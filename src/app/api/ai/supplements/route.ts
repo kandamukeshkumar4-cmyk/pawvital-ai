@@ -1,0 +1,59 @@
+import { NextResponse } from "next/server";
+import { openai } from "@/lib/openai";
+
+export async function POST(request: Request) {
+  try {
+    const { pet } = await request.json();
+
+    const prompt = `You are a veterinary nutrition AI. Create a personalized supplement plan.
+
+Pet Profile:
+- Name: ${pet.name}
+- Breed: ${pet.breed}
+- Species: ${pet.species}
+- Age: ${pet.age_years} years, ${pet.age_months} months
+- Weight: ${pet.weight} ${pet.weight_unit}
+- Gender: ${pet.gender}, ${pet.is_neutered ? "neutered/spayed" : "intact"}
+- Existing conditions: ${pet.existing_conditions?.join(", ") || "None"}
+- Medications: ${pet.medications?.join(", ") || "None"}
+
+Create a supplement plan. Respond in this exact JSON format:
+{
+  "supplements": [
+    {
+      "name": "Supplement name",
+      "purpose": "Why this supplement is recommended",
+      "dosage": "Recommended dosage",
+      "frequency": "How often",
+      "brand": "Recommended brand",
+      "price": "Estimated monthly cost",
+      "priority": "essential" | "recommended" | "optional"
+    }
+  ],
+  "nutrition_grade": "A+",
+  "monthly_cost": "$XX",
+  "summary": "2-3 sentence summary of the plan"
+}
+
+Consider breed-specific needs, age-related requirements, and any existing conditions. Include 4-6 supplements. Respond ONLY with valid JSON.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.3,
+      max_tokens: 1000,
+    });
+
+    const content = completion.choices[0].message.content;
+    if (!content) throw new Error("No response from AI");
+
+    return NextResponse.json(JSON.parse(content));
+  } catch {
+    return NextResponse.json({
+      supplements: [],
+      nutrition_grade: "B+",
+      monthly_cost: "$90",
+      summary: "Unable to generate a full plan at this time. Please try again.",
+    });
+  }
+}
