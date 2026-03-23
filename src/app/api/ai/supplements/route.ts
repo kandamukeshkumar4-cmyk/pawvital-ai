@@ -1,20 +1,20 @@
 import { NextResponse } from "next/server";
-import { openai, isOpenAIConfigured } from "@/lib/openai";
+import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
 
 export async function POST(request: Request) {
   try {
     const { pet } = await request.json();
 
-    if (!isOpenAIConfigured) {
+    if (!isAnthropicConfigured) {
       return NextResponse.json({
         supplements: [],
         nutrition_grade: "B+",
         monthly_cost: "$90",
-        summary: `Demo mode: Connect an OpenAI API key for personalized supplement recommendations for ${pet?.name || "your pet"}.`,
+        summary: `Demo mode: Connect an ANTHROPIC_API_KEY for personalized supplement recommendations for ${pet?.name || "your pet"}.`,
       });
     }
 
-    const prompt = `You are a veterinary nutrition AI. Create a personalized supplement plan.
+    const prompt = `You are a veterinary nutrition AI expert. Create a personalized supplement plan.
 
 Pet Profile:
 - Name: ${pet.name}
@@ -44,19 +44,18 @@ Create a supplement plan. Respond in this exact JSON format:
   "summary": "2-3 sentence summary of the plan"
 }
 
-Consider breed-specific needs, age-related requirements, and any existing conditions. Include 4-6 supplements. Respond ONLY with valid JSON.`;
+Consider breed-specific needs, age-related requirements, and existing conditions. Include 4-6 supplements. Respond ONLY with valid JSON.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      max_tokens: 1000,
     });
 
-    const content = completion.choices[0].message.content;
-    if (!content) throw new Error("No response from AI");
+    const content = message.content[0];
+    if (content.type !== "text") throw new Error("Unexpected response type");
 
-    return NextResponse.json(JSON.parse(content));
+    return NextResponse.json(JSON.parse(content.text));
   } catch {
     return NextResponse.json({
       supplements: [],

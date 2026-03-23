@@ -1,20 +1,20 @@
 import { NextResponse } from "next/server";
-import { openai, isOpenAIConfigured } from "@/lib/openai";
+import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
 
 export async function POST(request: Request) {
   try {
     const { pet, recentSymptoms, recentActivity, supplements } = await request.json();
 
-    if (!isOpenAIConfigured) {
+    if (!isAnthropicConfigured) {
       return NextResponse.json({
         score: 85,
         factors: { activity: 82, nutrition: 88, weight: 80, symptoms: 90, mood: 85 },
-        summary: `${pet?.name || "Your pet"} is in good overall health. Connect an OpenAI API key for personalized AI analysis.`,
+        summary: `${pet?.name || "Your pet"} is in good overall health. Connect an ANTHROPIC_API_KEY for personalized AI analysis.`,
         tips: ["Maintain current supplement routine", "Increase daily walk by 5 minutes", "Schedule annual checkup"],
       });
     }
 
-    const prompt = `You are a veterinary AI assistant. Calculate a health score (1-100) for this pet.
+    const prompt = `You are a veterinary health AI. Calculate a health score (1-100) for this pet.
 
 Pet Profile:
 - Name: ${pet.name}
@@ -44,17 +44,16 @@ Calculate a health score and breakdown. Respond in this exact JSON format:
 
 Consider breed-specific health benchmarks and age-appropriate expectations. Respond ONLY with valid JSON.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 512,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      max_tokens: 500,
     });
 
-    const content = completion.choices[0].message.content;
-    if (!content) throw new Error("No response from AI");
+    const content = message.content[0];
+    if (content.type !== "text") throw new Error("Unexpected response type");
 
-    return NextResponse.json(JSON.parse(content));
+    return NextResponse.json(JSON.parse(content.text));
   } catch {
     return NextResponse.json({
       score: 85,
