@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
+import { stripe, isStripeConfigured } from "@/lib/stripe";
 
 export async function POST(request: Request) {
   try {
     const { email, userId } = await request.json();
+
+    if (!isStripeConfigured) {
+      return NextResponse.json(
+        { error: "Stripe is not configured. Add STRIPE_SECRET_KEY to enable payments." },
+        { status: 400 }
+      );
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
