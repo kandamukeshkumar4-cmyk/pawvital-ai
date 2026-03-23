@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
+import { openai, isOpenAIConfigured } from "@/lib/openai";
 
 export async function POST(request: Request) {
   try {
     const { pet, recentSymptoms, recentActivity, supplements } = await request.json();
+
+    if (!isOpenAIConfigured) {
+      return NextResponse.json({
+        score: 85,
+        factors: { activity: 82, nutrition: 88, weight: 80, symptoms: 90, mood: 85 },
+        summary: `${pet?.name || "Your pet"} is in good overall health. Connect an OpenAI API key for personalized AI analysis.`,
+        tips: ["Maintain current supplement routine", "Increase daily walk by 5 minutes", "Schedule annual checkup"],
+      });
+    }
 
     const prompt = `You are a veterinary AI assistant. Calculate a health score (1-100) for this pet.
 

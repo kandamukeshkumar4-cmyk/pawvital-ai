@@ -1,9 +1,31 @@
 import { NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
+import { openai, isOpenAIConfigured } from "@/lib/openai";
 
 export async function POST(request: Request) {
   try {
     const { symptoms, pet } = await request.json();
+
+    if (!isOpenAIConfigured) {
+      return NextResponse.json({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "AI Assessment (Demo Mode)",
+        explanation: `Based on the symptoms described for ${pet?.name || "your pet"}: "${symptoms}". In demo mode, we provide general guidance. With a configured OpenAI API key, you'll get breed-specific, AI-powered analysis. We recommend monitoring closely and consulting your vet if symptoms persist.`,
+        actions: [
+          "Monitor your pet closely for the next 24-48 hours",
+          "Keep a log of when symptoms occur and their duration",
+          "Ensure fresh water is always available",
+          "Avoid strenuous activity until symptoms resolve",
+          "Schedule a vet visit if no improvement in 48 hours",
+        ],
+        warning_signs: [
+          "Symptoms suddenly worsen",
+          "Loss of appetite persists beyond 24 hours",
+          "Difficulty breathing or rapid breathing",
+          "Inability to stand or walk",
+        ],
+      });
+    }
 
     const prompt = `You are a veterinary AI assistant. A pet owner is describing symptoms for their pet.
 

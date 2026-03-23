@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
-import { openai } from "@/lib/openai";
+import { openai, isOpenAIConfigured } from "@/lib/openai";
 
 export async function POST(request: Request) {
   try {
     const { pet } = await request.json();
+
+    if (!isOpenAIConfigured) {
+      return NextResponse.json({
+        supplements: [],
+        nutrition_grade: "B+",
+        monthly_cost: "$90",
+        summary: `Demo mode: Connect an OpenAI API key for personalized supplement recommendations for ${pet?.name || "your pet"}.`,
+      });
+    }
 
     const prompt = `You are a veterinary nutrition AI. Create a personalized supplement plan.
 
