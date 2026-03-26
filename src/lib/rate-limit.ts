@@ -7,14 +7,18 @@ import { Redis } from "@upstash/redis";
  * Falls back to no-op if env vars are missing (dev/demo mode).
  */
 
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+
 const isConfigured =
-  !!process.env.UPSTASH_REDIS_REST_URL &&
-  !!process.env.UPSTASH_REDIS_REST_TOKEN;
+  !!redisUrl &&
+  !!redisToken &&
+  redisUrl.startsWith("https://");
 
 const redis = isConfigured
   ? new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+      url: redisUrl!,
+      token: redisToken!,
     })
   : null;
 
