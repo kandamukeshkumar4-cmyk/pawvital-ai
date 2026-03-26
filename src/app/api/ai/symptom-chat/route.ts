@@ -193,10 +193,14 @@ export async function POST(request: Request) {
       effectivePet = getEffectivePetProfile(pet, session);
     }
 
+    // ALWAYS run vision when an image is present — the photo IS the user's answer.
+    // Even a short label like "left leg" is a clinical image that must be analyzed.
     const shouldRunWoundVision = image
       ? shouldAnalyzeWoundImage(lastUserMessage.content, session) ||
         roboflowSkinSuggested ||
-        isGenericImagePrompt(lastUserMessage.content)
+        isGenericImagePrompt(lastUserMessage.content) ||
+        Boolean(session.last_question_asked) ||  // image sent as answer to a question
+        session.known_symptoms.length > 0         // active session — any image matters
       : false;
 
     if (image && shouldRunWoundVision && gateOverride !== true) {
@@ -395,19 +399,21 @@ export async function POST(request: Request) {
     // the answer (e.g. user said "no", "nothing", "I don't know"), force-
     // record the user's raw text so the question is marked answered.
     const pendingQ = session.last_question_asked;
-    if (
-      pendingQ &&
-      !session.answered_questions.includes(pendingQ)
-    ) {
-      // The user responded but extraction returned null — record raw text
-      const coercedAnswer = coerceAnswerForQuestion(
-        pendingQ,
-        lastUserMessage.content
-      );
+    if (pendingQ && !session.answered_questions.includes(pendingQ)) {
+      // Build a rich combined answer from text + vision analysis
+      // e.g. user sent "left leg" + photo → combined = "left leg [vision: wound on left leg, raw area]"
+      const combinedUserSignal = [
+        lastUserMessage.content,
+        visionAnalysis ? `[vision: ${visionAnalysis.substring(0, 200)}]` : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      const coercedAnswer = coerceAnswerForQuestion(pendingQ, combinedUserSignal);
       if (coercedAnswer !== null) {
         session = recordAnswer(session, pendingQ, coercedAnswer);
         console.log(
-          `[Engine] Force-recorded answer for "${pendingQ}" (extraction missed direct answer)`
+          `[Engine] Force-recorded answer for "${pendingQ}" (text+vision signal: "${combinedUserSignal.substring(0, 80)}")`
         );
       }
     }
@@ -493,10 +499,14 @@ export async function POST(request: Request) {
     // STEP 5: PHRASE question — Kimi K2.5 (Claude fallback)
     // ═══════════════════════════════════════════════════════════════════
     const questionText = getQuestionText(nextQuestionId);
-    const phrasingContext = shouldIncludeImageContextInQuestion(
-      nextQuestionId,
-      session,
-      turnFocusSymptoms
+    // Include image context when:
+    //  a) vision just ran this turn (visionAnalysis is freshly populated), OR
+    //  b) the question is wound-related, OR
+    //  c) turnFocusSymptoms-based check passes
+    const hasLiveVisionThisTurn = Boolean(visionAnalysis);
+    const phrasingContext = (
+      hasLiveVisionThisTurn ||
+      shouldIncludeImageContextInQuestion(nextQuestionId, session, turnFocusSymptoms)
     )
       ? buildQuestionPhrasingContext(session, visionSeverity)
       : null;
@@ -731,27 +741,26 @@ async function phraseQuestion(
 
 Pet: ${pet.name}, a ${pet.age_years}-year-old ${pet.breed} (${pet.weight} lbs)
 Symptoms so far: ${session.known_symptoms.join(", ")}
-Questions already asked: ${session.answered_questions.length}
-${phrasingContext ? `IMAGE CONTEXT: ${phrasingContext}\n` : ""}
-The clinical system has determined that the next piece of information needed is:
+Questions answered so far: ${session.answered_questions.length}
+${phrasingContext ? `\n--- WHAT I SAW / CONTEXT FROM PHOTO ---\n${phrasingContext}\n---\n` : ""}
+The clinical system now needs to know:
 "${questionText}"
 (Internal ID: ${questionId}, Type: ${qDef?.data_type || "string"})
 
 Your job: Ask this ONE question in a natural, caring way. Rules:
-- Start with a brief 1-sentence acknowledgment of what the owner just shared (empathetic but professional)${phrasingContext ? "\n- If helpful, briefly reference the photo context in plain language" : ""}
-- Then ask EXACTLY ONE focused question to get the needed information
+- Start with ONE brief sentence that acknowledges what the owner just shared — INCLUDING what you saw in any photo. Describe it naturally (e.g. "I can see there's a raw, inflamed area on the left leg — thank you for that photo.")
+- If a photo was provided, ALWAYS acknowledge it in your opening sentence. Never pretend the photo wasn't there.
+- Then ask EXACTLY ONE focused question to collect the next needed piece of information
 - Keep total response under 3 sentences
 - Use the pet's name (${pet.name})
-- Treat the owner's latest answer and any photo context as one continuous history about the same dog
-- NEVER ignore the owner's latest direct answer when choosing how to phrase the next question
-- If relevant, mention breed-specific context (e.g., "Given that ${pet.name} is a ${pet.breed}...")
-- Ignore photo details unless they directly help you ask this exact next question
+- Think like a vet who sees the whole picture: previous messages, photo, and current question are all part of ONE continuous conversation
+- NEVER ignore the owner's latest direct answer or photo when choosing how to phrase the next question
 - NEVER mention scores, probabilities, clinical IDs, or that you're an AI
 - NEVER list multiple possible conditions
 - NEVER say there is confusion about the animal type, species, or breed in the photo
-- NEVER speculate about whether the image shows a dog, cat, or another animal unless the owner directly asked that question
-- Sound like a concerned vet taking history, not a chatbot
-- ALWAYS use correct canine anatomy terms: "front leg" not "arm/forearm", "hind leg" not "leg", "paw" not "hand/foot", "muzzle" not "face", "stifle" not "knee", "carpus" not "wrist", "hock" not "ankle". Dogs do NOT have arms, forearms, hands, feet, fingers, or toes.
+- NEVER speculate about whether the image shows a dog, cat, or another animal unless the owner directly asked that
+- Sound like a concerned vet taking history, not a chatbot filling out a form
+- ALWAYS use correct canine anatomy: "front leg" not "arm", "hind leg", "paw" not "foot", "muzzle" not "face", "stifle" not "knee"
 
 Respond with ONLY your message. No JSON, no formatting, no thinking tags.`;
 
@@ -1310,25 +1319,33 @@ function buildQuestionPhrasingContext(
   visionSeverity?: "normal" | "needs_review" | "urgent"
 ): string {
   const parts: string[] = [];
-  const hasImageSignals =
-    Boolean(session.roboflow_skin_labels?.length) ||
-    Boolean(session.vision_analysis);
 
-  if (session.roboflow_skin_labels?.length) {
+  // Include actual vision findings so the AI can reference what it SAW
+  if (session.vision_analysis) {
+    // Trim to most relevant 300 chars — this is what the AI will reference
+    const visionSummary = session.vision_analysis
+      .replace(/<think>[\s\S]*?<\/think>/g, "")
+      .trim()
+      .substring(0, 300);
+    parts.push(`PHOTO FINDINGS: ${visionSummary}`);
+  } else if (session.roboflow_skin_labels?.length) {
     parts.push(
-      `Photo likely shows a skin-focused issue: ${session.roboflow_skin_labels
-        .slice(0, 2)
-        .join(", ")}`
+      `Photo likely shows: ${session.roboflow_skin_labels.slice(0, 2).join(", ")}`
     );
-  } else if (
-    session.known_symptoms.includes("wound_skin_issue") &&
-    session.vision_analysis
-  ) {
-    parts.push("Photo likely shows a localized wound or skin issue");
   }
 
-  if (hasImageSignals && visionSeverity && visionSeverity !== "normal") {
-    parts.push(`Photo triage severity is currently ${visionSeverity}`);
+  if (visionSeverity && visionSeverity !== "normal") {
+    parts.push(`Visual severity: ${visionSeverity}`);
+  }
+
+  if (session.vision_symptoms?.length) {
+    parts.push(`Visual symptoms detected: ${session.vision_symptoms.join(", ")}`);
+  }
+
+  // Tell the AI what the PREVIOUS question was so it can connect the answer
+  if (session.last_question_asked && session.answered_questions.includes(session.last_question_asked)) {
+    const prevQ = getQuestionText(session.last_question_asked);
+    parts.push(`The owner's last message (including photo) answered: "${prevQ}"`);
   }
 
   return parts.join(". ");
