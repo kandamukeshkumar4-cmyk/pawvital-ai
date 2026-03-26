@@ -130,6 +130,71 @@ function dedupeTerms(terms: string[]): string[] {
   return normalized;
 }
 
+const CONDITION_LABEL_ALIASES: Array<{ label: string; terms: string[] }> = [
+  { label: "healthy_skin", terms: ["healthy skin", "normal skin", "healthy"] },
+  { label: "ringworm", terms: ["ringworm", "dermatophyte"] },
+  { label: "fungal_infection", terms: ["fungal infection", "fungal", "yeast"] },
+  {
+    label: "demodicosis_mange",
+    terms: ["demodicosis", "demodectic mange", "mange"],
+  },
+  {
+    label: "hypersensitivity_allergic",
+    terms: [
+      "hypersensitivity allergic",
+      "hypersensitivity",
+      "allergic dermatitis",
+      "allergic",
+      "skin allergy",
+    ],
+  },
+  { label: "bacterial_dermatosis", terms: ["bacterial", "pyoderma"] },
+  { label: "dermatitis", terms: ["dermatitis"] },
+  { label: "hot_spot", terms: ["hot spot", "hotspot", "moist dermatitis"] },
+  { label: "tick_infestation", terms: ["tick infestation", "tick"] },
+  { label: "worm_infection", terms: ["worm infection", "worm"] },
+  { label: "dental_disease", terms: ["dental disease", "dental"] },
+  { label: "kennel_cough", terms: ["kennel cough"] },
+  { label: "parvovirus", terms: ["parvovirus", "parvo"] },
+  { label: "eye_infection", terms: ["eye infection"] },
+  { label: "distemper", terms: ["distemper"] },
+];
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function deriveReferenceImageConditionLabels(
+  searchText: string,
+  conditionFilters: string[] = []
+): string[] {
+  const fullText = dedupeTerms([searchText, ...conditionFilters]).join(" ");
+  const labels = new Set<string>();
+
+  for (const filter of conditionFilters) {
+    const normalized = normalizeTerm(filter).toLowerCase().replace(/\s+/g, "_");
+    if (normalized) {
+      labels.add(normalized);
+    }
+  }
+
+  for (const alias of CONDITION_LABEL_ALIASES) {
+    if (
+      alias.terms.some((term) => {
+        const pattern = new RegExp(
+          `\\b${escapeRegExp(term).replace(/\s+/g, "\\s+")}\\b`,
+          "i"
+        );
+        return pattern.test(fullText);
+      })
+    ) {
+      labels.add(alias.label);
+    }
+  }
+
+  return [...labels];
+}
+
 export function isKnowledgeRetrievalConfigured(): boolean {
   return isConfigured;
 }
@@ -335,49 +400,68 @@ export async function searchReferenceImages(
 
   const safeQuery = sanitizeSearchQuery(searchText);
   if (!safeQuery) return [];
+  const labelTerms = deriveReferenceImageConditionLabels(
+    safeQuery,
+    conditionFilters
+  );
 
   try {
-    const [queryEmbedding] = await embedImageQueries([safeQuery]);
-    if (!queryEmbedding?.length) {
-      return [];
-    }
-
-    const { data, error } = await supabase.rpc(
-      "match_reference_image_assets_by_embedding_text",
-      {
-        query_embedding_text: embeddingToVectorLiteral(queryEmbedding),
-        match_count: Math.max(1, limit),
-        condition_filters:
-          conditionFilters.length > 0 ? conditionFilters : null,
-      }
-    );
-
-    if (!error && data && data.length > 0) {
-      return (data as SearchReferenceImageRpcRow[]).map((row) => ({
-        assetId: row.asset_id,
-        sourceId: row.source_id,
-        sourceSlug: row.source_slug,
-        sourceTitle: row.source_title,
-        datasetUrl: row.dataset_url,
-        conditionLabel: row.condition_label,
-        localPath: row.local_path,
-        assetUrl: row.asset_url,
-        caption: row.caption,
-        metadata: row.metadata || {},
-        similarity: Number(row.similarity || 0),
-      }));
-    }
-
-    return await searchReferenceImagesFallback(
+    const semanticMatches = await searchReferenceImagesSemantic(
       supabase,
       safeQuery,
       limit,
-      conditionFilters
+      labelTerms
     );
+    const lexicalMatches = await searchReferenceImagesFallback(
+      supabase,
+      safeQuery,
+      limit,
+      labelTerms
+    );
+    return mergeReferenceImageMatches(semanticMatches, lexicalMatches, limit);
   } catch (error) {
     console.error("[Reference Image Retrieval] Search failed:", error);
     return [];
   }
+}
+
+async function searchReferenceImagesSemantic(
+  supabase: SupabaseClient,
+  safeQuery: string,
+  limit: number,
+  conditionFilters: string[]
+): Promise<ReferenceImageMatch[]> {
+  const [queryEmbedding] = await embedImageQueries([safeQuery]);
+  if (!queryEmbedding?.length) {
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc(
+    "match_reference_image_assets_by_embedding_text",
+    {
+      query_embedding_text: embeddingToVectorLiteral(queryEmbedding),
+      match_count: Math.max(1, limit),
+      condition_filters: conditionFilters.length > 0 ? conditionFilters : null,
+    }
+  );
+
+  if (error || !data) {
+    return [];
+  }
+
+  return (data as SearchReferenceImageRpcRow[]).map((row) => ({
+    assetId: row.asset_id,
+    sourceId: row.source_id,
+    sourceSlug: row.source_slug,
+    sourceTitle: row.source_title,
+    datasetUrl: row.dataset_url,
+    conditionLabel: row.condition_label,
+    localPath: row.local_path,
+    assetUrl: row.asset_url,
+    caption: row.caption,
+    metadata: row.metadata || {},
+    similarity: Number(row.similarity || 0),
+  }));
 }
 
 async function searchReferenceImagesFallback(
@@ -425,6 +509,28 @@ async function searchReferenceImagesFallback(
     metadata: row.metadata || {},
     similarity: 0.1,
   }));
+}
+
+function mergeReferenceImageMatches(
+  semanticMatches: ReferenceImageMatch[],
+  lexicalMatches: ReferenceImageMatch[],
+  limit: number
+): ReferenceImageMatch[] {
+  const merged = new Map<string, ReferenceImageMatch>();
+  const prioritizeLexical = lexicalMatches.length > 0;
+  const orderedGroups = prioritizeLexical
+    ? [lexicalMatches, semanticMatches]
+    : [semanticMatches, lexicalMatches];
+
+  for (const group of orderedGroups) {
+    for (const match of group) {
+      if (!merged.has(match.assetId)) {
+        merged.set(match.assetId, match);
+      }
+    }
+  }
+
+  return [...merged.values()].slice(0, Math.max(1, limit));
 }
 
 export function formatKnowledgeContext(chunks: KnowledgeChunkMatch[]): string {

@@ -1,0 +1,122 @@
+{
+  "documents": [
+    {
+      "slug": "merck-wound-overview",
+      "title": "Overview of Wound Management in Small Animals",
+      "url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care/wound-management-in-small-animals/overview-of-wound-management-in-small-animals",
+      "sourceType": "html",
+      "license": "Merck Veterinary Manual site terms",
+      "trustLevel": 100,
+      "speciesScope": ["dog", "cat"],
+      "tags": ["wounds", "triage", "infection", "healing"],
+      "metadata": {
+        "publisher": "Merck Veterinary Manual",
+        "domain": "merckvetmanual.com"
+      }
+    },
+    {
+      "slug": "merck-initial-wound-management",
+      "title": "Initial Wound Management in Small Animals",
+      "url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care/wound-management-in-small-animals/initial-wound-management-in-small-animals",
+      "sourceType": "html",
+      "license": "Merck Veterinary Manual site terms",
+      "trustLevel": 100,
+      "speciesScope": ["dog", "cat"],
+      "tags": ["wounds", "debridement", "stabilization", "contamination"],
+      "metadata": {
+        "publisher": "Merck Veterinary Manual",
+        "domain": "merckvetmanual.com"
+      }
+    },
+    {
+      "slug": "merck-specific-wounds",
+      "title": "Management of Specific Wounds in Small Animals",
+      "url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care/wound-management-in-small-animals/management-of-specific-wounds-in-small-animals",
+      "sourceType": "html",
+      "license": "Merck Veterinary Manual site terms",
+      "trustLevel": 100,
+      "speciesScope": ["dog", "cat"],
+      "tags": ["laceration", "bite wound", "pressure sore", "degloving"],
+      "metadata": {
+        "publisher": "Merck Veterinary Manual",
+        "domain": "merckvetmanual.com"
+      }
+    },
+    {
+      "slug": "merck-bandages-and-dressings",
+      "title": "Wound Bandages and Dressings for Small Animals",
+      "url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care/wound-management-in-small-animals/wound-bandages-and-dressings-for-small-animals",
+      "sourceType": "html",
+      "license": "Merck Veterinary Manual site terms",
+      "trustLevel": 100,
+      "speciesScope": ["dog", "cat"],
+      "tags": ["dressings", "bandages", "wound care", "exudate"],
+      "metadata": {
+        "publisher": "Merck Veterinary Manual",
+        "domain": "merckvetmanual.com"
+      }
+    },
+    {
+      "slug": "wavd-malassezia-guidelines",
+      "title": "WAVD Consensus Guidelines: Biology, Diagnosis, and Treatment of Malassezia Dermatitis in Dogs and Cats",
+      "url": "https://wavd.org/wp-content/uploads/biology-diagnosis-treatment-of-malassezia-dermatitis-in-dogs-and-cats-bond-et-al-2020-veterinary-dermatology.pdf",
+      "sourceType": "pdf",
+      "license": "WAVD open-access PDF",
+      "trustLevel": 95,
+      "speciesScope": ["dog", "cat"],
+      "tags": ["malassezia", "dermatitis", "skin infection", "consensus guidelines"],
+      "metadata": {
+        "publisher": "World Association for Veterinary Dermatology",
+        "domain": "wavd.org"
+      }
+    },
+    {
+      "slug": "wavd-pyoderma-summary-2024",
+      "title": "WAVD Summary of the New ISCAID Guidelines for Pyoderma 2024",
+      "url": "https://wavd.org/wp-content/uploads/arina-terentjeva-pyoderma-iscaid.pdf",
+      "sourceType": "pdf",
+      "license": "WAVD open-access PDF",
+      "trustLevel": 95,
+      "speciesScope": ["dog", "cat"],
+      "tags": ["pyoderma", "bacterial skin disease", "dermatology", "guidelines"],
+      "metadata": {
+        "publisher": "World Association for Veterinary Dermatology",
+        "domain": "wavd.org"
+      }
+    }
+  ],
+  "imageDatasets": [
+    {
+      "slug": "mendeley-dog-skin-disease-multispectral",
+      "title": "Classification of Pet Dog Skin Diseases Using Deep Learning With Images Captured From Multispectral Imaging Device",
+      "url": "https://data.mendeley.com/datasets/5dbht54kw7",
+      "license": "CC BY 4.0",
+      "conditionLabels": [
+        "bacterial_dermatosis",
+        "fungal_infection",
+        "allergic_dermatitis",
+        "healthy_skin"
+      ],
+      "notes": "Public dog skin disease dataset. Use as a bootstrap image reference source, not as a standalone clinical truth source.",
+      "metadata": {
+        "publisher": "Mendeley Data",
+        "domain": "data.mendeley.com"
+      }
+    },
+    {
+      "slug": "roboflow-dog-skin-disease-detection",
+      "title": "Dog Skin Disease Detection Classification Dataset",
+      "url": "https://universe.roboflow.com/animal-skin-disease-detection/dog-skin-disease-detection-6pgvk-m6ycv",
+      "license": "Roboflow Universe dataset terms",
+      "conditionLabels": [
+        "skin_disease",
+        "healthy_skin"
+      ],
+      "notes": "Public Roboflow dataset registry entry for later image download and embedding ingestion.",
+      "metadata": {
+        "publisher": "Roboflow Universe",
+        "domain": "universe.roboflow.com"
+      }
+    }
+  ]
+}

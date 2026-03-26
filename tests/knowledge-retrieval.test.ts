@@ -1,6 +1,7 @@
 import {
   buildKnowledgeSearchQuery,
   buildReferenceImageQuery,
+  deriveReferenceImageConditionLabels,
   formatReferenceImageContext,
   formatKnowledgeContext,
 } from "@/lib/knowledge-retrieval";
@@ -73,6 +74,23 @@ describe("knowledge retrieval helpers", () => {
     expect(query).toContain("golden retriever");
     expect(query).toContain("ringworm");
     expect(query).toContain("fungal infection");
+  });
+
+  it("derives canonical image condition labels from natural language", () => {
+    const labels = deriveReferenceImageConditionLabels(
+      "healthy dog skin with concern for tick infestation and ringworm",
+      ["mange"]
+    );
+
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        "healthy_skin",
+        "tick_infestation",
+        "ringworm",
+        "demodicosis_mange",
+      ])
+    );
+    expect(labels).not.toContain("worm_infection");
   });
 
   it("formats reference image matches into a compact prompt block", () => {

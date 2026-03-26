@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "jest --verbose",
     "test:watch": "jest --watch",
+    "test:retrieval:live": "jest --runInBand --runTestsByPath tests/retrieval.integration.test.ts",
     "db:apply-rag-schema": "node scripts/apply-rag-schema.mjs",
     "seed:public-corpus": "node scripts/seed-public-corpus.mjs",
     "seed:public-corpus:dry": "node scripts/seed-public-corpus.mjs --dry-run",
