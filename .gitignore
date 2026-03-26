@@ -40,4 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# Corpus data (indexed in Supabase, not needed at runtime)
+/corpus/
+
+# Scripts (build-time only)
+/scripts/
+
+# IDE / editor
+Roo-Code

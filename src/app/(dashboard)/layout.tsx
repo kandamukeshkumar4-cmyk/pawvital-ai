@@ -3,6 +3,7 @@
 import Sidebar from "@/components/dashboard/sidebar";
 import TopBar from "@/components/dashboard/top-bar";
 import { useAppStore } from "@/store/app-store";
+import { useLoadUserData } from "@/hooks/useSupabase";
 
 export default function DashboardLayout({
   children,
@@ -10,6 +11,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { sidebarOpen } = useAppStore();
+
+  // Load real user + pets from Supabase on mount (no-op in demo mode)
+  useLoadUserData();
 
   return (
     <div className="min-h-screen bg-gray-50">

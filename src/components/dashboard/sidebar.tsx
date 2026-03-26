@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
+import { useAuth } from "@/hooks/useSupabase";
 
 const navItems = [
   { href: "/dashboard", icon: Activity, label: "Dashboard" },
@@ -30,6 +31,7 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { sidebarOpen, toggleSidebar, activePet } = useAppStore();
+  const { signOut } = useAuth();
 
   return (
     <aside
@@ -111,7 +113,10 @@ export default function Sidebar() {
         </button>
 
         {sidebarOpen && (
-          <button className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-red-500 hover:bg-red-50 transition-colors mt-1">
+          <button
+            onClick={signOut}
+            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-red-500 hover:bg-red-50 transition-colors mt-1"
+          >
             <LogOut className="w-5 h-5" />
             <span className="text-sm">Sign Out</span>
           </button>

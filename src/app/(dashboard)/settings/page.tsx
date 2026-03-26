@@ -7,6 +7,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { useAppStore } from "@/store/app-store";
+import { usePets } from "@/hooks/useSupabase";
 import type { Pet } from "@/types";
 
 const breedOptions = [
@@ -26,8 +27,10 @@ const breedOptions = [
 ];
 
 export default function SettingsPage() {
-  const { pets, setPets, setActivePet } = useAppStore();
+  const { pets, setActivePet } = useAppStore();
+  const { savePet, deletePet } = usePets();
   const [showAddPet, setShowAddPet] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [petForm, setPetForm] = useState({
     name: "",
     breed: "",
@@ -42,8 +45,9 @@ export default function SettingsPage() {
     medications: "",
   });
 
-  const handleAddPet = (e: React.FormEvent) => {
+  const handleAddPet = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
     const newPet: Pet = {
       id: crypto.randomUUID(),
       user_id: "demo",
@@ -62,9 +66,8 @@ export default function SettingsPage() {
       updated_at: new Date().toISOString(),
     };
 
-    const updated = [...pets, newPet];
-    setPets(updated);
-    setActivePet(newPet);
+    await savePet(newPet);
+    setSaving(false);
     setShowAddPet(false);
     setPetForm({
       name: "", breed: "", species: "dog", age_years: "", age_months: "",
@@ -123,12 +126,7 @@ export default function SettingsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    const updated = pets.filter((p) => p.id !== pet.id);
-                    setPets(updated);
-                    if (updated.length > 0) setActivePet(updated[0]);
-                    else setActivePet(null);
-                  }}
+                  onClick={() => deletePet(pet.id)}
                 >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
@@ -247,8 +245,8 @@ export default function SettingsPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Button type="submit">
-                <Save className="w-4 h-4 mr-2" /> Save Pet
+              <Button type="submit" loading={saving}>
+                <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Pet"}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setShowAddPet(false)}>
                 Cancel

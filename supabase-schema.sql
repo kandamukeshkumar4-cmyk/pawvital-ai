@@ -54,7 +54,7 @@ CREATE TABLE symptom_checks (
   symptoms TEXT NOT NULL,
   ai_response TEXT,
   severity TEXT CHECK (severity IN ('low', 'medium', 'high', 'emergency')),
-  recommendation TEXT CHECK (recommendation IN ('monitor', 'vet_48h', 'emergency_vet')),
+  recommendation TEXT CHECK (recommendation IN ('monitor', 'vet_48h', 'vet_24h', 'emergency_vet')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

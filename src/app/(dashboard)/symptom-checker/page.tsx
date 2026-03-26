@@ -1,27 +1,137 @@
 "use client";
 
-import { useState } from "react";
-import { Stethoscope, AlertTriangle, Clock, AlertCircle, CheckCircle, Send, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import {
+  Stethoscope,
+  AlertTriangle,
+  Clock,
+  AlertCircle,
+  CheckCircle,
+  Send,
+  Loader2,
+  FlaskConical,
+  FileText,
+  Heart,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  Shield,
+  BookOpen,
+  Bot,
+  User,
+  Zap,
+  RotateCcw,
+  ImagePlus,
+  X,
+} from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
-import Textarea from "@/components/ui/textarea";
 import Badge from "@/components/ui/badge";
 import { useAppStore } from "@/store/app-store";
 
-interface SymptomResult {
-  severity: "low" | "medium" | "high" | "emergency";
-  recommendation: "monitor" | "vet_48h" | "emergency_vet";
-  title: string;
-  explanation: string;
-  actions: string[];
-  warning_signs: string[];
+// --- Types ---
+
+interface DifferentialDiagnosis {
+  condition: string;
+  likelihood: "high" | "moderate" | "low";
+  description: string;
 }
 
+interface RecommendedTest {
+  test: string;
+  reason: string;
+  urgency: "stat" | "urgent" | "routine";
+}
+
+interface HomeCare {
+  instruction: string;
+  duration: string;
+  details: string;
+}
+
+interface SymptomReport {
+  severity: "low" | "medium" | "high" | "emergency";
+  recommendation: "monitor" | "vet_48h" | "vet_24h" | "emergency_vet";
+  title: string;
+  explanation: string;
+  differential_diagnoses?: DifferentialDiagnosis[];
+  clinical_notes?: string;
+  recommended_tests?: RecommendedTest[];
+  home_care?: HomeCare[];
+  actions: string[];
+  warning_signs: string[];
+  vet_questions?: string[];
+}
+
+interface ImageMeta {
+  width: number;
+  height: number;
+  blurScore: number;
+  estimatedKb: number;
+}
+
+interface ImageGateWarning {
+  reason: "blurry" | "low_resolution" | "not_close_up";
+  topLabel?: string;
+  topScore?: number;
+}
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  type?: "question" | "emergency" | "ready" | "report" | "error" | "image_gate";
+  gate?: ImageGateWarning;
+  image?: string;
+  timestamp: Date;
+}
+
+interface SendMessageOptions {
+  imageOverride?: string | null;
+  imageMetaOverride?: ImageMeta | null;
+  gateOverride?: boolean;
+  appendUserMessage?: boolean;
+}
+
+// --- Config ---
+
 const severityConfig = {
-  low: { color: "success" as const, icon: CheckCircle, label: "Low Concern", bg: "bg-green-50 border-green-200" },
-  medium: { color: "warning" as const, icon: Clock, label: "Moderate", bg: "bg-amber-50 border-amber-200" },
-  high: { color: "danger" as const, icon: AlertTriangle, label: "High Concern", bg: "bg-orange-50 border-orange-200" },
-  emergency: { color: "danger" as const, icon: AlertCircle, label: "Emergency", bg: "bg-red-50 border-red-200" },
+  low: {
+    color: "success" as const,
+    icon: CheckCircle,
+    label: "Low Concern",
+    bg: "bg-green-50 border-green-200",
+  },
+  medium: {
+    color: "warning" as const,
+    icon: Clock,
+    label: "Moderate",
+    bg: "bg-amber-50 border-amber-200",
+  },
+  high: {
+    color: "danger" as const,
+    icon: AlertTriangle,
+    label: "High Concern",
+    bg: "bg-orange-50 border-orange-200",
+  },
+  emergency: {
+    color: "danger" as const,
+    icon: AlertCircle,
+    label: "Emergency",
+    bg: "bg-red-50 border-red-200",
+  },
+};
+
+const likelihoodColors = {
+  high: "bg-red-100 text-red-800 border-red-200",
+  moderate: "bg-amber-100 text-amber-800 border-amber-200",
+  low: "bg-blue-100 text-blue-800 border-blue-200",
+};
+
+const urgencyColors = {
+  stat: "bg-red-100 text-red-800",
+  urgent: "bg-orange-100 text-orange-800",
+  routine: "bg-green-100 text-green-800",
 };
 
 const quickSymptoms = [
@@ -35,213 +145,1007 @@ const quickSymptoms = [
   "Difficulty breathing",
   "Trembling/shaking",
   "Drinking more water than usual",
+  "Blood in stool",
+  "Swollen abdomen",
 ];
 
-const pastChecks = [
-  { date: "2 days ago", symptom: "Slight limping on back left leg", severity: "low" as const, recommendation: "Monitor at home" },
-  { date: "1 week ago", symptom: "Decreased appetite for 1 day", severity: "low" as const, recommendation: "Monitor for 24-48 hours" },
-  { date: "3 weeks ago", symptom: "Vomiting after eating grass", severity: "low" as const, recommendation: "Normal behavior, monitor" },
-];
+// --- Components ---
+
+function CollapsibleSection({
+  title,
+  icon: Icon,
+  iconColor,
+  children,
+  defaultOpen = true,
+}: {
+  title: string;
+  icon: React.ElementType;
+  iconColor: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Icon className={`w-5 h-5 ${iconColor}`} />
+          <h4 className="font-semibold text-gray-900 text-left">{title}</h4>
+        </div>
+        {open ? (
+          <ChevronUp className="w-4 h-4 text-gray-400" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-gray-400" />
+        )}
+      </button>
+      {open && <div className="p-4 pt-0 bg-white">{children}</div>}
+    </div>
+  );
+}
+
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+  const isEmergency = message.type === "emergency";
+  const isImageGate = message.type === "image_gate";
+
+  return (
+    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+      <div
+        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+          isUser
+            ? "bg-blue-100"
+            : isEmergency
+            ? "bg-red-100"
+            : isImageGate
+            ? "bg-amber-100"
+            : "bg-purple-100"
+        }`}
+      >
+        {isUser ? (
+          <User className="w-4 h-4 text-blue-600" />
+        ) : isEmergency ? (
+          <AlertCircle className="w-4 h-4 text-red-600" />
+        ) : isImageGate ? (
+          <AlertTriangle className="w-4 h-4 text-amber-600" />
+        ) : (
+          <Bot className="w-4 h-4 text-purple-600" />
+        )}
+      </div>
+      <div
+        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+          isUser
+            ? "bg-blue-600 text-white"
+            : isEmergency
+            ? "bg-red-50 border-2 border-red-300 text-red-900"
+            : isImageGate
+            ? "bg-amber-50 border border-amber-300 text-amber-950"
+            : "bg-gray-100 text-gray-800"
+        }`}
+      >
+        {message.image && (
+          <img
+            src={message.image}
+            alt="Uploaded by user"
+            className="w-full max-w-sm rounded-lg mb-2 border border-blue-400/30 object-contain"
+          />
+        )}
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        <p
+          className={`text-[10px] mt-1 ${
+            isUser
+              ? "text-blue-200"
+              : isEmergency
+              ? "text-red-400"
+              : isImageGate
+              ? "text-amber-600"
+              : "text-gray-400"
+          }`}
+        >
+          {message.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ReportView({ report }: { report: SymptomReport }) {
+  return (
+    <div className="space-y-4 animate-fade-in">
+      {/* Severity Header */}
+      <Card className={`p-6 border-2 ${severityConfig[report.severity].bg}`}>
+        <div className="flex items-start gap-3">
+          {(() => {
+            const config = severityConfig[report.severity];
+            const IconComponent = config.icon;
+            return <IconComponent className="w-7 h-7 text-current mt-0.5" />;
+          })()}
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl font-bold text-gray-900">{report.title}</h3>
+              <Badge variant={severityConfig[report.severity].color}>
+                {severityConfig[report.severity].label}
+              </Badge>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Recommendation:{" "}
+              <span className="font-semibold">
+                {report.recommendation === "emergency_vet"
+                  ? "Seek Emergency Veterinary Care Immediately"
+                  : report.recommendation === "vet_24h"
+                  ? "Schedule Veterinary Visit Within 24 Hours"
+                  : report.recommendation === "vet_48h"
+                  ? "Schedule Veterinary Visit Within 48 Hours"
+                  : "Monitor at Home with Parameters Below"}
+              </span>
+            </p>
+          </div>
+        </div>
+        <p className="text-gray-700 leading-relaxed mt-4 text-[15px]">
+          {report.explanation}
+        </p>
+      </Card>
+
+      {/* Differential Diagnoses */}
+      {report.differential_diagnoses && report.differential_diagnoses.length > 0 && (
+        <CollapsibleSection
+          title="Differential Diagnoses"
+          icon={FlaskConical}
+          iconColor="text-purple-600"
+          defaultOpen={true}
+        >
+          <div className="space-y-3 mt-2">
+            {report.differential_diagnoses.map((dx, i) => (
+              <div key={i} className="p-4 rounded-lg bg-gray-50 border border-gray-100">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h5 className="font-bold text-gray-900">
+                    {i + 1}. {dx.condition}
+                  </h5>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium border ${likelihoodColors[dx.likelihood]}`}
+                  >
+                    {dx.likelihood === "high"
+                      ? "Most Likely"
+                      : dx.likelihood === "moderate"
+                      ? "Possible"
+                      : "Less Likely"}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 mt-1.5 leading-relaxed">
+                  {dx.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Clinical Notes */}
+      {report.clinical_notes && (
+        <CollapsibleSection
+          title="Clinical Notes"
+          icon={FileText}
+          iconColor="text-blue-600"
+          defaultOpen={false}
+        >
+          <div className="mt-2 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-sm text-slate-700 leading-relaxed font-mono">
+              {report.clinical_notes}
+            </p>
+          </div>
+          <p className="text-xs text-gray-400 mt-2 italic">
+            Technical notes — share these with your veterinarian
+          </p>
+        </CollapsibleSection>
+      )}
+
+      {/* Recommended Diagnostic Tests */}
+      {report.recommended_tests && report.recommended_tests.length > 0 && (
+        <CollapsibleSection
+          title="Recommended Diagnostic Tests"
+          icon={BookOpen}
+          iconColor="text-indigo-600"
+          defaultOpen={true}
+        >
+          <div className="space-y-2 mt-2">
+            {report.recommended_tests.map((test, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gray-50">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded font-medium ${urgencyColors[test.urgency]} flex-shrink-0 mt-0.5`}
+                >
+                  {test.urgency === "stat"
+                    ? "STAT"
+                    : test.urgency === "urgent"
+                    ? "URGENT"
+                    : "ROUTINE"}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{test.test}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{test.reason}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Home Care Protocol */}
+      {report.home_care && report.home_care.length > 0 && (
+        <CollapsibleSection
+          title="Home Care Protocol"
+          icon={Heart}
+          iconColor="text-rose-600"
+          defaultOpen={true}
+        >
+          <div className="space-y-3 mt-2">
+            {report.home_care.map((care, i) => (
+              <div key={i} className="p-4 rounded-lg bg-rose-50/50 border border-rose-100">
+                <div className="flex items-start justify-between">
+                  <h5 className="text-sm font-semibold text-gray-900">
+                    {care.instruction}
+                  </h5>
+                  <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded flex-shrink-0 ml-2">
+                    {care.duration}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
+                  {care.details}
+                </p>
+              </div>
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Actions & Warning Signs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CollapsibleSection
+          title="Action Steps"
+          icon={Shield}
+          iconColor="text-green-600"
+          defaultOpen={true}
+        >
+          <ul className="space-y-2 mt-2">
+            {report.actions.map((action, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                {action}
+              </li>
+            ))}
+          </ul>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Warning Signs — Go to ER If:"
+          icon={AlertTriangle}
+          iconColor="text-red-600"
+          defaultOpen={true}
+        >
+          <ul className="space-y-2 mt-2">
+            {report.warning_signs.map((sign, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
+                {sign}
+              </li>
+            ))}
+          </ul>
+        </CollapsibleSection>
+      </div>
+
+      {/* Vet Questions */}
+      {report.vet_questions && report.vet_questions.length > 0 && (
+        <CollapsibleSection
+          title="Questions to Ask Your Veterinarian"
+          icon={MessageSquare}
+          iconColor="text-teal-600"
+          defaultOpen={false}
+        >
+          <ul className="space-y-2 mt-2">
+            {report.vet_questions.map((q, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                <MessageSquare className="w-4 h-4 text-teal-500 mt-0.5 flex-shrink-0" />
+                {q}
+              </li>
+            ))}
+          </ul>
+        </CollapsibleSection>
+      )}
+
+      {/* Disclaimer */}
+      <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+        <p className="text-xs text-gray-500 leading-relaxed">
+          <strong>Medical Disclaimer:</strong> This AI analysis is for informational
+          purposes only and is NOT a substitute for hands-on physical examination,
+          diagnostic testing, or professional veterinary medical advice. Always consult a
+          licensed veterinarian for diagnosis and treatment decisions. In emergencies,
+          contact your nearest emergency veterinary hospital immediately.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// --- Main Page ---
 
 export default function SymptomCheckerPage() {
   const { activePet } = useAppStore();
-  const [symptoms, setSymptoms] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageMeta, setSelectedImageMeta] = useState<ImageMeta | null>(null);
+  const [pendingGateImage, setPendingGateImage] = useState<string | null>(null);
+  const [pendingGateImageMeta, setPendingGateImageMeta] = useState<ImageMeta | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<SymptomResult | null>(null);
+  const [report, setReport] = useState<SymptomReport | null>(null);
+  const [readyForReport, setReadyForReport] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [sessionStarted, setSessionStarted] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCheck = async () => {
-    if (!symptoms.trim()) return;
+  // Hybrid triage session — passed to/from the API each turn
+  // Use both state (for re-renders) and ref (to avoid stale closures in async sendMessage)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [, setTriageSession] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const triageSessionRef = useRef<any>(null);
+
+  const pet = activePet || {
+    name: "your dog",
+    species: "dog",
+    breed: "Unknown",
+    age_years: 4,
+    weight: 50,
+    existing_conditions: [],
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  const clearComposerImage = () => {
+    setSelectedImage(null);
+    setSelectedImageMeta(null);
+  };
+
+  const clearPendingGateImage = () => {
+    setPendingGateImage(null);
+    setPendingGateImageMeta(null);
+  };
+
+  // ── Stage 1: Image Preprocessing ──
+  // Resize to max 1024px, compress to JPEG 85%, detect blurry images
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file.");
+      return;
+    }
+
+    // Max 10MB raw upload
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Image too large. Please upload an image under 10MB.");
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      // Resize to max 1024px on longest side (saves bandwidth + API tokens)
+      const MAX_SIZE = 1024;
+      let width = img.width;
+      let height = img.height;
+      if (width > MAX_SIZE || height > MAX_SIZE) {
+        const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Blur detection: compute variance of Laplacian on grayscale
+      const imageData = ctx.getImageData(0, 0, width, height);
+      const blurScore = detectBlur(imageData);
+
+      if (blurScore < 15) {
+        // Very blurry — warn user but still allow
+        alert(
+          "This photo looks a bit blurry. For the best analysis, try taking a clearer, well-lit photo of the affected area."
+        );
+      }
+
+      // Compress to JPEG at 85% quality
+      const base64 = canvas.toDataURL("image/jpeg", 0.85);
+      const estimatedKb = Math.round((base64.length * 0.75) / 1024);
+      setSelectedImage(base64);
+      setSelectedImageMeta({
+        width,
+        height,
+        blurScore: Number(blurScore.toFixed(1)),
+        estimatedKb,
+      });
+      console.log(
+        `[Preprocessing] ${img.width}x${img.height} → ${width}x${height}, blur=${blurScore.toFixed(1)}, size=${Math.round(base64.length * 0.75 / 1024)}KB`
+      );
+    };
+
+    img.src = URL.createObjectURL(file);
+
+    // Clear the input so the same file can be selected again if needed
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Laplacian variance blur detector — low score = blurry
+  function detectBlur(imageData: ImageData): number {
+    const { data, width, height } = imageData;
+    // Convert to grayscale
+    const gray = new Float32Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      const r = data[i * 4];
+      const g = data[i * 4 + 1];
+      const b = data[i * 4 + 2];
+      gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+    // Compute Laplacian (3x3 kernel: 0,-1,0 / -1,4,-1 / 0,-1,0)
+    let sum = 0;
+    let sumSq = 0;
+    let count = 0;
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        const lap =
+          4 * gray[idx] -
+          gray[idx - 1] -
+          gray[idx + 1] -
+          gray[idx - width] -
+          gray[idx + width];
+        sum += lap;
+        sumSq += lap * lap;
+        count++;
+      }
+    }
+    const mean = sum / count;
+    const variance = sumSq / count - mean * mean;
+    return variance;
+  }
+
+  // Build API-compatible messages array from current state
+  const getApiMessages = (extraMessages?: { role: string; content: string }[]) => {
+    const base = messages
+      .filter((m) => m.type !== "image_gate")
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+    return extraMessages ? [...base, ...extraMessages] : base;
+  };
+
+  // --- Send message to hybrid /api/ai/symptom-chat ---
+  const sendMessage = async (
+    text?: string,
+    options: SendMessageOptions = {}
+  ) => {
+    const {
+      imageOverride,
+      imageMetaOverride,
+      gateOverride = false,
+      appendUserMessage = true,
+    } = options;
+    const messageText = text ?? input.trim();
+    const imageToSend = imageOverride ?? selectedImage;
+    const imageMetaToSend = imageMetaOverride ?? selectedImageMeta;
+    if ((!messageText && !imageToSend) || loading) return;
+
+    let userMessage: ChatMessage | null = null;
+    if (appendUserMessage) {
+      const nextUserMessage: ChatMessage = {
+        role: "user",
+        content: messageText || "Uploaded an image for analysis.",
+        image: imageToSend || undefined,
+        timestamp: new Date(),
+      };
+      userMessage = nextUserMessage;
+      setMessages((prev) => [...prev, nextUserMessage]);
+      setInput("");
+      clearComposerImage();
+    }
+
+    if (imageToSend) {
+      setPendingGateImage(imageToSend);
+      setPendingGateImageMeta(imageMetaToSend ?? null);
+    }
+
+    setSessionStarted(true);
     setLoading(true);
 
     try {
-      const res = await fetch("/api/ai/symptom-check", {
+      const baseMessages = getApiMessages();
+      const apiMsgs =
+        appendUserMessage && userMessage
+          ? [...baseMessages, { role: "user" as const, content: userMessage.content }]
+          : baseMessages;
+
+      const res = await fetch("/api/ai/symptom-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          symptoms,
-          pet: activePet || {
-            name: "Cooper",
-            breed: "Golden Retriever",
-            age_years: 11,
-            weight: 72,
-            existing_conditions: ["mild arthritis"],
-          },
+          messages: apiMsgs,
+          pet,
+          action: "chat",
+          session: triageSessionRef.current,
+          image: imageToSend, // Send the base64 image here
+          imageMeta: imageMetaToSend,
+          gateOverride,
         }),
       });
 
       const data = await res.json();
-      setResult(data);
+
+      // Always store returned session state (both state and ref)
+      if (data.session) {
+        setTriageSession(data.session);
+        triageSessionRef.current = data.session;
+      }
+
+      if (data.type === "emergency") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.message,
+            type: "emergency",
+            timestamp: new Date(),
+          },
+        ]);
+        clearPendingGateImage();
+        setReadyForReport(true);
+      } else if (data.type === "image_gate") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.message,
+            type: "image_gate",
+            gate: data.gate,
+            timestamp: new Date(),
+          },
+        ]);
+      } else if (data.type === "ready") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.message,
+            type: "ready",
+            timestamp: new Date(),
+          },
+        ]);
+        clearPendingGateImage();
+        // Auto-trigger report generation with the latest session + messages
+        generateReport(
+          [...apiMsgs, { role: "assistant", content: data.message }],
+          data.session || triageSessionRef.current
+        );
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.message,
+            type: data.type,
+            timestamp: new Date(),
+          },
+        ]);
+        if (data.type !== "error") {
+          clearPendingGateImage();
+        }
+        if (data.ready_for_report) {
+          setReadyForReport(true);
+        }
+      }
     } catch {
-      setResult({
-        severity: "medium",
-        recommendation: "vet_48h",
-        title: "Assessment Complete",
-        explanation: `Based on the symptoms described for ${activePet?.name || "your pet"}, here is our AI assessment. The symptoms "${symptoms}" may indicate several possible conditions. Given the breed and age profile, we recommend monitoring closely and consulting your veterinarian if symptoms persist beyond 48 hours or worsen.`,
-        actions: [
-          "Monitor your pet closely for the next 24-48 hours",
-          "Keep a log of when symptoms occur and their duration",
-          "Ensure fresh water is always available",
-          "Avoid strenuous activity until symptoms resolve",
-          "Schedule a vet visit if no improvement in 48 hours",
-        ],
-        warning_signs: [
-          "Symptoms suddenly worsen",
-          "Loss of appetite persists beyond 24 hours",
-          "Difficulty breathing or rapid breathing",
-          "Inability to stand or walk",
-          "Signs of pain (whimpering, restlessness)",
-        ],
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I had trouble connecting. Please try again.",
+          type: "error",
+          timestamp: new Date(),
+        },
+      ]);
+    }
+
+    setLoading(false);
+    inputRef.current?.focus();
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const generateReport = async (overrideMessages?: { role: string; content: string }[], overrideSession?: any) => {
+    setGeneratingReport(true);
+    try {
+      const res = await fetch("/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: overrideMessages || getApiMessages(),
+          pet,
+          action: "generate_report",
+          session: overrideSession || triageSessionRef.current,
+        }),
       });
+
+      const data = await res.json();
+      if (data.type === "report" && data.report) {
+        setReport(data.report);
+      }
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "I had trouble generating the full report. You can try again using the button below.",
+          type: "error",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
-      setLoading(false);
+      setGeneratingReport(false);
     }
   };
 
-  const addQuickSymptom = (symptom: string) => {
-    setSymptoms((prev) => (prev ? `${prev}, ${symptom.toLowerCase()}` : symptom.toLowerCase()));
+  const startNewSession = () => {
+    setMessages([]);
+    setReport(null);
+    setReadyForReport(false);
+    setGeneratingReport(false);
+    setSessionStarted(false);
+    setTriageSession(null);
+    triageSessionRef.current = null;
+    setInput("");
+    clearComposerImage();
+    clearPendingGateImage();
+  };
+
+  const handleRetakePhoto = () => {
+    clearComposerImage();
+    clearPendingGateImage();
+    fileInputRef.current?.click();
+  };
+
+  const handleAnalyzeAnyway = () => {
+    if (!pendingGateImage || loading) return;
+
+    void sendMessage(undefined, {
+      imageOverride: pendingGateImage,
+      imageMetaOverride: pendingGateImageMeta,
+      gateOverride: true,
+      appendUserMessage: false,
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Symptom Checker</h1>
-        <p className="text-gray-500 mt-1">
-          Describe what&apos;s happening and get AI-powered guidance instantly
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Veterinary Symptom Analyzer
+            </h1>
+            <Badge variant="info">
+              <Activity className="w-3 h-3 mr-1" />
+              Clinical Matrix AI
+            </Badge>
+          </div>
+          <p className="text-gray-500 mt-1">
+            4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
+          </p>
+        </div>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          {sessionStarted && (
+            <Button
+              variant="secondary"
+              onClick={startNewSession}
+              className="flex-shrink-0"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              New Session
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Main Input */}
-      <Card className="p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-            <Stethoscope className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-gray-900">
-              What&apos;s going on with {activePet?.name || "your pet"}?
-            </h2>
-            <p className="text-sm text-gray-500">
-              Be as specific as possible — when it started, what you&apos;ve noticed, any changes.
-            </p>
-          </div>
-        </div>
-
-        <Textarea
-          value={symptoms}
-          onChange={(e) => setSymptoms(e.target.value)}
-          placeholder={`e.g., "${activePet?.name || "Cooper"} has been limping on his back left leg since yesterday morning. He's still eating and drinking normally, but seems reluctant to go on walks..."`}
-          rows={4}
-        />
-
-        {/* Quick Symptom Tags */}
-        <div className="mt-3">
-          <p className="text-xs text-gray-500 mb-2">Quick add:</p>
-          <div className="flex flex-wrap gap-2">
-            {quickSymptoms.map((s) => (
-              <button
-                key={s}
-                onClick={() => addQuickSymptom(s)}
-                className="px-3 py-1 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button onClick={handleCheck} loading={loading} disabled={!symptoms.trim()}>
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4 mr-2" />
-                Check Symptoms
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
-
-      {/* Result */}
-      {result && (
-        <Card className={`p-6 border-2 ${severityConfig[result.severity].bg} animate-fade-in`}>
+      {/* Pre-session: Welcome + Quick Start */}
+      {!sessionStarted && (
+        <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            {(() => {
-              const config = severityConfig[result.severity];
-              const IconComponent = config.icon;
-              return <IconComponent className="w-6 h-6 text-current" />;
-            })()}
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+              <Stethoscope className="w-5 h-5 text-purple-600" />
+            </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-gray-900">{result.title}</h3>
-                <Badge variant={severityConfig[result.severity].color}>
-                  {severityConfig[result.severity].label}
-                </Badge>
+              <h2 className="font-semibold text-gray-900">
+                Tell me what&apos;s going on with {pet.name}
+              </h2>
+              <p className="text-sm text-gray-500">
+                I&apos;ll ask follow-up questions like a real vet, then generate
+                a full clinical report with differential diagnoses
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 rounded-xl p-4 mb-4">
+            <div className="flex items-start gap-2">
+              <Bot className="w-5 h-5 text-purple-600 mt-0.5" />
+              <div>
+                <p className="text-sm text-purple-900 font-medium">
+                  How this works:
+                </p>
+                <ol className="text-sm text-purple-800 mt-1 space-y-1 list-decimal ml-4">
+                  <li>Describe what&apos;s happening in your own words or upload a photo of the issue</li>
+                  <li>I&apos;ll ask 3-5 focused clinical questions</li>
+                  <li>
+                    I&apos;ll generate a full report: differential diagnoses,
+                    diagnostic tests, home care, and vet prep questions
+                  </li>
+                </ol>
               </div>
             </div>
           </div>
 
-          <p className="text-gray-700 leading-relaxed mb-6">{result.explanation}</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Recommended Actions</h4>
-              <ul className="space-y-2">
-                {result.actions.map((action, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                    <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    {action}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Watch For These Warning Signs</h4>
-              <ul className="space-y-2">
-                {result.warning_signs.map((sign, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                    <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                    {sign}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-6 p-4 bg-white/70 rounded-xl">
-            <p className="text-xs text-gray-500">
-              This AI assessment is for informational purposes only and is not a substitute for professional veterinary care.
-              Always consult your veterinarian for medical decisions.
+          {/* Quick start symptom buttons */}
+          <div>
+            <p className="text-xs text-gray-500 mb-2">
+              Quick start — or type your own below:
             </p>
+            <div className="flex flex-wrap gap-2">
+              {quickSymptoms.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => sendMessage(`${pet.name} has been ${s.toLowerCase()}`)}
+                  className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </Card>
       )}
 
-      {/* Past Checks */}
-      <Card className="p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Symptom Checks</h2>
-        <div className="space-y-3">
-          {pastChecks.map((check, i) => (
-            <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{check.symptom}</p>
-                <p className="text-xs text-gray-500 mt-1">{check.date}</p>
-              </div>
-              <div className="text-right">
-                <Badge variant={severityConfig[check.severity].color}>
-                  {severityConfig[check.severity].label}
-                </Badge>
-                <p className="text-xs text-gray-500 mt-1">{check.recommendation}</p>
-              </div>
+      {/* Chat Messages */}
+      {sessionStarted && (
+        <Card className="p-0 overflow-hidden">
+          {/* Chat header */}
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+              <Bot className="w-4 h-4 text-purple-600" />
             </div>
-          ))}
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                Veterinary Triage for {pet.name}
+              </p>
+              <p className="text-xs text-gray-500">
+                {pet.breed}, {pet.age_years}y, {pet.weight} lbs
+              </p>
+            </div>
+            {!report && (
+              <div className="ml-auto">
+                <span className="text-xs text-gray-400">
+                  {messages.filter((m) => m.role === "assistant").length}/5
+                  questions
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Messages area */}
+          <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto min-h-[200px]">
+            {messages.map((msg, i) => (
+              <div key={i} className="space-y-2">
+                <ChatBubble message={msg} />
+                {msg.type === "image_gate" &&
+                  i === messages.length - 1 &&
+                  pendingGateImage && (
+                    <div className="ml-11 flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={handleRetakePhoto}
+                        disabled={loading}
+                      >
+                        Retake Photo
+                      </Button>
+                      <Button onClick={handleAnalyzeAnyway} disabled={loading}>
+                        Analyze Anyway
+                      </Button>
+                    </div>
+                  )}
+              </div>
+            ))}
+
+            {loading && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                    <span className="text-sm text-gray-500">Thinking...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input area — hide when report is generated */}
+          {!report && (
+            <div className="border-t border-gray-100 p-3">
+              {selectedImage && (
+                <div className="mb-3 relative inline-block">
+                  <img
+                    src={selectedImage}
+                    alt="Preview"
+                    className="h-24 rounded border border-gray-200 object-contain bg-gray-50"
+                  />
+                  <button
+                    onClick={clearComposerImage}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3"
+                  title="Attach Photo"
+                >
+                  <ImagePlus className="w-5 h-5 text-gray-500" />
+                </Button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  ref={fileInputRef}
+                  className="hidden"
+                />
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    messages.length === 0
+                      ? `Describe what's going on with ${pet.name} or attach a photo...`
+                      : "Type your answer or attach a photo..."
+                  }
+                  rows={2}
+                  className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <div className="flex flex-col gap-2">
+                  <Button
+                    onClick={() => sendMessage()}
+                    disabled={(!input.trim() && !selectedImage) || loading}
+                    className="h-full"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Generate Report button */}
+              {readyForReport && !generatingReport && (
+                <div className="mt-3 flex justify-center">
+                  <button
+                    onClick={() => generateReport()}
+                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold rounded-full hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-200"
+                  >
+                    <Zap className="w-4 h-4" />
+                    Generate Full Veterinary Report
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {(!sessionStarted && !report) && (
+        <div className="p-3 bg-white border border-gray-200 rounded-xl">
+           <div className="flex gap-2">
+              <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3"
+                  title="Attach Photo"
+                >
+                  <ImagePlus className="w-5 h-5 text-gray-500" />
+              </Button>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                ref={fileInputRef}
+                className="hidden"
+              />
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={`Describe what's going on with ${pet.name} or attach a photo...`}
+                rows={2}
+                className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={() => sendMessage()}
+                  disabled={(!input.trim() && !selectedImage) || loading}
+                  className="h-full"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+           </div>
+           {selectedImage && (
+              <div className="mt-3 relative inline-block">
+                <img
+                  src={selectedImage}
+                  alt="Preview"
+                  className="h-24 rounded border border-gray-200 object-contain bg-gray-50"
+                />
+                <button
+                  onClick={clearComposerImage}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
         </div>
-      </Card>
+      )}
+
+
+      {/* Generating Report Loading State */}
+      {generatingReport && (
+        <Card className="p-8 text-center animate-pulse">
+          <Stethoscope className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700">
+            Generating Veterinary Report...
+          </h3>
+          <p className="text-sm text-gray-500 mt-2">
+            Analyzing full conversation history, building differential diagnoses
+            with breed-specific data, and preparing diagnostic recommendations...
+          </p>
+        </Card>
+      )}
+
+      {/* Full Report */}
+      {report && <ReportView report={report} />}
     </div>
   );
 }

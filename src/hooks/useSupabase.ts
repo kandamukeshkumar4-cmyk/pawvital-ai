@@ -1,0 +1,198 @@
+"use client";
+
+import { useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import { useAppStore } from "@/store/app-store";
+import type { Pet, UserProfile } from "@/types";
+
+// ─── Auth Hook ────────────────────────────────────────────────────────────────
+
+export function useAuth() {
+  const { user, setUser } = useAppStore();
+  const router = useRouter();
+
+  const signOut = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      router.push("/login");
+      return;
+    }
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      setUser(null);
+      router.push("/login");
+    } catch (err) {
+      console.error("Sign out error:", err);
+      router.push("/login");
+    }
+  }, [router, setUser]);
+
+  return { user, signOut, isConfigured: isSupabaseConfigured };
+}
+
+// ─── User + Pets Loader ───────────────────────────────────────────────────────
+
+export function useLoadUserData() {
+  const { setUser, setPets, setActivePet, activePet } = useAppStore();
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    async function load() {
+      try {
+        const supabase = createClient();
+
+        // Get current auth user
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (!authUser) return;
+
+        // Get profile from profiles table
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", authUser.id)
+          .single();
+
+        if (profile) {
+          const userProfile: UserProfile = {
+            id: profile.id,
+            email: authUser.email || "",
+            full_name: profile.full_name || authUser.email?.split("@")[0] || "Pet Parent",
+            avatar_url: profile.avatar_url,
+            subscription_status: profile.subscription_status || "free_trial",
+            trial_ends_at: profile.trial_ends_at,
+            stripe_customer_id: profile.stripe_customer_id,
+            created_at: profile.created_at,
+          };
+          setUser(userProfile);
+        } else {
+          // Profile doesn't exist yet — use auth user data
+          setUser({
+            id: authUser.id,
+            email: authUser.email || "",
+            full_name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Pet Parent",
+            subscription_status: "free_trial",
+            created_at: authUser.created_at,
+          });
+        }
+
+        // Load pets for this user
+        const { data: pets } = await supabase
+          .from("pets")
+          .select("*")
+          .eq("user_id", authUser.id)
+          .order("created_at", { ascending: true });
+
+        if (pets && pets.length > 0) {
+          setPets(pets);
+          // Set first pet as active if none selected
+          if (!activePet) setActivePet(pets[0]);
+        }
+      } catch (err) {
+        console.error("Failed to load user data:", err);
+      }
+    }
+
+    load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
+// ─── Pet CRUD ─────────────────────────────────────────────────────────────────
+
+export function usePets() {
+  const { pets, setPets, setActivePet } = useAppStore();
+
+  const savePet = useCallback(async (pet: Pet): Promise<Pet> => {
+    if (!isSupabaseConfigured) {
+      // Demo mode: just update local state
+      const updated = [...pets.filter((p) => p.id !== pet.id), pet];
+      setPets(updated);
+      setActivePet(pet);
+      return pet;
+    }
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const petWithUser = { ...pet, user_id: user.id };
+
+      const { data, error } = await supabase
+        .from("pets")
+        .upsert(petWithUser, { onConflict: "id" })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const saved = data as Pet;
+      const updated = [...pets.filter((p) => p.id !== saved.id), saved];
+      setPets(updated);
+      setActivePet(saved);
+      return saved;
+    } catch (err) {
+      console.error("Failed to save pet:", err);
+      // Fallback to local state
+      const updated = [...pets.filter((p) => p.id !== pet.id), pet];
+      setPets(updated);
+      setActivePet(pet);
+      return pet;
+    }
+  }, [pets, setPets, setActivePet]);
+
+  const deletePet = useCallback(async (petId: string): Promise<void> => {
+    if (!isSupabaseConfigured) {
+      const updated = pets.filter((p) => p.id !== petId);
+      setPets(updated);
+      if (updated.length > 0) setActivePet(updated[0]);
+      else setActivePet(null);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      await supabase.from("pets").delete().eq("id", petId);
+    } catch (err) {
+      console.error("Failed to delete pet from DB:", err);
+    } finally {
+      const updated = pets.filter((p) => p.id !== petId);
+      setPets(updated);
+      if (updated.length > 0) setActivePet(updated[0]);
+      else setActivePet(null);
+    }
+  }, [pets, setPets, setActivePet]);
+
+  return { pets, savePet, deletePet };
+}
+
+// ─── Triage History ───────────────────────────────────────────────────────────
+
+export async function saveTriageSession(
+  petId: string,
+  symptoms: string,
+  report: string,
+  severity: "low" | "medium" | "high" | "emergency",
+  recommendation: "monitor" | "vet_48h" | "vet_24h" | "emergency_vet"
+): Promise<void> {
+  if (!isSupabaseConfigured) return;
+
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from("symptom_checks").insert({
+      pet_id: petId,
+      symptoms,
+      ai_response: report,
+      severity,
+      recommendation,
+    });
+  } catch (err) {
+    console.error("Failed to save triage session:", err);
+    // Non-blocking — don't throw
+  }
+}

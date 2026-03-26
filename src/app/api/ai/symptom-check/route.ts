@@ -7,67 +7,131 @@ export async function POST(request: Request) {
 
     if (!isAnthropicConfigured) {
       return NextResponse.json({
-        severity: "medium",
+        severity: "high",
         recommendation: "vet_48h",
         title: "AI Assessment (Demo Mode)",
-        explanation: `Based on the symptoms described for ${pet?.name || "your pet"}: "${symptoms}". This is demo mode — add your ANTHROPIC_API_KEY to get real AI-powered, breed-specific symptom analysis powered by Claude. We recommend monitoring closely and consulting your vet if symptoms persist.`,
+        explanation: `Based on the symptoms described for ${pet?.name || "your pet"}: "${symptoms}". This is demo mode — add your ANTHROPIC_API_KEY to get real AI-powered, veterinary-specialist-grade symptom analysis powered by Claude.`,
+        differential_diagnoses: [
+          { condition: "Demo Mode — Configure API Key", likelihood: "high", description: "Add your Anthropic API key to unlock full veterinary-grade differential diagnosis with clinical specificity." },
+        ],
+        clinical_notes: "Demo mode active. Real analysis will include ICD-10-CM veterinary codes, breed-specific epidemiological data, and evidence-based diagnostic pathways.",
+        recommended_tests: [
+          { test: "Complete Blood Count (CBC)", reason: "Baseline hematological assessment", urgency: "routine" },
+        ],
+        home_care: [
+          { instruction: "Monitor symptoms closely", duration: "24-48 hours", details: "Track frequency, duration, and any changes in severity" },
+        ],
         actions: [
           "Monitor your pet closely for the next 24-48 hours",
           "Keep a log of when symptoms occur and their duration",
-          "Ensure fresh water is always available",
-          "Avoid strenuous activity until symptoms resolve",
           "Schedule a vet visit if no improvement in 48 hours",
         ],
         warning_signs: [
-          "Symptoms suddenly worsen",
+          "Symptoms suddenly worsen or new symptoms appear",
           "Loss of appetite persists beyond 24 hours",
-          "Difficulty breathing or rapid breathing",
+          "Difficulty breathing or rapid breathing at rest",
           "Inability to stand or walk",
+        ],
+        vet_questions: [
+          "Ask your vet about breed-specific risk factors",
         ],
       });
     }
 
-    const prompt = `You are an expert veterinary AI assistant with deep knowledge of animal health, breed-specific conditions, and age-related risks. A pet owner is describing symptoms and needs your help.
+    const prompt = `You are a board-certified veterinary internist (DACVIM) with 20+ years of clinical experience, fellowship training in emergency medicine, and deep expertise in breed-specific pathology. You think like a specialist — not a Google search. Your analysis must reflect the depth and specificity of a $300 specialist consultation.
 
-Pet Profile:
-- Name: ${pet.name}
+PATIENT HISTORY:
+- Patient: ${pet.name}
+- Species: ${pet.species || "Dog"}
 - Breed: ${pet.breed}
-- Age: ${pet.age_years} years
+- Age: ${pet.age_years} years ${pet.age_years >= 7 ? "(GERIATRIC — elevated oncological, orthopedic, and organ-failure risk)" : pet.age_years <= 1 ? "(PEDIATRIC — elevated infectious, congenital, and developmental risk)" : ""}
 - Weight: ${pet.weight} lbs
-- Existing conditions: ${pet.existing_conditions?.join(", ") || "None"}
+- Known conditions: ${pet.existing_conditions?.join(", ") || "None documented"}
 - Current medications: ${pet.medications?.join(", ") || "None"}
+- Vaccination status: ${pet.vaccination_status || "Unknown"}
 
-Symptoms described by owner: "${symptoms}"
+PRESENTING COMPLAINT (owner-reported): "${symptoms}"
 
-Analyze these symptoms carefully. Consider:
-1. Breed-specific predispositions (e.g., Golden Retrievers are prone to hip dysplasia, cancer; Bulldogs to breathing issues)
-2. Age-related conditions (senior dogs 7+ have different risk profiles)
-3. Interaction with existing conditions and medications
-4. Urgency level based on symptom combination and severity
+CLINICAL ANALYSIS PROTOCOL:
+You MUST analyze like a real veterinary specialist would. This means:
+
+1. DIFFERENTIAL DIAGNOSES — List 3-5 specific conditions ranked by likelihood. Do NOT give vague answers like "could be many things." Name the actual diseases/conditions with their veterinary terminology. For each differential:
+   - Use the actual medical/veterinary term (e.g., "Intervertebral Disc Disease (IVDD)" not "back problems")
+   - Consider breed-specific prevalence data (e.g., IVDD is 10-12x more common in Dachshunds)
+   - Factor in age-related incidence rates
+   - Note if the condition interacts with existing conditions/medications
+
+2. CLINICAL NOTES — Write like you're dictating to a veterinary colleague. Include:
+   - Suspected anatomical systems involved
+   - Pathophysiological reasoning for your top differential
+   - Breed-specific epidemiological context with actual prevalence data where relevant
+   - How the patient's age/weight shifts your differential ranking
+   - Any drug interactions or contraindications with current medications
+
+3. RECOMMENDED DIAGNOSTICS — Specific tests a vet should run, not generic advice. Include:
+   - Name the exact test (e.g., "Serum T4 + Free T4 by equilibrium dialysis" not just "blood test")
+   - Explain what each test rules in/out
+   - Prioritize: which test to run FIRST for fastest diagnosis
+   - Estimated cost range when relevant
+
+4. HOME CARE — Specific, measurable instructions (not "monitor closely"). Include:
+   - Exact parameters to track (e.g., "Count respiratory rate at rest — normal is 15-30 breaths/min for dogs")
+   - Time-bound instructions (e.g., "Withhold food for 12 hours, then offer 1/4 normal portion of bland diet: boiled chicken breast + white rice, 2:1 ratio")
+   - What to measure and how (e.g., "Check capillary refill time: press gum above canine tooth, should return to pink in < 2 seconds")
+
+5. VET VISIT PREP — Specific questions the owner should ask their vet, tailored to the differentials
 
 Respond in this exact JSON format:
 {
   "severity": "low" | "medium" | "high" | "emergency",
-  "recommendation": "monitor" | "vet_48h" | "emergency_vet",
-  "title": "Brief assessment title (5-8 words)",
-  "explanation": "Detailed, empathetic explanation of what might be happening. Consider the specific breed and age. Explain in plain language a worried pet parent can understand. 3-4 sentences.",
-  "actions": ["Specific action 1", "Specific action 2", "Specific action 3", "Specific action 4", "Specific action 5"],
-  "warning_signs": ["Escalation sign 1", "Escalation sign 2", "Escalation sign 3", "Escalation sign 4"]
+  "recommendation": "monitor" | "vet_48h" | "vet_24h" | "emergency_vet",
+  "title": "Specific clinical assessment title (e.g., 'Suspected Cranial Cruciate Ligament Tear' not 'Leg Problem')",
+  "explanation": "Write 4-6 sentences explaining the clinical picture to a pet parent. Use precise medical terms but immediately follow each with a plain-English explanation in parentheses. Connect the dots between symptoms, breed predisposition, and age factors. Be specific about WHY you suspect what you suspect.",
+  "differential_diagnoses": [
+    {
+      "condition": "Full medical name of condition",
+      "likelihood": "high" | "moderate" | "low",
+      "description": "2-3 sentences: Why this condition fits, breed-specific prevalence, what distinguishes it from other differentials, expected progression if untreated"
+    }
+  ],
+  "clinical_notes": "Technical paragraph written as if dictating to a veterinary colleague. Include suspected pathophysiology, relevant breed predisposition data with prevalence percentages where known, anatomical systems involved, and any red flags in the presentation. Reference actual veterinary literature concepts.",
+  "recommended_tests": [
+    {
+      "test": "Exact diagnostic test name",
+      "reason": "What this test confirms or rules out, and which differential it targets",
+      "urgency": "stat" | "urgent" | "routine"
+    }
+  ],
+  "home_care": [
+    {
+      "instruction": "Specific action with measurable parameters",
+      "duration": "Exact timeframe",
+      "details": "Step-by-step details including normal vs abnormal values"
+    }
+  ],
+  "actions": ["5-7 specific, actionable steps — not generic advice. Each should reference the specific condition suspected."],
+  "warning_signs": ["4-6 specific clinical escalation signs with thresholds — e.g., 'Respiratory rate exceeds 40 breaths/min at rest' not just 'breathing problems'"],
+  "vet_questions": ["3-5 specific questions to ask the vet, tailored to the differential diagnoses — e.g., 'Ask about orthogonal radiographs of the stifle joint to assess for cruciate ligament integrity'"]
 }
 
 Severity guidelines:
-- "low": Minor issue, likely resolves on its own with home care
-- "medium": Worth monitoring closely, schedule vet visit if persists beyond 48 hours
-- "high": Needs veterinary attention within 24-48 hours
-- "emergency": Needs IMMEDIATE emergency veterinary care — do not wait
+- "low": Self-limiting, evidence-based home management appropriate. Clinical signs consistent with benign etiology.
+- "medium": Warrants professional evaluation if symptoms persist >48h or any single escalation sign appears. May require diagnostics to rule out serious pathology.
+- "high": Clinical presentation suggests pathology requiring veterinary intervention within 24h. Delay risks disease progression or complications.
+- "emergency": Presentation consistent with potentially life-threatening condition. Immediate emergency veterinary care required — triage priority.
 
-CRITICAL: Always err on the side of caution. When in doubt, recommend a higher severity level. A false alarm is always better than missing something serious.
+CRITICAL RULES:
+- NEVER give generic advice that could apply to any pet. Every recommendation must reference the specific breed, age, weight, and symptom combination.
+- Name actual diseases, not vague categories. "Immune-mediated hemolytic anemia (IMHA)" not "blood disorder."
+- Include specific vital sign parameters the owner can check at home.
+- If symptoms could indicate a surgical emergency (GDV, foreign body obstruction, splenic torsion), flag it prominently regardless of perceived likelihood.
+- Always err on the side of caution. A false alarm costs a vet visit. A missed emergency costs a life.
 
 Respond ONLY with valid JSON. No markdown, no code blocks, just the JSON object.`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
+      max_tokens: 4096,
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -76,7 +140,11 @@ Respond ONLY with valid JSON. No markdown, no code blocks, just the JSON object.
       throw new Error("Unexpected response type");
     }
 
-    const result = JSON.parse(content.text);
+    let jsonText = content.text.trim();
+    if (jsonText.startsWith("```")) {
+      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+    }
+    const result = JSON.parse(jsonText);
     return NextResponse.json(result);
   } catch (error) {
     console.error("Symptom check error:", error);

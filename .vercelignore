@@ -1,0 +1,13 @@
+# Image corpus (already indexed in Supabase - not needed at runtime)
+corpus/
+scripts/
+
+# Dev files
+.claude/
+*.sql
+*.mjs
+
+# Large caches
+node_modules/
+.next/
+.git/
