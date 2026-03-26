@@ -85,11 +85,11 @@ const ROLE_CONCURRENCY_LIMITS: Partial<Record<ModelRole, number>> = {
 };
 
 const ROLE_TIMEOUT_MS: Record<ModelRole, number> = {
-  extraction: 90000,
-  phrasing: 20000,
+  extraction: 45000,
+  phrasing: 15000,
   diagnosis: 120000,
   safety: 30000,
-  vision_fast: 45000,
+  vision_fast: 30000,
   vision_detailed: 90000,
   vision_deep: 45000,
 };
@@ -221,8 +221,11 @@ export async function complete({
 
   let lastError: Error | null = null;
   for (const model of modelsToTry) {
+    const timeoutMs = ROLE_TIMEOUT_MS[role];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-      const timeoutMs = ROLE_TIMEOUT_MS[role];
       const response = await withRoleConcurrency(role, () =>
         client.chat.completions.create({
           model,
@@ -233,9 +236,12 @@ export async function complete({
           stream: false,
           ...disableThinking,
         }, {
+          signal: controller.signal,
           timeout: timeoutMs,
         })
       );
+
+      clearTimeout(timeoutId);
 
       const message = response.choices[0]?.message;
       // Some NVIDIA NIM models return text in reasoning_content/reasoning
@@ -251,6 +257,7 @@ export async function complete({
       }
       return content.trim();
     } catch (err) {
+      clearTimeout(timeoutId);
       lastError = err instanceof Error ? err : new Error(String(err));
       console.error(`[NVIDIA] ${model} failed, trying fallback...`, lastError.message);
       continue;
@@ -357,8 +364,11 @@ async function callVisionModel(
 
   let lastError: Error | null = null;
   for (const model of modelsToTry) {
+    const timeoutMs = ROLE_TIMEOUT_MS[role];
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
-      const timeoutMs = ROLE_TIMEOUT_MS[role];
       const response = await withRoleConcurrency(role, () =>
         client.chat.completions.create({
           model,
@@ -374,9 +384,12 @@ async function callVisionModel(
           stream: false,
           ...extras,
         }, {
+          signal: controller.signal,
           timeout: timeoutMs,
         })
       );
+
+      clearTimeout(timeoutId);
 
       const message = response.choices[0]?.message;
       const content =
@@ -390,6 +403,7 @@ async function callVisionModel(
       // Strip thinking tags
       return content.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     } catch (err) {
+      clearTimeout(timeoutId);
       lastError = err instanceof Error ? err : new Error(String(err));
       console.error(`[Vision ${MODELS[role].role}] ${model} failed:`, lastError.message);
       continue;
