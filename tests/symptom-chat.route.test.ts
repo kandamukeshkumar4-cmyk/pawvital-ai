@@ -103,9 +103,11 @@ describe("symptom-chat mixed text + image routing", () => {
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: [], answers: {} })
     );
-    mockPhraseWithKimi.mockResolvedValue(
-      "I appreciate that detail about Bruno. When did the limping start — was it sudden or gradual?"
-    );
+    mockPhraseWithKimi.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
     mockRunVisionPipeline.mockResolvedValue({
       combined: "photo analysis",
       severity: "needs_review",
@@ -138,7 +140,7 @@ describe("symptom-chat mixed text + image routing", () => {
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
   });
 
-  it("keeps limping follow-ups on track while still carrying forward wound-photo context", async () => {
+  it("fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up", async () => {
     let session = createSession();
     session = addSymptoms(session, ["limping"]);
     session.last_question_asked = "which_leg";
@@ -149,19 +151,64 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
-    expect(payload.message).toContain("When did the limping start");
+    expect(payload.message).toBe("QUESTION_ID:wound_size");
     expect(payload.message).not.toContain("confusion about what type of animal");
 
     expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
     expect(mockExtractWithQwen).not.toHaveBeenCalled();
     expect(mockPhraseWithKimi).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithKimi.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
+    expect(mockPhraseWithKimi.mock.calls[0][0]).toContain("Internal ID: wound_size");
+    expect(mockPhraseWithKimi.mock.calls[0][0]).not.toContain(
+      "Internal ID: limping_onset"
+    );
     expect(mockPhraseWithKimi.mock.calls[0][0]).not.toContain(
       "Breed hint from image"
     );
-    expect(payload.session.known_symptoms).toContain("wound_skin_issue");
 
+    expect(payload.session.known_symptoms).toContain("wound_skin_issue");
     expect(payload.session.answered_questions).toContain("which_leg");
+    expect(payload.session.answered_questions).toContain("wound_location");
+    expect(payload.session.extracted_answers.which_leg).toBe("left leg");
+    expect(payload.session.extracted_answers.wound_location).toBe("left leg");
+  });
+
+  it("keeps the limping flow when the image adds no new symptom evidence", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockRunVisionPipeline.mockResolvedValue({
+      combined: "photo analysis",
+      severity: "normal",
+      tiersUsed: ["tier1"],
+      woundDetected: false,
+      tier1_fast: "{\"finding\":\"normal\"}",
+      tier2_detailed: null,
+      tier3_reasoned: null,
+    });
+    mockParseVisionForMatrix.mockReturnValue({
+      symptoms: [],
+      redFlags: [],
+      severityClass: "normal",
+    });
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "which_leg";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeRequest(session, "left leg"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.message).toBe("QUESTION_ID:limping_onset");
+    expect(mockPhraseWithKimi.mock.calls[0][0]).toContain(
+      "Internal ID: limping_onset"
+    );
+    expect(payload.session.known_symptoms).toEqual(["limping"]);
     expect(payload.session.extracted_answers.which_leg).toBe("left leg");
   });
 
@@ -176,8 +223,10 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
+    expect(payload.message).toBe("QUESTION_ID:wound_size");
     expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithKimi).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithKimi.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
+    expect(payload.session.extracted_answers.wound_location).toBe("left leg");
   });
 });

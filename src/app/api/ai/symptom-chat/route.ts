@@ -25,7 +25,7 @@ import {
   type TriageSession,
   type PetProfile,
 } from "@/lib/triage-engine";
-import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
+import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 import {
   evaluateImageGate,
   shouldAnalyzeWoundImage,
@@ -124,6 +124,7 @@ export async function POST(request: Request) {
     let session = clientSession || createSession();
     let effectivePet = getEffectivePetProfile(pet, session);
     const imageHash = image ? hashImage(image) : null;
+    const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
 
     if (imageHash && session.last_uploaded_image_hash !== imageHash) {
       resetImageStateForNewUpload(session);
@@ -148,11 +149,6 @@ export async function POST(request: Request) {
     const fastPathExtraction = getDeterministicFastPathExtraction(
       session,
       lastUserMessage.content
-    );
-    const deferImageDrivenWoundAnalysis = shouldDeferImageDrivenWoundAnalysis(
-      session,
-      Boolean(image),
-      fastPathExtraction
     );
 
     // ═══════════════════════════════════════════════════════════════════
@@ -342,14 +338,12 @@ export async function POST(request: Request) {
     // STEP 1: EXTRACT structured data — Qwen 3.5 122B (Claude fallback)
     // ═══════════════════════════════════════════════════════════════════
     const extractionSchema = getExtractionSchema(session);
-    const compactImageSignals = deferImageDrivenWoundAnalysis
-      ? ""
-      : buildCompactImageSignalContext(
-          session,
-          visionSymptoms,
-          visionRedFlags,
-          visionSeverity
-        );
+    const compactImageSignals = buildCompactImageSignalContext(
+      session,
+      visionSymptoms,
+      visionRedFlags,
+      visionSeverity
+    );
     const extracted =
       fastPathExtraction ||
       (await extractDataFromMessage(
@@ -430,6 +424,14 @@ export async function POST(request: Request) {
       );
     }
 
+    session = propagateSharedLocationAnswers(session);
+    const turnFocusSymptoms = buildTurnFocusSymptoms(
+      knownSymptomsBeforeTurn,
+      session,
+      visionSymptoms,
+      extracted.symptoms || []
+    );
+
     // ═══════════════════════════════════════════════════════════════════
     // STEP 3: Check red flags — EMERGENCY OVERRIDE (pure code)
     // ═══════════════════════════════════════════════════════════════════
@@ -458,7 +460,10 @@ export async function POST(request: Request) {
       });
     }
 
-    const nextQuestionId = getNextQuestionAvoidingRepeat(session);
+    const nextQuestionId = getNextQuestionAvoidingRepeat(
+      session,
+      turnFocusSymptoms
+    );
 
     if (!nextQuestionId) {
       if (session.known_symptoms.length === 0) {
@@ -490,7 +495,8 @@ export async function POST(request: Request) {
     const questionText = getQuestionText(nextQuestionId);
     const phrasingContext = shouldIncludeImageContextInQuestion(
       nextQuestionId,
-      session
+      session,
+      turnFocusSymptoms
     )
       ? buildQuestionPhrasingContext(session, visionSeverity)
       : null;
@@ -1149,8 +1155,13 @@ Output ONLY valid JSON (no thinking, no markdown):
   return report;
 }
 
-function getNextQuestionAvoidingRepeat(session: TriageSession): string | null {
-  const nextQuestionId = getNextQuestion(session);
+function getNextQuestionAvoidingRepeat(
+  session: TriageSession,
+  preferredSymptoms: string[] = []
+): string | null {
+  const nextQuestionId =
+    getNextQuestionForPreferredSymptoms(session, preferredSymptoms) ||
+    getNextQuestion(session);
   if (!nextQuestionId) return null;
 
   if (
@@ -1164,6 +1175,37 @@ function getNextQuestionAvoidingRepeat(session: TriageSession): string | null {
     (qId) => qId !== session.last_question_asked
   );
   return alternatives[0] || nextQuestionId;
+}
+
+function getNextQuestionForPreferredSymptoms(
+  session: TriageSession,
+  preferredSymptoms: string[]
+): string | null {
+  if (preferredSymptoms.length === 0) {
+    return null;
+  }
+
+  for (const symptom of preferredSymptoms) {
+    const followUps = SYMPTOM_MAP[symptom]?.follow_up_questions;
+    if (!followUps?.length) {
+      continue;
+    }
+
+    const unanswered = followUps.filter(
+      (qId) => !session.answered_questions.includes(qId)
+    );
+    if (unanswered.length === 0) {
+      continue;
+    }
+
+    const critical = unanswered.filter(
+      (qId) => FOLLOW_UP_QUESTIONS[qId]?.critical
+    );
+
+    return critical[0] || unanswered[0] || null;
+  }
+
+  return null;
 }
 
 function coerceAnswerForQuestion(
@@ -1292,53 +1334,91 @@ function buildQuestionPhrasingContext(
   return parts.join(". ");
 }
 
-function shouldDeferImageDrivenWoundAnalysis(
-  session: TriageSession,
-  hasImage: boolean,
-  fastPathExtraction: {
-    symptoms: string[];
-    answers: Record<string, string | boolean | number>;
-  } | null
-): boolean {
-  if (!hasImage || !fastPathExtraction) {
-    return false;
-  }
-
-  const pendingQuestionId = session.last_question_asked;
-  if (!pendingQuestionId || session.answered_questions.includes(pendingQuestionId)) {
-    return false;
-  }
-
-  if (pendingQuestionId.startsWith("wound_")) {
-    return false;
-  }
-
-  if (
-    !Object.prototype.hasOwnProperty.call(
-      fastPathExtraction.answers,
-      pendingQuestionId
-    )
-  ) {
-    return false;
-  }
-
-  return !(
-    session.known_symptoms.length === 1 &&
-    session.known_symptoms[0] === "wound_skin_issue"
-  );
-}
-
 function shouldIncludeImageContextInQuestion(
   questionId: string,
-  session: TriageSession
+  session: TriageSession,
+  preferredSymptoms: string[]
 ): boolean {
   if (questionId.startsWith("wound_")) {
     return true;
   }
 
   return (
-    session.known_symptoms.includes("wound_skin_issue") &&
+    preferredSymptoms.some((symptom) =>
+      SYMPTOM_MAP[symptom]?.follow_up_questions.includes(questionId)
+    ) &&
     (Boolean(session.roboflow_skin_labels?.length) || Boolean(session.vision_analysis))
+  );
+}
+
+function buildTurnFocusSymptoms(
+  knownSymptomsBeforeTurn: Set<string>,
+  session: TriageSession,
+  visionSymptoms: string[] = [],
+  extractedSymptoms: string[] = []
+): string[] {
+  const focus = new Set<string>();
+
+  for (const symptom of session.known_symptoms) {
+    if (!knownSymptomsBeforeTurn.has(symptom)) {
+      focus.add(symptom);
+    }
+  }
+
+  for (const symptom of [...visionSymptoms, ...extractedSymptoms]) {
+    if (session.known_symptoms.includes(symptom)) {
+      focus.add(symptom);
+    }
+  }
+
+  return [...focus];
+}
+
+function propagateSharedLocationAnswers(session: TriageSession): TriageSession {
+  const locationQuestionGroups = [["which_leg", "wound_location"]];
+  let updated = session;
+
+  for (const group of locationQuestionGroups) {
+    const sourceQuestionId = group.find(
+      (questionId) =>
+        Object.prototype.hasOwnProperty.call(
+          updated.extracted_answers,
+          questionId
+        ) &&
+        updated.extracted_answers[questionId] !== ""
+    );
+
+    if (!sourceQuestionId) {
+      continue;
+    }
+
+    const sourceValue = updated.extracted_answers[sourceQuestionId];
+
+    for (const targetQuestionId of group) {
+      if (targetQuestionId === sourceQuestionId) {
+        continue;
+      }
+
+      if (
+        updated.answered_questions.includes(targetQuestionId) ||
+        !isQuestionRelevantForCurrentSymptoms(updated, targetQuestionId)
+      ) {
+        continue;
+      }
+
+      updated = recordAnswer(updated, targetQuestionId, sourceValue);
+    }
+  }
+
+  return updated;
+}
+
+function isQuestionRelevantForCurrentSymptoms(
+  session: TriageSession,
+  questionId: string
+): boolean {
+  return session.known_symptoms.some((symptom) =>
+    SYMPTOM_MAP[symptom]?.follow_up_questions.includes(questionId)
   );
 }
 
