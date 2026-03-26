@@ -84,6 +84,16 @@ const ROLE_CONCURRENCY_LIMITS: Partial<Record<ModelRole, number>> = {
   vision_deep: 1,
 };
 
+const ROLE_TIMEOUT_MS: Record<ModelRole, number> = {
+  extraction: 90000,
+  phrasing: 20000,
+  diagnosis: 120000,
+  safety: 30000,
+  vision_fast: 45000,
+  vision_detailed: 90000,
+  vision_deep: 45000,
+};
+
 const roleInflight = new Map<ModelRole, number>();
 const roleQueues = new Map<ModelRole, Array<() => void>>();
 
@@ -212,6 +222,7 @@ export async function complete({
   let lastError: Error | null = null;
   for (const model of modelsToTry) {
     try {
+      const timeoutMs = ROLE_TIMEOUT_MS[role];
       const response = await withRoleConcurrency(role, () =>
         client.chat.completions.create({
           model,
@@ -221,6 +232,8 @@ export async function complete({
           top_p: role === "diagnosis" ? 0.7 : 0.9,
           stream: false,
           ...disableThinking,
+        }, {
+          timeout: timeoutMs,
         })
       );
 
@@ -345,6 +358,7 @@ async function callVisionModel(
   let lastError: Error | null = null;
   for (const model of modelsToTry) {
     try {
+      const timeoutMs = ROLE_TIMEOUT_MS[role];
       const response = await withRoleConcurrency(role, () =>
         client.chat.completions.create({
           model,
@@ -359,6 +373,8 @@ async function callVisionModel(
           temperature,
           stream: false,
           ...extras,
+        }, {
+          timeout: timeoutMs,
         })
       );
 

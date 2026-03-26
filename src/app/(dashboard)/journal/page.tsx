@@ -6,7 +6,6 @@ import {
   Plus,
   Camera,
   Scale,
-  Heart,
   Star,
   Activity,
   Calendar,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Activity, Stethoscope, Pill, Bell, TrendingUp, AlertCircle, Plus } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/card";
@@ -31,11 +31,7 @@ const upcomingReminders = [
 export default function DashboardPage() {
   const { activePet } = useAppStore();
   const [healthScore] = useState(87);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-
-  useEffect(() => {
-    if (!activePet) setShowOnboarding(true);
-  }, [activePet]);
+  const showOnboarding = !activePet;
 
   if (showOnboarding && !activePet) {
     return (

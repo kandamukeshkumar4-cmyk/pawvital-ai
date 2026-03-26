@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import {
-  Users,
   Plus,
   Heart,
   MessageCircle,
   Search,
-  TrendingUp,
 } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
@@ -15,7 +13,6 @@ import Textarea from "@/components/ui/textarea";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
-import Badge from "@/components/ui/badge";
 
 interface Post {
   id: string;

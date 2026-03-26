@@ -18,7 +18,6 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
-import Badge from "@/components/ui/badge";
 
 interface ReminderItem {
   id: string;

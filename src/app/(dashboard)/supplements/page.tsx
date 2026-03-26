@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pill, Plus, ExternalLink, Sparkles, Check, X } from "lucide-react";
+import { Pill, ExternalLink, Sparkles } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
