@@ -145,6 +145,16 @@ export async function POST(request: Request) {
       });
     }
 
+    const fastPathExtraction = getDeterministicFastPathExtraction(
+      session,
+      lastUserMessage.content
+    );
+    const deferImageDrivenWoundAnalysis = shouldDeferImageDrivenWoundAnalysis(
+      session,
+      Boolean(image),
+      fastPathExtraction
+    );
+
     // ═══════════════════════════════════════════════════════════════════
     // STEP 0 (optional): VISION — Llama 4 Maverick image analysis
     // Enhanced: breed-aware prompting + auto-extract symptoms/red flags
@@ -189,8 +199,8 @@ export async function POST(request: Request) {
 
     const shouldRunWoundVision = image
       ? shouldAnalyzeWoundImage(lastUserMessage.content, session) ||
-        roboflowSkinSuggested ||
-        isGenericImagePrompt(lastUserMessage.content)
+        (!deferImageDrivenWoundAnalysis &&
+          (roboflowSkinSuggested || isGenericImagePrompt(lastUserMessage.content)))
       : false;
 
     if (image && shouldRunWoundVision && gateOverride !== true) {
@@ -338,10 +348,6 @@ export async function POST(request: Request) {
       visionRedFlags,
       visionSeverity
     );
-    const fastPathExtraction = getDeterministicFastPathExtraction(
-      session,
-      lastUserMessage.content
-    );
     const extracted =
       fastPathExtraction ||
       (await extractDataFromMessage(
@@ -480,7 +486,13 @@ export async function POST(request: Request) {
     // STEP 5: PHRASE question — Kimi K2.5 (Claude fallback)
     // ═══════════════════════════════════════════════════════════════════
     const questionText = getQuestionText(nextQuestionId);
-    const phrasingContext = buildQuestionPhrasingContext(session, visionSeverity);
+    const phrasingContext = shouldIncludeImageContextInQuestion(
+      nextQuestionId,
+      session,
+      deferImageDrivenWoundAnalysis
+    )
+      ? buildQuestionPhrasingContext(session, visionSeverity)
+      : null;
     const phrasedQuestion = await phraseQuestion(
       questionText,
       nextQuestionId,
@@ -724,8 +736,11 @@ Your job: Ask this ONE question in a natural, caring way. Rules:
 - Keep total response under 3 sentences
 - Use the pet's name (${pet.name})
 - If relevant, mention breed-specific context (e.g., "Given that ${pet.name} is a ${pet.breed}...")
+- Ignore photo details unless they directly help you ask this exact next question
 - NEVER mention scores, probabilities, clinical IDs, or that you're an AI
 - NEVER list multiple possible conditions
+- NEVER say there is confusion about the animal type, species, or breed in the photo
+- NEVER speculate about whether the image shows a dog, cat, or another animal unless the owner directly asked that question
 - Sound like a concerned vet taking history, not a chatbot
 - ALWAYS use correct canine anatomy terms: "front leg" not "arm/forearm", "hind leg" not "leg", "paw" not "hand/foot", "muzzle" not "face", "stifle" not "knee", "carpus" not "wrist", "hock" not "ankle". Dogs do NOT have arms, forearms, hands, feet, fingers, or toes.
 
@@ -1272,6 +1287,61 @@ function buildQuestionPhrasingContext(
   }
 
   return parts.join(". ");
+}
+
+function shouldDeferImageDrivenWoundAnalysis(
+  session: TriageSession,
+  hasImage: boolean,
+  fastPathExtraction: {
+    symptoms: string[];
+    answers: Record<string, string | boolean | number>;
+  } | null
+): boolean {
+  if (!hasImage || !fastPathExtraction) {
+    return false;
+  }
+
+  const pendingQuestionId = session.last_question_asked;
+  if (!pendingQuestionId || session.answered_questions.includes(pendingQuestionId)) {
+    return false;
+  }
+
+  if (pendingQuestionId.startsWith("wound_")) {
+    return false;
+  }
+
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      fastPathExtraction.answers,
+      pendingQuestionId
+    )
+  ) {
+    return false;
+  }
+
+  return !(
+    session.known_symptoms.length === 1 &&
+    session.known_symptoms[0] === "wound_skin_issue"
+  );
+}
+
+function shouldIncludeImageContextInQuestion(
+  questionId: string,
+  session: TriageSession,
+  imageTurnWasDeferred: boolean
+): boolean {
+  if (imageTurnWasDeferred) {
+    return false;
+  }
+
+  if (questionId.startsWith("wound_")) {
+    return true;
+  }
+
+  return (
+    session.known_symptoms.length === 1 &&
+    session.known_symptoms[0] === "wound_skin_issue"
+  );
 }
 
 function getDeterministicFastPathExtraction(
