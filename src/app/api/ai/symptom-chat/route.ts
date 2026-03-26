@@ -199,8 +199,8 @@ export async function POST(request: Request) {
 
     const shouldRunWoundVision = image
       ? shouldAnalyzeWoundImage(lastUserMessage.content, session) ||
-        (!deferImageDrivenWoundAnalysis &&
-          (roboflowSkinSuggested || isGenericImagePrompt(lastUserMessage.content)))
+        roboflowSkinSuggested ||
+        isGenericImagePrompt(lastUserMessage.content)
       : false;
 
     if (image && shouldRunWoundVision && gateOverride !== true) {
@@ -342,12 +342,14 @@ export async function POST(request: Request) {
     // STEP 1: EXTRACT structured data — Qwen 3.5 122B (Claude fallback)
     // ═══════════════════════════════════════════════════════════════════
     const extractionSchema = getExtractionSchema(session);
-    const compactImageSignals = buildCompactImageSignalContext(
-      session,
-      visionSymptoms,
-      visionRedFlags,
-      visionSeverity
-    );
+    const compactImageSignals = deferImageDrivenWoundAnalysis
+      ? ""
+      : buildCompactImageSignalContext(
+          session,
+          visionSymptoms,
+          visionRedFlags,
+          visionSeverity
+        );
     const extracted =
       fastPathExtraction ||
       (await extractDataFromMessage(
@@ -488,8 +490,7 @@ export async function POST(request: Request) {
     const questionText = getQuestionText(nextQuestionId);
     const phrasingContext = shouldIncludeImageContextInQuestion(
       nextQuestionId,
-      session,
-      deferImageDrivenWoundAnalysis
+      session
     )
       ? buildQuestionPhrasingContext(session, visionSeverity)
       : null;
@@ -735,6 +736,8 @@ Your job: Ask this ONE question in a natural, caring way. Rules:
 - Then ask EXACTLY ONE focused question to get the needed information
 - Keep total response under 3 sentences
 - Use the pet's name (${pet.name})
+- Treat the owner's latest answer and any photo context as one continuous history about the same dog
+- NEVER ignore the owner's latest direct answer when choosing how to phrase the next question
 - If relevant, mention breed-specific context (e.g., "Given that ${pet.name} is a ${pet.breed}...")
 - Ignore photo details unless they directly help you ask this exact next question
 - NEVER mention scores, probabilities, clinical IDs, or that you're an AI
@@ -1266,13 +1269,8 @@ function buildQuestionPhrasingContext(
 ): string {
   const parts: string[] = [];
   const hasImageSignals =
-    Boolean(session.image_inferred_breed) ||
     Boolean(session.roboflow_skin_labels?.length) ||
     Boolean(session.vision_analysis);
-
-  if (session.image_inferred_breed) {
-    parts.push(`Breed hint from image: ${session.image_inferred_breed}`);
-  }
 
   if (session.roboflow_skin_labels?.length) {
     parts.push(
@@ -1280,6 +1278,11 @@ function buildQuestionPhrasingContext(
         .slice(0, 2)
         .join(", ")}`
     );
+  } else if (
+    session.known_symptoms.includes("wound_skin_issue") &&
+    session.vision_analysis
+  ) {
+    parts.push("Photo likely shows a localized wound or skin issue");
   }
 
   if (hasImageSignals && visionSeverity && visionSeverity !== "normal") {
@@ -1327,20 +1330,15 @@ function shouldDeferImageDrivenWoundAnalysis(
 
 function shouldIncludeImageContextInQuestion(
   questionId: string,
-  session: TriageSession,
-  imageTurnWasDeferred: boolean
+  session: TriageSession
 ): boolean {
-  if (imageTurnWasDeferred) {
-    return false;
-  }
-
   if (questionId.startsWith("wound_")) {
     return true;
   }
 
   return (
-    session.known_symptoms.length === 1 &&
-    session.known_symptoms[0] === "wound_skin_issue"
+    session.known_symptoms.includes("wound_skin_issue") &&
+    (Boolean(session.roboflow_skin_labels?.length) || Boolean(session.vision_analysis))
   );
 }
 

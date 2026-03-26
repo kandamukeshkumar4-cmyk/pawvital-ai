@@ -138,7 +138,7 @@ describe("symptom-chat mixed text + image routing", () => {
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
   });
 
-  it("keeps limping follow-ups on track when a short direct answer includes a wound photo", async () => {
+  it("keeps limping follow-ups on track while still carrying forward wound-photo context", async () => {
     let session = createSession();
     session = addSymptoms(session, ["limping"]);
     session.last_question_asked = "which_leg";
@@ -152,10 +152,14 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.message).toContain("When did the limping start");
     expect(payload.message).not.toContain("confusion about what type of animal");
 
-    expect(mockRunVisionPipeline).not.toHaveBeenCalled();
+    expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
     expect(mockExtractWithQwen).not.toHaveBeenCalled();
     expect(mockPhraseWithKimi).toHaveBeenCalledTimes(1);
-    expect(mockPhraseWithKimi.mock.calls[0][0]).not.toContain("IMAGE CONTEXT:");
+    expect(mockPhraseWithKimi.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
+    expect(mockPhraseWithKimi.mock.calls[0][0]).not.toContain(
+      "Breed hint from image"
+    );
+    expect(payload.session.known_symptoms).toContain("wound_skin_issue");
 
     expect(payload.session.answered_questions).toContain("which_leg");
     expect(payload.session.extracted_answers.which_leg).toBe("left leg");
