@@ -515,7 +515,8 @@ export async function POST(request: Request) {
       nextQuestionId,
       session,
       effectivePet,
-      phrasingContext
+      phrasingContext,
+      hasLiveVisionThisTurn  // tells prompt whether a real photo was analyzed this turn
     );
 
     return NextResponse.json({
@@ -733,36 +734,42 @@ async function phraseQuestion(
   questionId: string,
   session: TriageSession,
   pet: PetProfile,
-  phrasingContext?: string | null
+  phrasingContext?: string | null,
+  photoAnalyzedThisTurn?: boolean
 ): Promise<string> {
   const qDef = FOLLOW_UP_QUESTIONS[questionId];
+  const hasPhoto = Boolean(photoAnalyzedThisTurn);
 
   const prompt = `You are PawVital, a warm and empathetic AI veterinary triage assistant.
 
 Pet: ${pet.name}, a ${pet.age_years}-year-old ${pet.breed} (${pet.weight} lbs)
-Symptoms so far: ${session.known_symptoms.join(", ")}
-Questions answered so far: ${session.answered_questions.length}
-${phrasingContext ? `\n--- WHAT I SAW / CONTEXT FROM PHOTO ---\n${phrasingContext}\n---\n` : ""}
+Symptoms identified: ${session.known_symptoms.join(", ")}
+${phrasingContext ? `\n--- PHOTO ANALYSIS FROM THIS TURN ---\n${phrasingContext}\n---\n` : ""}
+PHOTO SENT THIS TURN: ${hasPhoto ? "YES — a real photo was analyzed above" : "NO — no photo, text only"}
+
 The clinical system now needs to know:
 "${questionText}"
 (Internal ID: ${questionId}, Type: ${qDef?.data_type || "string"})
 
-Your job: Ask this ONE question in a natural, caring way. Rules:
-- Start with ONE brief sentence that acknowledges what the owner just shared — INCLUDING what you saw in any photo. Describe it naturally (e.g. "I can see there's a raw, inflamed area on the left leg — thank you for that photo.")
-- If a photo was provided, ALWAYS acknowledge it in your opening sentence. Never pretend the photo wasn't there.
-- Then ask EXACTLY ONE focused question to collect the next needed piece of information
-- Keep total response under 3 sentences
-- Use the pet's name (${pet.name})
-- Think like a vet who sees the whole picture: previous messages, photo, and current question are all part of ONE continuous conversation
-- NEVER ignore the owner's latest direct answer or photo when choosing how to phrase the next question
-- NEVER mention scores, probabilities, clinical IDs, or that you're an AI
-- NEVER list multiple possible conditions
-- NEVER say there is confusion about the animal type, species, or breed in the photo
-- NEVER speculate about whether the image shows a dog, cat, or another animal unless the owner directly asked that
-- Sound like a concerned vet taking history, not a chatbot filling out a form
-- ALWAYS use correct canine anatomy: "front leg" not "arm", "hind leg", "paw" not "foot", "muzzle" not "face", "stifle" not "knee"
+YOUR JOB: Write a natural 2-sentence response:
 
-Respond with ONLY your message. No JSON, no formatting, no thinking tags.`;
+Sentence 1 — Acknowledgment:
+${hasPhoto
+  ? `- A real photo WAS analyzed. Briefly describe what you saw in it (e.g. "I can see a raw, inflamed area on the left leg — thank you for the photo.")`
+  : `- NO photo exists. Acknowledge only what the owner SAID in text (e.g. "I understand ${pet.name} has been limping."). NEVER say "I can see" or describe visuals if there is no photo.`}
+
+Sentence 2 — Question:
+- Ask EXACTLY this one question in caring, conversational language: "${questionText}"
+- Use ${pet.name}'s name naturally
+
+ABSOLUTE RULES:
+- NEVER say "I can see", "I notice", or use visual language when PHOTO SENT THIS TURN = NO
+- NEVER invent or hallucinate visual observations — only reference what is in PHOTO ANALYSIS above
+- NEVER mention scores, probabilities, clinical IDs, or that you're an AI
+- NEVER list conditions or diagnoses
+- Use correct canine anatomy: "front leg/hind leg" not "arm", "paw" not "foot", "muzzle" not "face"
+
+Respond with ONLY your 2-sentence message. No JSON, no markdown, no thinking tags.`;
 
   try {
     let response: string;
