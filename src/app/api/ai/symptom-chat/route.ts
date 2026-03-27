@@ -1729,7 +1729,7 @@ function extractLegLocation(rawMessage: string): string | null {
         ? "front"
         : "";
 
-  if (!side && !position) {
+  if (!side) {
     return null;
   }
 

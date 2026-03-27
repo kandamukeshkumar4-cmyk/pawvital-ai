@@ -403,4 +403,34 @@ describe("symptom-chat mixed text + image routing", () => {
       "Internal ID: limping_progression"
     );
   });
+
+  it("keeps asking which_leg when the owner only gives front-or-back without a side", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    const session = createSession();
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "My dog is limping on the back leg.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.known_symptoms).toContain("limping");
+    expect(payload.session.extracted_answers.which_leg).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("which_leg");
+    expect(payload.session.last_question_asked).toBe("which_leg");
+    expect(mockPhraseWithLlama.mock.calls.at(-1)?.[0]).toContain(
+      "Internal ID: which_leg"
+    );
+  });
 });
