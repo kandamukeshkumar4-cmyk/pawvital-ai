@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "jest --verbose",
     "test:watch": "jest --watch",
-    "test:retrieval:live": "jest --runInBand --runTestsByPath tests/retrieval.integration.test.ts",
+    "test:retrieval:live": "node -e \"const { spawnSync } = require('node:child_process'); const path = require('node:path'); const jestBin = path.join(process.cwd(), 'node_modules', 'jest', 'bin', 'jest.js'); const result = spawnSync(process.execPath, [jestBin, '--runInBand', '--runTestsByPath', 'tests/retrieval.integration.test.ts'], { stdio: 'inherit', env: { ...process.env, RUN_LIVE_RETRIEVAL_TESTS: '1' } }); process.exit(result.status ?? 1);\"",
     "db:apply-rag-schema": "node scripts/apply-rag-schema.mjs",
     "seed:public-corpus": "node scripts/seed-public-corpus.mjs",
     "seed:public-corpus:dry": "node scripts/seed-public-corpus.mjs --dry-run",

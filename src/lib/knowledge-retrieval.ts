@@ -396,7 +396,7 @@ export async function searchReferenceImages(
   conditionFilters: string[] = []
 ): Promise<ReferenceImageMatch[]> {
   const supabase = getSupabase();
-  if (!supabase || !isEmbeddingConfigured()) return [];
+  if (!supabase) return [];
 
   const safeQuery = sanitizeSearchQuery(searchText);
   if (!safeQuery) return [];
@@ -405,14 +405,19 @@ export async function searchReferenceImages(
     conditionFilters
   );
 
+  const lexicalMatches = await searchReferenceImagesFallback(
+    supabase,
+    safeQuery,
+    limit,
+    labelTerms
+  );
+
+  if (!isEmbeddingConfigured()) {
+    return lexicalMatches.slice(0, Math.max(1, limit));
+  }
+
   try {
     const semanticMatches = await searchReferenceImagesSemantic(
-      supabase,
-      safeQuery,
-      limit,
-      labelTerms
-    );
-    const lexicalMatches = await searchReferenceImagesFallback(
       supabase,
       safeQuery,
       limit,
@@ -421,7 +426,7 @@ export async function searchReferenceImages(
     return mergeReferenceImageMatches(semanticMatches, lexicalMatches, limit);
   } catch (error) {
     console.error("[Reference Image Retrieval] Search failed:", error);
-    return [];
+    return lexicalMatches.slice(0, Math.max(1, limit));
   }
 }
 

@@ -6,6 +6,7 @@ loadEnv({ path: resolve(process.cwd(), ".env.local"), quiet: true });
 jest.setTimeout(300000);
 
 const hasLiveRetrieval =
+  process.env.RUN_LIVE_RETRIEVAL_TESTS === "1" &&
   Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
   Boolean(
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
