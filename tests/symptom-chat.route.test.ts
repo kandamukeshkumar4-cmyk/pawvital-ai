@@ -404,6 +404,39 @@ describe("symptom-chat mixed text + image routing", () => {
     );
   });
 
+  it("prefers direct owner text over conflicting model extraction for critical first-turn facts", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["limping"],
+        answers: {
+          which_leg: "right front",
+          limping_onset: "gradual",
+        },
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog has been limping on the left back leg since this morning."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.which_leg).toBe("left back leg");
+    expect(payload.session.extracted_answers.limping_onset).toBe("sudden");
+    expect(payload.session.last_question_asked).toBe("limping_progression");
+  });
+
   it("keeps asking which_leg when the owner only gives front-or-back without a side", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -432,5 +465,84 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(mockPhraseWithLlama.mock.calls.at(-1)?.[0]).toContain(
       "Internal ID: which_leg"
     );
+  });
+
+  it("rejects weak model-only which_leg extraction when the side is still missing", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["limping"],
+        answers: { which_leg: "back" },
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(createSession(), "My dog is limping on the back leg.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.which_leg).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("which_leg");
+    expect(payload.session.last_question_asked).toBe("which_leg");
+  });
+
+  it("falls back to deterministic-summary when MiniMax compression throws", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+    mockCompressCaseMemoryWithMiniMax.mockRejectedValueOnce(new Error("timeout"));
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog has been limping on the left back leg since this morning."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.case_memory.compression_model).toBe(
+      "deterministic-summary"
+    );
+    expect(payload.session.case_memory.compressed_summary).toContain("Main concerns");
+  });
+
+  it("treats non-weight-bearing limping as an emergency red-flag path", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog has been limping on the left back leg since this morning and is not putting weight on it."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.red_flags_triggered).toContain("non_weight_bearing");
   });
 });

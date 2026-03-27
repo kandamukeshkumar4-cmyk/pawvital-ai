@@ -424,10 +424,11 @@ export async function POST(request: Request) {
       lastUserMessage.content,
       session
     );
-    const mergedAnswers = {
-      ...deterministicSupplementalAnswers,
-      ...(extracted.answers || {}),
-    };
+    const mergedAnswers = mergeTurnAnswers(
+      session,
+      deterministicSupplementalAnswers,
+      extracted.answers || {}
+    );
 
     for (const [key, value] of Object.entries(mergedAnswers)) {
       if (value !== null && value !== undefined && value !== "") {
@@ -450,7 +451,10 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join(" ");
 
-      const coercedAnswer = coerceAnswerForQuestion(pendingQ, combinedUserSignal);
+      const coercedAnswer = coerceFallbackAnswerForPendingQuestion(
+        pendingQ,
+        combinedUserSignal
+      );
       if (coercedAnswer !== null) {
         session = recordAnswer(session, pendingQ, coercedAnswer);
         console.log(
@@ -1619,10 +1623,19 @@ function coerceAnswerForQuestion(
   if (!question || !message) return null;
 
   if (question.data_type === "boolean") {
-    if (/(^|\b)(yes|yeah|yep|does|is|has|there is|it is|he is|she is|true)\b/.test(lower)) {
+    const words = lower.split(/\s+/).filter(Boolean);
+    if (
+      /(^|\b)(yes|yeah|yep|true)\b/.test(lower) ||
+      (words.length <= 3 &&
+        /^(it is|he is|she is|there is|does|has|is)$/.test(lower))
+    ) {
       return true;
     }
-    if (/(^|\b)(no|nope|none|not really|doesn't|doesnt|isn't|isnt|hasn't|hasnt|false)\b/.test(lower)) {
+    if (
+      /(^|\b)(no|nope|none|not really|false)\b/.test(lower) ||
+      (words.length <= 4 &&
+        /^(doesn't|doesnt|isn't|isnt|hasn't|hasnt|not)$/.test(lower))
+    ) {
       return false;
     }
     return null;
@@ -1647,10 +1660,18 @@ function coerceAnswerForQuestion(
     }
 
     if (Array.isArray(question.choices)) {
-      const matchedChoice = question.choices.find((choice) =>
-        lower.includes(String(choice).toLowerCase()) ||
-        lower.includes(String(choice).toLowerCase().replace(/[_-]/g, " "))
-      );
+      const matchedChoice = [...question.choices]
+        .sort((a, b) => String(b).length - String(a).length)
+        .find((choice) => {
+          const normalizedChoice = String(choice).toLowerCase();
+          const spacedChoice = normalizedChoice.replace(/[_-]/g, " ");
+          return (
+            lower === normalizedChoice ||
+            lower === spacedChoice ||
+            lower.includes(`${spacedChoice}`) ||
+            lower.includes(`${normalizedChoice}`)
+          );
+        });
       if (matchedChoice) return matchedChoice;
     }
 
@@ -1665,14 +1686,30 @@ function coerceAnswerForQuestion(
   return message;
 }
 
+function coerceFallbackAnswerForPendingQuestion(
+  questionId: string,
+  rawMessage: string
+): string | boolean | number | null {
+  const deterministic = deriveDeterministicAnswerForQuestion(questionId, rawMessage);
+  if (deterministic !== null) {
+    return deterministic;
+  }
+
+  if (questionId === "which_leg" || questionId === "wound_location") {
+    return null;
+  }
+
+  return coerceAnswerForQuestion(questionId, rawMessage);
+}
+
 function extractDeterministicAnswersForTurn(
   rawMessage: string,
   session: TriageSession
 ): Record<string, string | boolean | number> {
   const answers: Record<string, string | boolean | number> = {};
-  const missingQuestions = getMissingQuestions(session);
+  const candidateQuestions = getDeterministicCandidateQuestionIds(session);
 
-  for (const questionId of missingQuestions) {
+  for (const questionId of candidateQuestions) {
     if (Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)) {
       continue;
     }
@@ -1695,8 +1732,9 @@ function deriveDeterministicAnswerForQuestion(
 ): string | boolean | number | null {
   switch (questionId) {
     case "which_leg":
-    case "wound_location":
       return extractLegLocation(rawMessage);
+    case "wound_location":
+      return extractBodyLocation(rawMessage);
     case "limping_onset":
       return extractLimpingOnset(rawMessage);
     case "limping_progression":
@@ -1705,17 +1743,122 @@ function deriveDeterministicAnswerForQuestion(
       return extractWeightBearingStatus(rawMessage);
     case "trauma_history":
       return extractTraumaHistory(rawMessage);
+    case "pain_on_touch":
+      return extractPainOnTouch(rawMessage);
+    case "worse_after_rest":
+      return extractWorseAfterRest(rawMessage);
+    case "swelling_present":
+      return extractSwellingPresence(rawMessage);
+    case "warmth_present":
+      return extractWarmthPresence(rawMessage);
+    case "prior_limping":
+      return extractPriorLimping(rawMessage);
     default: {
-      const question = FOLLOW_UP_QUESTIONS[questionId];
-      if (
-        question?.data_type === "boolean" ||
-        question?.data_type === "choice" ||
-        question?.data_type === "number"
-      ) {
-        return coerceAnswerForQuestion(questionId, rawMessage);
-      }
       return null;
     }
+  }
+}
+
+function getDeterministicCandidateQuestionIds(session: TriageSession): string[] {
+  const questionIds = new Set<string>(getMissingQuestions(session));
+
+  for (const symptom of session.known_symptoms) {
+    for (const questionId of SYMPTOM_MAP[symptom]?.follow_up_questions || []) {
+      if (!session.answered_questions.includes(questionId)) {
+        questionIds.add(questionId);
+      }
+    }
+  }
+
+  if (
+    session.last_question_asked &&
+    !session.answered_questions.includes(session.last_question_asked)
+  ) {
+    questionIds.add(session.last_question_asked);
+  }
+
+  return [...questionIds];
+}
+
+function mergeTurnAnswers(
+  session: TriageSession,
+  deterministicAnswers: Record<string, string | boolean | number>,
+  modelAnswers: Record<string, string | boolean | number>
+): Record<string, string | boolean | number> {
+  const merged: Record<string, string | boolean | number> = {};
+  const questionIds = new Set([
+    ...Object.keys(deterministicAnswers),
+    ...Object.keys(modelAnswers),
+  ]);
+
+  for (const questionId of questionIds) {
+    const deterministicValue = sanitizeAnswerForQuestion(
+      questionId,
+      deterministicAnswers[questionId]
+    );
+    const modelValue = sanitizeAnswerForQuestion(
+      questionId,
+      modelAnswers[questionId]
+    );
+
+    const preferredValue = shouldPreferDeterministicAnswer(questionId)
+      ? deterministicValue ?? modelValue
+      : modelValue ?? deterministicValue;
+
+    if (preferredValue !== null) {
+      merged[questionId] = preferredValue;
+    }
+  }
+
+  return merged;
+}
+
+function shouldPreferDeterministicAnswer(questionId: string): boolean {
+  return [
+    "which_leg",
+    "wound_location",
+    "limping_onset",
+    "limping_progression",
+    "weight_bearing",
+    "trauma_history",
+    "swelling_present",
+    "warmth_present",
+    "pain_on_touch",
+    "worse_after_rest",
+    "prior_limping",
+  ].includes(questionId);
+}
+
+function sanitizeAnswerForQuestion(
+  questionId: string,
+  value: string | boolean | number | null | undefined
+): string | boolean | number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (typeof value === "boolean" || typeof value === "number") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  switch (questionId) {
+    case "which_leg":
+      return extractLegLocation(trimmed);
+    case "wound_location":
+      return extractBodyLocation(trimmed);
+    case "limping_onset":
+      return extractLimpingOnset(trimmed) ? trimmed : null;
+    case "limping_progression":
+      return extractLimpingProgression(trimmed);
+    case "weight_bearing":
+      return extractWeightBearingStatus(trimmed) ?? coerceAnswerForQuestion(questionId, trimmed);
+    case "trauma_history":
+      return extractTraumaHistory(trimmed);
+    default:
+      return trimmed;
   }
 }
 
@@ -1735,6 +1878,24 @@ function extractLegLocation(rawMessage: string): string | null {
 
   const parts = [side, position, "leg"].filter(Boolean);
   return parts.join(" ").trim() || null;
+}
+
+function extractBodyLocation(rawMessage: string): string | null {
+  const explicitLegLocation = extractLegLocation(rawMessage);
+  if (explicitLegLocation) {
+    return explicitLegLocation;
+  }
+
+  const lower = rawMessage.toLowerCase();
+  const bodyAreaMatch = lower.match(
+    /\b(head|face|eye|ear|neck|shoulder|chest|back|spine|belly|abdomen|stomach|flank|hip|tail|paw|foot|toe|leg|arm|elbow|knee|thigh)\b/
+  );
+  if (!bodyAreaMatch) {
+    return null;
+  }
+
+  const side = /\bleft\b/.test(lower) ? "left " : /\bright\b/.test(lower) ? "right " : "";
+  return `${side}${bodyAreaMatch[1]}`.trim();
 }
 
 function extractLimpingOnset(rawMessage: string): string | null {
@@ -1774,6 +1935,13 @@ function extractLimpingProgression(rawMessage: string): string | null {
 function extractWeightBearingStatus(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
+  if (/\bnon[_\s-]?weight[_\s-]?bearing\b/.test(lower)) {
+    return "non_weight_bearing";
+  }
+  if (/\bweight[_\s-]?bearing\b/.test(lower)) {
+    return "weight_bearing";
+  }
+
   if (
     /\b(non weight bearing|non-weight-bearing|not putting weight|won't put weight|avoiding it completely|holding it up|won't use it|not using it|hopping)\b/.test(
       lower
@@ -1807,6 +1975,73 @@ function extractTraumaHistory(rawMessage: string): string | null {
     return rawMessage.trim().slice(0, 160);
   }
 
+  return null;
+}
+
+function extractPainOnTouch(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  if (/\b(doesn't react|doesnt react|no pain when touched|not painful)\b/.test(lower)) {
+    return false;
+  }
+  if (
+    /\b(yelp|yelps|pulled away|pulls away|growl|growls|cries out|painful when touched|hurts when touched|tender to touch)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+  return null;
+}
+
+function extractWorseAfterRest(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  if (/\b(not worse after rest|same after rest|no stiffness after rest)\b/.test(lower)) {
+    return false;
+  }
+  if (
+    /\b(worse after rest|worse when .*gets up|stiff after rest|stiff when .*gets up|stiff after sleeping)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+  return null;
+}
+
+function extractSwellingPresence(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  if (/\b(no swelling|not swollen)\b/.test(lower)) {
+    return false;
+  }
+  if (/\b(swollen|swelling|puffy|enlarged)\b/.test(lower)) {
+    return true;
+  }
+  return null;
+}
+
+function extractWarmthPresence(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  if (/\b(not warm|not hot|cool to touch)\b/.test(lower)) {
+    return false;
+  }
+  if (/\b(warm to touch|hot to touch|feels warm|feels hot)\b/.test(lower)) {
+    return true;
+  }
+  return null;
+}
+
+function extractPriorLimping(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  if (/\b(first time|never before|no previous episodes)\b/.test(lower)) {
+    return false;
+  }
+  if (
+    /\b(has happened before|previous limp|previous episode|again|recurring|comes and goes|used to limp)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
   return null;
 }
 
@@ -1954,6 +2189,12 @@ function propagateSharedLocationAnswers(session: TriageSession): TriageSession {
 
       if (
         updated.answered_questions.includes(targetQuestionId) ||
+        !canPropagateLocationAnswer(
+          updated,
+          sourceQuestionId,
+          targetQuestionId,
+          sourceValue
+        ) ||
         !isQuestionRelevantForCurrentSymptoms(updated, targetQuestionId)
       ) {
         continue;
@@ -1964,6 +2205,40 @@ function propagateSharedLocationAnswers(session: TriageSession): TriageSession {
   }
 
   return updated;
+}
+
+function canPropagateLocationAnswer(
+  session: TriageSession,
+  sourceQuestionId: string,
+  targetQuestionId: string,
+  sourceValue: string | boolean | number
+): boolean {
+  if (typeof sourceValue !== "string") {
+    return false;
+  }
+
+  const normalized = sourceValue.toLowerCase();
+  const hasExplicitSide = /\bleft\b|\bright\b/.test(normalized);
+  const isExplicitLegLocation = /\bleg\b/.test(normalized) && hasExplicitSide;
+
+  if (!isExplicitLegLocation) {
+    return false;
+  }
+
+  if (sourceQuestionId === "which_leg" && targetQuestionId === "wound_location") {
+    return (
+      session.known_symptoms.includes("wound_skin_issue") &&
+      (Boolean(session.vision_analysis) ||
+        Boolean(session.roboflow_skin_labels?.length) ||
+        Boolean(session.vision_symptoms?.includes("wound_skin_issue")))
+    );
+  }
+
+  if (sourceQuestionId === "wound_location" && targetQuestionId === "which_leg") {
+    return session.known_symptoms.includes("limping");
+  }
+
+  return false;
 }
 
 function isQuestionRelevantForCurrentSymptoms(

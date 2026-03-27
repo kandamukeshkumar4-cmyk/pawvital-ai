@@ -254,7 +254,8 @@ function checkRedFlags(session: TriageSession): void {
     if (!entry) continue;
     for (const flag of entry.red_flags) {
       if (
-        session.extracted_answers[flag] === true &&
+        (session.extracted_answers[flag] === true ||
+          Object.values(session.extracted_answers).includes(flag)) &&
         !session.red_flags_triggered.includes(flag)
       ) {
         session.red_flags_triggered.push(flag);
