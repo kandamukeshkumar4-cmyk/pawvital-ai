@@ -10,6 +10,10 @@ const MINIMAX_API_KEY = (
   ""
 ).trim();
 
+// Timeout for MiniMax API calls (45 seconds to handle network latency)
+// Can be overridden via MINIMAX_TIMEOUT_MS environment variable
+const MINIMAX_TIMEOUT_MS = Number(process.env.MINIMAX_TIMEOUT_MS) || 45000;
+
 const MEMORY_MODEL_CANDIDATES = [
   process.env.MINIMAX_MEMORY_MODEL?.trim(),
   "MiniMax-M2.7",
@@ -59,9 +63,10 @@ export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
 
   for (const model of MEMORY_MODEL_CANDIDATES) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    const timeoutId = setTimeout(() => controller.abort(), MINIMAX_TIMEOUT_MS);
 
     try {
+      console.log(`[MiniMax] Attempting compression with model: ${model}`);
       const response = await client.chat.completions.create(
         {
           model,
@@ -94,9 +99,13 @@ export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
         throw new Error(`MiniMax returned empty summary for ${model}`);
       }
 
+      console.log(`[MiniMax] Successfully compressed with model: ${model}`);
       return { summary, model };
     } catch (error) {
       clearTimeout(timeoutId);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const isAbortError = error instanceof DOMException && error.name === "AbortError";
+      console.error(`[MiniMax] Error with ${model}: ${errorMessage}${isAbortError ? " (timeout/aborted)" : ""}`);
       lastError =
         error instanceof Error ? error : new Error("MiniMax compression failed");
     }

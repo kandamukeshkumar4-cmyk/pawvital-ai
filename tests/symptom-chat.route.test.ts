@@ -154,6 +154,8 @@ describe("symptom-chat mixed text + image routing", () => {
           "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. How big is the affected area? Compare to a coin, golf ball, or your palm.",
         limping_onset:
           "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. When did the limping start? Was it sudden or gradual?",
+        limping_progression:
+          "Thanks for sharing that about Bruno; I'm combining your answer with the rest of the history. Since it started, is the limping getting better, worse, or staying the same?",
       };
       return JSON.stringify({
         message: messages[questionId] || `Thanks for sharing that about Bruno. ${questionId}?`,
@@ -362,5 +364,43 @@ describe("symptom-chat mixed text + image routing", () => {
     );
     expect(mockPhraseWithLlama).not.toHaveBeenCalled();
     expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+  });
+
+  it("captures obvious first-turn limping details before asking the next question", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    const session = createSession();
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        session,
+        "My dog has been limping on the left back leg since this morning."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.message).toBe(
+      "Thanks for sharing that about Bruno; I'm combining your answer with the rest of the history. Since it started, is the limping getting better, worse, or staying the same?"
+    );
+    expect(payload.session.known_symptoms).toContain("limping");
+    expect(payload.session.extracted_answers.which_leg).toBe("left back leg");
+    expect(payload.session.extracted_answers.limping_onset).toBe("sudden");
+    expect(payload.session.answered_questions).toContain("which_leg");
+    expect(payload.session.answered_questions).toContain("limping_onset");
+    expect(payload.session.last_question_asked).toBe("limping_progression");
+    expect(mockPhraseWithLlama.mock.calls.at(-1)?.[0]).toContain(
+      "Internal ID: limping_progression"
+    );
   });
 });

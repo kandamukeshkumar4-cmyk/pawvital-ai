@@ -356,7 +356,17 @@ export async function POST(request: Request) {
     // ═══════════════════════════════════════════════════════════════════
     // STEP 1: EXTRACT structured data — Qwen 3.5 122B (Claude fallback)
     // ═══════════════════════════════════════════════════════════════════
-    const extractionSchema = getExtractionSchema(session);
+    const seededExtractionSymptoms = Array.from(
+      new Set([
+        ...session.known_symptoms,
+        ...extractSymptomsFromKeywords(lastUserMessage.content),
+        ...visionSymptoms,
+      ])
+    );
+    const extractionSchema = getExtractionSchema({
+      ...session,
+      known_symptoms: seededExtractionSymptoms,
+    });
     const compactImageSignals = buildCompactImageSignalContext(
       session,
       visionSymptoms,
@@ -399,11 +409,27 @@ export async function POST(request: Request) {
     }
 
     // 2d: LLM-extracted symptoms
-    if (extracted.symptoms && extracted.symptoms.length > 0) {
-      session = addSymptoms(session, extracted.symptoms);
+    const turnTextSymptoms = Array.from(
+      new Set([
+        ...(extracted.symptoms || []),
+        ...extractSymptomsFromKeywords(lastUserMessage.content),
+      ])
+    );
+
+    if (turnTextSymptoms.length > 0) {
+      session = addSymptoms(session, turnTextSymptoms);
     }
 
-    for (const [key, value] of Object.entries(extracted.answers || {})) {
+    const deterministicSupplementalAnswers = extractDeterministicAnswersForTurn(
+      lastUserMessage.content,
+      session
+    );
+    const mergedAnswers = {
+      ...deterministicSupplementalAnswers,
+      ...(extracted.answers || {}),
+    };
+
+    for (const [key, value] of Object.entries(mergedAnswers)) {
       if (value !== null && value !== undefined && value !== "") {
         session = recordAnswer(session, key, value);
       }
@@ -450,7 +476,7 @@ export async function POST(request: Request) {
       knownSymptomsBeforeTurn,
       session,
       visionSymptoms,
-      extracted.symptoms || []
+      turnTextSymptoms
     );
     const changedSymptomsThisTurn = session.known_symptoms.filter(
       (symptom) => !knownSymptomsBeforeTurn.has(symptom)
@@ -1637,6 +1663,151 @@ function coerceAnswerForQuestion(
   }
 
   return message;
+}
+
+function extractDeterministicAnswersForTurn(
+  rawMessage: string,
+  session: TriageSession
+): Record<string, string | boolean | number> {
+  const answers: Record<string, string | boolean | number> = {};
+  const missingQuestions = getMissingQuestions(session);
+
+  for (const questionId of missingQuestions) {
+    if (Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)) {
+      continue;
+    }
+
+    const derivedAnswer = deriveDeterministicAnswerForQuestion(
+      questionId,
+      rawMessage
+    );
+    if (derivedAnswer !== null) {
+      answers[questionId] = derivedAnswer;
+    }
+  }
+
+  return answers;
+}
+
+function deriveDeterministicAnswerForQuestion(
+  questionId: string,
+  rawMessage: string
+): string | boolean | number | null {
+  switch (questionId) {
+    case "which_leg":
+    case "wound_location":
+      return extractLegLocation(rawMessage);
+    case "limping_onset":
+      return extractLimpingOnset(rawMessage);
+    case "limping_progression":
+      return extractLimpingProgression(rawMessage);
+    case "weight_bearing":
+      return extractWeightBearingStatus(rawMessage);
+    case "trauma_history":
+      return extractTraumaHistory(rawMessage);
+    default: {
+      const question = FOLLOW_UP_QUESTIONS[questionId];
+      if (
+        question?.data_type === "boolean" ||
+        question?.data_type === "choice" ||
+        question?.data_type === "number"
+      ) {
+        return coerceAnswerForQuestion(questionId, rawMessage);
+      }
+      return null;
+    }
+  }
+}
+
+function extractLegLocation(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+  const side = /\bleft\b/.test(lower) ? "left" : /\bright\b/.test(lower) ? "right" : "";
+  const position =
+    /\b(back|hind|rear)\b/.test(lower)
+      ? "back"
+      : /\b(front|fore)\b/.test(lower)
+        ? "front"
+        : "";
+
+  if (!side && !position) {
+    return null;
+  }
+
+  const parts = [side, position, "leg"].filter(Boolean);
+  return parts.join(" ").trim() || null;
+}
+
+function extractLimpingOnset(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(gradual|gradually|over time|slowly|progressively|for weeks|for months)\b/.test(
+      lower
+    )
+  ) {
+    return "gradual";
+  }
+
+  if (
+    /\b(sudden|suddenly|all of a sudden|just started|started today|started this morning|since this morning|since yesterday|today|this morning|last night|yesterday)\b/.test(
+      lower
+    )
+  ) {
+    return "sudden";
+  }
+
+  return null;
+}
+
+function extractLimpingProgression(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(getting worse|worsening|worse)\b/.test(lower)) return "worse";
+  if (/\b(getting better|improving|better)\b/.test(lower)) return "better";
+  if (/\b(staying the same|about the same|same|unchanged|stable)\b/.test(lower)) {
+    return "same";
+  }
+
+  return null;
+}
+
+function extractWeightBearingStatus(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(non weight bearing|non-weight-bearing|not putting weight|won't put weight|avoiding it completely|holding it up|won't use it|not using it|hopping)\b/.test(
+      lower
+    )
+  ) {
+    return "non_weight_bearing";
+  }
+
+  if (
+    /\b(partial weight|barely putting weight|toe touching|touching toes|favoring it|limping but walking)\b/.test(
+      lower
+    )
+  ) {
+    return "partial";
+  }
+
+  if (/\b(putting weight|bearing weight|walking on it|still using it)\b/.test(lower)) {
+    return "weight_bearing";
+  }
+
+  return null;
+}
+
+function extractTraumaHistory(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+  if (
+    /\b(fall|fell|jump|jumped|rough play|collision|hit|slipped|slid|twisted|injured|injury|landed badly)\b/.test(
+      lower
+    )
+  ) {
+    return rawMessage.trim().slice(0, 160);
+  }
+
+  return null;
 }
 
 function buildCompactImageSignalContext(
