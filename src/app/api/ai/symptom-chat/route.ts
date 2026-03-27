@@ -1857,9 +1857,9 @@ function sanitizeAnswerForQuestion(
       return extractWeightBearingStatus(trimmed) ?? coerceAnswerForQuestion(questionId, trimmed);
     case "trauma_history":
       return extractTraumaHistory(trimmed);
-    default:
-      return trimmed;
   }
+
+  return trimmed;
 }
 
 function extractLegLocation(rawMessage: string): string | null {
@@ -2213,15 +2213,8 @@ function canPropagateLocationAnswer(
   targetQuestionId: string,
   sourceValue: string | boolean | number
 ): boolean {
-  if (typeof sourceValue !== "string") {
-    return false;
-  }
-
-  const normalized = sourceValue.toLowerCase();
-  const hasExplicitSide = /\bleft\b|\bright\b/.test(normalized);
-  const isExplicitLegLocation = /\bleg\b/.test(normalized) && hasExplicitSide;
-
-  if (!isExplicitLegLocation) {
+  const normalizedLocation = normalizeExplicitLegLocationAnswer(sourceValue);
+  if (!normalizedLocation) {
     return false;
   }
 
@@ -2239,6 +2232,20 @@ function canPropagateLocationAnswer(
   }
 
   return false;
+}
+
+function normalizeExplicitLegLocationAnswer(
+  value: string | boolean | number
+): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.toLowerCase();
+  const hasExplicitSide = /\bleft\b|\bright\b/.test(normalized);
+  const mentionsLeg = /\bleg\b/.test(normalized);
+
+  return hasExplicitSide && mentionsLeg ? normalized : null;
 }
 
 function isQuestionRelevantForCurrentSymptoms(
