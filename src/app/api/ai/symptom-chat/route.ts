@@ -1761,31 +1761,57 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       console.error("[DB] Failed to save triage session:", e)
     );
 
-    if (
-      image &&
+    let asyncReviewScheduled = false;
+    const reviewImage = image;
+    const shouldAttemptAsyncReview =
+      Boolean(reviewImage) &&
       context.highest_urgency !== "emergency" &&
       shouldScheduleAsyncConsultReview(session) &&
       isMultimodalConsultConfigured() &&
-      requestOrigin &&
-      runAfterSafely(async () => {
+      Boolean(requestOrigin);
+
+    if (shouldAttemptAsyncReview) {
+      const task = async () => {
         try {
-          const success = await enqueueAsyncReview({
-            baseUrl: requestOrigin,
-            image,
+          await enqueueAsyncReview({
+            baseUrl: requestOrigin!,
+            image: reviewImage!,
             pet,
             session,
             report: finalReport,
           });
-          if (success) {
-            finalReport.async_review_scheduled = true;
-            console.log("[HF Multimodal Consult] queued async review");
-          }
+          console.log("[HF Multimodal Consult] queued async review");
         } catch (error) {
           console.error("[HF Multimodal Consult] async review failed:", error);
         }
-      })
-    ) {
-      // Flag is set inside callback after successful enqueue
+      };
+
+      asyncReviewScheduled = runAfterSafely(task);
+      if (!asyncReviewScheduled) {
+        try {
+          asyncReviewScheduled = await enqueueAsyncReview({
+            baseUrl: requestOrigin!,
+            image: reviewImage!,
+            pet,
+            session,
+            report: finalReport,
+          });
+          if (asyncReviewScheduled) {
+            console.log(
+              "[HF Multimodal Consult] queued async review via inline fallback"
+            );
+          }
+        } catch (error) {
+          console.error(
+            "[HF Multimodal Consult] inline fallback enqueue failed:",
+            error
+          );
+        }
+      }
+    }
+
+    if (asyncReviewScheduled) {
+      finalReport.async_review_scheduled = true;
     }
 
     return NextResponse.json({ type: "report", report: finalReport });

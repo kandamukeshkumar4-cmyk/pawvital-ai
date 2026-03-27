@@ -734,6 +734,7 @@ describe("symptom-chat mixed text + image routing", () => {
         }),
       ])
     );
+    expect(payload.report.async_review_scheduled).toBe(true);
   });
 
   it("captures obvious first-turn limping details before asking the next question", async () => {

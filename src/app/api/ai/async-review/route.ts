@@ -35,7 +35,7 @@ function buildFallbackPreprocess(session: TriageSession): VisionPreprocessResult
   };
 }
 
-function scheduleAfterSafely(task: () => Promise<void>): boolean {
+function scheduleAfterSafely(task: () => Promise<unknown>): boolean {
   try {
     after(async () => {
       await task();
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
   const session = body.session;
   const report = body.report;
 
-  const task = async () => {
+  const task = async (): Promise<boolean> => {
     try {
       await consultWithMultimodalSidecar({
         image,
@@ -106,18 +106,24 @@ export async function POST(request: Request) {
         deterministicFacts: session.extracted_answers || {},
         mode: "async",
       });
+      return true;
     } catch (error) {
       console.error("[Async Review] background consult failed:", error);
+      return false;
     }
   };
 
   const scheduled = scheduleAfterSafely(task);
   if (!scheduled) {
-    await task();
+    const completed = await task();
+    return NextResponse.json(
+      { queued: completed, mode: "inline-fallback" },
+      { status: completed ? 202 : 502 }
+    );
   }
 
   return NextResponse.json(
-    { queued: true, mode: scheduled ? "after" : "inline-fallback" },
+    { queued: true, mode: "after" },
     { status: 202 }
   );
 }
