@@ -50,6 +50,31 @@ function stripThinkingArtifacts(text: string): string {
     .trim();
 }
 
+function isAbortLikeError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return true;
+  }
+
+  if (error instanceof Error && error.name === "AbortError") {
+    return true;
+  }
+
+  const cause =
+    typeof error === "object" && error !== null && "cause" in error
+      ? (error as { cause?: unknown }).cause
+      : undefined;
+
+  if (cause instanceof DOMException && cause.name === "AbortError") {
+    return true;
+  }
+
+  if (cause instanceof Error && cause.name === "AbortError") {
+    return true;
+  }
+
+  return false;
+}
+
 export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
   summary: string;
   model: string;
@@ -104,7 +129,7 @@ export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
     } catch (error) {
       clearTimeout(timeoutId);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      const isAbortError = error instanceof DOMException && error.name === "AbortError";
+      const isAbortError = isAbortLikeError(error);
       console.error(`[MiniMax] Error with ${model}: ${errorMessage}${isAbortError ? " (timeout/aborted)" : ""}`);
       lastError =
         error instanceof Error ? error : new Error("MiniMax compression failed");
