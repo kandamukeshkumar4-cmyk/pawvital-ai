@@ -101,8 +101,8 @@ const ROLE_CONCURRENCY_LIMITS: Partial<Record<ModelRole, number>> = {
 const ROLE_TIMEOUT_MS: Record<ModelRole, number> = {
   extraction: 45000,
   phrasing: 12000,
-  phrasing_verifier: 15000,
-  diagnosis: 120000,
+  phrasing_verifier: 20000,
+  diagnosis: 150000,
   safety: 30000,
   vision_fast: 30000,
   vision_detailed: 90000,
@@ -315,7 +315,7 @@ export async function phraseWithLlama(prompt: string): Promise<string> {
   return complete({
     role: "phrasing",
     prompt,
-    maxTokens: 160,
+    maxTokens: 240,
     temperature: 0.25,
   });
 }
@@ -326,7 +326,7 @@ export async function verifyQuestionWithNemotron(
   return complete({
     role: "phrasing_verifier",
     prompt,
-    maxTokens: 220,
+    maxTokens: 320,
     temperature: 0.1,
     systemPrompt: "/no_think",
   });
@@ -338,7 +338,7 @@ export async function reviewQuestionPlanWithNemotron(
   return complete({
     role: "phrasing_verifier",
     prompt,
-    maxTokens: 180,
+    maxTokens: 240,
     temperature: 0.1,
     systemPrompt: "/no_think",
   });
@@ -352,7 +352,7 @@ export async function diagnoseWithDeepSeek(prompt: string): Promise<string> {
   return complete({
     role: "diagnosis",
     prompt,
-    maxTokens: 2048,
+    maxTokens: 3072,
     temperature: 0.4,
   });
 }
@@ -502,7 +502,7 @@ export async function runVisionPipeline(
   // TIER 1: Fast Triage — Llama 3.2 11B Vision
   // Goal: Detect wound, quick severity, basic features
   // ═══════════════════════════════════════════════════════════════════════
-  const tier1Prompt = `You are a veterinary triage nurse. Quickly assess this dog photo.
+  const tier1Prompt = `You are a veterinary triage clinician. Quickly assess this dog photo using conservative veterinary reasoning grounded only in visible findings.
 ${breedInfo ? `Patient: ${breedInfo.breed}, ${breedInfo.age_years}yr, ${breedInfo.weight}lbs` : ""}
 ${textContext ? `Owner says: "${textContext}"` : ""}
 ${CANINE_ANATOMY_RULES}
@@ -518,6 +518,8 @@ Output ONLY valid JSON:
   "discharge": "none|clear|yellow|green|bloody|mixed",
   "tissue_visible": false,
   "hair_loss_around": false,
+  "clinical_impression": "1 sentence veterinary impression grounded only in visible findings",
+  "image_limitations": ["brief limits such as angle, blur, hidden depth"],
   "red_flags": [],
   "severity_classification": "normal|needs_review|urgent",
   "urgency": "monitor_at_home|vet_soon|vet_24h|ER_NOW",
@@ -527,7 +529,7 @@ Output ONLY valid JSON:
 }`;
 
   console.log("[Vision Pipeline] Tier 1: Llama 3.2 11B Vision (fast triage)...");
-  const tier1Raw = await callVisionModel("vision_fast", imageUrl, tier1Prompt, 448, 0.1);
+  const tier1Raw = await callVisionModel("vision_fast", imageUrl, tier1Prompt, 640, 0.1);
   console.log("[Vision Pipeline] Tier 1 complete");
 
   // Parse Tier 1 to decide routing

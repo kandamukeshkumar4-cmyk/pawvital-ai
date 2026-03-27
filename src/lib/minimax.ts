@@ -13,6 +13,8 @@ const MINIMAX_API_KEY = (
 // Timeout for MiniMax API calls (45 seconds to handle network latency)
 // Can be overridden via MINIMAX_TIMEOUT_MS environment variable
 const MINIMAX_TIMEOUT_MS = Number(process.env.MINIMAX_TIMEOUT_MS) || 45000;
+const MINIMAX_MEMORY_MAX_TOKENS =
+  Number(process.env.MINIMAX_MEMORY_MAX_TOKENS) || 650;
 
 const MEMORY_MODEL_CANDIDATES = [
   process.env.MINIMAX_MEMORY_MODEL?.trim(),
@@ -108,7 +110,7 @@ export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
           ],
           temperature: 0.2,
           top_p: 0.9,
-          max_completion_tokens: 400,
+          max_completion_tokens: MINIMAX_MEMORY_MAX_TOKENS,
         },
         {
           signal: controller.signal,
