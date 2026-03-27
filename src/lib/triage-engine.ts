@@ -40,6 +40,22 @@ export interface TriageSession {
   breed_profile_summary?: string;
   roboflow_skin_summary?: string;
   roboflow_skin_labels?: string[];
+  case_memory?: StructuredCaseMemory;
+}
+
+export interface StructuredCaseMemory {
+  turn_count: number;
+  chief_complaints: string[];
+  active_focus_symptoms: string[];
+  confirmed_facts: Record<string, string | boolean | number>;
+  image_findings: string[];
+  red_flag_notes: string[];
+  unresolved_question_ids: string[];
+  timeline_notes: string[];
+  latest_owner_turn?: string;
+  compressed_summary?: string;
+  compression_model?: string;
+  last_compressed_turn?: number;
 }
 
 export interface PetProfile {
@@ -76,6 +92,16 @@ export function createSession(): TriageSession {
     red_flags_triggered: [],
     candidate_diseases: [],
     body_systems_involved: [],
+    case_memory: {
+      turn_count: 0,
+      chief_complaints: [],
+      active_focus_symptoms: [],
+      confirmed_facts: {},
+      image_findings: [],
+      red_flag_notes: [],
+      unresolved_question_ids: [],
+      timeline_notes: [],
+    },
   };
 }
 

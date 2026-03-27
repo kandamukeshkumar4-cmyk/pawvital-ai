@@ -4,6 +4,7 @@ const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
+const mockReviewQuestionPlanWithNemotron = jest.fn();
 const mockVerifyQuestionWithNemotron = jest.fn();
 const mockRunVisionPipeline = jest.fn();
 const mockParseVisionForMatrix = jest.fn();
@@ -12,6 +13,7 @@ const mockDetectBreedWithNyckel = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
 const mockEvaluateImageGate = jest.fn();
 const mockShouldAnalyzeWoundImage = jest.fn();
+const mockCompressCaseMemoryWithMiniMax = jest.fn();
 
 jest.mock("@/lib/rate-limit", () => ({
   symptomChatLimiter: {},
@@ -28,6 +30,8 @@ jest.mock("@/lib/nvidia-models", () => ({
   isNvidiaConfigured: () => true,
   extractWithQwen: (...args: unknown[]) => mockExtractWithQwen(...args),
   phraseWithLlama: (...args: unknown[]) => mockPhraseWithLlama(...args),
+  reviewQuestionPlanWithNemotron: (...args: unknown[]) =>
+    mockReviewQuestionPlanWithNemotron(...args),
   verifyQuestionWithNemotron: (...args: unknown[]) =>
     mockVerifyQuestionWithNemotron(...args),
   diagnoseWithDeepSeek: jest.fn(),
@@ -61,6 +65,12 @@ jest.mock("@/lib/knowledge-retrieval", () => ({
   formatKnowledgeContext: jest.fn(),
   searchReferenceImages: jest.fn(),
   searchKnowledgeChunks: jest.fn(),
+}));
+
+jest.mock("@/lib/minimax", () => ({
+  isMiniMaxConfigured: () => true,
+  compressCaseMemoryWithMiniMax: (...args: unknown[]) =>
+    mockCompressCaseMemoryWithMiniMax(...args),
 }));
 
 const PET = {
@@ -119,11 +129,23 @@ describe("symptom-chat mixed text + image routing", () => {
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: [], answers: {} })
     );
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary:
+        "Bruno remains in a limping triage flow with left-sided limb concerns and possible wound evidence from the latest photo.",
+      model: "MiniMax-M2.7",
+    });
     mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
       const questionId =
         prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
       return `QUESTION_ID:${questionId}`;
     });
+    mockReviewQuestionPlanWithNemotron.mockImplementation(async (prompt: string) =>
+      JSON.stringify({
+        include_image_context: prompt.includes("PHOTO ANALYZED THIS TURN: YES"),
+        use_deterministic_fallback: false,
+        reason: "safe",
+      })
+    );
     mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
       const questionId =
         prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
@@ -187,10 +209,16 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
     expect(mockExtractWithQwen).not.toHaveBeenCalled();
+    expect(mockReviewQuestionPlanWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
     expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
+    expect(mockCompressCaseMemoryWithMiniMax).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Internal ID: wound_size");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Compressed case summary:");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain(
+      "Bruno remains in a limping triage flow"
+    );
     expect(mockPhraseWithLlama.mock.calls[0][0]).not.toContain(
       "Internal ID: limping_onset"
     );
@@ -239,6 +267,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.message).toBe(
       "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. When did the limping start? Was it sudden or gradual?"
     );
+    expect(mockReviewQuestionPlanWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain(
       "Internal ID: limping_onset"
     );
@@ -261,6 +290,7 @@ describe("symptom-chat mixed text + image routing", () => {
       "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
+    expect(mockReviewQuestionPlanWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
     expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
@@ -301,9 +331,36 @@ describe("symptom-chat mixed text + image routing", () => {
       "I understand Bruno has been limping. When did the limping start?"
     );
     expect(payload.message).not.toContain("I can see");
+    expect(mockReviewQuestionPlanWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockVerifyQuestionWithNemotron.mock.calls[0][0]).toContain(
       "PHOTO SENT THIS TURN: NO"
     );
+  });
+
+  it("falls back to deterministic phrasing when the preflight gate marks the turn as fragile", async () => {
+    mockReviewQuestionPlanWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        include_image_context: false,
+        use_deterministic_fallback: true,
+        reason: "fragile mixed turn",
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "which_leg";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeRequest(session, "left leg"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.message).toBe(
+      "I'm keeping track of what you've shared so far about Bruno's limping. How big is the affected area? Compare to a coin, golf ball, or your palm."
+    );
+    expect(mockPhraseWithLlama).not.toHaveBeenCalled();
+    expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
   });
 });

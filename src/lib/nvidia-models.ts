@@ -332,6 +332,18 @@ export async function verifyQuestionWithNemotron(
   });
 }
 
+export async function reviewQuestionPlanWithNemotron(
+  prompt: string
+): Promise<string> {
+  return complete({
+    role: "phrasing_verifier",
+    prompt,
+    maxTokens: 180,
+    temperature: 0.1,
+    systemPrompt: "/no_think",
+  });
+}
+
 /**
  * Generate clinical diagnosis report using Nemotron Ultra 253B.
  * Falls back to DeepSeek V3.2. Deep reasoning for differential diagnosis ranking.

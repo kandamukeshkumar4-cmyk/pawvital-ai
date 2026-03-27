@@ -6,6 +6,7 @@ import {
   isNvidiaConfigured,
   extractWithQwen,
   phraseWithLlama,
+  reviewQuestionPlanWithNemotron,
   verifyQuestionWithNemotron,
   diagnoseWithDeepSeek,
   verifyWithGLM,
@@ -54,6 +55,18 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import {
+  buildCaseMemorySnapshot,
+  buildDeterministicCaseSummary,
+  ensureStructuredCaseMemory,
+  shouldCompressCaseMemory,
+  syncStructuredCaseMemoryQuestions,
+  updateStructuredCaseMemory,
+} from "@/lib/symptom-memory";
+import {
+  compressCaseMemoryWithMiniMax,
+  isMiniMaxConfigured,
+} from "@/lib/minimax";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -126,6 +139,7 @@ export async function POST(request: Request) {
     let effectivePet = getEffectivePetProfile(pet, session);
     const imageHash = image ? hashImage(image) : null;
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
+    const answerKeysBeforeTurn = new Set(Object.keys(session.extracted_answers));
 
     if (imageHash && session.last_uploaded_image_hash !== imageHash) {
       resetImageStateForNewUpload(session);
@@ -438,6 +452,22 @@ export async function POST(request: Request) {
       visionSymptoms,
       extracted.symptoms || []
     );
+    const changedSymptomsThisTurn = session.known_symptoms.filter(
+      (symptom) => !knownSymptomsBeforeTurn.has(symptom)
+    );
+    const changedAnswerKeys = Object.keys(session.extracted_answers).filter(
+      (key) => !answerKeysBeforeTurn.has(key)
+    );
+
+    session = updateStructuredCaseMemory(session, effectivePet, {
+      latestUserMessage: lastUserMessage.content,
+      imageAnalyzed: Boolean(visionAnalysis),
+      imageSummary: visionAnalysis,
+      imageSymptoms: visionSymptoms,
+      imageRedFlags: visionRedFlags,
+      turnFocusSymptoms,
+      missingQuestionIds: getMissingQuestions(session),
+    });
 
     // ═══════════════════════════════════════════════════════════════════
     // STEP 3: Check red flags — EMERGENCY OVERRIDE (pure code)
@@ -470,6 +500,22 @@ export async function POST(request: Request) {
     const nextQuestionId = getNextQuestionAvoidingRepeat(
       session,
       turnFocusSymptoms
+    );
+    session = syncStructuredCaseMemoryQuestions(
+      session,
+      nextQuestionId,
+      getMissingQuestions(session)
+    );
+    session = await maybeCompressStructuredCaseMemory(
+      session,
+      effectivePet,
+      messages,
+      lastUserMessage.content,
+      {
+        imageAnalyzed: Boolean(visionAnalysis),
+        changedSymptoms: changedSymptomsThisTurn,
+        changedAnswers: changedAnswerKeys,
+      }
     );
 
     if (!nextQuestionId) {
@@ -505,11 +551,24 @@ export async function POST(request: Request) {
     //  b) the question is wound-related, OR
     //  c) turnFocusSymptoms-based check passes
     const hasLiveVisionThisTurn = Boolean(visionAnalysis);
-    const phrasingContext = (
+    const basePhrasingContext = (
       hasLiveVisionThisTurn ||
       shouldIncludeImageContextInQuestion(nextQuestionId, session, turnFocusSymptoms)
     )
       ? buildQuestionPhrasingContext(session, visionSeverity)
+      : null;
+    const questionGate = await gateQuestionBeforePhrasing(
+      nextQuestionId,
+      questionText,
+      session,
+      effectivePet,
+      messages,
+      lastUserMessage.content,
+      basePhrasingContext,
+      hasLiveVisionThisTurn
+    );
+    const phrasingContext = questionGate.includeImageContext
+      ? basePhrasingContext
       : null;
     const phrasedQuestion = await phraseQuestion(
       questionText,
@@ -519,7 +578,8 @@ export async function POST(request: Request) {
       messages,
       lastUserMessage.content,
       phrasingContext,
-      hasLiveVisionThisTurn  // tells prompt whether a real photo was analyzed this turn
+      hasLiveVisionThisTurn && questionGate.includeImageContext,
+      questionGate.useDeterministicFallback
     );
 
     return NextResponse.json({
@@ -728,38 +788,6 @@ function extractSymptomsFromKeywords(message: string): string[] {
   return symptoms;
 }
 
-function buildQuestionMemorySnapshot(
-  session: TriageSession,
-  messages: { role: "user" | "assistant"; content: string }[],
-  latestUserMessage: string
-): string {
-  const structuredFacts = Object.entries(session.extracted_answers)
-    .filter(([, value]) => value !== null && value !== undefined && value !== "")
-    .slice(-12)
-    .map(([key, value]) => `- ${key}: ${String(value)}`);
-
-  const recentTranscript = messages
-    .slice(-6)
-    .map((message, index) => {
-      const role = message.role === "user" ? "Owner" : "Assistant";
-      const compact = message.content.replace(/\s+/g, " ").trim().slice(0, 180);
-      return `${index + 1}. ${role}: ${compact}`;
-    });
-
-  return [
-    `Known symptoms: ${session.known_symptoms.join(", ") || "none"}`,
-    `Answered questions: ${session.answered_questions.join(", ") || "none"}`,
-    `Pending question ID: ${session.last_question_asked || "none"}`,
-    structuredFacts.length > 0
-      ? `Structured facts:\n${structuredFacts.join("\n")}`
-      : "Structured facts: none yet",
-    recentTranscript.length > 0
-      ? `Recent transcript:\n${recentTranscript.join("\n")}`
-      : "Recent transcript: none",
-    `Latest owner turn: ${latestUserMessage}`,
-  ].join("\n");
-}
-
 function stripThinkingArtifacts(text: string): string {
   return text
     .replace(/<think>[\s\S]*?<\/think>/g, "")
@@ -817,6 +845,153 @@ function sanitizeQuestionDraft(
   return cleaned;
 }
 
+interface QuestionGateDecision {
+  includeImageContext: boolean;
+  useDeterministicFallback: boolean;
+  reason: string;
+}
+
+async function maybeCompressStructuredCaseMemory(
+  session: TriageSession,
+  pet: PetProfile,
+  messages: { role: "user" | "assistant"; content: string }[],
+  latestUserMessage: string,
+  options: {
+    imageAnalyzed: boolean;
+    changedSymptoms: string[];
+    changedAnswers: string[];
+  }
+): Promise<TriageSession> {
+  const shouldRefresh = shouldCompressCaseMemory(session, messages, options);
+  const caseMemory = ensureStructuredCaseMemory(session);
+  const fallbackSummary = buildDeterministicCaseSummary(session, pet);
+
+  if (!shouldRefresh) {
+    return {
+      ...session,
+      case_memory: {
+        ...caseMemory,
+        compressed_summary: caseMemory.compressed_summary || fallbackSummary,
+      },
+    };
+  }
+
+  if (!isMiniMaxConfigured()) {
+    return {
+      ...session,
+      case_memory: {
+        ...caseMemory,
+        compressed_summary: fallbackSummary,
+        compression_model: "deterministic-summary",
+        last_compressed_turn: caseMemory.turn_count,
+      },
+    };
+  }
+
+  const prompt = `You are compressing an active veterinary triage case into stable memory for downstream reasoning.
+
+Summarize only confirmed or strongly supported facts. Preserve:
+- main symptoms
+- direct owner answers
+- important negative findings
+- image findings when present
+- current unresolved questions
+
+Keep the summary under 180 words and avoid diagnosis language unless already explicit in the case.
+
+CASE SNAPSHOT:
+${buildCaseMemorySnapshot(session, messages, latestUserMessage)}
+
+Return ONLY the summary text.`;
+
+  try {
+    const compressed = await compressCaseMemoryWithMiniMax(prompt);
+    return {
+      ...session,
+      case_memory: {
+        ...caseMemory,
+        compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
+        compression_model: compressed.model,
+        last_compressed_turn: caseMemory.turn_count,
+      },
+    };
+  } catch (error) {
+    console.error("MiniMax memory compression failed:", error);
+    return {
+      ...session,
+      case_memory: {
+        ...caseMemory,
+        compressed_summary: fallbackSummary,
+        compression_model: "deterministic-summary",
+        last_compressed_turn: caseMemory.turn_count,
+      },
+    };
+  }
+}
+
+async function gateQuestionBeforePhrasing(
+  questionId: string,
+  questionText: string,
+  session: TriageSession,
+  pet: PetProfile,
+  messages: { role: "user" | "assistant"; content: string }[],
+  latestUserMessage: string,
+  phrasingContext?: string | null,
+  photoAnalyzedThisTurn?: boolean
+): Promise<QuestionGateDecision> {
+  const defaultDecision: QuestionGateDecision = {
+    includeImageContext: Boolean(photoAnalyzedThisTurn && phrasingContext),
+    useDeterministicFallback: false,
+    reason: "default",
+  };
+
+  if (!useNvidia) {
+    return defaultDecision;
+  }
+
+  const prompt = `Review this next-question plan for a veterinary triage assistant.
+
+CASE MEMORY:
+${buildCaseMemorySnapshot(session, messages, latestUserMessage)}
+${phrasingContext ? `\nIMAGE CONTEXT:\n${phrasingContext}\n` : ""}
+PHOTO ANALYZED THIS TURN: ${photoAnalyzedThisTurn ? "YES" : "NO"}
+
+REQUIRED QUESTION:
+- ID: ${questionId}
+- Text: ${questionText}
+
+Return ONLY valid JSON:
+{
+  "include_image_context": true,
+  "use_deterministic_fallback": false,
+  "reason": "short explanation"
+}
+
+RULES:
+- include_image_context can be true only if the photo directly helps this exact question.
+- use_deterministic_fallback should be true if the turn is contradictory, ambiguous, or likely to trigger hallucinated wording.
+- Never change the question.
+- Be conservative.`;
+
+  try {
+    const rawDecision = await reviewQuestionPlanWithNemotron(prompt);
+    const parsed = parseLooseJsonRecord(rawDecision);
+    const includeImageContext =
+      Boolean(parsed.include_image_context) &&
+      Boolean(photoAnalyzedThisTurn) &&
+      Boolean(phrasingContext);
+    return {
+      includeImageContext,
+      useDeterministicFallback: Boolean(parsed.use_deterministic_fallback),
+      reason:
+        typeof parsed.reason === "string" ? parsed.reason : "nemotron-gate",
+    };
+  } catch (error) {
+    console.error("Question preflight gate failed:", error);
+    return defaultDecision;
+  }
+}
+
 async function phraseQuestionV2(
   questionText: string,
   questionId: string,
@@ -825,11 +1000,12 @@ async function phraseQuestionV2(
   messages: { role: "user" | "assistant"; content: string }[],
   latestUserMessage: string,
   phrasingContext?: string | null,
-  photoAnalyzedThisTurn?: boolean
+  photoAnalyzedThisTurn?: boolean,
+  forceDeterministicFallback = false
 ): Promise<string> {
   const qDef = FOLLOW_UP_QUESTIONS[questionId];
   const hasPhoto = Boolean(photoAnalyzedThisTurn);
-  const memorySnapshot = buildQuestionMemorySnapshot(
+  const memorySnapshot = buildCaseMemorySnapshot(
     session,
     messages,
     latestUserMessage
@@ -840,6 +1016,9 @@ async function phraseQuestionV2(
     session,
     hasPhoto
   );
+  if (forceDeterministicFallback) {
+    return fallbackMessage;
+  }
 
   const prompt = `You are PawVital, a precise veterinary triage wording assistant.
 
@@ -979,7 +1158,8 @@ async function phraseQuestion(
   messages: { role: "user" | "assistant"; content: string }[],
   latestUserMessage: string,
   phrasingContext?: string | null,
-  photoAnalyzedThisTurn?: boolean
+  photoAnalyzedThisTurn?: boolean,
+  forceDeterministicFallback = false
 ): Promise<string> {
   return phraseQuestionV2(
     questionText,
@@ -989,7 +1169,8 @@ async function phraseQuestion(
     messages,
     latestUserMessage,
     phrasingContext,
-    photoAnalyzedThisTurn
+    photoAnalyzedThisTurn,
+    forceDeterministicFallback
   );
 
   const qDef = FOLLOW_UP_QUESTIONS[questionId];
@@ -1192,6 +1373,9 @@ Current medications: ${pet.medications?.join(", ") || "None"}
 
 TRIAGE CONVERSATION:
 ${conversationSummary}
+
+STRUCTURED CASE MEMORY:
+${session.case_memory?.compressed_summary || buildDeterministicCaseSummary(session, pet)}
 
 CLINICAL MATRIX CALCULATIONS (pre-calculated disease probabilities — use as your ranking):
 ${top5Formatted}
