@@ -10,6 +10,7 @@ import {
   BREED_MODIFIERS,
   FOLLOW_UP_QUESTIONS,
   type BreedModifiers,
+  type DiseaseEntry,
 } from "./clinical-matrix";
 
 // --- Session State ---
@@ -159,25 +160,25 @@ export function getNextQuestion(session: TriageSession): string | null {
   if (missing.length === 0) return null;
 
   // Score each question by how many candidate diseases it helps narrow down
-  const scored = missing.map((qId) => {
+  const scored = missing.map((qId, index) => {
     let relevanceScore = 0;
     const qDef = FOLLOW_UP_QUESTIONS[qId];
 
     // Higher score for critical questions
     if (qDef?.critical) relevanceScore += 10;
 
-    // Count how many current symptoms reference this question
+    // Count how many current symptoms reference this question, weighted by urgency
     for (const symptom of session.known_symptoms) {
       const entry = SYMPTOM_MAP[symptom];
       if (entry?.follow_up_questions.includes(qId)) {
-        relevanceScore += 5;
+        relevanceScore += 5 + getSymptomPriorityScore(symptom);
       }
     }
 
-    return { qId, score: relevanceScore };
+    return { qId, score: relevanceScore, index };
   });
 
-  scored.sort((a, b) => b.score - a.score);
+  scored.sort((a, b) => b.score - a.score || a.index - b.index);
   return scored[0]?.qId || null;
 }
 
@@ -254,14 +255,91 @@ function checkRedFlags(session: TriageSession): void {
     if (!entry) continue;
     for (const flag of entry.red_flags) {
       if (
-        (session.extracted_answers[flag] === true ||
-          Object.values(session.extracted_answers).includes(flag)) &&
+        isRedFlagTriggered(flag, session) &&
         !session.red_flags_triggered.includes(flag)
       ) {
         session.red_flags_triggered.push(flag);
       }
     }
   }
+}
+
+function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
+  const answers = session.extracted_answers;
+
+  if (answers[flag] === true || Object.values(answers).includes(flag)) {
+    return true;
+  }
+
+  switch (flag) {
+    case "blue_gums":
+      return answers.gum_color === "blue";
+    case "pale_gums":
+      return answers.gum_color === "pale_white";
+    case "breathing_onset_sudden":
+      return answers.breathing_onset === "sudden";
+    case "large_blood_volume":
+      return answers.blood_amount === "mostly_blood";
+    case "rat_poison_confirmed":
+      return (
+        answers.rat_poison_access === true ||
+        matchesExposureText(answers.toxin_exposure, [
+          "rat poison",
+          "rodenticide",
+          "mouse bait",
+          "bait station",
+          "warfarin",
+          "brodifacoum",
+          "bromadiolone",
+        ])
+      );
+    case "balance_loss":
+      return answers.balance_issues === true;
+    case "head_tilt_sudden":
+      return answers.head_tilt === true;
+    case "no_water_24h":
+      return answers.water_intake === "not_drinking";
+    case "toxin_confirmed":
+      return matchesExposureText(answers.toxin_exposure, [
+        "rat poison",
+        "rodenticide",
+        "xylitol",
+        "chocolate",
+        "grapes",
+        "raisins",
+        "antifreeze",
+        "ibuprofen",
+        "naproxen",
+        "acetaminophen",
+        "marijuana",
+      ]);
+    case "rapid_onset_distension":
+      return matchesExposureText(answers.abdomen_onset, [
+        "sudden",
+        "suddenly",
+        "today",
+        "this morning",
+        "last night",
+        "hours",
+        "just started",
+      ]);
+    case "unresponsive":
+      return answers.consciousness_level === "unresponsive";
+    default:
+      return false;
+  }
+}
+
+function matchesExposureText(
+  value: string | boolean | number | undefined,
+  keywords: string[]
+): boolean {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const lower = value.toLowerCase();
+  return keywords.some((keyword) => lower.includes(keyword));
 }
 
 /**
@@ -618,6 +696,27 @@ function getBreedModifiers(breed: string): BreedModifiers {
   return {};
 }
 
+export function getSymptomPriorityScore(symptom: string): number {
+  const entry = SYMPTOM_MAP[symptom];
+  if (!entry) return 0;
+
+  const urgencyWeights: Record<DiseaseEntry["urgency"], number> = {
+    low: 0,
+    moderate: 4,
+    high: 8,
+    emergency: 12,
+  };
+
+  let maxUrgencyWeight = 0;
+  for (const diseaseKey of entry.linked_diseases) {
+    const urgency = DISEASE_DB[diseaseKey]?.urgency;
+    if (!urgency) continue;
+    maxUrgencyWeight = Math.max(maxUrgencyWeight, urgencyWeights[urgency]);
+  }
+
+  return maxUrgencyWeight + Math.min(entry.red_flags.length, 3);
+}
+
 function normalizeBreedKey(breed: string): string {
   return breed.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -746,13 +845,13 @@ function normalizeSymptom(raw: string): string | null {
   // Direct match
   if (mapping[lower]) return mapping[lower];
 
+  // Exact SYMPTOM_MAP keys should win over looser substring matches
+  if (SYMPTOM_MAP[lower]) return lower;
+
   // Partial match
   for (const [key, val] of Object.entries(mapping)) {
     if (lower.includes(key)) return val;
   }
-
-  // Check SYMPTOM_MAP keys directly
-  if (SYMPTOM_MAP[lower]) return lower;
 
   return null;
 }

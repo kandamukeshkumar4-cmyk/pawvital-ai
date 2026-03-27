@@ -26,6 +26,7 @@ import {
   buildDiagnosisContext,
   type TriageSession,
   type PetProfile,
+  getSymptomPriorityScore,
 } from "@/lib/triage-engine";
 import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 import {
@@ -213,9 +214,9 @@ export async function POST(request: Request) {
     const shouldRunWoundVision = image
       ? shouldAnalyzeWoundImage(lastUserMessage.content, session) ||
         roboflowSkinSuggested ||
-        isGenericImagePrompt(lastUserMessage.content) ||
-        Boolean(session.last_question_asked) ||  // image sent as answer to a question
-        session.known_symptoms.length > 0         // active session — any image matters
+        isImageEvidenceQuestion(session.last_question_asked) ||
+        (isGenericImagePrompt(lastUserMessage.content) &&
+          session.known_symptoms.includes("wound_skin_issue"))
       : false;
 
     if (image && shouldRunWoundVision && gateOverride !== true) {
@@ -453,7 +454,8 @@ export async function POST(request: Request) {
 
       const coercedAnswer = coerceFallbackAnswerForPendingQuestion(
         pendingQ,
-        combinedUserSignal
+        combinedUserSignal,
+        mergedAnswers
       );
       if (coercedAnswer !== null) {
         session = recordAnswer(session, pendingQ, coercedAnswer);
@@ -616,7 +618,7 @@ export async function POST(request: Request) {
       type: "question",
       message: phrasedQuestion,
       session,
-      ready_for_report: session.answered_questions.length >= 3,
+      ready_for_report: isReadyForDiagnosis(session),
     });
   } catch (error) {
     console.error("Symptom chat error:", error);
@@ -775,19 +777,46 @@ function extractSymptomsFromKeywords(message: string): string[] {
     vomit: "vomiting",
     "not eating": "not_eating",
     "won't eat": "not_eating",
+    "refusing food": "not_eating",
+    "not interested in food": "not_eating",
     diarrhea: "diarrhea",
+    "bloody diarrhea": "blood_in_stool",
+    "blood in poop": "blood_in_stool",
+    "blood in poo": "blood_in_stool",
+    "bloody stool": "blood_in_stool",
     letharg: "lethargy",
     cough: "coughing",
     "can't breathe": "difficulty_breathing",
+    "trouble breathing": "difficulty_breathing",
+    "breathing hard": "difficulty_breathing",
+    "breathing heavy": "difficulty_breathing",
+    "breathing fast": "difficulty_breathing",
+    "hard to breathe": "difficulty_breathing",
+    "short of breath": "difficulty_breathing",
+    panting: "difficulty_breathing",
     scratch: "excessive_scratching",
     itch: "excessive_scratching",
     "drinking more": "drinking_more",
+    "drinking a lot": "drinking_more",
+    thirsty: "drinking_more",
     trembl: "trembling",
     shak: "trembling",
     bloat: "swollen_abdomen",
+    bloated: "swollen_abdomen",
+    "swollen belly": "swollen_abdomen",
+    "big belly": "swollen_abdomen",
+    "hard belly": "swollen_abdomen",
+    "distended belly": "swollen_abdomen",
     "blood in stool": "blood_in_stool",
     "eye discharge": "eye_discharge",
+    "goopy eye": "eye_discharge",
+    "goopy eyes": "eye_discharge",
+    "runny eye": "eye_discharge",
     "ear scratch": "ear_scratching",
+    "shaking head": "ear_scratching",
+    "head shaking": "ear_scratching",
+    "ear smell": "ear_scratching",
+    "scratching ears": "ear_scratching",
     "weight loss": "weight_loss",
     wound: "wound_skin_issue",
     cut: "wound_skin_issue",
@@ -1589,7 +1618,12 @@ function getNextQuestionForPreferredSymptoms(
     return null;
   }
 
-  for (const symptom of preferredSymptoms) {
+  const rankedPreferredSymptoms = [...preferredSymptoms].sort(
+    (left, right) =>
+      getSymptomPriorityScore(right) - getSymptomPriorityScore(left)
+  );
+
+  for (const symptom of rankedPreferredSymptoms) {
     const followUps = SYMPTOM_MAP[symptom]?.follow_up_questions;
     if (!followUps?.length) {
       continue;
@@ -1688,14 +1722,24 @@ function coerceAnswerForQuestion(
 
 function coerceFallbackAnswerForPendingQuestion(
   questionId: string,
-  rawMessage: string
+  rawMessage: string,
+  turnAnswers: Record<string, string | boolean | number> = {}
 ): string | boolean | number | null {
   const deterministic = deriveDeterministicAnswerForQuestion(questionId, rawMessage);
   if (deterministic !== null) {
     return deterministic;
   }
 
+  if (Object.keys(turnAnswers).some((answerQuestionId) => answerQuestionId !== questionId)) {
+    return null;
+  }
+
   if (questionId === "which_leg" || questionId === "wound_location") {
+    return null;
+  }
+
+  const question = FOLLOW_UP_QUESTIONS[questionId];
+  if (!question || question.data_type === "string") {
     return null;
   }
 
@@ -1710,7 +1754,7 @@ function extractDeterministicAnswersForTurn(
   const candidateQuestions = getDeterministicCandidateQuestionIds(session);
 
   for (const questionId of candidateQuestions) {
-    if (Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)) {
+    if (shouldSkipDeterministicQuestion(session, questionId, rawMessage)) {
       continue;
     }
 
@@ -1764,9 +1808,7 @@ function getDeterministicCandidateQuestionIds(session: TriageSession): string[] 
 
   for (const symptom of session.known_symptoms) {
     for (const questionId of SYMPTOM_MAP[symptom]?.follow_up_questions || []) {
-      if (!session.answered_questions.includes(questionId)) {
-        questionIds.add(questionId);
-      }
+      questionIds.add(questionId);
     }
   }
 
@@ -1778,6 +1820,78 @@ function getDeterministicCandidateQuestionIds(session: TriageSession): string[] 
   }
 
   return [...questionIds];
+}
+
+function shouldSkipDeterministicQuestion(
+  session: TriageSession,
+  questionId: string,
+  rawMessage: string
+): boolean {
+  if (!Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)) {
+    return false;
+  }
+
+  return !shouldRefreshDeterministicAnswer(session, questionId, rawMessage);
+}
+
+function shouldRefreshDeterministicAnswer(
+  session: TriageSession,
+  questionId: string,
+  rawMessage: string
+): boolean {
+  if (!isRefreshableDeterministicQuestion(questionId)) {
+    return false;
+  }
+
+  const refreshedAnswer = sanitizeAnswerForQuestion(
+    questionId,
+    deriveDeterministicAnswerForQuestion(questionId, rawMessage)
+  );
+  if (refreshedAnswer === null) {
+    return false;
+  }
+
+  const currentAnswer = sanitizeAnswerForQuestion(
+    questionId,
+    session.extracted_answers[questionId]
+  );
+
+  return !areEquivalentAnswers(currentAnswer, refreshedAnswer);
+}
+
+function isRefreshableDeterministicQuestion(questionId: string): boolean {
+  return [
+    "which_leg",
+    "wound_location",
+    "limping_onset",
+    "limping_progression",
+    "weight_bearing",
+    "trauma_history",
+    "pain_on_touch",
+    "worse_after_rest",
+    "swelling_present",
+    "warmth_present",
+    "prior_limping",
+  ].includes(questionId);
+}
+
+function areEquivalentAnswers(
+  left: string | boolean | number | null,
+  right: string | boolean | number | null
+): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (
+    typeof left === "string" &&
+    typeof right === "string" &&
+    left.trim().toLowerCase() === right.trim().toLowerCase()
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function mergeTurnAnswers(
@@ -1857,9 +1971,9 @@ function sanitizeAnswerForQuestion(
       return extractWeightBearingStatus(trimmed) ?? coerceAnswerForQuestion(questionId, trimmed);
     case "trauma_history":
       return extractTraumaHistory(trimmed);
+    default:
+      return coerceAnswerForQuestion(questionId, trimmed);
   }
-
-  return trimmed;
 }
 
 function extractLegLocation(rawMessage: string): string | null {
@@ -2411,6 +2525,26 @@ function isGenericImagePrompt(message: string): boolean {
   ];
 
   return genericPrompts.some((prompt) => normalized.includes(prompt));
+}
+
+function isImageEvidenceQuestion(questionId?: string): boolean {
+  if (!questionId) {
+    return false;
+  }
+
+  return [
+    "which_leg",
+    "wound_location",
+    "pain_on_touch",
+    "swelling_present",
+    "warmth_present",
+    "wound_size",
+    "wound_duration",
+    "wound_color",
+    "wound_discharge",
+    "wound_odor",
+    "wound_licking",
+  ].includes(questionId);
 }
 
 // =============================================================================

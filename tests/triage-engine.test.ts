@@ -17,6 +17,7 @@ import {
   type TriageSession,
   type PetProfile,
 } from "@/lib/triage-engine";
+import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 
 // ─── Test Fixtures ───────────────────────────────────────────────────────────
 
@@ -84,6 +85,21 @@ describe("addSymptoms", () => {
     let session = createSession();
     session = addSymptoms(session, ["throwing up"]);
     expect(session.known_symptoms).toContain("vomiting");
+  });
+
+  it.each([
+    ["won't eat", "not_eating"],
+    ["hacking", "coughing"],
+    ["panting", "difficulty_breathing"],
+    ["goopy eyes", "eye_discharge"],
+    ["shaking head", "ear_scratching"],
+    ["hot spot", "wound_skin_issue"],
+    ["favoring", "limping"],
+    ["bald spot", "wound_skin_issue"],
+  ])("should normalize colloquial phrase %s to %s", (phrase, expected) => {
+    let session = createSession();
+    session = addSymptoms(session, [phrase]);
+    expect(session.known_symptoms).toContain(expected);
   });
 
   it("should normalize wound-related keywords to wound_skin_issue", () => {
@@ -179,6 +195,39 @@ describe("recordAnswer", () => {
     session = recordAnswer(session, "vomit_blood", false);
     expect(session.red_flags_triggered).not.toContain("vomit_blood");
   });
+
+  it("should trigger choice-valued red flags like non_weight_bearing", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session = recordAnswer(session, "weight_bearing", "non_weight_bearing");
+    expect(session.red_flags_triggered).toContain("non_weight_bearing");
+  });
+
+  it("should trigger respiratory red flags derived from choice answers", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["difficulty_breathing"]);
+    session = recordAnswer(session, "gum_color", "blue");
+    session = recordAnswer(session, "breathing_onset", "sudden");
+
+    expect(session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["blue_gums", "breathing_onset_sudden"])
+    );
+  });
+
+  it("should trigger GI and toxin red flags derived from non-boolean answers", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["blood_in_stool", "trembling"]);
+    session = recordAnswer(session, "blood_amount", "mostly_blood");
+    session = recordAnswer(
+      session,
+      "toxin_exposure",
+      "He got into rat poison near the garage."
+    );
+
+    expect(session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["large_blood_volume", "rat_poison_confirmed", "toxin_confirmed"])
+    );
+  });
 });
 
 // ─── getNextQuestion ─────────────────────────────────────────────────────────
@@ -213,6 +262,31 @@ describe("getNextQuestion", () => {
     const firstQ = getNextQuestion(session);
     // First question should be one of the critical wound questions
     expect(firstQ).not.toBeNull();
+  });
+
+  it.each(
+    Object.entries(SYMPTOM_MAP).map(([symptom, entry]) => {
+      const firstCriticalQuestion =
+        entry.follow_up_questions.find(
+          (qId) => FOLLOW_UP_QUESTIONS[qId]?.critical
+        ) || entry.follow_up_questions[0];
+
+      return [symptom, firstCriticalQuestion];
+    })
+  )(
+    "should start %s with its first critical follow-up question",
+    (symptom, expectedQuestionId) => {
+      let session = createSession();
+      session = addSymptoms(session, [symptom]);
+      expect(getNextQuestion(session)).toBe(expectedQuestionId);
+    }
+  );
+
+  it("should prioritize higher-risk breathing questions over cough questions in mixed respiratory cases", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["coughing", "difficulty_breathing"]);
+
+    expect(getNextQuestion(session)).toBe("breathing_onset");
   });
 
   it("should eventually return null when all questions answered", () => {
