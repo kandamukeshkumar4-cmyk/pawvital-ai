@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { after, NextResponse } from "next/server";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
 import {
   isNvidiaConfigured,
@@ -95,6 +94,14 @@ import {
   compressCaseMemoryWithMiniMax,
   isMiniMaxConfigured,
 } from "@/lib/minimax";
+import {
+  appendShadowComparison,
+  appendSidecarObservation,
+  buildObservabilitySnapshot,
+  describeShadowComparison,
+  isShadowModeEnabledForService,
+} from "@/lib/sidecar-observability";
+import { saveSymptomReportToDB } from "@/lib/report-storage";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -120,10 +127,6 @@ interface RequestBody {
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
-}
-
-interface PersistablePetProfile extends PetProfile {
-  id?: string;
 }
 
 export async function POST(request: Request) {
@@ -252,9 +255,13 @@ export async function POST(request: Request) {
       : "unsupported";
 
     if (image) {
+      const visionPreprocessShadowMode = isShadowModeEnabledForService(
+        "vision-preprocess-service"
+      );
       if (isVisionPreprocessConfigured()) {
+        const startedAt = Date.now();
         try {
-          imagePreprocess = await preprocessVeterinaryImage({
+          const preprocessedImage = await preprocessVeterinaryImage({
             image,
             ownerText: lastUserMessage.content,
             knownSymptoms: session.known_symptoms,
@@ -262,8 +269,42 @@ export async function POST(request: Request) {
             ageYears: effectivePet.age_years,
             weight: effectivePet.weight,
           });
+          session = appendSidecarObservation(session, {
+            service: "vision-preprocess-service",
+            stage: "preprocess",
+            latencyMs: Date.now() - startedAt,
+            outcome: visionPreprocessShadowMode ? "shadow" : "success",
+            shadowMode: visionPreprocessShadowMode,
+            fallbackUsed: visionPreprocessShadowMode,
+            note: `domain=${preprocessedImage.domain}; quality=${preprocessedImage.imageQuality}`,
+          });
+
+          if (visionPreprocessShadowMode) {
+            session = appendShadowComparison(
+              session,
+              describeShadowComparison(
+                "vision-preprocess-service",
+                "fallback-domain-inference",
+                "hf-vision-preprocess",
+                `Fallback domain=${fallbackImageDomain}; shadow domain=${preprocessedImage.domain}; bodyRegion=${preprocessedImage.bodyRegion || "unknown"}`,
+                preprocessedImage.domain !== fallbackImageDomain ? 1 : 0
+              )
+            );
+          } else {
+            imagePreprocess = preprocessedImage;
+          }
         } catch (error) {
           console.error("[HF Vision Preprocess] failed:", error);
+          const timedOut = isSidecarAbortError(error);
+          session = appendSidecarObservation(session, {
+            service: "vision-preprocess-service",
+            stage: "preprocess",
+            latencyMs: Date.now() - startedAt,
+            outcome: timedOut ? "timeout" : "error",
+            shadowMode: visionPreprocessShadowMode,
+            fallbackUsed: true,
+            note: timedOut ? "vision preprocess timeout" : "vision preprocess failed",
+          });
           if (isSidecarAbortError(error)) {
             serviceTimeouts.push({
               service: "vision-preprocess-service",
@@ -275,18 +316,10 @@ export async function POST(request: Request) {
       }
 
       if (!imagePreprocess) {
-        imagePreprocess = {
-          domain: fallbackImageDomain,
-          bodyRegion:
-            fallbackImageDomain === "skin_wound" ? "skin/limb region" : null,
-          detectedRegions: [],
-          bestCrop: null,
-          imageQuality: "borderline",
-          confidence: fallbackImageDomain === "unsupported" ? 0.2 : 0.45,
-          limitations: isVisionPreprocessConfigured()
-            ? ["preprocess sidecar unavailable"]
-            : ["no preprocess sidecar configured"],
-        };
+        imagePreprocess = buildFallbackPreprocessResult(fallbackImageDomain);
+        imagePreprocess.limitations = isVisionPreprocessConfigured()
+          ? ["preprocess sidecar unavailable"]
+          : ["no preprocess sidecar configured"];
       }
 
       session.latest_image_domain = imagePreprocess.domain;
@@ -651,8 +684,12 @@ export async function POST(request: Request) {
       }
 
       if (visualEvidence.requiresConsult && image && isMultimodalConsultConfigured()) {
+        const consultShadowMode = isShadowModeEnabledForService(
+          "multimodal-consult-service"
+        );
+        const startedAt = Date.now();
         try {
-          consultOpinion = await consultWithMultimodalSidecar({
+          const nextConsultOpinion = await consultWithMultimodalSidecar({
             image,
             ownerText: lastUserMessage.content,
             preprocess:
@@ -669,10 +706,44 @@ export async function POST(request: Request) {
             deterministicFacts: session.extracted_answers,
             mode: "sync",
           });
-          session.latest_consult_opinion = consultOpinion;
-          ambiguityFlags.push(...consultOpinion.uncertainties);
+          session = appendSidecarObservation(session, {
+            service: "multimodal-consult-service",
+            stage: "sync-consult",
+            latencyMs: Date.now() - startedAt,
+            outcome: consultShadowMode ? "shadow" : "success",
+            shadowMode: consultShadowMode,
+            fallbackUsed: consultShadowMode,
+            note: `disagreements=${nextConsultOpinion.disagreements.length}`,
+          });
+
+          if (consultShadowMode) {
+            session = appendShadowComparison(
+              session,
+              describeShadowComparison(
+                "multimodal-consult-service",
+                "nvidia-vision-only",
+                nextConsultOpinion.model,
+                nextConsultOpinion.summary.slice(0, 180),
+                nextConsultOpinion.disagreements.length
+              )
+            );
+          } else {
+            consultOpinion = nextConsultOpinion;
+            session.latest_consult_opinion = consultOpinion;
+            ambiguityFlags.push(...consultOpinion.uncertainties);
+          }
         } catch (error) {
           console.error("[HF Multimodal Consult] failed:", error);
+          const timedOut = isSidecarAbortError(error);
+          session = appendSidecarObservation(session, {
+            service: "multimodal-consult-service",
+            stage: "sync-consult",
+            latencyMs: Date.now() - startedAt,
+            outcome: timedOut ? "timeout" : "error",
+            shadowMode: consultShadowMode,
+            fallbackUsed: true,
+            note: timedOut ? "multimodal consult timeout" : "multimodal consult failed",
+          });
           if (isSidecarAbortError(error)) {
             serviceTimeouts.push({
               service: "multimodal-consult-service",
@@ -1495,40 +1566,42 @@ async function phraseQuestion(
 // =============================================================================
 
 // ── Server-side Supabase save (uses service role to bypass RLS) ──
-async function saveReportToDB(
+function buildVetHandoffSummary(
   session: TriageSession,
   pet: PetProfile,
   report: Record<string, unknown>
-): Promise<void> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey || url.includes("your_supabase")) return;
+): string {
+  const ownerFacts = Object.entries(session.extracted_answers)
+    .slice(0, 8)
+    .map(([key, value]) => `${key}: ${String(value)}`);
+  const differentials = Array.isArray(report.differential_diagnoses)
+    ? (report.differential_diagnoses as Array<Record<string, unknown>>)
+        .slice(0, 3)
+        .map((entry) => String(entry.condition || "").trim())
+        .filter(Boolean)
+    : [];
+  const tests = Array.isArray(report.recommended_tests)
+    ? (report.recommended_tests as Array<Record<string, unknown>>)
+        .slice(0, 3)
+        .map((entry) => String(entry.test || "").trim())
+        .filter(Boolean)
+    : [];
 
-  const supabase = createSupabaseClient(url, serviceKey);
-
-  const urgency = (report.urgency_level as string) || "low";
-  const severityMap: Record<string, string> = {
-    emergency: "emergency", high: "high", moderate: "medium", low: "low",
-  };
-  const recMap: Record<string, string> = {
-    emergency: "emergency_vet", high: "vet_24h", moderate: "vet_48h", low: "monitor",
-  };
-
-  const symptoms = session.known_symptoms.join(", ") || "unknown";
-  const aiResponse = JSON.stringify(report);
-
-  // If pet has a real DB id (uuid format), save to symptom_checks
-  const petId = (pet as PersistablePetProfile).id;
-  if (!petId || petId === "demo") return;
-
-  await supabase.from("symptom_checks").insert({
-    pet_id: petId,
-    symptoms,
-    ai_response: aiResponse,
-    severity: severityMap[urgency] || "low",
-    recommendation: recMap[urgency] || "monitor",
-  });
-  console.log("[DB] Triage session saved to symptom_checks");
+  return [
+    `Patient: ${pet.name}, ${pet.age_years}y ${pet.breed}, ${pet.weight} lbs.`,
+    `Urgency: ${String(report.recommendation || report.severity || "monitor")}.`,
+    `Main concerns: ${session.known_symptoms.join(", ") || "not fully established"}.`,
+    ownerFacts.length > 0 ? `Owner-reported facts: ${ownerFacts.join("; ")}.` : "",
+    session.vision_analysis
+      ? `Visual findings: ${session.vision_analysis.replace(/\s+/g, " ").trim().slice(0, 220)}`
+      : "",
+    differentials.length > 0
+      ? `Top differentials: ${differentials.join("; ")}.`
+      : "",
+    tests.length > 0 ? `Recommended diagnostics: ${tests.join("; ")}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 async function generateReport(
@@ -1565,14 +1638,29 @@ async function generateReport(
     pet,
     context.top5.map((d) => d.medical_term)
   );
-  const retrievalBundle = await buildReportRetrievalBundle(
+  const retrievalResult = await buildReportRetrievalBundle(
     session,
     pet,
     knowledgeQuery,
     referenceImageQuery,
     context.top5.map((d) => d.medical_term)
   );
+  session = retrievalResult.session;
+  const retrievalBundle = retrievalResult.bundle;
   session.latest_retrieval_bundle = retrievalBundle;
+  const reportMemory = ensureStructuredCaseMemory(session);
+  session.case_memory = {
+    ...reportMemory,
+    retrieval_evidence: [
+      ...reportMemory.retrieval_evidence,
+      ...retrievalBundle.textChunks,
+      ...retrievalBundle.imageMatches,
+    ].slice(-16),
+    evidence_chain: [
+      ...reportMemory.evidence_chain,
+      ...buildEvidenceChainForResponse(session, retrievalBundle),
+    ].slice(-16),
+  };
   const knowledgeContext = formatRetrievalTextContext(retrievalBundle);
   const referenceImageContext = formatRetrievalImageContext(retrievalBundle);
 
@@ -1757,10 +1845,6 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     }
 
     // ── Save to Supabase (non-blocking) ──
-    saveReportToDB(session, pet, finalReport).catch((e) =>
-      console.error("[DB] Failed to save triage session:", e)
-    );
-
     let asyncReviewScheduled = false;
     const reviewImage = image;
     const shouldAttemptAsyncReview =
@@ -1814,6 +1898,27 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       finalReport.async_review_scheduled = true;
     }
 
+    finalReport.vet_handoff_summary = buildVetHandoffSummary(
+      session,
+      pet,
+      finalReport
+    );
+    finalReport.system_observability = buildObservabilitySnapshot(session);
+
+    try {
+      const reportStorageId = await saveSymptomReportToDB(
+        session,
+        pet,
+        finalReport
+      );
+      if (reportStorageId) {
+        finalReport.report_storage_id = reportStorageId;
+        finalReport.outcome_feedback_enabled = true;
+      }
+    } catch (saveError) {
+      console.error("[DB] Failed to save triage session:", saveError);
+    }
+
     return NextResponse.json({ type: "report", report: finalReport });
   } catch (error) {
     console.error("Report generation failed:", error);
@@ -1856,6 +1961,17 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
           session,
           retrievalBundle
         );
+        report.vet_handoff_summary = buildVetHandoffSummary(session, pet, report);
+        report.system_observability = buildObservabilitySnapshot(session);
+        try {
+          const reportStorageId = await saveSymptomReportToDB(session, pet, report);
+          if (reportStorageId) {
+            report.report_storage_id = reportStorageId;
+            report.outcome_feedback_enabled = true;
+          }
+        } catch (saveError) {
+          console.error("[DB] Failed to save triage session:", saveError);
+        }
         return NextResponse.json({ type: "report", report });
       } catch (fallbackError) {
         console.error("Claude fallback also failed:", fallbackError);
@@ -2099,74 +2215,206 @@ async function buildReportRetrievalBundle(
   knowledgeQuery: string,
   referenceImageQuery: string,
   conditionHints: string[]
-): Promise<RetrievalBundle> {
+): Promise<{ session: TriageSession; bundle: RetrievalBundle }> {
+  const domain = session.latest_image_domain || null;
+  const retrievalShadowMode =
+    isShadowModeEnabledForService("text-retrieval-service") ||
+    isShadowModeEnabledForService("image-retrieval-service");
+
+  let sidecarBundle: RetrievalBundle | null = null;
+
   if (isTextRetrievalConfigured() || isImageRetrievalConfigured()) {
-    try {
-      const [textResult, imageResult] = await Promise.all([
-        isTextRetrievalConfigured()
-          ? retrieveVeterinaryTextEvidence({
-              query: knowledgeQuery,
-              domain: session.latest_image_domain || null,
-              breed: pet.breed,
-              conditionHints,
-              dogOnly: true,
-              textLimit: 3,
-            })
-          : Promise.resolve({
-              textChunks: [],
-              rerankScores: [],
-              sourceCitations: [],
-            }),
-        isImageRetrievalConfigured()
-          ? retrieveVeterinaryImageEvidence({
-              query: referenceImageQuery,
-              domain: session.latest_image_domain || null,
-              breed: pet.breed,
-              conditionHints,
-              dogOnly: true,
-              imageLimit: 4,
-            })
-          : Promise.resolve({
-              imageMatches: [],
-              sourceCitations: [],
-            }),
-      ]);
+    const textStarted = Date.now();
+    const imageStarted = Date.now();
+    const [textResult, imageResult] = await Promise.allSettled([
+      isTextRetrievalConfigured()
+        ? retrieveVeterinaryTextEvidence({
+            query: knowledgeQuery,
+            domain,
+            breed: pet.breed,
+            conditionHints,
+            dogOnly: true,
+            textLimit: 3,
+          })
+        : Promise.resolve({
+            textChunks: [],
+            rerankScores: [],
+            sourceCitations: [],
+          }),
+      isImageRetrievalConfigured()
+        ? retrieveVeterinaryImageEvidence({
+            query: referenceImageQuery,
+            domain,
+            breed: pet.breed,
+            conditionHints,
+            dogOnly: true,
+            imageLimit: 4,
+          })
+        : Promise.resolve({
+            imageMatches: [],
+            sourceCitations: [],
+          }),
+    ]);
 
-      return {
-        textChunks: textResult.textChunks,
-        imageMatches: imageResult.imageMatches,
-        rerankScores: textResult.rerankScores,
-        sourceCitations: [
-          ...textResult.sourceCitations,
-          ...imageResult.sourceCitations,
-        ].slice(0, 8),
-      };
-    } catch (error) {
-      console.error("[HF Retrieval Sidecar] split services failed:", error);
+    if (textResult.status === "fulfilled") {
+      session = appendSidecarObservation(session, {
+        service: "text-retrieval-service",
+        stage: "report-retrieval",
+        latencyMs: Date.now() - textStarted,
+        outcome: retrievalShadowMode ? "shadow" : "success",
+        shadowMode: retrievalShadowMode,
+        fallbackUsed: retrievalShadowMode,
+        note: `chunks=${textResult.value.textChunks.length}`,
+      });
+    } else if (isTextRetrievalConfigured()) {
+      const timedOut = isSidecarAbortError(textResult.reason);
+      session = appendSidecarObservation(session, {
+        service: "text-retrieval-service",
+        stage: "report-retrieval",
+        latencyMs: Date.now() - textStarted,
+        outcome: timedOut ? "timeout" : "error",
+        shadowMode: retrievalShadowMode,
+        fallbackUsed: true,
+        note: timedOut ? "text retrieval timeout" : "text retrieval failed",
+      });
+      if (timedOut) {
+        session.case_memory = {
+          ...ensureStructuredCaseMemory(session),
+          service_timeouts: [
+            ...ensureStructuredCaseMemory(session).service_timeouts,
+            {
+              service: "text-retrieval-service",
+              stage: "report-retrieval",
+              reason: "timeout",
+            },
+          ].slice(-10),
+        };
+      }
     }
-  }
 
-  if (isRetrievalSidecarConfigured()) {
+    if (imageResult.status === "fulfilled") {
+      session = appendSidecarObservation(session, {
+        service: "image-retrieval-service",
+        stage: "report-retrieval",
+        latencyMs: Date.now() - imageStarted,
+        outcome: retrievalShadowMode ? "shadow" : "success",
+        shadowMode: retrievalShadowMode,
+        fallbackUsed: retrievalShadowMode,
+        note: `images=${imageResult.value.imageMatches.length}`,
+      });
+    } else if (isImageRetrievalConfigured()) {
+      const timedOut = isSidecarAbortError(imageResult.reason);
+      session = appendSidecarObservation(session, {
+        service: "image-retrieval-service",
+        stage: "report-retrieval",
+        latencyMs: Date.now() - imageStarted,
+        outcome: timedOut ? "timeout" : "error",
+        shadowMode: retrievalShadowMode,
+        fallbackUsed: true,
+        note: timedOut ? "image retrieval timeout" : "image retrieval failed",
+      });
+      if (timedOut) {
+        session.case_memory = {
+          ...ensureStructuredCaseMemory(session),
+          service_timeouts: [
+            ...ensureStructuredCaseMemory(session).service_timeouts,
+            {
+              service: "image-retrieval-service",
+              stage: "report-retrieval",
+              reason: "timeout",
+            },
+          ].slice(-10),
+        };
+      }
+    }
+
+    sidecarBundle = {
+      textChunks:
+        textResult.status === "fulfilled" ? textResult.value.textChunks : [],
+      imageMatches:
+        imageResult.status === "fulfilled" ? imageResult.value.imageMatches : [],
+      rerankScores:
+        textResult.status === "fulfilled" ? textResult.value.rerankScores : [],
+      sourceCitations: [
+        ...(textResult.status === "fulfilled"
+          ? textResult.value.sourceCitations
+          : []),
+        ...(imageResult.status === "fulfilled"
+          ? imageResult.value.sourceCitations
+          : []),
+      ].slice(0, 8),
+    };
+  } else if (isRetrievalSidecarConfigured()) {
+    const startedAt = Date.now();
     try {
-      return await retrieveVeterinaryEvidenceFromSidecar({
+      sidecarBundle = await retrieveVeterinaryEvidenceFromSidecar({
         query: knowledgeQuery,
-        domain: session.latest_image_domain || null,
+        domain,
         breed: pet.breed,
         conditionHints,
         dogOnly: true,
         textLimit: 3,
         imageLimit: 4,
       });
+      session = appendSidecarObservation(session, {
+        service: "text-retrieval-service",
+        stage: "legacy-combined-retrieval",
+        latencyMs: Date.now() - startedAt,
+        outcome: retrievalShadowMode ? "shadow" : "success",
+        shadowMode: retrievalShadowMode,
+        fallbackUsed: retrievalShadowMode,
+        note: "legacy combined retrieval endpoint",
+      });
     } catch (error) {
       console.error("[HF Retrieval Sidecar] failed:", error);
+      session = appendSidecarObservation(session, {
+        service: "text-retrieval-service",
+        stage: "legacy-combined-retrieval",
+        latencyMs: Date.now() - startedAt,
+        outcome: isSidecarAbortError(error) ? "timeout" : "error",
+        shadowMode: retrievalShadowMode,
+        fallbackUsed: true,
+        note: "legacy combined retrieval failed",
+      });
     }
   }
 
-  return buildFallbackRetrievalBundle(
+  const fallbackBundle = await buildFallbackRetrievalBundle(
     knowledgeQuery,
     referenceImageQuery,
-    session.latest_image_domain || null
+    domain
   );
+
+  if (sidecarBundle) {
+    if (retrievalShadowMode) {
+      session = appendShadowComparison(
+        session,
+        describeShadowComparison(
+          "text-retrieval-service",
+          "fallback-retrieval",
+          "hf-retrieval-sidecars",
+          `Fallback text=${fallbackBundle.textChunks.length}, images=${fallbackBundle.imageMatches.length}; shadow text=${sidecarBundle.textChunks.length}, images=${sidecarBundle.imageMatches.length}`,
+          Math.abs(fallbackBundle.textChunks.length - sidecarBundle.textChunks.length) +
+            Math.abs(fallbackBundle.imageMatches.length - sidecarBundle.imageMatches.length)
+        )
+      );
+      return { session, bundle: fallbackBundle };
+    }
+
+    return { session, bundle: sidecarBundle };
+  }
+
+  session = appendSidecarObservation(session, {
+    service: "text-retrieval-service",
+    stage: "report-retrieval",
+    latencyMs: 0,
+    outcome: "fallback",
+    shadowMode: false,
+    fallbackUsed: true,
+    note: "using local retrieval fallback",
+  });
+
+  return { session, bundle: fallbackBundle };
 }
 
 async function buildFallbackRetrievalBundle(
@@ -2174,16 +2422,18 @@ async function buildFallbackRetrievalBundle(
   referenceImageQuery: string,
   domain: SupportedImageDomain | null
 ): Promise<RetrievalBundle> {
-  const knowledgeChunks = await searchKnowledgeChunks(knowledgeQuery, 3);
-  const referenceImageMatches = await searchReferenceImages(
+  const knowledgeChunks = (await searchKnowledgeChunks(knowledgeQuery, 3)) || [];
+  const referenceImageMatches =
+    (await searchReferenceImages(
     referenceImageQuery,
     4,
     [],
     {
       domain,
       dogOnly: true,
+      liveOnly: true,
     }
-  );
+  )) || [];
 
   return {
     textChunks: knowledgeChunks.map((chunk) => ({

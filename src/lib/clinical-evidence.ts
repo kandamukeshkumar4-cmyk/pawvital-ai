@@ -78,6 +78,33 @@ export interface ServiceTimeoutRecord {
   reason: string;
 }
 
+export type SidecarServiceName =
+  | "vision-preprocess-service"
+  | "text-retrieval-service"
+  | "image-retrieval-service"
+  | "multimodal-consult-service"
+  | "async-review-service";
+
+export interface SidecarObservation {
+  service: SidecarServiceName;
+  stage: string;
+  latencyMs: number;
+  outcome: "success" | "timeout" | "error" | "fallback" | "shadow";
+  shadowMode: boolean;
+  fallbackUsed: boolean;
+  note?: string;
+  recordedAt: string;
+}
+
+export interface ShadowComparisonRecord {
+  service: SidecarServiceName;
+  usedStrategy: string;
+  shadowStrategy: string;
+  summary: string;
+  disagreementCount: number;
+  recordedAt: string;
+}
+
 const IMAGE_DOMAIN_KEYWORDS: Array<{
   domain: SupportedImageDomain;
   keywords: string[];

@@ -12,6 +12,11 @@ import {
   isDogOnlyText,
   supportsDomainText,
 } from "./clinical-evidence";
+import {
+  inferLiveCorpusDomain,
+  isLiveCorpusEligibleMatch,
+  matchesRequestedLiveDomain,
+} from "./live-corpus";
 
 export interface KnowledgeChunkMatch {
   chunkId: string;
@@ -42,6 +47,7 @@ export interface ReferenceImageMatch {
 interface ReferenceImageSearchOptions {
   domain?: SupportedImageDomain | null;
   dogOnly?: boolean;
+  liveOnly?: boolean;
 }
 
 interface SearchKnowledgeChunkRpcRow {
@@ -559,6 +565,14 @@ function mergeReferenceImageMatches(
 }
 
 function isDogOnlyReferenceImageMatch(match: ReferenceImageMatch): boolean {
+  const speciesScope =
+    typeof match.metadata.species_scope === "string"
+      ? match.metadata.species_scope.toLowerCase()
+      : "";
+  if (speciesScope && speciesScope !== "dog") {
+    return false;
+  }
+
   const joined = [
     match.sourceSlug,
     match.sourceTitle,
@@ -581,12 +595,46 @@ function filterReferenceImageMatches(
 ): ReferenceImageMatch[] {
   let filtered = matches;
 
+  if (options.liveOnly) {
+    filtered = filtered.filter((match) =>
+      isLiveCorpusEligibleMatch({
+        sourceSlug: match.sourceSlug,
+        conditionLabel: match.conditionLabel,
+        caption: match.caption,
+        metadata: match.metadata,
+      })
+    );
+  }
+
   if (options.dogOnly) {
     filtered = filtered.filter(isDogOnlyReferenceImageMatch);
   }
 
   if (options.domain && options.domain !== "unsupported") {
     filtered = filtered.filter((match) => {
+      const curatedMatch = matchesRequestedLiveDomain(
+        {
+          sourceSlug: match.sourceSlug,
+          conditionLabel: match.conditionLabel,
+          caption: match.caption,
+          metadata: match.metadata,
+        },
+        options.domain
+      );
+      if (!curatedMatch) {
+        return false;
+      }
+
+      const curatedDomain = inferLiveCorpusDomain({
+        sourceSlug: match.sourceSlug,
+        conditionLabel: match.conditionLabel,
+        caption: match.caption,
+        metadata: match.metadata,
+      });
+      if (curatedDomain && curatedDomain !== options.domain) {
+        return false;
+      }
+
       const joined = [
         match.conditionLabel,
         match.caption || "",

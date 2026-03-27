@@ -46,7 +46,7 @@ export function buildStructuredEvidenceChain(
         ...visual.supportedSymptoms.slice(0, 3),
       ].filter(Boolean),
       contradicting: visual.contradictions,
-      confidence: visual.confidence,
+      confidence: visual.confidence ?? 0.5,
     });
   }
 

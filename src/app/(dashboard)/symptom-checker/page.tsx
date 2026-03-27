@@ -24,6 +24,9 @@ import {
   RotateCcw,
   ImagePlus,
   X,
+  Phone,
+  Copy,
+  CheckCheck,
 } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
@@ -50,6 +53,14 @@ interface HomeCare {
   details: string;
 }
 
+interface StructuredEvidenceChainItem {
+  source: string;
+  finding: string;
+  supporting: string[];
+  contradicting: string[];
+  confidence: number;
+}
+
 interface SymptomReport {
   severity: "low" | "medium" | "high" | "emergency";
   recommendation: "monitor" | "vet_48h" | "vet_24h" | "emergency_vet";
@@ -62,6 +73,16 @@ interface SymptomReport {
   actions: string[];
   warning_signs: string[];
   vet_questions?: string[];
+  confidence?: number;
+  evidenceChain?: StructuredEvidenceChainItem[];
+  vet_handoff_summary?: string;
+  async_review_scheduled?: boolean;
+  report_storage_id?: string;
+  outcome_feedback_enabled?: boolean;
+  system_observability?: {
+    timeoutCount?: number;
+    fallbackCount?: number;
+  };
 }
 
 interface ImageMeta {
@@ -255,6 +276,59 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 }
 
 function ReportView({ report }: { report: SymptomReport }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const [feedbackState, setFeedbackState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [matchedExpectation, setMatchedExpectation] = useState<
+    "yes" | "partly" | "no"
+  >("partly");
+  const [confirmedDiagnosis, setConfirmedDiagnosis] = useState("");
+  const [vetOutcome, setVetOutcome] = useState("");
+  const [ownerNotes, setOwnerNotes] = useState("");
+
+  const isEmergencyReport =
+    report.recommendation === "emergency_vet" || report.severity === "emergency";
+
+  const copyVetSummary = async () => {
+    if (!report.vet_handoff_summary) return;
+
+    try {
+      await navigator.clipboard.writeText(report.vet_handoff_summary);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("error");
+    }
+  };
+
+  const submitOutcomeFeedback = async () => {
+    if (!report.report_storage_id || feedbackState === "saving") return;
+
+    setFeedbackState("saving");
+    try {
+      const response = await fetch("/api/ai/outcome-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symptomCheckId: report.report_storage_id,
+          matchedExpectation,
+          confirmedDiagnosis,
+          vetOutcome,
+          ownerNotes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Feedback request failed");
+      }
+
+      setFeedbackState("saved");
+    } catch {
+      setFeedbackState("error");
+    }
+  };
+
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Severity Header */}
@@ -271,6 +345,14 @@ function ReportView({ report }: { report: SymptomReport }) {
               <Badge variant={severityConfig[report.severity].color}>
                 {severityConfig[report.severity].label}
               </Badge>
+              {typeof report.confidence === "number" && (
+                <Badge variant="info">
+                  Confidence {(report.confidence * 100).toFixed(0)}%
+                </Badge>
+              )}
+              {report.async_review_scheduled && (
+                <Badge variant="info">Specialist review queued</Badge>
+              )}
             </div>
             <p className="text-sm text-gray-600 mt-1">
               Recommendation:{" "}
@@ -289,7 +371,79 @@ function ReportView({ report }: { report: SymptomReport }) {
         <p className="text-gray-700 leading-relaxed mt-4 text-[15px]">
           {report.explanation}
         </p>
+        {isEmergencyReport && (
+          <div className="mt-4 rounded-xl border border-red-300 bg-white/80 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold text-red-900">
+                  This should be treated as an emergency.
+                </p>
+                <p className="text-sm text-red-800 mt-1">
+                  Call an emergency veterinary hospital now and bring the handoff
+                  summary below with you.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href="tel:"
+                  className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
+                >
+                  <Phone className="w-4 h-4" />
+                  Open Phone Dialer
+                </a>
+                {report.vet_handoff_summary && (
+                  <button
+                    onClick={copyVetSummary}
+                    className="inline-flex items-center gap-2 rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 transition-colors"
+                  >
+                    {copyState === "copied" ? (
+                      <CheckCheck className="w-4 h-4" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                    {copyState === "copied" ? "Summary Copied" : "Copy Vet Summary"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
+
+      {report.vet_handoff_summary && (
+        <CollapsibleSection
+          title="Vet Handoff Summary"
+          icon={Stethoscope}
+          iconColor="text-red-600"
+          defaultOpen={true}
+        >
+          <div className="space-y-3 mt-2">
+            <div className="rounded-lg border border-red-100 bg-red-50/60 p-4">
+              <p className="text-sm leading-relaxed text-red-950 whitespace-pre-wrap">
+                {report.vet_handoff_summary}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={copyVetSummary}
+                className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {copyState === "copied" ? (
+                  <CheckCheck className="w-4 h-4 text-green-600" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+                {copyState === "copied" ? "Copied" : "Copy Summary"}
+              </button>
+              {copyState === "error" && (
+                <span className="text-xs text-red-600">
+                  Couldn&apos;t access your clipboard. You can still select and copy the summary manually.
+                </span>
+              )}
+            </div>
+          </div>
+        </CollapsibleSection>
+      )}
 
       {/* Differential Diagnoses */}
       {report.differential_diagnoses && report.differential_diagnoses.length > 0 && (
@@ -341,6 +495,46 @@ function ReportView({ report }: { report: SymptomReport }) {
           <p className="text-xs text-gray-400 mt-2 italic">
             Technical notes — share these with your veterinarian
           </p>
+        </CollapsibleSection>
+      )}
+
+      {report.evidenceChain && report.evidenceChain.length > 0 && (
+        <CollapsibleSection
+          title="Evidence Chain"
+          icon={Activity}
+          iconColor="text-sky-600"
+          defaultOpen={false}
+        >
+          <div className="space-y-3 mt-2">
+            {report.evidenceChain.map((item, index) => (
+              <div
+                key={`${item.source}-${index}`}
+                className="rounded-lg border border-sky-100 bg-sky-50/40 p-4"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    {item.source}
+                  </span>
+                  <span className="text-xs text-sky-900">
+                    {(item.confidence * 100).toFixed(0)}% confidence
+                  </span>
+                </div>
+                <p className="mt-2 text-sm font-medium text-gray-900">
+                  {item.finding}
+                </p>
+                {item.supporting.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-600">
+                    Supports: {item.supporting.join(" • ")}
+                  </p>
+                )}
+                {item.contradicting.length > 0 && (
+                  <p className="mt-1 text-xs text-red-700">
+                    Contradictions: {item.contradicting.join(" • ")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
         </CollapsibleSection>
       )}
 
@@ -454,6 +648,124 @@ function ReportView({ report }: { report: SymptomReport }) {
             ))}
           </ul>
         </CollapsibleSection>
+      )}
+
+      {report.outcome_feedback_enabled && report.report_storage_id && (
+        <CollapsibleSection
+          title="After Your Vet Visit"
+          icon={Heart}
+          iconColor="text-emerald-600"
+          defaultOpen={false}
+        >
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-gray-600">
+              Sharing the confirmed outcome helps PawVital get better at
+              thresholds, retrieval quality, and ambiguity handling over time.
+            </p>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                How close was this report to what your vet said?
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ["yes", "Very close"],
+                  ["partly", "Partly right"],
+                  ["no", "Not close"],
+                ] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    onClick={() => setMatchedExpectation(value)}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      matchedExpectation === value
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                        : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  Confirmed diagnosis
+                </label>
+                <input
+                  value={confirmedDiagnosis}
+                  onChange={(event) => setConfirmedDiagnosis(event.target.value)}
+                  placeholder="Example: otitis externa"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">
+                  Vet outcome
+                </label>
+                <input
+                  value={vetOutcome}
+                  onChange={(event) => setVetOutcome(event.target.value)}
+                  placeholder="Example: ear cytology + meds prescribed"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Notes
+              </label>
+              <textarea
+                value={ownerNotes}
+                onChange={(event) => setOwnerNotes(event.target.value)}
+                rows={3}
+                placeholder="Anything useful that the vet found, ruled out, or corrected."
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={submitOutcomeFeedback}
+                disabled={feedbackState === "saving" || feedbackState === "saved"}
+                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
+              >
+                {feedbackState === "saved" ? (
+                  <CheckCheck className="w-4 h-4" />
+                ) : null}
+                {feedbackState === "saving"
+                  ? "Saving..."
+                  : feedbackState === "saved"
+                  ? "Feedback Saved"
+                  : "Save Outcome Feedback"}
+              </button>
+              {feedbackState === "error" && (
+                <span className="text-sm text-red-600">
+                  I couldn&apos;t save that right now. Please try again in a moment.
+                </span>
+              )}
+              {feedbackState === "saved" && (
+                <span className="text-sm text-emerald-700">
+                  Thanks. This case can now be used for future quality review.
+                </span>
+              )}
+            </div>
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {report.system_observability && (
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            System Notes
+          </p>
+          <p className="mt-1 text-xs text-gray-600">
+            Recent fallbacks: {report.system_observability.fallbackCount ?? 0} | Timeouts:{" "}
+            {report.system_observability.timeoutCount ?? 0}
+          </p>
+        </div>
       )}
 
       {/* Disclaimer */}

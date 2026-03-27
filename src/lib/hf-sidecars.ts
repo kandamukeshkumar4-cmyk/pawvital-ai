@@ -8,6 +8,12 @@ import type {
   VisionPreprocessResult,
   VisionSeverityClass,
 } from "./clinical-evidence";
+import {
+  validateOrLog,
+  VisionPreprocessResultSchema,
+  RetrievalBundleSchema,
+  ConsultOpinionSchema,
+} from "./api-schemas";
 
 const VISION_PREPROCESS_URL = process.env.HF_VISION_PREPROCESS_URL?.trim() || "";
 const TEXT_RETRIEVAL_SERVICE_URL =
@@ -51,36 +57,95 @@ function buildHeaders(): HeadersInit {
   };
 }
 
+interface FetchJsonOptions {
+  timeoutMs: number;
+  retries?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+}
+
+interface FetchJsonError extends Error {
+  retriesAttempted: number;
+  statusCode?: number;
+}
+
 async function fetchJson<T>(
   url: string,
   payload: Record<string, unknown>,
-  timeoutMs: number
+  options: FetchJsonOptions
 ): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const {
+    timeoutMs,
+    retries = 2,
+    baseDelayMs = 500,
+    maxDelayMs = 4000,
+  } = options;
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: buildHeaders(),
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-      cache: "no-store",
-    });
+  let lastError: FetchJsonError | null = null;
 
-    const text = await response.text();
-    const parsed = text ? (JSON.parse(text) as T) : ({} as T);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!response.ok) {
-      throw new Error(
-        `Sidecar request failed (${response.status}): ${text.slice(0, 240)}`
-      );
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const text = await response.text();
+      const parsed = text ? (JSON.parse(text) as T) : ({} as T);
+
+      if (!response.ok) {
+        const error = new Error(
+          `Sidecar request failed (${response.status}): ${text.slice(0, 240)}`
+        ) as FetchJsonError;
+        error.statusCode = response.status;
+        error.retriesAttempted = attempt;
+        throw error;
+      }
+
+      return parsed;
+    } catch (error) {
+      if (error instanceof Error) {
+        const fetchError = error as FetchJsonError;
+        fetchError.retriesAttempted = attempt;
+        lastError = fetchError;
+
+        // Don't wait after last attempt
+        if (attempt < retries) {
+          const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+          console.warn(
+            `[HF Sidecar] Request failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${error.message}`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      } else {
+        lastError = new Error(String(error)) as FetchJsonError;
+        lastError.retriesAttempted = attempt;
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return parsed;
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  throw lastError;
+}
+
+function requireValidated<T>(
+  schema: Parameters<typeof validateOrLog<T>>[0],
+  data: unknown,
+  context: string,
+  fallbackMessage: string
+): T {
+  const validated = validateOrLog(schema, data, context);
+  if (!validated) {
+    throw new Error(fallbackMessage);
+  }
+  return validated;
 }
 
 export function isAbortLikeError(error: unknown): boolean {
@@ -189,10 +254,10 @@ export async function preprocessVeterinaryImage(input: {
       age_years: input.ageYears,
       weight: input.weight,
     },
-    VISION_PREPROCESS_TIMEOUT_MS
+    { timeoutMs: VISION_PREPROCESS_TIMEOUT_MS, retries: 2, baseDelayMs: 500, maxDelayMs: 4000 }
   );
 
-  return {
+  const normalized = {
     domain: normalizeDomain(response.domain ?? response.image_domain),
     bodyRegion:
       String(response.bodyRegion ?? response.body_region ?? "").trim() || null,
@@ -215,6 +280,13 @@ export async function preprocessVeterinaryImage(input: {
             .filter(Boolean)
         : [],
   };
+
+  return requireValidated(
+    VisionPreprocessResultSchema,
+    normalized,
+    "vision-preprocess-service response",
+    "Vision preprocess sidecar returned an invalid payload"
+  );
 }
 
 function normalizeTextEvidence(value: unknown): RetrievalTextEvidence[] {
@@ -302,7 +374,7 @@ export async function retrieveVeterinaryTextEvidenceFromSidecar(input: {
       dog_only: input.dogOnly ?? true,
       text_limit: input.textLimit ?? 4,
     },
-    TEXT_RETRIEVAL_SERVICE_TIMEOUT_MS
+    { timeoutMs: TEXT_RETRIEVAL_SERVICE_TIMEOUT_MS, retries: 2, baseDelayMs: 500, maxDelayMs: 4000 }
   );
 
   const textChunks = normalizeTextEvidence(
@@ -353,7 +425,7 @@ export async function retrieveVeterinaryImageEvidenceFromSidecar(input: {
       dog_only: input.dogOnly ?? true,
       image_limit: input.imageLimit ?? 4,
     },
-    IMAGE_RETRIEVAL_SERVICE_TIMEOUT_MS
+    { timeoutMs: IMAGE_RETRIEVAL_SERVICE_TIMEOUT_MS, retries: 2, baseDelayMs: 500, maxDelayMs: 4000 }
   );
 
   return {
@@ -417,12 +489,19 @@ export async function retrieveVeterinaryEvidenceFromSidecar(input: {
     console.error("[HF Retrieval] image retrieval failed:", imageResult.reason);
   }
 
-  return {
+  const bundle = {
     textChunks,
     imageMatches,
     rerankScores,
     sourceCitations: [...textCitations, ...imageCitations].slice(0, 10),
   };
+
+  return requireValidated(
+    RetrievalBundleSchema,
+    bundle,
+    "retrieval sidecar response",
+    "Retrieval sidecar returned an invalid payload"
+  );
 }
 
 export async function consultWithMultimodalSidecar(input: {
@@ -456,12 +535,17 @@ export async function consultWithMultimodalSidecar(input: {
       contradictions: input.contradictions,
       deterministic_facts: input.deterministicFacts,
     },
-    input.mode === "async"
-      ? ASYNC_REVIEW_SERVICE_TIMEOUT_MS
-      : MULTIMODAL_CONSULT_TIMEOUT_MS
+    {
+      timeoutMs: input.mode === "async"
+        ? ASYNC_REVIEW_SERVICE_TIMEOUT_MS
+        : MULTIMODAL_CONSULT_TIMEOUT_MS,
+      retries: 2,
+      baseDelayMs: 500,
+      maxDelayMs: 4000
+    }
   );
 
-  return {
+  const normalized = {
     model:
       String(
         response.model ||
@@ -482,4 +566,11 @@ export async function consultWithMultimodalSidecar(input: {
     confidence: Number(response.confidence ?? 0.6),
     mode: input.mode || "sync",
   };
+
+  return requireValidated(
+    ConsultOpinionSchema,
+    normalized,
+    "multimodal consult response",
+    "Multimodal consult sidecar returned an invalid payload"
+  );
 }

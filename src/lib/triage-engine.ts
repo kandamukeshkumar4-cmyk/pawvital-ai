@@ -16,7 +16,9 @@ import type {
   ConsultOpinion,
   RetrievalImageEvidence,
   RetrievalTextEvidence,
+  ShadowComparisonRecord,
   ServiceTimeoutRecord,
+  SidecarObservation,
   SupportedImageDomain,
   VisionClinicalEvidence,
   VisionPreprocessResult,
@@ -79,6 +81,8 @@ export interface StructuredCaseMemory {
   consult_opinions: ConsultOpinion[];
   evidence_chain: string[];
   service_timeouts: ServiceTimeoutRecord[];
+  service_observations: SidecarObservation[];
+  shadow_comparisons: ShadowComparisonRecord[];
   ambiguity_flags: string[];
   latest_owner_turn?: string;
   compressed_summary?: string;
@@ -134,6 +138,8 @@ export function createSession(): TriageSession {
       consult_opinions: [],
       evidence_chain: [],
       service_timeouts: [],
+      service_observations: [],
+      shadow_comparisons: [],
       ambiguity_flags: [],
     },
   };

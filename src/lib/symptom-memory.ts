@@ -84,24 +84,29 @@ function buildTimelineLine(
 export function ensureStructuredCaseMemory(
   session: TriageSession
 ): StructuredCaseMemory {
-  return (
-    session.case_memory || {
-      turn_count: 0,
-      chief_complaints: [],
-      active_focus_symptoms: [],
-      confirmed_facts: {},
-      image_findings: [],
-      red_flag_notes: [],
-      unresolved_question_ids: [],
-      timeline_notes: [],
-      visual_evidence: [],
-      retrieval_evidence: [],
-      consult_opinions: [],
-      evidence_chain: [],
-      service_timeouts: [],
-      ambiguity_flags: [],
-    }
-  );
+  const existing = session.case_memory;
+  return {
+    turn_count: existing?.turn_count || 0,
+    chief_complaints: existing?.chief_complaints || [],
+    active_focus_symptoms: existing?.active_focus_symptoms || [],
+    confirmed_facts: existing?.confirmed_facts || {},
+    image_findings: existing?.image_findings || [],
+    red_flag_notes: existing?.red_flag_notes || [],
+    unresolved_question_ids: existing?.unresolved_question_ids || [],
+    timeline_notes: existing?.timeline_notes || [],
+    visual_evidence: existing?.visual_evidence || [],
+    retrieval_evidence: existing?.retrieval_evidence || [],
+    consult_opinions: existing?.consult_opinions || [],
+    evidence_chain: existing?.evidence_chain || [],
+    service_timeouts: existing?.service_timeouts || [],
+    service_observations: existing?.service_observations || [],
+    shadow_comparisons: existing?.shadow_comparisons || [],
+    ambiguity_flags: existing?.ambiguity_flags || [],
+    latest_owner_turn: existing?.latest_owner_turn,
+    compressed_summary: existing?.compressed_summary,
+    compression_model: existing?.compression_model,
+    last_compressed_turn: existing?.last_compressed_turn,
+  };
 }
 
 export function updateStructuredCaseMemory(
@@ -234,6 +239,8 @@ export function updateStructuredCaseMemory(
       consult_opinions: consultOpinions,
       evidence_chain: evidenceChain,
       service_timeouts: serviceTimeouts,
+      service_observations: existing.service_observations || [],
+      shadow_comparisons: existing.shadow_comparisons || [],
       ambiguity_flags: ambiguityFlags,
     },
   };
@@ -375,6 +382,24 @@ export function buildCaseMemorySnapshot(
           .map((entry) => `${entry.service}:${entry.stage} (${entry.reason})`)
           .join("\n- ")}`
       : "Service timeouts: none",
+    memory.service_observations.length > 0
+      ? `Recent service telemetry:\n- ${memory.service_observations
+          .slice(-6)
+          .map(
+            (entry) =>
+              `${entry.service}:${entry.stage} ${entry.outcome} in ${entry.latencyMs}ms${entry.shadowMode ? " [shadow]" : ""}${entry.fallbackUsed ? " [fallback]" : ""}`
+          )
+          .join("\n- ")}`
+      : "Recent service telemetry: none",
+    memory.shadow_comparisons.length > 0
+      ? `Shadow comparisons:\n- ${memory.shadow_comparisons
+          .slice(-4)
+          .map(
+            (entry) =>
+              `${entry.service} used=${entry.usedStrategy} shadow=${entry.shadowStrategy} disagreements=${entry.disagreementCount} | ${entry.summary}`
+          )
+          .join("\n- ")}`
+      : "Shadow comparisons: none",
     memory.ambiguity_flags.length > 0
       ? `Ambiguity flags:\n- ${memory.ambiguity_flags.join("\n- ")}`
       : "Ambiguity flags: none",
