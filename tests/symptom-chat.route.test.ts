@@ -3,7 +3,8 @@ import { addSymptoms, createSession, type TriageSession } from "@/lib/triage-eng
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockExtractWithQwen = jest.fn();
-const mockPhraseWithKimi = jest.fn();
+const mockPhraseWithLlama = jest.fn();
+const mockVerifyQuestionWithNemotron = jest.fn();
 const mockRunVisionPipeline = jest.fn();
 const mockParseVisionForMatrix = jest.fn();
 const mockImageGuardrail = jest.fn();
@@ -26,7 +27,9 @@ jest.mock("@/lib/anthropic", () => ({
 jest.mock("@/lib/nvidia-models", () => ({
   isNvidiaConfigured: () => true,
   extractWithQwen: (...args: unknown[]) => mockExtractWithQwen(...args),
-  phraseWithKimi: (...args: unknown[]) => mockPhraseWithKimi(...args),
+  phraseWithLlama: (...args: unknown[]) => mockPhraseWithLlama(...args),
+  verifyQuestionWithNemotron: (...args: unknown[]) =>
+    mockVerifyQuestionWithNemotron(...args),
   diagnoseWithDeepSeek: jest.fn(),
   verifyWithGLM: jest.fn(),
   runVisionPipeline: (...args: unknown[]) => mockRunVisionPipeline(...args),
@@ -90,6 +93,19 @@ function makeRequest(session: TriageSession, message: string) {
   });
 }
 
+function makeTextOnlyRequest(session: TriageSession, message: string) {
+  return new Request("http://localhost/api/ai/symptom-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "chat",
+      pet: PET,
+      session,
+      messages: [{ role: "user", content: message }],
+    }),
+  });
+}
+
 describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -103,10 +119,23 @@ describe("symptom-chat mixed text + image routing", () => {
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: [], answers: {} })
     );
-    mockPhraseWithKimi.mockImplementation(async (prompt: string) => {
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
       const questionId =
         prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
       return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      const messages: Record<string, string> = {
+        wound_size:
+          "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. How big is the affected area? Compare to a coin, golf ball, or your palm.",
+        limping_onset:
+          "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. When did the limping start? Was it sudden or gradual?",
+      };
+      return JSON.stringify({
+        message: messages[questionId] || `Thanks for sharing that about Bruno. ${questionId}?`,
+      });
     });
     mockRunVisionPipeline.mockResolvedValue({
       combined: "photo analysis",
@@ -151,18 +180,21 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
-    expect(payload.message).toBe("QUESTION_ID:wound_size");
+    expect(payload.message).toBe(
+      "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. How big is the affected area? Compare to a coin, golf ball, or your palm."
+    );
     expect(payload.message).not.toContain("confusion about what type of animal");
 
     expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
     expect(mockExtractWithQwen).not.toHaveBeenCalled();
-    expect(mockPhraseWithKimi).toHaveBeenCalledTimes(1);
-    expect(mockPhraseWithKimi.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
-    expect(mockPhraseWithKimi.mock.calls[0][0]).toContain("Internal ID: wound_size");
-    expect(mockPhraseWithKimi.mock.calls[0][0]).not.toContain(
+    expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
+    expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Internal ID: wound_size");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).not.toContain(
       "Internal ID: limping_onset"
     );
-    expect(mockPhraseWithKimi.mock.calls[0][0]).not.toContain(
+    expect(mockPhraseWithLlama.mock.calls[0][0]).not.toContain(
       "Breed hint from image"
     );
 
@@ -204,8 +236,10 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
-    expect(payload.message).toBe("QUESTION_ID:limping_onset");
-    expect(mockPhraseWithKimi.mock.calls[0][0]).toContain(
+    expect(payload.message).toBe(
+      "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. When did the limping start? Was it sudden or gradual?"
+    );
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain(
       "Internal ID: limping_onset"
     );
     expect(payload.session.known_symptoms).toEqual(["limping"]);
@@ -223,10 +257,53 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
-    expect(payload.message).toBe("QUESTION_ID:wound_size");
+    expect(payload.message).toBe(
+      "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. How big is the affected area? Compare to a coin, golf ball, or your palm."
+    );
     expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
-    expect(mockPhraseWithKimi).toHaveBeenCalledTimes(1);
-    expect(mockPhraseWithKimi.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
+    expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
+    expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
     expect(payload.session.extracted_answers.wound_location).toBe("left leg");
+  });
+
+  it("strips visual hallucinations when no photo was sent this turn", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockPhraseWithLlama.mockResolvedValue(
+      "I can see your dog holding up one leg. When did the limping start?"
+    );
+    mockVerifyQuestionWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        message:
+          "I understand Bruno has been limping. When did the limping start?",
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "which_leg";
+    session = addSymptoms(session, []);
+    session.answered_questions.push("which_leg");
+    session.extracted_answers.which_leg = "left leg";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "it started today"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.message).toBe(
+      "I understand Bruno has been limping. When did the limping start?"
+    );
+    expect(payload.message).not.toContain("I can see");
+    expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
+    expect(mockVerifyQuestionWithNemotron.mock.calls[0][0]).toContain(
+      "PHOTO SENT THIS TURN: NO"
+    );
   });
 });

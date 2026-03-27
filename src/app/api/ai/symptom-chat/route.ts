@@ -5,7 +5,8 @@ import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
 import {
   isNvidiaConfigured,
   extractWithQwen,
-  phraseWithKimi,
+  phraseWithLlama,
+  verifyQuestionWithNemotron,
   diagnoseWithDeepSeek,
   verifyWithGLM,
   runVisionPipeline,
@@ -515,6 +516,8 @@ export async function POST(request: Request) {
       nextQuestionId,
       session,
       effectivePet,
+      messages,
+      lastUserMessage.content,
       phrasingContext,
       hasLiveVisionThisTurn  // tells prompt whether a real photo was analyzed this turn
     );
@@ -725,6 +728,245 @@ function extractSymptomsFromKeywords(message: string): string[] {
   return symptoms;
 }
 
+function buildQuestionMemorySnapshot(
+  session: TriageSession,
+  messages: { role: "user" | "assistant"; content: string }[],
+  latestUserMessage: string
+): string {
+  const structuredFacts = Object.entries(session.extracted_answers)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .slice(-12)
+    .map(([key, value]) => `- ${key}: ${String(value)}`);
+
+  const recentTranscript = messages
+    .slice(-6)
+    .map((message, index) => {
+      const role = message.role === "user" ? "Owner" : "Assistant";
+      const compact = message.content.replace(/\s+/g, " ").trim().slice(0, 180);
+      return `${index + 1}. ${role}: ${compact}`;
+    });
+
+  return [
+    `Known symptoms: ${session.known_symptoms.join(", ") || "none"}`,
+    `Answered questions: ${session.answered_questions.join(", ") || "none"}`,
+    `Pending question ID: ${session.last_question_asked || "none"}`,
+    structuredFacts.length > 0
+      ? `Structured facts:\n${structuredFacts.join("\n")}`
+      : "Structured facts: none yet",
+    recentTranscript.length > 0
+      ? `Recent transcript:\n${recentTranscript.join("\n")}`
+      : "Recent transcript: none",
+    `Latest owner turn: ${latestUserMessage}`,
+  ].join("\n");
+}
+
+function stripThinkingArtifacts(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/g, "")
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
+function parseLooseJsonRecord(rawText: string): Record<string, unknown> {
+  const cleaned = stripThinkingArtifacts(rawText);
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  return JSON.parse(match ? match[0] : cleaned) as Record<string, unknown>;
+}
+
+function buildDeterministicQuestionFallback(
+  petName: string,
+  questionText: string,
+  session: TriageSession,
+  hasPhoto: boolean
+): string {
+  const symptomLead = session.known_symptoms[0];
+  const acknowledgment = hasPhoto
+    ? `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`
+    : symptomLead
+      ? `I'm keeping track of what you've shared so far about ${petName}'s ${symptomLead.replace(/_/g, " ")}.`
+      : `Thanks for sharing that about ${petName}.`;
+  return `${acknowledgment} ${questionText}`;
+}
+
+function sanitizeQuestionDraft(
+  rawDraft: string,
+  fallbackMessage: string,
+  hasPhoto: boolean
+): string {
+  const cleaned = stripThinkingArtifacts(rawDraft).replace(/\s+/g, " ").trim();
+  if (!cleaned) return fallbackMessage;
+
+  const mentionsSpeciesConfusion =
+    /confusion about (what type of )?animal|species confusion|breed confusion/i.test(
+      cleaned
+    );
+  const usesVisualLanguage =
+    /\b(i can see|i notice|from the photo|from the image|looking at the photo|looking at the image)\b/i.test(
+      cleaned
+    );
+
+  if (mentionsSpeciesConfusion || (!hasPhoto && usesVisualLanguage)) {
+    return fallbackMessage;
+  }
+
+  if (!cleaned.includes("?")) {
+    return fallbackMessage;
+  }
+
+  return cleaned;
+}
+
+async function phraseQuestionV2(
+  questionText: string,
+  questionId: string,
+  session: TriageSession,
+  pet: PetProfile,
+  messages: { role: "user" | "assistant"; content: string }[],
+  latestUserMessage: string,
+  phrasingContext?: string | null,
+  photoAnalyzedThisTurn?: boolean
+): Promise<string> {
+  const qDef = FOLLOW_UP_QUESTIONS[questionId];
+  const hasPhoto = Boolean(photoAnalyzedThisTurn);
+  const memorySnapshot = buildQuestionMemorySnapshot(
+    session,
+    messages,
+    latestUserMessage
+  );
+  const fallbackMessage = buildDeterministicQuestionFallback(
+    pet.name,
+    questionText,
+    session,
+    hasPhoto
+  );
+
+  const prompt = `You are PawVital, a precise veterinary triage wording assistant.
+
+The clinical matrix already chose the next question. Do not invent clinical logic.
+
+PET:
+- Name: ${pet.name}
+- Breed: ${pet.breed}
+- Age: ${pet.age_years}
+- Weight: ${pet.weight}
+
+FULL SESSION MEMORY:
+${memorySnapshot}
+${phrasingContext ? `\nIMAGE CONTEXT:\n${phrasingContext}\n` : ""}
+PHOTO SENT THIS TURN: ${hasPhoto ? "YES" : "NO"}
+
+REQUIRED QUESTION:
+- Exact question text: "${questionText}"
+- Internal ID: ${questionId}
+- Answer type: ${qDef?.data_type || "string"}
+
+WRITE EXACTLY 2 SENTENCES:
+1. One short acknowledgment that fits the whole session.
+2. Ask the exact required question in caring, simple language.
+
+HARD RULES:
+- Treat the latest owner answer and any attached photo as one combined turn about the same dog.
+- Never act like this turn exists in isolation.
+- Never ask a different question than the required one.
+- Never mention species confusion, breed confusion, or made-up visual details.
+- If PHOTO SENT THIS TURN = NO, never use visual language like "I can see" or "from the photo".
+- If PHOTO SENT THIS TURN = YES, only mention the image briefly and only if it supports the required question.
+- Never mention scores, probabilities, clinical IDs, or internal logic.
+- Never list diagnoses or differentials.
+- Use correct canine anatomy.
+
+Respond with only the final 2-sentence message.`;
+
+  try {
+    let draft: string;
+
+    if (useNvidia) {
+      draft = await phraseWithLlama(prompt);
+      console.log("[Engine] Phrasing primary: Llama 3.3 70B Instruct");
+    } else {
+      const claudeRes = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 256,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const content = claudeRes.content[0];
+      if (content.type !== "text") throw new Error("Unexpected response type");
+      draft = content.text;
+      console.log("[Engine] Phrasing primary: Claude");
+    }
+
+    draft = sanitizeQuestionDraft(draft, fallbackMessage, hasPhoto);
+
+    if (useNvidia) {
+      try {
+        const verificationPrompt = `Review and, if needed, repair this drafted veterinary follow-up message.
+
+FULL SESSION MEMORY:
+${memorySnapshot}
+${phrasingContext ? `\nIMAGE CONTEXT:\n${phrasingContext}\n` : ""}
+PHOTO SENT THIS TURN: ${hasPhoto ? "YES" : "NO"}
+
+REQUIRED QUESTION:
+- Exact question text: "${questionText}"
+- Internal ID: ${questionId}
+
+DRAFT MESSAGE:
+${draft}
+
+Return ONLY valid JSON:
+{
+  "message": "final corrected 2-sentence message"
+}
+
+RULES:
+- Preserve the required question intent exactly.
+- Keep it to 2 sentences.
+- Keep it grounded in the full session memory.
+- If PHOTO SENT THIS TURN = NO, remove all visual language.
+- Never mention species confusion, breed confusion, or made-up visual details.
+- Never ask a different question.
+- Never mention diagnoses, scores, IDs, or probabilities.`;
+
+        const verified = await verifyQuestionWithNemotron(verificationPrompt);
+        const parsed = parseLooseJsonRecord(verified);
+        const verifiedMessage =
+          typeof parsed.message === "string" ? parsed.message : "";
+
+        return sanitizeQuestionDraft(
+          verifiedMessage,
+          fallbackMessage,
+          hasPhoto
+        );
+      } catch (verificationError) {
+        console.error("Question verification failed:", verificationError);
+      }
+    }
+
+    return draft;
+  } catch (error) {
+    console.error("Phrasing failed:", error);
+
+    if (useNvidia && isAnthropicConfigured) {
+      try {
+        const claudeRes = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 256,
+          messages: [{ role: "user", content: prompt }],
+        });
+        const content = claudeRes.content[0];
+        if (content.type !== "text")
+          throw new Error("Unexpected response type");
+        return sanitizeQuestionDraft(content.text, fallbackMessage, hasPhoto);
+      } catch {
+        // Final fallback below
+      }
+    }
+
+    return fallbackMessage;
+  }
+}
+
 // =============================================================================
 // STEP 5: Question Phrasing — Kimi K2.5 → Claude fallback
 // =============================================================================
@@ -734,9 +976,22 @@ async function phraseQuestion(
   questionId: string,
   session: TriageSession,
   pet: PetProfile,
+  messages: { role: "user" | "assistant"; content: string }[],
+  latestUserMessage: string,
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean
 ): Promise<string> {
+  return phraseQuestionV2(
+    questionText,
+    questionId,
+    session,
+    pet,
+    messages,
+    latestUserMessage,
+    phrasingContext,
+    photoAnalyzedThisTurn
+  );
+
   const qDef = FOLLOW_UP_QUESTIONS[questionId];
   const hasPhoto = Boolean(photoAnalyzedThisTurn);
 
@@ -776,8 +1031,8 @@ Respond with ONLY your 2-sentence message. No JSON, no markdown, no thinking tag
 
     if (useNvidia) {
       // PRIMARY: Kimi K2.5 — warm, empathetic language
-      response = await phraseWithKimi(prompt);
-      console.log("[Engine] Phrasing: Kimi K2.5");
+      response = await phraseWithLlama(prompt);
+      console.log("[Engine] Phrasing: Llama 3.3 70B Instruct");
     } else {
       // FALLBACK: Claude
       const claudeRes = await anthropic.messages.create({
@@ -787,7 +1042,7 @@ Respond with ONLY your 2-sentence message. No JSON, no markdown, no thinking tag
       });
       const content = claudeRes.content[0];
       if (content.type !== "text") throw new Error("Unexpected response type");
-      response = content.text;
+      response = (content as { type: "text"; text: string }).text;
       console.log("[Engine] Phrasing: Claude (fallback)");
     }
 
@@ -809,7 +1064,7 @@ Respond with ONLY your 2-sentence message. No JSON, no markdown, no thinking tag
         const content = claudeRes.content[0];
         if (content.type !== "text")
           throw new Error("Unexpected response type");
-        return content.text.trim();
+        return (content as { type: "text"; text: string }).text.trim();
       } catch {
         // Final fallback
       }

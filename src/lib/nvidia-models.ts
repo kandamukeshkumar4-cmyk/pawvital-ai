@@ -8,6 +8,13 @@ import OpenAI from "openai";
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
 const SHARED_NVIDIA_API_KEY =
   process.env.NVIDIA_API_KEY || process.env.NVIDIA_VISION_API_KEY;
+const GENERAL_TEXT_API_KEY =
+  process.env.NVIDIA_TEXT_API_KEY ||
+  process.env.NVIDIA_QWEN_API_KEY ||
+  process.env.NVIDIA_DEEPSEEK_API_KEY ||
+  process.env.NVIDIA_KIMI_API_KEY ||
+  process.env.NVIDIA_GLM_API_KEY ||
+  SHARED_NVIDIA_API_KEY;
 const VISION_FAST_API_KEY =
   process.env.NVIDIA_VISION_FAST_API_KEY ||
   SHARED_NVIDIA_API_KEY ||
@@ -31,10 +38,16 @@ export const MODELS = {
   },
   // Kimi K2.5 — natural language, empathetic phrasing
   phrasing: {
-    name: "moonshotai/kimi-k2.5",
-    fallback: null,
+    name: "meta/llama-3.3-70b-instruct",
+    fallback: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
     role: "Question Phrasing" as const,
-    apiKey: process.env.NVIDIA_KIMI_API_KEY,
+    apiKey: GENERAL_TEXT_API_KEY,
+  },
+  phrasing_verifier: {
+    name: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    fallback: "meta/llama-3.3-70b-instruct",
+    role: "Question Verification" as const,
+    apiKey: GENERAL_TEXT_API_KEY,
   },
   // Nemotron Ultra 253B — NVIDIA's most powerful model for clinical diagnosis
   // (DeepSeek V3.2 as fallback; R1/V3.1 have CUDA issues on NIM)
@@ -80,13 +93,15 @@ type ModelRole = keyof typeof MODELS;
 const ROLE_CONCURRENCY_LIMITS: Partial<Record<ModelRole, number>> = {
   extraction: 2,
   diagnosis: 1,
+  phrasing_verifier: 1,
   vision_detailed: 1,
   vision_deep: 1,
 };
 
 const ROLE_TIMEOUT_MS: Record<ModelRole, number> = {
   extraction: 45000,
-  phrasing: 15000,
+  phrasing: 12000,
+  phrasing_verifier: 15000,
   diagnosis: 120000,
   safety: 30000,
   vision_fast: 30000,
@@ -198,15 +213,25 @@ export async function complete({
   const client = getClient(role);
   if (!client) throw new Error(`NVIDIA ${MODELS[role].role} model not configured`);
 
+  const modelName = MODELS[role].name;
+  let finalSystemPrompt = systemPrompt;
+  if (
+    modelName.includes("nemotron-super-49b-v1.5") &&
+    !finalSystemPrompt?.includes("/no_think")
+  ) {
+    finalSystemPrompt = ["/no_think", finalSystemPrompt]
+      .filter(Boolean)
+      .join("\n");
+  }
+
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-  if (systemPrompt) {
-    messages.push({ role: "system", content: systemPrompt });
+  if (finalSystemPrompt) {
+    messages.push({ role: "system", content: finalSystemPrompt });
   }
   messages.push({ role: "user", content: prompt });
 
   // Disable thinking mode for models that enable it by default
   // Thinking consumes from max_tokens budget and returns content in wrong field
-  const modelName = MODELS[role].name;
   const disableThinking: Record<string, unknown> = {};
   if (modelName.includes("kimi")) {
     disableThinking.chat_template_kwargs = { thinking: false };
@@ -286,12 +311,24 @@ export async function extractWithQwen(prompt: string): Promise<string> {
  * Phrase a clinical question naturally using Kimi K2.5.
  * Returns a warm, empathetic question string.
  */
-export async function phraseWithKimi(prompt: string): Promise<string> {
+export async function phraseWithLlama(prompt: string): Promise<string> {
   return complete({
     role: "phrasing",
     prompt,
     maxTokens: 160,
-    temperature: 0.5,
+    temperature: 0.25,
+  });
+}
+
+export async function verifyQuestionWithNemotron(
+  prompt: string
+): Promise<string> {
+  return complete({
+    role: "phrasing_verifier",
+    prompt,
+    maxTokens: 220,
+    temperature: 0.1,
+    systemPrompt: "/no_think",
   });
 }
 
