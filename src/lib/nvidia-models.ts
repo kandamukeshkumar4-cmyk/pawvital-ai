@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { VisionPreprocessResult } from "./clinical-evidence";
 
 // =============================================================================
 // NVIDIA NIM Multi-Model Client
@@ -393,7 +394,7 @@ Dogs do NOT have arms, forearms, hands, feet, fingers, toes, ankles, or wrists.
 /** Shared helper: call a vision model with an image */
 async function callVisionModel(
   role: "vision_fast" | "vision_detailed" | "vision_deep",
-  imageUrl: string,
+  imageUrls: string[],
   prompt: string,
   maxTokens: number = 512,
   temperature: number = 0.2
@@ -424,7 +425,10 @@ async function callVisionModel(
           messages: [{
             role: "user",
             content: [
-              { type: "image_url", image_url: { url: imageUrl } },
+              ...imageUrls.map((url) => ({
+                type: "image_url" as const,
+                image_url: { url },
+              })),
               { type: "text", text: prompt },
             ],
           }],
@@ -479,23 +483,58 @@ export interface VisionPipelineResult {
 export async function analyzeImageWithVision(
   base64Image: string,
   textContext?: string,
-  breedInfo?: { breed: string; age_years: number; weight: number }
+  breedInfo?: { breed: string; age_years: number; weight: number },
+  options?: { preprocess?: VisionPreprocessResult }
 ): Promise<string> {
-  const result = await runVisionPipeline(base64Image, textContext, breedInfo);
+  const result = await runVisionPipeline(
+    base64Image,
+    textContext,
+    breedInfo,
+    options
+  );
   return result.combined;
 }
 
 export async function runVisionPipeline(
   base64Image: string,
   textContext?: string,
-  breedInfo?: { breed: string; age_years: number; weight: number }
+  breedInfo?: { breed: string; age_years: number; weight: number },
+  options?: { preprocess?: VisionPreprocessResult }
 ): Promise<VisionPipelineResult> {
   const imageUrl = base64Image.startsWith("data:")
     ? base64Image
     : `data:image/jpeg;base64,${base64Image}`;
+  const bestCrop =
+    options?.preprocess?.bestCrop && options.preprocess.bestCrop.startsWith("data:")
+      ? options.preprocess.bestCrop
+      : options?.preprocess?.bestCrop
+        ? `data:image/jpeg;base64,${options.preprocess.bestCrop}`
+        : null;
+  const imageUrls = [imageUrl, ...(bestCrop ? [bestCrop] : [])];
 
   const breedContext = breedInfo
     ? buildBreedRiskContext(breedInfo.breed, breedInfo.age_years)
+    : "";
+  const preprocessContext = options?.preprocess
+    ? [
+        `Image domain: ${options.preprocess.domain}`,
+        options.preprocess.bodyRegion
+          ? `Body region: ${options.preprocess.bodyRegion}`
+          : "",
+        options.preprocess.detectedRegions.length > 0
+          ? `Detected regions: ${options.preprocess.detectedRegions
+              .map((region) =>
+                `${region.label} (${region.confidence.toFixed(2)})`
+              )
+              .join(", ")}`
+          : "",
+        `Image quality: ${options.preprocess.imageQuality}`,
+        options.preprocess.limitations.length > 0
+          ? `Preprocess limitations: ${options.preprocess.limitations.join(", ")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
     : "";
 
   // ═══════════════════════════════════════════════════════════════════════
@@ -506,7 +545,10 @@ const tier1Prompt = `You are a veterinary triage clinician. Quickly assess this 
 ${breedInfo ? `Patient: ${breedInfo.breed}, ${breedInfo.age_years}yr, ${breedInfo.weight}lbs` : ""}
 ${breedContext ? `Breed risk context: ${breedContext}` : ""}
 ${textContext ? `Owner says: "${textContext}"` : ""}
+${preprocessContext ? `Pre-vision context:\n${preprocessContext}` : ""}
 ${CANINE_ANATOMY_RULES}
+
+If two images are attached, the first is the original and the second is a focused crop of the most relevant region.
 
 Output ONLY valid JSON:
 {
@@ -530,7 +572,7 @@ Output ONLY valid JSON:
 }`;
 
   console.log("[Vision Pipeline] Tier 1: Llama 3.2 11B Vision (fast triage)...");
-  const tier1Raw = await callVisionModel("vision_fast", imageUrl, tier1Prompt, 640, 0.1);
+  const tier1Raw = await callVisionModel("vision_fast", imageUrls, tier1Prompt, 640, 0.1);
   console.log("[Vision Pipeline] Tier 1 complete");
 
   // Parse Tier 1 to decide routing
@@ -607,6 +649,7 @@ Output ONLY valid JSON:
 ${breedInfo ? `PATIENT: ${breedInfo.breed}, ${breedInfo.age_years} years old, ${breedInfo.weight} lbs` : ""}
 ${breedContext ? `\nBREED-SPECIFIC RISK FACTORS:\n${breedContext}` : ""}
 ${textContext ? `\nOWNER'S DESCRIPTION: "${textContext}"` : ""}
+${preprocessContext ? `\nPRE-VISION CONTEXT:\n${preprocessContext}` : ""}
 
 INITIAL TRIAGE FINDINGS: ${JSON.stringify(tier1Data)}
 
@@ -654,7 +697,7 @@ Output ONLY valid JSON:
 
     try {
       console.log("[Vision Pipeline] Tier 2: Llama 3.2 90B Vision (detailed analysis)...");
-      tier2Raw = await callVisionModel("vision_detailed", imageUrl, tier2Prompt, 900, 0.15);
+      tier2Raw = await callVisionModel("vision_detailed", imageUrls, tier2Prompt, 900, 0.15);
       try {
         tier2Data = parseLooseJsonObject(tier2Raw);
       } catch {
@@ -705,6 +748,7 @@ Output ONLY valid JSON:
 ${breedInfo ? `PATIENT: ${breedInfo.breed}, ${breedInfo.age_years} years old, ${breedInfo.weight} lbs` : ""}
 ${breedContext ? `\nBREED-SPECIFIC RISK FACTORS:\n${breedContext}` : ""}
 ${textContext ? `\nOWNER'S DESCRIPTION: "${textContext}"` : ""}
+${preprocessContext ? `\nPRE-VISION CONTEXT:\n${preprocessContext}` : ""}
 
 TIER 1 TRIAGE: ${JSON.stringify(tier1Data)}
 ${tier2Raw ? `TIER 2 DETAILED: ${tier2Raw.substring(0, 1500)}` : ""}
@@ -739,7 +783,7 @@ Output ONLY valid JSON:
 
     try {
       console.log("[Vision Pipeline] Tier 3: Kimi K2.5 (deep reasoning)...");
-      tier3Raw = await callVisionModel("vision_deep", imageUrl, tier3Prompt, 700, 0.2);
+      tier3Raw = await callVisionModel("vision_deep", imageUrls, tier3Prompt, 700, 0.2);
       console.log("[Vision Pipeline] Tier 3 complete");
     } catch (err) {
       console.error("[Vision Pipeline] Tier 3 failed (non-blocking):", err);

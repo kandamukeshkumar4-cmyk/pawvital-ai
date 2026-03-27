@@ -12,6 +12,15 @@ import {
   type BreedModifiers,
   type DiseaseEntry,
 } from "./clinical-matrix";
+import type {
+  ConsultOpinion,
+  RetrievalImageEvidence,
+  RetrievalTextEvidence,
+  ServiceTimeoutRecord,
+  SupportedImageDomain,
+  VisionClinicalEvidence,
+  VisionPreprocessResult,
+} from "./clinical-evidence";
 
 // --- Session State ---
 
@@ -41,6 +50,18 @@ export interface TriageSession {
   breed_profile_summary?: string;
   roboflow_skin_summary?: string;
   roboflow_skin_labels?: string[];
+  latest_image_domain?: SupportedImageDomain;
+  latest_image_body_region?: string;
+  latest_image_quality?: string;
+  latest_preprocess?: VisionPreprocessResult;
+  latest_visual_evidence?: VisionClinicalEvidence;
+  latest_retrieval_bundle?: {
+    textChunks: RetrievalTextEvidence[];
+    imageMatches: RetrievalImageEvidence[];
+    rerankScores: number[];
+    sourceCitations: string[];
+  };
+  latest_consult_opinion?: ConsultOpinion;
   case_memory?: StructuredCaseMemory;
 }
 
@@ -53,6 +74,12 @@ export interface StructuredCaseMemory {
   red_flag_notes: string[];
   unresolved_question_ids: string[];
   timeline_notes: string[];
+  visual_evidence: VisionClinicalEvidence[];
+  retrieval_evidence: Array<RetrievalTextEvidence | RetrievalImageEvidence>;
+  consult_opinions: ConsultOpinion[];
+  evidence_chain: string[];
+  service_timeouts: ServiceTimeoutRecord[];
+  ambiguity_flags: string[];
   latest_owner_turn?: string;
   compressed_summary?: string;
   compression_model?: string;
@@ -102,6 +129,12 @@ export function createSession(): TriageSession {
       red_flag_notes: [],
       unresolved_question_ids: [],
       timeline_notes: [],
+      visual_evidence: [],
+      retrieval_evidence: [],
+      consult_opinions: [],
+      evidence_chain: [],
+      service_timeouts: [],
+      ambiguity_flags: [],
     },
   };
 }

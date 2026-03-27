@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { PetProfile, TriageSession } from "./triage-engine";
+import type { SupportedImageDomain } from "./clinical-evidence";
 import {
   buildReferenceImageSearchText,
   embedImageQueries,
@@ -7,6 +8,10 @@ import {
   embeddingToVectorLiteral,
   isEmbeddingConfigured,
 } from "./embedding-models";
+import {
+  isDogOnlyText,
+  supportsDomainText,
+} from "./clinical-evidence";
 
 export interface KnowledgeChunkMatch {
   chunkId: string;
@@ -32,6 +37,11 @@ export interface ReferenceImageMatch {
   caption: string | null;
   metadata: Record<string, unknown>;
   similarity: number;
+}
+
+interface ReferenceImageSearchOptions {
+  domain?: SupportedImageDomain | null;
+  dogOnly?: boolean;
 }
 
 interface SearchKnowledgeChunkRpcRow {
@@ -393,7 +403,8 @@ function mergeKnowledgeMatches(
 export async function searchReferenceImages(
   searchText: string,
   limit = 4,
-  conditionFilters: string[] = []
+  conditionFilters: string[] = [],
+  options: ReferenceImageSearchOptions = {}
 ): Promise<ReferenceImageMatch[]> {
   const supabase = getSupabase();
   if (!supabase) return [];
@@ -413,7 +424,10 @@ export async function searchReferenceImages(
   );
 
   if (!isEmbeddingConfigured()) {
-    return lexicalMatches.slice(0, Math.max(1, limit));
+    return filterReferenceImageMatches(
+      lexicalMatches.slice(0, Math.max(1, limit)),
+      options
+    );
   }
 
   try {
@@ -423,10 +437,16 @@ export async function searchReferenceImages(
       limit,
       labelTerms
     );
-    return mergeReferenceImageMatches(semanticMatches, lexicalMatches, limit);
+    return filterReferenceImageMatches(
+      mergeReferenceImageMatches(semanticMatches, lexicalMatches, limit),
+      options
+    );
   } catch (error) {
     console.error("[Reference Image Retrieval] Search failed:", error);
-    return lexicalMatches.slice(0, Math.max(1, limit));
+    return filterReferenceImageMatches(
+      lexicalMatches.slice(0, Math.max(1, limit)),
+      options
+    );
   }
 }
 
@@ -536,6 +556,48 @@ function mergeReferenceImageMatches(
   }
 
   return [...merged.values()].slice(0, Math.max(1, limit));
+}
+
+function isDogOnlyReferenceImageMatch(match: ReferenceImageMatch): boolean {
+  const joined = [
+    match.sourceSlug,
+    match.sourceTitle,
+    match.conditionLabel,
+    match.caption || "",
+    match.localPath || "",
+    typeof match.metadata.relative_path === "string"
+      ? match.metadata.relative_path
+      : "",
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return isDogOnlyText(joined);
+}
+
+function filterReferenceImageMatches(
+  matches: ReferenceImageMatch[],
+  options: ReferenceImageSearchOptions
+): ReferenceImageMatch[] {
+  let filtered = matches;
+
+  if (options.dogOnly) {
+    filtered = filtered.filter(isDogOnlyReferenceImageMatch);
+  }
+
+  if (options.domain && options.domain !== "unsupported") {
+    filtered = filtered.filter((match) => {
+      const joined = [
+        match.conditionLabel,
+        match.caption || "",
+        match.sourceSlug,
+        match.sourceTitle,
+      ].join(" ");
+      return supportsDomainText(joined, options.domain);
+    });
+  }
+
+  return filtered;
 }
 
 export function formatKnowledgeContext(chunks: KnowledgeChunkMatch[]): string {

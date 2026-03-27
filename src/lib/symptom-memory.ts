@@ -1,5 +1,12 @@
 import { FOLLOW_UP_QUESTIONS } from "./clinical-matrix";
 import type {
+  ConsultOpinion,
+  RetrievalImageEvidence,
+  RetrievalTextEvidence,
+  ServiceTimeoutRecord,
+  VisionClinicalEvidence,
+} from "./clinical-evidence";
+import type {
   PetProfile,
   StructuredCaseMemory,
   TriageSession,
@@ -16,6 +23,13 @@ interface TurnMemoryUpdate {
   turnFocusSymptoms?: string[];
   nextQuestionId?: string | null;
   missingQuestionIds?: string[];
+  visualEvidence?: VisionClinicalEvidence | null;
+  retrievalEvidence?: Array<RetrievalTextEvidence | RetrievalImageEvidence>;
+  consultOpinion?: ConsultOpinion | null;
+  serviceTimeouts?: ServiceTimeoutRecord[];
+  ambiguityFlags?: string[];
+  evidenceNotes?: string[];
+  imageInfluencedQuestionSelection?: boolean;
 }
 
 function trimLines(lines: string[], limit: number): string[] {
@@ -80,6 +94,12 @@ export function ensureStructuredCaseMemory(
       red_flag_notes: [],
       unresolved_question_ids: [],
       timeline_notes: [],
+      visual_evidence: [],
+      retrieval_evidence: [],
+      consult_opinions: [],
+      evidence_chain: [],
+      service_timeouts: [],
+      ambiguity_flags: [],
     }
   );
 }
@@ -142,6 +162,54 @@ export function updateStructuredCaseMemory(
     14
   );
 
+  const visualEvidence = update.visualEvidence
+    ? [
+        ...existing.visual_evidence.filter(
+          (entry) =>
+            !(
+              entry.domain === update.visualEvidence?.domain &&
+              entry.bodyRegion === update.visualEvidence?.bodyRegion &&
+              entry.severity === update.visualEvidence?.severity
+            )
+        ),
+        {
+          ...update.visualEvidence,
+          influencedQuestionSelection:
+            update.imageInfluencedQuestionSelection ??
+            update.visualEvidence.influencedQuestionSelection,
+        },
+      ].slice(-8)
+    : existing.visual_evidence;
+
+  const retrievalEvidence = [
+    ...existing.retrieval_evidence,
+    ...(
+      update.retrievalEvidence?.map((entry) => ({
+        ...entry,
+        summary: entry.summary.replace(/\s+/g, " ").trim().slice(0, 240),
+      })) || []
+    ),
+  ].slice(-12);
+
+  const consultOpinions = update.consultOpinion
+    ? [...existing.consult_opinions, update.consultOpinion].slice(-6)
+    : existing.consult_opinions;
+
+  const serviceTimeouts = [
+    ...existing.service_timeouts,
+    ...(update.serviceTimeouts || []),
+  ].slice(-10);
+
+  const ambiguityFlags = dedupeStrings(
+    [...existing.ambiguity_flags, ...(update.ambiguityFlags || [])],
+    10
+  );
+
+  const evidenceChain = trimLines(
+    [...existing.evidence_chain, ...((update.evidenceNotes || []).slice(0, 4))],
+    16
+  );
+
   return {
     ...session,
     case_memory: {
@@ -161,6 +229,12 @@ export function updateStructuredCaseMemory(
         12
       ),
       timeline_notes: timelineNotes,
+      visual_evidence: visualEvidence,
+      retrieval_evidence: retrievalEvidence,
+      consult_opinions: consultOpinions,
+      evidence_chain: evidenceChain,
+      service_timeouts: serviceTimeouts,
+      ambiguity_flags: ambiguityFlags,
     },
   };
 }
@@ -188,8 +262,26 @@ export function buildDeterministicCaseSummary(
     memory.image_findings.length > 0
       ? `Image findings: ${memory.image_findings.slice(0, 3).join("; ")}.`
       : "",
+    memory.visual_evidence.length > 0
+      ? `Structured visual evidence: ${memory.visual_evidence
+          .slice(-2)
+          .map(
+            (entry) =>
+              `${entry.domain} ${entry.bodyRegion || "location unknown"} (${entry.severity}, confidence ${entry.confidence.toFixed(2)})`
+          )
+          .join("; ")}.`
+      : "",
+    memory.consult_opinions.length > 0
+      ? `Consult opinions: ${memory.consult_opinions
+          .slice(-2)
+          .map((entry) => `${entry.model}: ${entry.summary}`)
+          .join("; ")}.`
+      : "",
     memory.red_flag_notes.length > 0
       ? `Red flag watch: ${memory.red_flag_notes.slice(0, 3).join("; ")}.`
+      : "",
+    memory.ambiguity_flags.length > 0
+      ? `Open ambiguities: ${memory.ambiguity_flags.slice(0, 4).join("; ")}.`
       : "",
     nextQuestions.length > 0
       ? `Open questions: ${nextQuestions.join(" | ")}.`
@@ -250,6 +342,42 @@ export function buildCaseMemorySnapshot(
     memory.image_findings.length > 0
       ? `Image findings:\n- ${memory.image_findings.slice(0, 5).join("\n- ")}`
       : "Image findings: none",
+    memory.visual_evidence.length > 0
+      ? `Structured visual evidence:\n- ${memory.visual_evidence
+          .slice(-4)
+          .map(
+            (entry) =>
+              `${entry.domain} | ${entry.bodyRegion || "unknown region"} | ${entry.findings.join(", ") || "no findings"} | severity=${entry.severity} | confidence=${entry.confidence.toFixed(2)}`
+          )
+          .join("\n- ")}`
+      : "Structured visual evidence: none",
+    memory.consult_opinions.length > 0
+      ? `Consult opinions:\n- ${memory.consult_opinions
+          .slice(-3)
+          .map(
+            (entry) =>
+              `${entry.model} (${entry.mode}) confidence=${entry.confidence.toFixed(2)} | ${entry.summary}`
+          )
+          .join("\n- ")}`
+      : "Consult opinions: none",
+    memory.retrieval_evidence.length > 0
+      ? `Retrieved evidence:\n- ${memory.retrieval_evidence
+          .slice(-6)
+          .map((entry) => `${entry.title} | score=${entry.score.toFixed(2)} | ${entry.summary}`)
+          .join("\n- ")}`
+      : "Retrieved evidence: none",
+    memory.evidence_chain.length > 0
+      ? `Evidence chain:\n- ${memory.evidence_chain.slice(-6).join("\n- ")}`
+      : "Evidence chain: none",
+    memory.service_timeouts.length > 0
+      ? `Service timeouts:\n- ${memory.service_timeouts
+          .slice(-4)
+          .map((entry) => `${entry.service}:${entry.stage} (${entry.reason})`)
+          .join("\n- ")}`
+      : "Service timeouts: none",
+    memory.ambiguity_flags.length > 0
+      ? `Ambiguity flags:\n- ${memory.ambiguity_flags.join("\n- ")}`
+      : "Ambiguity flags: none",
     memory.timeline_notes.length > 0
       ? `Timeline notes:\n- ${memory.timeline_notes.slice(-6).join("\n- ")}`
       : "Timeline notes: none",

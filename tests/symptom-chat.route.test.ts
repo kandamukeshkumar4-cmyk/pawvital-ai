@@ -14,11 +14,16 @@ const mockVerifyQuestionWithNemotron = jest.fn();
 const mockRunVisionPipeline = jest.fn();
 const mockParseVisionForMatrix = jest.fn();
 const mockImageGuardrail = jest.fn();
+const mockDiagnoseWithDeepSeek = jest.fn();
+const mockVerifyWithGLM = jest.fn();
 const mockDetectBreedWithNyckel = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
 const mockEvaluateImageGate = jest.fn();
 const mockShouldAnalyzeWoundImage = jest.fn();
 const mockCompressCaseMemoryWithMiniMax = jest.fn();
+const mockPreprocessVeterinaryImage = jest.fn();
+const mockConsultWithMultimodalSidecar = jest.fn();
+const mockRetrieveVeterinaryEvidenceFromSidecar = jest.fn();
 
 jest.mock("@/lib/rate-limit", () => ({
   symptomChatLimiter: {},
@@ -39,8 +44,8 @@ jest.mock("@/lib/nvidia-models", () => ({
     mockReviewQuestionPlanWithNemotron(...args),
   verifyQuestionWithNemotron: (...args: unknown[]) =>
     mockVerifyQuestionWithNemotron(...args),
-  diagnoseWithDeepSeek: jest.fn(),
-  verifyWithGLM: jest.fn(),
+  diagnoseWithDeepSeek: (...args: unknown[]) => mockDiagnoseWithDeepSeek(...args),
+  verifyWithGLM: (...args: unknown[]) => mockVerifyWithGLM(...args),
   runVisionPipeline: (...args: unknown[]) => mockRunVisionPipeline(...args),
   parseVisionForMatrix: (...args: unknown[]) => mockParseVisionForMatrix(...args),
   imageGuardrail: (...args: unknown[]) => mockImageGuardrail(...args),
@@ -76,6 +81,20 @@ jest.mock("@/lib/minimax", () => ({
   isMiniMaxConfigured: () => true,
   compressCaseMemoryWithMiniMax: (...args: unknown[]) =>
     mockCompressCaseMemoryWithMiniMax(...args),
+}));
+
+jest.mock("@/lib/hf-sidecars", () => ({
+  isVisionPreprocessConfigured: () => true,
+  isRetrievalSidecarConfigured: () => true,
+  isMultimodalConsultConfigured: () => true,
+  isAbortLikeError: (error: unknown) =>
+    error instanceof Error && error.name === "AbortError",
+  preprocessVeterinaryImage: (...args: unknown[]) =>
+    mockPreprocessVeterinaryImage(...args),
+  consultWithMultimodalSidecar: (...args: unknown[]) =>
+    mockConsultWithMultimodalSidecar(...args),
+  retrieveVeterinaryEvidenceFromSidecar: (...args: unknown[]) =>
+    mockRetrieveVeterinaryEvidenceFromSidecar(...args),
 }));
 
 const PET = {
@@ -121,6 +140,20 @@ function makeTextOnlyRequest(session: TriageSession, message: string) {
   });
 }
 
+function makeReportRequest(session: TriageSession, image?: string) {
+  return new Request("http://localhost/api/ai/symptom-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "generate_report",
+      pet: PET,
+      session,
+      image,
+      messages: [{ role: "user", content: "Please generate the report." }],
+    }),
+  });
+}
+
 describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -139,6 +172,52 @@ describe("symptom-chat mixed text + image routing", () => {
         "Bruno remains in a limping triage flow with left-sided limb concerns and possible wound evidence from the latest photo.",
       model: "MiniMax-M2.7",
     });
+    mockPreprocessVeterinaryImage.mockResolvedValue({
+      domain: "skin_wound",
+      bodyRegion: "left hind leg",
+      detectedRegions: [{ label: "wound", confidence: 0.92 }],
+      bestCrop: null,
+      imageQuality: "good",
+      confidence: 0.88,
+      limitations: [],
+    });
+    mockConsultWithMultimodalSidecar.mockResolvedValue({
+      model: "Qwen2.5-VL-7B-Instruct",
+      summary: "The lesion appears localized to the left hind limb and warrants wound-focused follow-up.",
+      agreements: ["left hind limb involvement"],
+      disagreements: [],
+      uncertainties: [],
+      confidence: 0.74,
+      mode: "sync",
+    });
+    mockRetrieveVeterinaryEvidenceFromSidecar.mockResolvedValue({
+      textChunks: [],
+      imageMatches: [],
+      rerankScores: [],
+      sourceCitations: [],
+    });
+    mockDiagnoseWithDeepSeek.mockResolvedValue(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Localized skin lesion",
+        explanation: "Explanation",
+        differential_diagnoses: [],
+        clinical_notes: "Notes",
+        recommended_tests: [],
+        home_care: [],
+        actions: [],
+        warning_signs: [],
+        vet_questions: [],
+      })
+    );
+    mockVerifyWithGLM.mockResolvedValue(
+      JSON.stringify({
+        safe: true,
+        corrections: {},
+        reasoning: "Report is clinically sound",
+      })
+    );
     mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
       const questionId =
         prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
@@ -345,7 +424,7 @@ describe("symptom-chat mixed text + image routing", () => {
     );
   });
 
-  it("keeps fresh image findings for reasoning even when direct photo wording is blocked", async () => {
+  it("keeps fresh image findings available for reasoning even when direct photo wording is blocked", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
@@ -397,7 +476,7 @@ describe("symptom-chat mixed text + image routing", () => {
       "EXPLICITLY REFERENCE PHOTO IN WORDING: NO"
     );
     expect(payload.message).toBe(
-      "I'm keeping track of what you've shared so far about Bruno's limping. When did the limping start? Was it sudden or gradual?"
+      "I'm keeping track of what you've shared so far about Bruno's limping. How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(payload.message).not.toContain("photo");
   });
@@ -426,6 +505,184 @@ describe("symptom-chat mixed text + image routing", () => {
     );
     expect(mockPhraseWithLlama).not.toHaveBeenCalled();
     expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+  });
+
+  it("supports eye-domain image turns even outside the wound flow", async () => {
+    mockPreprocessVeterinaryImage.mockResolvedValue({
+      domain: "eye",
+      bodyRegion: "left eye",
+      detectedRegions: [{ label: "eye", confidence: 0.96 }],
+      bestCrop: null,
+      imageQuality: "good",
+      confidence: 0.91,
+      limitations: [],
+    });
+    mockRunVisionPipeline.mockResolvedValue({
+      combined: "photo analysis showing redness and discharge around the left eye",
+      severity: "needs_review",
+      tiersUsed: [1],
+      woundDetected: false,
+      tier1_fast:
+        "{\"clinical_impression\":\"mild ocular irritation\",\"confidence\":0.82}",
+      tier2_detailed: null,
+      tier3_deep: null,
+    });
+    mockParseVisionForMatrix.mockReturnValue({
+      symptoms: [],
+      redFlags: [],
+      severityClass: "needs_review",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeRequest(createSession(), "his left eye looks red"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
+    expect(payload.session.latest_image_domain).toBe("eye");
+    expect(payload.session.known_symptoms).toContain("eye_discharge");
+    expect(payload.session.case_memory.visual_evidence.at(-1)?.domain).toBe("eye");
+  });
+
+  it("calls the multimodal consult on ambiguous supported image cases", async () => {
+    mockPreprocessVeterinaryImage.mockResolvedValue({
+      domain: "eye",
+      bodyRegion: "left eye",
+      detectedRegions: [
+        { label: "eye", confidence: 0.65 },
+        { label: "discharge", confidence: 0.61 },
+      ],
+      bestCrop: null,
+      imageQuality: "borderline",
+      confidence: 0.58,
+      limitations: ["partial blur"],
+    });
+    mockRunVisionPipeline.mockResolvedValue({
+      combined: "{\"confidence\":0.52,\"summary\":\"ocular irritation\"}",
+      severity: "needs_review",
+      tiersUsed: [1, 2],
+      woundDetected: false,
+      tier1_fast: "{\"confidence\":0.52}",
+      tier2_detailed: "{\"estimated_severity\":\"moderate\"}",
+      tier3_deep: null,
+    });
+    mockParseVisionForMatrix.mockReturnValue({
+      symptoms: [],
+      redFlags: [],
+      severityClass: "needs_review",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeRequest(createSession(), "his eye looks weird"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockConsultWithMultimodalSidecar).toHaveBeenCalledTimes(1);
+    expect(payload.session.latest_consult_opinion?.model).toBe(
+      "Qwen2.5-VL-7B-Instruct"
+    );
+    expect(payload.session.case_memory.consult_opinions).toHaveLength(1);
+  });
+
+  it("records sidecar timeouts and falls back to deterministic preprocess", async () => {
+    const abortError = new Error("aborted");
+    abortError.name = "AbortError";
+    mockPreprocessVeterinaryImage.mockRejectedValue(abortError);
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "which_leg";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeRequest(session, "left leg"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.latest_image_domain).toBe("skin_wound");
+    expect(payload.session.case_memory.service_timeouts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: "vision-preprocess-service",
+          stage: "preprocess",
+          reason: "timeout",
+        }),
+      ])
+    );
+  });
+
+  it("adds evidence-chain data and capped confidence to the final report", async () => {
+    mockRetrieveVeterinaryEvidenceFromSidecar.mockResolvedValue({
+      textChunks: [
+        {
+          title: "Merck Wound Management",
+          citation: "Merck Veterinary Manual",
+          score: 0.92,
+          summary: "Clean wounds should be stabilized and monitored for infection.",
+          sourceUrl: "https://example.com/merck",
+        },
+      ],
+      imageMatches: [
+        {
+          title: "Dog Skin Dataset",
+          citation: "https://example.com/dataset",
+          score: 0.88,
+          summary: "reference hot spot image",
+          assetUrl: null,
+          domain: "skin_wound",
+          conditionLabel: "hot_spot",
+          dogOnly: true,
+        },
+      ],
+      rerankScores: [0.92],
+      sourceCitations: ["Merck Veterinary Manual"],
+    });
+
+    const session = createSession();
+    session.known_symptoms = ["wound_skin_issue"];
+    session.extracted_answers = { wound_location: "left hind leg" };
+    session.vision_analysis = "Superficial moist lesion on the left hind leg.";
+    session.vision_severity = "needs_review";
+    session.latest_image_domain = "skin_wound";
+    session.latest_image_quality = "borderline";
+    session.case_memory = {
+      ...session.case_memory!,
+      latest_owner_turn: "There is a raw patch on his left hind leg.",
+      compressed_summary: "Raw moist lesion on the left hind leg with owner concern about irritation.",
+      visual_evidence: [
+        {
+          domain: "skin_wound",
+          bodyRegion: "left hind leg",
+          findings: ["raw moist lesion"],
+          severity: "needs_review",
+          confidence: 0.71,
+          supportedSymptoms: ["wound_skin_issue"],
+          contradictions: [],
+          requiresConsult: false,
+          limitations: ["borderline image quality"],
+          influencedQuestionSelection: true,
+        },
+      ],
+      consult_opinions: [],
+      retrieval_evidence: [],
+      evidence_chain: ["Visual evidence directly influenced next question: wound_size"],
+      service_timeouts: [],
+      ambiguity_flags: ["borderline image quality"],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeReportRequest(session, IMAGE));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("report");
+    expect(payload.report.confidence).toBeLessThanOrEqual(0.98);
+    expect(payload.report.evidence_chain).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Visual evidence"),
+        expect.stringContaining("Reference support"),
+      ])
+    );
   });
 
   it("captures obvious first-turn limping details before asking the next question", async () => {
@@ -803,11 +1060,20 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(bellyPayload.session.last_question_asked).toBe("abdomen_onset");
   });
 
-  it("does not run wound vision for a generic photo in a non-wound respiratory session", async () => {
+  it("does not run deep image analysis when pre-vision marks a generic photo unsupported", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
       labels: [],
+    });
+    mockPreprocessVeterinaryImage.mockResolvedValue({
+      domain: "unsupported",
+      bodyRegion: null,
+      detectedRegions: [],
+      bestCrop: null,
+      imageQuality: "borderline",
+      confidence: 0.2,
+      limitations: ["generic photo does not map to a supported veterinary image domain"],
     });
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
     mockExtractWithQwen.mockResolvedValue(
@@ -825,6 +1091,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     expect(mockRunVisionPipeline).not.toHaveBeenCalled();
     expect(payload.session.known_symptoms).not.toContain("wound_skin_issue");
+    expect(payload.session.latest_image_domain).toBe("unsupported");
   });
 
   it("falls back to deterministic-summary when MiniMax compression throws", async () => {

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
 import {
@@ -46,11 +46,28 @@ import {
 import {
   buildReferenceImageQuery,
   buildKnowledgeSearchQuery,
-  formatReferenceImageContext,
-  formatKnowledgeContext,
   searchReferenceImages,
   searchKnowledgeChunks,
 } from "@/lib/knowledge-retrieval";
+import {
+  capDiagnosticConfidence,
+  inferSupportedImageDomain,
+  type ConsultOpinion,
+  type RetrievalBundle,
+  type ServiceTimeoutRecord,
+  type SupportedImageDomain,
+  type VisionClinicalEvidence,
+  type VisionPreprocessResult,
+} from "@/lib/clinical-evidence";
+import {
+  consultWithMultimodalSidecar,
+  isAbortLikeError as isSidecarAbortError,
+  isMultimodalConsultConfigured,
+  isRetrievalSidecarConfigured,
+  isVisionPreprocessConfigured,
+  preprocessVeterinaryImage,
+  retrieveVeterinaryEvidenceFromSidecar,
+} from "@/lib/hf-sidecars";
 import {
   symptomChatLimiter,
   checkRateLimit,
@@ -141,6 +158,11 @@ export async function POST(request: Request) {
     const imageHash = image ? hashImage(image) : null;
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
     const answerKeysBeforeTurn = new Set(Object.keys(session.extracted_answers));
+    let imagePreprocess: VisionPreprocessResult | null = null;
+    let visualEvidence: VisionClinicalEvidence | null = null;
+    let consultOpinion: ConsultOpinion | null = null;
+    const serviceTimeouts: ServiceTimeoutRecord[] = [];
+    const ambiguityFlags: string[] = [];
 
     if (imageHash && session.last_uploaded_image_hash !== imageHash) {
       resetImageStateForNewUpload(session);
@@ -149,7 +171,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "generate_report") {
-      return await generateReport(session, effectivePet, messages);
+      return await generateReport(session, effectivePet, messages, image);
     }
 
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
@@ -209,10 +231,63 @@ export async function POST(request: Request) {
       effectivePet = getEffectivePetProfile(pet, session);
     }
 
-    // ALWAYS run vision when an image is present — the photo IS the user's answer.
-    // Even a short label like "left leg" is a clinical image that must be analyzed.
+    const fallbackImageDomain = image
+      ? inferSupportedImageDomain(lastUserMessage.content, session.known_symptoms)
+      : "unsupported";
+
+    if (image) {
+      if (isVisionPreprocessConfigured()) {
+        try {
+          imagePreprocess = await preprocessVeterinaryImage({
+            image,
+            ownerText: lastUserMessage.content,
+            knownSymptoms: session.known_symptoms,
+            breed: effectivePet.breed,
+            ageYears: effectivePet.age_years,
+            weight: effectivePet.weight,
+          });
+        } catch (error) {
+          console.error("[HF Vision Preprocess] failed:", error);
+          if (isSidecarAbortError(error)) {
+            serviceTimeouts.push({
+              service: "vision-preprocess-service",
+              stage: "preprocess",
+              reason: "timeout",
+            });
+          }
+        }
+      }
+
+      if (!imagePreprocess) {
+        imagePreprocess = {
+          domain: fallbackImageDomain,
+          bodyRegion:
+            fallbackImageDomain === "skin_wound" ? "skin/limb region" : null,
+          detectedRegions: [],
+          bestCrop: null,
+          imageQuality: "borderline",
+          confidence: fallbackImageDomain === "unsupported" ? 0.2 : 0.45,
+          limitations: isVisionPreprocessConfigured()
+            ? ["preprocess sidecar unavailable"]
+            : ["no preprocess sidecar configured"],
+        };
+      }
+
+      session.latest_image_domain = imagePreprocess.domain;
+      session.latest_image_body_region = imagePreprocess.bodyRegion || undefined;
+      session.latest_image_quality = imagePreprocess.imageQuality;
+      session.latest_preprocess = imagePreprocess;
+    }
+
+    const supportedImageTurn =
+      imagePreprocess?.domain &&
+      imagePreprocess.domain !== "unsupported";
+
+    // ALWAYS run vision when an image is present and the image is in a supported
+    // veterinary domain. The photo is part of the answer, not an isolated artifact.
     const shouldRunWoundVision = image
-      ? shouldAnalyzeWoundImage(lastUserMessage.content, session) ||
+      ? supportedImageTurn ||
+        shouldAnalyzeWoundImage(lastUserMessage.content, session) ||
         roboflowSkinSuggested ||
         isImageEvidenceQuestion(session.last_question_asked) ||
         (isGenericImagePrompt(lastUserMessage.content) &&
@@ -265,6 +340,9 @@ export async function POST(request: Request) {
             breed: effectivePet.breed,
             age_years: effectivePet.age_years,
             weight: effectivePet.weight,
+          },
+          {
+            preprocess: imagePreprocess || undefined,
           }
         );
         visionAnalysis = visionResult.combined;
@@ -291,7 +369,34 @@ export async function POST(request: Request) {
           if (tier2Data.severityClass === "urgent") visionSeverity = "urgent";
         }
 
+        for (
+          const symptom of deriveSymptomsFromImageEvidence({
+            preprocess: imagePreprocess,
+            visionAnalysis,
+            visionSymptoms,
+            visionRedFlags,
+            visionSeverity,
+          })
+        ) {
+          if (!visionSymptoms.includes(symptom)) {
+            visionSymptoms.push(symptom);
+          }
+        }
+
         console.log(`[Engine] Vision → Matrix: symptoms=${visionSymptoms.join(",")}, redFlags=${visionRedFlags.join(",")}, severity=${visionSeverity}`);
+
+        visualEvidence = buildVisionClinicalEvidence({
+          preprocess: imagePreprocess,
+          session,
+          visionAnalysis,
+          visionSymptoms,
+          visionRedFlags,
+          visionSeverity,
+          influencedQuestionSelection: false,
+        });
+        if (visualEvidence) {
+          session.latest_visual_evidence = visualEvidence;
+        }
 
         // ── Stage 5: Hardcoded Visual Red Flag Guardrails ──
         // Override everything if critical wound signs detected
@@ -324,11 +429,26 @@ export async function POST(request: Request) {
                 }
               }
               if (visionAnalysis) {
-                session.vision_analysis = visionAnalysis;
+              session.vision_analysis = visionAnalysis;
               }
               session.vision_severity = visionSeverity;
               session.vision_symptoms = [...visionSymptoms];
               session.vision_red_flags = [...visionRedFlags];
+              if (visualEvidence) {
+                session.latest_visual_evidence = {
+                  ...visualEvidence,
+                  influencedQuestionSelection: true,
+                };
+              }
+              if (serviceTimeouts.length > 0) {
+                session.case_memory = {
+                  ...ensureStructuredCaseMemory(session),
+                  service_timeouts: [
+                    ...ensureStructuredCaseMemory(session).service_timeouts,
+                    ...serviceTimeouts,
+                  ].slice(-10),
+                };
+              }
 
               return NextResponse.json({
                 type: "emergency",
@@ -346,12 +466,22 @@ export async function POST(request: Request) {
           session.vision_severity = visionSeverity;
           session.vision_symptoms = [...visionSymptoms];
           session.vision_red_flags = [...visionRedFlags];
+          if (visualEvidence) {
+            session.latest_visual_evidence = visualEvidence;
+          }
         }
       } catch (visionError) {
         console.error("Vision pipeline failed (non-blocking):", visionError);
+        if (isSidecarAbortError(visionError)) {
+          serviceTimeouts.push({
+            service: "nvidia-vision",
+            stage: "vision",
+            reason: "timeout",
+          });
+        }
       }
     } else if (image) {
-      console.log("[Image Gate] Skipping wound-only image analysis for non-wound flow");
+      console.log("[Image Gate] Skipping image analysis for unsupported image domain");
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -478,6 +608,65 @@ export async function POST(request: Request) {
     }
 
     session = propagateSharedLocationAnswers(session);
+    if (visualEvidence) {
+      const contradictions = deriveVisionContradictions(
+        lastUserMessage.content,
+        session,
+        visualEvidence,
+        imagePreprocess
+      );
+      if (contradictions.length > 0) {
+        ambiguityFlags.push(...contradictions);
+      }
+
+      visualEvidence = {
+        ...visualEvidence,
+        contradictions,
+        requiresConsult: shouldTriggerSyncConsult({
+          visualEvidence,
+          preprocess: imagePreprocess,
+          ownerText: lastUserMessage.content,
+          session,
+          contradictions,
+        }),
+      };
+      if (visualEvidence) {
+        session.latest_visual_evidence = visualEvidence;
+      }
+
+      if (visualEvidence.requiresConsult && image && isMultimodalConsultConfigured()) {
+        try {
+          consultOpinion = await consultWithMultimodalSidecar({
+            image,
+            ownerText: lastUserMessage.content,
+            preprocess:
+              imagePreprocess ||
+              buildFallbackPreprocessResult(
+                inferSupportedImageDomain(
+                  lastUserMessage.content,
+                  session.known_symptoms
+                )
+              ),
+            visionSummary: visionAnalysis || session.vision_analysis || "",
+            severity: visualEvidence.severity,
+            contradictions,
+            deterministicFacts: session.extracted_answers,
+            mode: "sync",
+          });
+          session.latest_consult_opinion = consultOpinion;
+          ambiguityFlags.push(...consultOpinion.uncertainties);
+        } catch (error) {
+          console.error("[HF Multimodal Consult] failed:", error);
+          if (isSidecarAbortError(error)) {
+            serviceTimeouts.push({
+              service: "multimodal-consult-service",
+              stage: "sync-consult",
+              reason: "timeout",
+            });
+          }
+        }
+      }
+    }
     const turnFocusSymptoms = buildTurnFocusSymptoms(
       knownSymptomsBeforeTurn,
       session,
@@ -498,6 +687,15 @@ export async function POST(request: Request) {
       imageSymptoms: visionSymptoms,
       imageRedFlags: visionRedFlags,
       turnFocusSymptoms,
+      visualEvidence,
+      consultOpinion,
+      serviceTimeouts,
+      ambiguityFlags,
+      evidenceNotes: buildEvidenceChainNotes({
+        preprocess: imagePreprocess,
+        visualEvidence,
+        consultOpinion,
+      }),
       missingQuestionIds: getMissingQuestions(session),
     });
 
@@ -533,6 +731,35 @@ export async function POST(request: Request) {
       session,
       turnFocusSymptoms
     );
+    const visualEvidenceInfluencedQuestion = didVisualEvidenceInfluenceQuestion(
+      nextQuestionId,
+      visualEvidence,
+      turnFocusSymptoms
+    );
+    if (
+      visualEvidence &&
+      session.case_memory?.visual_evidence?.length
+    ) {
+      session.case_memory.visual_evidence = session.case_memory.visual_evidence.map(
+        (entry, index, list) =>
+          index === list.length - 1
+            ? {
+                ...entry,
+                influencedQuestionSelection: visualEvidenceInfluencedQuestion,
+              }
+            : entry
+      );
+      session.latest_visual_evidence = {
+        ...visualEvidence,
+        influencedQuestionSelection: visualEvidenceInfluencedQuestion,
+      };
+      if (visualEvidenceInfluencedQuestion) {
+        session.case_memory.evidence_chain = [
+          ...session.case_memory.evidence_chain,
+          `Visual evidence directly influenced next question: ${nextQuestionId || "ready_for_report"}`,
+        ].slice(-16);
+      }
+    }
     session = syncStructuredCaseMemoryQuestions(
       session,
       nextQuestionId,
@@ -1291,7 +1518,8 @@ async function saveReportToDB(
 async function generateReport(
   session: TriageSession,
   pet: PetProfile,
-  messages: { role: string; content: string }[]
+  messages: { role: string; content: string }[],
+  image?: string
 ) {
   if (
     isLikelyDogContext(pet) &&
@@ -1320,13 +1548,16 @@ async function generateReport(
     pet,
     context.top5.map((d) => d.medical_term)
   );
-  const knowledgeChunks = await searchKnowledgeChunks(knowledgeQuery, 3);
-  const knowledgeContext = formatKnowledgeContext(knowledgeChunks);
-  const referenceImageMatches = await searchReferenceImages(
+  const retrievalBundle = await buildReportRetrievalBundle(
+    session,
+    pet,
+    knowledgeQuery,
     referenceImageQuery,
-    4
+    context.top5.map((d) => d.medical_term)
   );
-  const referenceImageContext = formatReferenceImageContext(referenceImageMatches);
+  session.latest_retrieval_bundle = retrievalBundle;
+  const knowledgeContext = formatRetrievalTextContext(retrievalBundle);
+  const referenceImageContext = formatRetrievalImageContext(retrievalBundle);
 
   const top5Formatted = context.top5
     .map(
@@ -1376,13 +1607,28 @@ BREED RISK PROFILE: ${context.breed_risk_summary}
 BODY SYSTEMS INVOLVED: ${context.body_systems.join(", ")}
 RED FLAGS: ${context.red_flags.length > 0 ? context.red_flags.join(", ") : "None"}
 MATRIX-DETERMINED URGENCY: ${context.highest_urgency}
+OWNER-REPORTED FACTS:
+- Latest owner turn: ${session.case_memory?.latest_owner_turn || "none"}
+- Structured facts: ${Object.entries(session.extracted_answers)
+  .map(([key, value]) => `${key}=${String(value)}`)
+  .join("; ") || "none"}
+
+DETERMINISTIC EXTRACTED FACTS:
+${context.answer_summary}
+
+VISUAL FINDINGS:
+${formatVisualEvidenceForReport(session)}
+
+CONSULT EVIDENCE:
+${formatConsultEvidenceForReport(session)}
+
+EVIDENCE CHAIN:
+${formatEvidenceChainForReport(session)}
+
 ${session.image_inferred_breed ? `IMAGE-INFERRED BREED SIGNAL: ${session.image_inferred_breed} (${Math.round((session.image_inferred_breed_confidence || 0) * 100)}% confidence)\n` : ""}${session.breed_profile_summary ? `EXTERNAL BREED PROFILE: ${session.breed_profile_summary}\n` : ""}${session.roboflow_skin_summary ? `ROBOFLOW SKIN FLAG: ${session.roboflow_skin_summary}\n` : ""}${knowledgeContext ? `EXTERNAL KNOWLEDGE RETRIEVAL (trusted public corpus; use to support, not replace, the matrix ranking):\n${knowledgeContext}\n` : ""}
 ${referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases; use as supportive visual context, not a diagnosis by itself):\n${referenceImageContext}\n` : ""}
 
 ${session.vision_analysis ? `VISUAL ANALYSIS FROM PET PHOTO (analyzed by the NVIDIA 11B/90B vision stack):\n${session.vision_analysis}\n\nIMPORTANT: Incorporate the visual findings above into your differential diagnoses and clinical notes. Reference what was observed in the image (e.g., wound characteristics, skin condition, eye appearance). The visual analysis should heavily influence your report.\n` : ""}
-EXTRACTED CLINICAL DATA:
-${context.answer_summary}
-
 YOUR TASK: Write the clinical report using the matrix's disease ranking as your primary guide. Do NOT reorder the differentials unless you have strong clinical reasoning to do so. The matrix has already applied breed multipliers, age factors, and symptom-specific modifiers.
 
 For each differential diagnosis, provide:
@@ -1425,7 +1671,9 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
   ],
   "actions": ["5-7 specific steps"],
   "warning_signs": ["4-6 escalation signs with thresholds"],
-  "vet_questions": ["3-5 questions tailored to top differentials"]
+  "vet_questions": ["3-5 questions tailored to top differentials"],
+  "confidence": 0.0,
+  "evidence_chain": ["brief evidence statements linking owner facts, visual findings, and supporting references"]
 }`;
 
   try {
@@ -1449,6 +1697,30 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     }
 
     const report = parseReportJSON(rawReport);
+    report.confidence = capDiagnosticConfidence({
+      baseConfidence:
+        typeof report.confidence === "number"
+          ? report.confidence
+          : deriveBaselineReportConfidence(context),
+      hasModelDisagreement: Boolean(
+        session.case_memory?.consult_opinions?.some(
+          (opinion) => opinion.disagreements.length > 0
+        )
+      ),
+      lowQualityImage:
+        session.latest_image_quality === "poor" ||
+        session.latest_image_quality === "borderline",
+      weakRetrievalSupport:
+        retrievalBundle.textChunks.length === 0 &&
+        retrievalBundle.imageMatches.length === 0,
+      ambiguityFlags: session.case_memory?.ambiguity_flags || [],
+    });
+    if (!Array.isArray(report.evidence_chain)) {
+      report.evidence_chain = buildEvidenceChainForResponse(
+        session,
+        retrievalBundle
+      );
+    }
 
     // ═══════════════════════════════════════════════════════════════════
     // SAFETY LAYER: GLM-5 reviews the report for missed emergencies
@@ -1468,6 +1740,37 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       console.error("[DB] Failed to save triage session:", e)
     );
 
+    if (
+      image &&
+      context.highest_urgency !== "emergency" &&
+      shouldScheduleAsyncConsultReview(session) &&
+      isMultimodalConsultConfigured() &&
+      runAfterSafely(async () => {
+        try {
+          await consultWithMultimodalSidecar({
+            image,
+            ownerText: session.case_memory?.latest_owner_turn || "",
+            preprocess:
+              session.latest_preprocess ||
+              buildFallbackPreprocessResult(
+                session.latest_image_domain || "unsupported"
+              ),
+            visionSummary: session.vision_analysis || "",
+            severity: session.vision_severity || "needs_review",
+            contradictions:
+              session.case_memory?.ambiguity_flags?.slice(-4) || [],
+            deterministicFacts: session.extracted_answers,
+            mode: "async",
+          });
+          console.log("[HF Multimodal Consult] queued async review");
+        } catch (error) {
+          console.error("[HF Multimodal Consult] async review failed:", error);
+        }
+      })
+    ) {
+      finalReport.async_review_scheduled = true;
+    }
+
     return NextResponse.json({ type: "report", report: finalReport });
   } catch (error) {
     console.error("Report generation failed:", error);
@@ -1485,6 +1788,27 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
         if (content.type !== "text")
           throw new Error("Unexpected response type");
         const report = parseReportJSON(content.text);
+        report.confidence = capDiagnosticConfidence({
+          baseConfidence: deriveBaselineReportConfidence(context),
+          hasModelDisagreement: Boolean(
+            session.case_memory?.consult_opinions?.some(
+              (opinion) => opinion.disagreements.length > 0
+            )
+          ),
+          lowQualityImage:
+            session.latest_image_quality === "poor" ||
+            session.latest_image_quality === "borderline",
+          weakRetrievalSupport:
+            retrievalBundle.textChunks.length === 0 &&
+            retrievalBundle.imageMatches.length === 0,
+          ambiguityFlags: session.case_memory?.ambiguity_flags || [],
+        });
+        if (!Array.isArray(report.evidence_chain)) {
+          report.evidence_chain = buildEvidenceChainForResponse(
+            session,
+            retrievalBundle
+          );
+        }
         return NextResponse.json({ type: "report", report });
       } catch (fallbackError) {
         console.error("Claude fallback also failed:", fallbackError);
@@ -1492,6 +1816,473 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     }
 
     throw error;
+  }
+}
+
+function buildFallbackPreprocessResult(
+  domain: SupportedImageDomain
+): VisionPreprocessResult {
+  return {
+    domain,
+    bodyRegion: domain === "skin_wound" ? "skin/limb region" : null,
+    detectedRegions: [],
+    bestCrop: null,
+    imageQuality: "borderline",
+    confidence: domain === "unsupported" ? 0.2 : 0.45,
+    limitations: ["sidecar preprocess unavailable"],
+  };
+}
+
+function buildVisionClinicalEvidence(input: {
+  preprocess: VisionPreprocessResult | null;
+  session: TriageSession;
+  visionAnalysis: string | null;
+  visionSymptoms: string[];
+  visionRedFlags: string[];
+  visionSeverity: "normal" | "needs_review" | "urgent";
+  influencedQuestionSelection: boolean;
+}): VisionClinicalEvidence | null {
+  if (
+    !input.preprocess &&
+    !input.visionAnalysis &&
+    input.visionSymptoms.length === 0 &&
+    input.visionRedFlags.length === 0
+  ) {
+    return null;
+  }
+
+  const findings = [
+    ...(input.visionAnalysis
+      ? [input.visionAnalysis.replace(/\s+/g, " ").trim().slice(0, 220)]
+      : []),
+    ...input.visionSymptoms.map((symptom) => symptom.replace(/_/g, " ")),
+    ...input.visionRedFlags.map((flag) => `red flag: ${flag.replace(/_/g, " ")}`),
+  ].slice(0, 6);
+
+  const confidenceFromAnalysis = extractNumericConfidence(input.visionAnalysis);
+  const preprocessConfidence = input.preprocess?.confidence || 0;
+  const confidence = Number(
+    Math.max(confidenceFromAnalysis, preprocessConfidence, 0.45).toFixed(2)
+  );
+
+  return {
+    domain: input.preprocess?.domain || sessionToDomainFallback(input.session),
+    bodyRegion:
+      input.preprocess?.bodyRegion ||
+      input.session.latest_image_body_region ||
+      null,
+    findings,
+    severity: input.visionSeverity,
+    confidence,
+    supportedSymptoms: input.visionSymptoms,
+    contradictions: [],
+    requiresConsult: false,
+    limitations: [
+      ...(input.preprocess?.limitations || []),
+      ...(input.session.vision_analysis ? [] : ["limited vision context"]),
+    ].slice(0, 4),
+    influencedQuestionSelection: input.influencedQuestionSelection,
+  };
+}
+
+function extractNumericConfidence(text: string | null | undefined): number {
+  if (!text) return 0;
+  const match = text.match(/"confidence"\s*:\s*([0-9.]+)/i);
+  if (!match) return 0;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function sessionToDomainFallback(session: TriageSession): SupportedImageDomain {
+  if (session.latest_image_domain) return session.latest_image_domain;
+  if (session.known_symptoms.includes("eye_discharge")) return "eye";
+  if (session.known_symptoms.includes("ear_scratching")) return "ear";
+  if (
+    session.known_symptoms.includes("vomiting") ||
+    session.known_symptoms.includes("diarrhea") ||
+    session.known_symptoms.includes("blood_in_stool")
+  ) {
+    return "stool_vomit";
+  }
+  if (session.known_symptoms.includes("wound_skin_issue")) return "skin_wound";
+  return "unsupported";
+}
+
+function deriveVisionContradictions(
+  ownerText: string,
+  session: TriageSession,
+  evidence: VisionClinicalEvidence,
+  preprocess: VisionPreprocessResult | null
+): string[] {
+  const contradictions = new Set<string>();
+  const lowerOwner = ownerText.toLowerCase();
+  const analysisText = (session.vision_analysis || "").toLowerCase();
+
+  if (
+    preprocess?.domain === "eye" &&
+    !lowerOwner.includes("eye") &&
+    !session.known_symptoms.includes("eye_discharge")
+  ) {
+    contradictions.add("image suggests an eye-focused issue while owner text is about a different complaint");
+  }
+
+  if (
+    preprocess?.domain === "ear" &&
+    !lowerOwner.includes("ear") &&
+    !session.known_symptoms.includes("ear_scratching")
+  ) {
+    contradictions.add("image suggests an ear-focused issue while owner text is about a different complaint");
+  }
+
+  if (
+    preprocess?.domain === "stool_vomit" &&
+    !/(vomit|vomiting|stool|poop|diarrhea|diarrhoea)/.test(lowerOwner)
+  ) {
+    contradictions.add("image suggests stool or vomit evidence that is not clearly described in the owner message");
+  }
+
+  if (
+    session.extracted_answers.which_leg &&
+    evidence.bodyRegion &&
+    !String(session.extracted_answers.which_leg)
+      .toLowerCase()
+      .includes(String(evidence.bodyRegion).toLowerCase().split(" ")[0]) &&
+    /(left|right)/.test(String(session.extracted_answers.which_leg).toLowerCase())
+  ) {
+    contradictions.add("owner-reported location and image body region do not fully align");
+  }
+
+  if (
+    evidence.severity === "urgent" &&
+    !analysisText.includes("urgent") &&
+    !session.red_flags_triggered.length
+  ) {
+    contradictions.add("visual severity is high without matching text red flags");
+  }
+
+  return [...contradictions];
+}
+
+function shouldTriggerSyncConsult(input: {
+  visualEvidence: VisionClinicalEvidence;
+  preprocess: VisionPreprocessResult | null;
+  ownerText: string;
+  session: TriageSession;
+  contradictions: string[];
+}): boolean {
+  const lower = input.ownerText.toLowerCase();
+  const multipleRegions = (input.preprocess?.detectedRegions.length || 0) > 1;
+  const lowVisionConfidence = input.visualEvidence.confidence < 0.7;
+  const severeVisualFinding = input.visualEvidence.severity === "urgent";
+  const morphologyDomain =
+    input.visualEvidence.domain === "eye" ||
+    input.visualEvidence.domain === "ear" ||
+    input.visualEvidence.domain === "stool_vomit";
+  const moderateOrHigher =
+    input.visualEvidence.severity === "needs_review" ||
+    input.visualEvidence.severity === "urgent";
+  const conflictWithOwner =
+    input.contradictions.length > 0 ||
+    (lower.includes("left") &&
+      typeof input.session.extracted_answers.which_leg === "string" &&
+      String(input.session.extracted_answers.which_leg).toLowerCase().includes("right"));
+
+  return (
+    lowVisionConfidence ||
+    severeVisualFinding ||
+    multipleRegions ||
+    conflictWithOwner ||
+    (morphologyDomain && moderateOrHigher)
+  );
+}
+
+function buildEvidenceChainNotes(input: {
+  preprocess: VisionPreprocessResult | null;
+  visualEvidence: VisionClinicalEvidence | null;
+  consultOpinion: ConsultOpinion | null;
+}): string[] {
+  const notes: string[] = [];
+
+  if (input.preprocess) {
+    notes.push(
+      `Pre-vision classified image as ${input.preprocess.domain} with quality ${input.preprocess.imageQuality}`
+    );
+  }
+
+  if (input.visualEvidence) {
+    notes.push(
+      `NVIDIA vision severity ${input.visualEvidence.severity} with findings: ${
+        input.visualEvidence.findings[0] || "no structured findings"
+      }`
+    );
+  }
+
+  if (input.consultOpinion) {
+    notes.push(
+      `${input.consultOpinion.model} consult summary: ${input.consultOpinion.summary}`
+    );
+  }
+
+  return notes;
+}
+
+function didVisualEvidenceInfluenceQuestion(
+  nextQuestionId: string | null,
+  visualEvidence: VisionClinicalEvidence | null,
+  turnFocusSymptoms: string[]
+): boolean {
+  if (!nextQuestionId || !visualEvidence) return false;
+  if (nextQuestionId.startsWith("wound_")) return true;
+  if (visualEvidence.domain === "eye" && nextQuestionId.includes("eye")) return true;
+  if (visualEvidence.domain === "ear" && nextQuestionId.includes("ear")) return true;
+  if (
+    visualEvidence.domain === "stool_vomit" &&
+    /(stool|vomit|blood|diarrhea)/.test(nextQuestionId)
+  ) {
+    return true;
+  }
+  return visualEvidence.supportedSymptoms.some((symptom) =>
+    turnFocusSymptoms.includes(symptom)
+  );
+}
+
+async function buildReportRetrievalBundle(
+  session: TriageSession,
+  pet: PetProfile,
+  knowledgeQuery: string,
+  referenceImageQuery: string,
+  conditionHints: string[]
+): Promise<RetrievalBundle> {
+  if (isRetrievalSidecarConfigured()) {
+    try {
+      return await retrieveVeterinaryEvidenceFromSidecar({
+        query: knowledgeQuery,
+        domain: session.latest_image_domain || null,
+        breed: pet.breed,
+        conditionHints,
+        dogOnly: true,
+        textLimit: 3,
+        imageLimit: 4,
+      });
+    } catch (error) {
+      console.error("[HF Retrieval Sidecar] failed:", error);
+    }
+  }
+
+  return buildFallbackRetrievalBundle(
+    knowledgeQuery,
+    referenceImageQuery,
+    session.latest_image_domain || null
+  );
+}
+
+async function buildFallbackRetrievalBundle(
+  knowledgeQuery: string,
+  referenceImageQuery: string,
+  domain: SupportedImageDomain | null
+): Promise<RetrievalBundle> {
+  const knowledgeChunks = await searchKnowledgeChunks(knowledgeQuery, 3);
+  const referenceImageMatches = await searchReferenceImages(
+    referenceImageQuery,
+    4,
+    [],
+    {
+      domain,
+      dogOnly: true,
+    }
+  );
+
+  return {
+    textChunks: knowledgeChunks.map((chunk) => ({
+      title: chunk.sourceTitle,
+      citation: chunk.citation || chunk.sourceUrl,
+      score: chunk.score,
+      summary: chunk.textContent,
+      sourceUrl: chunk.sourceUrl,
+    })),
+    imageMatches: referenceImageMatches.map((match) => ({
+      title: match.sourceTitle,
+      citation: match.datasetUrl || match.assetUrl,
+      score: match.similarity,
+      summary: match.caption || match.conditionLabel,
+      assetUrl: match.assetUrl,
+      domain: inferSupportedImageDomain(
+        `${match.conditionLabel} ${match.caption || ""}`
+      ),
+      conditionLabel: match.conditionLabel,
+      dogOnly: true,
+    })),
+    rerankScores: [],
+    sourceCitations: [
+      ...knowledgeChunks
+        .map((chunk) => chunk.citation || chunk.sourceUrl || "")
+        .filter(Boolean),
+      ...referenceImageMatches
+        .map((match) => match.datasetUrl || match.assetUrl || "")
+        .filter(Boolean),
+    ].slice(0, 8),
+  };
+}
+
+function formatRetrievalTextContext(bundle: RetrievalBundle): string {
+  if (bundle.textChunks.length === 0) return "";
+
+  return bundle.textChunks
+    .map((chunk, index) => {
+      const excerpt =
+        chunk.summary.length > 700
+          ? `${chunk.summary.slice(0, 700).trim()}...`
+          : chunk.summary;
+      const citation = chunk.citation || chunk.sourceUrl || "No source URL";
+      return `${index + 1}. ${chunk.title}\nSource: ${citation}\nScore: ${chunk.score.toFixed(2)}\nExcerpt: ${excerpt}`;
+    })
+    .join("\n\n");
+}
+
+function formatRetrievalImageContext(bundle: RetrievalBundle): string {
+  if (bundle.imageMatches.length === 0) return "";
+
+  return bundle.imageMatches
+    .map((match, index) => {
+      const similarity = Number.isFinite(match.score)
+        ? `${(match.score * 100).toFixed(1)}%`
+        : "n/a";
+      return `${index + 1}. ${match.conditionLabel || match.title} (${similarity} visual similarity)\nSource: ${match.title}\nCitation: ${match.citation || "No citation"}\nSummary: ${match.summary || "No summary"}`;
+    })
+    .join("\n\n");
+}
+
+function formatVisualEvidenceForReport(session: TriageSession): string {
+  const evidence = session.case_memory?.visual_evidence || [];
+  if (evidence.length === 0) {
+    return session.vision_analysis || "No structured visual evidence recorded.";
+  }
+
+  return evidence
+    .slice(-3)
+    .map(
+      (entry) =>
+        `- ${entry.domain} | ${entry.bodyRegion || "unknown region"} | severity=${entry.severity} | confidence=${entry.confidence.toFixed(2)} | findings=${entry.findings.join("; ") || "none"} | limitations=${entry.limitations.join(", ") || "none"}`
+    )
+    .join("\n");
+}
+
+function formatConsultEvidenceForReport(session: TriageSession): string {
+  const opinions = session.case_memory?.consult_opinions || [];
+  if (opinions.length === 0) return "No specialist consult opinions recorded.";
+
+  return opinions
+    .slice(-3)
+    .map(
+      (opinion) =>
+        `- ${opinion.model} (${opinion.mode}) confidence=${opinion.confidence.toFixed(2)} | summary=${opinion.summary} | agreements=${opinion.agreements.join(", ") || "none"} | disagreements=${opinion.disagreements.join(", ") || "none"} | uncertainties=${opinion.uncertainties.join(", ") || "none"}`
+    )
+    .join("\n");
+}
+
+function formatEvidenceChainForReport(session: TriageSession): string {
+  const notes = session.case_memory?.evidence_chain || [];
+  return notes.length > 0 ? notes.map((note) => `- ${note}`).join("\n") : "- No explicit evidence chain recorded.";
+}
+
+function buildEvidenceChainForResponse(
+  session: TriageSession,
+  retrievalBundle: RetrievalBundle
+): string[] {
+  return [
+    ...(session.case_memory?.evidence_chain || []),
+    ...(retrievalBundle.textChunks.slice(0, 2).map(
+      (entry) => `Reference support: ${entry.title} (${entry.score.toFixed(2)})`
+    )),
+    ...(retrievalBundle.imageMatches.slice(0, 2).map(
+      (entry) =>
+        `Image support: ${entry.conditionLabel || entry.title} (${entry.score.toFixed(2)})`
+    )),
+  ].slice(-8);
+}
+
+function deriveBaselineReportConfidence(
+  context: ReturnType<typeof buildDiagnosisContext>
+): number {
+  if (context.top5.length === 0) return 0.7;
+  const topScore = context.top5[0]?.final_score || 0;
+  if (topScore >= 1.6) return 0.92;
+  if (topScore >= 1.1) return 0.87;
+  if (topScore >= 0.8) return 0.82;
+  return 0.76;
+}
+
+function shouldScheduleAsyncConsultReview(session: TriageSession): boolean {
+  return Boolean(
+    session.case_memory?.ambiguity_flags?.length ||
+      session.case_memory?.consult_opinions?.some(
+        (opinion) => opinion.uncertainties.length > 0
+      )
+  );
+}
+
+function hasPositiveVisionNarrative(visionAnalysis: string | null): boolean {
+  if (!visionAnalysis) return false;
+
+  return /(wound|lesion|ulcer|abrasion|rash|discharge|inflam|swelling|redness|ear|eye|vomit|stool|diarrh)/i.test(
+    visionAnalysis
+  );
+}
+
+function deriveSymptomsFromImageEvidence(input: {
+  preprocess: VisionPreprocessResult | null;
+  visionAnalysis: string | null;
+  visionSymptoms: string[];
+  visionRedFlags: string[];
+  visionSeverity: "normal" | "needs_review" | "urgent";
+}): string[] {
+  const { preprocess, visionAnalysis, visionSymptoms, visionRedFlags, visionSeverity } =
+    input;
+  if (!preprocess) return [];
+
+  const hasStructuredVisionEvidence =
+    visionSymptoms.length > 0 || visionRedFlags.length > 0;
+  const hasNarrativeEvidence = hasPositiveVisionNarrative(visionAnalysis);
+  const hasEscalatedSeverity = visionSeverity !== "normal";
+
+  // Domain classification alone is not enough to mutate symptom state.
+  if (
+    !hasStructuredVisionEvidence &&
+    !hasNarrativeEvidence &&
+    !hasEscalatedSeverity
+  ) {
+    return [];
+  }
+
+  switch (preprocess.domain) {
+    case "eye":
+      return ["eye_discharge"];
+    case "ear":
+      return ["ear_scratching"];
+    case "stool_vomit":
+      return ["vomiting", "diarrhea"];
+    case "skin_wound":
+      return ["wound_skin_issue"];
+    default:
+      return [];
+  }
+}
+
+function runAfterSafely(task: () => Promise<void>): boolean {
+  try {
+    after(async () => {
+      await task();
+    });
+    return true;
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /outside a request scope/i.test(error.message)
+    ) {
+      return false;
+    }
+    console.error("[Async After] failed to schedule:", error);
+    return false;
   }
 }
 
@@ -2344,6 +3135,14 @@ function buildCompactImageSignalContext(
     parts.push(`Skin labels: ${session.roboflow_skin_labels.slice(0, 3).join(", ")}`);
   }
 
+  if (session.latest_image_domain && session.latest_image_domain !== "unsupported") {
+    parts.push(`Image domain: ${session.latest_image_domain}`);
+  }
+
+  if (session.latest_image_body_region) {
+    parts.push(`Image body region: ${session.latest_image_body_region}`);
+  }
+
   if (visionSymptoms.length > 0) {
     parts.push(`Vision symptoms: ${visionSymptoms.join(", ")}`);
   }
@@ -2385,6 +3184,20 @@ function buildQuestionPhrasingContext(
 
   if (session.vision_symptoms?.length) {
     parts.push(`Visual symptoms detected: ${session.vision_symptoms.join(", ")}`);
+  }
+
+  if (session.latest_visual_evidence) {
+    parts.push(
+      `Structured visual evidence: domain=${session.latest_visual_evidence.domain}, body_region=${session.latest_visual_evidence.bodyRegion || "unknown"}, findings=${session.latest_visual_evidence.findings.join(", ") || "none"}, contradictions=${session.latest_visual_evidence.contradictions.join(", ") || "none"}`
+    );
+  }
+
+  if (session.latest_consult_opinion) {
+    parts.push(
+      `Specialist consult: ${session.latest_consult_opinion.summary}. Uncertainties: ${
+        session.latest_consult_opinion.uncertainties.join(", ") || "none"
+      }`
+    );
   }
 
   // Tell the AI what the PREVIOUS question was so it can connect the answer
