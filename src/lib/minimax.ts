@@ -1,15 +1,17 @@
 import OpenAI from "openai";
 
-const MINIMAX_BASE_URL =
-  process.env.MINIMAX_BASE_URL || "https://api.minimax.io/v1";
-const MINIMAX_API_KEY =
+const MINIMAX_BASE_URL = (
+  process.env.MINIMAX_BASE_URL || "https://api.minimax.io/v1"
+).trim();
+const MINIMAX_API_KEY = (
   process.env.MINIMAX_API_KEY ||
   process.env.MINIMAX_CHAT_API_KEY ||
   process.env.MINIMAX_CODING_API_KEY ||
-  "";
+  ""
+).trim();
 
 const MEMORY_MODEL_CANDIDATES = [
-  process.env.MINIMAX_MEMORY_MODEL,
+  process.env.MINIMAX_MEMORY_MODEL?.trim(),
   "MiniMax-M2.7",
   "MiniMax-M2.5-highspeed",
   "MiniMax-M2.5",
