@@ -36,6 +36,151 @@ export interface FollowUpQuestion {
   critical: boolean; // Must be answered before diagnosis
 }
 
+const DEFAULT_AGE_MODIFIER: DiseaseEntry["age_modifier"] = {
+  puppy: 0.8,
+  adult: 1.0,
+  senior: 1.2,
+};
+
+function makeDiseaseEntry({
+  name,
+  medicalTerm,
+  description,
+  urgency,
+  keyDifferentiators,
+  typicalTests,
+  typicalHomeCare,
+  baseProbability = 0.08,
+  ageModifier = DEFAULT_AGE_MODIFIER,
+}: {
+  name: string;
+  medicalTerm: string;
+  description: string;
+  urgency: DiseaseEntry["urgency"];
+  keyDifferentiators: string[];
+  typicalTests: string[];
+  typicalHomeCare: string[];
+  baseProbability?: number;
+  ageModifier?: DiseaseEntry["age_modifier"];
+}): DiseaseEntry {
+  return {
+    name,
+    medical_term: medicalTerm,
+    description,
+    base_probability: baseProbability,
+    age_modifier: ageModifier,
+    urgency,
+    key_differentiators: keyDifferentiators,
+    typical_tests: typicalTests,
+    typical_home_care: typicalHomeCare,
+  };
+}
+
+function makeSystemicDisease(
+  name: string,
+  medicalTerm: string,
+  description: string,
+  urgency: DiseaseEntry["urgency"],
+  baseProbability: number,
+  ageModifier?: DiseaseEntry["age_modifier"]
+): DiseaseEntry {
+  return makeDiseaseEntry({
+    name,
+    medicalTerm,
+    description,
+    urgency,
+    baseProbability,
+    ageModifier,
+    keyDifferentiators: [description],
+    typicalTests: ["Physical exam plus CBC/chemistry and targeted diagnostics"],
+    typicalHomeCare: ["Schedule prompt veterinary evaluation and monitor appetite, energy, hydration, and comfort"],
+  });
+}
+
+function makeRespiratoryDisease(
+  name: string,
+  medicalTerm: string,
+  description: string,
+  urgency: DiseaseEntry["urgency"],
+  baseProbability: number,
+  ageModifier?: DiseaseEntry["age_modifier"]
+): DiseaseEntry {
+  return makeDiseaseEntry({
+    name,
+    medicalTerm,
+    description,
+    urgency,
+    baseProbability,
+    ageModifier,
+    keyDifferentiators: [description],
+    typicalTests: ["Respiratory exam with pulse oximetry and thoracic imaging"],
+    typicalHomeCare: ["Keep activity low, reduce stress, and seek urgent care if breathing worsens or gums change color"],
+  });
+}
+
+function makeDermDisease(
+  name: string,
+  medicalTerm: string,
+  description: string,
+  urgency: DiseaseEntry["urgency"],
+  baseProbability: number,
+  ageModifier?: DiseaseEntry["age_modifier"]
+): DiseaseEntry {
+  return makeDiseaseEntry({
+    name,
+    medicalTerm,
+    description,
+    urgency,
+    baseProbability,
+    ageModifier,
+    keyDifferentiators: [description],
+    typicalTests: ["Dermatologic exam with cytology, skin scrape, or otoscopic evaluation as indicated"],
+    typicalHomeCare: ["Prevent self-trauma, keep the area clean, and avoid new topical products until examined"],
+  });
+}
+
+function makeNeuroOrOrthoDisease(
+  name: string,
+  medicalTerm: string,
+  description: string,
+  urgency: DiseaseEntry["urgency"],
+  baseProbability: number,
+  ageModifier?: DiseaseEntry["age_modifier"]
+): DiseaseEntry {
+  return makeDiseaseEntry({
+    name,
+    medicalTerm,
+    description,
+    urgency,
+    baseProbability,
+    ageModifier,
+    keyDifferentiators: [description],
+    typicalTests: ["Neurologic and orthopedic examination with imaging as needed"],
+    typicalHomeCare: ["Restrict activity and seek veterinary care promptly if weakness, pain, or gait changes progress"],
+  });
+}
+
+function makeOphthalmicDisease(
+  name: string,
+  medicalTerm: string,
+  description: string,
+  urgency: DiseaseEntry["urgency"],
+  baseProbability: number,
+  ageModifier?: DiseaseEntry["age_modifier"]
+): DiseaseEntry {
+  return makeDiseaseEntry({
+    name,
+    medicalTerm,
+    description,
+    urgency,
+    baseProbability,
+    ageModifier,
+    keyDifferentiators: [description],
+    typicalTests: ["Ophthalmic examination with fluorescein stain and tonometry as needed"],
+    typicalHomeCare: ["Prevent rubbing, avoid human eye medications, and seek urgent eye care if pain or vision loss is present"],
+  });
+}
+
 // --- SYMPTOM → DISEASE + QUESTION MAP ---
 
 export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
@@ -108,9 +253,13 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "impa",
       "bone_cancer",
       "ivdd",
+      "degenerative_myelopathy",
       "iliopsoas_strain",
       "patellar_luxation",
       "lumbosacral_disease",
+      "wobbler_syndrome",
+      "obesity_related",
+      "histiocytic_sarcoma",
     ],
     follow_up_questions: [
       "which_leg",
@@ -137,6 +286,9 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "kidney_disease",
       "liver_disease",
       "addisons_disease",
+      "imha",
+      "heat_stroke",
+      "liver_shunt",
     ],
     follow_up_questions: [
       "lethargy_duration",
@@ -173,9 +325,11 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "heart_failure",
       "pleural_effusion",
       "gdv",
+      "difficulty_breathing",
       "laryngeal_paralysis",
       "allergic_reaction",
       "trauma_chest",
+      "heat_stroke",
     ],
     follow_up_questions: [
       "breathing_onset",
@@ -195,6 +349,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "hot_spots",
       "mange",
       "yeast_infection",
+      "zinc_responsive_dermatosis",
     ],
     follow_up_questions: [
       "scratch_location",
@@ -233,6 +388,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "toxin_ingestion",
       "hypoglycemia",
       "seizure_disorder",
+      "epilepsy",
       "addisons_disease",
       "fever",
       "anxiety",
@@ -250,6 +406,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
   swollen_abdomen: {
     linked_diseases: [
       "gdv",
+      "bloat",
       "ascites",
       "splenic_mass",
       "pyometra",
@@ -274,6 +431,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "foreign_body",
       "coagulopathy",
       "gi_cancer",
+      "von_willebrands",
     ],
     follow_up_questions: [
       "blood_color",
@@ -293,6 +451,8 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "glaucoma",
       "uveitis",
       "entropion",
+      "cherry_eye",
+      "eye_disorders",
     ],
     follow_up_questions: [
       "discharge_color",
@@ -313,6 +473,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "allergic_dermatitis",
       "foreign_body_ear",
       "aural_hematoma",
+      "syringomyelia",
     ],
     follow_up_questions: [
       "ear_odor",
@@ -334,6 +495,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "ibd",
       "exocrine_pancreatic_insufficiency",
       "parasites",
+      "histiocytic_sarcoma",
     ],
     follow_up_questions: [
       "weight_loss_duration",
@@ -354,6 +516,10 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "skin_mass",
       "laceration",
       "autoimmune_skin",
+      "mast_cell_tumor",
+      "perianal_fistula",
+      "alopecia",
+      "zinc_responsive_dermatosis",
     ],
     follow_up_questions: [
       "wound_location",
@@ -371,6 +537,76 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
 };
 
 // --- DISEASE DATABASE ---
+
+const SUPPLEMENTAL_DISEASES: Record<string, DiseaseEntry> = {
+  liver_disease: makeSystemicDisease("Liver Disease", "Canine Hepatopathy", "Hepatic disease can drive appetite loss, lethargy, vomiting, jaundice, or increased thirst.", "high", 0.08),
+  dental_disease: makeSystemicDisease("Dental Disease", "Periodontal Disease / Oral Pain", "Oral pain commonly presents as reduced appetite, drooling, halitosis, or chewing reluctance.", "moderate", 0.12),
+  pain_general: makeSystemicDisease("Generalized Pain", "Non-localized Pain Syndrome", "Pain can present as lethargy, trembling, reduced appetite, and behavior change even without an obvious injury.", "high", 0.08),
+  parasites: makeSystemicDisease("Parasitism", "Intestinal Parasitic Disease", "Intestinal parasites can cause diarrhea, weight loss, blood in stool, or a poor hair coat.", "moderate", 0.12, { puppy: 2.2, adult: 1.0, senior: 0.9 }),
+  colitis: makeSystemicDisease("Colitis", "Large Bowel Colitis", "Colitis often causes frequent small-volume stool, mucus, urgency, and bright red blood.", "moderate", 0.12),
+  food_allergy: makeDermDisease("Food Allergy", "Adverse Food Reaction", "Food allergy can cause itching, recurrent ear disease, GI upset, or year-round skin inflammation.", "moderate", 0.1),
+  ivdd: makeNeuroOrOrthoDisease("Intervertebral Disc Disease", "Intervertebral Disc Extrusion / Protrusion", "Disc disease can cause back pain, reluctance to move, limb weakness, or sudden neurologic deficits.", "high", 0.09, { puppy: 0.4, adult: 1.0, senior: 1.8 }),
+  infection: makeSystemicDisease("Systemic Infection", "Infectious Inflammatory Disease", "Fever, lethargy, poor appetite, and pain can reflect bacterial, viral, or inflammatory infection.", "high", 0.08),
+  anemia: makeSystemicDisease("Anemia", "Reduced Red Blood Cell Mass", "Anemia can cause lethargy, pale gums, weakness, rapid breathing, and collapse.", "high", 0.07),
+  hypothyroidism: makeSystemicDisease("Hypothyroidism", "Canine Hypothyroidism", "Low thyroid hormone commonly causes lethargy, weight gain, skin disease, and exercise intolerance.", "moderate", 0.08, { puppy: 0.2, adult: 1.0, senior: 1.6 }),
+  addisons_disease: makeSystemicDisease("Addison's Disease", "Hypoadrenocorticism", "Addison's disease can cause waxing and waning lethargy, GI upset, weakness, trembling, or collapse.", "high", 0.06),
+  pneumonia: makeRespiratoryDisease("Pneumonia", "Pneumonia", "Lower airway infection or inflammation can cause cough, fast breathing, fever, and respiratory distress.", "high", 0.08),
+  collapsing_trachea: makeRespiratoryDisease("Collapsing Trachea", "Tracheal Collapse", "A dry honking cough, exercise intolerance, and noisy breathing are classic for collapsing trachea.", "moderate", 0.08),
+  laryngeal_paralysis: makeRespiratoryDisease("Laryngeal Paralysis", "Laryngeal Paralysis", "Upper airway obstruction can cause noisy breathing, heat intolerance, and worsening respiratory effort.", "high", 0.06, { puppy: 0.2, adult: 0.8, senior: 1.8 }),
+  lung_cancer: makeRespiratoryDisease("Lung Cancer", "Primary or Metastatic Pulmonary Neoplasia", "Pulmonary tumors can cause chronic cough, breathing difficulty, weight loss, and exercise intolerance.", "high", 0.03, { puppy: 0.1, adult: 0.7, senior: 2.0 }),
+  heart_failure: makeRespiratoryDisease("Heart Failure", "Congestive Heart Failure", "Fluid buildup from heart disease can cause cough, fast breathing, intolerance to exercise, and weakness.", "emergency", 0.06, { puppy: 0.2, adult: 0.8, senior: 1.9 }),
+  pleural_effusion: makeRespiratoryDisease("Pleural Effusion", "Pleural Space Effusion", "Fluid around the lungs causes shallow breathing, orthopnea, and severe respiratory effort.", "emergency", 0.04),
+  allergic_reaction: makeRespiratoryDisease("Allergic Reaction", "Acute Hypersensitivity Reaction", "Acute allergy can cause facial swelling, hives, vomiting, and rapid-onset breathing difficulty.", "emergency", 0.05),
+  trauma_chest: makeRespiratoryDisease("Chest Trauma", "Thoracic Trauma", "Blunt or penetrating chest trauma can cause pain, shock, internal bleeding, or breathing difficulty.", "emergency", 0.03),
+  flea_allergy: makeDermDisease("Flea Allergy Dermatitis", "Flea Allergy Dermatitis", "Even a small flea burden can trigger severe itching, hair loss, and hot spots.", "moderate", 0.09),
+  ear_infection: makeDermDisease("Ear Infection", "Otitis Externa", "Ear inflammation can cause odor, discharge, head shaking, and scratching around the ears.", "moderate", 0.08),
+  mange: makeDermDisease("Mange", "Demodectic or Sarcoptic Mange", "Mites can cause hair loss, crusting, intense itch, and secondary infection.", "moderate", 0.07),
+  yeast_infection: makeDermDisease("Yeast Dermatitis", "Malassezia Dermatitis", "Yeast overgrowth often causes greasy skin, odor, redness, and itch in skin folds or paws.", "moderate", 0.08),
+  cushings_disease: makeSystemicDisease("Cushing's Disease", "Hyperadrenocorticism", "Cushing's disease causes increased thirst, panting, recurrent skin issues, and abdominal enlargement.", "moderate", 0.06, { puppy: 0.1, adult: 0.8, senior: 1.8 }),
+  pyometra: makeSystemicDisease("Pyometra", "Infected Uterus", "Pyometra in intact females can cause increased drinking, lethargy, abdominal enlargement, or collapse.", "emergency", 0.05, { puppy: 0.0, adult: 1.0, senior: 1.4 }),
+  hypercalcemia: makeSystemicDisease("Hypercalcemia", "Elevated Blood Calcium", "High calcium can cause increased drinking, weakness, reduced appetite, and constipation.", "high", 0.03),
+  hypoglycemia: makeSystemicDisease("Hypoglycemia", "Low Blood Sugar", "Low blood glucose can cause trembling, weakness, disorientation, seizures, or collapse.", "emergency", 0.05, { puppy: 1.8, adult: 1.0, senior: 0.9 }),
+  seizure_disorder: makeNeuroOrOrthoDisease("Seizure Disorder", "Epileptic or Reactive Seizure Disorder", "Seizure disorders can cause trembling, collapse, salivation, paddling, or post-ictal confusion.", "high", 0.06),
+  fever: makeSystemicDisease("Fever", "Pyrexia", "Fever can cause lethargy, shivering, reduced appetite, and warm ears or body temperature.", "moderate", 0.08),
+  anxiety: makeSystemicDisease("Anxiety", "Anxiety / Stress Response", "Stress can cause trembling, pacing, panting, and restlessness without primary organic disease.", "low", 0.07),
+  ascites: makeSystemicDisease("Ascites", "Abdominal Effusion", "Fluid in the abdomen causes progressive distension and can reflect heart, liver, or protein disorders.", "high", 0.05),
+  splenic_mass: makeSystemicDisease("Splenic Mass", "Splenic Mass / Hemangiosarcoma Risk", "A splenic mass can cause abdominal enlargement, weakness, collapse, or internal bleeding.", "emergency", 0.04, { puppy: 0.0, adult: 0.8, senior: 1.8 }),
+  pregnancy: makeSystemicDisease("Pregnancy", "Canine Pregnancy", "Normal or complicated pregnancy can enlarge the abdomen and change appetite or behavior.", "moderate", 0.03, { puppy: 0.0, adult: 1.0, senior: 0.2 }),
+  hemorrhagic_gastroenteritis: makeSystemicDisease("Hemorrhagic Gastroenteritis", "Acute Hemorrhagic Diarrhea Syndrome", "Sudden profuse bloody diarrhea with vomiting can rapidly dehydrate dogs and become critical.", "emergency", 0.05),
+  coagulopathy: makeSystemicDisease("Coagulopathy", "Bleeding Disorder / Coagulopathy", "Abnormal clotting can cause GI bleeding, bruising, pale gums, and weakness.", "emergency", 0.04),
+  gi_cancer: makeSystemicDisease("Gastrointestinal Cancer", "Gastrointestinal Neoplasia", "GI tumors can cause chronic vomiting, blood in stool, weight loss, and reduced appetite.", "high", 0.03, { puppy: 0.0, adult: 0.6, senior: 1.8 }),
+  conjunctivitis: makeOphthalmicDisease("Conjunctivitis", "Conjunctivitis", "Conjunctival inflammation causes redness, discharge, squinting, and periocular irritation.", "moderate", 0.09),
+  corneal_ulcer: makeOphthalmicDisease("Corneal Ulcer", "Corneal Ulceration", "Corneal ulcers are painful and often cause squinting, tearing, cloudiness, and discharge.", "high", 0.07),
+  dry_eye: makeOphthalmicDisease("Dry Eye", "Keratoconjunctivitis Sicca", "Reduced tear production causes thick discharge, redness, and recurrent eye irritation.", "moderate", 0.06),
+  glaucoma: makeOphthalmicDisease("Glaucoma", "Glaucoma", "High intraocular pressure causes severe pain, redness, cloudy cornea, and sudden vision loss.", "emergency", 0.04),
+  uveitis: makeOphthalmicDisease("Uveitis", "Uveitis", "Inflammation inside the eye causes pain, redness, squinting, and vision change.", "high", 0.04),
+  entropion: makeOphthalmicDisease("Entropion", "Entropion", "Inward-rolling eyelids cause chronic discharge, corneal trauma, and squinting.", "moderate", 0.05),
+  ear_infection_yeast: makeDermDisease("Yeast Ear Infection", "Malassezia Otitis Externa", "Yeasty otitis causes dark debris, strong odor, itch, and head shaking.", "moderate", 0.06),
+  ear_mites: makeDermDisease("Ear Mites", "Otodectic Otitis", "Ear mites cause dark debris, irritation, and intense head shaking or scratching.", "moderate", 0.04, { puppy: 1.8, adult: 1.0, senior: 0.8 }),
+  foreign_body_ear: makeDermDisease("Ear Foreign Body", "Foreign Body in Ear Canal", "Grass awns and other material can trigger sudden pain, head shaking, and unilateral discharge.", "high", 0.04),
+  aural_hematoma: makeDermDisease("Aural Hematoma", "Aural Hematoma", "Bleeding within the ear flap causes a swollen, warm, pillow-like ear.", "moderate", 0.05),
+  hyperthyroidism: makeSystemicDisease("Hyperthyroidism-like Weight Loss", "Weight Loss with Increased Metabolic Drive", "Although uncommon in dogs, marked metabolic weight loss can resemble hyperthyroid patterns.", "moderate", 0.02, { puppy: 0.0, adult: 0.4, senior: 1.3 }),
+  cancer: makeSystemicDisease("Cancer", "Systemic Neoplasia", "Cancer can cause weight loss, lethargy, reduced appetite, bleeding, or masses depending on the site.", "high", 0.06),
+  exocrine_pancreatic_insufficiency: makeSystemicDisease("Exocrine Pancreatic Insufficiency", "Exocrine Pancreatic Insufficiency", "EPI causes weight loss, ravenous appetite, poor stool quality, and malabsorption.", "moderate", 0.04),
+  degenerative_myelopathy: makeNeuroOrOrthoDisease("Degenerative Myelopathy", "Degenerative Myelopathy", "Progressive hind-end weakness and ataxia in older dogs can mimic orthopedic limping.", "high", 0.04, { puppy: 0.0, adult: 0.6, senior: 1.8 }),
+  wobbler_syndrome: makeNeuroOrOrthoDisease("Wobbler Syndrome", "Cervical Spondylomyelopathy", "Neck disease can cause a wobbly gait, weakness, neck pain, and limb deficits.", "high", 0.03, { puppy: 0.1, adult: 0.8, senior: 1.5 }),
+  obesity_related: makeSystemicDisease("Obesity-related Mobility Disease", "Obesity-associated Musculoskeletal Strain", "Excess body weight can worsen joint pain, exercise intolerance, and mobility complaints.", "moderate", 0.06),
+  histiocytic_sarcoma: makeSystemicDisease("Histiocytic Sarcoma", "Histiocytic Sarcoma", "Aggressive cancer in predisposed breeds can present as lameness, masses, lethargy, or weight loss.", "high", 0.02, { puppy: 0.0, adult: 0.7, senior: 1.7 }),
+  imha: makeSystemicDisease("Immune-Mediated Hemolytic Anemia", "Immune-Mediated Hemolytic Anemia", "IMHA can cause sudden lethargy, pale or yellow gums, rapid breathing, and collapse.", "emergency", 0.03),
+  liver_shunt: makeSystemicDisease("Liver Shunt", "Portosystemic Shunt", "Abnormal liver blood flow can cause poor growth, vomiting, neurologic signs, and poor appetite.", "high", 0.03, { puppy: 2.0, adult: 0.8, senior: 0.3 }),
+  difficulty_breathing: makeRespiratoryDisease("Upper Airway Obstructive Disease", "Brachycephalic / Upper Airway Obstruction", "Chronic upper airway obstruction causes noisy breathing, panting intolerance, and exertional distress.", "high", 0.06),
+  heat_stroke: makeRespiratoryDisease("Heat Stroke", "Heat Stroke / Hyperthermia", "Heat illness causes panting, collapse, brick-red or pale gums, vomiting, and shock.", "emergency", 0.04),
+  bloat: makeSystemicDisease("Gastric Dilatation", "Gastric Dilatation / Bloat", "Gastric distension can cause a tense abdomen, restlessness, and rapid progression to GDV.", "emergency", 0.04),
+  mast_cell_tumor: makeDermDisease("Mast Cell Tumor", "Mast Cell Tumor", "Skin or subcutaneous masses can wax and wane, itch, redden, or ulcerate.", "high", 0.04, { puppy: 0.0, adult: 0.8, senior: 1.6 }),
+  perianal_fistula: makeDermDisease("Perianal Fistula", "Perianal Fistula / Anal Furunculosis", "Painful draining tracts near the anus can cause licking, odor, bleeding, and reluctance to sit.", "high", 0.03),
+  alopecia: makeDermDisease("Alopecia", "Alopecia", "Hair loss without severe inflammation can reflect endocrine, allergic, or follicular disease.", "low", 0.05),
+  zinc_responsive_dermatosis: makeDermDisease("Zinc-Responsive Dermatosis", "Zinc-Responsive Dermatosis", "A crusting dermatosis affecting face, pads, and pressure points in predisposed breeds.", "moderate", 0.02),
+  cherry_eye: makeOphthalmicDisease("Cherry Eye", "Prolapsed Gland of the Third Eyelid", "A pink tissue mass at the inner corner of the eye is typical of cherry eye.", "moderate", 0.05, { puppy: 1.4, adult: 1.0, senior: 0.8 }),
+  eye_disorders: makeOphthalmicDisease("Inherited Eye Disorders", "Inherited Ocular Disorders", "Breed-related eye disease can present with discharge, irritation, vision change, or recurrent eye pain.", "moderate", 0.03),
+  epilepsy: makeNeuroOrOrthoDisease("Epilepsy", "Idiopathic Epilepsy", "Recurrent seizures or episodic tremoring can reflect inherited epilepsy in predisposed breeds.", "high", 0.05, { puppy: 0.8, adult: 1.0, senior: 0.7 }),
+  syringomyelia: makeNeuroOrOrthoDisease("Syringomyelia", "Syringomyelia", "Neuropathic pain can cause phantom scratching, neck pain, vocalization, and gait change.", "high", 0.03),
+  von_willebrands: makeSystemicDisease("von Willebrand Disease", "von Willebrand Disease", "Inherited clotting disorders can cause bruising, mucosal bleeding, and excessive bleeding with minor trauma.", "high", 0.03),
+};
 
 export const DISEASE_DB: Record<string, DiseaseEntry> = {
   ccl_rupture: {
@@ -1038,6 +1274,7 @@ export const DISEASE_DB: Record<string, DiseaseEntry> = {
       "Do not attempt to pick or remove crusts forcefully",
     ],
   },
+  ...SUPPLEMENTAL_DISEASES,
 };
 
 // --- BREED RISK MULTIPLIERS ---

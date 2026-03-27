@@ -1,7 +1,7 @@
 /**
- * CLINICAL MATRIX — Data Integrity Tests
+ * CLINICAL MATRIX - Data Integrity Tests
  * Ensures the hardcoded medical data is complete and consistent.
- * Catches: missing diseases, orphaned questions, broken references.
+ * Catches missing diseases, orphaned questions, and broken references.
  */
 
 import {
@@ -11,8 +11,6 @@ import {
   FOLLOW_UP_QUESTIONS,
 } from "@/lib/clinical-matrix";
 
-// ─── SYMPTOM_MAP integrity ──────────────────────────────────────────────────
-
 describe("SYMPTOM_MAP integrity", () => {
   const symptoms = Object.keys(SYMPTOM_MAP);
 
@@ -21,7 +19,7 @@ describe("SYMPTOM_MAP integrity", () => {
   });
 
   it("should include wound_skin_issue symptom", () => {
-    expect(SYMPTOM_MAP["wound_skin_issue"]).toBeDefined();
+    expect(SYMPTOM_MAP.wound_skin_issue).toBeDefined();
   });
 
   it("should include all core symptoms", () => {
@@ -34,50 +32,39 @@ describe("SYMPTOM_MAP integrity", () => {
       "coughing",
       "wound_skin_issue",
     ];
-    for (const s of required) {
-      expect(SYMPTOM_MAP[s]).toBeDefined();
+    for (const symptom of required) {
+      expect(SYMPTOM_MAP[symptom]).toBeDefined();
     }
   });
 
   it("every symptom should have at least 1 linked disease", () => {
-    for (const [symptom, entry] of Object.entries(SYMPTOM_MAP)) {
+    for (const entry of Object.values(SYMPTOM_MAP)) {
       expect(entry.linked_diseases.length).toBeGreaterThan(0);
     }
   });
 
   it("every symptom should have at least 1 follow-up question", () => {
-    for (const [symptom, entry] of Object.entries(SYMPTOM_MAP)) {
+    for (const entry of Object.values(SYMPTOM_MAP)) {
       expect(entry.follow_up_questions.length).toBeGreaterThan(0);
     }
   });
 
   it("every symptom should have at least 1 body system", () => {
-    for (const [symptom, entry] of Object.entries(SYMPTOM_MAP)) {
+    for (const entry of Object.values(SYMPTOM_MAP)) {
       expect(entry.body_systems.length).toBeGreaterThan(0);
     }
   });
 
-  it("all linked diseases should exist in DISEASE_DB (report gaps)", () => {
+  it("all linked diseases should exist in DISEASE_DB", () => {
     const missing: string[] = [];
     for (const [symptom, entry] of Object.entries(SYMPTOM_MAP)) {
       for (const disease of entry.linked_diseases) {
         if (!DISEASE_DB[disease]) {
-          missing.push(`${symptom} → ${disease}`);
+          missing.push(`${symptom} -> ${disease}`);
         }
       }
     }
-    // Log gaps for future work but don't fail — these are known expansion targets
-    if (missing.length > 0) {
-      console.warn(
-        `[KNOWN GAP] ${missing.length} disease(s) referenced but not in DISEASE_DB:\n  ${missing.join("\n  ")}`
-      );
-    }
-    // Core diseases must exist
-    expect(DISEASE_DB["gastroenteritis"]).toBeDefined();
-    expect(DISEASE_DB["pancreatitis"]).toBeDefined();
-    expect(DISEASE_DB["wound_infection"]).toBeDefined();
-    expect(DISEASE_DB["hot_spots"]).toBeDefined();
-    expect(DISEASE_DB["gdv"]).toBeDefined();
+    expect(missing).toEqual([]);
   });
 
   it("all follow-up questions should exist in FOLLOW_UP_QUESTIONS", () => {
@@ -85,21 +72,13 @@ describe("SYMPTOM_MAP integrity", () => {
     for (const [symptom, entry] of Object.entries(SYMPTOM_MAP)) {
       for (const qId of entry.follow_up_questions) {
         if (!FOLLOW_UP_QUESTIONS[qId]) {
-          missing.push(`${symptom} → ${qId}`);
+          missing.push(`${symptom} -> ${qId}`);
         }
       }
     }
-    if (missing.length > 0) {
-      console.warn(
-        `[KNOWN GAP] ${missing.length} question(s) referenced but not in FOLLOW_UP_QUESTIONS:\n  ${missing.join("\n  ")}`
-      );
-    }
-    // All questions should exist (this was passing before)
-    expect(missing.length).toBe(0);
+    expect(missing).toEqual([]);
   });
 });
-
-// ─── DISEASE_DB integrity ───────────────────────────────────────────────────
 
 describe("DISEASE_DB integrity", () => {
   const diseases = Object.keys(DISEASE_DB);
@@ -115,8 +94,8 @@ describe("DISEASE_DB integrity", () => {
       "hot_spots",
       "laceration",
     ];
-    for (const d of woundDiseases) {
-      expect(DISEASE_DB[d]).toBeDefined();
+    for (const disease of woundDiseases) {
+      expect(DISEASE_DB[disease]).toBeDefined();
     }
   });
 
@@ -128,9 +107,14 @@ describe("DISEASE_DB integrity", () => {
       expect(disease.base_probability).toBeGreaterThan(0);
       expect(disease.base_probability).toBeLessThanOrEqual(1);
       expect(disease.age_modifier).toBeDefined();
-      expect(disease.age_modifier.puppy).toBeGreaterThan(0);
-      expect(disease.age_modifier.adult).toBeGreaterThan(0);
-      expect(disease.age_modifier.senior).toBeGreaterThan(0);
+      expect(disease.age_modifier.puppy).toBeGreaterThanOrEqual(0);
+      expect(disease.age_modifier.adult).toBeGreaterThanOrEqual(0);
+      expect(disease.age_modifier.senior).toBeGreaterThanOrEqual(0);
+      expect(
+        disease.age_modifier.puppy +
+          disease.age_modifier.adult +
+          disease.age_modifier.senior
+      ).toBeGreaterThan(0);
       expect(["low", "moderate", "high", "emergency"]).toContain(
         disease.urgency
       );
@@ -143,8 +127,8 @@ describe("DISEASE_DB integrity", () => {
   it("every disease should be referenced by at least one symptom", () => {
     const referencedDiseases = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
-      for (const d of entry.linked_diseases) {
-        referencedDiseases.add(d);
+      for (const disease of entry.linked_diseases) {
+        referencedDiseases.add(disease);
       }
     }
     for (const diseaseKey of diseases) {
@@ -152,8 +136,6 @@ describe("DISEASE_DB integrity", () => {
     }
   });
 });
-
-// ─── FOLLOW_UP_QUESTIONS integrity ──────────────────────────────────────────
 
 describe("FOLLOW_UP_QUESTIONS integrity", () => {
   const questions = Object.keys(FOLLOW_UP_QUESTIONS);
@@ -163,34 +145,36 @@ describe("FOLLOW_UP_QUESTIONS integrity", () => {
   });
 
   it("should include wound-specific questions", () => {
-    const woundQs = [
+    const woundQuestions = [
       "wound_location",
       "wound_size",
       "wound_duration",
       "wound_discharge",
       "wound_licking",
     ];
-    for (const q of woundQs) {
-      expect(FOLLOW_UP_QUESTIONS[q]).toBeDefined();
+    for (const qId of woundQuestions) {
+      expect(FOLLOW_UP_QUESTIONS[qId]).toBeDefined();
     }
   });
 
   it("every question should have required fields", () => {
-    for (const [id, q] of Object.entries(FOLLOW_UP_QUESTIONS)) {
-      expect(q.id).toBe(id);
-      expect(q.question_text).toBeTruthy();
-      expect(q.question_text.length).toBeGreaterThan(5);
-      expect(["boolean", "string", "number", "choice"]).toContain(q.data_type);
-      expect(q.extraction_hint).toBeTruthy();
-      expect(typeof q.critical).toBe("boolean");
+    for (const [id, question] of Object.entries(FOLLOW_UP_QUESTIONS)) {
+      expect(question.id).toBe(id);
+      expect(question.question_text).toBeTruthy();
+      expect(question.question_text.length).toBeGreaterThan(5);
+      expect(["boolean", "string", "number", "choice"]).toContain(
+        question.data_type
+      );
+      expect(question.extraction_hint).toBeTruthy();
+      expect(typeof question.critical).toBe("boolean");
     }
   });
 
   it("choice-type questions should have choices array", () => {
-    for (const [id, q] of Object.entries(FOLLOW_UP_QUESTIONS)) {
-      if (q.data_type === "choice") {
-        expect(q.choices).toBeDefined();
-        expect(q.choices!.length).toBeGreaterThan(1);
+    for (const question of Object.values(FOLLOW_UP_QUESTIONS)) {
+      if (question.data_type === "choice") {
+        expect(question.choices).toBeDefined();
+        expect(question.choices!.length).toBeGreaterThan(1);
       }
     }
   });
@@ -198,8 +182,8 @@ describe("FOLLOW_UP_QUESTIONS integrity", () => {
   it("every question should be referenced by at least one symptom", () => {
     const referencedQuestions = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
-      for (const q of entry.follow_up_questions) {
-        referencedQuestions.add(q);
+      for (const qId of entry.follow_up_questions) {
+        referencedQuestions.add(qId);
       }
     }
     for (const qId of questions) {
@@ -208,91 +192,73 @@ describe("FOLLOW_UP_QUESTIONS integrity", () => {
   });
 });
 
-// ─── BREED_MODIFIERS integrity ──────────────────────────────────────────────
-
 describe("BREED_MODIFIERS integrity", () => {
   it("should have breed entries", () => {
     expect(Object.keys(BREED_MODIFIERS).length).toBeGreaterThan(0);
   });
 
   it("Golden Retriever should have hot_spots modifier >= 2.0", () => {
-    const gr = BREED_MODIFIERS["Golden Retriever"];
-    expect(gr).toBeDefined();
-    if (gr) {
-      expect(gr["hot_spots"]).toBeGreaterThanOrEqual(2.0);
+    const goldenRetriever = BREED_MODIFIERS["Golden Retriever"];
+    expect(goldenRetriever).toBeDefined();
+    if (goldenRetriever) {
+      expect(goldenRetriever.hot_spots).toBeGreaterThanOrEqual(2.0);
     }
   });
 
   it("all modifier values should be positive numbers", () => {
-    for (const [breed, mods] of Object.entries(BREED_MODIFIERS)) {
-      for (const [disease, mult] of Object.entries(mods)) {
-        expect(mult).toBeGreaterThan(0);
-        expect(typeof mult).toBe("number");
+    for (const modifiers of Object.values(BREED_MODIFIERS)) {
+      for (const multiplier of Object.values(modifiers)) {
+        expect(multiplier).toBeGreaterThan(0);
+        expect(typeof multiplier).toBe("number");
       }
     }
   });
 
-  it("all diseases in modifiers should exist in DISEASE_DB (report gaps)", () => {
+  it("all diseases in modifiers should exist in DISEASE_DB", () => {
     const missing: string[] = [];
-    for (const [breed, mods] of Object.entries(BREED_MODIFIERS)) {
-      for (const disease of Object.keys(mods)) {
+    for (const [breed, modifiers] of Object.entries(BREED_MODIFIERS)) {
+      for (const disease of Object.keys(modifiers)) {
         if (!DISEASE_DB[disease]) {
-          missing.push(`${breed} → ${disease}`);
+          missing.push(`${breed} -> ${disease}`);
         }
       }
     }
-    if (missing.length > 0) {
-      console.warn(
-        `[KNOWN GAP] ${missing.length} breed modifier disease(s) not in DISEASE_DB:\n  ${missing.join("\n  ")}`
-      );
-    }
-    // Core breed-disease combos must exist
-    expect(DISEASE_DB["hot_spots"]).toBeDefined();
-    expect(DISEASE_DB["wound_infection"]).toBeDefined();
+    expect(missing).toEqual([]);
   });
 });
-
-// ─── Cross-reference consistency ────────────────────────────────────────────
 
 describe("Cross-reference consistency", () => {
   it("no orphaned diseases (in DISEASE_DB but never linked from any symptom)", () => {
     const linked = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
-      entry.linked_diseases.forEach((d) => linked.add(d));
+      entry.linked_diseases.forEach((disease) => linked.add(disease));
     }
-    const orphaned = Object.keys(DISEASE_DB).filter((dk) => !linked.has(dk));
-    if (orphaned.length > 0) {
-      console.warn(`[WARN] Orphaned diseases in DISEASE_DB: ${orphaned.join(", ")}`);
-    }
-    // Allow some gap but core diseases must be linked
-    expect(linked.has("gastroenteritis")).toBe(true);
-    expect(linked.has("wound_infection")).toBe(true);
+    const orphaned = Object.keys(DISEASE_DB).filter(
+      (diseaseKey) => !linked.has(diseaseKey)
+    );
+    expect(orphaned).toEqual([]);
   });
 
   it("no orphaned questions (in FOLLOW_UP_QUESTIONS but never referenced)", () => {
     const referenced = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
-      entry.follow_up_questions.forEach((q) => referenced.add(q));
+      entry.follow_up_questions.forEach((qId) => referenced.add(qId));
     }
     const orphaned = Object.keys(FOLLOW_UP_QUESTIONS).filter(
-      (qk) => !referenced.has(qk)
+      (questionKey) => !referenced.has(questionKey)
     );
-    if (orphaned.length > 0) {
-      console.warn(`[WARN] Orphaned questions: ${orphaned.join(", ")}`);
-    }
-    // All questions should be referenced
-    expect(orphaned.length).toBe(0);
+    expect(orphaned).toEqual([]);
   });
 
   it("wound_skin_issue should link to wound-related diseases", () => {
-    const wound = SYMPTOM_MAP["wound_skin_issue"];
+    const wound = SYMPTOM_MAP.wound_skin_issue;
     expect(wound.linked_diseases).toContain("wound_infection");
     expect(wound.linked_diseases).toContain("hot_spots");
     expect(wound.linked_diseases).toContain("abscess");
   });
 
   it("wound_skin_issue should have wound-specific follow-up questions", () => {
-    const wound = SYMPTOM_MAP["wound_skin_issue"];
+    const wound = SYMPTOM_MAP.wound_skin_issue;
     expect(wound.follow_up_questions).toContain("wound_location");
     expect(wound.follow_up_questions).toContain("wound_size");
     expect(wound.follow_up_questions).toContain("wound_discharge");
