@@ -1781,12 +1781,30 @@ function deriveDeterministicAnswerForQuestion(
       return extractBodyLocation(rawMessage);
     case "limping_onset":
       return extractLimpingOnset(rawMessage);
+    case "breathing_onset":
+      return extractBreathingOnset(rawMessage);
+    case "abdomen_onset":
+      return extractAbdomenOnset(rawMessage);
     case "limping_progression":
       return extractLimpingProgression(rawMessage);
     case "weight_bearing":
       return extractWeightBearingStatus(rawMessage);
     case "trauma_history":
       return extractTraumaHistory(rawMessage);
+    case "gum_color":
+      return extractGumColor(rawMessage);
+    case "water_intake":
+      return extractWaterIntake(rawMessage);
+    case "consciousness_level":
+      return extractConsciousnessLevel(rawMessage);
+    case "blood_color":
+      return extractBloodColor(rawMessage);
+    case "blood_amount":
+      return extractBloodAmount(rawMessage);
+    case "rat_poison_access":
+      return extractRatPoisonAccess(rawMessage);
+    case "toxin_exposure":
+      return extractToxinExposure(rawMessage);
     case "pain_on_touch":
       return extractPainOnTouch(rawMessage);
     case "worse_after_rest":
@@ -1864,9 +1882,18 @@ function isRefreshableDeterministicQuestion(questionId: string): boolean {
     "which_leg",
     "wound_location",
     "limping_onset",
+    "breathing_onset",
+    "abdomen_onset",
     "limping_progression",
     "weight_bearing",
     "trauma_history",
+    "gum_color",
+    "water_intake",
+    "consciousness_level",
+    "blood_color",
+    "blood_amount",
+    "rat_poison_access",
+    "toxin_exposure",
     "pain_on_touch",
     "worse_after_rest",
     "swelling_present",
@@ -1932,9 +1959,18 @@ function shouldPreferDeterministicAnswer(questionId: string): boolean {
     "which_leg",
     "wound_location",
     "limping_onset",
+    "breathing_onset",
+    "abdomen_onset",
     "limping_progression",
     "weight_bearing",
     "trauma_history",
+    "gum_color",
+    "water_intake",
+    "consciousness_level",
+    "blood_color",
+    "blood_amount",
+    "rat_poison_access",
+    "toxin_exposure",
     "swelling_present",
     "warmth_present",
     "pain_on_touch",
@@ -2013,6 +2049,30 @@ function extractBodyLocation(rawMessage: string): string | null {
 }
 
 function extractLimpingOnset(rawMessage: string): string | null {
+  return extractOnsetPattern(rawMessage);
+}
+
+function extractBreathingOnset(rawMessage: string): string | null {
+  return extractOnsetPattern(rawMessage);
+}
+
+function extractAbdomenOnset(rawMessage: string): string | null {
+  return extractOnsetPattern(rawMessage);
+}
+
+function extractLimpingProgression(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(getting worse|worsening|worse)\b/.test(lower)) return "worse";
+  if (/\b(getting better|improving|better)\b/.test(lower)) return "better";
+  if (/\b(staying the same|about the same|same|unchanged|stable)\b/.test(lower)) {
+    return "same";
+  }
+
+  return null;
+}
+
+function extractOnsetPattern(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
   if (
@@ -2024,7 +2084,7 @@ function extractLimpingOnset(rawMessage: string): string | null {
   }
 
   if (
-    /\b(sudden|suddenly|all of a sudden|just started|started today|started this morning|since this morning|since yesterday|today|this morning|last night|yesterday)\b/.test(
+    /\b(sudden|suddenly|all of a sudden|just started|started today|started this morning|since this morning|since yesterday|today|this morning|last night|yesterday|within hours|a few hours ago)\b/.test(
       lower
     )
   ) {
@@ -2034,13 +2094,99 @@ function extractLimpingOnset(rawMessage: string): string | null {
   return null;
 }
 
-function extractLimpingProgression(rawMessage: string): string | null {
+function extractGumColor(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
-  if (/\b(getting worse|worsening|worse)\b/.test(lower)) return "worse";
-  if (/\b(getting better|improving|better)\b/.test(lower)) return "better";
-  if (/\b(staying the same|about the same|same|unchanged|stable)\b/.test(lower)) {
-    return "same";
+  if (/\b(blue|bluish|gray|grey|purple)\b/.test(lower)) return "blue";
+  if (/\b(pale|white|whitish)\b/.test(lower)) return "pale_white";
+  if (/\b(bright red|very red|red gums)\b/.test(lower)) return "bright_red";
+  if (/\b(yellow|jaundice|jaundiced)\b/.test(lower)) return "yellow";
+  if (/\b(pink|normal)\b/.test(lower)) return "pink_normal";
+
+  return null;
+}
+
+function extractWaterIntake(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(not drinking|won't drink|wont drink|refusing water|no water)\b/.test(lower)) {
+    return "not_drinking";
+  }
+  if (/\b(drinking more|drinking a lot|very thirsty|constantly drinking|more water)\b/.test(lower)) {
+    return "more_than_usual";
+  }
+  if (/\b(drinking less|hardly drinking|less water)\b/.test(lower)) {
+    return "less_than_usual";
+  }
+  if (/\b(drinking normally|water is normal|normal drinking)\b/.test(lower)) {
+    return "normal";
+  }
+
+  return null;
+}
+
+function extractConsciousnessLevel(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(unresponsive|passed out|collapsed|not waking up|won't wake|wont wake)\b/.test(lower)) {
+    return "unresponsive";
+  }
+  if (/\b(dull|out of it|very weak|barely responsive|not acting alert)\b/.test(lower)) {
+    return "dull";
+  }
+  if (/\b(alert|responsive|acting normal)\b/.test(lower)) {
+    return "alert";
+  }
+
+  return null;
+}
+
+function extractBloodColor(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(bright red|fresh red)\b/.test(lower)) return "bright_red";
+  if (/\b(dark|tarry|black)\b/.test(lower)) return "dark_tarry";
+
+  return null;
+}
+
+function extractBloodAmount(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(mostly blood|all blood|pool of blood|a lot of blood|heavy bleeding)\b/.test(lower)) {
+    return "mostly_blood";
+  }
+  if (/\b(mixed in|throughout|mixed with stool)\b/.test(lower)) {
+    return "mixed_in";
+  }
+  if (/\b(streaks|streaking|on the surface|small amount)\b/.test(lower)) {
+    return "streaks";
+  }
+
+  return null;
+}
+
+function extractRatPoisonAccess(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(no rat poison|no rodenticide|did not get into rat poison)\b/.test(lower)) {
+    return false;
+  }
+  if (/\b(rat poison|rodenticide|mouse bait|bait station|warfarin|brodifacoum|bromadiolone)\b/.test(lower)) {
+    return true;
+  }
+
+  return null;
+}
+
+function extractToxinExposure(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+  if (
+    /\b(rat poison|rodenticide|mouse bait|bait station|xylitol|chocolate|grapes|raisins|antifreeze|ibuprofen|naproxen|acetaminophen|marijuana|cannabis)\b/.test(
+      lower
+    )
+  ) {
+    return rawMessage.trim().slice(0, 160);
   }
 
   return null;

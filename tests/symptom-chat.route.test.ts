@@ -643,6 +643,38 @@ describe("symptom-chat mixed text + image routing", () => {
     );
   });
 
+  it("deterministically captures respiratory red flags when the model misses them", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["difficulty_breathing"],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog suddenly started struggling to breathe and his gums look blue."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.extracted_answers.breathing_onset).toBe("sudden");
+    expect(payload.session.extracted_answers.gum_color).toBe("blue");
+    expect(payload.session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["blue_gums", "breathing_onset_sudden"])
+    );
+  });
+
   it("does not force-close an unrelated pending string question with a new symptom update", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
