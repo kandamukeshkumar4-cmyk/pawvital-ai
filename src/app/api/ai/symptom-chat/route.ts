@@ -59,6 +59,16 @@ import {
   type VisionClinicalEvidence,
   type VisionPreprocessResult,
 } from "@/lib/clinical-evidence";
+import { buildStructuredEvidenceChain } from "@/lib/evidence-chain";
+import { enqueueAsyncReview } from "@/lib/async-review-client";
+import {
+  isImageRetrievalConfigured,
+  retrieveVeterinaryImageEvidence,
+} from "@/lib/image-retrieval-service";
+import {
+  isTextRetrievalConfigured,
+  retrieveVeterinaryTextEvidence,
+} from "@/lib/text-retrieval-service";
 import {
   consultWithMultimodalSidecar,
   isAbortLikeError as isSidecarAbortError,
@@ -171,7 +181,13 @@ export async function POST(request: Request) {
     }
 
     if (action === "generate_report") {
-      return await generateReport(session, effectivePet, messages, image);
+      return await generateReport(
+        session,
+        effectivePet,
+        messages,
+        image,
+        new URL(request.url).origin
+      );
     }
 
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
@@ -1519,7 +1535,8 @@ async function generateReport(
   session: TriageSession,
   pet: PetProfile,
   messages: { role: string; content: string }[],
-  image?: string
+  image?: string,
+  requestOrigin?: string
 ) {
   if (
     isLikelyDogContext(pet) &&
@@ -1721,6 +1738,10 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
         retrievalBundle
       );
     }
+    report.evidenceChain = buildStructuredEvidenceChain(
+      session,
+      retrievalBundle
+    );
 
     // ═══════════════════════════════════════════════════════════════════
     // SAFETY LAYER: GLM-5 reviews the report for missed emergencies
@@ -1745,30 +1766,26 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       context.highest_urgency !== "emergency" &&
       shouldScheduleAsyncConsultReview(session) &&
       isMultimodalConsultConfigured() &&
+      requestOrigin &&
       runAfterSafely(async () => {
         try {
-          await consultWithMultimodalSidecar({
+          const success = await enqueueAsyncReview({
+            baseUrl: requestOrigin,
             image,
-            ownerText: session.case_memory?.latest_owner_turn || "",
-            preprocess:
-              session.latest_preprocess ||
-              buildFallbackPreprocessResult(
-                session.latest_image_domain || "unsupported"
-              ),
-            visionSummary: session.vision_analysis || "",
-            severity: session.vision_severity || "needs_review",
-            contradictions:
-              session.case_memory?.ambiguity_flags?.slice(-4) || [],
-            deterministicFacts: session.extracted_answers,
-            mode: "async",
+            pet,
+            session,
+            report: finalReport,
           });
-          console.log("[HF Multimodal Consult] queued async review");
+          if (success) {
+            finalReport.async_review_scheduled = true;
+            console.log("[HF Multimodal Consult] queued async review");
+          }
         } catch (error) {
           console.error("[HF Multimodal Consult] async review failed:", error);
         }
       })
     ) {
-      finalReport.async_review_scheduled = true;
+      // Flag is set inside callback after successful enqueue
     }
 
     return NextResponse.json({ type: "report", report: finalReport });
@@ -1809,6 +1826,10 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
             retrievalBundle
           );
         }
+        report.evidenceChain = buildStructuredEvidenceChain(
+          session,
+          retrievalBundle
+        );
         return NextResponse.json({ type: "report", report });
       } catch (fallbackError) {
         console.error("Claude fallback also failed:", fallbackError);
@@ -2053,6 +2074,52 @@ async function buildReportRetrievalBundle(
   referenceImageQuery: string,
   conditionHints: string[]
 ): Promise<RetrievalBundle> {
+  if (isTextRetrievalConfigured() || isImageRetrievalConfigured()) {
+    try {
+      const [textResult, imageResult] = await Promise.all([
+        isTextRetrievalConfigured()
+          ? retrieveVeterinaryTextEvidence({
+              query: knowledgeQuery,
+              domain: session.latest_image_domain || null,
+              breed: pet.breed,
+              conditionHints,
+              dogOnly: true,
+              textLimit: 3,
+            })
+          : Promise.resolve({
+              textChunks: [],
+              rerankScores: [],
+              sourceCitations: [],
+            }),
+        isImageRetrievalConfigured()
+          ? retrieveVeterinaryImageEvidence({
+              query: referenceImageQuery,
+              domain: session.latest_image_domain || null,
+              breed: pet.breed,
+              conditionHints,
+              dogOnly: true,
+              imageLimit: 4,
+            })
+          : Promise.resolve({
+              imageMatches: [],
+              sourceCitations: [],
+            }),
+      ]);
+
+      return {
+        textChunks: textResult.textChunks,
+        imageMatches: imageResult.imageMatches,
+        rerankScores: textResult.rerankScores,
+        sourceCitations: [
+          ...textResult.sourceCitations,
+          ...imageResult.sourceCitations,
+        ].slice(0, 8),
+      };
+    } catch (error) {
+      console.error("[HF Retrieval Sidecar] split services failed:", error);
+    }
+  }
+
   if (isRetrievalSidecarConfigured()) {
     try {
       return await retrieveVeterinaryEvidenceFromSidecar({

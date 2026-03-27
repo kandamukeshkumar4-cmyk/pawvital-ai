@@ -10,17 +10,39 @@ import type {
 } from "./clinical-evidence";
 
 const VISION_PREPROCESS_URL = process.env.HF_VISION_PREPROCESS_URL?.trim() || "";
-const RETRIEVAL_SERVICE_URL = process.env.HF_RETRIEVAL_SERVICE_URL?.trim() || "";
+const TEXT_RETRIEVAL_SERVICE_URL =
+  process.env.HF_TEXT_RETRIEVAL_URL?.trim() ||
+  process.env.TEXT_RETRIEVAL_URL?.trim() ||
+  process.env.HF_RETRIEVAL_SERVICE_URL?.trim() ||
+  "";
+const IMAGE_RETRIEVAL_SERVICE_URL =
+  process.env.HF_IMAGE_RETRIEVAL_URL?.trim() ||
+  process.env.IMAGE_RETRIEVAL_URL?.trim() ||
+  process.env.HF_RETRIEVAL_SERVICE_URL?.trim() ||
+  "";
 const MULTIMODAL_CONSULT_URL =
   process.env.HF_MULTIMODAL_CONSULT_URL?.trim() || "";
+const ASYNC_REVIEW_SERVICE_URL =
+  process.env.HF_ASYNC_REVIEW_URL?.trim() ||
+  process.env.ASYNC_REVIEW_SERVICE_URL?.trim() ||
+  process.env.HF_MULTIMODAL_CONSULT_ASYNC_URL?.trim() ||
+  "";
 const SIDECAR_API_KEY = process.env.HF_SIDECAR_API_KEY?.trim() || "";
 
 const VISION_PREPROCESS_TIMEOUT_MS =
   Number(process.env.HF_VISION_PREPROCESS_TIMEOUT_MS) || 4500;
-const RETRIEVAL_SERVICE_TIMEOUT_MS =
-  Number(process.env.HF_RETRIEVAL_SERVICE_TIMEOUT_MS) || 5000;
+const TEXT_RETRIEVAL_SERVICE_TIMEOUT_MS =
+  Number(process.env.HF_TEXT_RETRIEVAL_TIMEOUT_MS) ||
+  Number(process.env.HF_RETRIEVAL_SERVICE_TIMEOUT_MS) ||
+  5000;
+const IMAGE_RETRIEVAL_SERVICE_TIMEOUT_MS =
+  Number(process.env.HF_IMAGE_RETRIEVAL_TIMEOUT_MS) ||
+  Number(process.env.HF_RETRIEVAL_SERVICE_TIMEOUT_MS) ||
+  5000;
 const MULTIMODAL_CONSULT_TIMEOUT_MS =
   Number(process.env.HF_MULTIMODAL_CONSULT_TIMEOUT_MS) || 9000;
+const ASYNC_REVIEW_SERVICE_TIMEOUT_MS =
+  Number(process.env.HF_ASYNC_REVIEW_TIMEOUT_MS) || 15000;
 
 function buildHeaders(): HeadersInit {
   return {
@@ -78,11 +100,28 @@ export function isVisionPreprocessConfigured(): boolean {
 }
 
 export function isRetrievalSidecarConfigured(): boolean {
-  return Boolean(RETRIEVAL_SERVICE_URL);
+  // Check new split services first, then fall back to legacy single URL
+  return Boolean(
+    TEXT_RETRIEVAL_SERVICE_URL ||
+    IMAGE_RETRIEVAL_SERVICE_URL ||
+    process.env.HF_RETRIEVAL_SERVICE_URL?.trim()
+  );
+}
+
+export function isTextRetrievalConfigured(): boolean {
+  return Boolean(TEXT_RETRIEVAL_SERVICE_URL);
+}
+
+export function isImageRetrievalConfigured(): boolean {
+  return Boolean(IMAGE_RETRIEVAL_SERVICE_URL);
 }
 
 export function isMultimodalConsultConfigured(): boolean {
   return Boolean(MULTIMODAL_CONSULT_URL);
+}
+
+export function isAsyncReviewServiceConfigured(): boolean {
+  return Boolean(ASYNC_REVIEW_SERVICE_URL || MULTIMODAL_CONSULT_URL);
 }
 
 function normalizeDomain(value: unknown): SupportedImageDomain {
@@ -237,21 +276,24 @@ function normalizeImageEvidence(value: unknown): RetrievalImageEvidence[] {
   );
 }
 
-export async function retrieveVeterinaryEvidenceFromSidecar(input: {
+export async function retrieveVeterinaryTextEvidenceFromSidecar(input: {
   query: string;
   domain: SupportedImageDomain | null;
   breed?: string;
   conditionHints?: string[];
   dogOnly?: boolean;
   textLimit?: number;
-  imageLimit?: number;
-}): Promise<RetrievalBundle> {
-  if (!RETRIEVAL_SERVICE_URL) {
-    throw new Error("Retrieval sidecar is not configured");
+}): Promise<{
+  textChunks: RetrievalTextEvidence[];
+  rerankScores: number[];
+  sourceCitations: string[];
+}> {
+  if (!TEXT_RETRIEVAL_SERVICE_URL) {
+    throw new Error("Text retrieval sidecar is not configured");
   }
 
   const response = await fetchJson<Record<string, unknown>>(
-    RETRIEVAL_SERVICE_URL,
+    TEXT_RETRIEVAL_SERVICE_URL,
     {
       query: input.query,
       domain: input.domain,
@@ -259,21 +301,16 @@ export async function retrieveVeterinaryEvidenceFromSidecar(input: {
       condition_hints: input.conditionHints || [],
       dog_only: input.dogOnly ?? true,
       text_limit: input.textLimit ?? 4,
-      image_limit: input.imageLimit ?? 4,
     },
-    RETRIEVAL_SERVICE_TIMEOUT_MS
+    TEXT_RETRIEVAL_SERVICE_TIMEOUT_MS
   );
 
   const textChunks = normalizeTextEvidence(
     response.textChunks ?? response.text_chunks
   );
-  const imageMatches = normalizeImageEvidence(
-    response.imageMatches ?? response.image_matches
-  );
 
   return {
     textChunks,
-    imageMatches,
     rerankScores: Array.isArray(response.rerankScores)
       ? response.rerankScores.map((value) => Number(value)).filter(Number.isFinite)
       : Array.isArray(response.rerank_scores)
@@ -291,6 +328,103 @@ export async function retrieveVeterinaryEvidenceFromSidecar(input: {
   };
 }
 
+export async function retrieveVeterinaryImageEvidenceFromSidecar(input: {
+  query: string;
+  domain: SupportedImageDomain | null;
+  breed?: string;
+  conditionHints?: string[];
+  dogOnly?: boolean;
+  imageLimit?: number;
+}): Promise<{
+  imageMatches: RetrievalImageEvidence[];
+  sourceCitations: string[];
+}> {
+  if (!IMAGE_RETRIEVAL_SERVICE_URL) {
+    throw new Error("Image retrieval sidecar is not configured");
+  }
+
+  const response = await fetchJson<Record<string, unknown>>(
+    IMAGE_RETRIEVAL_SERVICE_URL,
+    {
+      query: input.query,
+      domain: input.domain,
+      breed: input.breed,
+      condition_hints: input.conditionHints || [],
+      dog_only: input.dogOnly ?? true,
+      image_limit: input.imageLimit ?? 4,
+    },
+    IMAGE_RETRIEVAL_SERVICE_TIMEOUT_MS
+  );
+
+  return {
+    imageMatches: normalizeImageEvidence(
+      response.imageMatches ?? response.image_matches
+    ),
+    sourceCitations: Array.isArray(response.sourceCitations)
+      ? response.sourceCitations.map((value) => String(value)).filter(Boolean)
+      : Array.isArray(response.source_citations)
+        ? response.source_citations
+            .map((value) => String(value))
+            .filter(Boolean)
+        : [],
+  };
+}
+
+export async function retrieveVeterinaryEvidenceFromSidecar(input: {
+  query: string;
+  domain: SupportedImageDomain | null;
+  breed?: string;
+  conditionHints?: string[];
+  dogOnly?: boolean;
+  textLimit?: number;
+  imageLimit?: number;
+}): Promise<RetrievalBundle> {
+  const results = await Promise.allSettled([
+    isTextRetrievalConfigured()
+      ? retrieveVeterinaryTextEvidenceFromSidecar(input)
+      : Promise.resolve({
+          textChunks: [] as RetrievalTextEvidence[],
+          rerankScores: [] as number[],
+          sourceCitations: [] as string[],
+        }),
+    isImageRetrievalConfigured()
+      ? retrieveVeterinaryImageEvidenceFromSidecar(input)
+      : Promise.resolve({
+          imageMatches: [] as RetrievalImageEvidence[],
+          sourceCitations: [] as string[],
+        }),
+  ]);
+
+  const textResult = results[0];
+  const imageResult = results[1];
+
+  const textChunks: RetrievalTextEvidence[] =
+    textResult.status === "fulfilled" ? textResult.value.textChunks : [];
+  const rerankScores: number[] =
+    textResult.status === "fulfilled" ? textResult.value.rerankScores : [];
+  const textCitations: string[] =
+    textResult.status === "fulfilled" ? textResult.value.sourceCitations : [];
+  const imageMatches: RetrievalImageEvidence[] =
+    imageResult.status === "fulfilled" ? imageResult.value.imageMatches : [];
+  const imageCitations: string[] =
+    imageResult.status === "fulfilled" ? imageResult.value.sourceCitations : [];
+
+  // Log any failures for debugging
+  if (textResult.status === "rejected") {
+    console.error("[HF Retrieval] text retrieval failed:", textResult.reason);
+  }
+  if (imageResult.status === "rejected") {
+    console.error("[HF Retrieval] image retrieval failed:", imageResult.reason);
+  }
+
+  return {
+    textChunks,
+    imageMatches,
+    rerankScores,
+    sourceCitations: [...textCitations, ...imageCitations].slice(0, 10),
+  };
+}
+
 export async function consultWithMultimodalSidecar(input: {
   image: string;
   ownerText: string;
@@ -301,12 +435,17 @@ export async function consultWithMultimodalSidecar(input: {
   deterministicFacts: Record<string, string | boolean | number>;
   mode?: "sync" | "async";
 }): Promise<ConsultOpinion> {
-  if (!MULTIMODAL_CONSULT_URL) {
+  const targetUrl =
+    input.mode === "async" && ASYNC_REVIEW_SERVICE_URL
+      ? ASYNC_REVIEW_SERVICE_URL
+      : MULTIMODAL_CONSULT_URL;
+
+  if (!targetUrl) {
     throw new Error("Multimodal consult sidecar is not configured");
   }
 
   const response = await fetchJson<Record<string, unknown>>(
-    MULTIMODAL_CONSULT_URL,
+    targetUrl,
     {
       image: input.image,
       owner_text: input.ownerText,
@@ -317,7 +456,9 @@ export async function consultWithMultimodalSidecar(input: {
       contradictions: input.contradictions,
       deterministic_facts: input.deterministicFacts,
     },
-    MULTIMODAL_CONSULT_TIMEOUT_MS
+    input.mode === "async"
+      ? ASYNC_REVIEW_SERVICE_TIMEOUT_MS
+      : MULTIMODAL_CONSULT_TIMEOUT_MS
   );
 
   return {

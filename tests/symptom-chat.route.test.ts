@@ -24,6 +24,11 @@ const mockCompressCaseMemoryWithMiniMax = jest.fn();
 const mockPreprocessVeterinaryImage = jest.fn();
 const mockConsultWithMultimodalSidecar = jest.fn();
 const mockRetrieveVeterinaryEvidenceFromSidecar = jest.fn();
+const mockIsTextRetrievalConfigured = jest.fn();
+const mockIsImageRetrievalConfigured = jest.fn();
+const mockRetrieveVeterinaryTextEvidence = jest.fn();
+const mockRetrieveVeterinaryImageEvidence = jest.fn();
+const mockEnqueueAsyncReview = jest.fn();
 
 jest.mock("@/lib/rate-limit", () => ({
   symptomChatLimiter: {},
@@ -95,6 +100,24 @@ jest.mock("@/lib/hf-sidecars", () => ({
     mockConsultWithMultimodalSidecar(...args),
   retrieveVeterinaryEvidenceFromSidecar: (...args: unknown[]) =>
     mockRetrieveVeterinaryEvidenceFromSidecar(...args),
+}));
+
+jest.mock("@/lib/text-retrieval-service", () => ({
+  isTextRetrievalConfigured: (...args: unknown[]) =>
+    mockIsTextRetrievalConfigured(...args),
+  retrieveVeterinaryTextEvidence: (...args: unknown[]) =>
+    mockRetrieveVeterinaryTextEvidence(...args),
+}));
+
+jest.mock("@/lib/image-retrieval-service", () => ({
+  isImageRetrievalConfigured: (...args: unknown[]) =>
+    mockIsImageRetrievalConfigured(...args),
+  retrieveVeterinaryImageEvidence: (...args: unknown[]) =>
+    mockRetrieveVeterinaryImageEvidence(...args),
+}));
+
+jest.mock("@/lib/async-review-client", () => ({
+  enqueueAsyncReview: (...args: unknown[]) => mockEnqueueAsyncReview(...args),
 }));
 
 const PET = {
@@ -196,6 +219,18 @@ describe("symptom-chat mixed text + image routing", () => {
       rerankScores: [],
       sourceCitations: [],
     });
+    mockIsTextRetrievalConfigured.mockReturnValue(false);
+    mockIsImageRetrievalConfigured.mockReturnValue(false);
+    mockRetrieveVeterinaryTextEvidence.mockResolvedValue({
+      textChunks: [],
+      rerankScores: [],
+      sourceCitations: [],
+    });
+    mockRetrieveVeterinaryImageEvidence.mockResolvedValue({
+      imageMatches: [],
+      sourceCitations: [],
+    });
+    mockEnqueueAsyncReview.mockResolvedValue(true);
     mockDiagnoseWithDeepSeek.mockResolvedValue(
       JSON.stringify({
         severity: "medium",
@@ -612,7 +647,9 @@ describe("symptom-chat mixed text + image routing", () => {
   });
 
   it("adds evidence-chain data and capped confidence to the final report", async () => {
-    mockRetrieveVeterinaryEvidenceFromSidecar.mockResolvedValue({
+    mockIsTextRetrievalConfigured.mockReturnValue(true);
+    mockIsImageRetrievalConfigured.mockReturnValue(true);
+    mockRetrieveVeterinaryTextEvidence.mockResolvedValue({
       textChunks: [
         {
           title: "Merck Wound Management",
@@ -622,6 +659,10 @@ describe("symptom-chat mixed text + image routing", () => {
           sourceUrl: "https://example.com/merck",
         },
       ],
+      rerankScores: [0.92],
+      sourceCitations: ["Merck Veterinary Manual"],
+    });
+    mockRetrieveVeterinaryImageEvidence.mockResolvedValue({
       imageMatches: [
         {
           title: "Dog Skin Dataset",
@@ -634,8 +675,7 @@ describe("symptom-chat mixed text + image routing", () => {
           dogOnly: true,
         },
       ],
-      rerankScores: [0.92],
-      sourceCitations: ["Merck Veterinary Manual"],
+      sourceCitations: ["Dog Skin Dataset"],
     });
 
     const session = createSession();
@@ -681,6 +721,17 @@ describe("symptom-chat mixed text + image routing", () => {
       expect.arrayContaining([
         expect.stringContaining("Visual evidence"),
         expect.stringContaining("Reference support"),
+      ])
+    );
+    expect(payload.report.evidenceChain).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: "visual-analysis",
+          confidence: 0.71,
+        }),
+        expect.objectContaining({
+          source: "text-retrieval",
+        }),
       ])
     );
   });

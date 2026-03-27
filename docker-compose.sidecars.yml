@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  vision-preprocess-service:
+    build:
+      context: ./services/vision-preprocess-service
+    ports:
+      - "8080:8080"
+    environment:
+      SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
+
+  text-retrieval-service:
+    build:
+      context: ./services/text-retrieval-service
+    ports:
+      - "8081:8081"
+    environment:
+      SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
+
+  image-retrieval-service:
+    build:
+      context: ./services/image-retrieval-service
+    ports:
+      - "8082:8082"
+    environment:
+      SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
+
+  multimodal-consult-service:
+    build:
+      context: ./services/multimodal-consult-service
+    ports:
+      - "8083:8083"
+    environment:
+      SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
+
+  async-review-service:
+    build:
+      context: ./services/async-review-service
+    ports:
+      - "8084:8084"
+    environment:
+      SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
