@@ -575,7 +575,7 @@ export async function POST(request: Request) {
     session.last_question_asked = nextQuestionId;
 
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 5: PHRASE question — Kimi K2.5 (Claude fallback)
+    // STEP 5: PHRASE question — Llama 3.3 70B + Nemotron verifier
     // ═══════════════════════════════════════════════════════════════════
     const questionText = getQuestionText(nextQuestionId);
     // Include image context when:
@@ -599,9 +599,9 @@ export async function POST(request: Request) {
       basePhrasingContext,
       hasLiveVisionThisTurn
     );
-    const phrasingContext = questionGate.includeImageContext
-      ? basePhrasingContext
-      : null;
+    const phrasingContext = basePhrasingContext;
+    const allowPhotoMentionInWording =
+      hasLiveVisionThisTurn && questionGate.includeImageContext;
     const phrasedQuestion = await phraseQuestion(
       questionText,
       nextQuestionId,
@@ -610,7 +610,8 @@ export async function POST(request: Request) {
       messages,
       lastUserMessage.content,
       phrasingContext,
-      hasLiveVisionThisTurn && questionGate.includeImageContext,
+      hasLiveVisionThisTurn,
+      allowPhotoMentionInWording,
       questionGate.useDeterministicFallback
     );
 
@@ -865,10 +866,11 @@ function buildDeterministicQuestionFallback(
   petName: string,
   questionText: string,
   session: TriageSession,
-  hasPhoto: boolean
+  hasPhoto: boolean,
+  allowPhotoMention: boolean
 ): string {
   const symptomLead = session.known_symptoms[0];
-  const acknowledgment = hasPhoto
+  const acknowledgment = hasPhoto && allowPhotoMention
     ? `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`
     : symptomLead
       ? `I'm keeping track of what you've shared so far about ${petName}'s ${symptomLead.replace(/_/g, " ")}.`
@@ -879,7 +881,7 @@ function buildDeterministicQuestionFallback(
 function sanitizeQuestionDraft(
   rawDraft: string,
   fallbackMessage: string,
-  hasPhoto: boolean
+  allowPhotoMention: boolean
 ): string {
   const cleaned = stripThinkingArtifacts(rawDraft).replace(/\s+/g, " ").trim();
   if (!cleaned) return fallbackMessage;
@@ -889,11 +891,11 @@ function sanitizeQuestionDraft(
       cleaned
     );
   const usesVisualLanguage =
-    /\b(i can see|i notice|from the photo|from the image|looking at the photo|looking at the image)\b/i.test(
+    /\b(i can see|i notice|from the photo|from the image|looking at the photo|looking at the image|the photo|the image|this photo|this image)\b/i.test(
       cleaned
     );
 
-  if (mentionsSpeciesConfusion || (!hasPhoto && usesVisualLanguage)) {
+  if (mentionsSpeciesConfusion || (!allowPhotoMention && usesVisualLanguage)) {
     return fallbackMessage;
   }
 
@@ -1027,10 +1029,11 @@ Return ONLY valid JSON:
 }
 
 RULES:
-- include_image_context can be true only if the photo directly helps this exact question.
+- include_image_context should stay true when the photo materially informs the reasoning for this exact question's wording.
+- Set include_image_context to false only when the photo is clearly irrelevant to the wording of this exact question.
 - use_deterministic_fallback should be true if the turn is contradictory, ambiguous, or likely to trigger hallucinated wording.
 - Never change the question.
-- Be conservative.`;
+- Be precise, not overly cautious.`;
 
   try {
     const rawDecision = await reviewQuestionPlanWithNemotron(prompt);
@@ -1060,6 +1063,7 @@ async function phraseQuestionV2(
   latestUserMessage: string,
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean,
+  allowPhotoMentionInWording = false,
   forceDeterministicFallback = false
 ): Promise<string> {
   const qDef = FOLLOW_UP_QUESTIONS[questionId];
@@ -1073,7 +1077,8 @@ async function phraseQuestionV2(
     pet.name,
     questionText,
     session,
-    hasPhoto
+    hasPhoto,
+    allowPhotoMentionInWording
   );
   if (forceDeterministicFallback) {
     return fallbackMessage;
@@ -1091,8 +1096,9 @@ PET:
 
 FULL SESSION MEMORY:
 ${memorySnapshot}
-${phrasingContext ? `\nIMAGE CONTEXT:\n${phrasingContext}\n` : ""}
+${phrasingContext ? `\nIMAGE REASONING CONTEXT:\n${phrasingContext}\n` : ""}
 PHOTO SENT THIS TURN: ${hasPhoto ? "YES" : "NO"}
+EXPLICITLY REFERENCE PHOTO IN WORDING: ${allowPhotoMentionInWording ? "YES" : "NO"}
 
 REQUIRED QUESTION:
 - Exact question text: "${questionText}"
@@ -1108,8 +1114,9 @@ HARD RULES:
 - Never act like this turn exists in isolation.
 - Never ask a different question than the required one.
 - Never mention species confusion, breed confusion, or made-up visual details.
-- If PHOTO SENT THIS TURN = NO, never use visual language like "I can see" or "from the photo".
-- If PHOTO SENT THIS TURN = YES, only mention the image briefly and only if it supports the required question.
+- Use image reasoning context when it exists so the question stays grounded in what is already known.
+- If EXPLICITLY REFERENCE PHOTO IN WORDING = NO, never mention the photo, image, or use visual language like "I can see" or "from the photo".
+- If EXPLICITLY REFERENCE PHOTO IN WORDING = YES, only mention the image briefly and only if it supports the required question.
 - Never mention scores, probabilities, clinical IDs, or internal logic.
 - Never list diagnoses or differentials.
 - Use correct canine anatomy.
@@ -1134,7 +1141,11 @@ Respond with only the final 2-sentence message.`;
       console.log("[Engine] Phrasing primary: Claude");
     }
 
-    draft = sanitizeQuestionDraft(draft, fallbackMessage, hasPhoto);
+    draft = sanitizeQuestionDraft(
+      draft,
+      fallbackMessage,
+      allowPhotoMentionInWording
+    );
 
     if (useNvidia) {
       try {
@@ -1142,8 +1153,9 @@ Respond with only the final 2-sentence message.`;
 
 FULL SESSION MEMORY:
 ${memorySnapshot}
-${phrasingContext ? `\nIMAGE CONTEXT:\n${phrasingContext}\n` : ""}
+${phrasingContext ? `\nIMAGE REASONING CONTEXT:\n${phrasingContext}\n` : ""}
 PHOTO SENT THIS TURN: ${hasPhoto ? "YES" : "NO"}
+EXPLICITLY REFERENCE PHOTO IN WORDING: ${allowPhotoMentionInWording ? "YES" : "NO"}
 
 REQUIRED QUESTION:
 - Exact question text: "${questionText}"
@@ -1161,7 +1173,7 @@ RULES:
 - Preserve the required question intent exactly.
 - Keep it to 2 sentences.
 - Keep it grounded in the full session memory.
-- If PHOTO SENT THIS TURN = NO, remove all visual language.
+- If EXPLICITLY REFERENCE PHOTO IN WORDING = NO, remove all direct photo/image/visual language.
 - Never mention species confusion, breed confusion, or made-up visual details.
 - Never ask a different question.
 - Never mention diagnoses, scores, IDs, or probabilities.`;
@@ -1174,7 +1186,7 @@ RULES:
         return sanitizeQuestionDraft(
           verifiedMessage,
           fallbackMessage,
-          hasPhoto
+          allowPhotoMentionInWording
         );
       } catch (verificationError) {
         console.error("Question verification failed:", verificationError);
@@ -1206,7 +1218,7 @@ RULES:
 }
 
 // =============================================================================
-// STEP 5: Question Phrasing — Kimi K2.5 → Claude fallback
+// STEP 5: Question Phrasing — Llama 3.3 70B → Claude fallback
 // =============================================================================
 
 async function phraseQuestion(
@@ -1218,6 +1230,7 @@ async function phraseQuestion(
   latestUserMessage: string,
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean,
+  allowPhotoMentionInWording = false,
   forceDeterministicFallback = false
 ): Promise<string> {
   return phraseQuestionV2(
@@ -1229,6 +1242,7 @@ async function phraseQuestion(
     latestUserMessage,
     phrasingContext,
     photoAnalyzedThisTurn,
+    allowPhotoMentionInWording,
     forceDeterministicFallback
   );
 }

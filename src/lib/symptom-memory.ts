@@ -276,10 +276,9 @@ export function shouldCompressCaseMemory(
 
   return (
     !memory.compressed_summary ||
-    turnsSinceCompression >= 2 ||
+    turnsSinceCompression >= 4 ||
     options.imageAnalyzed ||
     options.changedSymptoms.length > 0 ||
-    options.changedAnswers.length > 0 ||
     messages.length >= 8
   );
 }

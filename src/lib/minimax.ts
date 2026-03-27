@@ -14,7 +14,7 @@ const MINIMAX_API_KEY = (
 // Can be overridden via MINIMAX_TIMEOUT_MS environment variable
 const MINIMAX_TIMEOUT_MS = Number(process.env.MINIMAX_TIMEOUT_MS) || 45000;
 const MINIMAX_MEMORY_MAX_TOKENS =
-  Number(process.env.MINIMAX_MEMORY_MAX_TOKENS) || 650;
+  Number(process.env.MINIMAX_MEMORY_MAX_TOKENS) || 800;
 
 const MEMORY_MODEL_CANDIDATES = [
   process.env.MINIMAX_MEMORY_MODEL?.trim(),

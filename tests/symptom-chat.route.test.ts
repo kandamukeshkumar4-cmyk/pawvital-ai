@@ -220,7 +220,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
     expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockCompressCaseMemoryWithMiniMax).toHaveBeenCalledTimes(1);
-    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE REASONING CONTEXT:");
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Internal ID: wound_size");
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Compressed case summary:");
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain(
@@ -300,7 +300,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(mockReviewQuestionPlanWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
     expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
-    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE CONTEXT:");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE REASONING CONTEXT:");
     expect(payload.session.extracted_answers.wound_location).toBe("left leg");
   });
 
@@ -343,6 +343,63 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(mockVerifyQuestionWithNemotron.mock.calls[0][0]).toContain(
       "PHOTO SENT THIS TURN: NO"
     );
+  });
+
+  it("keeps fresh image findings for reasoning even when direct photo wording is blocked", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockRunVisionPipeline.mockResolvedValue({
+      combined: "photo analysis showing a superficial wound on the left hind leg",
+      severity: "needs_review",
+      tiersUsed: ["tier1"],
+      woundDetected: true,
+      tier1_fast: "{\"finding\":\"wound\"}",
+      tier2_detailed: null,
+      tier3_reasoned: null,
+    });
+    mockParseVisionForMatrix.mockReturnValue({
+      symptoms: [],
+      redFlags: [],
+      severityClass: "needs_review",
+    });
+    mockReviewQuestionPlanWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        include_image_context: false,
+        use_deterministic_fallback: false,
+        reason: "image should inform reasoning but not be mentioned directly",
+      })
+    );
+    mockPhraseWithLlama.mockResolvedValue(
+      "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. When did the limping start? Was it sudden or gradual?"
+    );
+    mockVerifyQuestionWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        message:
+          "Thanks for sharing that about Bruno; I'm combining your answer with the photo and the rest of the history. When did the limping start? Was it sudden or gradual?",
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "which_leg";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeRequest(session, "left leg"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE REASONING CONTEXT:");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain(
+      "EXPLICITLY REFERENCE PHOTO IN WORDING: NO"
+    );
+    expect(payload.message).toBe(
+      "I'm keeping track of what you've shared so far about Bruno's limping. When did the limping start? Was it sudden or gradual?"
+    );
+    expect(payload.message).not.toContain("photo");
   });
 
   it("falls back to deterministic phrasing when the preflight gate marks the turn as fragile", async () => {

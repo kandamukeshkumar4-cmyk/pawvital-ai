@@ -308,14 +308,14 @@ export async function extractWithQwen(prompt: string): Promise<string> {
 }
 
 /**
- * Phrase a clinical question naturally using Kimi K2.5.
+ * Phrase a clinical question naturally using Llama 3.3 70B Instruct.
  * Returns a warm, empathetic question string.
  */
 export async function phraseWithLlama(prompt: string): Promise<string> {
   return complete({
     role: "phrasing",
     prompt,
-    maxTokens: 240,
+    maxTokens: 320,
     temperature: 0.25,
   });
 }
@@ -502,8 +502,9 @@ export async function runVisionPipeline(
   // TIER 1: Fast Triage — Llama 3.2 11B Vision
   // Goal: Detect wound, quick severity, basic features
   // ═══════════════════════════════════════════════════════════════════════
-  const tier1Prompt = `You are a veterinary triage clinician. Quickly assess this dog photo using conservative veterinary reasoning grounded only in visible findings.
+const tier1Prompt = `You are a veterinary triage clinician. Quickly assess this dog photo using conservative veterinary reasoning grounded only in visible findings.
 ${breedInfo ? `Patient: ${breedInfo.breed}, ${breedInfo.age_years}yr, ${breedInfo.weight}lbs` : ""}
+${breedContext ? `Breed risk context: ${breedContext}` : ""}
 ${textContext ? `Owner says: "${textContext}"` : ""}
 ${CANINE_ANATOMY_RULES}
 
