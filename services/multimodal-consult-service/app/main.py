@@ -474,6 +474,7 @@ def _extract_partial_fields(content: str) -> dict | None:
         partial.setdefault("risk_stratifiers", [])
         partial.setdefault("recommended_next_steps", [])
         partial.setdefault("comparison_to_baseline", {})
+        partial.setdefault("uncertainty_calibration", {})
         return partial
 
     return None
@@ -492,6 +493,7 @@ def _minimal_fallback(reason: str) -> dict:
         "risk_stratifiers": [],
         "recommended_next_steps": [],
         "comparison_to_baseline": {},
+        "uncertainty_calibration": {},
     }
 
 
@@ -598,6 +600,7 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
         risk_stratifiers=parsed.get("risk_stratifiers", []),
         recommended_next_steps=parsed.get("recommended_next_steps", []),
         comparison_to_baseline=parsed.get("comparison_to_baseline", {}),
+        uncertainty_calibration=parsed.get("uncertainty_calibration", {}),
     )
 
 
