@@ -67,6 +67,151 @@ describe("hf-sidecars integration contracts", () => {
     expect(result.sourceCitations).toEqual(["Merck"]);
   });
 
+  it("normalizes vision preprocess responses from the sidecar", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          image_domain: "skin-wound",
+          body_region: "left hind leg",
+          detected_regions: [
+            {
+              label: "inflamed plaque",
+              confidence: 0.91,
+              notes: "moist surface",
+            },
+          ],
+          best_crop: "data:image/jpeg;base64,crop",
+          image_quality: "good",
+          preprocess_confidence: 0.82,
+          image_limitations: ["slight blur"],
+        }),
+    });
+
+    const sidecars = await import("@/lib/hf-sidecars");
+    const result = await sidecars.preprocessVeterinaryImage({
+      image: "data:image/jpeg;base64,ZmFrZQ==",
+      ownerText: "My dog has a sore on the back leg.",
+      knownSymptoms: ["limping", "wound"],
+      breed: "Labrador",
+      ageYears: 4,
+      weight: 50,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:8080/infer");
+    expect(result).toEqual({
+      domain: "skin_wound",
+      bodyRegion: "left hind leg",
+      detectedRegions: [
+        {
+          label: "inflamed plaque",
+          confidence: 0.91,
+          notes: "moist surface",
+        },
+      ],
+      bestCrop: "data:image/jpeg;base64,crop",
+      imageQuality: "good",
+      confidence: 0.82,
+      limitations: ["slight blur"],
+    });
+  });
+
+  it("normalizes image retrieval sidecar matches", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          image_matches: [
+            {
+              title: "Reference lesion image",
+              citation: "Dataset B",
+              score: 0.71,
+              summary: "Hot spot example on hind limb.",
+              asset_url: "https://example.com/hotspot.jpg",
+              image_domain: "skin_wound",
+              condition_label: "hot_spot",
+              species: "dog",
+            },
+          ],
+          source_citations: ["Dataset B"],
+        }),
+    });
+
+    const sidecars = await import("@/lib/hf-sidecars");
+    const result = await sidecars.retrieveVeterinaryImageEvidenceFromSidecar({
+      query: "dog hot spot hind leg",
+      domain: "skin_wound",
+      conditionHints: ["hot_spot"],
+      dogOnly: true,
+      imageLimit: 1,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:8082/search");
+    expect(result).toEqual({
+      imageMatches: [
+        {
+          title: "Reference lesion image",
+          citation: "Dataset B",
+          score: 0.71,
+          summary: "Hot spot example on hind limb.",
+          assetUrl: "https://example.com/hotspot.jpg",
+          domain: "skin_wound",
+          conditionLabel: "hot_spot",
+          dogOnly: true,
+        },
+      ],
+      sourceCitations: ["Dataset B"],
+    });
+  });
+
+  it("normalizes multimodal consult responses", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          model: "Qwen2.5-VL-7B-Instruct",
+          assessment: "The lesion appears superficial but inflamed.",
+          agreements: ["The image supports a localized skin lesion."],
+          disagreements: [],
+          uncertainties: ["Depth is hard to judge from one image."],
+          confidence: 0.67,
+        }),
+    });
+
+    const sidecars = await import("@/lib/hf-sidecars");
+    const result = await sidecars.consultWithMultimodalSidecar({
+      image: "data:image/jpeg;base64,ZmFrZQ==",
+      ownerText: "This popped up yesterday.",
+      preprocess: {
+        domain: "skin_wound",
+        bodyRegion: "left hind leg",
+        detectedRegions: [],
+        bestCrop: null,
+        imageQuality: "good",
+        confidence: 0.7,
+        limitations: [],
+      },
+      visionSummary: "Inflamed superficial lesion on left hind leg.",
+      severity: "needs_review",
+      contradictions: [],
+      deterministicFacts: { wound_location: "left hind leg" },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://localhost:8083/consult");
+    expect(result).toEqual({
+      model: "Qwen2.5-VL-7B-Instruct",
+      summary: "The lesion appears superficial but inflamed.",
+      agreements: ["The image supports a localized skin lesion."],
+      disagreements: [],
+      uncertainties: ["Depth is hard to judge from one image."],
+      confidence: 0.67,
+      mode: "sync",
+    });
+  });
+
   it("submits async review requests to the dedicated async endpoint", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,

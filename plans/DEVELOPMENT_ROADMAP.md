@@ -190,6 +190,7 @@ To move faster without breaking `master`, parallel work should follow explicit f
   - sync consult stays on `multimodal-consult-service`
   - async review now has an explicit queue submission contract
   - retrieval sidecars now support optional model-backed reranking with deterministic fallback
+- App-level smoke coverage now exercises all five sidecar contracts through `hf-sidecars.ts` and the async review route.
 - The next fastest path is to finish app integration, then deploy and shadow the sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership
