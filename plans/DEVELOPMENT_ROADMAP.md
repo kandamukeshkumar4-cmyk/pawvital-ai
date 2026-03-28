@@ -53,7 +53,7 @@ This document is the single source of truth for the architecture path, phase ord
 | 1 | App-side sidecar contracts, async review queue, evidence architecture | Complete |
 | 2 | Curated live corpus rules, observability, shadow mode hooks, emergency/report UX, outcome feedback capture | Complete |
 | 3 | Replace stub HF sidecars with real model-serving implementations | In progress |
-| 4 | Deploy sidecars and wire production environment variables | Not started |
+| 4 | Deploy sidecars and wire production environment variables | Partially started |
 | 5 | Run shadow mode with telemetry and compare sidecars against current production path | Not started |
 | 6 | Reindex curated dog-only/domain-tagged corpus and verify live retrieval behavior | Not started |
 | 7 | Expand emergency UX and vet workflow polish | In progress |
@@ -91,7 +91,7 @@ This document is the single source of truth for the architecture path, phase ord
 
 ## Current Position
 
-The codebase is now in active `Phase 3`.
+The codebase is now in late `Phase 3`, with `Phase 4` partially started.
 
 That means:
 - the Next.js application is now architecturally ready for the world-class path
@@ -101,7 +101,8 @@ That means:
 - async review now has dead-letter persistence, review state tracking, richer shadow disagreement analysis, and stronger feedback synthesis on `master`
 - the reasoning-heavy MiniMax service lane is now merged locally on `master`, including cross-case review intelligence and deeper consult rubric coverage
 - the main unfinished work is deepening real model runtime coverage, deployment wiring, and shadow-mode validation
-- the current Phase 4 blocker is concrete: Vercel production still does not have the `HF_*` sidecar URLs configured, so live readiness checks against the deployed app cannot pass yet
+- Vercel production now has the shared sidecar auth secret aligned, and guarded readiness / shadow routes respond correctly on the live app
+- the current Phase 4 blocker is narrower: Vercel production still does not have the five `HF_*_URL` sidecar endpoint vars configured, so the live app still cannot call any deployed sidecar service
 
 ## What Is Live In The Repo Right Now
 
@@ -209,9 +210,9 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - Sidecar env + health readiness is now exposed through a guarded app route so deployment wiring can be verified from the app boundary, not just from shell scripts.
 - Curated corpus activation prep now has a shared registry plus a live-corpus verification script that flags mapped-but-empty dataset sources before activation.
 - Four previously misclassified Roboflow image sources have now been moved out of `live` status into `pending_assets` until real files are populated on disk.
-- Production verification has now confirmed that Vercel is still missing all `HF_*` sidecar URL env vars, so Phase 4 cannot be truthfully marked started yet.
 - Vercel production now has `HF_SIDECAR_API_KEY` configured, and live probes against `https://pawvital-ai.vercel.app/api/ai/sidecar-readiness` and `/api/ai/shadow-rollout` are passing again.
-- The remaining Phase 4 blocker is now narrower: the five `HF_*_URL` sidecar endpoints still do not exist in Vercel production, so the app can authenticate the debug routes but still cannot call any deployed sidecar service.
+- Production verification still shows all five `HF_*` sidecar URL env vars are missing, so Phase 4 is only partially started, not complete.
+- The remaining Phase 4 blocker is the same deployment gap: the app can authenticate the guarded debug routes but still cannot call any deployed sidecar service until the real sidecar endpoint URLs exist.
 - The next fastest path is to finish Phase 4 wiring, then shadow the deployed sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership
