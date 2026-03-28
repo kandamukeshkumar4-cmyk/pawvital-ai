@@ -15,6 +15,7 @@ import base64
 import json
 import logging
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel, Field
@@ -306,7 +307,7 @@ def _extract_partial_fields(content: str) -> dict | None:
     """Try to extract valid partial fields from malformed content."""
     import re
 
-    partial: dict[str, any] = {"_parse_notes": []}
+    partial: dict[str, Any] = {"_parse_notes": []}
 
     # Try to extract summary
     summary_match = re.search(r'"summary"\s*:\s*"([^"]*)"', content)
