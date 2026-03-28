@@ -4,8 +4,8 @@ These services define the production contract for PawVital's self-hosted Hugging
 
 Current status:
 - The Next.js app is already wired to these contracts.
-- The service implementations in this directory are runnable contract stubs for local integration and deployment plumbing.
-- Replace the stub handlers with real model loaders before using them in production traffic.
+- The service implementations in this directory now provide first-pass runnable sidecar behavior.
+- Some services still use heuristic or optional model-backed fallbacks, so production rollout should go through shadow mode first.
 
 Services:
 - `vision-preprocess-service` on `:8080` -> `/infer`
@@ -21,3 +21,12 @@ docker compose -f docker-compose.sidecars.yml up --build
 ```
 
 Then point the app to the matching endpoint URLs in `.env.sidecars.example`.
+
+Deployment-readiness verification:
+
+```bash
+npm run verify:sidecars:env
+npm run verify:sidecars:health
+```
+
+Use `npm run verify:sidecars -- --strict` when you want warnings such as stub mode or missing sidecar URLs to fail the check.
