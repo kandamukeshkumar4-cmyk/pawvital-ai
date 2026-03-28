@@ -1,4 +1,5 @@
 import type {
+  AsyncReviewSubmission,
   ConsultOpinion,
   DetectedRegion,
   RetrievalBundle,
@@ -13,6 +14,7 @@ import {
   VisionPreprocessResultSchema,
   RetrievalBundleSchema,
   ConsultOpinionSchema,
+  AsyncReviewSubmissionSchema,
 } from "./api-schemas";
 
 const VISION_PREPROCESS_URL = process.env.HF_VISION_PREPROCESS_URL?.trim() || "";
@@ -186,7 +188,7 @@ export function isMultimodalConsultConfigured(): boolean {
 }
 
 export function isAsyncReviewServiceConfigured(): boolean {
-  return Boolean(ASYNC_REVIEW_SERVICE_URL || MULTIMODAL_CONSULT_URL);
+  return Boolean(ASYNC_REVIEW_SERVICE_URL);
 }
 
 function normalizeDomain(value: unknown): SupportedImageDomain {
@@ -514,21 +516,16 @@ export async function consultWithMultimodalSidecar(input: {
   deterministicFacts: Record<string, string | boolean | number>;
   mode?: "sync" | "async";
 }): Promise<ConsultOpinion> {
-  const targetUrl =
-    input.mode === "async" && ASYNC_REVIEW_SERVICE_URL
-      ? ASYNC_REVIEW_SERVICE_URL
-      : MULTIMODAL_CONSULT_URL;
-
-  if (!targetUrl) {
+  if (!MULTIMODAL_CONSULT_URL) {
     throw new Error("Multimodal consult sidecar is not configured");
   }
 
   const response = await fetchJson<Record<string, unknown>>(
-    targetUrl,
+    MULTIMODAL_CONSULT_URL,
     {
       image: input.image,
       owner_text: input.ownerText,
-      mode: input.mode || "sync",
+      mode: "sync",
       preprocess: input.preprocess,
       vision_summary: input.visionSummary,
       severity: input.severity,
@@ -536,9 +533,7 @@ export async function consultWithMultimodalSidecar(input: {
       deterministic_facts: input.deterministicFacts,
     },
     {
-      timeoutMs: input.mode === "async"
-        ? ASYNC_REVIEW_SERVICE_TIMEOUT_MS
-        : MULTIMODAL_CONSULT_TIMEOUT_MS,
+      timeoutMs: MULTIMODAL_CONSULT_TIMEOUT_MS,
       retries: 2,
       baseDelayMs: 500,
       maxDelayMs: 4000
@@ -564,7 +559,7 @@ export async function consultWithMultimodalSidecar(input: {
       ? response.uncertainties.map((value) => String(value)).filter(Boolean)
       : [],
     confidence: Number(response.confidence ?? 0.6),
-    mode: input.mode || "sync",
+    mode: "sync",
   };
 
   return requireValidated(
@@ -572,5 +567,61 @@ export async function consultWithMultimodalSidecar(input: {
     normalized,
     "multimodal consult response",
     "Multimodal consult sidecar returned an invalid payload"
+  );
+}
+
+export async function submitAsyncReviewToSidecar(input: {
+  image: string;
+  ownerText: string;
+  preprocess: VisionPreprocessResult;
+  visionSummary: string;
+  severity: VisionSeverityClass;
+  contradictions: string[];
+  deterministicFacts: Record<string, string | boolean | number>;
+  caseId?: string;
+  callbackUrl?: string;
+}): Promise<AsyncReviewSubmission> {
+  if (!ASYNC_REVIEW_SERVICE_URL) {
+    throw new Error("Async review sidecar is not configured");
+  }
+
+  const response = await fetchJson<Record<string, unknown>>(
+    ASYNC_REVIEW_SERVICE_URL,
+    {
+      image: input.image,
+      owner_text: input.ownerText,
+      mode: "async",
+      preprocess: input.preprocess,
+      vision_summary: input.visionSummary,
+      severity: input.severity,
+      contradictions: input.contradictions,
+      deterministic_facts: input.deterministicFacts,
+      case_id: input.caseId,
+      callback_url: input.callbackUrl,
+    },
+    {
+      timeoutMs: ASYNC_REVIEW_SERVICE_TIMEOUT_MS,
+      retries: 2,
+      baseDelayMs: 500,
+      maxDelayMs: 4000,
+    }
+  );
+
+  const normalized = {
+    ok:
+      response.ok === true ||
+      response.ok === "true" ||
+      String(response.status || "").trim().toLowerCase() === "queued",
+    caseId: String(response.caseId || response.case_id || "").trim(),
+    status: (String(response.status || "queued").trim().toLowerCase() ||
+      "queued") as AsyncReviewSubmission["status"],
+    message: String(response.message || "").trim() || null,
+  };
+
+  return requireValidated(
+    AsyncReviewSubmissionSchema,
+    normalized,
+    "async review sidecar response",
+    "Async review sidecar returned an invalid payload"
   );
 }

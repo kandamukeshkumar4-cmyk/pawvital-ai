@@ -88,6 +88,13 @@ export const ConsultOpinionSchema = z.object({
   mode: z.enum(["sync", "async"]),
 });
 
+export const AsyncReviewSubmissionSchema = z.object({
+  ok: z.boolean(),
+  caseId: z.string().min(1),
+  status: z.enum(["queued", "processing", "completed", "failed"]),
+  message: z.string().nullable(),
+});
+
 // =============================================================================
 // Service Timeout Record Schema
 // =============================================================================
@@ -155,6 +162,14 @@ export const RawMultimodalConsultResponseSchema = z.object({
   disagreements: z.array(z.unknown()).optional(),
   uncertainties: z.array(z.unknown()).optional(),
   confidence: z.union([z.number(), z.string(), z.null()]).optional(),
+});
+
+export const RawAsyncReviewSubmissionResponseSchema = z.object({
+  ok: z.union([z.boolean(), z.string(), z.null()]).optional(),
+  caseId: z.union([z.string(), z.null()]).optional(),
+  case_id: z.union([z.string(), z.null()]).optional(),
+  status: z.union([z.string(), z.null()]).optional(),
+  message: z.union([z.string(), z.null()]).optional(),
 });
 
 // =============================================================================

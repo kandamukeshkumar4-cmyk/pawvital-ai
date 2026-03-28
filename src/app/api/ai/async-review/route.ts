@@ -1,8 +1,7 @@
 import { after, NextResponse } from "next/server";
 import {
-  consultWithMultimodalSidecar,
   isAsyncReviewServiceConfigured,
-  isMultimodalConsultConfigured,
+  submitAsyncReviewToSidecar,
 } from "@/lib/hf-sidecars";
 import type { PetProfile, TriageSession } from "@/lib/triage-engine";
 import type { VisionPreprocessResult, VisionSeverityClass } from "@/lib/clinical-evidence";
@@ -62,7 +61,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!isAsyncReviewServiceConfigured() && !isMultimodalConsultConfigured()) {
+  if (!isAsyncReviewServiceConfigured()) {
     return NextResponse.json(
       { error: "Async review service is not configured" },
       { status: 503 }
@@ -90,7 +89,7 @@ export async function POST(request: Request) {
 
   const task = async (): Promise<boolean> => {
     try {
-      await consultWithMultimodalSidecar({
+      await submitAsyncReviewToSidecar({
         image,
         ownerText:
           session.case_memory?.latest_owner_turn ||
@@ -104,7 +103,6 @@ export async function POST(request: Request) {
           "needs_review",
         contradictions: session.latest_visual_evidence?.contradictions || [],
         deterministicFacts: session.extracted_answers || {},
-        mode: "async",
       });
       return true;
     } catch (error) {

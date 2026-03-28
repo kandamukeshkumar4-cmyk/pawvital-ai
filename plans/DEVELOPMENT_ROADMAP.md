@@ -91,13 +91,14 @@ This document is the single source of truth for the architecture path, phase ord
 
 ## Current Position
 
-The codebase is now in early `Phase 3`.
+The codebase is now in active `Phase 3`.
 
 That means:
 - the Next.js application is now architecturally ready for the world-class path
 - the route, memory model, retrieval, evidence, and UI layers are already prepared for sidecar-backed operation
-- bridge implementations now exist for `vision-preprocess-service`, `text-retrieval-service`, and `image-retrieval-service`
-- the main unfinished work is promoting those bridge implementations into full model-backed services and landing the MiniMax-owned consult/review services
+- working first-pass implementations now exist for all five HF sidecars
+- shared app contracts now distinguish sync consults from async review queue submission
+- the main unfinished work is deepening real model runtime coverage, deployment wiring, and shadow-mode validation
 
 ## What Is Live In The Repo Right Now
 
@@ -111,12 +112,12 @@ That means:
 
 ### Not yet truly live
 - real Grounding DINO, SAM2.1, Florence-2 inference
-- real BGE-M3 retrieval service
-- real BiomedCLIP image retrieval service
-- real Qwen2.5-VL synchronous consult service
-- real Qwen2.5-VL async review worker
+- production-deployed BGE-M3 retrieval service
+- production-deployed BiomedCLIP image retrieval service
+- production-deployed Qwen2.5-VL synchronous consult service
+- production-deployed Qwen2.5-VL async review worker
 
-### Phase 3 started
+### Phase 3 in progress
 - `vision-preprocess-service`
   - bearer auth validation
   - base64/URL image decoding
@@ -127,12 +128,21 @@ That means:
   - bearer auth validation
   - live Supabase-backed candidate retrieval via knowledge corpus
   - deterministic lexical reranking
+  - optional BGE-M3 semantic rerank
+  - optional BGE reranker cross-encoder scoring
   - dog-only and requested-domain filtering
 - `image-retrieval-service`
   - bearer auth validation
   - live Supabase-backed asset lookup against curated corpus metadata
   - domain-aware source filtering
   - deterministic condition-label and caption scoring
+  - optional BiomedCLIP reranking over candidate assets
+- `multimodal-consult-service`
+  - real Qwen2.5-VL-7B service implementation merged from MiniMax branch
+  - strict bearer auth and stub/production mode hardening
+- `async-review-service`
+  - real Qwen2.5-VL-32B service implementation merged from MiniMax branch
+  - deterministic review IDs and explicit queue submission contract
 
 ## Immediate Next Tasks
 
@@ -174,14 +184,13 @@ To move faster without breaking `master`, parallel work should follow explicit f
 
 ### Current checkpoint
 
-- We are in early `Phase 3`.
-- MiniMax M2.7 now has an active remote branch: `origin/minimax/phase3-multimodal-async-services`
-- Current MiniMax branch scope is clean:
-  - `services/multimodal-consult-service/app/main.py`
-  - `services/multimodal-consult-service/requirements.txt`
-  - `services/async-review-service/app/main.py`
-  - `services/async-review-service/requirements.txt`
-- The next fastest path is to keep the split aligned by model strength and avoid shared-file collisions.
+- We are in active `Phase 3`.
+- MiniMax M2.7 does not have a newer remote push beyond the already merged branch `origin/minimax/phase3-multimodal-async-services`.
+- The shared integration layer has started moving from scaffolding into validated contracts:
+  - sync consult stays on `multimodal-consult-service`
+  - async review now has an explicit queue submission contract
+  - retrieval sidecars now support optional model-backed reranking with deterministic fallback
+- The next fastest path is to finish app integration, then deploy and shadow the sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership
 
@@ -251,16 +260,16 @@ Every post-task status update should answer these questions clearly:
 To accelerate Phase 3 right now:
 
 1. Codex picks up:
-   - promote `vision-preprocess-service` bridge runtime toward real model-backed inference
-   - promote `text-retrieval-service` toward BGE-backed retrieval
-   - promote `image-retrieval-service` toward BiomedCLIP-backed retrieval
+   - finish shared app integration in `src/lib/hf-sidecars.ts` and `src/app/api/ai/symptom-chat/route.ts`
+   - add service smoke/contract verification for all five sidecars
+   - continue promoting `vision-preprocess-service` toward real model-backed inference
    - retrieval-side verification and curated-corpus validation
 2. MiniMax M2.7 picks up:
-   - real `multimodal-consult-service`
-   - real `async-review-service`
+   - improve `multimodal-consult-service` output quality and prompt discipline
+   - improve `async-review-service` persistence/retry/callback behavior
    - shadow disagreement review prompts and outcome-analysis logic
 3. After both land:
-   - Codex handles integration verification, shadow-mode checks, deployment verification, and roadmap status updates
+   - Codex handles deployment verification, shadow-mode checks, and roadmap status updates
 
 ## Definition Of Done For The World-Class Path
 

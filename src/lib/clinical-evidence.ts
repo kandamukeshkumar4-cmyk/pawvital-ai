@@ -72,6 +72,13 @@ export interface ConsultOpinion {
   mode: "sync" | "async";
 }
 
+export interface AsyncReviewSubmission {
+  ok: boolean;
+  caseId: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  message: string | null;
+}
+
 export interface ServiceTimeoutRecord {
   service: string;
   stage: string;

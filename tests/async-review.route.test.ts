@@ -1,14 +1,11 @@
-const mockConsultWithMultimodalSidecar = jest.fn();
+const mockSubmitAsyncReviewToSidecar = jest.fn();
 const mockIsAsyncReviewServiceConfigured = jest.fn();
-const mockIsMultimodalConsultConfigured = jest.fn();
 
 jest.mock("@/lib/hf-sidecars", () => ({
-  consultWithMultimodalSidecar: (...args: unknown[]) =>
-    mockConsultWithMultimodalSidecar(...args),
+  submitAsyncReviewToSidecar: (...args: unknown[]) =>
+    mockSubmitAsyncReviewToSidecar(...args),
   isAsyncReviewServiceConfigured: (...args: unknown[]) =>
     mockIsAsyncReviewServiceConfigured(...args),
-  isMultimodalConsultConfigured: (...args: unknown[]) =>
-    mockIsMultimodalConsultConfigured(...args),
 }));
 
 const PET = {
@@ -32,15 +29,11 @@ describe("async-review route", () => {
     jest.resetModules();
     jest.clearAllMocks();
     mockIsAsyncReviewServiceConfigured.mockReturnValue(true);
-    mockIsMultimodalConsultConfigured.mockReturnValue(true);
-    mockConsultWithMultimodalSidecar.mockResolvedValue({
-      model: "Qwen2.5-VL-32B-Instruct",
-      summary: "queued",
-      agreements: [],
-      disagreements: [],
-      uncertainties: [],
-      confidence: 0.4,
-      mode: "async",
+    mockSubmitAsyncReviewToSidecar.mockResolvedValue({
+      ok: true,
+      caseId: "case-123",
+      status: "queued",
+      message: "queued",
     });
   });
 
@@ -82,13 +75,29 @@ describe("async-review route", () => {
 
     expect(response.status).toBe(202);
     expect(payload.queued).toBe(true);
-    expect(mockConsultWithMultimodalSidecar).toHaveBeenCalledWith(
+    expect(mockSubmitAsyncReviewToSidecar).toHaveBeenCalledWith(
       expect.objectContaining({
-        mode: "async",
         ownerText: "Please do a deeper review of this lesion.",
         deterministicFacts: { wound_location: "left hind leg" },
       })
     );
+  });
+
+  it("returns 503 when the async review sidecar is unavailable", async () => {
+    mockIsAsyncReviewServiceConfigured.mockReturnValue(false);
+
+    const { POST } = await import("@/app/api/ai/async-review/route");
+    const response = await POST(
+      makeRequest({
+        image: "data:image/jpeg;base64,ZmFrZQ==",
+        pet: PET,
+        session: {},
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload.error).toContain("not configured");
   });
 
   it("rejects missing image payloads", async () => {
