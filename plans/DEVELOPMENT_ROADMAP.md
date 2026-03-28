@@ -52,7 +52,7 @@ This document is the single source of truth for the architecture path, phase ord
 | 0 | Architecture decisions, docs, service scaffolding, review-agent setup | Complete |
 | 1 | App-side sidecar contracts, async review queue, evidence architecture | Complete |
 | 2 | Curated live corpus rules, observability, shadow mode hooks, emergency/report UX, outcome feedback capture | Complete |
-| 3 | Replace stub HF sidecars with real model-serving implementations | Not started |
+| 3 | Replace stub HF sidecars with real model-serving implementations | In progress |
 | 4 | Deploy sidecars and wire production environment variables | Not started |
 | 5 | Run shadow mode with telemetry and compare sidecars against current production path | Not started |
 | 6 | Reindex curated dog-only/domain-tagged corpus and verify live retrieval behavior | Not started |
@@ -91,12 +91,13 @@ This document is the single source of truth for the architecture path, phase ord
 
 ## Current Position
 
-The codebase is currently at the boundary between `Phase 2` and `Phase 3`.
+The codebase is now in early `Phase 3`.
 
 That means:
 - the Next.js application is now architecturally ready for the world-class path
 - the route, memory model, retrieval, evidence, and UI layers are already prepared for sidecar-backed operation
-- the main unfinished work is the actual replacement of stub sidecar services with real GPU-backed model inference
+- bridge implementations now exist for `vision-preprocess-service`, `text-retrieval-service`, and `image-retrieval-service`
+- the main unfinished work is promoting those bridge implementations into full model-backed services and landing the MiniMax-owned consult/review services
 
 ## What Is Live In The Repo Right Now
 
@@ -114,6 +115,24 @@ That means:
 - real BiomedCLIP image retrieval service
 - real Qwen2.5-VL synchronous consult service
 - real Qwen2.5-VL async review worker
+
+### Phase 3 started
+- `vision-preprocess-service`
+  - bearer auth validation
+  - base64/URL image decoding
+  - heuristic domain/body-region inference
+  - image quality scoring
+  - lesion-focused crop generation for obvious inflamed skin regions
+- `text-retrieval-service`
+  - bearer auth validation
+  - live Supabase-backed candidate retrieval via knowledge corpus
+  - deterministic lexical reranking
+  - dog-only and requested-domain filtering
+- `image-retrieval-service`
+  - bearer auth validation
+  - live Supabase-backed asset lookup against curated corpus metadata
+  - domain-aware source filtering
+  - deterministic condition-label and caption scoring
 
 ## Immediate Next Tasks
 
@@ -155,9 +174,14 @@ To move faster without breaking `master`, parallel work should follow explicit f
 
 ### Current checkpoint
 
-- We are still between `Phase 2` and `Phase 3`.
-- There is currently no visible MiniMax-specific GitHub PR or remote branch yet.
-- The next fastest path is to split `Phase 3` by model strength, not just by file count.
+- We are in early `Phase 3`.
+- MiniMax M2.7 now has an active remote branch: `origin/minimax/phase3-multimodal-async-services`
+- Current MiniMax branch scope is clean:
+  - `services/multimodal-consult-service/app/main.py`
+  - `services/multimodal-consult-service/requirements.txt`
+  - `services/async-review-service/app/main.py`
+  - `services/async-review-service/requirements.txt`
+- The next fastest path is to keep the split aligned by model strength and avoid shared-file collisions.
 
 ### Strength-aligned ownership
 
@@ -227,9 +251,9 @@ Every post-task status update should answer these questions clearly:
 To accelerate Phase 3 right now:
 
 1. Codex picks up:
-   - real `vision-preprocess-service` runtime and model-serving plumbing
-   - real `text-retrieval-service`
-   - real `image-retrieval-service`
+   - promote `vision-preprocess-service` bridge runtime toward real model-backed inference
+   - promote `text-retrieval-service` toward BGE-backed retrieval
+   - promote `image-retrieval-service` toward BiomedCLIP-backed retrieval
    - retrieval-side verification and curated-corpus validation
 2. MiniMax M2.7 picks up:
    - real `multimodal-consult-service`

@@ -8,7 +8,7 @@ services:
       - "8080:8080"
     environment:
       SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
-      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-false}
 
   text-retrieval-service:
     build:
@@ -17,7 +17,10 @@ services:
       - "8081:8081"
     environment:
       SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
-      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-false}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_TIMEOUT_SECONDS: ${SUPABASE_TIMEOUT_SECONDS:-8}
 
   image-retrieval-service:
     build:
@@ -26,7 +29,10 @@ services:
       - "8082:8082"
     environment:
       SIDECAR_API_KEY: ${HF_SIDECAR_API_KEY:-}
-      STUB_MODE: ${SIDECAR_STUB_MODE:-true}
+      STUB_MODE: ${SIDECAR_STUB_MODE:-false}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_TIMEOUT_SECONDS: ${SUPABASE_TIMEOUT_SECONDS:-8}
 
   multimodal-consult-service:
     build:
