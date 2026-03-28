@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from typing import Any
@@ -40,14 +41,13 @@ NON_DOG_MARKERS = {
     "sheep",
 }
 
-SUPABASE_URL = (
-    os.getenv("SUPABASE_URL", "").strip()
-    or os.getenv("NEXT_PUBLIC_SUPABASE_URL", "").strip()
-)
+logger = logging.getLogger("text-retrieval-service")
+
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = (
     os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     or os.getenv("SUPABASE_ANON_KEY", "").strip()
-    or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "").strip()
 )
 SIDECAR_API_KEY = os.getenv("SIDECAR_API_KEY", "").strip()
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("SUPABASE_TIMEOUT_SECONDS", "8"))
@@ -81,6 +81,20 @@ def tokenize_text(value: str) -> list[str]:
         for token in re.findall(r"[a-z0-9]+", normalize_text(value))
         if len(token) >= 3
     ]
+
+
+def fallback_tokens(values: list[str], limit: int = 6) -> list[str]:
+    seen: set[str] = set()
+    tokens: list[str] = []
+    for value in values:
+        for token in tokenize_text(value):
+            if token in seen:
+                continue
+            seen.add(token)
+            tokens.append(token)
+            if len(tokens) >= limit:
+                return tokens
+    return tokens
 
 
 def dedupe_terms(values: list[str]) -> list[str]:
@@ -149,6 +163,11 @@ def build_search_terms(payload: RetrievalRequest) -> list[str]:
     )
 
 
+def build_or_filter(search_terms: list[str]) -> str:
+    filters = [f"text_content.ilike.*{token}*" for token in fallback_tokens(search_terms)]
+    return f"({','.join(filters)})" if filters else ""
+
+
 def summarize_text(text: str, max_chars: int = 320) -> str:
     compact = re.sub(r"\s+", " ", text.strip())
     if len(compact) <= max_chars:
@@ -175,44 +194,47 @@ def fetch_fallback_candidates(search_terms: list[str], limit: int) -> list[dict[
     if not SUPABASE_URL or not SUPABASE_KEY or not search_terms:
         return []
 
+    params = {
+        "select": "id,source_id,title,text_content,citation,keyword_tags,source_url",
+        "limit": str(limit),
+    }
+
+    or_filter = build_or_filter(search_terms)
+    if not or_filter:
+        return []
+
+    params["or"] = or_filter
+    response = requests.get(
+        f"{SUPABASE_URL.rstrip('/')}/rest/v1/knowledge_chunks",
+        headers=build_supabase_headers(),
+        params=params,
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()
+    data = response.json()
+    if not isinstance(data, list):
+        return []
+
     candidates: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
-
-    for term in search_terms[:4]:
-        params = {
-            "select": "id,source_id,title,text_content,citation,keyword_tags,source_url",
-            "text_content": f"ilike.*{term}*",
-            "limit": str(limit),
-        }
-        response = requests.get(
-            f"{SUPABASE_URL.rstrip('/')}/rest/v1/knowledge_chunks",
-            headers=build_supabase_headers(),
-            params=params,
-            timeout=REQUEST_TIMEOUT_SECONDS,
+    for row in data:
+        chunk_id = str(row.get("id") or "")
+        if not chunk_id or chunk_id in seen_ids:
+            continue
+        seen_ids.add(chunk_id)
+        candidates.append(
+            {
+                "chunk_id": chunk_id,
+                "source_id": row.get("source_id"),
+                "source_title": "Veterinary Reference",
+                "chunk_title": row.get("title") or "Veterinary Reference",
+                "source_url": row.get("source_url"),
+                "citation": row.get("citation"),
+                "text_content": row.get("text_content") or "",
+                "keyword_tags": row.get("keyword_tags") or [],
+                "score": 0.1,
+            }
         )
-        if not response.ok:
-            continue
-        data = response.json()
-        if not isinstance(data, list):
-            continue
-        for row in data:
-            chunk_id = str(row.get("id") or "")
-            if not chunk_id or chunk_id in seen_ids:
-                continue
-            seen_ids.add(chunk_id)
-            candidates.append(
-                {
-                    "chunk_id": chunk_id,
-                    "source_id": row.get("source_id"),
-                    "source_title": "Veterinary Reference",
-                    "chunk_title": row.get("title") or "Veterinary Reference",
-                    "source_url": row.get("source_url"),
-                    "citation": row.get("citation"),
-                    "text_content": row.get("text_content") or "",
-                    "keyword_tags": row.get("keyword_tags") or [],
-                    "score": 0.1,
-                }
-            )
     return candidates
 
 
@@ -288,14 +310,14 @@ def search(payload: RetrievalRequest, authorization: str | None = Header(default
     try:
         candidates = fetch_rpc_candidates(query, candidate_limit)
     except Exception as error:
-        print(f"[text-retrieval-service] RPC search failed: {error}")
+        logger.error("RPC search failed", exc_info=error)
         candidates = []
 
     if not candidates:
         try:
             candidates = fetch_fallback_candidates(search_terms, candidate_limit)
         except Exception as error:
-            print(f"[text-retrieval-service] Fallback search failed: {error}")
+            logger.error("Fallback lexical search failed", exc_info=error)
             candidates = []
 
     ranked: list[tuple[float, dict[str, Any]]] = []

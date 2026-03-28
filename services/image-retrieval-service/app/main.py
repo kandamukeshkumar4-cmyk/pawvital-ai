@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from typing import Any
@@ -43,14 +44,13 @@ CONDITION_LABEL_ALIASES: list[tuple[str, list[str]]] = [
     ("ear_infection", ["ear infection", "otitis"]),
 ]
 
-SUPABASE_URL = (
-    os.getenv("SUPABASE_URL", "").strip()
-    or os.getenv("NEXT_PUBLIC_SUPABASE_URL", "").strip()
-)
+logger = logging.getLogger("image-retrieval-service")
+
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = (
     os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     or os.getenv("SUPABASE_ANON_KEY", "").strip()
-    or os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "").strip()
 )
 SIDECAR_API_KEY = os.getenv("SIDECAR_API_KEY", "").strip()
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("SUPABASE_TIMEOUT_SECONDS", "8"))
@@ -88,6 +88,14 @@ def dedupe_terms(values: list[str]) -> list[str]:
         seen.add(normalized)
         ordered.append(normalized)
     return ordered
+
+
+def tokenize_text(value: str) -> list[str]:
+    return [
+        token
+        for token in re.findall(r"[a-z0-9]+", normalize_text(value))
+        if len(token) >= 3
+    ]
 
 
 def validate_auth(authorization: str | None) -> None:
@@ -231,12 +239,23 @@ def fetch_live_sources(payload: ImageRetrievalRequest) -> dict[str, dict[str, An
 
 def build_or_filter(search_terms: list[str]) -> str:
     filters: list[str] = []
-    for term in search_terms[:6]:
-        safe = re.sub(r"[^a-z0-9 ]+", " ", term)
-        safe = normalize_text(safe)
-        if not safe:
+    token_values: list[str] = []
+    seen_tokens: set[str] = set()
+    for term in search_terms:
+        for token in tokenize_text(term):
+            if token in seen_tokens:
+                continue
+            seen_tokens.add(token)
+            token_values.append(token)
+            if len(token_values) >= 6:
+                break
+        if len(token_values) >= 6:
+            break
+
+    for token in token_values:
+        if not token:
             continue
-        wildcard = f"*{safe}*"
+        wildcard = f"*{token}*"
         filters.append(f"condition_label.ilike.{wildcard}")
         filters.append(f"caption.ilike.{wildcard}")
     return f"({','.join(filters)})" if filters else ""
@@ -367,7 +386,7 @@ def search(payload: ImageRetrievalRequest, authorization: str | None = Header(de
     try:
         assets = fetch_assets(list(sources.keys()), search_terms, condition_filters, candidate_limit)
     except Exception as error:
-        print(f"[image-retrieval-service] asset query failed: {error}")
+        logger.error("Asset query failed", exc_info=error)
         assets = []
 
     ranked: list[tuple[float, dict[str, Any], dict[str, Any]]] = []
