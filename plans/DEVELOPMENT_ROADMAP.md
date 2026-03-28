@@ -149,6 +149,57 @@ That means:
 2. Analyze which thresholds should change.
 3. Feed findings back into retrieval and ambiguity handling.
 
+## Parallel Execution Split
+
+To move faster without breaking `master`, parallel work should follow explicit file ownership.
+
+### Current recommended ownership
+
+#### Codex ownership
+- `src/lib/text-retrieval-service.ts`
+- `src/lib/image-retrieval-service.ts`
+- `src/lib/live-corpus.ts`
+- `src/lib/knowledge-retrieval.ts`
+- retrieval verification, curated-corpus reindex, and shadow-mode retrieval comparisons
+
+#### MiniMax agent ownership
+- `src/lib/vision-preprocess.ts`
+- `src/lib/multimodal-consult.ts`
+- `src/lib/async-review-client.ts`
+- any GPU-backed sidecar serving code or container/runtime setup for those services
+
+#### Shared integration files
+- `src/app/api/ai/symptom-chat/route.ts`
+- `plans/DEVELOPMENT_ROADMAP.md`
+- production env wiring and deployment config
+
+Shared files should only be changed by one agent at a time after pulling latest `master`.
+
+### Push protocol
+
+When two agents are both pushing directly to `master`, use this order every time:
+
+1. `git pull --rebase origin master` before starting work
+2. avoid editing files owned by the other agent
+3. `git pull --rebase origin master` again right before push
+4. push only after local tests/build for the touched area pass
+5. update this roadmap if the phase status or ownership changed
+
+### Recommended next split
+
+To accelerate Phase 3 right now:
+
+1. Codex picks up:
+   - real `text-retrieval-service`
+   - real `image-retrieval-service`
+   - retrieval-side verification
+2. MiniMax agent picks up:
+   - real `vision-preprocess-service`
+   - real `multimodal-consult-service`
+   - real `async-review-service`
+3. After both land:
+   - Codex handles integration verification, shadow-mode checks, and roadmap status updates
+
 ## Definition Of Done For The World-Class Path
 
 The architecture is considered complete only when all of the following are true:
