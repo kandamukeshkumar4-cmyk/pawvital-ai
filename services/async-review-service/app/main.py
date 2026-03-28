@@ -901,6 +901,8 @@ def healthz():
         results_cached = len(REVIEW_RESULTS)
         shadow_disagreements_tracked = len(SHADOW_DISAGREEMENTS)
         outcome_feedback_entries = len(OUTCOME_FEEDBACK)
+        dead_letter_size = len(DEAD_LETTER_QUEUE)
+        state_transitions_tracked = len(REVIEW_STATE_TRANSITIONS)
 
     return {
         "ok": True,
@@ -912,6 +914,8 @@ def healthz():
         "results_cached": results_cached,
         "shadow_disagreements_tracked": shadow_disagreements_tracked,
         "outcome_feedback_entries": outcome_feedback_entries,
+        "dead_letter_queue_size": dead_letter_size,
+        "state_transitions_tracked": state_transitions_tracked,
         "callback_retry_config": {
             "max_retries": MAX_CALLBACK_RETRIES,
             "retry_delay_seconds": CALLBACK_RETRY_DELAY_SECONDS,
@@ -1191,6 +1195,241 @@ async def record_outcome_feedback(feedback_data: dict):
     })
 
 
+@app.get("/feedback/synthesis")
+async def get_feedback_synthesis():
+    """
+    Get synthesized feedback analysis with trends and aggregated statistics.
+    
+    This endpoint provides:
+    - Overall quality signal distribution
+    - Trend analysis over time
+    - Domain-specific insights
+    - Shadow disagreement patterns
+    - Actionable recommendations
+    """
+    with STATE_LOCK:
+        feedback_entries = list(OUTCOME_FEEDBACK)
+        shadow_entries = dict(SHADOW_DISAGREEMENTS)
+    
+    if not feedback_entries:
+        return {
+            "status": "no_data",
+            "message": "No feedback entries available for synthesis",
+            "total_entries": 0,
+        }
+    
+    # Aggregate statistics
+    total_entries = len(feedback_entries)
+    
+    # Quality signal distribution
+    quality_signal_counts = {
+        "low_confidence": 0,
+        "high_disagreement_ratio": 0,
+        "uncertainty_overload": 0,
+        "summary_too_brief": 0,
+    }
+    
+    # Confidence statistics
+    confidences = []
+    confidence_deltas = []
+    
+    # Domain distribution
+    domain_counts = {}
+    severity_counts = {}
+    body_region_counts = {}
+    
+    # Shadow analysis stats
+    shadow_analyzed_count = 0
+    high_alignment_count = 0
+    moderate_alignment_count = 0
+    low_alignment_count = 0
+    requires_attention_count = 0
+    
+    # Process entries
+    for entry in feedback_entries:
+        signals = entry.get("quality_signals", {})
+        for signal_name in quality_signal_counts:
+            if signals.get(signal_name):
+                quality_signal_counts[signal_name] += 1
+        
+        confidences.append(entry.get("review_confidence", 0.5))
+        
+        delta = signals.get("confidence_vs_consult_delta")
+        if delta is not None:
+            confidence_deltas.append(delta)
+        
+        domain = entry.get("domain", "unknown")
+        domain_counts[domain] = domain_counts.get(domain, 0) + 1
+        
+        severity = entry.get("severity", "unknown")
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
+        
+        body_region = entry.get("body_region", "unknown")
+        body_region_counts[body_region] = body_region_counts.get(body_region, 0) + 1
+        
+        if entry.get("shadow_analyzed"):
+            shadow_analyzed_count += 1
+    
+    # Process shadow entries
+    for shadow in shadow_entries.values():
+        synopsis = shadow.get("synopsis", "")
+        if "HIGH_ALIGNMENT" in synopsis:
+            high_alignment_count += 1
+        elif "MODERATE_ALIGNMENT" in synopsis:
+            moderate_alignment_count += 1
+        else:
+            low_alignment_count += 1
+        
+        if shadow.get("requires_attention"):
+            requires_attention_count += 1
+    
+    # Calculate statistics
+    avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+    min_confidence = min(confidences) if confidences else 0
+    max_confidence = max(confidences) if confidences else 0
+    
+    avg_delta = sum(confidence_deltas) / len(confidence_deltas) if confidence_deltas else 0
+    
+    # Generate insights
+    insights = []
+    
+    # Quality signal insights
+    if quality_signal_counts["low_confidence"] > total_entries * 0.2:
+        insights.append({
+            "type": "warning",
+            "message": f"High rate of low confidence reviews ({quality_signal_counts['low_confidence']}/{total_entries})",
+            "suggestion": "Consider reviewing model calibration or case selection criteria"
+        })
+    
+    if quality_signal_counts["high_disagreement_ratio"] > total_entries * 0.15:
+        insights.append({
+            "type": "warning", 
+            "message": f"Frequent high disagreement ratios ({quality_signal_counts['high_disagreement_ratio']}/{total_entries})",
+            "suggestion": "Review if 7B-32B model configuration is optimal"
+        })
+    
+    if quality_signal_counts["uncertainty_overload"] > total_entries * 0.1:
+        insights.append({
+            "type": "info",
+            "message": f"Moderate uncertainty overload cases ({quality_signal_counts['uncertainty_overload']}/{total_entries})",
+            "suggestion": "These cases may benefit from additional clinical context"
+        })
+    
+    # Shadow analysis insights
+    if requires_attention_count > 0:
+        insights.append({
+            "type": "alert",
+            "message": f"{requires_attention_count} cases require clinical attention due to high-severity disagreements",
+            "suggestion": "Review HIGH_SEVERITY disagreement classifications in shadow analysis"
+        })
+    
+    # Confidence delta insight
+    if avg_delta < -0.1:
+        insights.append({
+            "type": "info",
+            "message": f"32B model is generally less confident than 7B (avg delta: {avg_delta:.3f})",
+            "suggestion": "This may indicate 32B is appropriately more cautious or needs calibration"
+        })
+    elif avg_delta > 0.1:
+        insights.append({
+            "type": "info",
+            "message": f"32B model is generally more confident than 7B (avg delta: {avg_delta:.3f})",
+            "suggestion": "32B's higher confidence may reflect its larger capacity"
+        })
+    
+    # Build synthesis response
+    synthesis = {
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "total_entries": total_entries,
+        "shadow_analyzed_count": shadow_analyzed_count,
+        "statistics": {
+            "avg_confidence": round(avg_confidence, 3),
+            "min_confidence": round(min_confidence, 3),
+            "max_confidence": round(max_confidence, 3),
+            "avg_confidence_delta_vs_consult": round(avg_delta, 3),
+        },
+        "quality_signal_distribution": quality_signal_counts,
+        "domain_distribution": domain_counts,
+        "severity_distribution": severity_counts,
+        "body_region_distribution": body_region_counts,
+        "shadow_analysis": {
+            "high_alignment": high_alignment_count,
+            "moderate_alignment": moderate_alignment_count,
+            "low_alignment": low_alignment_count,
+            "requires_attention": requires_attention_count,
+        },
+        "insights": insights,
+        "recommendations": [
+            "Monitor LOW_ALIGNMENT cases for systematic issues",
+            "Review high-severity disagreements for clinical pattern identification",
+            "Consider feedback loop refinement based on outcome data"
+        ] if insights else []
+    }
+    
+    return synthesis
+
+
+@app.get("/feedback/trends")
+async def get_feedback_trends(window_hours: int = 24):
+    """
+    Get trend analysis for feedback quality signals over a time window.
+    
+    Args:
+        window_hours: Time window for trend analysis (default: 24 hours)
+    """
+    from datetime import timedelta
+    
+    cutoff_time = datetime.utcnow() - timedelta(hours=window_hours)
+    
+    with STATE_LOCK:
+        feedback_entries = list(OUTCOME_FEEDBACK)
+    
+    # Filter to window
+    window_entries = []
+    for entry in feedback_entries:
+        stored_at = entry.get("stored_at") or entry.get("recorded_at")
+        if stored_at:
+            try:
+                entry_time = datetime.fromisoformat(stored_at.replace("Z", "+00:00"))
+                if entry_time > cutoff_time:
+                    window_entries.append(entry)
+            except (ValueError, AttributeError):
+                continue
+    
+    if not window_entries:
+        return {
+            "status": "no_data",
+            "window_hours": window_hours,
+            "message": f"No feedback entries in the last {window_hours} hours"
+        }
+    
+    # Calculate trends
+    confidences = [e.get("review_confidence", 0.5) for e in window_entries]
+    avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+    
+    # Quality signals in window
+    quality_signals_in_window = {
+        "low_confidence": 0,
+        "high_disagreement_ratio": 0,
+        "uncertainty_overload": 0,
+        "summary_too_brief": 0,
+    }
+    
+    for entry in window_entries:
+        signals = entry.get("quality_signals", {})
+        for sig in quality_signals_in_window:
+            if signals.get(sig):
+                quality_signals_in_window[sig] += 1
+    
+    return {
+        "window_hours": window_hours,
+        "entries_in_window": len(window_entries),
+        "avg_confidence": round(avg_confidence, 3),
+        "quality_signals": quality_signals_in_window,
+        "trend_direction": "improving" if avg_confidence > 0.7 else "stable" if avg_confidence > 0.5 else "declining"
+    }
+
+
 @app.get("/reviews")
 async def list_reviews(limit: int = 10):
     """List recent review results."""
@@ -1203,6 +1442,99 @@ async def list_reviews(limit: int = 10):
         "total": total,
         "queue_size": queue_size,
     }
+
+
+# =============================================================================
+# Dead Letter Queue Management Endpoints
+# =============================================================================
+
+@app.get("/dead-letter")
+async def get_dead_letter_queue(limit: int = 50, status: str = None):
+    """
+    Get entries from the dead letter queue for inspection and retry.
+    
+    Args:
+        limit: Maximum number of entries to return
+        status: Filter by status (pending, retried, resolved, abandoned)
+    """
+    with STATE_LOCK:
+        entries = list(DEAD_LETTER_QUEUE)
+    
+    if status:
+        entries = [e for e in entries if e.get("retry_status") == status]
+    
+    # Return most recent first
+    return {
+        "total": len(entries),
+        "entries": entries[-limit:] if limit else entries,
+    }
+
+
+@app.post("/dead-letter/{case_id}/retry")
+async def retry_dead_letter_entry(case_id: str):
+    """
+    Attempt to retry a specific dead letter queue entry.
+    
+    Returns the result of the retry attempt.
+    """
+    with STATE_LOCK:
+        entry = next((e for e in DEAD_LETTER_QUEUE if e.get("case_id") == case_id), None)
+    
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"Dead letter entry for case {case_id} not found")
+    
+    success = await _retry_dead_letter_entry(entry)
+    
+    return {
+        "case_id": case_id,
+        "retry_success": success,
+        "entry_status": entry.get("retry_status"),
+        "error": entry.get("error"),
+    }
+
+
+@app.post("/dead-letter/retry-all")
+async def retry_all_dead_letter_entries():
+    """
+    Attempt to retry all pending dead letter queue entries.
+    
+    Returns summary of retry results.
+    """
+    with STATE_LOCK:
+        pending_entries = [e for e in DEAD_LETTER_QUEUE if e.get("retry_status") == "pending"]
+    
+    results = {
+        "total": len(pending_entries),
+        "succeeded": 0,
+        "failed": 0,
+        "details": []
+    }
+    
+    for entry in pending_entries:
+        success = await _retry_dead_letter_entry(entry)
+        if success:
+            results["succeeded"] += 1
+        else:
+            results["failed"] += 1
+        results["details"].append({
+            "case_id": entry.get("case_id"),
+            "success": success,
+            "status": entry.get("retry_status")
+        })
+    
+    return results
+
+
+@app.delete("/dead-letter/{case_id}")
+async def delete_dead_letter_entry(case_id: str):
+    """Delete a specific dead letter queue entry (mark as abandoned)."""
+    with STATE_LOCK:
+        for i, e in enumerate(DEAD_LETTER_QUEUE):
+            if e.get("case_id") == case_id:
+                DEAD_LETTER_QUEUE[i]["retry_status"] = "abandoned"
+                return {"ok": True, "message": f"Dead letter entry {case_id} marked as abandoned"}
+    
+    raise HTTPException(status_code=404, detail=f"Dead letter entry for case {case_id} not found")
 
 
 @app.delete("/reviews/{case_id}")
