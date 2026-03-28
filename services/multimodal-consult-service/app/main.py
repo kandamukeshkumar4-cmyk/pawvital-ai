@@ -791,6 +791,273 @@ def _assess_risk_trajectory(current_case: dict, historical_cases: list[dict]) ->
         return "stable_risk"
 
 
+# =============================================================================
+# Enhanced Uncertainty Discipline
+# =============================================================================
+# Strengthened uncertainty quantification and discipline for consult quality.
+
+
+class UncertaintyMetrics(BaseModel):
+    """Metrics for quantifying and qualifying uncertainty in consults."""
+    knowledge_uncertainty: float = Field(..., description="0-1 score for gaps in domain knowledge")
+    image_quality_uncertainty: float = Field(..., description="0-1 score for image quality limitations")
+    temporal_uncertainty: float = Field(..., description="0-1 score for insufficient historical context")
+    confidence_calibration: float = Field(..., description="How well confidence matches actual accuracy")
+    uncertainty_disciplined: bool = Field(..., description="Whether uncertainty was properly communicated")
+
+
+def _compute_uncertainty_metrics(
+    case_context: dict,
+    image_quality: str,
+    previous_findings: list[dict],
+    uncertainties: list[str],
+    confidence: float
+) -> UncertaintyMetrics:
+    """
+    Compute disciplined uncertainty metrics for a consult.
+    
+    Quantifies and qualifies different sources of uncertainty to ensure
+    proper calibration and communication.
+    """
+    # Knowledge uncertainty - gaps in what the model knows
+    knowledge_uncertainty = 0.0
+    if "unknown" in str(case_context).lower():
+        knowledge_uncertainty += 0.2
+    if len(uncertainties) > 3:
+        knowledge_uncertainty += min(0.3, (len(uncertainties) - 3) * 0.1)
+    
+    # Image quality uncertainty
+    image_quality_uncertainty = 0.0
+    quality_map = {"good": 0.0, "adequate": 0.2, "poor": 0.5, "marginal": 0.4, "unknown": 0.3}
+    image_quality_uncertainty = quality_map.get(image_quality.lower(), 0.3)
+    
+    # Temporal uncertainty - insufficient historical context
+    temporal_uncertainty = 0.0
+    if not previous_findings:
+        temporal_uncertainty = 0.4
+    elif len(previous_findings) < 2:
+        temporal_uncertainty = 0.2
+    
+    # Confidence calibration - does reported confidence match uncertainty sources?
+    expected_confidence = 1.0 - (knowledge_uncertainty * 0.3 + image_quality_uncertainty * 0.4 + temporal_uncertainty * 0.3)
+    confidence_calibration = 1.0 - abs(confidence - expected_confidence)
+    
+    # Uncertainty discipline - were uncertainties properly communicated?
+    uncertainty_disciplined = (
+        len(uncertainties) >= 1 and
+        knowledge_uncertainty < 0.5 and
+        image_quality_uncertainty < 0.6
+    )
+    
+    return UncertaintyMetrics(
+        knowledge_uncertainty=round(knowledge_uncertainty, 3),
+        image_quality_uncertainty=round(image_quality_uncertainty, 3),
+        temporal_uncertainty=round(temporal_uncertainty, 3),
+        confidence_calibration=round(max(0.0, confidence_calibration), 3),
+        uncertainty_disciplined=uncertainty_disciplined
+    )
+
+
+class EnhancedCaseComparisonRequest(BaseModel):
+    """Enhanced request model for comprehensive case comparison."""
+    current_case: dict = Field(..., description="Current case data")
+    historical_cases: list[dict] = Field(..., description="Historical cases for comparison")
+    comparison_mode: str = Field(default="comprehensive", description="Comparison mode")
+    include_uncertainty_analysis: bool = Field(default=True, description="Include uncertainty discipline analysis")
+
+
+class EnhancedCaseComparisonResponse(BaseModel):
+    """Enhanced response model for comprehensive case comparison."""
+    current_case_id: str
+    comparison_summary: str
+    pattern_matches: list[dict]
+    anomalies_detected: list[str]
+    progression_indicators: dict
+    risk_trajectory: str
+    confidence: float
+    # Enhanced fields
+    uncertainty_metrics: dict
+    uncertainty_discipline_score: float
+    comparison_fidelity: float
+    recommended_confidence_adjustment: float
+
+
+@app.post("/compare-cases/enhanced", response_model=EnhancedCaseComparisonResponse)
+async def enhanced_case_comparison(
+    payload: EnhancedCaseComparisonRequest,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Enhanced case comparison with stronger uncertainty discipline.
+    
+    Provides comprehensive comparison including:
+    - Pattern matching across historical cases
+    - Anomaly detection
+    - Progression indicators
+    - Uncertainty discipline analysis
+    - Confidence calibration
+    """
+    validate_auth(authorization)
+    
+    current_case = payload.current_case
+    historical_cases = payload.historical_cases
+    comparison_mode = payload.comparison_mode
+    include_uncertainty = payload.include_uncertainty_analysis
+    
+    current_case_id = current_case.get("case_id", "unknown")
+    
+    # Compute base comparison metrics
+    pattern_matches = []
+    anomalies_detected = []
+    progression_indicators = {"direction": "stable", "magnitude": 0.0, "confidence": 0.5}
+    
+    # Enhanced temporal analysis
+    if len(historical_cases) >= 2 and comparison_mode in ["temporal", "comprehensive"]:
+        sorted_cases = sorted(historical_cases, key=lambda x: x.get("date", ""), reverse=True)
+        
+        # Compare severity progression
+        severity_timeline = []
+        for case in sorted_cases:
+            sev = case.get("severity", "unknown").lower()
+            severity_timeline.append(sev)
+        
+        if len(severity_timeline) >= 2:
+            direction = _infer_progression_direction(severity_timeline)
+            progression_indicators = {
+                "direction": direction,
+                "magnitude": len(set(severity_timeline)),
+                "timeline_points": len(severity_timeline),
+                "timeline": severity_timeline,
+                "confidence": 0.8 if len(severity_timeline) >= 3 else 0.5
+            }
+            
+            # Detect anomalies in progression
+            if direction == "improving" and current_case.get("severity", "").lower() in ["high", "critical"]:
+                anomalies_detected.append("Severity appears improving but current case is high/critical - verify data consistency")
+            elif direction == "progressing":
+                anomalies_detected.append(f"Progressive deterioration detected across {len(severity_timeline)} time points")
+    
+    # Cross-sectional pattern matching
+    if comparison_mode in ["cross-sectional", "pattern", "comprehensive"]:
+        # Domain-based patterns
+        same_domain = [c for c in historical_cases if c.get("domain") == current_case.get("domain")]
+        if same_domain:
+            pattern_matches.append({
+                "pattern_type": "domain_association",
+                "match_count": len(same_domain),
+                "description": f"{len(same_domain)} cases with same domain ({current_case.get('domain')})",
+                "confidence": min(0.9, 0.5 + len(same_domain) * 0.1)
+            })
+        
+        # Body region patterns
+        same_region = [c for c in historical_cases if c.get("body_region") == current_case.get("body_region")]
+        if same_region:
+            pattern_matches.append({
+                "pattern_type": "body_region_association",
+                "match_count": len(same_region),
+                "description": f"{len(same_region)} cases with same body region",
+                "confidence": min(0.9, 0.5 + len(same_region) * 0.1)
+            })
+        
+        # Severity cluster patterns
+        same_severity = [c for c in historical_cases if c.get("severity") == current_case.get("severity")]
+        if same_severity:
+            pattern_matches.append({
+                "pattern_type": "severity_cluster",
+                "match_count": len(same_severity),
+                "description": f"{len(same_severity)} cases with same severity",
+                "confidence": min(0.9, 0.5 + len(same_severity) * 0.1)
+            })
+    
+    # Risk trajectory
+    risk_trajectory = _assess_risk_trajectory(current_case, historical_cases)
+    
+    # Base confidence
+    confidence = min(0.9, 0.5 + len(historical_cases) * 0.05)
+    
+    # Enhanced uncertainty discipline analysis
+    uncertainty_metrics = {}
+    uncertainty_discipline_score = 0.5
+    comparison_fidelity = 0.5
+    recommended_confidence_adjustment = 0.0
+    
+    if include_uncertainty:
+        # Extract uncertainty sources
+        case_context = current_case.get("context", {})
+        image_quality = current_case.get("image_quality", current_case.get("imageQuality", "unknown"))
+        previous_findings = current_case.get("previous_findings", [])
+        uncertainties = current_case.get("uncertainties", [])
+        reported_confidence = current_case.get("confidence", 0.7)
+        
+        uncertainty_metrics = _compute_uncertainty_metrics(
+            case_context, image_quality, previous_findings, uncertainties, reported_confidence
+        )
+        
+        # Compute comparison fidelity - how reliable is this comparison?
+        if len(historical_cases) >= 3:
+            comparison_fidelity = min(0.9, 0.4 + len(historical_cases) * 0.15)
+        else:
+            comparison_fidelity = 0.3 + len(historical_cases) * 0.1
+        
+        # Compute uncertainty discipline score
+        uncertainty_discipline_score = (
+            uncertainty_metrics.confidence_calibration * 0.4 +
+            (1.0 - uncertainty_metrics.knowledge_uncertainty) * 0.2 +
+            (1.0 - uncertainty_metrics.image_quality_uncertainty) * 0.2 +
+            (1.0 - uncertainty_metrics.temporal_uncertainty) * 0.2
+        )
+        
+        # Recommend confidence adjustment based on uncertainty
+        if uncertainty_metrics.knowledge_uncertainty > 0.4:
+            recommended_confidence_adjustment = -0.1
+        if uncertainty_metrics.image_quality_uncertainty > 0.4:
+            recommended_confidence_adjustment = max(recommended_confidence_adjustment, -0.15)
+        if uncertainty_metrics.temporal_uncertainty > 0.3:
+            recommended_confidence_adjustment = max(recommended_confidence_adjustment, -0.1)
+    
+    return EnhancedCaseComparisonResponse(
+        current_case_id=current_case_id,
+        comparison_summary=f"Enhanced comparison of current case against {len(historical_cases)} historical cases using {comparison_mode} analysis with uncertainty discipline.",
+        pattern_matches=pattern_matches,
+        anomalies_detected=anomalies_detected,
+        progression_indicators=progression_indicators,
+        risk_trajectory=risk_trajectory,
+        confidence=round(confidence, 3),
+        uncertainty_metrics=uncertainty_metrics,
+        uncertainty_discipline_score=round(uncertainty_discipline_score, 3),
+        comparison_fidelity=round(comparison_fidelity, 3),
+        recommended_confidence_adjustment=round(recommended_confidence_adjustment, 3)
+    )
+
+
+@app.get("/uncertainty/discipline-report")
+async def get_uncertainty_discipline_report(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Generate a report on uncertainty discipline across recent consults.
+    
+    Returns aggregated statistics on how well uncertainty is being
+    communicated and calibrated across the service.
+    """
+    validate_auth(authorization)
+    
+    # This would typically analyze recent consults
+    # For now, return structure for future implementation
+    return {
+        "report_type": "uncertainty_discipline",
+        "description": "Aggregated uncertainty discipline metrics across consults",
+        "metrics_collected": [
+            "knowledge_uncertainty_avg",
+            "image_quality_uncertainty_avg",
+            "temporal_uncertainty_avg",
+            "confidence_calibration_avg",
+            "discipline_compliance_rate"
+        ],
+        "note": "Implement analytics by tracking consult responses over time"
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8083)
