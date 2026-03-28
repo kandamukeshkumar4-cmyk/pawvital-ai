@@ -17,7 +17,8 @@ import base64
 import json
 import hashlib
 import logging
-from typing import Optional
+from threading import Lock
+from typing import Any, Optional
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -66,14 +67,14 @@ class ReviewResponse(BaseModel):
 # In-memory review storage (in production, use Redis or a database)
 REVIEW_RESULTS: dict[str, ReviewResponse] = {}
 PROCESSING_QUEUE: list[str] = []
+STATE_LOCK = Lock()
 
-# Callback retry state tracking
-CALLBACK_ATTEMPTS: dict[str, int] = {}
 MAX_CALLBACK_RETRIES = int(os.environ.get("MAX_CALLBACK_RETRIES", "3"))
 CALLBACK_RETRY_DELAY_SECONDS = float(os.environ.get("CALLBACK_RETRY_DELAY_SECONDS", "5.0"))
 
 # Shadow disagreement tracking (for comparing 7B consult vs 32B review)
 SHADOW_DISAGREEMENTS: dict[str, dict] = {}
+MAX_SHADOW_HISTORY = int(os.environ.get("MAX_SHADOW_HISTORY", "1000"))
 
 # Outcome feedback storage (for learning/improvement)
 OUTCOME_FEEDBACK: list[dict] = []
@@ -353,7 +354,7 @@ def parse_model_response(content: str) -> dict:
 def _extract_review_partial(content: str) -> dict | None:
     """Extract partial fields from malformed 32B response."""
     import re
-    partial: dict[str, any] = {"_parse_notes": []}
+    partial: dict[str, Any] = {"_parse_notes": []}
 
     summary_match = re.search(r'"summary"\s*:\s*"([^"]*)"', content)
     if summary_match:
@@ -533,16 +534,15 @@ async def process_review_task(request: AsyncReviewRequest):
     case_id = generate_case_id(request)
     try:
         result = await generate_review(request, case_id)
-        REVIEW_RESULTS[case_id] = result
-        
-        # Remove from processing queue
-        if case_id in PROCESSING_QUEUE:
-            PROCESSING_QUEUE.remove(case_id)
-        
+        with STATE_LOCK:
+            REVIEW_RESULTS[case_id] = result
+            if case_id in PROCESSING_QUEUE:
+                PROCESSING_QUEUE.remove(case_id)
+
         # Store shadow disagreement if consult opinion provided
-        if hasattr(request, 'consult_opinion') and request.consult_opinion:
+        if request.consult_opinion is not None:
             shadow = _compute_shadow_disagreement(case_id, request.consult_opinion, result)
-            SHADOW_DISAGREEMENTS[case_id] = shadow
+            _store_shadow_disagreement(case_id, shadow)
         
         # Store outcome feedback
         _store_outcome_feedback(case_id, result, request)
@@ -553,8 +553,9 @@ async def process_review_task(request: AsyncReviewRequest):
                 
     except Exception as e:
         logger.error("Processing error for case %s", case_id, exc_info=e)
-        if case_id in PROCESSING_QUEUE:
-            PROCESSING_QUEUE.remove(case_id)
+        with STATE_LOCK:
+            if case_id in PROCESSING_QUEUE:
+                PROCESSING_QUEUE.remove(case_id)
 
 
 async def _robust_callback(case_id: str, callback_url: str, result: ReviewResponse) -> bool:
@@ -693,6 +694,19 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
     return shadow_summary
 
 
+def _store_shadow_disagreement(case_id: str, shadow: dict[str, Any]) -> None:
+    """Store bounded shadow disagreement history."""
+    global SHADOW_DISAGREEMENTS
+
+    with STATE_LOCK:
+        SHADOW_DISAGREEMENTS[case_id] = shadow
+        if len(SHADOW_DISAGREEMENTS) > MAX_SHADOW_HISTORY:
+            overflow = len(SHADOW_DISAGREEMENTS) - MAX_SHADOW_HISTORY
+            oldest_keys = list(SHADOW_DISAGREEMENTS.keys())[:overflow]
+            for key in oldest_keys:
+                SHADOW_DISAGREEMENTS.pop(key, None)
+
+
 def _store_outcome_feedback(case_id: str, review_result: ReviewResponse, request: AsyncReviewRequest) -> None:
     """
     Store outcome feedback for learning and improvement.
@@ -712,19 +726,20 @@ def _store_outcome_feedback(case_id: str, review_result: ReviewResponse, request
         "severity": request.severity,
         "domain": request.preprocess.get("domain", "unknown"),
         "has_callback": bool(request.callback_url),
-        "consult_opinion_available": hasattr(request, 'consult_opinion') and bool(request.consult_opinion),
-        "shadow_analyzed": case_id in SHADOW_DISAGREEMENTS,
+        "consult_opinion_available": request.consult_opinion is not None,
+        "shadow_analyzed": False,
     }
-    
-    OUTCOME_FEEDBACK.append(feedback_entry)
-    
-    # Prune oldest entries if over limit
-    if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
-        OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
+
+    with STATE_LOCK:
+        feedback_entry["shadow_analyzed"] = case_id in SHADOW_DISAGREEMENTS
+        OUTCOME_FEEDBACK.append(feedback_entry)
+        if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
+            OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
+        total_feedback_entries = len(OUTCOME_FEEDBACK)
     
     logger.debug(
         "Stored outcome feedback for case %s. Total feedback entries: %d",
-        case_id, len(OUTCOME_FEEDBACK)
+        case_id, total_feedback_entries
     )
 
 
@@ -753,16 +768,22 @@ app = FastAPI(
 @app.get("/healthz")
 def healthz():
     """Health check endpoint with full system status."""
+    with STATE_LOCK:
+        queue_size = len(PROCESSING_QUEUE)
+        results_cached = len(REVIEW_RESULTS)
+        shadow_disagreements_tracked = len(SHADOW_DISAGREEMENTS)
+        outcome_feedback_entries = len(OUTCOME_FEEDBACK)
+
     return {
         "ok": True,
         "service": "async-review-service",
         "mode": "stub" if STUB_MODE else "production",
         "model": MODEL_NAME,
         "device": DEVICE,
-        "queue_size": len(PROCESSING_QUEUE),
-        "results_cached": len(REVIEW_RESULTS),
-        "shadow_disagreements_tracked": len(SHADOW_DISAGREEMENTS),
-        "outcome_feedback_entries": len(OUTCOME_FEEDBACK),
+        "queue_size": queue_size,
+        "results_cached": results_cached,
+        "shadow_disagreements_tracked": shadow_disagreements_tracked,
+        "outcome_feedback_entries": outcome_feedback_entries,
         "callback_retry_config": {
             "max_retries": MAX_CALLBACK_RETRIES,
             "retry_delay_seconds": CALLBACK_RETRY_DELAY_SECONDS,
@@ -787,7 +808,8 @@ async def review(
     
     try:
         case_id = generate_case_id(payload)
-        PROCESSING_QUEUE.append(case_id)
+        with STATE_LOCK:
+            PROCESSING_QUEUE.append(case_id)
         
         # Queue background processing
         background_tasks.add_task(process_review_task, payload)
@@ -807,11 +829,15 @@ async def review(
 @app.get("/review/{case_id}", response_model=ReviewResponse)
 async def get_review(case_id: str):
     """Retrieve results of an async review by case_id."""
-    
-    if case_id in REVIEW_RESULTS:
-        return REVIEW_RESULTS[case_id]
-    
-    if case_id in PROCESSING_QUEUE:
+
+    with STATE_LOCK:
+        result = REVIEW_RESULTS.get(case_id)
+        queued = case_id in PROCESSING_QUEUE
+
+    if result:
+        return result
+
+    if queued:
         return JSONResponse({
             "status": "processing",
             "case_id": case_id,
@@ -829,7 +855,10 @@ async def get_shadow_disagreement(case_id: str):
     This shows how the 32B review diverged from the 7B consult opinion.
     Shadow analysis is advisory only and does not affect clinical decisions.
     """
-    if case_id not in SHADOW_DISAGREEMENTS:
+    with STATE_LOCK:
+        shadow = SHADOW_DISAGREEMENTS.get(case_id)
+
+    if shadow is None:
         return JSONResponse({
             "status": "not_analyzed",
             "case_id": case_id,
@@ -838,7 +867,7 @@ async def get_shadow_disagreement(case_id: str):
     
     return JSONResponse({
         "status": "available",
-        "shadow": SHADOW_DISAGREEMENTS[case_id],
+        "shadow": shadow,
     })
 
 
@@ -849,36 +878,47 @@ async def get_feedback_summary():
     
     Returns anonymized statistics about review quality for improvement tracking.
     """
-    if not OUTCOME_FEEDBACK:
+    with STATE_LOCK:
+        feedback_entries = list(OUTCOME_FEEDBACK)
+
+    if not feedback_entries:
         return JSONResponse({
             "status": "no_data",
             "message": "No outcome feedback recorded yet.",
         })
-    
-    # Compute aggregates
-    total = len(OUTCOME_FEEDBACK)
-    avg_confidence = sum(f["review_confidence"] for f in OUTCOME_FEEDBACK) / total
-    avg_agreements = sum(f["n_agreements"] for f in OUTCOME_FEEDBACK) / total
-    avg_disagreements = sum(f["n_disagreements"] for f in OUTCOME_FEEDBACK) / total
-    avg_uncertainties = sum(f["n_uncertainties"] for f in OUTCOME_FEEDBACK) / total
-    shadow_analyzed_count = sum(1 for f in OUTCOME_FEEDBACK if f["shadow_analyzed"])
-    
-    # Severity distribution
+
+    review_entries = [f for f in feedback_entries if "review_confidence" in f]
+    manual_feedback_entries = [f for f in feedback_entries if "review_confidence" not in f]
+    shadow_analyzed_count = sum(1 for f in review_entries if f.get("shadow_analyzed"))
+
+    if review_entries:
+        review_total = len(review_entries)
+        avg_confidence = sum(float(f.get("review_confidence", 0.0)) for f in review_entries) / review_total
+        avg_agreements = sum(int(f.get("n_agreements", 0)) for f in review_entries) / review_total
+        avg_disagreements = sum(int(f.get("n_disagreements", 0)) for f in review_entries) / review_total
+        avg_uncertainties = sum(int(f.get("n_uncertainties", 0)) for f in review_entries) / review_total
+    else:
+        avg_confidence = 0.0
+        avg_agreements = 0.0
+        avg_disagreements = 0.0
+        avg_uncertainties = 0.0
+
     severity_dist: dict[str, int] = {}
-    for f in OUTCOME_FEEDBACK:
-        sev = f["severity"]
+    for f in review_entries:
+        sev = f.get("severity", "unknown")
         severity_dist[sev] = severity_dist.get(sev, 0) + 1
-    
-    # Domain distribution
+
     domain_dist: dict[str, int] = {}
-    for f in OUTCOME_FEEDBACK:
-        domain = f["domain"]
+    for f in review_entries:
+        domain = f.get("domain", "unknown")
         domain_dist[domain] = domain_dist.get(domain, 0) + 1
-    
+
     return JSONResponse({
         "status": "available",
         "summary": {
-            "total_reviews": total,
+            "total_feedback_entries": len(feedback_entries),
+            "review_feedback_entries": len(review_entries),
+            "manual_feedback_entries": len(manual_feedback_entries),
             "avg_review_confidence": round(avg_confidence, 3),
             "avg_agreements_per_review": round(avg_agreements, 2),
             "avg_disagreements_per_review": round(avg_disagreements, 2),
@@ -907,46 +947,53 @@ async def record_outcome_feedback(feedback_data: dict):
     entry = {
         "case_id": feedback_data["case_id"],
         "recorded_at": datetime.utcnow().isoformat() + "Z",
+        "feedback_kind": "manual_outcome",
         "outcome": feedback_data["outcome"],
         "outcome_confidence": feedback_data.get("outcome_confidence"),
         "notes": feedback_data.get("notes", ""),
     }
     
-    OUTCOME_FEEDBACK.append(entry)
-    
-    if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
-        OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
+    with STATE_LOCK:
+        OUTCOME_FEEDBACK.append(entry)
+        if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
+            OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
+        total_feedback_entries = len(OUTCOME_FEEDBACK)
     
     logger.info("Recorded manual outcome feedback for case %s", feedback_data["case_id"])
     
     return JSONResponse({
         "ok": True,
         "case_id": feedback_data["case_id"],
-        "total_feedback_entries": len(OUTCOME_FEEDBACK),
+        "total_feedback_entries": total_feedback_entries,
     })
 
 
 @app.get("/reviews")
 async def list_reviews(limit: int = 10):
     """List recent review results."""
-    recent = list(REVIEW_RESULTS.values())[-limit:]
+    with STATE_LOCK:
+        recent = list(REVIEW_RESULTS.values())[-limit:]
+        total = len(REVIEW_RESULTS)
+        queue_size = len(PROCESSING_QUEUE)
     return {
         "reviews": [r.model_dump() for r in recent],
-        "total": len(REVIEW_RESULTS),
-        "queue_size": len(PROCESSING_QUEUE),
+        "total": total,
+        "queue_size": queue_size,
     }
 
 
 @app.delete("/reviews/{case_id}")
 async def delete_review(case_id: str):
     """Delete a stored review result."""
-    if case_id in REVIEW_RESULTS:
-        del REVIEW_RESULTS[case_id]
-        return {"ok": True, "message": f"Review {case_id} deleted"}
-    
-    if case_id in PROCESSING_QUEUE:
-        PROCESSING_QUEUE.remove(case_id)
-        return {"ok": True, "message": f"Queued review {case_id} cancelled"}
+    with STATE_LOCK:
+        if case_id in REVIEW_RESULTS:
+            del REVIEW_RESULTS[case_id]
+            SHADOW_DISAGREEMENTS.pop(case_id, None)
+            return {"ok": True, "message": f"Review {case_id} deleted"}
+
+        if case_id in PROCESSING_QUEUE:
+            PROCESSING_QUEUE.remove(case_id)
+            return {"ok": True, "message": f"Queued review {case_id} cancelled"}
     
     raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
 
