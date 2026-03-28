@@ -18,7 +18,7 @@ import json
 import hashlib
 import logging
 import re
-from threading import Lock
+from threading import RLock
 from typing import Any, Optional
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -88,7 +88,7 @@ class ReviewResponse(BaseModel):
 REVIEW_RESULTS: dict[str, ReviewResponse] = {}
 REVIEW_CONTEXT: dict[str, dict] = {}
 PROCESSING_QUEUE: list[str] = []
-STATE_LOCK = Lock()
+STATE_LOCK = RLock()
 
 MAX_CALLBACK_RETRIES = int(os.environ.get("MAX_CALLBACK_RETRIES", "3"))
 CALLBACK_RETRY_DELAY_SECONDS = float(os.environ.get("CALLBACK_RETRY_DELAY_SECONDS", "5.0"))
@@ -138,6 +138,33 @@ def _trim_list_in_place(values: list[Any], max_items: int) -> None:
 def _review_context_for_case(case_id: str) -> dict[str, Any]:
     with STATE_LOCK:
         return dict(REVIEW_CONTEXT.get(case_id, {}))
+
+
+def _shadow_disagreements_snapshot() -> list[tuple[str, dict[str, Any]]]:
+    with STATE_LOCK:
+        return [(case_id, dict(disagreement)) for case_id, disagreement in SHADOW_DISAGREEMENTS.items()]
+
+
+def _resolve_image_quality_for_case(case_id: str, disagreement: dict[str, Any] | None = None) -> str:
+    if disagreement:
+        quality = disagreement.get("image_quality")
+        if isinstance(quality, str) and quality.strip():
+            return quality
+
+    context = _review_context_for_case(case_id)
+    preprocess = context.get("preprocess", {})
+    if isinstance(preprocess, dict):
+        quality = preprocess.get("imageQuality") or preprocess.get("image_quality")
+        if isinstance(quality, str) and quality.strip():
+            return quality
+
+    return "unknown"
+
+
+def _append_case_to_pattern_bucket(patterns: dict[str, dict[str, Any]], key: str, case_id: str) -> None:
+    bucket = patterns.setdefault(key, {"count": 0, "cases": []})
+    bucket["count"] += 1
+    bucket["cases"].append(case_id)
 
 
 def _review_result_dict(case_id: str) -> dict[str, Any]:
@@ -3127,15 +3154,14 @@ def _get_cluster_performance(cluster_key: str) -> dict | None:
     Returns escalation rate and case count if available.
     """
     cluster_cases = []
-    with STATE_LOCK:
-        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
-            if _build_disagreement_cluster_key(disagreement) == cluster_key:
-                cluster_cases.append(
-                    {
-                        **disagreement,
-                        "final_outcome": _final_outcome_for_case(case_id),
-                    }
-                )
+    for case_id, disagreement in _shadow_disagreements_snapshot():
+        if _build_disagreement_cluster_key(disagreement) == cluster_key:
+            cluster_cases.append(
+                {
+                    **disagreement,
+                    "final_outcome": _final_outcome_for_case(case_id),
+                }
+            )
     
     if not cluster_cases:
         return None
@@ -3833,6 +3859,909 @@ def _compute_region_specific_thresholds() -> dict[str, dict]:
     return result
 
 
+# =============================================================================
+# Cluster-Level Promotion Playbooks
+# Turn disagreement clusters into reusable decision playbooks
+# =============================================================================
+
+# Playbook definition templates
+CLUSTER_PLAYBOOK_TEMPLATES = {
+    "MUST_OVERRIDE": {
+        "condition": "32B must override 7B regardless of other factors",
+        "confidence_band": "high_certainty",
+        "policy_text": "Override 7B consult with 32B review. This is a mandatory escalation scenario."
+    },
+    "SHOULD_OVERRIDE": {
+        "condition": "Strong evidence favors 32B, recommend escalation",
+        "confidence_band": "medium_certainty", 
+        "policy_text": "Promote to 32B review. Evidence supports escalation but case is not critical."
+    },
+    "CONSIDER_OVERRIDE": {
+        "condition": "Mixed signals, human review recommended",
+        "confidence_band": "low_certainty",
+        "policy_text": "Consider 32B review. Evidence is mixed, human judgment may be needed."
+    },
+    "DISCOUNT_32B": {
+        "condition": "32B analysis should be discounted",
+        "confidence_band": "negative_certainty",
+        "policy_text": "Do not rely on 32B review. Escalation may not add value in this scenario."
+    },
+    "AMBIGUOUS": {
+        "condition": "Case is too ambiguous to trust either model strongly",
+        "confidence_band": "no_certainty",
+        "policy_text": "Neither 7B nor 32B can be trusted strongly. Recommend specialist consultation or additional data."
+    }
+}
+
+
+def _build_cluster_promotion_playbooks() -> list[dict]:
+    """
+    Build reusable promotion playbooks from historical cluster data.
+    
+    Analyzes disagreement clusters to create decision playbooks that define:
+    - When 32B must override 7B
+    - When 32B should be discounted
+    - When the case is too ambiguous to trust either model
+    - Confidence bands and natural-language rationale
+    
+    Returns:
+        List of playbook dictionaries with conditions, actions, and rationale.
+    """
+    playbooks = []
+    seen_clusters: set[str] = set()
+
+    for _, disagreement in _shadow_disagreements_snapshot():
+        cluster_key = _build_disagreement_cluster_key(disagreement)
+        if cluster_key in seen_clusters:
+            continue
+        seen_clusters.add(cluster_key)
+
+        cluster_performance = _get_cluster_performance(cluster_key)
+        if not cluster_performance:
+            continue
+
+        escalation_rate = cluster_performance.get("escalation_rate", 0)
+        case_count = cluster_performance.get("case_count", 0)
+        severity_impact = disagreement.get("severity_impact", 0.5)
+        conf_delta = abs(
+            disagreement.get("consult_confidence", 0.5) -
+            disagreement.get("review_confidence", 0.5)
+        )
+        pattern_type = disagreement.get("pattern_type", "unknown")
+        body_region = disagreement.get("body_region", "unknown")
+
+        playbook = {
+            "cluster_key": cluster_key,
+            "domain": disagreement.get("domain", "unknown"),
+            "body_region": body_region,
+            "pattern_type": pattern_type,
+            "case_count": case_count,
+            "escalation_rate": escalation_rate,
+            "rules": [],
+        }
+
+        if severity_impact >= 0.8:
+            playbook["rules"].append({
+                "rule_type": "MUST_OVERRIDE",
+                "trigger": f"severity_impact >= 0.8 (actual: {severity_impact:.2f})",
+                "confidence_band": "high_certainty",
+                "rationale": f"Critical severity ({severity_impact:.0%}) mandates 32B's thorough analysis. "
+                             "7B may miss life-threatening findings.",
+                "threshold_crossed": "severity_impact",
+                "threshold_value": 0.8,
+                "actual_value": severity_impact,
+            })
+        elif pattern_type == "diagnostic" and severity_impact >= 0.7:
+            playbook["rules"].append({
+                "rule_type": "MUST_OVERRIDE",
+                "trigger": "pattern_type == 'diagnostic' AND severity_impact >= 0.7",
+                "confidence_band": "high_certainty",
+                "rationale": "Diagnostic patterns with high severity require mandatory 32B review. "
+                             "Misdiagnosis risk is unacceptable.",
+                "threshold_crossed": "severity_impact + pattern_type",
+                "threshold_value": "0.7 + diagnostic",
+                "actual_value": f"{severity_impact:.2f} + {pattern_type}",
+            })
+        elif escalation_rate >= 0.7 and case_count >= 5:
+            playbook["rules"].append({
+                "rule_type": "MUST_OVERRIDE",
+                "trigger": "escalation_rate >= 0.7 AND case_count >= 5",
+                "confidence_band": "high_certainty",
+                "rationale": f"Historical cluster data shows {escalation_rate:.0%} escalation rate "
+                             f"across {case_count} cases. Strong evidence for mandatory escalation.",
+                "threshold_crossed": "escalation_rate + case_count",
+                "threshold_value": "0.7 + 5",
+                "actual_value": f"{escalation_rate:.2f} + {case_count}",
+            })
+
+        if pattern_type == "alignment" and conf_delta < 0.1:
+            playbook["rules"].append({
+                "rule_type": "DISCOUNT_32B",
+                "trigger": "pattern_type == 'alignment' AND conf_delta < 0.1",
+                "confidence_band": "negative_certainty",
+                "rationale": "Models strongly agree (alignment pattern). 32B analysis may not add value.",
+                "threshold_crossed": "pattern_type + conf_delta",
+                "threshold_value": "alignment + 0.1",
+                "actual_value": f"{pattern_type} + {conf_delta:.2f}",
+            })
+        elif case_count >= 3 and escalation_rate < 0.1:
+            playbook["rules"].append({
+                "rule_type": "DISCOUNT_32B",
+                "trigger": "case_count >= 3 AND escalation_rate < 0.1",
+                "confidence_band": "negative_certainty",
+                "rationale": f"Cluster shows {escalation_rate:.0%} escalation rate despite {case_count} cases. "
+                             "32B escalations rarely justified.",
+                "threshold_crossed": "escalation_rate",
+                "threshold_value": 0.1,
+                "actual_value": escalation_rate,
+            })
+        elif body_region in ["skin", "coat"] and severity_impact < 0.4:
+            playbook["rules"].append({
+                "rule_type": "DISCOUNT_32B",
+                "trigger": "body_region in ['skin', 'coat'] AND severity_impact < 0.4",
+                "confidence_band": "negative_certainty",
+                "rationale": "Superficial body regions with low severity rarely benefit from 32B escalation.",
+                "threshold_crossed": "body_region + severity_impact",
+                "threshold_value": "skin/coat + 0.4",
+                "actual_value": f"{body_region} + {severity_impact:.2f}",
+            })
+
+        if disagreement.get("n_uncertainty_divergence", 0) > disagreement.get("n_disagreements", 0) * 1.5:
+            playbook["rules"].append({
+                "rule_type": "AMBIGUOUS",
+                "trigger": "n_uncertainty_divergence > n_disagreements * 1.5",
+                "confidence_band": "no_certainty",
+                "rationale": "Uncertainty divergences dominate disagreements. Case characteristics are "
+                             "genuinely ambiguous - neither model can be trusted strongly.",
+                "threshold_crossed": "uncertainty_vs_disagreement_ratio",
+                "threshold_value": 1.5,
+                "actual_value": disagreement.get("n_uncertainty_divergence", 0) / max(disagreement.get("n_disagreements", 1), 1),
+            })
+        elif case_count < 3 and severity_impact > 0.6:
+            playbook["rules"].append({
+                "rule_type": "AMBIGUOUS",
+                "trigger": "case_count < 3 AND severity_impact > 0.6",
+                "confidence_band": "no_certainty",
+                "rationale": "Insufficient cluster history to guide decision. High severity case "
+                             "with limited evidence - recommend specialist.",
+                "threshold_crossed": "case_count + severity_impact",
+                "threshold_value": "3 + 0.6",
+                "actual_value": f"{case_count} + {severity_impact:.2f}",
+            })
+
+        if not any(r["rule_type"] in ("MUST_OVERRIDE", "DISCOUNT_32B", "AMBIGUOUS") for r in playbook["rules"]):
+            if severity_impact >= 0.6 or conf_delta >= 0.25:
+                playbook["rules"].append({
+                    "rule_type": "SHOULD_OVERRIDE",
+                    "trigger": "severity_impact >= 0.6 OR conf_delta >= 0.25",
+                    "confidence_band": "medium_certainty",
+                    "rationale": f"Evidence supports 32B escalation (severity={severity_impact:.0%}, "
+                                 f"conf_delta={conf_delta:.0%}). Consider promotion.",
+                    "threshold_crossed": "severity_impact + conf_delta",
+                    "threshold_value": "0.6 | 0.25",
+                    "actual_value": f"{severity_impact:.2f} | {conf_delta:.2f}",
+                })
+            else:
+                playbook["rules"].append({
+                    "rule_type": "CONSIDER_OVERRIDE",
+                    "trigger": "default_case",
+                    "confidence_band": "low_certainty",
+                    "rationale": "Mixed signals. Standard review may suffice but 32B could add value.",
+                    "threshold_crossed": "none",
+                    "threshold_value": "none",
+                    "actual_value": "default",
+                })
+
+        rule_types = [r["rule_type"] for r in playbook["rules"]]
+        if "MUST_OVERRIDE" in rule_types:
+            playbook["recommendation"] = "mandatory_32b_review"
+            playbook["confidence"] = 0.85
+        elif "DISCOUNT_32B" in rule_types:
+            playbook["recommendation"] = "standard_review"
+            playbook["confidence"] = 0.75
+        elif "AMBIGUOUS" in rule_types:
+            playbook["recommendation"] = "specialist_referral"
+            playbook["confidence"] = 0.60
+        elif "SHOULD_OVERRIDE" in rule_types:
+            playbook["recommendation"] = "promote_to_32b"
+            playbook["confidence"] = 0.70
+        else:
+            playbook["recommendation"] = "consider_32b"
+            playbook["confidence"] = 0.50
+
+        playbook["natural_language_rationale"] = _build_playbook_natural_language(playbook)
+        playbooks.append(playbook)
+
+    return playbooks
+
+
+def _build_playbook_natural_language(playbook: dict) -> str:
+    """
+    Build human-readable natural language rationale for a playbook.
+    """
+    parts = []
+    cluster_key = playbook.get("cluster_key", "unknown")
+    recommendation = playbook.get("recommendation", "unknown")
+    confidence = playbook.get("confidence", 0.5)
+    case_count = playbook.get("case_count", 0)
+    escalation_rate = playbook.get("escalation_rate", 0)
+    
+    parts.append(f"PLAYBOOK FOR CLUSTER: {cluster_key}")
+    parts.append(f"This cluster has {case_count} historical cases with {escalation_rate:.0%} escalation rate.")
+    
+    for rule in playbook.get("rules", []):
+        rule_type = rule.get("rule_type", "unknown")
+        trigger = rule.get("trigger", "unknown")
+        rationale = rule.get("rationale", "")
+        
+        if rule_type == "MUST_OVERRIDE":
+            parts.append(f"\n[MANDATORY ESCALATION] Rule triggered: {trigger}")
+            parts.append(f"  -> {rationale}")
+        elif rule_type == "DISCOUNT_32B":
+            parts.append(f"\n[DISCOUNT ESCALATION] Rule triggered: {trigger}")
+            parts.append(f"  -> {rationale}")
+        elif rule_type == "AMBIGUOUS":
+            parts.append(f"\n[AMBIGUOUS CASE] Rule triggered: {trigger}")
+            parts.append(f"  -> {rationale}")
+        elif rule_type == "SHOULD_OVERRIDE":
+            parts.append(f"\n[RECOMMEND ESCALATION] Rule triggered: {trigger}")
+            parts.append(f"  -> {rationale}")
+        else:
+            parts.append(f"\n[{rule_type}] Rule triggered: {trigger}")
+            parts.append(f"  -> {rationale}")
+    
+    parts.append(f"\nFINAL RECOMMENDATION: {recommendation.upper().replace('_', ' ')}")
+    parts.append(f"CONFIDENCE: {confidence:.0%}")
+    
+    if recommendation == "mandatory_32b_review":
+        parts.append("This case MUST be escalated to 32B review based on established criteria.")
+    elif recommendation == "promote_to_32b":
+        parts.append("This case SHOULD be promoted to 32B review based on evidence.")
+    elif recommendation == "standard_review":
+        parts.append("Standard 7B review is sufficient. 32B escalation is unlikely to add value.")
+    elif recommendation == "specialist_referral":
+        parts.append("Neither 7B nor 32B can be trusted strongly. Consider specialist consultation.")
+    else:
+        parts.append("Consider 32B review if additional confidence is desired.")
+    
+    return "\n".join(parts)
+
+
+def _get_playbook_for_case(case_id: str) -> dict | None:
+    """
+    Get the appropriate promotion playbook for a specific case.
+    
+    Finds the matching cluster playbook based on case characteristics.
+    """
+    if case_id not in SHADOW_DISAGREEMENTS:
+        return None
+    
+    disagreement = SHADOW_DISAGREEMENTS[case_id]
+    cluster_key = _build_disagreement_cluster_key(disagreement)
+    cluster_performance = _get_cluster_performance(cluster_key)
+    
+    if not cluster_performance:
+        return None
+    
+    playbook = {
+        "case_id": case_id,
+        "cluster_key": cluster_key,
+        "matching_criteria": {
+            "domain": disagreement.get("domain", "unknown"),
+            "body_region": disagreement.get("body_region", "unknown"),
+            "pattern_type": disagreement.get("pattern_type", "unknown"),
+            "severity_impact": disagreement.get("severity_impact", 0.5),
+            "conf_delta": abs(
+                disagreement.get("consult_confidence", 0.5) -
+                disagreement.get("review_confidence", 0.5)
+            )
+        },
+        "cluster_stats": cluster_performance,
+        "recommendation": None,
+        "confidence": 0.0,
+        "rules_triggered": [],
+        "natural_language": ""
+    }
+    
+    severity_impact = disagreement.get("severity_impact", 0.5)
+    conf_delta = playbook["matching_criteria"]["conf_delta"]
+    pattern_type = disagreement.get("pattern_type", "unknown")
+    body_region = disagreement.get("body_region", "unknown")
+    escalation_rate = cluster_performance.get("escalation_rate", 0)
+    case_count = cluster_performance.get("case_count", 0)
+    
+    # Apply playbook rules
+    # MUST_OVERRIDE
+    if severity_impact >= 0.8:
+        playbook["rules_triggered"].append({
+            "type": "MUST_OVERRIDE",
+            "trigger": f"severity_impact={severity_impact:.2f} >= 0.8",
+            "explanation": "Critical severity mandates 32B review"
+        })
+    elif pattern_type == "diagnostic" and severity_impact >= 0.7:
+        playbook["rules_triggered"].append({
+            "type": "MUST_OVERRIDE",
+            "trigger": f"pattern_type={pattern_type} AND severity_impact={severity_impact:.2f} >= 0.7",
+            "explanation": "Diagnostic pattern with high severity requires mandatory 32B"
+        })
+    elif escalation_rate >= 0.7 and case_count >= 5:
+        playbook["rules_triggered"].append({
+            "type": "MUST_OVERRIDE",
+            "trigger": f"escalation_rate={escalation_rate:.2f} >= 0.7 AND case_count={case_count} >= 5",
+            "explanation": f"Historical cluster data strongly supports escalation ({escalation_rate:.0%} rate)"
+        })
+    
+    # DISCOUNT_32B
+    if pattern_type == "alignment" and conf_delta < 0.1:
+        playbook["rules_triggered"].append({
+            "type": "DISCOUNT_32B",
+            "trigger": f"pattern_type={pattern_type} AND conf_delta={conf_delta:.2f} < 0.1",
+            "explanation": "Models strongly agree - 32B escalation unlikely to add value"
+        })
+    elif escalation_rate < 0.1 and case_count >= 3:
+        playbook["rules_triggered"].append({
+            "type": "DISCOUNT_32B",
+            "trigger": f"escalation_rate={escalation_rate:.2f} < 0.1 AND case_count={case_count} >= 3",
+            "explanation": "Cluster rarely requires escalation despite sufficient history"
+        })
+    
+    # AMBIGUOUS
+    if disagreement.get("n_uncertainty_divergence", 0) > disagreement.get("n_disagreements", 0) * 1.5:
+        playbook["rules_triggered"].append({
+            "type": "AMBIGUOUS",
+            "trigger": "n_uncertainty_divergence > n_disagreements * 1.5",
+            "explanation": "Case is genuinely ambiguous - neither model can be trusted"
+        })
+    
+    # Determine recommendation
+    rule_types = [r["type"] for r in playbook["rules_triggered"]]
+    
+    if "MUST_OVERRIDE" in rule_types:
+        playbook["recommendation"] = "mandatory_32b_review"
+        playbook["confidence"] = 0.85
+    elif "DISCOUNT_32B" in rule_types:
+        playbook["recommendation"] = "standard_review"
+        playbook["confidence"] = 0.75
+    elif "AMBIGUOUS" in rule_types:
+        playbook["recommendation"] = "specialist_referral"
+        playbook["confidence"] = 0.60
+    elif "SHOULD_OVERRIDE" in rule_types:
+        playbook["recommendation"] = "promote_to_32b"
+        playbook["confidence"] = 0.70
+    else:
+        playbook["recommendation"] = "consider_32b"
+        playbook["confidence"] = 0.50
+    
+    playbook["natural_language"] = _build_playbook_natural_language({
+        "cluster_key": cluster_key,
+        "recommendation": playbook["recommendation"],
+        "confidence": playbook["confidence"],
+        "case_count": case_count,
+        "escalation_rate": escalation_rate,
+        "rules": playbook["rules_triggered"]
+    })
+    
+    return playbook
+
+
+def _should_32b_override_7b(case_id: str) -> tuple[bool, float, str]:
+    """
+    Determine if 32B should override 7B for a given case.
+    
+    Returns:
+        Tuple of (should_override, confidence, rationale)
+    """
+    playbook = _get_playbook_for_case(case_id)
+    
+    if not playbook:
+        return False, 0.0, "No playbook available - insufficient cluster data"
+    
+    recommendation = playbook.get("recommendation", "")
+    confidence = playbook.get("confidence", 0.5)
+    rationale = playbook.get("natural_language", "")
+    
+    should_override = recommendation in ("mandatory_32b_review", "promote_to_32b")
+    
+    return should_override, confidence, rationale
+
+
+def _should_32b_be_discounted(case_id: str) -> tuple[bool, float, str]:
+    """
+    Determine if 32B analysis should be discounted for a given case.
+    
+    Returns:
+        Tuple of (should_discount, confidence, rationale)
+    """
+    playbook = _get_playbook_for_case(case_id)
+    
+    if not playbook:
+        return False, 0.0, "No playbook available - insufficient cluster data"
+    
+    rule_types = [r["type"] for r in playbook.get("rules_triggered", [])]
+    
+    should_discount = "DISCOUNT_32B" in rule_types
+    confidence = playbook.get("confidence", 0.5)
+    rationale = playbook.get("natural_language", "")
+    
+    return should_discount, confidence, rationale
+
+
+def _is_case_too_ambiguous(case_id: str) -> tuple[bool, float, str]:
+    """
+    Determine if a case is too ambiguous to trust either model strongly.
+    
+    Returns:
+        Tuple of (is_ambiguous, confidence, rationale)
+    """
+    playbook = _get_playbook_for_case(case_id)
+    
+    if not playbook:
+        return True, 0.5, "Case classified as ambiguous due to lack of cluster data"
+    
+    rule_types = [r["type"] for r in playbook.get("rules_triggered", [])]
+    
+    is_ambiguous = "AMBIGUOUS" in rule_types
+    confidence = playbook.get("confidence", 0.5)
+    rationale = playbook.get("natural_language", "")
+    
+    return is_ambiguous, confidence, rationale
+
+
+# =============================================================================
+# False Positive / False Negative Promotion Analysis
+# Analyze cases where escalation happened but shouldn't have (FP)
+# and cases where escalation should have happened but didn't (FN)
+# =============================================================================
+
+def _analyze_false_positives() -> dict:
+    """
+    Analyze false positive promotion cases.
+    
+    False positives are cases where escalation happened but shouldn't have -
+    i.e., cases that were escalated to 32B review but the escalation did not
+    result in a meaningfully different outcome or was not warranted.
+    
+    Returns:
+        Dictionary with false positive analysis including patterns by
+        body region, severity, image quality, and pattern type.
+    """
+    false_positives = {
+        "total_count": 0,
+        "cases": [],
+        "patterns": {
+            "by_body_region": {},
+            "by_severity": {},
+            "by_image_quality": {},
+            "by_pattern_type": {}
+        },
+        "cluster_analysis": []
+    }
+    
+    disagreements_snapshot = _shadow_disagreements_snapshot()
+    for case_id, disagreement in disagreements_snapshot:
+        outcome = _final_outcome_for_case(case_id)
+        if outcome != "escalated":
+            continue
+
+        severity_impact = disagreement.get("severity_impact", 0.5)
+        conf_delta = abs(
+            disagreement.get("consult_confidence", 0.5) -
+            disagreement.get("review_confidence", 0.5)
+        )
+
+        if severity_impact < 0.4 and conf_delta < 0.15:
+            image_quality = _resolve_image_quality_for_case(case_id, disagreement)
+            fp_case = {
+                "case_id": case_id,
+                "domain": disagreement.get("domain", "unknown"),
+                "body_region": disagreement.get("body_region", "unknown"),
+                "pattern_type": disagreement.get("pattern_type", "unknown"),
+                "image_quality": image_quality,
+                "severity_impact": severity_impact,
+                "conf_delta": conf_delta,
+                "outcome": outcome,
+                "explanation": f"Low severity ({severity_impact:.0%}) and small conf_delta ({conf_delta:.0%}) "
+                               f"suggest escalation was not warranted. Final outcome: {outcome}",
+            }
+            false_positives["cases"].append(fp_case)
+            false_positives["total_count"] += 1
+
+            _append_case_to_pattern_bucket(
+                false_positives["patterns"]["by_body_region"],
+                disagreement.get("body_region", "unknown"),
+                case_id,
+            )
+            severity_bucket = "LOW" if severity_impact < 0.3 else "MEDIUM"
+            _append_case_to_pattern_bucket(
+                false_positives["patterns"]["by_severity"],
+                severity_bucket,
+                case_id,
+            )
+            _append_case_to_pattern_bucket(
+                false_positives["patterns"]["by_image_quality"],
+                image_quality,
+                case_id,
+            )
+            _append_case_to_pattern_bucket(
+                false_positives["patterns"]["by_pattern_type"],
+                disagreement.get("pattern_type", "unknown"),
+                case_id,
+            )
+
+    cluster_fp = {}
+    for fp_case in false_positives["cases"]:
+        disagreement = next((d for cid, d in disagreements_snapshot if cid == fp_case["case_id"]), {})
+        cluster_key = _build_disagreement_cluster_key(disagreement)
+        if cluster_key not in cluster_fp:
+            cluster_fp[cluster_key] = {"count": 0, "cases": []}
+        cluster_fp[cluster_key]["count"] += 1
+        cluster_fp[cluster_key]["cases"].append(fp_case["case_id"])
+    
+    false_positives["cluster_analysis"] = [
+        {"cluster_key": k, "count": v["count"], "cases": v["cases"]}
+        for k, v in cluster_fp.items()
+    ]
+    false_positives["cluster_analysis"].sort(key=lambda x: x["count"], reverse=True)
+    
+    # Add natural language summary
+    false_positives["summary"] = _build_false_positive_summary(false_positives)
+    
+    return false_positives
+
+
+def _build_false_positive_summary(fp_analysis: dict) -> str:
+    """Build natural language summary of false positive patterns."""
+    parts = []
+    total = fp_analysis["total_count"]
+    
+    if total == 0:
+        return "No false positive escalations detected in current data."
+    
+    parts.append(f"FALSE POSITIVE ANALYSIS: {total} cases where escalation may not have been warranted.")
+    
+    # Most common body regions
+    by_region = fp_analysis["patterns"]["by_body_region"]
+    if by_region:
+        top_regions = sorted(by_region.items(), key=lambda x: x[1]["count"], reverse=True)[:3]
+        parts.append(f"\nMost affected body regions:")
+        for region, data in top_regions:
+            parts.append(f"  - {region}: {data['count']} FP cases ({data['count']/total:.0%})")
+    
+    # Most common pattern types
+    by_pattern = fp_analysis["patterns"]["by_pattern_type"]
+    if by_pattern:
+        top_patterns = sorted(by_pattern.items(), key=lambda x: x[1]["count"], reverse=True)[:3]
+        parts.append(f"\nMost affected pattern types:")
+        for pattern, data in top_patterns:
+            parts.append(f"  - {pattern}: {data['count']} FP cases ({data['count']/total:.0%})")
+    
+    # Recommendations
+    parts.append(f"\nRECOMMENDATIONS:")
+    parts.append(f"  - Review escalation thresholds for low-severity cases ({fp_analysis['patterns']['by_severity'].get('LOW', {}).get('count', 0)} cases)")
+    parts.append(f"  - Consider tightening confidence delta thresholds before escalation")
+    parts.append(f"  - Cluster analysis shows {len(fp_analysis['cluster_analysis'])} clusters with FP patterns")
+    
+    return "\n".join(parts)
+
+
+def _analyze_false_negatives() -> dict:
+    """
+    Analyze false negative promotion cases.
+    
+    False negatives are cases where escalation should have happened but didn't -
+    i.e., cases that were NOT escalated but should have been based on
+    severity, complexity, or outcome patterns.
+    
+    Returns:
+        Dictionary with false negative analysis including patterns by
+        body region, severity, image quality, and pattern type.
+    """
+    false_negatives = {
+        "total_count": 0,
+        "cases": [],
+        "patterns": {
+            "by_body_region": {},
+            "by_severity": {},
+            "by_image_quality": {},
+            "by_pattern_type": {}
+        },
+        "cluster_analysis": []
+    }
+    
+    disagreements_snapshot = _shadow_disagreements_snapshot()
+    for case_id, disagreement in disagreements_snapshot:
+        outcome = _final_outcome_for_case(case_id)
+        if outcome == "escalated":
+            continue
+
+        severity_impact = disagreement.get("severity_impact", 0.5)
+        conf_delta = abs(
+            disagreement.get("consult_confidence", 0.5) -
+            disagreement.get("review_confidence", 0.5)
+        )
+        n_disagreements = disagreement.get("n_disagreements", 0)
+
+        if severity_impact >= 0.65 or (conf_delta >= 0.25 and n_disagreements >= 2):
+            image_quality = _resolve_image_quality_for_case(case_id, disagreement)
+            fn_case = {
+                "case_id": case_id,
+                "domain": disagreement.get("domain", "unknown"),
+                "body_region": disagreement.get("body_region", "unknown"),
+                "pattern_type": disagreement.get("pattern_type", "unknown"),
+                "image_quality": image_quality,
+                "severity_impact": severity_impact,
+                "conf_delta": conf_delta,
+                "n_disagreements": n_disagreements,
+                "outcome": outcome,
+                "explanation": f"High severity ({severity_impact:.0%}) or disagreement (conf_delta={conf_delta:.0%}, "
+                               f"n_disagreements={n_disagreements}) but NOT escalated. Outcome: {outcome}",
+            }
+            false_negatives["cases"].append(fn_case)
+            false_negatives["total_count"] += 1
+
+            _append_case_to_pattern_bucket(
+                false_negatives["patterns"]["by_body_region"],
+                disagreement.get("body_region", "unknown"),
+                case_id,
+            )
+            severity_bucket = "HIGH" if severity_impact >= 0.7 else "MEDIUM"
+            _append_case_to_pattern_bucket(
+                false_negatives["patterns"]["by_severity"],
+                severity_bucket,
+                case_id,
+            )
+            _append_case_to_pattern_bucket(
+                false_negatives["patterns"]["by_image_quality"],
+                image_quality,
+                case_id,
+            )
+            _append_case_to_pattern_bucket(
+                false_negatives["patterns"]["by_pattern_type"],
+                disagreement.get("pattern_type", "unknown"),
+                case_id,
+            )
+
+    cluster_fn = {}
+    for fn_case in false_negatives["cases"]:
+        disagreement = next((d for cid, d in disagreements_snapshot if cid == fn_case["case_id"]), {})
+        cluster_key = _build_disagreement_cluster_key(disagreement)
+        if cluster_key not in cluster_fn:
+            cluster_fn[cluster_key] = {"count": 0, "cases": []}
+        cluster_fn[cluster_key]["count"] += 1
+        cluster_fn[cluster_key]["cases"].append(fn_case["case_id"])
+    
+    false_negatives["cluster_analysis"] = [
+        {"cluster_key": k, "count": v["count"], "cases": v["cases"]}
+        for k, v in cluster_fn.items()
+    ]
+    false_negatives["cluster_analysis"].sort(key=lambda x: x["count"], reverse=True)
+    
+    # Add natural language summary
+    false_negatives["summary"] = _build_false_negative_summary(false_negatives)
+    
+    return false_negatives
+
+
+def _build_false_negative_summary(fn_analysis: dict) -> str:
+    """Build natural language summary of false negative patterns."""
+    parts = []
+    total = fn_analysis["total_count"]
+    
+    if total == 0:
+        return "No false negative cases detected in current data."
+    
+    parts.append(f"FALSE NEGATIVE ANALYSIS: {total} cases where escalation should have happened but didn't.")
+    
+    # Most common body regions
+    by_region = fn_analysis["patterns"]["by_body_region"]
+    if by_region:
+        top_regions = sorted(by_region.items(), key=lambda x: x[1]["count"], reverse=True)[:3]
+        parts.append(f"\nMost affected body regions:")
+        for region, data in top_regions:
+            parts.append(f"  - {region}: {data['count']} FN cases ({data['count']/total:.0%})")
+    
+    # Most common pattern types
+    by_pattern = fn_analysis["patterns"]["by_pattern_type"]
+    if by_pattern:
+        top_patterns = sorted(by_pattern.items(), key=lambda x: x[1]["count"], reverse=True)[:3]
+        parts.append(f"\nMost affected pattern types:")
+        for pattern, data in top_patterns:
+            parts.append(f"  - {pattern}: {data['count']} FN cases ({data['count']/total:.0%})")
+    
+    # Most common severity levels
+    by_severity = fn_analysis["patterns"]["by_severity"]
+    if by_severity:
+        parts.append(f"\nSeverity distribution:")
+        for severity, data in sorted(by_severity.items()):
+            parts.append(f"  - {severity}: {data['count']} cases")
+    
+    # Recommendations
+    parts.append(f"\nRECOMMENDATIONS:")
+    parts.append(f"  - Lower escalation thresholds for high-severity cases ({by_severity.get('HIGH', {}).get('count', 0)} missed)")
+    parts.append(f"  - Review confidence delta requirements for escalation")
+    parts.append(f"  - Cluster analysis shows {len(fn_analysis['cluster_analysis'])} clusters with FN patterns")
+    
+    return "\n".join(parts)
+
+
+def _compute_outcome_linked_patterns() -> dict:
+    """
+    Compute outcome-linked patterns by body region, severity, image quality, and pattern type.
+    
+    This analysis links specific case characteristics to outcomes to identify
+    which features reliably predict escalation success or failure.
+    
+    Returns:
+        Dictionary with outcome patterns by each dimension.
+    """
+    patterns = {
+        "by_body_region": {},
+        "by_severity": {},
+        "by_image_quality": {},
+        "by_pattern_type": {},
+        "by_confidence_delta": {},
+        "composite_patterns": []
+    }
+    
+    disagreements_snapshot = _shadow_disagreements_snapshot()
+    for case_id, disagreement in disagreements_snapshot:
+        outcome = _final_outcome_for_case(case_id)
+        body_region = disagreement.get("body_region", "unknown")
+        severity_impact = disagreement.get("severity_impact", 0.5)
+        image_quality = _resolve_image_quality_for_case(case_id, disagreement)
+        pattern_type = disagreement.get("pattern_type", "unknown")
+        conf_delta = abs(
+            disagreement.get("consult_confidence", 0.5) -
+            disagreement.get("review_confidence", 0.5)
+        )
+
+        if body_region not in patterns["by_body_region"]:
+            patterns["by_body_region"][body_region] = {
+                "total": 0, "escalated": 0, "resolved": 0,
+                "escalation_rate": 0.0, "avg_severity": 0.0,
+            }
+        pr = patterns["by_body_region"][body_region]
+        pr["total"] += 1
+        pr["escalated" if outcome == "escalated" else "resolved"] += 1
+        pr["avg_severity"] = (pr["avg_severity"] * (pr["total"] - 1) + severity_impact) / pr["total"]
+        pr["escalation_rate"] = pr["escalated"] / pr["total"]
+
+        if severity_impact >= 0.7:
+            severity_bucket = "HIGH"
+        elif severity_impact >= 0.4:
+            severity_bucket = "MEDIUM"
+        else:
+            severity_bucket = "LOW"
+
+        if severity_bucket not in patterns["by_severity"]:
+            patterns["by_severity"][severity_bucket] = {
+                "total": 0, "escalated": 0, "resolved": 0,
+                "escalation_rate": 0.0,
+            }
+        ps = patterns["by_severity"][severity_bucket]
+        ps["total"] += 1
+        ps["escalated" if outcome == "escalated" else "resolved"] += 1
+        ps["escalation_rate"] = ps["escalated"] / ps["total"]
+
+        if image_quality not in patterns["by_image_quality"]:
+            patterns["by_image_quality"][image_quality] = {
+                "total": 0, "escalated": 0, "resolved": 0,
+                "escalation_rate": 0.0,
+            }
+        piq = patterns["by_image_quality"][image_quality]
+        piq["total"] += 1
+        piq["escalated" if outcome == "escalated" else "resolved"] += 1
+        piq["escalation_rate"] = piq["escalated"] / piq["total"]
+
+        if pattern_type not in patterns["by_pattern_type"]:
+            patterns["by_pattern_type"][pattern_type] = {
+                "total": 0, "escalated": 0, "resolved": 0,
+                "escalation_rate": 0.0,
+            }
+        pt = patterns["by_pattern_type"][pattern_type]
+        pt["total"] += 1
+        pt["escalated" if outcome == "escalated" else "resolved"] += 1
+        pt["escalation_rate"] = pt["escalated"] / pt["total"]
+
+        if conf_delta >= 0.35:
+            cd_bucket = "HIGH"
+        elif conf_delta >= 0.2:
+            cd_bucket = "MEDIUM"
+        else:
+            cd_bucket = "LOW"
+
+        if cd_bucket not in patterns["by_confidence_delta"]:
+            patterns["by_confidence_delta"][cd_bucket] = {
+                "total": 0, "escalated": 0, "resolved": 0,
+                "escalation_rate": 0.0,
+            }
+        pcd = patterns["by_confidence_delta"][cd_bucket]
+        pcd["total"] += 1
+        pcd["escalated" if outcome == "escalated" else "resolved"] += 1
+        pcd["escalation_rate"] = pcd["escalated"] / pcd["total"]
+    
+    # Build composite patterns (combinations of features)
+    composite = {}
+    for case_id, disagreement in disagreements_snapshot:
+        outcome = _final_outcome_for_case(case_id)
+        severity_impact = disagreement.get("severity_impact", 0.5)
+        severity_bucket = "HIGH" if severity_impact >= 0.7 else ("MEDIUM" if severity_impact >= 0.4 else "LOW")
+        body_region = disagreement.get("body_region", "unknown")
+        pattern_type = disagreement.get("pattern_type", "unknown")
+        key = f"{severity_bucket}/{body_region}/{pattern_type}"
+        if key not in composite:
+            composite[key] = {"total": 0, "escalated": 0, "resolved": 0, "escalation_rate": 0.0}
+        composite[key]["total"] += 1
+        composite[key]["escalated" if outcome == "escalated" else "resolved"] += 1
+    
+    for key, data in composite.items():
+        if data["total"] >= 3:  # Only significant composites
+            data["escalation_rate"] = data["escalated"] / data["total"] if data["total"] > 0 else 0
+            patterns["composite_patterns"].append({
+                "pattern": key,
+                "total": data["total"],
+                "escalated": data["escalated"],
+                "resolved": data["resolved"],
+                "escalation_rate": data["escalation_rate"]
+            })
+    
+    patterns["composite_patterns"].sort(key=lambda x: x["escalation_rate"], reverse=True)
+    
+    # Add natural language summary
+    patterns["summary"] = _build_outcome_linked_summary(patterns)
+    
+    return patterns
+
+
+def _build_outcome_linked_summary(patterns: dict) -> str:
+    """Build natural language summary of outcome-linked patterns."""
+    parts = []
+    
+    parts.append("OUTCOME-LINKED PATTERN ANALYSIS")
+    parts.append("=" * 50)
+    
+    # High-risk body regions
+    by_region = patterns["by_body_region"]
+    high_risk_regions = [(k, v) for k, v in by_region.items() if v.get("escalation_rate", 0) > 0.5 and v["total"] >= 3]
+    if high_risk_regions:
+        parts.append("\nHIGH-RISK BODY REGIONS (escalation rate > 50%):")
+        for region, data in sorted(high_risk_regions, key=lambda x: x[1]["escalation_rate"], reverse=True):
+            parts.append(f"  - {region}: {data['escalation_rate']:.0%} escalation rate ({data['total']} cases)")
+    
+    # Severity patterns
+    by_severity = patterns["by_severity"]
+    parts.append("\nESCALATION BY SEVERITY:")
+    for severity in ["HIGH", "MEDIUM", "LOW"]:
+        if severity in by_severity:
+            data = by_severity[severity]
+            parts.append(f"  - {severity}: {data['escalation_rate']:.0%} escalation rate ({data['total']} cases)")
+    
+    # Pattern type patterns
+    by_pattern = patterns["by_pattern_type"]
+    high_risk_patterns = [(k, v) for k, v in by_pattern.items() if v.get("escalation_rate", 0) > 0.5 and v["total"] >= 3]
+    if high_risk_patterns:
+        parts.append("\nHIGH-RISK PATTERN TYPES:")
+        for pattern, data in sorted(high_risk_patterns, key=lambda x: x[1]["escalation_rate"], reverse=True):
+            parts.append(f"  - {pattern}: {data['escalation_rate']:.0%} escalation rate ({data['total']} cases)")
+    
+    # Confidence delta patterns
+    by_cd = patterns["by_confidence_delta"]
+    parts.append("\nESCALATION BY CONFIDENCE DELTA:")
+    for cd in ["HIGH", "MEDIUM", "LOW"]:
+        if cd in by_cd:
+            data = by_cd[cd]
+            parts.append(f"  - {cd}: {data['escalation_rate']:.0%} escalation rate ({data['total']} cases)")
+    
+    # Top composite patterns
+    composites = patterns.get("composite_patterns", [])[:5]
+    if composites:
+        parts.append("\nTOP COMPOSITE PATTERNS (by escalation rate):")
+        for cp in composites:
+            parts.append(f"  - {cp['pattern']}: {cp['escalation_rate']:.0%} escalation rate ({cp['total']} cases)")
+    
+    return "\n".join(parts)
+
+
 def _compute_severity_weighted_thresholds() -> dict:
     """
     Compute promotion thresholds weighted by severity indicators.
@@ -4038,6 +4967,22 @@ async def get_promotion_threshold_recommendations(
     return thresholds
 
 
+@app.get("/intelligence/playbooks")
+async def get_cluster_promotion_playbooks(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get reusable cluster-level promotion playbooks built from disagreement history.
+    """
+    validate_auth(authorization)
+
+    playbooks = _build_cluster_promotion_playbooks()
+    return {
+        "total_playbooks": len(playbooks),
+        "playbooks": playbooks[:50],
+    }
+
+
 @app.get("/intelligence/calibration/{case_id}")
 async def get_reviewer_calibration_narrative(
     case_id: str,
@@ -4134,6 +5079,25 @@ async def get_image_quality_patterns(
     }
 
 
+@app.get("/intelligence/promotion-errors")
+async def get_promotion_error_analysis(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get false-positive, false-negative, and outcome-linked promotion analyses.
+    """
+    validate_auth(authorization)
+
+    false_positives = _analyze_false_positives()
+    false_negatives = _analyze_false_negatives()
+    outcome_patterns = _compute_outcome_linked_patterns()
+    return {
+        "false_positives": false_positives,
+        "false_negatives": false_negatives,
+        "outcome_linked_patterns": outcome_patterns,
+    }
+
+
 @app.post("/intelligence/analyze-all")
 async def analyze_all_cross_case_intelligence(
     authorization: str | None = Header(default=None),
@@ -4149,9 +5113,13 @@ async def analyze_all_cross_case_intelligence(
     # Run all analyses
     clusters_result = await get_cross_case_disagreement_clusters(authorization)
     thresholds = _compute_promotion_threshold("comprehensive")
+    playbooks = _build_cluster_promotion_playbooks()
     body_region_patterns = _mine_body_region_patterns()
     severity_patterns = _mine_severity_patterns()
     quality_patterns = _mine_image_quality_patterns()
+    false_positives = _analyze_false_positives()
+    false_negatives = _analyze_false_negatives()
+    outcome_patterns = _compute_outcome_linked_patterns()
     
     # Generate calibration narratives for high-disagreement cases
     calibration_narratives = []
@@ -4169,16 +5137,23 @@ async def analyze_all_cross_case_intelligence(
         "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
         "disagreement_clusters": clusters_result,
         "promotion_thresholds": thresholds,
+        "promotion_playbooks": playbooks,
         "calibration_narratives_count": len(calibration_narratives),
         "body_region_patterns": body_region_patterns,
         "severity_patterns": severity_patterns,
         "image_quality_patterns": quality_patterns,
+        "false_positives": false_positives,
+        "false_negatives": false_negatives,
+        "outcome_linked_patterns": outcome_patterns,
         "summary": {
             "total_clusters": len(clusters_result.get("clusters", [])),
+            "total_playbooks": len(playbooks),
             "total_high_disagreement_cases": len(high_disagreement_cases),
             "total_body_regions_analyzed": len(body_region_patterns),
             "total_severity_levels_analyzed": len(severity_patterns),
-            "total_quality_levels_analyzed": len(quality_patterns)
+            "total_quality_levels_analyzed": len(quality_patterns),
+            "false_positive_count": false_positives.get("total_count", 0),
+            "false_negative_count": false_negatives.get("total_count", 0),
         }
     }
 

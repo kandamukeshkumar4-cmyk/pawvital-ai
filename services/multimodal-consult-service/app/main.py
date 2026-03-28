@@ -1595,6 +1595,653 @@ def _generate_clarification_questions(
     return unique_questions[:5]  # Return top 5 most impactful questions
 
 
+# =============================================================================
+# Differential Evolution Over Time
+# Track how the likely differential changed across images/turns
+# =============================================================================
+
+class DifferentialEvolutionRecord(BaseModel):
+    """Record of how differential diagnosis evolved across a sequence."""
+    position: int = Field(..., description="Position in sequence (0-indexed)")
+    timestamp: str = Field(..., description="Timestamp or timepoint identifier")
+    differential_at_position: list[str] = Field(..., description="Differential diagnoses at this position")
+    confidence_at_position: float = Field(..., description="Confidence level at this position")
+    evidence_supports: list[str] = Field(default=[], description="Evidence that supports each differential")
+    evidence_contradicts: list[str] = Field(default=[], description="Evidence that contradicts each differential")
+    leading_differential: str = Field(..., description="Most likely differential at this position")
+    confidence_shift_from_previous: float = Field(default=0.0, description="Change in leading differential confidence")
+
+
+def _track_differential_evolution(
+    image_sequence: list[dict],
+    findings_sequence: list[dict]
+) -> list[DifferentialEvolutionRecord]:
+    """
+    Track how the likely differential changed across images/turns.
+    
+    Analyzes the evolution of differential diagnoses through a sequence
+    of images or consultation turns to identify shifting patterns.
+    
+    Args:
+        image_sequence: List of image data across the sequence
+        findings_sequence: List of findings from each timepoint
+    
+    Returns:
+        List of DifferentialEvolutionRecord showing how differential evolved
+    """
+    evolution = []
+    
+    if not findings_sequence:
+        return evolution
+    
+    for i, finding in enumerate(findings_sequence):
+        # Extract differential at this position
+        differential = finding.get("differential_diagnosis", [])
+        if isinstance(differential, str):
+            differential = [differential]
+        
+        # Get confidence at this position
+        confidence = finding.get("confidence", 0.5)
+        
+        # Get evidence for and against each differential
+        evidence_supports = []
+        evidence_contradicts = []
+        
+        # Extract supporting evidence
+        supporting_evidence = finding.get("supporting_evidence", [])
+        if isinstance(supporting_evidence, list):
+            evidence_supports = supporting_evidence
+        
+        # Extract contradicting evidence
+        contradicting_evidence = finding.get("contradicting_evidence", [])
+        if isinstance(contradicting_evidence, list):
+            evidence_contradicts = contradicting_evidence
+        
+        # Determine leading differential
+        leading = differential[0] if differential else "unknown"
+        
+        # Calculate confidence shift from previous
+        confidence_shift = 0.0
+        if i > 0:
+            prev_confidence = findings_sequence[i-1].get("confidence", 0.5)
+            confidence_shift = confidence - prev_confidence
+        
+        # Get timestamp or generate one
+        timestamp = finding.get("timestamp", finding.get("consult_timestamp", f"timepoint_{i}"))
+        
+        evolution.append(DifferentialEvolutionRecord(
+            position=i,
+            timestamp=timestamp,
+            differential_at_position=differential,
+            confidence_at_position=confidence,
+            evidence_supports=evidence_supports,
+            evidence_contradicts=evidence_contradicts,
+            leading_differential=leading,
+            confidence_shift_from_previous=round(confidence_shift, 3)
+        ))
+    
+    return evolution
+
+
+def _identify_confidence_shift_points(evolution: list[DifferentialEvolutionRecord]) -> list[dict]:
+    """
+    Identify which image/timepoint changed confidence the most.
+    
+    Analyzes the evolution record to find the most significant
+    confidence shift points and what caused them.
+    
+    Returns:
+        List of shift points with causes
+    """
+    shift_points = []
+    
+    for i, record in enumerate(evolution):
+        if abs(record.confidence_shift_from_previous) > 0.15:  # Significant shift threshold
+            shift_point = {
+                "position": i,
+                "timestamp": record.timestamp,
+                "magnitude": abs(record.confidence_shift_from_previous),
+                "direction": "increased" if record.confidence_shift_from_previous > 0 else "decreased",
+                "leading_differential": record.leading_differential,
+                "previous_leading": evolution[i-1].leading_differential if i > 0 else None,
+                "differential_changed": record.leading_differential != evolution[i-1].leading_differential if i > 0 else False,
+                "evidence_at_shift": [],
+                "cause_analysis": ""
+            }
+            
+            # Collect evidence at this shift point
+            shift_point["evidence_at_shift"] = record.evidence_supports + record.evidence_contradicts
+            
+            # Build cause analysis
+            if shift_point["differential_changed"]:
+                shift_point["cause_analysis"] = (
+                    f"Differential shifted from '{evolution[i-1].leading_differential}' to "
+                    f"'{record.leading_differential}' with confidence change of "
+                    f"{record.confidence_shift_from_previous:+.0%}. "
+                    f"Evidence supporting new differential: {len(record.evidence_supports)} items. "
+                    f"Evidence contradicting old differential: {len(record.evidence_contradicts)} items."
+                )
+            else:
+                shift_point["cause_analysis"] = (
+                    f"Confidence in '{record.leading_differential}' "
+                    f"{'increased' if record.confidence_shift_from_previous > 0 else 'decreased'} by "
+                    f"{abs(record.confidence_shift_from_previous):.0%}. "
+                    f"Evidence at this point: {len(record.evidence_supports)} supporting, "
+                    f"{len(record.evidence_contradicts)} contradicting."
+                )
+            
+            shift_points.append(shift_point)
+    
+    # Sort by magnitude (most significant first)
+    shift_points.sort(key=lambda x: x["magnitude"], reverse=True)
+    
+    return shift_points
+
+
+def _identify_shift_cause(shift_point: dict, all_findings: list[dict]) -> str:
+    """
+    Identify what evidence caused the shift.
+    
+    Analyzes the context around a shift point to determine
+    what specific evidence or factor caused the change.
+    """
+    position = shift_point["position"]
+    if position >= len(all_findings):
+        return "Unable to determine shift cause - insufficient data"
+    
+    finding = all_findings[position]
+    
+    causes = []
+    
+    # Check for severity changes
+    if position > 0:
+        prev_severity = all_findings[position-1].get("severity_score", 0.5)
+        curr_severity = finding.get("severity_score", 0.5)
+        if abs(curr_severity - prev_severity) > 0.2:
+            causes.append(
+                f"Severity change from {prev_severity:.0%} to {curr_severity:.0%} "
+                f"({'increased' if curr_severity > prev_severity else 'decreased'})"
+            )
+    
+    # Check for new evidence
+    new_evidence = finding.get("new_evidence", [])
+    if new_evidence:
+        causes.append(f"New evidence presented: {', '.join(new_evidence[:3])}")
+    
+    # Check for image quality changes
+    image_quality = finding.get("image_quality", "unknown")
+    if image_quality in ("poor", "marginal"):
+        causes.append(f"Image quality limitations ({image_quality}) may affect confidence")
+    
+    # Check for temporal factors
+    temporal_context = finding.get("temporal_marker", "")
+    if temporal_context:
+        causes.append(f"Temporal context: {temporal_context}")
+    
+    # Check for pattern detection
+    detected_pattern = finding.get("detected_pattern", "")
+    if detected_pattern:
+        causes.append(f"Pattern detected: {detected_pattern}")
+    
+    if not causes:
+        return "Shift cause undetermined - no specific factor identified"
+    
+    return " | ".join(causes)
+
+
+def _compute_most_valuable_clarification(
+    evolution: list[DifferentialEvolutionRecord],
+    shift_points: list[dict],
+    current_uncertainty_drivers: list[str]
+) -> list[dict]:
+    """
+    Determine what clarification question would reduce uncertainty fastest.
+    
+    Prioritizes clarification questions based on:
+    - Which uncertainty drivers are most impactful
+    - Which shift points have the most ambiguity
+    - What evidence would resolve the differential
+    
+    Returns:
+        List of prioritized clarification questions with rationale
+    """
+    clarifications = []
+    
+    # Question 1: Resolve the most uncertain differential
+    if evolution:
+        last_record = evolution[-1]
+        if len(last_record.differential_at_position) > 1:
+            clarifications.append({
+                "question": f"Which differential is most likely: {', '.join(last_record.differential_at_position[:3])}?",
+                "rationale": "Multiple differentials remain possible. Clarifying the leading diagnosis would significantly focus the analysis.",
+                "impact": "high",
+                "targets": last_record.differential_at_position[:3]
+            })
+    
+    # Question 2: Address the biggest confidence shift
+    if shift_points:
+        biggest_shift = shift_points[0]
+        if biggest_shift.get("differential_changed"):
+            clarifications.append({
+                "question": f"What evidence confirms the shift from '{biggest_shift.get('previous_leading')}' to '{biggest_shift.get('leading_differential')}'?",
+                "rationale": f"Confidence shifted by {biggest_shift.get('magnitude', 0):.0%} at position {biggest_shift.get('position')}. Confirming this shift would stabilize the differential.",
+                "impact": "high",
+                "targets": [biggest_shift.get("leading_differential")]
+            })
+    
+    # Question 3: Address specific uncertainty drivers
+    driver_questions = {
+        "knowledge_gaps": "What additional clinical history or presentation details are available?",
+        "image_quality": "Can higher quality images or additional imaging angles be obtained?",
+        "temporal_context": "What is the timeline of symptom progression? When did this first appear?",
+        "sequence_position": "Are there additional images from other timepoints available?",
+        "follow_up_trajectory": "What treatment has been attempted and what was the response?"
+    }
+    
+    for driver in current_uncertainty_drivers[:2]:  # Top 2 drivers
+        if driver in driver_questions:
+            clarifications.append({
+                "question": driver_questions[driver],
+                "rationale": f"Primary uncertainty driver '{driver}' significantly impacts confidence. Addressing this would reduce uncertainty substantially.",
+                "impact": "medium",
+                "targets": [driver]
+            })
+    
+    # Question 4: Resolve conflicting evidence
+    if shift_points:
+        for shift in shift_points[:2]:
+            evidence_at_shift = shift.get("evidence_at_shift", [])
+            if len(evidence_at_shift) > 3:
+                clarifications.append({
+                    "question": "Can you clarify which evidence is most reliable at this timepoint?",
+                    "rationale": f"Multiple evidence items present ({len(evidence_at_shift)}). Identifying the most authoritative would help resolve conflicting signals.",
+                    "impact": "medium",
+                    "targets": evidence_at_shift[:3]
+                })
+    
+    # Deduplicate and limit
+    seen = set()
+    unique_clarifications = []
+    for c in clarifications:
+        if c["question"] not in seen:
+            seen.add(c["question"])
+            unique_clarifications.append(c)
+    
+    return unique_clarifications[:4]  # Return top 4
+
+
+def _build_differential_evolution_summary(
+    evolution: list[DifferentialEvolutionRecord],
+    shift_points: list[dict],
+    clarifications: list[dict]
+) -> str:
+    """
+    Build comprehensive natural language summary of differential evolution.
+    """
+    parts = []
+    
+    parts.append("DIFFERENTIAL EVOLUTION ANALYSIS")
+    parts.append("=" * 50)
+    
+    if not evolution:
+        parts.append("\nNo evolution data available.")
+        return "\n".join(parts)
+    
+    # Summary of evolution
+    parts.append(f"\nEVOLUTION OVER {len(evolution)} TIMEPOINTS:")
+    for record in evolution:
+        shift_indicator = f" ({record.confidence_shift_from_previous:+.0%})" if record.position > 0 else ""
+        parts.append(
+            f"  [{record.position}] {record.leading_differential}: "
+            f"{record.confidence_at_position:.0%} confidence{shift_indicator}"
+        )
+    
+    # Most significant shift
+    if shift_points:
+        biggest = shift_points[0]
+        parts.append(f"\nMOST SIGNIFICANT SHIFT:")
+        parts.append(f"  Position {biggest['position']}: {biggest['direction'].upper()}")
+        parts.append(f"  Magnitude: {biggest['magnitude']:.0%}")
+        parts.append(f"  Differential: {biggest.get('previous_leading', 'N/A')} → {biggest.get('leading_differential')}")
+        parts.append(f"  Analysis: {biggest.get('cause_analysis', 'No analysis available')}")
+    
+    # Recommendations
+    if clarifications:
+        parts.append(f"\nTOP CLARIFICATION QUESTIONS:")
+        for i, c in enumerate(clarifications[:3], 1):
+            parts.append(f"  {i}. {c['question']}")
+            parts.append(f"     Impact: {c['impact']} | Rationale: {c['rationale']}")
+    
+    return "\n".join(parts)
+
+
+# =============================================================================
+# Deepened Uncertainty Narration
+# Explain not just that uncertainty exists, but WHY and what would CHANGE
+# =============================================================================
+
+class DeepUncertaintyNarrative(BaseModel):
+    """Deep uncertainty narrative with causal explanations."""
+    overall_uncertainty_level: str = Field(..., description="LOW, MODERATE, or HIGH")
+    total_uncertainty_score: float = Field(..., description="0-1 composite uncertainty score")
+    
+    # Why uncertainty exists
+    why_uncertainty_exists: str = Field(..., description="Root cause explanation")
+    causal_factors: list[dict] = Field(default=[], description="Specific causal factors")
+    
+    # What would change the conclusion
+    what_would_change_conclusion: list[str] = Field(default=[], description="What evidence would flip the conclusion")
+    conclusion_flip_conditions: list[dict] = Field(default=[], description="Conditions that would flip conclusion")
+    
+    # What additional input is most valuable
+    most_valuable_inputs: list[dict] = Field(default=[], description="Prioritized additional inputs")
+    input_impact_analysis: list[str] = Field(default=[], description="Analysis of input value")
+    
+    # Natural language narration
+    full_narrative: str = Field(..., description="Complete natural language explanation")
+
+
+def _build_deep_uncertainty_narrative(
+    case_context: dict,
+    image_quality: str,
+    previous_findings: list[dict],
+    uncertainties: list[str],
+    confidence: float,
+    uncertainty_metrics: UncertaintyMetrics
+) -> DeepUncertaintyNarrative:
+    """
+    Build deep uncertainty narrative explaining:
+    - NOT JUST that uncertainty exists, but WHY it exists
+    - What would CHANGE the conclusion
+    - What additional input is MOST VALUABLE
+    
+    Returns:
+        DeepUncertaintyNarrative with comprehensive explanations
+    """
+    # Calculate uncertainty components
+    knowledge_uncertainty = uncertainty_metrics.knowledge_uncertainty
+    image_quality_uncertainty = uncertainty_metrics.image_quality_uncertainty
+    temporal_uncertainty = uncertainty_metrics.temporal_uncertainty
+    sequence_uncertainty = uncertainty_metrics.sequence_uncertainty
+    follow_up_uncertainty = uncertainty_metrics.follow_up_uncertainty
+    
+    # Composite uncertainty score
+    total_uncertainty = (
+        knowledge_uncertainty * 0.25 +
+        image_quality_uncertainty * 0.30 +
+        temporal_uncertainty * 0.20 +
+        sequence_uncertainty * 0.15 +
+        follow_up_uncertainty * 0.10
+    )
+    
+    # Determine level
+    if total_uncertainty < 0.15:
+        level = "LOW"
+    elif total_uncertainty < 0.30:
+        level = "MODERATE"
+    else:
+        level = "HIGH"
+    
+    # WHY uncertainty exists
+    causal_factors = []
+    why_parts = []
+    
+    if knowledge_uncertainty > 0.15:
+        causal_factors.append({
+            "factor": "knowledge_gaps",
+            "severity": "high" if knowledge_uncertainty > 0.3 else "medium",
+            "description": "Insufficient domain knowledge to definitively resolve the differential",
+            "specifics": []
+        })
+        why_parts.append("Knowledge gaps exist in the domain")
+        if "unknown" in str(case_context).lower():
+            causal_factors[-1]["specifics"].append("Generic 'unknown' markers detected in case context")
+        if len(uncertainties) > 3:
+            causal_factors[-1]["specifics"].append(f"{len(uncertainties)} explicit uncertainties stated")
+    
+    if image_quality_uncertainty > 0.2:
+        causal_factors.append({
+            "factor": "image_quality",
+            "severity": "high" if image_quality_uncertainty > 0.4 else "medium",
+            "description": f"Image quality rated as '{image_quality}' limits diagnostic confidence",
+            "specifics": [f"Quality rating: {image_quality}"]
+        })
+        why_parts.append(f"Image quality limitations ({image_quality}) restrict confident interpretation")
+    
+    if temporal_uncertainty > 0.15:
+        causal_factors.append({
+            "factor": "temporal_context",
+            "severity": "high" if temporal_uncertainty > 0.3 else "medium",
+            "description": "Insufficient historical context to establish disease progression",
+            "specifics": []
+        })
+        why_parts.append("Temporal context is insufficient to establish progression patterns")
+        if not previous_findings:
+            causal_factors[-1]["specifics"].append("No previous findings available")
+        elif len(previous_findings) < 2:
+            causal_factors[-1]["specifics"].append("Limited longitudinal history")
+    
+    if sequence_uncertainty > 0.12:
+        causal_factors.append({
+            "factor": "sequence_position",
+            "severity": "high" if sequence_uncertainty > 0.2 else "medium",
+            "description": "Multi-image sequence position introduces uncertainty",
+            "specifics": []
+        })
+        why_parts.append("Image sequence position affects confidence (early images lack comparison, middle images await completion)")
+        if uncertainty_metrics.cross_image_agreement_score < 0.6:
+            causal_factors[-1]["specifics"].append(
+                f"Cross-image agreement is low ({uncertainty_metrics.cross_image_agreement_score:.0%})"
+            )
+    
+    if follow_up_uncertainty > 0.12:
+        causal_factors.append({
+            "factor": "follow_up_trajectory",
+            "severity": "high" if follow_up_uncertainty > 0.2 else "medium",
+            "description": "Follow-up trajectory is unclear",
+            "specifics": []
+        })
+        why_parts.append("Follow-up trajectory ambiguity prevents confident progression assessment")
+        if uncertainty_metrics.trajectory_clarity_score < 0.4:
+            causal_factors[-1]["specifics"].append(
+                f"Trajectory clarity is low ({uncertainty_metrics.trajectory_clarity_score:.0%})"
+            )
+    
+    why_uncertainty_exists = ". ".join(why_parts) if why_parts else "Uncertainty sources are minimal."
+    
+    # WHAT would change the conclusion
+    what_would_change = []
+    flip_conditions = []
+    
+    # If knowledge gap is the issue
+    if knowledge_uncertainty > 0.15:
+        what_would_change.append(
+            "Specific diagnostic testing or biopsy results would resolve knowledge gaps"
+        )
+        flip_conditions.append({
+            "if": "Definitive diagnostic evidence obtained",
+            "then": "Confidence would increase substantially",
+            "uncertainty_reduced_by": knowledge_uncertainty * 0.4
+        })
+    
+    # If image quality is the issue
+    if image_quality_uncertainty > 0.2:
+        what_would_change.append(
+            "Higher quality images or additional imaging angles would reduce image quality uncertainty"
+        )
+        flip_conditions.append({
+            "if": f"Image quality improved to 'good'",
+            "then": f"Image quality uncertainty ({image_quality_uncertainty:.0%}) would be eliminated",
+            "uncertainty_reduced_by": image_quality_uncertainty
+        })
+    
+    # If cross-image agreement is low
+    if uncertainty_metrics.cross_image_agreement_score < 0.5:
+        what_would_change.append(
+            "Clarification on whether images are from same session or different timepoints would resolve conflict"
+        )
+        flip_conditions.append({
+            "if": "Images confirmed to be from same timepoint with consistent interpretation",
+            "then": "Cross-image agreement would increase, reducing sequence uncertainty",
+            "uncertainty_reduced_by": sequence_uncertainty * 0.5
+        })
+    
+    # If temporal context is weak
+    if temporal_uncertainty > 0.15:
+        what_would_change.append(
+            "Prior images or consultations for comparison would establish temporal baseline"
+        )
+        flip_conditions.append({
+            "if": "Prior imaging or clinical history obtained",
+            "then": "Temporal uncertainty would reduce significantly",
+            "uncertainty_reduced_by": temporal_uncertainty * 0.6
+        })
+    
+    # If trajectory is unclear
+    if follow_up_uncertainty > 0.12 and uncertainty_metrics.trajectory_clarity_score < 0.4:
+        what_would_change.append(
+            "Clear documentation of treatment response and symptom progression would clarify trajectory"
+        )
+        flip_conditions.append({
+            "if": "Treatment response documented with objective measures",
+            "then": "Trajectory clarity would improve",
+            "uncertainty_reduced_by": follow_up_uncertainty * 0.4
+        })
+    
+    # MOST VALUABLE INPUT
+    most_valuable = []
+    impact_analysis = []
+    
+    # Prioritize based on uncertainty weights
+    uncertainty_weights = {
+        "image_quality": image_quality_uncertainty * 0.30,
+        "temporal_context": temporal_uncertainty * 0.20,
+        "knowledge": knowledge_uncertainty * 0.25,
+        "sequence": sequence_uncertainty * 0.15,
+        "trajectory": follow_up_uncertainty * 0.10
+    }
+    
+    sorted_factors = sorted(uncertainty_weights.items(), key=lambda x: x[1], reverse=True)
+    
+    for factor, weight in sorted_factors[:3]:
+        if weight < 0.05:
+            continue
+            
+        if factor == "image_quality":
+            most_valuable.append({
+                "input": "Higher quality images or additional imaging angles",
+                "priority": 1,
+                "current_gap": f"Image quality rated as '{image_quality}'",
+                "expected_impact": f"Would reduce total uncertainty by ~{image_quality_uncertainty * 0.3:.0%}"
+            })
+            impact_analysis.append(
+                f"Image quality ({image_quality}) contributes {image_quality_uncertainty:.0%} uncertainty. "
+                f"Improving quality would reduce composite uncertainty by ~{image_quality_uncertainty * 0.3:.0%}."
+            )
+        elif factor == "temporal_context":
+            most_valuable.append({
+                "input": "Prior imaging or clinical history for comparison",
+                "priority": 2,
+                "current_gap": "No or limited longitudinal history",
+                "expected_impact": f"Would reduce total uncertainty by ~{temporal_uncertainty * 0.2:.0%}"
+            })
+            impact_analysis.append(
+                f"Temporal context contributes {temporal_uncertainty:.0%} uncertainty. "
+                f"Prior history would reduce composite uncertainty by ~{temporal_uncertainty * 0.2:.0%}."
+            )
+        elif factor == "knowledge":
+            most_valuable.append({
+                "input": "Diagnostic testing or biopsy results",
+                "priority": 3,
+                "current_gap": "Knowledge gaps in differential diagnosis",
+                "expected_impact": f"Would reduce total uncertainty by ~{knowledge_uncertainty * 0.25:.0%}"
+            })
+            impact_analysis.append(
+                f"Knowledge gaps contribute {knowledge_uncertainty:.0%} uncertainty. "
+                f"Definitive diagnostic evidence would reduce composite uncertainty by ~{knowledge_uncertainty * 0.25:.0%}."
+            )
+        elif factor == "sequence":
+            most_valuable.append({
+                "input": "Additional images to complete the sequence",
+                "priority": 4,
+                "current_gap": "Multi-image sequence incomplete or inconsistent",
+                "expected_impact": f"Would reduce total uncertainty by ~{sequence_uncertainty * 0.15:.0%}"
+            })
+            impact_analysis.append(
+                f"Sequence position contributes {sequence_uncertainty:.0%} uncertainty. "
+                f"Complete sequence would reduce composite uncertainty by ~{sequence_uncertainty * 0.15:.0%}."
+            )
+        elif factor == "trajectory":
+            most_valuable.append({
+                "input": "Treatment response documentation and symptom timeline",
+                "priority": 5,
+                "current_gap": "Follow-up trajectory unclear",
+                "expected_impact": f"Would reduce total uncertainty by ~{follow_up_uncertainty * 0.10:.0%}"
+            })
+            impact_analysis.append(
+                f"Follow-up trajectory contributes {follow_up_uncertainty:.0%} uncertainty. "
+                f"Clear progression documentation would reduce composite uncertainty by ~{follow_up_uncertainty * 0.10:.0%}."
+            )
+    
+    # BUILD FULL NARRATIVE
+    full_narrative_parts = []
+    
+    full_narrative_parts.append(f"UNCERTAINTY ANALYSIS: {level} LEVEL (Score: {total_uncertainty:.0%})")
+    full_narrative_parts.append("=" * 60)
+    
+    full_narrative_parts.append("\n## WHY UNCERTAINTY EXISTS")
+    full_narrative_parts.append(why_uncertainty_exists)
+    if causal_factors:
+        full_narrative_parts.append("\nSpecific causal factors:")
+        for cf in causal_factors:
+            full_narrative_parts.append(f"  - [{cf['severity'].upper()}] {cf['description']}")
+            for spec in cf.get("specifics", []):
+                full_narrative_parts.append(f"      → {spec}")
+    
+    full_narrative_parts.append("\n## WHAT WOULD CHANGE THE CONCLUSION")
+    if what_would_change:
+        for i, w in enumerate(what_would_change, 1):
+            full_narrative_parts.append(f"  {i}. {w}")
+    else:
+        full_narrative_parts.append("  Uncertainty is already low. Current evidence is sufficient for confident decision.")
+    
+    if flip_conditions:
+        full_narrative_parts.append("\nConclusion flip conditions:")
+        for fc in flip_conditions:
+            full_narrative_parts.append(f"  → IF: {fc['if']}")
+            full_narrative_parts.append(f"    THEN: {fc['then']}")
+    
+    full_narrative_parts.append("\n## MOST VALUABLE ADDITIONAL INPUTS")
+    if most_valuable:
+        for mv in most_valuable:
+            full_narrative_parts.append(
+                f"  [{mv['priority']}] {mv['input']} "
+                f"(Current gap: {mv['current_gap']}, Expected impact: {mv['expected_impact']})"
+            )
+    else:
+        full_narrative_parts.append("  No additional inputs identified as high-value.")
+    
+    full_narrative_parts.append("\n## INPUT IMPACT ANALYSIS")
+    if impact_analysis:
+        for ia in impact_analysis:
+            full_narrative_parts.append(f"  • {ia}")
+    
+    full_narrative_parts.append("\n" + "=" * 60)
+    full_narrative_parts.append(f"RECOMMENDATION: {'Manage with standard protocols' if level == 'LOW' else ('Consider specialist input' if level == 'MODERATE' else 'Escalate for comprehensive review')}")
+    
+    return DeepUncertaintyNarrative(
+        overall_uncertainty_level=level,
+        total_uncertainty_score=round(total_uncertainty, 3),
+        why_uncertainty_exists=why_uncertainty_exists,
+        causal_factors=causal_factors,
+        what_would_change_conclusion=what_would_change,
+        conclusion_flip_conditions=flip_conditions,
+        most_valuable_inputs=most_valuable,
+        input_impact_analysis=impact_analysis,
+        full_narrative="\n".join(full_narrative_parts)
+    )
+
+
 class EnhancedCaseComparisonRequest(BaseModel):
     """Enhanced request model for comprehensive case comparison."""
     current_case: dict = Field(..., description="Current case data")
@@ -1617,6 +2264,11 @@ class EnhancedCaseComparisonResponse(BaseModel):
     uncertainty_discipline_score: float
     comparison_fidelity: float
     recommended_confidence_adjustment: float
+    differential_evolution: list[dict] = Field(default_factory=list)
+    confidence_shift_points: list[dict] = Field(default_factory=list)
+    most_valuable_clarifications: list[dict] = Field(default_factory=list)
+    deep_uncertainty_narrative: dict = Field(default_factory=dict)
+    evolution_summary: str = Field(default="", description="Natural-language summary of how the differential evolved")
 
 
 @app.post("/compare-cases/enhanced", response_model=EnhancedCaseComparisonResponse)
@@ -1717,6 +2369,11 @@ async def enhanced_case_comparison(
     uncertainty_discipline_score = 0.5
     comparison_fidelity = 0.5
     recommended_confidence_adjustment = 0.0
+    differential_evolution: list[dict] = []
+    confidence_shift_points: list[dict] = []
+    most_valuable_clarifications: list[dict] = []
+    deep_uncertainty_narrative: dict = {}
+    evolution_summary = ""
     
     if include_uncertainty:
         # Extract uncertainty sources
@@ -1725,10 +2382,51 @@ async def enhanced_case_comparison(
         previous_findings = current_case.get("previous_findings", [])
         uncertainties = current_case.get("uncertainties", [])
         reported_confidence = current_case.get("confidence", 0.7)
+        temporal_context = current_case.get("temporal_context") or current_case.get("case_temporal_context")
         
         uncertainty_metrics = _compute_uncertainty_metrics(
-            case_context, image_quality, previous_findings, uncertainties, reported_confidence
+            case_context,
+            image_quality,
+            previous_findings,
+            uncertainties,
+            reported_confidence,
+            image_sequence_position=max(len(historical_cases), 0),
+            total_images_in_sequence=max(len(historical_cases) + 1, 1),
+            case_temporal_context=temporal_context,
         )
+
+        sequence_cases = sorted(
+            [*historical_cases, current_case],
+            key=lambda case: case.get("date")
+            or case.get("timestamp")
+            or case.get("consult_timestamp")
+            or "",
+        )
+        findings_sequence = [case.get("findings", case) for case in sequence_cases]
+        evolution_models = _track_differential_evolution(sequence_cases, findings_sequence)
+        differential_evolution = [record.model_dump() for record in evolution_models]
+        confidence_shift_points = _identify_confidence_shift_points(evolution_models)
+        for shift_point in confidence_shift_points:
+            shift_point["shift_cause"] = _identify_shift_cause(shift_point, findings_sequence)
+
+        most_valuable_clarifications = _compute_most_valuable_clarification(
+            evolution_models,
+            confidence_shift_points,
+            uncertainty_metrics.primary_uncertainty_drivers,
+        )
+        evolution_summary = _build_differential_evolution_summary(
+            evolution_models,
+            confidence_shift_points,
+            most_valuable_clarifications,
+        )
+        deep_uncertainty_narrative = _build_deep_uncertainty_narrative(
+            case_context,
+            image_quality,
+            previous_findings,
+            uncertainties,
+            reported_confidence,
+            uncertainty_metrics,
+        ).model_dump()
         
         # Compute comparison fidelity - how reliable is this comparison?
         if len(historical_cases) >= 3:
@@ -1760,10 +2458,15 @@ async def enhanced_case_comparison(
         progression_indicators=progression_indicators,
         risk_trajectory=risk_trajectory,
         confidence=round(confidence, 3),
-        uncertainty_metrics=uncertainty_metrics,
+        uncertainty_metrics=uncertainty_metrics.model_dump() if isinstance(uncertainty_metrics, UncertaintyMetrics) else uncertainty_metrics,
         uncertainty_discipline_score=round(uncertainty_discipline_score, 3),
         comparison_fidelity=round(comparison_fidelity, 3),
-        recommended_confidence_adjustment=round(recommended_confidence_adjustment, 3)
+        recommended_confidence_adjustment=round(recommended_confidence_adjustment, 3),
+        differential_evolution=differential_evolution,
+        confidence_shift_points=confidence_shift_points,
+        most_valuable_clarifications=most_valuable_clarifications,
+        deep_uncertainty_narrative=deep_uncertainty_narrative,
+        evolution_summary=evolution_summary,
     )
 
 
