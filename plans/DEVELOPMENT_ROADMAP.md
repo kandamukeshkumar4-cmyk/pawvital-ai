@@ -98,6 +98,7 @@ That means:
 - the route, memory model, retrieval, evidence, and UI layers are already prepared for sidecar-backed operation
 - working first-pass implementations now exist for all five HF sidecars
 - shared app contracts now distinguish sync consults from async review queue submission
+- async review now has dead-letter persistence, review state tracking, richer shadow disagreement analysis, and stronger feedback synthesis on `master`
 - the main unfinished work is deepening real model runtime coverage, deployment wiring, and shadow-mode validation
 
 ## What Is Live In The Repo Right Now
@@ -140,9 +141,11 @@ That means:
 - `multimodal-consult-service`
   - real Qwen2.5-VL-7B service implementation merged from MiniMax branch
   - strict bearer auth and stub/production mode hardening
+  - stricter response schema recovery and output-discipline validation
 - `async-review-service`
   - real Qwen2.5-VL-32B service implementation merged from MiniMax branch
   - deterministic review IDs and explicit queue submission contract
+  - dead-letter persistence, guarded retry endpoints, state-transition tracking, and richer feedback synthesis
 
 ## Immediate Next Tasks
 
@@ -185,7 +188,8 @@ To move faster without breaking `master`, parallel work should follow explicit f
 ### Current checkpoint
 
 - We are in active `Phase 3`.
-- MiniMax M2.7 does not have a newer remote push beyond the already merged branch `origin/minimax/phase3-multimodal-async-services`.
+- `master` currently includes the merged async-review persistence/synthesis lane at commit `62c96e7`.
+- MiniMax M2.7 does not have a newer remote push beyond the already merged branches `origin/minimax/phase3-multimodal-async-services` and `origin/minimax/service-quality`.
 - The shared integration layer has started moving from scaffolding into validated contracts:
   - sync consult stays on `multimodal-consult-service`
   - async review now has an explicit queue submission contract
@@ -196,7 +200,7 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - Phase 4 now also has a deployment runbook covering env ownership, rollout order, shadow-mode promotion, and rollback.
 - Shadow-mode verification now has a session-level rollout summary helper that turns sidecar observations into per-service promotion status (`ready`, `watch`, `blocked`, `insufficient_data`).
 - Shadow rollout readiness is now exposed through a guarded debug API route so promotion status can be inspected without exposing raw case payloads.
-- The next fastest path is to finish app integration, then deploy and shadow the sidecars instead of expanding architecture again.
+- The next fastest path is to finish Phase 4 wiring, then shadow the deployed sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership
 
@@ -216,6 +220,9 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - review prompts, disagreement-analysis logic, and long-context case comparison behavior
 - outcome-feedback mining and shadow-review summarization
 - any service-layer reasoning policies for multimodal consult and async review
+- large reasoning-heavy service work in:
+  - `services/multimodal-consult-service/app/main.py`
+  - `services/async-review-service/app/main.py`
 
 #### Shared-but-sequenced ownership
 - `src/lib/hf-sidecars.ts`
@@ -227,13 +234,15 @@ Shared files should only be changed by one agent at a time after pulling latest 
 
 ### Push protocol
 
-When two agents are both pushing directly to `master`, use this order every time:
+Use this order every time:
 
 1. `git pull --rebase origin master` before starting work
 2. avoid editing files owned by the other agent
-3. `git pull --rebase origin master` again right before push
-4. push only after local tests/build for the touched area pass
-5. update this roadmap if the phase status or ownership changed
+3. MiniMax M2.7 works on `minimax/*` branches only, not directly on `master`
+4. Codex reviews MiniMax branch work before merging into `master`
+5. `git pull --rebase origin master` again right before push
+6. push only after local tests/build for the touched area pass
+7. update this roadmap if the phase status or ownership changed
 
 ### Lead coordination protocol
 
@@ -266,16 +275,19 @@ Every post-task status update should answer these questions clearly:
 To accelerate Phase 3 right now:
 
 1. Codex picks up:
-   - finish shared app integration in `src/lib/hf-sidecars.ts` and `src/app/api/ai/symptom-chat/route.ts`
-   - add service smoke/contract verification for all five sidecars
-   - continue promoting `vision-preprocess-service` toward real model-backed inference
-   - retrieval-side verification and curated-corpus validation
+   - Phase 4 app/env wiring and deployment verification
+   - sidecar health + shadow rollout integration at the app boundary
+   - curated-corpus activation prep and retrieval validation
+   - deployment/runbook enforcement and production verification
 2. MiniMax M2.7 picks up:
-   - improve `multimodal-consult-service` output quality and prompt discipline
-   - improve `async-review-service` persistence/retry/callback behavior
-   - shadow disagreement review prompts and outcome-analysis logic
+   - build the highest-value reasoning layer, not just small prompt tweaks:
+     - stronger multimodal consult rubric and long-context case comparison in `services/multimodal-consult-service/app/main.py`
+     - shadow disagreement clustering, severity synthesis, and outcome-learning heuristics in `services/async-review-service/app/main.py`
+     - cross-case narrative summarization for what the 32B reviewer is seeing repeatedly
+     - review-quality calibration guidance that can later drive promotion thresholds
+   - keep all new work on `minimax/*` branches and hand it back for review/merge
 3. After both land:
-   - Codex handles deployment verification, shadow-mode checks, and roadmap status updates
+   - Codex handles deployment verification, shadow-mode checks, promotion gating, and roadmap status updates
 
 ## Definition Of Done For The World-Class Path
 
