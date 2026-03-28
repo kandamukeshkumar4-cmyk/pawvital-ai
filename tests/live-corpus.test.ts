@@ -2,11 +2,13 @@ import {
   getLiveCorpusSourcePolicy,
   inferLiveCorpusDomain,
   isLiveCorpusEligibleMatch,
+  listLiveCorpusSourcePolicies,
   matchesRequestedLiveDomain,
 } from "@/lib/live-corpus";
 
 describe("live corpus policy helpers", () => {
   it("recognizes curated live image sources", () => {
+    expect(listLiveCorpusSourcePolicies().length).toBeGreaterThan(0);
     expect(
       getLiveCorpusSourcePolicy("kaggle-pet-disease-images-dog")?.status
     ).toBe("live");

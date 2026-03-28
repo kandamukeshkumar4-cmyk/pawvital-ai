@@ -1,4 +1,5 @@
 import type { SupportedImageDomain } from "./clinical-evidence";
+import liveCorpusRegistry from "./live-corpus-registry.json";
 
 export type LiveCorpusStatus = "live" | "benchmark_only";
 
@@ -8,6 +9,7 @@ export interface LiveCorpusSourcePolicy {
   speciesScope: "dog" | "mixed";
   supportedDomains: SupportedImageDomain[];
   note?: string;
+  directoryHints?: string[];
 }
 
 interface MatchLike {
@@ -17,57 +19,12 @@ interface MatchLike {
   metadata?: Record<string, unknown> | null;
 }
 
-const LIVE_CORPUS_SOURCE_POLICIES: Record<string, LiveCorpusSourcePolicy> = {
-  "roboflow-dog-skin-disease-detection": {
-    slug: "roboflow-dog-skin-disease-detection",
-    status: "live",
-    speciesScope: "dog",
-    supportedDomains: ["skin_wound"],
-  },
-  "mendeley-dog-skin-disease-multispectral": {
-    slug: "mendeley-dog-skin-disease-multispectral",
-    status: "live",
-    speciesScope: "dog",
-    supportedDomains: ["skin_wound"],
-  },
-  "kaggle-dog-skin-diseases-5class": {
-    slug: "kaggle-dog-skin-diseases-5class",
-    status: "live",
-    speciesScope: "dog",
-    supportedDomains: ["skin_wound"],
-  },
-  "kaggle-pet-disease-images-dog": {
-    slug: "kaggle-pet-disease-images-dog",
-    status: "live",
-    speciesScope: "mixed",
-    supportedDomains: ["skin_wound", "eye"],
-    note: "Only the curated dog-only subset is eligible for live retrieval.",
-  },
-  "roboflow-dog-skin-detection-4class": {
-    slug: "roboflow-dog-skin-detection-4class",
-    status: "live",
-    speciesScope: "dog",
-    supportedDomains: ["skin_wound"],
-  },
-  "kaggle-yashmotiani-dog-skin": {
-    slug: "kaggle-yashmotiani-dog-skin",
-    status: "live",
-    speciesScope: "dog",
-    supportedDomains: ["skin_wound"],
-  },
-  "roboflow-tick-detection": {
-    slug: "roboflow-tick-detection",
-    status: "live",
-    speciesScope: "dog",
-    supportedDomains: ["skin_wound"],
-  },
-  "roboflow-dog-eye-disease": {
-    slug: "roboflow-dog-eye-disease",
-    status: "live",
-    speciesScope: "dog",
-    supportedDomains: ["eye"],
-  },
-};
+const LIVE_CORPUS_SOURCE_POLICIES = Object.fromEntries(
+  (liveCorpusRegistry as LiveCorpusSourcePolicy[]).map((policy) => [
+    policy.slug,
+    policy,
+  ])
+) as Record<string, LiveCorpusSourcePolicy>;
 
 const CONDITION_DOMAIN_HINTS: Array<{
   domain: SupportedImageDomain;
@@ -142,6 +99,14 @@ export function getLiveCorpusSourcePolicy(
 ): LiveCorpusSourcePolicy | null {
   const normalized = normalizeSlug(sourceSlug);
   return LIVE_CORPUS_SOURCE_POLICIES[normalized] || null;
+}
+
+export function listLiveCorpusSourcePolicies(): LiveCorpusSourcePolicy[] {
+  return Object.values(LIVE_CORPUS_SOURCE_POLICIES).map((policy) => ({
+    ...policy,
+    supportedDomains: [...policy.supportedDomains],
+    directoryHints: [...(policy.directoryHints || [])],
+  }));
 }
 
 export function inferLiveCorpusDomain(input: MatchLike): SupportedImageDomain | null {
