@@ -3208,6 +3208,18 @@ def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
     elif thresholds["recommendation"] == "full_32b_required":
         thresholds["rationale"].append("High-severity patterns require mandatory 32B review")
     
+    # =================================================================
+    # Compute Explicit Confidence Bands
+    # =================================================================
+    thresholds["confidence_bands"] = _compute_explicit_confidence_bands(
+        thresholds, cluster_analysis, len(high_score_disagreements)
+    )
+    
+    # =================================================================
+    # Generate Explicit Policy Rules
+    # =================================================================
+    thresholds["policy_rules"] = _generate_explicit_policy_rules(thresholds)
+    
     # Add summary
     thresholds["summary"] = (
         f"Promotion threshold analysis based on {len(high_score_disagreements)} high-disagreement cases, "
@@ -3217,6 +3229,190 @@ def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
     )
     
     return thresholds
+
+
+def _compute_explicit_confidence_bands(
+    thresholds: dict,
+    cluster_analysis: dict,
+    n_high_disagreement_cases: int
+) -> dict:
+    """
+    Compute explicit confidence bands for promotion thresholds.
+    
+    Returns confidence bands with numeric ranges and evidence counts.
+    """
+    # Determine evidence strength
+    evidence_count = (
+        len(cluster_analysis.get("significant_clusters", [])) +
+        len(cluster_analysis.get("promotion_triggers", [])) +
+        n_high_disagreement_cases
+    )
+    
+    # Compute confidence level
+    if evidence_count >= 10:
+        confidence_level = "high"
+        confidence_value = min(0.95, 0.7 + evidence_count * 0.02)
+    elif evidence_count >= 5:
+        confidence_level = "medium"
+        confidence_value = min(0.85, 0.5 + evidence_count * 0.04)
+    else:
+        confidence_level = "low"
+        confidence_value = max(0.3, 0.3 + evidence_count * 0.06)
+    
+    # Determine band width based on evidence consistency
+    consistency = 1.0
+    if cluster_analysis.get("significant_clusters"):
+        scores = [c.get("avg_score", 0) for c in cluster_analysis["significant_clusters"]]
+        if len(scores) > 1:
+            score_variance = sum((s - sum(scores)/len(scores))**2 for s in scores) / len(scores)
+            consistency = max(0.5, 1.0 - score_variance)
+    
+    band_width = 0.15 * (2 - consistency)  # Wider bands for inconsistent evidence
+    lower_bound = max(0.0, confidence_value - band_width)
+    upper_bound = min(1.0, confidence_value + band_width)
+    
+    return {
+        "confidence_level": confidence_level,
+        "confidence_value": round(confidence_value, 3),
+        "band_width": round(band_width, 3),
+        "lower_bound": round(lower_bound, 3),
+        "upper_bound": round(upper_bound, 3),
+        "evidence_count": evidence_count,
+        "evidence_sources": {
+            "significant_clusters": len(cluster_analysis.get("significant_clusters", [])),
+            "promotion_triggers": len(cluster_analysis.get("promotion_triggers", [])),
+            "high_disagreement_cases": n_high_disagreement_cases
+        }
+    }
+
+
+def _generate_explicit_policy_rules(thresholds: dict) -> list[dict]:
+    """
+    Generate explicit policy rules from promotion threshold analysis.
+    
+    Returns concrete, actionable rules with conditions and actions.
+    """
+    rules = []
+    
+    # Rule 1: Severity-based promotion
+    severity_data = thresholds.get("severity_weighted", {})
+    if severity_data.get("high_severity_escalation_rate", 0) > 0.2:
+        rules.append({
+            "rule_id": "SEVERITY_HIGH_MANDATORY",
+            "condition": {
+                "type": "severity_impact",
+                "operator": ">=",
+                "value": 0.75,
+                "description": "Severity impact >= 0.75"
+            },
+            "action": {
+                "type": "mandatory_32b_review",
+                "description": "Always promote to 32B review"
+            },
+            "confidence": severity_data.get("high_severity_escalation_rate", 0),
+            "policy_text": "Cases with severity impact >= 0.75 MUST be escalated to 32B review due to high escalation risk."
+        })
+    
+    # Rule 2: Pattern type-based promotion
+    pattern_data = thresholds.get("pattern_thresholds", {})
+    for pattern_key, data in pattern_data.items():
+        if isinstance(data, dict) and data.get("requires_promotion"):
+            escalation_rate = data.get("escalation_rate", 0)
+            rules.append({
+                "rule_id": f"PATTERN_{pattern_key.upper()}",
+                "condition": {
+                    "type": "pattern_type",
+                    "operator": "==",
+                    "value": pattern_key,
+                    "description": f"Pattern type == {pattern_key}"
+                },
+                "action": {
+                    "type": "promote_to_32b",
+                    "description": f"Promote {pattern_key} cases to 32B review"
+                },
+                "confidence": escalation_rate,
+                "policy_text": f"Cases with pattern '{pattern_key}' should be promoted to 32B review (escalation rate: {escalation_rate:.1%})."
+            })
+    
+    # Rule 3: Cluster-based promotion
+    cluster_triggers = thresholds.get("cluster_insights", {}).get("promotion_triggers", [])
+    for trigger in cluster_triggers:
+        rules.append({
+            "rule_id": f"CLUSTER_{trigger.get('cluster_key', 'unknown').replace(':', '_')}",
+            "condition": {
+                "type": "cluster_match",
+                "operator": "==",
+                "value": trigger.get("cluster_key"),
+                "description": f"Cluster key == {trigger.get('cluster_key')}"
+            },
+            "action": {
+                "type": "promote_to_32b",
+                "description": "Promote cluster cases to 32B review"
+            },
+            "confidence": 0.75,
+            "policy_text": f"Cases matching cluster '{trigger.get('cluster_key')}' should be promoted to 32B review ({trigger.get('reason')})."
+        })
+    
+    # Rule 4: Confidence delta promotion
+    conf_delta = thresholds.get("thresholds", {}).get("confidence_delta_threshold")
+    conf_escalation = thresholds.get("thresholds", {}).get("confidence_escalation_rate", 0)
+    if conf_delta and conf_escalation > 0.25:
+        rules.append({
+            "rule_id": "CONFIDENCE_DELTA",
+            "condition": {
+                "type": "confidence_delta",
+                "operator": ">",
+                "value": conf_delta,
+                "description": f"Confidence delta > {conf_delta}"
+            },
+            "action": {
+                "type": "promote_to_32b",
+                "description": "Promote to 32B when large confidence gap exists"
+            },
+            "confidence": conf_escalation,
+            "policy_text": f"Cases with |7B_confidence - 32B_confidence| > {conf_delta:.2f} should be promoted to 32B review (escalation rate: {conf_escalation:.1%})."
+        })
+    
+    # Rule 5: Body region promotion
+    region_data = thresholds.get("region_thresholds", {})
+    for region, data in region_data.items():
+        if isinstance(data, dict) and data.get("requires_promotion"):
+            escalation_rate = data.get("escalation_rate", 0)
+            rules.append({
+                "rule_id": f"REGION_{region.upper()}",
+                "condition": {
+                    "type": "body_region",
+                    "operator": "==",
+                    "value": region,
+                    "description": f"Body region == {region}"
+                },
+                "action": {
+                    "type": "promote_to_32b",
+                    "description": f"Promote {region} cases to 32B review"
+                },
+                "confidence": escalation_rate,
+                "policy_text": f"Cases involving body region '{region}' should be promoted to 32B review due to elevated escalation risk ({escalation_rate:.1%})."
+            })
+    
+    # Rule 6: Disagreement score promotion
+    if thresholds.get("thresholds", {}).get("high_disagreement_score"):
+        rules.append({
+            "rule_id": "DISAGREEMENT_SCORE",
+            "condition": {
+                "type": "disagreement_score",
+                "operator": ">",
+                "value": 0.6,
+                "description": "Disagreement score > 0.6"
+            },
+            "action": {
+                "type": "promote_to_32b",
+                "description": "Promote high disagreement score cases to 32B"
+            },
+            "confidence": 0.7,
+            "policy_text": "Cases with disagreement score > 0.6 should be promoted to 32B review for thorough analysis."
+        })
+    
+    return rules
 
 
 def _analyze_disagreement_clusters_for_promotion() -> dict:
