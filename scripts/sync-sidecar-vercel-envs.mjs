@@ -63,6 +63,15 @@ function getNpxCommand() {
 }
 
 function runVercel(args, options = {}) {
+  if (process.platform === "win32") {
+    return spawnSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `npx vercel ${args.join(" ")}`], {
+      cwd: rootDir,
+      encoding: "utf8",
+      timeout: 20000,
+      ...options,
+    });
+  }
+
   return spawnSync(getNpxCommand(), ["vercel", ...args], {
     cwd: rootDir,
     encoding: "utf8",
@@ -116,7 +125,7 @@ function removeVercelEnv(name, targetEnvironment) {
 
 function addVercelEnv(name, targetEnvironment, value) {
   const result = runVercel(["env", "add", name, targetEnvironment], {
-    input: `${value}\n`,
+    input: value,
   });
   if (result.status !== 0) {
     throw new Error(

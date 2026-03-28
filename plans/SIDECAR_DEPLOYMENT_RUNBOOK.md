@@ -13,6 +13,14 @@ This runbook is the operational guide for moving the Hugging Face sidecars from 
   4. compared against the existing path
   5. only then considered for live promotion
 
+### Current hosting reality
+
+- `vision-preprocess-service` has now been validated as a standalone Vercel FastAPI deployment and is reachable at its production alias with working `/healthz` and `/infer` routes.
+- `text-retrieval-service`, `image-retrieval-service`, `multimodal-consult-service`, and `async-review-service` currently fail Vercel deployment from their service directories because their Python dependency bundles are roughly `4.6 GB` to `5.3 GB`, far above Vercel's `500 MB` Lambda ephemeral storage ceiling.
+- That means Phase 4 is now split:
+  1. Vercel wiring for the app and the lightweight vision-preprocess sidecar
+  2. alternative hosting for the four heavier model-backed sidecars
+
 ## Environment Matrix
 
 ### Next.js app runtime
@@ -77,12 +85,16 @@ Expected paths:
 - `/consult`
 - `/review`
 
+Current result:
+- verified on Vercel: `vision-preprocess-service`
+- blocked on Vercel footprint: `text-retrieval-service`, `image-retrieval-service`, `multimodal-consult-service`, `async-review-service`
+
 ### Step 2: Wire app envs
 
 Set the app-side `HF_*` URLs to the deployed endpoints and set `HF_SIDECAR_API_KEY`.
 
 Recommended first pass:
-- configure all five URLs
+- configure the URLs that are actually deployed and reachable
 - set `HF_SIDECAR_SHADOW_MODE=true`
 - leave the service-specific flags unset unless selectively testing
 

@@ -102,7 +102,8 @@ That means:
 - the reasoning-heavy MiniMax service lane is now merged locally on `master`, including cross-case review intelligence, explicit promotion-policy bands, and deeper consult longitudinal uncertainty coverage
 - the main unfinished work is deepening real model runtime coverage, deployment wiring, and shadow-mode validation
 - Vercel production now has the shared sidecar auth secret aligned, and guarded readiness / shadow routes respond correctly on the live app
-- the current Phase 4 blocker is narrower: Vercel production still does not have the five `HF_*_URL` sidecar endpoint vars configured, so the live app still cannot call any deployed sidecar service
+- Vercel production now also has `HF_VISION_PREPROCESS_URL` configured, and the live app reports `configured=1, healthy=1` on `/api/ai/sidecar-readiness`
+- the current Phase 4 blocker is now explicit: only `vision-preprocess-service` is Vercel-deployable as-is; the other four sidecars exceed Vercel's Python/Lambda storage ceiling and need a different hosting target or slimmer runtimes before their `HF_*_URL` vars can be wired
 
 ## What Is Live In The Repo Right Now
 
@@ -115,11 +116,12 @@ That means:
 - outcome feedback capture
 
 ### Not yet truly live
-- real Grounding DINO, SAM2.1, Florence-2 inference
+- real Grounding DINO, SAM2.1, Florence-2 inference beyond the current heuristic/stub-backed vision deployment
 - production-deployed BGE-M3 retrieval service
 - production-deployed BiomedCLIP image retrieval service
 - production-deployed Qwen2.5-VL synchronous consult service
 - production-deployed Qwen2.5-VL async review worker
+- alternative-host deployment path for the four heavy sidecars
 
 ### Phase 3 in progress
 - `vision-preprocess-service`
@@ -162,9 +164,10 @@ That means:
 5. Implement `async-review-service` with Qwen2.5-VL-32B batch-style review.
 
 ### Phase 4: Deployment and production wiring
-1. Deploy the sidecars to GPU-backed infrastructure.
-2. Set production env vars.
-3. Verify service health and contract compatibility.
+1. Keep `vision-preprocess-service` wired and verified on Vercel.
+2. Deploy the four heavy sidecars to infrastructure that can handle their model/runtime footprint.
+3. Set the remaining production `HF_*_URL` vars.
+4. Verify service health and contract compatibility.
 
 ### Phase 5: Shadow mode rollout
 1. Run sidecars in shadow mode first.
@@ -212,8 +215,8 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - Curated corpus activation prep now has a shared registry plus a live-corpus verification script that flags mapped-but-empty dataset sources before activation.
 - Four previously misclassified Roboflow image sources have now been moved out of `live` status into `pending_assets` until real files are populated on disk.
 - Vercel production now has `HF_SIDECAR_API_KEY` configured, and live probes against `https://pawvital-ai.vercel.app/api/ai/sidecar-readiness` and `/api/ai/shadow-rollout` are passing again.
-- Production verification still shows all five `HF_*` sidecar URL env vars are missing, so Phase 4 is only partially started, not complete.
-- The remaining Phase 4 blocker is the same deployment gap: the app can authenticate the guarded debug routes but still cannot call any deployed sidecar service until the real sidecar endpoint URLs exist.
+- Production verification now shows one real sidecar URL env (`HF_VISION_PREPROCESS_URL`) present and healthy in the live app.
+- The remaining Phase 4 blocker is the heavy-sidecar deployment gap: the app can call the vision preprocess sidecar, but the other four sidecars do not yet have deployable production endpoints.
 - The next fastest path is to finish Phase 4 wiring, then shadow the deployed sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership
