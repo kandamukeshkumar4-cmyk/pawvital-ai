@@ -39,6 +39,7 @@ These variables are consumed by app-side code such as [G:\MY Website\pawvital-ai
 | `HF_SHADOW_IMAGE_RETRIEVAL` | Optional | Service-specific shadow mode flag |
 | `HF_SHADOW_MULTIMODAL_CONSULT` | Optional | Service-specific shadow mode flag |
 | `HF_SHADOW_ASYNC_REVIEW` | Optional | Service-specific shadow mode flag |
+| `APP_BASE_URL` or `NEXT_PUBLIC_APP_URL` | Recommended for rollout checks | Base app URL used by verification scripts to hit `/api/ai/shadow-rollout` |
 
 ### Sidecar container/runtime variables
 
@@ -92,6 +93,7 @@ Run:
 ```bash
 npm run verify:sidecars:env
 npm run verify:sidecars:health
+npm run verify:sidecars:shadow
 ```
 
 Use strict mode when promoting:
@@ -128,6 +130,7 @@ In shadow mode:
 - the sidecar runs
 - the result is logged into observability
 - the fallback/live path still drives the app response
+- the guarded `/api/ai/shadow-rollout` route can be checked with `npm run verify:sidecars:shadow` to confirm the app can summarize rollout readiness from a real session payload
 
 ### Step 6: Compare before promotion
 

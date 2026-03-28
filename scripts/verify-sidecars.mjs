@@ -14,6 +14,8 @@ for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
 
 const command = (process.argv[2] || "all").toLowerCase();
 const strictMode = process.argv.includes("--strict");
+const APP_BASE_URL =
+  (process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim();
 
 const services = [
   {
@@ -91,12 +93,49 @@ function buildHealthUrl(url) {
   return healthUrl.toString();
 }
 
+function buildAppRouteUrl(baseUrl, routePath) {
+  const routeUrl = new URL(baseUrl);
+  routeUrl.pathname = routePath;
+  routeUrl.search = "";
+  routeUrl.hash = "";
+  return routeUrl.toString();
+}
+
 async function fetchHealth(url, timeoutMs = 5000) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, {
       method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let parsed = null;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      parsed = null;
+    }
+    return { status: response.status, ok: response.ok, body: parsed, rawText: text };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function postJson(url, payload, timeoutMs = 7000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(readEnv("HF_SIDECAR_API_KEY")
+          ? { Authorization: `Bearer ${readEnv("HF_SIDECAR_API_KEY")}` }
+          : {}),
+      },
+      body: JSON.stringify(payload),
       cache: "no-store",
       signal: controller.signal,
     });
@@ -239,12 +278,120 @@ async function runHealthChecks() {
   return { failures, warnings };
 }
 
+function buildShadowProbePayload() {
+  return {
+    session: {
+      known_symptoms: ["wound_skin_issue"],
+      answered_questions: ["wound_location"],
+      extracted_answers: { wound_location: "left hind leg" },
+      red_flags_triggered: [],
+      candidate_diseases: ["wound_infection"],
+      body_systems_involved: ["skin"],
+      case_memory: {
+        turn_count: 2,
+        chief_complaints: ["skin lesion"],
+        active_focus_symptoms: ["wound_skin_issue"],
+        confirmed_facts: { wound_location: "left hind leg" },
+        image_findings: ["localized lesion on left hind leg"],
+        red_flag_notes: [],
+        unresolved_question_ids: [],
+        timeline_notes: ["present since yesterday"],
+        visual_evidence: [],
+        retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
+        service_timeouts: [],
+        service_observations: [
+          {
+            service: "text-retrieval-service",
+            stage: "shadow_probe",
+            strategy: "shadow",
+            outcome: "shadow",
+            latencyMs: 1200,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+        shadow_comparisons: [
+          {
+            service: "text-retrieval-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow retrieval aligned with primary evidence selection.",
+            disagreementCount: 0,
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+        ambiguity_flags: [],
+      },
+    },
+  };
+}
+
+async function runShadowChecks() {
+  let failures = 0;
+  let warnings = 0;
+
+  if (!APP_BASE_URL) {
+    warnings += 1;
+    statusLine(
+      "warn",
+      "Skipping shadow rollout route check because APP_BASE_URL/NEXT_PUBLIC_APP_URL is unset"
+    );
+    return { failures, warnings };
+  }
+
+  let routeUrl;
+  try {
+    routeUrl = buildAppRouteUrl(APP_BASE_URL, "/api/ai/shadow-rollout");
+  } catch (error) {
+    failures += 1;
+    statusLine(
+      "fail",
+      `APP_BASE_URL is not a valid URL: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return { failures, warnings };
+  }
+
+  try {
+    const result = await postJson(routeUrl, buildShadowProbePayload());
+    if (!result.ok || !result.body || result.body.ok !== true) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `shadow rollout route failed at ${routeUrl} (${result.status})`
+      );
+      return { failures, warnings };
+    }
+
+    statusLine(
+      "ok",
+      `shadow rollout route healthy at ${routeUrl} (overallStatus=${String(
+        result.body.summary?.overallStatus || "unknown"
+      )}, recentServiceCallCount=${Number(
+        result.body.observability?.recentServiceCallCount ?? 0
+      )})`
+    );
+  } catch (error) {
+    failures += 1;
+    statusLine(
+      "fail",
+      `shadow rollout route request failed at ${routeUrl}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  return { failures, warnings };
+}
+
 async function main() {
   let failures = 0;
   let warnings = 0;
 
-  if (!["env", "health", "all"].includes(command)) {
-    console.error(`Unknown command "${command}". Use env, health, or all.`);
+  if (!["env", "health", "shadow", "all"].includes(command)) {
+    console.error(
+      `Unknown command "${command}". Use env, health, shadow, or all.`
+    );
     process.exit(1);
   }
 
@@ -261,6 +408,13 @@ async function main() {
     }
     console.log("== Sidecar health checks ==");
     const result = await runHealthChecks();
+    failures += result.failures;
+    warnings += result.warnings;
+  }
+
+  if (command === "shadow") {
+    console.log("== Shadow rollout route check ==");
+    const result = await runShadowChecks();
     failures += result.failures;
     warnings += result.warnings;
   }
