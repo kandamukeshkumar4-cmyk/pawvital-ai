@@ -355,6 +355,12 @@ def _validate_response_schema(result: dict, issues: list[str]) -> None:
         "uncertainties": (list,),
         "confidence": (int, float),
     }
+    optional_list_fields = ("risk_stratifiers", "recommended_next_steps")
+    optional_dict_fields = (
+        "morphological_indicators",
+        "temporal_patterns",
+        "comparison_to_baseline",
+    )
 
     for field, expected_types in required_fields.items():
         if field not in result:
@@ -390,6 +396,21 @@ def _validate_response_schema(result: dict, issues: list[str]) -> None:
                     str(item) if not isinstance(item, str) else item
                     for item in result[array_field]
                 ]
+
+    for array_field in optional_list_fields:
+        if array_field not in result:
+            result[array_field] = []
+        elif not isinstance(result[array_field], list):
+            result[array_field] = [str(result[array_field])] if result[array_field] else []
+        else:
+            result[array_field] = [
+                str(item) if not isinstance(item, str) else item
+                for item in result[array_field]
+            ]
+
+    for object_field in optional_dict_fields:
+        if object_field not in result or not isinstance(result[object_field], dict):
+            result[object_field] = {}
 
     # Content quality validation
     if "summary" in result and isinstance(result["summary"], str):
@@ -448,6 +469,11 @@ def _extract_partial_fields(content: str) -> dict | None:
         partial.setdefault("disagreements", [])
         partial.setdefault("uncertainties", ["Partial parse - some fields missing"])
         partial.setdefault("confidence", partial.get("confidence", 0.3))
+        partial.setdefault("morphological_indicators", {})
+        partial.setdefault("temporal_patterns", {})
+        partial.setdefault("risk_stratifiers", [])
+        partial.setdefault("recommended_next_steps", [])
+        partial.setdefault("comparison_to_baseline", {})
         return partial
 
     return None
@@ -461,6 +487,11 @@ def _minimal_fallback(reason: str) -> dict:
         "disagreements": [],
         "uncertainties": [f"Consult parse failure: {reason}"],
         "confidence": 0.1,
+        "morphological_indicators": {},
+        "temporal_patterns": {},
+        "risk_stratifiers": [],
+        "recommended_next_steps": [],
+        "comparison_to_baseline": {},
     }
 
 
@@ -562,6 +593,11 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
         uncertainties=parsed.get("uncertainties", []),
         confidence=float(parsed.get("confidence", 0.5)),
         mode="sync",
+        morphological_indicators=parsed.get("morphological_indicators", {}),
+        temporal_patterns=parsed.get("temporal_patterns", {}),
+        risk_stratifiers=parsed.get("risk_stratifiers", []),
+        recommended_next_steps=parsed.get("recommended_next_steps", []),
+        comparison_to_baseline=parsed.get("comparison_to_baseline", {}),
     )
 
 

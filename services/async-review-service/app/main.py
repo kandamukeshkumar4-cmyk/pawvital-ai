@@ -807,6 +807,7 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "consult_model": consult_opinion.get("model", "unknown"),
         "review_model": review_result.model,
+        "consult_summary": consult_opinion.get("summary", "")[:240],
         "consult_confidence": consult_opinion.get("confidence", 0.5),
         "review_confidence": review_result.confidence,
         "agreement_overlap": [],
@@ -818,6 +819,8 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         "semantic_matches": [],  # Enhanced: track semantic similarity matches
         "disagreement_classifications": [],
         "requires_attention": False,
+        "pattern_type": "alignment",
+        "severity_impact": 0.35,
         "synopsis": "",
     }
     
@@ -889,6 +892,20 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         item["severity"] == "HIGH_SEVERITY" or item["type"] in {"diagnostic", "urgency"}
         for item in shadow_summary["disagreement_classifications"]
     )
+
+    if shadow_summary["disagreement_classifications"]:
+        top_classification = shadow_summary["disagreement_classifications"][0]
+        shadow_summary["pattern_type"] = top_classification["type"]
+
+    if any(item["severity"] == "HIGH_SEVERITY" for item in shadow_summary["disagreement_classifications"]):
+        shadow_summary["severity_impact"] = 0.9
+    elif any(item["type"] in {"diagnostic", "urgency"} for item in shadow_summary["disagreement_classifications"]):
+        shadow_summary["severity_impact"] = 0.75
+    elif n_disagreements > 0:
+        shadow_summary["severity_impact"] = 0.6
+    elif n_unc_divs > 0:
+        shadow_summary["pattern_type"] = "uncertainty_gap"
+        shadow_summary["severity_impact"] = 0.45
     
     # Determine alignment level
     if n_disagreements == 0 and conf_delta < 0.15:
@@ -1325,8 +1342,7 @@ async def record_outcome_feedback(feedback_data: dict):
     
     with STATE_LOCK:
         OUTCOME_FEEDBACK.append(entry)
-        if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
-            OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
+        _trim_list_in_place(OUTCOME_FEEDBACK, MAX_FEEDBACK_HISTORY)
         total_feedback_entries = len(OUTCOME_FEEDBACK)
     
     logger.info("Recorded manual outcome feedback for case %s", feedback_data["case_id"])
@@ -2256,7 +2272,8 @@ async def generate_cross_case_summary(
         
         # From review results
         if case_id in REVIEW_RESULTS:
-            case_info["review"] = REVIEW_RESULTS[case_id]
+            case_info["review"] = _review_result_dict(case_id)
+            case_info["review_context"] = _review_context_for_case(case_id)
         
         # From shadow disagreements
         if case_id in SHADOW_DISAGREEMENTS:
@@ -2314,10 +2331,14 @@ def _synthesize_decision_pattern_summary(cases: list[dict]) -> str:
     for case in cases:
         if "review" in case:
             review = case["review"]
+            review_context = case.get("review_context", {})
             patterns.append({
                 "case_id": case["case_id"],
-                "triage": review.get("triage_category", "unknown"),
-                "reasoning": review.get("reasoning", "")[:100]
+                "triage": review_context.get(
+                    "requested_severity",
+                    review.get("requested_severity", "unknown"),
+                ),
+                "reasoning": review.get("summary", "")[:100]
             })
     
     # Identify common patterns
@@ -2505,8 +2526,8 @@ def _mine_body_region_patterns() -> list[dict]:
             case_id = feedback.get("case_id", "")
             # Extract body region from review results if available
             body_region = "unknown"
-            if case_id in REVIEW_RESULTS:
-                preprocess = REVIEW_RESULTS[case_id].get("preprocess", {})
+            if case_id in REVIEW_CONTEXT:
+                preprocess = REVIEW_CONTEXT[case_id].get("preprocess", {})
                 body_region = preprocess.get("bodyRegion") or preprocess.get("body_region", "unknown")
             
             if body_region not in patterns:
@@ -2596,8 +2617,8 @@ def _mine_image_quality_patterns() -> list[dict]:
             case_id = feedback.get("case_id", "")
             # Extract image quality from review results if available
             image_quality = "unknown"
-            if case_id in REVIEW_RESULTS:
-                preprocess = REVIEW_RESULTS[case_id].get("preprocess", {})
+            if case_id in REVIEW_CONTEXT:
+                preprocess = REVIEW_CONTEXT[case_id].get("preprocess", {})
                 image_quality = preprocess.get("imageQuality", "unknown")
             
             if image_quality not in patterns:
@@ -2832,7 +2853,9 @@ async def get_promotion_threshold_recommendations(
             "recommendation_type": recommendation_type,
             **thresholds
         })
-        CROSS_CASE_INTELLIGENCE["promotion_thresholds"][-MAX_PATTERN_HISTORY:]
+        _trim_list_in_place(
+            CROSS_CASE_INTELLIGENCE["promotion_thresholds"], MAX_PATTERN_HISTORY
+        )
     
     return thresholds
 
@@ -2857,7 +2880,9 @@ async def get_reviewer_calibration_narrative(
             "generated_at": datetime.now(timezone.utc).isoformat(),
             **narrative
         })
-        CROSS_CASE_INTELLIGENCE["calibration_narratives"][-MAX_PATTERN_HISTORY:]
+        _trim_list_in_place(
+            CROSS_CASE_INTELLIGENCE["calibration_narratives"], MAX_PATTERN_HISTORY
+        )
     
     return narrative
 
