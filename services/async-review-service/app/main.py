@@ -2517,6 +2517,24 @@ def _build_disagreement_cluster_key(disagreement: dict) -> str:
     return f"{domain}:{body_region}:{pattern_type}:{severity_impact}"
 
 
+def _final_outcome_for_case(case_id: str) -> str:
+    """Look up the recorded final outcome for a case, if one exists."""
+    with STATE_LOCK:
+        for outcome in reversed(OUTCOME_LEARNING):
+            if outcome.get("case_id") == case_id:
+                return str(outcome.get("final_outcome", "unknown"))
+    return "unknown"
+
+
+def _severity_bucket_from_risk_score(risk_score: float) -> str:
+    """Bucket a synthesized risk score into LOW/MEDIUM/HIGH severity bands."""
+    if risk_score >= 0.75:
+        return "HIGH_SEVERITY"
+    if risk_score >= 0.45:
+        return "MEDIUM_SEVERITY"
+    return "LOW_SEVERITY"
+
+
 def _mine_body_region_patterns() -> list[dict]:
     """Mine outcome feedback patterns grouped by body region."""
     patterns = {}
@@ -2652,57 +2670,148 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     """
     Generate a narrative explaining when the 32B reviewer should be trusted more than 7B consult.
     
-    Returns calibration assessment with reasoning.
+    Returns comprehensive calibration assessment with reasoning, confidence bands, and concrete recommendations.
     """
     narrative = {
         "case_id": case_id,
         "trust_32b_over_7b": False,
         "calibration_score": 0.5,
+        "confidence_band": "uncertain",
         "reasons": [],
-        "conditions": []
+        "conditions": [],
+        "promotion_recommendation": None,
+        "promotion_confidence": 0.0,
+        "calibration_narrative": ""
     }
     
     if case_id not in SHADOW_DISAGREEMENTS:
         narrative["reasons"].append("No shadow disagreement data available for calibration")
+        narrative["confidence_band"] = "no_data"
+        narrative["promotion_recommendation"] = "standard_review"
+        narrative["promotion_confidence"] = 0.3
+        narrative["calibration_narrative"] = "Insufficient historical data for calibration. Default to standard 7B review unless case presents high-severity indicators."
         return narrative
     
     disagreement = SHADOW_DISAGREEMENTS[case_id]
     
     # Check conditions that favor trusting 32B over 7B
     conditions_favoring_32b = []
+    confidence_components = []
     
-    # High severity impact disagreements favor 32B's more thorough analysis
+    # =================================================================
+    # Severity Assessment
+    # =================================================================
     severity_impact = disagreement.get("severity_impact", 0.5)
     if severity_impact > 0.7:
-        conditions_favoring_32b.append("High severity impact disagreement - 32B's thorough analysis is critical")
-        narrative["calibration_score"] += 0.2
+        conditions_favoring_32b.append("HIGH: Severe disagreement - 32B's thorough analysis is critical")
+        confidence_components.append(("severity", 0.25, "high"))
+    elif severity_impact > 0.5:
+        conditions_favoring_32b.append("MEDIUM: Moderate severity impact favors 32B's depth")
+        confidence_components.append(("severity", 0.15, "medium"))
+    elif severity_impact > 0.35:
+        confidence_components.append(("severity", 0.05, "low"))
     
-    # Large confidence delta suggests 32B sees something 7B missed
-    conf_delta = abs(disagreement.get("consult_confidence", 0.5) - disagreement.get("expected_confidence", 0.5))
-    if conf_delta > 0.25:
-        conditions_favoring_32b.append(f"Large confidence delta ({conf_delta:.2f}) suggests 32B detected nuanced findings")
-        narrative["calibration_score"] += 0.15
+    # =================================================================
+    # Confidence Delta Assessment
+    # =================================================================
+    consult_conf = disagreement.get("consult_confidence", 0.5)
+    review_conf = disagreement.get("review_confidence", 0.5)
+    conf_delta = abs(consult_conf - review_conf)
     
-    # Multiple disagreement points suggests complex case
+    if conf_delta > 0.30:
+        conditions_favoring_32b.append(f"HIGH: Large confidence delta ({conf_delta:.2f}) - 32B detected significant findings 7B missed")
+        confidence_components.append(("confidence_delta", 0.20, "high"))
+    elif conf_delta > 0.20:
+        conditions_favoring_32b.append(f"MEDIUM: Moderate confidence delta ({conf_delta:.2f}) suggests nuanced findings")
+        confidence_components.append(("confidence_delta", 0.12, "medium"))
+    elif conf_delta > 0.10:
+        confidence_components.append(("confidence_delta", 0.05, "low"))
+    
+    # =================================================================
+    # Case Complexity Assessment
+    # =================================================================
     n_disagreements = disagreement.get("n_disagreements", 0)
-    if n_disagreements > 2:
-        conditions_favoring_32b.append(f"Multiple disagreement points ({n_disagreements}) indicates case complexity")
-        narrative["calibration_score"] += 0.15
+    n_unc_divs = disagreement.get("n_uncertainty_divergence", 0)
+    total_divergence = n_disagreements + n_unc_divs
     
-    # Domain-specific: certain domains benefit more from 32B
+    if total_divergence > 4:
+        conditions_favoring_32b.append(f"HIGH: Complex case with {total_divergence} divergence points indicates intricate findings")
+        confidence_components.append(("complexity", 0.20, "high"))
+    elif total_divergence > 2:
+        conditions_favoring_32b.append(f"MEDIUM: {total_divergence} divergence points suggests moderate complexity")
+        confidence_components.append(("complexity", 0.12, "medium"))
+    elif total_divergence > 0:
+        confidence_components.append(("complexity", 0.05, "low"))
+    
+    # =================================================================
+    # Domain Complexity Assessment
+    # =================================================================
     domain = disagreement.get("domain", "unknown")
-    complex_domains = ["dermatology", "ophthalmology", "cardiology", "neurology"]
+    body_region = disagreement.get("body_region", "unknown")
+    pattern_type = disagreement.get("pattern_type", "unknown")
+    
+    complex_domains = ["dermatology", "ophthalmology", "cardiology", "neurology", "oncology"]
     if domain in complex_domains:
-        conditions_favoring_32b.append(f"Complex domain ({domain}) benefits from 32B's depth")
-        narrative["calibration_score"] += 0.1
+        conditions_favoring_32b.append(f"MEDIUM: Complex domain ({domain}) benefits from 32B's reasoning depth")
+        confidence_components.append(("domain", 0.10, "medium"))
     
-    # Image quality issues favor 32B because it handles ambiguity better
-    if disagreement.get("image_quality", "good") != "good":
-        conditions_favoring_32b.append("Lower image quality - 32B's advanced reasoning better handles ambiguity")
-        narrative["calibration_score"] += 0.1
+    # =================================================================
+    # Pattern Type Assessment
+    # =================================================================
+    high_risk_patterns = ["diagnostic", "urgency", "prognostic"]
+    if pattern_type in high_risk_patterns:
+        conditions_favoring_32b.append(f"HIGH: {pattern_type} pattern type requires 32B's thorough analysis")
+        confidence_components.append(("pattern", 0.15, "high"))
     
-    # Cap calibration score at 1.0
+    # =================================================================
+    # Body Region Assessment
+    # =================================================================
+    sensitive_regions = ["eye", "heart", "brain", "spinal", "liver", "kidney"]
+    if body_region in sensitive_regions:
+        conditions_favoring_32b.append(f"MEDIUM: Sensitive body region ({body_region}) warrants careful 32B review")
+        confidence_components.append(("region", 0.08, "medium"))
+    
+    # =================================================================
+    # Historical Cluster Performance
+    # =================================================================
+    cluster_key = _build_disagreement_cluster_key(disagreement)
+    cluster_data = _get_cluster_performance(cluster_key)
+    if cluster_data and cluster_data.get("escalation_rate", 0) > 0.3:
+        conditions_favoring_32b.append(
+            f"HIGH: Historical cluster escalation rate {cluster_data['escalation_rate']:.1%} - "
+            f"cases like this frequently require escalation"
+        )
+        confidence_components.append(("cluster", 0.18, "high"))
+    
+    # =================================================================
+    # Compute Final Calibration Score and Confidence Band
+    # =================================================================
+    narrative["calibration_score"] = sum(c[1] for c in confidence_components)
     narrative["calibration_score"] = min(1.0, narrative["calibration_score"])
+    
+    # Determine confidence band
+    high_confidence_components = sum(1 for c in confidence_components if c[2] == "high")
+    if narrative["calibration_score"] >= 0.6 and high_confidence_components >= 2:
+        narrative["confidence_band"] = "high_confidence"
+    elif narrative["calibration_score"] >= 0.35:
+        narrative["confidence_band"] = "medium_confidence"
+    else:
+        narrative["confidence_band"] = "low_confidence"
+    
+    # =================================================================
+    # Generate Concrete Promotion Recommendation
+    # =================================================================
+    recommendation = _compute_concrete_promotion_recommendation(
+        case_id, disagreement, narrative["calibration_score"], confidence_components
+    )
+    narrative.update(recommendation)
+    
+    # =================================================================
+    # Generate Human-Readable Calibration Narrative
+    # =================================================================
+    narrative["calibration_narrative"] = _build_calibration_narrative_text(
+        case_id, disagreement, narrative, conditions_favoring_32b
+    )
     
     if conditions_favoring_32b:
         narrative["trust_32b_over_7b"] = True
@@ -2715,9 +2824,206 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     return narrative
 
 
+def _get_cluster_performance(cluster_key: str) -> dict | None:
+    """
+    Get historical performance metrics for a disagreement cluster.
+    
+    Returns escalation rate and case count if available.
+    """
+    cluster_cases = []
+    with STATE_LOCK:
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            if _build_disagreement_cluster_key(disagreement) == cluster_key:
+                cluster_cases.append(
+                    {
+                        **disagreement,
+                        "final_outcome": _final_outcome_for_case(case_id),
+                    }
+                )
+    
+    if not cluster_cases:
+        return None
+    
+    escalated = sum(1 for c in cluster_cases if c.get("final_outcome") == "escalated")
+    return {
+        "case_count": len(cluster_cases),
+        "escalation_rate": escalated / len(cluster_cases) if cluster_cases else 0
+    }
+
+
+def _compute_concrete_promotion_recommendation(
+    case_id: str,
+    disagreement: dict,
+    calibration_score: float,
+    confidence_components: list[tuple]
+) -> dict:
+    """
+    Compute concrete promotion recommendation with confidence band.
+    
+    Returns promotion recommendation with specific thresholds and confidence level.
+    """
+    recommendation = {
+        "promotion_recommendation": "standard_review",
+        "promotion_confidence": 0.0,
+        "promotion_threshold_used": None,
+        "alternative_recommendation": None
+    }
+    
+    severity_impact = disagreement.get("severity_impact", 0.5)
+    conf_delta = abs(
+        disagreement.get("consult_confidence", 0.5) -
+        disagreement.get("review_confidence", 0.5)
+    )
+    pattern_type = disagreement.get("pattern_type", "unknown")
+    n_disagreements = disagreement.get("n_disagreements", 0)
+    
+    # HIGH CONFIDENCE promotions (confidence >= 0.7)
+    if calibration_score >= 0.7:
+        if severity_impact >= 0.75:
+            recommendation["promotion_recommendation"] = "mandatory_32b_review"
+            recommendation["promotion_confidence"] = 0.85
+            recommendation["promotion_threshold_used"] = "severity_impact >= 0.75"
+        elif pattern_type == "diagnostic" and n_disagreements >= 2:
+            recommendation["promotion_recommendation"] = "mandatory_32b_review"
+            recommendation["promotion_confidence"] = 0.80
+            recommendation["promotion_threshold_used"] = "diagnostic_pattern + multiple_disagreements"
+        elif conf_delta > 0.35:
+            recommendation["promotion_recommendation"] = "promote_to_32b"
+            recommendation["promotion_confidence"] = 0.78
+            recommendation["promotion_threshold_used"] = "confidence_delta > 0.35"
+        else:
+            recommendation["promotion_recommendation"] = "promote_to_32b"
+            recommendation["promotion_confidence"] = 0.72
+            recommendation["promotion_threshold_used"] = f"calibration_score >= 0.7"
+    
+    # MEDIUM CONFIDENCE promotions (0.35 <= confidence < 0.7)
+    elif calibration_score >= 0.35:
+        if severity_impact >= 0.6:
+            recommendation["promotion_recommendation"] = "promote_to_32b"
+            recommendation["promotion_confidence"] = 0.65
+            recommendation["promotion_threshold_used"] = "severity_impact >= 0.6"
+        elif pattern_type in ["diagnostic", "urgency"]:
+            recommendation["promotion_recommendation"] = "consider_32b"
+            recommendation["promotion_confidence"] = 0.55
+            recommendation["promotion_threshold_used"] = f"{pattern_type}_pattern"
+        elif conf_delta > 0.25:
+            recommendation["promotion_recommendation"] = "consider_32b"
+            recommendation["promotion_confidence"] = 0.52
+            recommendation["promotion_threshold_used"] = "confidence_delta > 0.25"
+        else:
+            recommendation["promotion_recommendation"] = "standard_review"
+            recommendation["promotion_confidence"] = 0.45
+            recommendation["promotion_threshold_used"] = "calibration_score >= 0.35 but below thresholds"
+    
+    # LOW CONFIDENCE (calibration_score < 0.35)
+    else:
+        recommendation["promotion_recommendation"] = "standard_review"
+        recommendation["promotion_confidence"] = max(0.3, 1.0 - calibration_score)
+        recommendation["promotion_threshold_used"] = "calibration_score < 0.35"
+        
+        if severity_impact >= 0.5:
+            recommendation["alternative_recommendation"] = "consider_32b"
+            recommendation["alternative_recommendation_reason"] = "Despite low overall calibration, severity impact warrants consideration"
+    
+    return recommendation
+
+
+def _build_calibration_narrative_text(
+    case_id: str,
+    disagreement: dict,
+    narrative: dict,
+    conditions: list[str]
+) -> str:
+    """
+    Build human-readable calibration narrative.
+    """
+    severity_impact = disagreement.get("severity_impact", 0.5)
+    conf_delta = abs(
+        disagreement.get("consult_confidence", 0.5) -
+        disagreement.get("review_confidence", 0.5)
+    )
+    pattern_type = disagreement.get("pattern_type", "unknown")
+    domain = disagreement.get("domain", "unknown")
+    
+    parts = []
+    
+    # Opening assessment
+    if narrative["promotion_recommendation"] in ["mandatory_32b_review", "promote_to_32b"]:
+        parts.append(
+            f"This case ({case_id}) shows clear indicators that 32B review would be beneficial. "
+        )
+    elif narrative["promotion_recommendation"] == "consider_32b":
+        parts.append(
+            f"This case ({case_id}) presents mixed signals where 32B review may improve outcomes. "
+        )
+    else:
+        parts.append(
+            f"This case ({case_id}) does not show strong indicators requiring 32B enhancement. "
+        )
+    
+    # Key findings
+    if severity_impact >= 0.6:
+        parts.append(
+            f"Severity impact is {severity_impact:.0%}, indicating potentially critical findings "
+            f"that warrant deeper 32B analysis. "
+        )
+    
+    if conf_delta > 0.25:
+        parts.append(
+            f"The {conf_delta:.0%} confidence gap between 7B and 32B suggests meaningful "
+            f"difference in case assessment. "
+        )
+    
+    if pattern_type != "unknown" and pattern_type != "alignment":
+        parts.append(
+            f"The '{pattern_type}' pattern type in {domain} domain suggests case characteristics "
+            f"that benefit from 32B's reasoning capabilities. "
+        )
+    
+    # Confidence assessment
+    if narrative["confidence_band"] == "high_confidence":
+        parts.append(
+            f"High confidence in this recommendation ({narrative['promotion_confidence']:.0%}) "
+            f"based on multiple strong indicators. "
+        )
+    elif narrative["confidence_band"] == "medium_confidence":
+        parts.append(
+            f"Medium confidence ({narrative['promotion_confidence']:.0%}) in this recommendation "
+            f"based on moderate indicators. "
+        )
+    
+    # Recommendation summary
+    rec = narrative["promotion_recommendation"]
+    if rec == "mandatory_32b_review":
+        parts.append(
+            f"RECOMMENDATION: Mandatory 32B review required. "
+            f"All promotion thresholds exceeded with high confidence."
+        )
+    elif rec == "promote_to_32b":
+        parts.append(
+            f"RECOMMENDATION: Promote to 32B review. "
+            f"Strong indicators support escalation."
+        )
+    elif rec == "consider_32b":
+        parts.append(
+            f"RECOMMENDATION: Consider 32B review. "
+            f"Benefits unclear but case has some escalation indicators."
+        )
+    else:
+        parts.append(
+            f"RECOMMENDATION: Standard 7B review sufficient. "
+            f"Case does not meet promotion thresholds."
+        )
+    
+    return "".join(parts)
+
+
 def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
     """
     Compute promotion threshold recommendations based on accumulated intelligence.
+    
+    Analyzes cross-case disagreement clusters and outcome patterns to determine
+    when cases should be escalated from 7B consult to 32B review.
     
     Returns thresholds for what distinguishes satisfactory from exemplary performance.
     """
@@ -2725,10 +3031,99 @@ def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
         "recommendation_type": recommendation_type,
         "thresholds": {},
         "criteria": [],
-        "confidence": 0.5
+        "cluster_insights": {},
+        "region_thresholds": {},
+        "pattern_thresholds": {},
+        "severity_weighted": {},
+        "confidence": 0.5,
+        "recommendation": "no_action",
+        "rationale": []
     }
     
-    # Analyze shadow disagreement patterns
+    # =================================================================
+    # Phase 1: Cluster-Based Threshold Analysis
+    # =================================================================
+    # Analyze disagreement clusters to find systemic patterns
+    cluster_analysis = _analyze_disagreement_clusters_for_promotion()
+    
+    if cluster_analysis["significant_clusters"]:
+        thresholds["cluster_insights"] = cluster_analysis
+        thresholds["thresholds"]["cluster_significance_threshold"] = 0.5
+        thresholds["thresholds"]["min_cluster_size_for_promotion"] = 3
+        
+        # Derive promotion criteria from clusters
+        for cluster in cluster_analysis["significant_clusters"]:
+            domain = cluster.get("domain", "unknown")
+            body_region = cluster.get("body_region", "unknown")
+            pattern_type = cluster.get("pattern_type", "unknown")
+            avg_score = cluster.get("avg_score", 0)
+            
+            key = f"{domain}_{body_region}_{pattern_type}"
+            thresholds["pattern_thresholds"][key] = {
+                "avg_disagreement_score": avg_score,
+                "case_count": cluster.get("count", 0),
+                "promote_to_32b": avg_score > 0.6,
+                "confidence_boost": min(0.15, cluster.get("count", 0) * 0.02)
+            }
+            
+            if avg_score > 0.6:
+                thresholds["criteria"].append(
+                    f"[CLUSTER] {domain}/{body_region}/{pattern_type}: "
+                    f"avg_score={avg_score:.2f} from {cluster.get('count')} cases → promote to 32B"
+                )
+                thresholds["recommendation"] = "enhance_review"
+    
+    # =================================================================
+    # Phase 2: Body Region-Specific Thresholds
+    # =================================================================
+    region_thresholds = _compute_region_specific_thresholds()
+    if region_thresholds:
+        thresholds["region_thresholds"] = region_thresholds
+        
+        for region, data in region_thresholds.items():
+            escalation_rate = data.get("escalation_rate", 0)
+            if escalation_rate > 0.25:
+                thresholds["thresholds"][f"{region}_escalation_threshold"] = 0.25
+                thresholds["criteria"].append(
+                    f"[REGION] {region}: escalation_rate={escalation_rate:.1%} → "
+                    f"auto-promote high-severity to 32B"
+                )
+                thresholds["recommendation"] = "enhance_review"
+    
+    # =================================================================
+    # Phase 3: Severity-Weighted Promotion Criteria
+    # =================================================================
+    severity_thresholds = _compute_severity_weighted_thresholds()
+    if severity_thresholds:
+        thresholds["severity_weighted"] = severity_thresholds
+        
+        high_severity_escalation = severity_thresholds.get("high_severity_escalation_rate", 0)
+        if high_severity_escalation > 0.2:
+            thresholds["thresholds"]["high_severity_escalation_threshold"] = 0.2
+            thresholds["criteria"].append(
+                f"[SEVERITY] High-severity escalation rate: {high_severity_escalation:.1%} → "
+                f"always use 32B for HIGH_SEVERITY cases"
+            )
+            thresholds["recommendation"] = "full_32b_required"
+    
+    # =================================================================
+    # Phase 4: Pattern Type-Based Promotion Criteria
+    # =================================================================
+    pattern_based_thresholds = _compute_pattern_type_thresholds()
+    if pattern_based_thresholds:
+        thresholds["pattern_thresholds"].update(pattern_based_thresholds)
+        
+        for pattern_type, data in pattern_based_thresholds.items():
+            if data.get("escalation_rate", 0) > 0.3:
+                thresholds["criteria"].append(
+                    f"[PATTERN] {pattern_type}: escalation_rate={data['escalation_rate']:.1%} → "
+                    f"promote all {pattern_type} to 32B review"
+                )
+                thresholds["recommendation"] = "enhance_review"
+    
+    # =================================================================
+    # Phase 5: Shadow Disagreement Score Analysis
+    # =================================================================
     high_score_disagreements = []
     with STATE_LOCK:
         for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
@@ -2738,7 +3133,10 @@ def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
                     "case_id": case_id,
                     "score": score,
                     "domain": disagreement.get("domain"),
-                    "outcome": disagreement.get("outcome", "unknown")
+                    "body_region": disagreement.get("body_region", "unknown"),
+                    "pattern_type": disagreement.get("pattern_type", "unknown"),
+                    "severity_impact": disagreement.get("severity_impact", 0.5),
+                    "outcome": _final_outcome_for_case(case_id),
                 })
     
     if len(high_score_disagreements) >= 5:
@@ -2761,8 +3159,11 @@ def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
                 thresholds["criteria"].append(f"{domain}: >30% escalation rate when 7B disagrees - promote to 32B")
         
         thresholds["confidence"] = min(0.9, 0.5 + len(high_score_disagreements) * 0.05)
+        thresholds["recommendation"] = "enhance_review"
     
-    # Analyze outcome patterns
+    # =================================================================
+    # Phase 6: Outcome Pattern Analysis
+    # =================================================================
     with STATE_LOCK:
         total_outcomes = len(OUTCOME_LEARNING)
         if total_outcomes >= 10:
@@ -2780,7 +3181,292 @@ def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
             
             thresholds["confidence"] = min(0.9, 0.5 + total_outcomes * 0.02)
     
+    # =================================================================
+    # Phase 7: Confidence Delta Analysis
+    # =================================================================
+    confidence_delta_thresholds = _compute_confidence_delta_thresholds()
+    if confidence_delta_thresholds:
+        thresholds["thresholds"]["confidence_delta_threshold"] = confidence_delta_thresholds.get("delta_threshold", 0.25)
+        thresholds["thresholds"]["confidence_escalation_rate"] = confidence_delta_thresholds.get("escalation_rate", 0)
+        
+        if confidence_delta_thresholds.get("escalation_rate", 0) > 0.25:
+            thresholds["criteria"].append(
+                f"[CONFIDENCE] High confidence delta cases escalate at "
+                f"{confidence_delta_thresholds['escalation_rate']:.1%} → "
+                f"promote when |7B_conf - 32B_conf| > 0.25"
+            )
+            thresholds["recommendation"] = "enhance_review"
+    
+    # =================================================================
+    # Final Recommendation Synthesis
+    # =================================================================
+    if thresholds["recommendation"] == "no_action" and thresholds["confidence"] > 0.6:
+        thresholds["recommendation"] = "standard_review"
+        thresholds["rationale"].append("Sufficient data for standard 7B review")
+    elif thresholds["recommendation"] == "enhance_review":
+        thresholds["rationale"].append("Multiple indicators suggest 32B enhancement beneficial")
+    elif thresholds["recommendation"] == "full_32b_required":
+        thresholds["rationale"].append("High-severity patterns require mandatory 32B review")
+    
+    # Add summary
+    thresholds["summary"] = (
+        f"Promotion threshold analysis based on {len(high_score_disagreements)} high-disagreement cases, "
+        f"{len(cluster_analysis.get('significant_clusters', []))} significant clusters, "
+        f"and {len(region_thresholds)} regional patterns. "
+        f"Recommendation: {thresholds['recommendation']}"
+    )
+    
     return thresholds
+
+
+def _analyze_disagreement_clusters_for_promotion() -> dict:
+    """
+    Analyze disagreement clusters to identify systemic patterns that should
+    trigger promotion to 32B review.
+    
+    Returns cluster insights with significance scores and promotion recommendations.
+    """
+    clusters = {}
+    
+    with STATE_LOCK:
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            cluster_key = _build_disagreement_cluster_key(disagreement)
+            
+            if cluster_key not in clusters:
+                clusters[cluster_key] = {
+                    "cluster_key": cluster_key,
+                    "domain": disagreement.get("domain", "unknown"),
+                    "body_region": disagreement.get("body_region", "unknown"),
+                    "pattern_type": disagreement.get("pattern_type", "unknown"),
+                    "severity_impact": disagreement.get("severity_impact", 0.5),
+                    "cases": [],
+                    "total_score": 0.0,
+                    "count": 0,
+                    "outcomes": [],
+                    "escalated": 0
+                }
+            
+            score = _compute_disagreement_score(case_id)
+            clusters[cluster_key]["cases"].append(case_id)
+            clusters[cluster_key]["total_score"] += score
+            clusters[cluster_key]["count"] += 1
+            
+            outcome = _final_outcome_for_case(case_id)
+            clusters[cluster_key]["outcomes"].append(outcome)
+            if outcome == "escalated":
+                clusters[cluster_key]["escalated"] += 1
+    
+    # Compute averages and significance
+    result = {
+        "total_clusters": len(clusters),
+        "significant_clusters": [],
+        "high_risk_clusters": [],
+        "promotion_triggers": []
+    }
+    
+    for cluster_key, cluster in clusters.items():
+        cluster["avg_score"] = cluster["total_score"] / cluster["count"] if cluster["count"] > 0 else 0
+        cluster["significance"] = cluster["avg_score"] * cluster["count"]
+        cluster["escalation_rate"] = cluster["escalated"] / cluster["count"] if cluster["count"] > 0 else 0
+        
+        # Significant if high disagreement score and multiple cases
+        if cluster["avg_score"] > 0.5 and cluster["count"] >= 3:
+            result["significant_clusters"].append(cluster)
+            
+            # Check if this cluster should trigger promotion
+            if cluster["avg_score"] > 0.6 or cluster["escalation_rate"] > 0.3:
+                result["promotion_triggers"].append({
+                    "cluster_key": cluster_key,
+                    "reason": f"avg_score={cluster['avg_score']:.2f}, escalation_rate={cluster['escalation_rate']:.1%}",
+                    "domain": cluster["domain"],
+                    "body_region": cluster["body_region"],
+                    "pattern_type": cluster["pattern_type"]
+                })
+        
+        # High risk if escalation rate is very high
+        if cluster["escalation_rate"] > 0.4 and cluster["count"] >= 2:
+            result["high_risk_clusters"].append(cluster)
+    
+    # Sort by significance
+    result["significant_clusters"].sort(key=lambda x: x["significance"], reverse=True)
+    result["high_risk_clusters"].sort(key=lambda x: x["escalation_rate"], reverse=True)
+    result["promotion_triggers"].sort(key=lambda x: x["cluster_key"])
+    
+    return result
+
+
+def _compute_region_specific_thresholds() -> dict[str, dict]:
+    """
+    Compute promotion thresholds specific to body regions.
+    
+    Returns thresholds per body region based on escalation rates.
+    """
+    region_data = {}
+    
+    with STATE_LOCK:
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            body_region = disagreement.get("body_region", "unknown")
+            
+            if body_region not in region_data:
+                region_data[body_region] = {
+                    "region": body_region,
+                    "cases": [],
+                    "outcomes": [],
+                    "escalated": 0,
+                    "severity_impacts": []
+                }
+            
+            region_data[body_region]["cases"].append(case_id)
+            outcome = _final_outcome_for_case(case_id)
+            region_data[body_region]["outcomes"].append(outcome)
+            
+            if outcome == "escalated":
+                region_data[body_region]["escalated"] += 1
+            
+            region_data[body_region]["severity_impacts"].append(
+                disagreement.get("severity_impact", 0.5)
+            )
+    
+    result = {}
+    for region, data in region_data.items():
+        if len(data["cases"]) >= 3:  # Only regions with enough data
+            result[region] = {
+                "region": region,
+                "case_count": len(data["cases"]),
+                "escalation_rate": data["escalated"] / len(data["cases"]),
+                "avg_severity_impact": sum(data["severity_impacts"]) / len(data["severity_impacts"]),
+                "requires_promotion": (data["escalated"] / len(data["cases"])) > 0.25
+            }
+    
+    return result
+
+
+def _compute_severity_weighted_thresholds() -> dict:
+    """
+    Compute promotion thresholds weighted by severity indicators.
+    
+    Returns severity-based thresholds for promotion decisions.
+    """
+    severity_outcomes = {
+        "HIGH_SEVERITY": {"total": 0, "escalated": 0},
+        "MEDIUM_SEVERITY": {"total": 0, "escalated": 0},
+        "LOW_SEVERITY": {"total": 0, "escalated": 0}
+    }
+    
+    with STATE_LOCK:
+        for severity_record in SEVERITY_INDICATORS:
+            severity_level = _severity_bucket_from_risk_score(
+                float(severity_record.get("risk_score", 0.5))
+            )
+            outcome = _final_outcome_for_case(str(severity_record.get("case_id", "")))
+            
+            severity_outcomes[severity_level]["total"] += 1
+            if outcome == "escalated":
+                severity_outcomes[severity_level]["escalated"] += 1
+    
+    result = {}
+    for severity, data in severity_outcomes.items():
+        if data["total"] >= 5:
+            escalation_rate = data["escalated"] / data["total"]
+            result[f"{severity.lower()}_escalation_rate"] = escalation_rate
+            result[f"{severity.lower()}_case_count"] = data["total"]
+            
+            if severity == "HIGH_SEVERITY":
+                result["high_severity_escalation_rate"] = escalation_rate
+                result["high_severity_total"] = data["total"]
+    
+    return result
+
+
+def _compute_pattern_type_thresholds() -> dict[str, dict]:
+    """
+    Compute promotion thresholds based on disagreement pattern types.
+    
+    Returns thresholds per pattern type (diagnostic, urgency, etc.).
+    """
+    pattern_data = {}
+    
+    with STATE_LOCK:
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            pattern_type = disagreement.get("pattern_type", "unknown")
+            
+            if pattern_type not in pattern_data:
+                pattern_data[pattern_type] = {
+                    "pattern_type": pattern_type,
+                    "cases": [],
+                    "outcomes": [],
+                    "escalated": 0,
+                    "severity_impacts": []
+                }
+            
+            pattern_data[pattern_type]["cases"].append(case_id)
+            outcome = _final_outcome_for_case(case_id)
+            pattern_data[pattern_type]["outcomes"].append(outcome)
+            
+            if outcome == "escalated":
+                pattern_data[pattern_type]["escalated"] += 1
+            
+            pattern_data[pattern_type]["severity_impacts"].append(
+                disagreement.get("severity_impact", 0.5)
+            )
+    
+    result = {}
+    for pattern_type, data in pattern_data.items():
+        if len(data["cases"]) >= 3:  # Only patterns with enough data
+            result[pattern_type] = {
+                "pattern_type": pattern_type,
+                "case_count": len(data["cases"]),
+                "escalation_rate": data["escalated"] / len(data["cases"]),
+                "avg_severity_impact": sum(data["severity_impacts"]) / len(data["severity_impacts"]),
+                "requires_promotion": (data["escalated"] / len(data["cases"])) > 0.25
+            }
+    
+    return result
+
+
+def _compute_confidence_delta_thresholds() -> dict:
+    """
+    Compute thresholds based on confidence delta between models.
+    
+    Returns thresholds for when large confidence deltas should trigger promotion.
+    """
+    delta_buckets = {
+        "low_delta": {"cases": 0, "escalated": 0},      # < 0.15
+        "medium_delta": {"cases": 0, "escalated": 0},   # 0.15 - 0.30
+        "high_delta": {"cases": 0, "escalated": 0}      # > 0.30
+    }
+    
+    with STATE_LOCK:
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            conf_delta = disagreement.get("confidence_delta", 0)
+            outcome = _final_outcome_for_case(case_id)
+            
+            if conf_delta < 0.15:
+                bucket = delta_buckets["low_delta"]
+            elif conf_delta < 0.30:
+                bucket = delta_buckets["medium_delta"]
+            else:
+                bucket = delta_buckets["high_delta"]
+            
+            bucket["cases"] += 1
+            if outcome == "escalated":
+                bucket["escalated"] += 1
+    
+    result = {}
+    total_cases = sum(b["cases"] for b in delta_buckets.values())
+    
+    if total_cases >= 10:
+        high_delta = delta_buckets["high_delta"]
+        if high_delta["cases"] > 0:
+            escalation_rate = high_delta["escalated"] / high_delta["cases"]
+            result["delta_threshold"] = 0.30
+            result["escalation_rate"] = escalation_rate
+            result["high_delta_cases"] = high_delta["cases"]
+            
+            if escalation_rate > 0.25:
+                result["recommendation"] = "promote_on_high_delta"
+    
+    return result
 
 
 @app.get("/intelligence/disagreement-clusters")

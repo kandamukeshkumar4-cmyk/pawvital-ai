@@ -841,6 +841,8 @@ class UncertaintyMetrics(BaseModel):
     knowledge_uncertainty: float = Field(..., description="0-1 score for gaps in domain knowledge")
     image_quality_uncertainty: float = Field(..., description="0-1 score for image quality limitations")
     temporal_uncertainty: float = Field(..., description="0-1 score for insufficient historical context")
+    sequence_uncertainty: float = Field(default=0.0, description="0-1 score for multi-image sequence position")
+    follow_up_uncertainty: float = Field(default=0.0, description="0-1 score for multi-turn follow-up trajectory")
     confidence_calibration: float = Field(..., description="How well confidence matches actual accuracy")
     uncertainty_disciplined: bool = Field(..., description="Whether uncertainty was properly communicated")
 
@@ -850,13 +852,15 @@ def _compute_uncertainty_metrics(
     image_quality: str,
     previous_findings: list[dict],
     uncertainties: list[str],
-    confidence: float
+    confidence: float,
+    image_sequence_position: int = 0,
+    total_images_in_sequence: int = 1
 ) -> UncertaintyMetrics:
     """
     Compute disciplined uncertainty metrics for a consult.
     
     Quantifies and qualifies different sources of uncertainty to ensure
-    proper calibration and communication.
+    proper calibration and communication. Enhanced for multi-image sequences.
     """
     # Knowledge uncertainty - gaps in what the model knows
     knowledge_uncertainty = 0.0
@@ -876,9 +880,48 @@ def _compute_uncertainty_metrics(
         temporal_uncertainty = 0.4
     elif len(previous_findings) < 2:
         temporal_uncertainty = 0.2
+    elif len(previous_findings) >= 5:
+        temporal_uncertainty = 0.05  # Rich history reduces temporal uncertainty
+    
+    # Multi-image sequence uncertainty
+    sequence_uncertainty = 0.0
+    if total_images_in_sequence > 1:
+        # First image in sequence has higher uncertainty (no comparison possible)
+        if image_sequence_position == 0:
+            sequence_uncertainty = 0.25
+        # Middle images have moderate uncertainty
+        elif image_sequence_position < total_images_in_sequence - 1:
+            sequence_uncertainty = 0.15
+        # Last image has lower uncertainty (can confirm or contradict earlier images)
+        else:
+            sequence_uncertainty = 0.08
+        
+        # Check for consistency across sequence
+        if previous_findings and len(previous_findings) >= 2:
+            # If we have findings from previous images in this sequence
+            consistency = _compute_sequence_consistency(previous_findings)
+            if consistency < 0.5:
+                sequence_uncertainty += 0.15  # Inconsistent findings increase uncertainty
+    
+    # Multi-turn follow-up uncertainty
+    follow_up_uncertainty = 0.0
+    if len(previous_findings) >= 3:
+        # Assess trajectory clarity
+        trajectory_indicators = [pf.get("progression_indicator", "unknown") for pf in previous_findings[-3:]]
+        if len(set(trajectory_indicators)) > 2:
+            follow_up_uncertainty = 0.20  # Conflicting trajectory signals
+        elif all(t == "unknown" for t in trajectory_indicators):
+            follow_up_uncertainty = 0.15  # No clear trajectory established
     
     # Confidence calibration - does reported confidence match uncertainty sources?
-    expected_confidence = 1.0 - (knowledge_uncertainty * 0.3 + image_quality_uncertainty * 0.4 + temporal_uncertainty * 0.3)
+    uncertainty_weight_sum = (
+        knowledge_uncertainty * 0.25 +
+        image_quality_uncertainty * 0.30 +
+        temporal_uncertainty * 0.20 +
+        sequence_uncertainty * 0.15 +
+        follow_up_uncertainty * 0.10
+    )
+    expected_confidence = 1.0 - uncertainty_weight_sum
     confidence_calibration = 1.0 - abs(confidence - expected_confidence)
     
     # Uncertainty discipline - were uncertainties properly communicated?
@@ -892,9 +935,42 @@ def _compute_uncertainty_metrics(
         knowledge_uncertainty=round(knowledge_uncertainty, 3),
         image_quality_uncertainty=round(image_quality_uncertainty, 3),
         temporal_uncertainty=round(temporal_uncertainty, 3),
+        sequence_uncertainty=round(sequence_uncertainty, 3),
+        follow_up_uncertainty=round(follow_up_uncertainty, 3),
         confidence_calibration=round(max(0.0, confidence_calibration), 3),
         uncertainty_disciplined=uncertainty_disciplined
     )
+
+
+def _compute_sequence_consistency(previous_findings: list[dict]) -> float:
+    """
+    Compute consistency score across findings in a multi-image sequence.
+    
+    Returns a score between 0.0 (completely inconsistent) and 1.0 (fully consistent).
+    """
+    if len(previous_findings) < 2:
+        return 0.5  # Insufficient data
+    
+    # Extract key indicators for comparison
+    key_indicators = []
+    for finding in previous_findings:
+        # Extract key assessment dimensions if available
+        assessment = finding.get("assessment", finding.get("temporal_patterns", {}))
+        if isinstance(assessment, dict):
+            indicator = assessment.get("progression_indicator", "unknown")
+            chronicity = assessment.get("chronicity_assessment", "unknown")
+            key_indicators.append(f"{chronicity}_{indicator}")
+        else:
+            key_indicators.append("unknown")
+    
+    # Count matching indicators
+    if not key_indicators:
+        return 0.5
+    
+    unique_indicators = set(key_indicators)
+    consistency = 1.0 - (len(unique_indicators) - 1) / len(key_indicators)
+    
+    return max(0.0, min(1.0, consistency))
 
 
 class EnhancedCaseComparisonRequest(BaseModel):
