@@ -946,6 +946,34 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).toBe("limping_progression");
   });
 
+  it("accepts an explicit unknown trauma-history answer instead of repeating the same question", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session = recordAnswer(session, "which_leg", "left back leg");
+    session = recordAnswer(session, "limping_onset", "sudden");
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "I don't know."));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("I don't know.");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
   it("prioritizes breathing follow-up over coughing when both symptoms are reported together", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,

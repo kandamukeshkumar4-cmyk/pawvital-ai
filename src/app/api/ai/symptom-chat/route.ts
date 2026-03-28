@@ -3154,7 +3154,7 @@ function sanitizeAnswerForQuestion(
     case "weight_bearing":
       return extractWeightBearingStatus(trimmed) ?? coerceAnswerForQuestion(questionId, trimmed);
     case "trauma_history":
-      return extractTraumaHistory(trimmed);
+      return extractTraumaHistory(trimmed) ?? coerceAnswerForQuestion(questionId, trimmed);
     default:
       return coerceAnswerForQuestion(questionId, trimmed);
   }
