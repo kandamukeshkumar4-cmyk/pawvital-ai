@@ -9,7 +9,13 @@ const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
 
 function statusLine(level, message) {
   const prefix =
-    level === "ok" ? "[OK]" : level === "warn" ? "[WARN]" : "[FAIL]";
+    level === "ok"
+      ? "[OK]"
+      : level === "warn"
+        ? "[WARN]"
+        : level === "info"
+          ? "[INFO]"
+          : "[FAIL]";
   console.log(`${prefix} ${message}`);
 }
 
@@ -71,11 +77,18 @@ function main() {
     const matches = findMatches(directoryEntries, hints);
 
     if (matches.length === 0) {
-      failures += 1;
-      statusLine(
-        "fail",
-        `${policy.slug} has no matching corpus directory (hints: ${hints.join(", ")})`
-      );
+      if (policy.status === "live") {
+        failures += 1;
+        statusLine(
+          "fail",
+          `${policy.slug} has no matching corpus directory (hints: ${hints.join(", ")})`
+        );
+      } else {
+        statusLine(
+          "info",
+          `${policy.slug} is ${policy.status} and has no active corpus directory yet`
+        );
+      }
       continue;
     }
 
@@ -86,11 +99,18 @@ function main() {
     }
 
     if (totalFiles <= 0) {
-      warnings += 1;
-      statusLine(
-        "warn",
-        `${policy.slug} matched ${matches.map((entry) => entry.name).join(", ")} but no files were found`
-      );
+      if (policy.status === "live") {
+        warnings += 1;
+        statusLine(
+          "warn",
+          `${policy.slug} matched ${matches.map((entry) => entry.name).join(", ")} but no files were found`
+        );
+      } else {
+        statusLine(
+          "info",
+          `${policy.slug} is ${policy.status} and currently excluded from live activation until assets are populated`
+        );
+      }
       continue;
     }
 

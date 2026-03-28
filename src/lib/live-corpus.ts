@@ -1,7 +1,7 @@
 import type { SupportedImageDomain } from "./clinical-evidence";
 import liveCorpusRegistry from "./live-corpus-registry.json";
 
-export type LiveCorpusStatus = "live" | "benchmark_only";
+export type LiveCorpusStatus = "live" | "benchmark_only" | "pending_assets";
 
 export interface LiveCorpusSourcePolicy {
   slug: string;

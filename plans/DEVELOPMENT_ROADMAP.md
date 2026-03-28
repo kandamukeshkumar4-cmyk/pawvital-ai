@@ -99,7 +99,9 @@ That means:
 - working first-pass implementations now exist for all five HF sidecars
 - shared app contracts now distinguish sync consults from async review queue submission
 - async review now has dead-letter persistence, review state tracking, richer shadow disagreement analysis, and stronger feedback synthesis on `master`
+- the reasoning-heavy MiniMax service lane is now merged locally on `master`, including cross-case review intelligence and deeper consult rubric coverage
 - the main unfinished work is deepening real model runtime coverage, deployment wiring, and shadow-mode validation
+- the current Phase 4 blocker is concrete: Vercel production still does not have the `HF_*` sidecar URLs configured, so live readiness checks against the deployed app cannot pass yet
 
 ## What Is Live In The Repo Right Now
 
@@ -142,10 +144,12 @@ That means:
   - real Qwen2.5-VL-7B service implementation merged from MiniMax branch
   - strict bearer auth and stub/production mode hardening
   - stricter response schema recovery and output-discipline validation
+  - expanded consult rubric with comparison, risk stratification, and recommended next-step fields wired through the live response shape
 - `async-review-service`
   - real Qwen2.5-VL-32B service implementation merged from MiniMax branch
   - deterministic review IDs and explicit queue submission contract
   - dead-letter persistence, guarded retry endpoints, state-transition tracking, and richer feedback synthesis
+  - cross-case disagreement clustering, severity synthesis, outcome-learning records, and reviewer-calibration summary surfaces
 
 ## Immediate Next Tasks
 
@@ -189,6 +193,7 @@ To move faster without breaking `master`, parallel work should follow explicit f
 
 - We are in active `Phase 3`.
 - `master` currently includes the merged async-review persistence/synthesis lane at commit `62c96e7`.
+- `master` now also includes the merged reasoning-heavy sidecar intelligence lane on top of `57e036c`.
 - MiniMax M2.7 does not have a newer remote push beyond the already merged branches `origin/minimax/phase3-multimodal-async-services` and `origin/minimax/service-quality`.
 - The shared integration layer has started moving from scaffolding into validated contracts:
   - sync consult stays on `multimodal-consult-service`
@@ -202,6 +207,9 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - Shadow rollout readiness is now exposed through a guarded debug API route so promotion status can be inspected without exposing raw case payloads.
 - Sidecar env + health readiness is now exposed through a guarded app route so deployment wiring can be verified from the app boundary, not just from shell scripts.
 - Curated corpus activation prep now has a shared registry plus a live-corpus verification script that flags mapped-but-empty dataset sources before activation.
+- Four previously misclassified Roboflow image sources have now been moved out of `live` status into `pending_assets` until real files are populated on disk.
+- Production verification has now confirmed that Vercel is still missing all `HF_*` sidecar URL env vars, so Phase 4 cannot be truthfully marked started yet.
+- Live probes against `https://pawvital-ai.vercel.app/api/ai/sidecar-readiness` and `/api/ai/shadow-rollout` are currently returning `401`, so the deployment-time debug secret alignment still needs to be completed before remote readiness checks can pass.
 - The next fastest path is to finish Phase 4 wiring, then shadow the deployed sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership

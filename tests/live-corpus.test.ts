@@ -15,6 +15,9 @@ describe("live corpus policy helpers", () => {
     expect(
       getLiveCorpusSourcePolicy("kaggle-pet-disease-images-dog")?.supportedDomains
     ).toContain("eye");
+    expect(
+      getLiveCorpusSourcePolicy("roboflow-dog-eye-disease")?.status
+    ).toBe("pending_assets");
   });
 
   it("infers supported live domains from labels and metadata", () => {
@@ -58,6 +61,19 @@ describe("live corpus policy helpers", () => {
           species_scope: "cat",
           live_retrieval_status: "benchmark_only",
           live_domain: "skin_wound",
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      isLiveCorpusEligibleMatch({
+        sourceSlug: "roboflow-dog-eye-disease",
+        conditionLabel: "corneal_ulcer",
+        caption: "Dog eye lesion",
+        metadata: {
+          species_scope: "dog",
+          live_retrieval_status: "live",
+          live_domain: "eye",
         },
       })
     ).toBe(false);

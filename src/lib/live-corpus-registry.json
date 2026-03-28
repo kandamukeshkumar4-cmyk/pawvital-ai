@@ -1,10 +1,11 @@
 [
   {
     "slug": "roboflow-dog-skin-disease-detection",
-    "status": "live",
+    "status": "pending_assets",
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
-    "directoryHints": ["roboflow-dog-skin-classification"]
+    "directoryHints": ["roboflow-dog-skin-classification"],
+    "note": "Registry placeholder kept for future activation once curated Roboflow assets are available on disk."
   },
   {
     "slug": "mendeley-dog-skin-disease-multispectral",
@@ -33,10 +34,11 @@
   },
   {
     "slug": "roboflow-dog-skin-detection-4class",
-    "status": "live",
+    "status": "pending_assets",
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
-    "directoryHints": ["roboflow-dog-skin-detection"]
+    "directoryHints": ["roboflow-dog-skin-detection"],
+    "note": "Registry placeholder kept for future activation once curated Roboflow detection assets are available on disk."
   },
   {
     "slug": "kaggle-yashmotiani-dog-skin",
@@ -47,16 +49,18 @@
   },
   {
     "slug": "roboflow-tick-detection",
-    "status": "live",
+    "status": "pending_assets",
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
-    "directoryHints": ["roboflow-tick-detection"]
+    "directoryHints": ["roboflow-tick-detection"],
+    "note": "Registry placeholder kept for future activation once tick-localization assets are populated."
   },
   {
     "slug": "roboflow-dog-eye-disease",
-    "status": "live",
+    "status": "pending_assets",
     "speciesScope": "dog",
     "supportedDomains": ["eye"],
-    "directoryHints": ["roboflow-dog-eye-disease"]
+    "directoryHints": ["roboflow-dog-eye-disease"],
+    "note": "Registry placeholder kept for future activation once curated eye-disease assets are available on disk."
   }
 ]
