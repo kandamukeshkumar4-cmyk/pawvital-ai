@@ -8,5 +8,6 @@ Current implementation now provides:
 - live Supabase-backed asset lookup against the curated corpus
 - domain-aware source filtering
 - deterministic condition-label and caption scoring
+- optional `microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224` image-text reranking over candidate assets
 
-It is still a bridge implementation until full BiomedCLIP similarity serving is deployed.
+If the model runtime is unavailable or candidate images cannot be loaded, the service degrades gracefully to deterministic ranking instead of failing the request.

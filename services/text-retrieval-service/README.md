@@ -8,6 +8,8 @@ Current implementation now provides:
 - bearer-token validation
 - live Supabase-backed candidate retrieval
 - lexical scoring plus deterministic reranking
+- optional `BAAI/bge-m3` semantic embedding rerank
+- optional `BAAI/bge-reranker-v2-m3` cross-encoder rerank
 - dog-only and requested-domain filtering
 
-It is still a bridge implementation until the full BGE-M3 + reranker model-serving stack is deployed.
+If the HF model runtime is unavailable, the service degrades gracefully to deterministic retrieval instead of failing the request.

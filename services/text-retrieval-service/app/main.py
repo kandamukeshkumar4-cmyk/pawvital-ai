@@ -53,6 +53,18 @@ SIDECAR_API_KEY = os.getenv("SIDECAR_API_KEY", "").strip()
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("SUPABASE_TIMEOUT_SECONDS", "8"))
 STUB_MODE = os.getenv("STUB_MODE", "false").strip().lower() == "true"
 DEFAULT_CANDIDATE_LIMIT = int(os.getenv("TEXT_RETRIEVAL_CANDIDATE_LIMIT", "18"))
+TEXT_EMBED_MODEL_NAME = os.getenv("TEXT_EMBED_MODEL_NAME", "BAAI/bge-m3").strip()
+TEXT_RERANK_MODEL_NAME = os.getenv(
+    "TEXT_RERANK_MODEL_NAME",
+    "BAAI/bge-reranker-v2-m3",
+).strip()
+TEXT_MODEL_ENABLED = os.getenv("TEXT_MODEL_ENABLED", "true").strip().lower() == "true"
+TEXT_MODEL_MAX_CANDIDATES = int(os.getenv("TEXT_MODEL_MAX_CANDIDATES", "24"))
+
+EMBED_MODEL = None
+RERANK_MODEL = None
+MODEL_LOAD_ATTEMPTED = False
+MODEL_LOAD_ERROR: str | None = None
 
 
 class RetrievalRequest(BaseModel):
@@ -163,6 +175,10 @@ def build_search_terms(payload: RetrievalRequest) -> list[str]:
     )
 
 
+def model_backend_enabled() -> bool:
+    return TEXT_MODEL_ENABLED and not STUB_MODE
+
+
 def build_or_filter(search_terms: list[str]) -> str:
     filters = [f"text_content.ilike.*{token}*" for token in fallback_tokens(search_terms)]
     return f"({','.join(filters)})" if filters else ""
@@ -173,6 +189,91 @@ def summarize_text(text: str, max_chars: int = 320) -> str:
     if len(compact) <= max_chars:
         return compact
     return compact[: max_chars - 3].rstrip() + "..."
+
+
+def build_candidate_text(row: dict[str, Any]) -> str:
+    keyword_tags = [str(tag) for tag in row.get("keyword_tags") or []]
+    return " ".join(
+        part
+        for part in [
+            str(row.get("source_title") or ""),
+            str(row.get("chunk_title") or ""),
+            str(row.get("text_content") or ""),
+            " ".join(keyword_tags),
+        ]
+        if part
+    )
+
+
+def load_models():
+    global EMBED_MODEL, RERANK_MODEL, MODEL_LOAD_ATTEMPTED, MODEL_LOAD_ERROR
+
+    if MODEL_LOAD_ATTEMPTED:
+        return EMBED_MODEL, RERANK_MODEL
+
+    MODEL_LOAD_ATTEMPTED = True
+
+    if not model_backend_enabled():
+        return None, None
+
+    try:
+        from sentence_transformers import CrossEncoder, SentenceTransformer
+
+        embed_model = SentenceTransformer(TEXT_EMBED_MODEL_NAME)
+        rerank_model = CrossEncoder(TEXT_RERANK_MODEL_NAME)
+        EMBED_MODEL = embed_model
+        RERANK_MODEL = rerank_model
+        MODEL_LOAD_ERROR = None
+        logger.info(
+            "Loaded text retrieval models embed=%s rerank=%s",
+            TEXT_EMBED_MODEL_NAME,
+            TEXT_RERANK_MODEL_NAME,
+        )
+    except Exception as error:
+        MODEL_LOAD_ERROR = str(error)
+        EMBED_MODEL = None
+        RERANK_MODEL = None
+        logger.warning("Falling back to deterministic text retrieval", exc_info=error)
+
+    return EMBED_MODEL, RERANK_MODEL
+
+
+def rerank_with_models(
+    query: str,
+    ranked_rows: list[tuple[float, dict[str, Any]]],
+) -> list[tuple[float, dict[str, Any]]]:
+    embed_model, rerank_model = load_models()
+    if not embed_model or not rerank_model:
+        return ranked_rows
+
+    model_rows = ranked_rows[: max(1, TEXT_MODEL_MAX_CANDIDATES)]
+    remainder = ranked_rows[max(1, TEXT_MODEL_MAX_CANDIDATES) :]
+    candidate_texts = [build_candidate_text(row) for _, row in model_rows]
+    if not candidate_texts:
+        return ranked_rows
+
+    try:
+        import numpy as np
+
+        query_embedding = embed_model.encode([query], normalize_embeddings=True)[0]
+        document_embeddings = embed_model.encode(candidate_texts, normalize_embeddings=True)
+        semantic_scores = np.dot(document_embeddings, query_embedding)
+
+        rerank_pairs = [[query, text] for text in candidate_texts]
+        cross_scores = rerank_model.predict(rerank_pairs)
+
+        rescored: list[tuple[float, dict[str, Any]]] = []
+        for index, (base_score, row) in enumerate(model_rows):
+            semantic_score = float(semantic_scores[index])
+            cross_score = float(cross_scores[index])
+            combined_score = base_score + semantic_score * 4.0 + cross_score * 3.0
+            rescored.append((combined_score, row))
+
+        rescored.sort(key=lambda item: item[0], reverse=True)
+        return rescored + remainder
+    except Exception as error:
+        logger.warning("Model reranking failed; using deterministic ranking", exc_info=error)
+        return ranked_rows
 
 
 def fetch_rpc_candidates(query: str, limit: int) -> list[dict[str, Any]]:
@@ -290,6 +391,10 @@ def healthz():
         "service": "text-retrieval-service",
         "mode": health_mode(),
         "supabase_configured": bool(SUPABASE_URL and SUPABASE_KEY),
+        "model_backend_enabled": model_backend_enabled(),
+        "embed_model": TEXT_EMBED_MODEL_NAME,
+        "rerank_model": TEXT_RERANK_MODEL_NAME,
+        "model_load_error": MODEL_LOAD_ERROR,
     }
 
 
@@ -328,6 +433,7 @@ def search(payload: RetrievalRequest, authorization: str | None = Header(default
         ranked.append((score, candidate))
 
     ranked.sort(key=lambda item: item[0], reverse=True)
+    ranked = rerank_with_models(query, ranked)
     top_rows = ranked[: max(1, payload.text_limit)]
 
     text_chunks: list[dict[str, Any]] = []

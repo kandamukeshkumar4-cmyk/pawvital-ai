@@ -1,10 +1,12 @@
 import logging
 import os
 import re
+import io
 from typing import Any
 
 import requests
 from fastapi import FastAPI, Header, HTTPException
+from PIL import Image
 from pydantic import BaseModel, Field
 
 
@@ -56,6 +58,21 @@ SIDECAR_API_KEY = os.getenv("SIDECAR_API_KEY", "").strip()
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("SUPABASE_TIMEOUT_SECONDS", "8"))
 STUB_MODE = os.getenv("STUB_MODE", "false").strip().lower() == "true"
 DEFAULT_CANDIDATE_LIMIT = int(os.getenv("IMAGE_RETRIEVAL_CANDIDATE_LIMIT", "60"))
+IMAGE_RETRIEVAL_MODEL_NAME = os.getenv(
+    "IMAGE_RETRIEVAL_MODEL_NAME",
+    "microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224",
+).strip()
+IMAGE_MODEL_ENABLED = os.getenv("IMAGE_MODEL_ENABLED", "true").strip().lower() == "true"
+IMAGE_MODEL_MAX_ASSETS = int(os.getenv("IMAGE_MODEL_MAX_ASSETS", "12"))
+IMAGE_FETCH_TIMEOUT_SECONDS = float(os.getenv("IMAGE_FETCH_TIMEOUT_SECONDS", "6"))
+
+CLIP_MODEL = None
+CLIP_PREPROCESS = None
+CLIP_TOKENIZER = None
+CLIP_DEVICE = "cpu"
+MODEL_LOAD_ATTEMPTED = False
+MODEL_LOAD_ERROR: str | None = None
+IMAGE_EMBED_CACHE: dict[str, list[float]] = {}
 
 
 class ImageRetrievalRequest(BaseModel):
@@ -115,6 +132,10 @@ def health_mode() -> str:
     return "degraded"
 
 
+def model_backend_enabled() -> bool:
+    return IMAGE_MODEL_ENABLED and not STUB_MODE
+
+
 def build_supabase_headers() -> dict[str, str]:
     return {
         "apikey": SUPABASE_KEY,
@@ -132,6 +153,19 @@ def build_search_terms(payload: ImageRetrievalRequest) -> list[str]:
             payload.domain or "",
         ]
     )
+
+
+def build_query_text(payload: ImageRetrievalRequest) -> str:
+    parts = dedupe_terms(
+        [
+            payload.query,
+            *(payload.condition_hints or []),
+            payload.domain or "",
+            payload.breed or "",
+            "dog veterinary reference image",
+        ]
+    )
+    return ", ".join(parts)
 
 
 def infer_condition_filters(payload: ImageRetrievalRequest) -> list[str]:
@@ -322,6 +356,133 @@ def fetch_assets(
     return data if isinstance(data, list) else []
 
 
+def load_biomedclip():
+    global CLIP_MODEL, CLIP_PREPROCESS, CLIP_TOKENIZER, CLIP_DEVICE, MODEL_LOAD_ATTEMPTED, MODEL_LOAD_ERROR
+
+    if MODEL_LOAD_ATTEMPTED:
+        return CLIP_MODEL, CLIP_PREPROCESS, CLIP_TOKENIZER
+
+    MODEL_LOAD_ATTEMPTED = True
+
+    if not model_backend_enabled():
+        return None, None, None
+
+    try:
+        import open_clip
+        import torch
+
+        CLIP_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+        model, preprocess = open_clip.create_model_from_pretrained(
+            f"hf-hub:{IMAGE_RETRIEVAL_MODEL_NAME}"
+        )
+        tokenizer = open_clip.get_tokenizer(f"hf-hub:{IMAGE_RETRIEVAL_MODEL_NAME}")
+        model = model.to(CLIP_DEVICE)
+        model.eval()
+
+        CLIP_MODEL = model
+        CLIP_PREPROCESS = preprocess
+        CLIP_TOKENIZER = tokenizer
+        MODEL_LOAD_ERROR = None
+        logger.info(
+            "Loaded image retrieval model=%s device=%s",
+            IMAGE_RETRIEVAL_MODEL_NAME,
+            CLIP_DEVICE,
+        )
+    except Exception as error:
+        MODEL_LOAD_ERROR = str(error)
+        CLIP_MODEL = None
+        CLIP_PREPROCESS = None
+        CLIP_TOKENIZER = None
+        logger.warning("Falling back to deterministic image retrieval", exc_info=error)
+
+    return CLIP_MODEL, CLIP_PREPROCESS, CLIP_TOKENIZER
+
+
+def load_candidate_image(asset: dict[str, Any]) -> Image.Image | None:
+    local_path = str(asset.get("local_path") or "").strip()
+    if local_path and os.path.exists(local_path):
+        try:
+            return Image.open(local_path).convert("RGB")
+        except Exception:
+            return None
+
+    asset_url = str(asset.get("asset_url") or "").strip()
+    if asset_url.startswith("http://") or asset_url.startswith("https://"):
+        try:
+            response = requests.get(asset_url, timeout=IMAGE_FETCH_TIMEOUT_SECONDS)
+            response.raise_for_status()
+            return Image.open(io.BytesIO(response.content)).convert("RGB")
+        except Exception:
+            return None
+
+    return None
+
+
+def get_cached_image_embedding(asset: dict[str, Any]) -> list[float] | None:
+    cache_key = str(asset.get("id") or asset.get("local_path") or asset.get("asset_url") or "")
+    if not cache_key:
+        return None
+    return IMAGE_EMBED_CACHE.get(cache_key)
+
+
+def set_cached_image_embedding(asset: dict[str, Any], embedding: list[float]) -> None:
+    cache_key = str(asset.get("id") or asset.get("local_path") or asset.get("asset_url") or "")
+    if not cache_key:
+        return
+    IMAGE_EMBED_CACHE[cache_key] = embedding
+
+
+def rerank_assets_with_model(
+    payload: ImageRetrievalRequest,
+    ranked_rows: list[tuple[float, dict[str, Any], dict[str, Any]]],
+) -> list[tuple[float, dict[str, Any], dict[str, Any]]]:
+    model, preprocess, tokenizer = load_biomedclip()
+    if not model or not preprocess or not tokenizer:
+        return ranked_rows
+
+    model_rows = ranked_rows[: max(1, IMAGE_MODEL_MAX_ASSETS)]
+    remainder = ranked_rows[max(1, IMAGE_MODEL_MAX_ASSETS) :]
+    if not model_rows:
+        return ranked_rows
+
+    try:
+        import torch
+
+        query_text = build_query_text(payload)
+        with torch.no_grad():
+            text_tokens = tokenizer([query_text]).to(CLIP_DEVICE)
+            text_features = model.encode_text(text_tokens)
+            text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+
+            rescored: list[tuple[float, dict[str, Any], dict[str, Any]]] = []
+            for base_score, asset, source in model_rows:
+                cached_embedding = get_cached_image_embedding(asset)
+                if cached_embedding is not None:
+                    image_features = torch.tensor([cached_embedding], device=CLIP_DEVICE)
+                else:
+                    image = load_candidate_image(asset)
+                    if image is None:
+                        rescored.append((base_score, asset, source))
+                        continue
+                    image_tensor = preprocess(image).unsqueeze(0).to(CLIP_DEVICE)
+                    image_features = model.encode_image(image_tensor)
+                    image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                    set_cached_image_embedding(
+                        asset,
+                        image_features.squeeze(0).detach().cpu().tolist(),
+                    )
+
+                clip_similarity = float((image_features @ text_features.T).squeeze().item())
+                combined_score = base_score + clip_similarity * 5.0
+                rescored.append((combined_score, asset, source))
+
+        rescored.sort(key=lambda item: item[0], reverse=True)
+        return rescored + remainder
+    except Exception as error:
+        logger.warning("Model image reranking failed; using deterministic ranking", exc_info=error)
+        return ranked_rows
+
+
 def score_asset(
     asset: dict[str, Any],
     source: dict[str, Any],
@@ -365,6 +526,9 @@ def healthz():
         "service": "image-retrieval-service",
         "mode": health_mode(),
         "supabase_configured": bool(SUPABASE_URL and SUPABASE_KEY),
+        "model_backend_enabled": model_backend_enabled(),
+        "model_name": IMAGE_RETRIEVAL_MODEL_NAME,
+        "model_load_error": MODEL_LOAD_ERROR,
     }
 
 
@@ -400,6 +564,7 @@ def search(payload: ImageRetrievalRequest, authorization: str | None = Header(de
         ranked.append((score, asset, source))
 
     ranked.sort(key=lambda item: item[0], reverse=True)
+    ranked = rerank_assets_with_model(payload, ranked)
     top_rows = ranked[: max(1, payload.image_limit)]
 
     image_matches: list[dict[str, Any]] = []
