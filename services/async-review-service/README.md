@@ -1,6 +1,13 @@
 # async-review-service
 
-Contract-first FastAPI service for:
+FastAPI sidecar for:
 - Qwen2.5-VL-32B-Instruct asynchronous high-complexity review
 
-This service is intentionally non-blocking in the app architecture. The current implementation is a stub endpoint for queue/worker integration.
+This service is intentionally non-blocking in the app architecture and supports two runtime modes:
+- `STUB_MODE=true`: returns conservative contract-valid review results for queue/polling integration checks
+- `STUB_MODE=false`: loads the real Qwen2.5-VL-32B-Instruct model and processes queued review requests
+
+Important guardrails:
+- The service is server-to-server only and expects `Bearer <SIDECAR_API_KEY>` when configured
+- Review IDs are deterministic so queued responses can be polled reliably
+- Stub mode is meant for local orchestration and queue contract verification

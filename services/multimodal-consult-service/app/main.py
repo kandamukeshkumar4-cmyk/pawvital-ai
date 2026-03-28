@@ -13,11 +13,10 @@ import os
 import io
 import base64
 import json
-from typing import Optional
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from PIL import Image
 import torch
@@ -58,14 +57,29 @@ MODEL_NAME = "Qwen/Qwen2.5-VL-7B-Instruct"
 MODEL = None
 PROCESSOR = None
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+STUB_MODE = os.environ.get("STUB_MODE", "false").strip().lower() == "true"
+EXPECTED_API_KEY = os.environ.get("SIDECAR_API_KEY", "").strip()
+logger = logging.getLogger("multimodal-consult-service")
+
+
+def validate_auth(authorization: str | None) -> None:
+    if not EXPECTED_API_KEY:
+        return
+
+    expected_header = f"Bearer {EXPECTED_API_KEY}"
+    if authorization != expected_header:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 def load_model():
     """Load Qwen2.5-VL-7B-Instruct model and processor."""
     global MODEL, PROCESSOR
+
+    if STUB_MODE:
+        return None, None
     
     if MODEL is None or PROCESSOR is None:
-        print(f"[multimodal-consult] Loading {MODEL_NAME} on {DEVICE}...")
+        logger.info("Loading %s on %s", MODEL_NAME, DEVICE)
         PROCESSOR = AutoProcessor.from_pretrained(MODEL_NAME)
         MODEL = AutoModelForVision2Seq.from_pretrained(
             MODEL_NAME,
@@ -73,7 +87,7 @@ def load_model():
             device_map="auto" if DEVICE == "cuda" else None,
         )
         MODEL.eval()
-        print("[multimodal-consult] Model loaded successfully")
+        logger.info("Model loaded successfully")
     
     return MODEL, PROCESSOR
 
@@ -208,6 +222,22 @@ def parse_model_response(content: str) -> dict:
 
 async def generate_consult(request: ConsultRequest) -> ConsultResponse:
     """Generate consult opinion using Qwen2.5-VL-7B."""
+    if STUB_MODE:
+        return ConsultResponse(
+            model=f"{MODEL_NAME} (stub)",
+            summary=(
+                "Stub consult mode is active. The clinical matrix remains the authority "
+                "and no external multimodal specialist opinion was generated."
+            ),
+            agreements=[],
+            disagreements=[],
+            uncertainties=[
+                "Multimodal consult service is running in stub mode.",
+                "Use this only for contract and integration verification.",
+            ],
+            confidence=0.25,
+            mode="sync",
+        )
     
     model, processor = load_model()
     
@@ -298,10 +328,9 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for model loading."""
-    # Startup: preload model
-    load_model()
+    if not STUB_MODE:
+        load_model()
     yield
-    # Shutdown: cleanup if needed
     global MODEL, PROCESSOR
     MODEL = None
     PROCESSOR = None
@@ -320,7 +349,7 @@ def healthz():
     return {
         "ok": True,
         "service": "multimodal-consult-service",
-        "mode": "production",
+        "mode": "stub" if STUB_MODE else "production",
         "model": MODEL_NAME,
         "device": DEVICE,
     }
@@ -338,12 +367,7 @@ async def consult(
     the clinical matrix authority.
     """
     
-    # Check for API key if configured
-    expected_key = os.environ.get("SIDECAR_API_KEY", "")
-    if expected_key and authorization:
-        auth_header = authorization.replace("Bearer ", "")
-        if auth_header != expected_key:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+    validate_auth(authorization)
     
     try:
         result = await generate_consult(payload)
@@ -354,8 +378,7 @@ async def consult(
             detail="GPU memory exhausted. Consider reducing image resolution.",
         )
     except Exception as e:
-        # Log error but don't expose internal details
-        print(f"[multimodal-consult] Error: {str(e)}")
+        logger.error("Consult generation failed", exc_info=e)
         raise HTTPException(
             status_code=500,
             detail="Consult generation failed. Falling back to clinical matrix authority.",

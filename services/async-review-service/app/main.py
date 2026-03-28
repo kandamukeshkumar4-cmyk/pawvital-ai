@@ -15,13 +15,13 @@ import os
 import io
 import base64
 import json
-import asyncio
 import hashlib
-from typing import Optional, Literal
+import logging
+from typing import Optional
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, Header, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, Header, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from PIL import Image
@@ -72,14 +72,29 @@ MODEL_NAME = "Qwen/Qwen2.5-VL-32B-Instruct"
 MODEL = None
 PROCESSOR = None
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+STUB_MODE = os.environ.get("STUB_MODE", "false").strip().lower() == "true"
+EXPECTED_API_KEY = os.environ.get("SIDECAR_API_KEY", "").strip()
+logger = logging.getLogger("async-review-service")
+
+
+def validate_auth(authorization: str | None) -> None:
+    if not EXPECTED_API_KEY:
+        return
+
+    expected_header = f"Bearer {EXPECTED_API_KEY}"
+    if authorization != expected_header:
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 def load_model():
     """Load Qwen2.5-VL-32B-Instruct model and processor."""
     global MODEL, PROCESSOR
+
+    if STUB_MODE:
+        return None, None
     
     if MODEL is None or PROCESSOR is None:
-        print(f"[async-review] Loading {MODEL_NAME} on {DEVICE}...")
+        logger.info("Loading %s on %s", MODEL_NAME, DEVICE)
         PROCESSOR = AutoProcessor.from_pretrained(MODEL_NAME)
         MODEL = AutoModelForVision2Seq.from_pretrained(
             MODEL_NAME,
@@ -87,7 +102,7 @@ def load_model():
             device_map="auto" if DEVICE == "cuda" else None,
         )
         MODEL.eval()
-        print("[async-review] Model loaded successfully")
+        logger.info("Model loaded successfully")
     
     return MODEL, PROCESSOR
 
@@ -103,7 +118,20 @@ def decode_image(image_data: str) -> Image.Image:
 
 def generate_case_id(request: AsyncReviewRequest) -> str:
     """Generate a deterministic case ID from request content."""
-    content = f"{request.image[:100]}:{request.owner_text[:50]}:{datetime.utcnow().isoformat()}"
+    if request.case_id:
+        return request.case_id
+
+    content = json.dumps(
+        {
+            "image": request.image[:256],
+            "owner_text": request.owner_text,
+            "preprocess": request.preprocess,
+            "severity": request.severity,
+            "deterministic_facts": request.deterministic_facts,
+        },
+        sort_keys=True,
+        default=str,
+    )
     return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
@@ -225,6 +253,24 @@ def parse_model_response(content: str) -> dict:
 
 async def generate_review(request: AsyncReviewRequest, case_id: str) -> ReviewResponse:
     """Generate thorough review using Qwen2.5-VL-32B."""
+    if STUB_MODE:
+        return ReviewResponse(
+            model=f"{MODEL_NAME} (stub)",
+            summary=(
+                "Stub async review mode is active. This result preserves the review contract "
+                "but does not represent a real 32B multimodal second opinion."
+            ),
+            agreements=[],
+            disagreements=[],
+            uncertainties=[
+                "Async review service is running in stub mode.",
+                "Use this only for queue, polling, and callback integration checks.",
+            ],
+            confidence=0.2,
+            mode="async",
+            case_id=case_id,
+            processed_at=datetime.utcnow().isoformat() + "Z",
+        )
     
     model, processor = load_model()
     
@@ -341,8 +387,8 @@ async def generate_review(request: AsyncReviewRequest, case_id: str) -> ReviewRe
 
 async def process_review_task(request: AsyncReviewRequest):
     """Background task to process review and store result."""
+    case_id = generate_case_id(request)
     try:
-        case_id = generate_case_id(request)
         result = await generate_review(request, case_id)
         REVIEW_RESULTS[case_id] = result
         
@@ -357,10 +403,12 @@ async def process_review_task(request: AsyncReviewRequest):
                 async with httpx.AsyncClient() as client:
                     await client.post(request.callback_url, json=result.model_dump())
             except Exception as e:
-                print(f"[async-review] Callback failed: {e}")
+                logger.error("Callback failed for case %s", case_id, exc_info=e)
                 
     except Exception as e:
-        print(f"[async-review] Processing error: {e}")
+        logger.error("Processing error for case %s", case_id, exc_info=e)
+        if case_id in PROCESSING_QUEUE:
+            PROCESSING_QUEUE.remove(case_id)
 
 
 # =============================================================================
@@ -370,7 +418,8 @@ async def process_review_task(request: AsyncReviewRequest):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for model loading."""
-    load_model()
+    if not STUB_MODE:
+        load_model()
     yield
     global MODEL, PROCESSOR
     MODEL = None
@@ -390,7 +439,7 @@ def healthz():
     return {
         "ok": True,
         "service": "async-review-service",
-        "mode": "production",
+        "mode": "stub" if STUB_MODE else "production",
         "model": MODEL_NAME,
         "device": DEVICE,
         "queue_size": len(PROCESSING_QUEUE),
@@ -411,12 +460,7 @@ async def review(
     Use GET /review/{case_id} to retrieve results.
     """
     
-    # Check for API key
-    expected_key = os.environ.get("SIDECAR_API_KEY", "")
-    if expected_key and authorization:
-        auth_header = authorization.replace("Bearer ", "")
-        if auth_header != expected_key:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+    validate_auth(authorization)
     
     try:
         case_id = generate_case_id(payload)
@@ -433,7 +477,7 @@ async def review(
         })
         
     except Exception as e:
-        print(f"[async-review] Error queuing review: {e}")
+        logger.error("Error queuing review", exc_info=e)
         raise HTTPException(status_code=500, detail="Failed to queue review")
 
 
