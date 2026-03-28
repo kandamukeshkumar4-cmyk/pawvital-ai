@@ -153,22 +153,33 @@ That means:
 
 To move faster without breaking `master`, parallel work should follow explicit file ownership.
 
-### Current recommended ownership
+### Current checkpoint
+
+- We are still between `Phase 2` and `Phase 3`.
+- There is currently no visible MiniMax-specific GitHub PR or remote branch yet.
+- The next fastest path is to split `Phase 3` by model strength, not just by file count.
+
+### Strength-aligned ownership
 
 #### Codex ownership
+- `src/lib/vision-preprocess.ts`
 - `src/lib/text-retrieval-service.ts`
 - `src/lib/image-retrieval-service.ts`
 - `src/lib/live-corpus.ts`
 - `src/lib/knowledge-retrieval.ts`
-- retrieval verification, curated-corpus reindex, and shadow-mode retrieval comparisons
+- sidecar contract integration in the app
+- retrieval verification, curated-corpus reindex, shadow-mode retrieval comparisons
+- deployment wiring, integration testing, and production verification
 
-#### MiniMax agent ownership
-- `src/lib/vision-preprocess.ts`
+#### MiniMax M2.7 ownership
 - `src/lib/multimodal-consult.ts`
 - `src/lib/async-review-client.ts`
-- any GPU-backed sidecar serving code or container/runtime setup for those services
+- review prompts, disagreement-analysis logic, and long-context case comparison behavior
+- outcome-feedback mining and shadow-review summarization
+- any service-layer reasoning policies for multimodal consult and async review
 
-#### Shared integration files
+#### Shared-but-sequenced ownership
+- `src/lib/hf-sidecars.ts`
 - `src/app/api/ai/symptom-chat/route.ts`
 - `plans/DEVELOPMENT_ROADMAP.md`
 - production env wiring and deployment config
@@ -190,15 +201,16 @@ When two agents are both pushing directly to `master`, use this order every time
 To accelerate Phase 3 right now:
 
 1. Codex picks up:
+   - real `vision-preprocess-service` runtime and model-serving plumbing
    - real `text-retrieval-service`
    - real `image-retrieval-service`
-   - retrieval-side verification
-2. MiniMax agent picks up:
-   - real `vision-preprocess-service`
+   - retrieval-side verification and curated-corpus validation
+2. MiniMax M2.7 picks up:
    - real `multimodal-consult-service`
    - real `async-review-service`
+   - shadow disagreement review prompts and outcome-analysis logic
 3. After both land:
-   - Codex handles integration verification, shadow-mode checks, and roadmap status updates
+   - Codex handles integration verification, shadow-mode checks, deployment verification, and roadmap status updates
 
 ## Definition Of Done For The World-Class Path
 
