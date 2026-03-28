@@ -196,6 +196,32 @@ When two agents are both pushing directly to `master`, use this order every time
 4. push only after local tests/build for the touched area pass
 5. update this roadmap if the phase status or ownership changed
 
+### Lead coordination protocol
+
+After every completed task, Codex should act as the lead coordinator and do all of the following before moving to the next task:
+
+1. verify the completed work locally with the smallest relevant test/build checks
+2. sync with `master` and confirm the working tree is clean
+3. check GitHub for any new MiniMax M2.7 branch, push, or PR activity
+4. review any MiniMax-delivered changes before touching shared files
+5. update `Current checkpoint`, `Current Position`, and phase notes in this roadmap if status changed
+6. publish the next task split:
+   - what Codex handles next
+   - what MiniMax M2.7 handles next
+   - which files remain shared/blocked
+7. only then start the next implementation task
+
+### Default reporting format after each task
+
+Every post-task status update should answer these questions clearly:
+
+- what was just completed
+- what phase we are in now
+- whether MiniMax M2.7 has pushed anything new
+- what Codex will do next
+- what MiniMax M2.7 should do next
+- whether any shared file is temporarily locked
+
 ### Recommended next split
 
 To accelerate Phase 3 right now:
