@@ -15,6 +15,7 @@
     "verify:sidecars:health": "node scripts/verify-sidecars.mjs health",
     "verify:sidecars:shadow": "node scripts/verify-sidecars.mjs shadow",
     "verify:sidecars:readiness": "node scripts/verify-sidecars.mjs readiness",
+    "verify:sidecars:vercel": "node scripts/verify-sidecars.mjs vercel",
     "verify:sidecars:strict": "node scripts/verify-sidecars.mjs all --strict",
     "verify:corpus:live": "node scripts/verify-live-corpus.mjs",
     "db:apply-rag-schema": "node scripts/apply-rag-schema.mjs",

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { spawnSync } from "node:child_process";
 import dotenv from "dotenv";
 
 const rootDir = process.cwd();
@@ -22,6 +23,11 @@ const services = JSON.parse(
     "utf8"
   )
 );
+const REQUIRED_VERCEL_ENV_NAMES = services.map((service) => service.env);
+const DEBUG_ROUTE_SECRET_ENV_NAMES = [
+  "HF_SIDECAR_API_KEY",
+  "ASYNC_REVIEW_WEBHOOK_SECRET",
+];
 
 function statusLine(level, message) {
   const prefix =
@@ -150,6 +156,41 @@ async function fetchJson(url, timeoutMs = 7000) {
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function runVercelEnvList(environment = "production") {
+  const args =
+    process.platform === "win32"
+      ? ["cmd", "/c", "npx", "vercel", "env", "ls", environment]
+      : ["npx", "vercel", "env", "ls", environment];
+
+  const command = args[0];
+  const commandArgs = args.slice(1);
+  return spawnSync(command, commandArgs, {
+    cwd: rootDir,
+    encoding: "utf8",
+    timeout: 15000,
+  });
+}
+
+function parseVercelEnvNames(output) {
+  return output
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter(
+      (line) =>
+        !line.startsWith("> ") &&
+        !line.startsWith("Retrieving project") &&
+        !line.startsWith("Common next commands") &&
+        !line.startsWith("- `vercel") &&
+        !/^name\s+value\s+environments\s+created$/i.test(line)
+    )
+    .map((line) => {
+      const match = line.match(/^([A-Z0-9_]+)/);
+      return match?.[1] || "";
+    })
+    .filter(Boolean);
 }
 
 function runEnvChecks() {
@@ -358,9 +399,13 @@ async function runShadowChecks() {
     const result = await postJson(routeUrl, buildShadowProbePayload());
     if (!result.ok || !result.body || result.body.ok !== true) {
       failures += 1;
+      const authHint =
+        result.status === 401
+          ? " Check deployed HF_SIDECAR_API_KEY / ASYNC_REVIEW_WEBHOOK_SECRET alignment."
+          : "";
       statusLine(
         "fail",
-        `shadow rollout route failed at ${routeUrl} (${result.status})`
+        `shadow rollout route failed at ${routeUrl} (${result.status}).${authHint}`
       );
       return { failures, warnings };
     }
@@ -413,9 +458,13 @@ async function runReadinessChecks() {
     const result = await fetchJson(routeUrl);
     if (!result.ok || !result.body || result.body.ok !== true) {
       failures += 1;
+      const authHint =
+        result.status === 401
+          ? " Check deployed HF_SIDECAR_API_KEY / ASYNC_REVIEW_WEBHOOK_SECRET alignment."
+          : "";
       statusLine(
         "fail",
-        `sidecar readiness route failed at ${routeUrl} (${result.status})`
+        `sidecar readiness route failed at ${routeUrl} (${result.status}).${authHint}`
       );
       return { failures, warnings };
     }
@@ -439,13 +488,70 @@ async function runReadinessChecks() {
   return { failures, warnings };
 }
 
+function runVercelChecks() {
+  let failures = 0;
+  let warnings = 0;
+
+  const result = runVercelEnvList("production");
+  if (result.error) {
+    failures += 1;
+    statusLine(
+      "fail",
+      `Failed to run "vercel env ls production": ${result.error.message}`
+    );
+    return { failures, warnings };
+  }
+
+  if (result.status !== 0) {
+    failures += 1;
+    statusLine(
+      "fail",
+      `vercel env ls production failed (${result.status}): ${String(
+        result.stderr || result.stdout || ""
+      ).trim()}`
+    );
+    return { failures, warnings };
+  }
+
+  const names = new Set(parseVercelEnvNames(result.stdout || ""));
+  if (names.size === 0) {
+    failures += 1;
+    statusLine("fail", "Could not parse any Vercel production environment variables");
+    return { failures, warnings };
+  }
+
+  for (const envName of REQUIRED_VERCEL_ENV_NAMES) {
+    if (names.has(envName)) {
+      statusLine("ok", `Vercel production env includes ${envName}`);
+    } else {
+      warnings += 1;
+      statusLine("warn", `Vercel production env is missing ${envName}`);
+    }
+  }
+
+  if (DEBUG_ROUTE_SECRET_ENV_NAMES.some((envName) => names.has(envName))) {
+    statusLine(
+      "ok",
+      "Vercel production has at least one debug-route auth secret configured"
+    );
+  } else {
+    warnings += 1;
+    statusLine(
+      "warn",
+      "Vercel production is missing both HF_SIDECAR_API_KEY and ASYNC_REVIEW_WEBHOOK_SECRET"
+    );
+  }
+
+  return { failures, warnings };
+}
+
 async function main() {
   let failures = 0;
   let warnings = 0;
 
-  if (!["env", "health", "shadow", "readiness", "all"].includes(command)) {
+  if (!["env", "health", "shadow", "readiness", "vercel", "all"].includes(command)) {
     console.error(
-      `Unknown command "${command}". Use env, health, shadow, readiness, or all.`
+      `Unknown command "${command}". Use env, health, shadow, readiness, vercel, or all.`
     );
     process.exit(1);
   }
@@ -477,6 +583,13 @@ async function main() {
   if (command === "readiness") {
     console.log("== Sidecar readiness route check ==");
     const result = await runReadinessChecks();
+    failures += result.failures;
+    warnings += result.warnings;
+  }
+
+  if (command === "vercel") {
+    console.log("== Vercel production env check ==");
+    const result = runVercelChecks();
     failures += result.failures;
     warnings += result.warnings;
   }

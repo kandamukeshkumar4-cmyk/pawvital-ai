@@ -95,6 +95,7 @@ npm run verify:sidecars:env
 npm run verify:sidecars:health
 npm run verify:sidecars:readiness
 npm run verify:sidecars:shadow
+npm run verify:sidecars:vercel
 npm run verify:corpus:live
 ```
 
@@ -145,6 +146,16 @@ npm run verify:corpus:live
 
 This check confirms that the live corpus registry points at real on-disk dataset folders and highlights any mapped-but-empty image sources that still need curation or ingestion.
 
+### Step 5.6: Confirm Vercel production env wiring
+
+Before declaring Phase 4 complete, run:
+
+```bash
+npm run verify:sidecars:vercel
+```
+
+This audit checks whether Vercel production has the expected `HF_*` sidecar URLs and at least one debug-route auth secret (`HF_SIDECAR_API_KEY` or `ASYNC_REVIEW_WEBHOOK_SECRET`).
+
 ### Step 6: Compare before promotion
 
 Review:
@@ -153,6 +164,7 @@ Review:
 - fallback rate
 - disagreement count
 - whether shadow outputs are cleaner than the live fallback path
+- whether the guarded debug routes are reachable without `401` once secrets are aligned
 
 Use the observability fields stored in session memory and the final report system snapshot.
 

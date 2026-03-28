@@ -29,6 +29,7 @@ npm run verify:sidecars:env
 npm run verify:sidecars:health
 npm run verify:sidecars:readiness
 npm run verify:sidecars:shadow
+npm run verify:sidecars:vercel
 npm run verify:corpus:live
 ```
 
