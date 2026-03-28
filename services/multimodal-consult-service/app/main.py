@@ -147,12 +147,13 @@ def build_consult_prompt(request: ConsultRequest) -> str:
     
     prompt = f"""You are a veterinary specialist providing an additive second opinion on a clinical image case.
 
-IMPORTANT CONSTRAINTS:
+IMPORTANT CONSTRAINTS - FOLLOW STRICTLY:
 1. You are NOT the authority. The clinical matrix makes final triage decisions.
 2. Your role is additive only - inform, never override.
 3. Respond ONLY with valid JSON matching the exact schema below.
 4. Do NOT include markdown code fences, explanations, or text outside the JSON.
 5. All array fields must be actual JSON arrays of strings, not single strings.
+6. Do NOT leave any array empty if you have genuine observations.
 
 === CASE INFORMATION ===
 
@@ -189,12 +190,12 @@ Respond ONLY with this exact JSON structure (no markdown, no text outside):
   "confidence": 0.0-1.0
 }}
 
-DISCIPLINE RULES:
-- summary: MUST be 50-500 characters, descriptive, not generic
-- agreements: Be specific to this case, cite image findings
-- disagreements: Only genuine specialist concerns, not minor variations
-- uncertainties: Include image quality limitations explicitly if applicable
-- confidence: 0.0 = no confidence, 1.0 = absolute certainty; be calibrated
+OUTPUT QUALITY DISCIPLINE:
+- summary: MUST be 50-500 characters, descriptive, specific to THIS case. Avoid generic phrases like "The image shows..." - instead cite specific findings.
+- agreements: Each item MUST cite a specific image finding that confirms the clinical matrix. Minimum 1 item if image quality allows assessment.
+- disagreements: Only genuine specialist concerns with severity implications. Minor variations in interpretation do not qualify. Maximum 3 items.
+- uncertainties: Explicitly state what image quality or information gaps limit your confidence. Include at minimum image_quality assessment if quality is not "good".
+- confidence: Calibrate honestly. 0.7-0.9 is typical for good quality images. Lower if image quality limits assessment.
 
 Respond with JSON only:
 """
@@ -265,6 +266,7 @@ def _validate_response_schema(result: dict, issues: list[str]) -> None:
     Validate response has required fields with correct types.
     
     Issues are appended to `issues` list for reporting in uncertainties.
+    Enhanced validation now enforces content quality minimums.
     """
     required_fields = {
         "summary": (str,),
@@ -297,10 +299,43 @@ def _validate_response_schema(result: dict, issues: list[str]) -> None:
                 issues.append(f"Confidence {conf} outside valid range [0.0, 1.0], clamping")
                 result["confidence"] = max(0.0, min(1.0, conf))
 
-    # Ensure arrays are actually arrays
+    # Ensure arrays are actually arrays with string elements
     for array_field in ("agreements", "disagreements", "uncertainties"):
-        if array_field in result and not isinstance(result[array_field], list):
-            result[array_field] = [str(result[array_field])] if result[array_field] else []
+        if array_field in result:
+            if not isinstance(result[array_field], list):
+                result[array_field] = [str(result[array_field])] if result[array_field] else []
+            else:
+                # Ensure all elements are strings
+                result[array_field] = [
+                    str(item) if not isinstance(item, str) else item
+                    for item in result[array_field]
+                ]
+
+    # Content quality validation
+    if "summary" in result and isinstance(result["summary"], str):
+        summary_len = len(result["summary"])
+        if summary_len < 30:
+            issues.append(f"Summary too short ({summary_len} chars), likely too generic")
+        elif summary_len > 600:
+            issues.append(f"Summary too long ({summary_len} chars), may lack focus")
+
+    # Agreements should have substantive content
+    if "agreements" in result and isinstance(result["agreements"], list):
+        if len(result["agreements"]) == 0:
+            issues.append("No agreements provided - was image quality too poor to assess?")
+        else:
+            # Check each agreement has minimum meaningful length
+            for i, agr in enumerate(result["agreements"]):
+                if len(agr) < 20:
+                    issues.append(f"Agreement {i+1} too short ({len(agr)} chars), lacks specificity")
+
+    # Disagreements should be limited and substantive
+    if "disagreements" in result and isinstance(result["disagreements"], list):
+        if len(result["disagreements"]) > 3:
+            issues.append(f"Too many disagreements ({len(result['disagreements'])}), maximum is 3")
+        for i, dis in enumerate(result["disagreements"]):
+            if len(dis) < 20:
+                issues.append(f"Disagreement {i+1} too short ({len(dis)} chars), lacks detail")
 
 
 def _extract_partial_fields(content: str) -> dict | None:

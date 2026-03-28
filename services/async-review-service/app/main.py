@@ -17,6 +17,7 @@ import base64
 import json
 import hashlib
 import logging
+import re
 from threading import Lock
 from typing import Any, Optional
 from contextlib import asynccontextmanager
@@ -29,6 +30,25 @@ from PIL import Image
 import torch
 from transformers import AutoProcessor, AutoModelForVision2Seq
 from qwen_vl_utils import process_vision_info
+
+
+# =============================================================================
+# Constants
+# =============================================================================
+
+STOP_WORDS = frozenset({
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "have", "has", "had", "do", "does", "did", "will", "would",
+    "could", "should", "may", "might", "must", "shall", "can",
+    "of", "in", "to", "for", "with", "on", "at", "by", "from",
+    "as", "into", "through", "during", "before", "after", "above",
+    "below", "between", "under", "again", "further", "then",
+    "once", "here", "there", "when", "where", "why", "how",
+    "all", "each", "few", "more", "most", "other", "some", "such",
+    "no", "nor", "not", "only", "own", "same", "so", "than", "too",
+    "very", "just", "and", "but", "if", "or", "because", "until",
+    "while", "this", "that", "these", "those", "it", "its"
+})
 
 
 # =============================================================================
@@ -194,12 +214,13 @@ def build_review_prompt(request: AsyncReviewRequest, case_id: str) -> str:
     
     prompt = f"""You are a veterinary specialist conducting a THOROUGH async review of a complex clinical case.
 
-IMPORTANT CONSTRAINTS:
+IMPORTANT CONSTRAINTS - FOLLOW STRICTLY:
 1. You are NOT the authority. The clinical matrix makes final triage decisions.
 2. Your role is additive only - inform, never override.
 3. Respond ONLY with valid JSON matching the exact schema below.
 4. Do NOT include markdown code fences, explanations, or text outside the JSON.
 5. All array fields must be actual JSON arrays of strings.
+6. Be thorough - the 32B model has capacity for nuanced analysis, use it fully.
 
 Case ID: {case_id}
 
@@ -240,17 +261,16 @@ Respond ONLY with this exact JSON structure (no markdown, no text outside):
   "recommended_followup": ["string: question that would strengthen assessment", ...]
 }}
 
-DISCIPLINE RULES FOR 32B MODEL:
-- summary: MUST be 100-800 characters, detailed and case-specific
-- agreements: Explain WHY you agree, cite specific image findings
-- disagreements: Be explicit about severity implications, not minor variations
-- uncertainties: List BOTH knowledge gaps AND image quality limitations separately
-- confidence: Calibrate honestly - 32B has capacity for nuance, use it
-- differential_considerations: At least 1-2 conditions even if unlikely
-- recommended_followup: Focus on actionable follow-ups, not just questions
+OUTPUT QUALITY DISCIPLINE FOR 32B MODEL:
+- summary: MUST be 100-800 characters. Include specific image findings, not generic statements. Reference detected regions by their features.
+- agreements: Each item MUST explain WHY you agree AND cite specific image findings. Minimum 1 substantive agreement.
+- disagreements: Be explicit about severity/triage implications. Minor variations do not qualify. Maximum 4 items. Each must explain the clinical significance.
+- uncertainties: Separate BOTH: (a) knowledge/uncertainty gaps, AND (b) image quality limitations. Be specific about what additional info would help.
+- confidence: Calibrate honestly. 0.75-0.95 is typical for good quality images with clear findings. Lower if image quality or case complexity limits certainty.
+- differential_considerations: At least 2-3 conditions that could present similarly, even if unlikely. Consider anatomical variants, trauma vs disease, acute vs chronic.
+- recommended_followup: At least 2 actionable items. Prefer questions about history, physical exam findings, or specific additional imaging that would clarify ambiguity.
 
-Be thorough. The 32B model has capacity for nuanced analysis.
-If image quality limits your assessment, state this explicitly with specific concerns.
+If image quality limits your assessment, state this explicitly with SPECIFIC concerns (e.g., "resolution insufficient to assess subtle bone changes" vs "image quality limits assessment").
 
 Respond with JSON only:
 """
@@ -624,8 +644,37 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
     """
     Compute shadow disagreement summary between 7B consult and 32B review.
     
+    Enhanced with semantic similarity matching for better disagreement detection.
     This is stored for analysis without affecting clinical decisions.
     """
+    def extract_keywords(text: str) -> set:
+        """Extract significant keywords from text for semantic matching."""
+        words = re.findall(r'\b[a-z]+\b', text.lower())
+        return {w for w in words if len(w) > 3 and w not in STOP_WORDS}
+    
+    def compute_similarity(item1: str, item2: str) -> float:
+        """Compute semantic similarity based on keyword overlap."""
+        keywords1 = extract_keywords(item1)
+        keywords2 = extract_keywords(item2)
+        if not keywords1 or not keywords2:
+            return 0.0
+        overlap = len(keywords1 & keywords2)
+        union = len(keywords1 | keywords2)
+        return overlap / union if union > 0 else 0.0
+    
+    def find_best_match(item: str, item_list: list[str], threshold: float = 0.3) -> tuple[int, float] | None:
+        """Find best matching item in list with similarity score."""
+        best_idx = -1
+        best_score = 0.0
+        for i, candidate in enumerate(item_list):
+            score = compute_similarity(item, candidate)
+            if score > best_score:
+                best_score = score
+                best_idx = i
+        if best_score >= threshold:
+            return (best_idx, best_score)
+        return None
+    
     consult_agreements = consult_opinion.get("agreements", [])
     consult_disagreements = consult_opinion.get("disagreements", [])
     consult_uncertainties = consult_opinion.get("uncertainties", [])
@@ -648,48 +697,87 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         "confidence_delta": abs(
             consult_opinion.get("confidence", 0.5) - review_result.confidence
         ),
+        "semantic_matches": [],  # Enhanced: track semantic similarity matches
         "synopsis": "",
     }
     
-    # Check agreement overlap
+    # Check agreement overlap with semantic matching
     for ca in consult_agreements:
-        if ca in review_agreements:
-            shadow_summary["agreement_overlap"].append(ca)
+        match = find_best_match(ca, review_agreements)
+        if match is not None:
+            idx, score = match
+            shadow_summary["agreement_overlap"].append(f"EXACT: {ca}")
+            shadow_summary["semantic_matches"].append({
+                "type": "agreement",
+                "consult_item": ca[:100] + "..." if len(ca) > 100 else ca,
+                "review_item": review_agreements[idx][:100] + "..." if len(review_agreements[idx]) > 100 else review_agreements[idx],
+                "similarity": round(score, 2)
+            })
         elif ca in review_disagreements:
             shadow_summary["disagreement_points"].append(
                 f"CONSULT AGREE vs REVIEW DISAGREE: {ca}"
             )
     
-    # Check disagreement divergence
+    # Check disagreement divergence with semantic matching
     for cd in consult_disagreements:
-        if cd in review_disagreements:
-            shadow_summary["agreement_overlap"].append(f"Both disagree: {cd}")
+        match = find_best_match(cd, review_disagreements)
+        if match is not None:
+            idx, score = match
+            shadow_summary["agreement_overlap"].append(f"DISAGREE BOTH: {cd[:80]}...")
+            shadow_summary["semantic_matches"].append({
+                "type": "disagreement",
+                "consult_item": cd[:100] + "..." if len(cd) > 100 else cd,
+                "review_item": review_disagreements[idx][:100] + "..." if len(review_disagreements[idx]) > 100 else review_disagreements[idx],
+                "similarity": round(score, 2)
+            })
         elif cd in review_agreements:
             shadow_summary["disagreement_points"].append(
                 f"CONSULT DISAGREE vs REVIEW AGREE: {cd}"
             )
     
-    # Check uncertainty divergence
+    # Check uncertainty divergence with semantic matching
     for cu in consult_uncertainties:
-        if cu not in review_uncertainties:
+        match = find_best_match(cu, review_uncertainties)
+        if match is None:
             shadow_summary["uncertainty_divergence"].append(
-                f"Consult uncertain, Review not: {cu}"
+                f"Consult uncertain, Review not: {cu[:80]}..." if len(cu) > 80 else f"Consult uncertain, Review not: {cu}"
             )
     
     for ru in review_uncertainties:
-        if ru not in consult_uncertainties:
+        match = find_best_match(ru, consult_uncertainties)
+        if match is None:
             shadow_summary["uncertainty_divergence"].append(
-                f"Review uncertain, Consult not: {ru}"
+                f"Review uncertain, Consult not: {ru[:80]}..." if len(ru) > 80 else f"Review uncertain, Consult not: {ru}"
             )
     
-    # Generate synopsis
+    # Generate enhanced synopsis
     n_agreements = len(shadow_summary["agreement_overlap"])
     n_disagreements = len(shadow_summary["disagreement_points"])
+    n_unc_divs = len(shadow_summary["uncertainty_divergence"])
+    conf_delta = shadow_summary["confidence_delta"]
+    
+    # Determine alignment level
+    if n_disagreements == 0 and conf_delta < 0.15:
+        alignment = "HIGH_ALIGNMENT"
+    elif n_disagreements <= 2 and conf_delta < 0.3:
+        alignment = "MODERATE_ALIGNMENT"
+    else:
+        alignment = "LOW_ALIGNMENT"
+    
     shadow_summary["synopsis"] = (
-        f"Shadow analysis: {n_agreements} aligned points, "
-        f"{n_disagreements} disagreement points. "
-        f"Confidence delta: {shadow_summary['confidence_delta']:.2f}"
+        f"[{alignment}] Shadow analysis: {n_agreements} aligned points, "
+        f"{n_disagreements} disagreement points, {n_unc_divs} uncertainty divergences. "
+        f"Confidence delta: {conf_delta:.2f} "
+        f"(7B: {consult_opinion.get('confidence', 0.5):.2f} vs 32B: {review_result.confidence:.2f})"
     )
+    
+    # Add key insight about what the disagreement means
+    if n_disagreements > 0:
+        shadow_summary["clinical_signal"] = (
+            f"7B-32B disagreement detected. Consider if 32B's more thorough analysis "
+            f"reveals genuine clinical nuance or if it reflects model's higher capacity "
+            f"for uncertainty articulation."
+        )
     
     return shadow_summary
 
@@ -711,20 +799,56 @@ def _store_outcome_feedback(case_id: str, review_result: ReviewResponse, request
     """
     Store outcome feedback for learning and improvement.
     
-    Feedback includes review result, original request context, and timing.
+    Enhanced to capture richer diagnostic information about review quality.
     """
     global OUTCOME_FEEDBACK
+    
+    # Compute quality signals from the review
+    review_summary = review_result.summary or ""
+    n_agreements = len(review_result.agreements)
+    n_disagreements = len(review_result.disagreements)
+    n_uncertainties = len(review_result.uncertainties)
+    confidence = review_result.confidence
+    
+    # Quality signals
+    quality_signals = {}
+    
+    # Low confidence signal
+    if confidence < 0.5:
+        quality_signals["low_confidence"] = True
+    
+    # High disagreement ratio signal
+    total_points = n_agreements + n_disagreements
+    if total_points > 0 and n_disagreements / total_points > 0.4:
+        quality_signals["high_disagreement_ratio"] = True
+    
+    # Uncertainty overload signal  
+    if n_uncertainties > 5:
+        quality_signals["uncertainty_overload"] = True
+    
+    # Very short summary signal
+    if len(review_summary) < 80:
+        quality_signals["summary_too_brief"] = True
+    
+    # Confidence calibration check (32B should generally be higher confidence than 7B)
+    if request.consult_opinion:
+        consult_conf = request.consult_opinion.get("confidence", 0.5)
+        quality_signals["confidence_vs_consult_delta"] = round(confidence - consult_conf, 3)
     
     feedback_entry = {
         "case_id": case_id,
         "stored_at": datetime.utcnow().isoformat() + "Z",
         "review_model": review_result.model,
-        "review_confidence": review_result.confidence,
-        "n_agreements": len(review_result.agreements),
-        "n_disagreements": len(review_result.disagreements),
-        "n_uncertainties": len(review_result.uncertainties),
+        "review_confidence": confidence,
+        "review_summary_length": len(review_summary),
+        "n_agreements": n_agreements,
+        "n_disagreements": n_disagreements,
+        "n_uncertainties": n_uncertainties,
+        "quality_signals": quality_signals,
         "severity": request.severity,
         "domain": request.preprocess.get("domain", "unknown"),
+        "body_region": request.preprocess.get("bodyRegion") or request.preprocess.get("body_region", "unknown"),
+        "image_quality": request.preprocess.get("imageQuality", "unknown"),
         "has_callback": bool(request.callback_url),
         "consult_opinion_available": request.consult_opinion is not None,
         "shadow_analyzed": False,
@@ -732,14 +856,18 @@ def _store_outcome_feedback(case_id: str, review_result: ReviewResponse, request
 
     with STATE_LOCK:
         feedback_entry["shadow_analyzed"] = case_id in SHADOW_DISAGREEMENTS
+        if feedback_entry["shadow_analyzed"]:
+            shadow = SHADOW_DISAGREEMENTS.get(case_id, {})
+            feedback_entry["shadow_alignment"] = shadow.get("synopsis", "")[:200]
+            feedback_entry["shadow_n_disagreements"] = len(shadow.get("disagreement_points", []))
         OUTCOME_FEEDBACK.append(feedback_entry)
         if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
             OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
         total_feedback_entries = len(OUTCOME_FEEDBACK)
     
     logger.debug(
-        "Stored outcome feedback for case %s. Total feedback entries: %d",
-        case_id, total_feedback_entries
+        "Stored outcome feedback for case %s. Total feedback entries: %d. Signals: %s",
+        case_id, total_feedback_entries, list(quality_signals.keys())
     )
 
 
@@ -874,9 +1002,10 @@ async def get_shadow_disagreement(case_id: str):
 @app.get("/feedback/summary")
 async def get_feedback_summary():
     """
-    Get aggregated outcome feedback summary.
+    Get aggregated outcome feedback summary with enhanced analytics.
     
-    Returns anonymized statistics about review quality for improvement tracking.
+    Returns anonymized statistics about review quality for improvement tracking,
+    including quality signals and shadow disagreement patterns.
     """
     with STATE_LOCK:
         feedback_entries = list(OUTCOME_FEEDBACK)
@@ -897,11 +1026,48 @@ async def get_feedback_summary():
         avg_agreements = sum(int(f.get("n_agreements", 0)) for f in review_entries) / review_total
         avg_disagreements = sum(int(f.get("n_disagreements", 0)) for f in review_entries) / review_total
         avg_uncertainties = sum(int(f.get("n_uncertainties", 0)) for f in review_entries) / review_total
+        avg_summary_len = sum(int(f.get("review_summary_length", 0)) for f in review_entries) / review_total
+        
+        # Confidence distribution buckets
+        conf_buckets = {"low": 0, "medium": 0, "high": 0}
+        for f in review_entries:
+            conf = float(f.get("review_confidence", 0.5))
+            if conf < 0.5:
+                conf_buckets["low"] += 1
+            elif conf < 0.75:
+                conf_buckets["medium"] += 1
+            else:
+                conf_buckets["high"] += 1
+        
+        # Quality signal aggregation
+        quality_signal_counts: dict[str, int] = {}
+        for f in review_entries:
+            signals = f.get("quality_signals", {})
+            for sig_name in signals.keys():
+                if sig_name != "confidence_vs_consult_delta":
+                    quality_signal_counts[sig_name] = quality_signal_counts.get(sig_name, 0) + 1
+        
+        # Shadow disagreement stats
+        shadow_disagreement_count = sum(1 for f in review_entries if f.get("shadow_n_disagreements", 0) > 0)
+        avg_confidence_delta_with_consult = 0.0
+        delta_count = 0
+        for f in review_entries:
+            delta = f.get("quality_signals", {}).get("confidence_vs_consult_delta")
+            if delta is not None:
+                avg_confidence_delta_with_consult += delta
+                delta_count += 1
+        avg_confidence_delta_with_consult = avg_confidence_delta_with_consult / delta_count if delta_count > 0 else 0.0
+        
     else:
         avg_confidence = 0.0
         avg_agreements = 0.0
         avg_disagreements = 0.0
         avg_uncertainties = 0.0
+        avg_summary_len = 0.0
+        conf_buckets = {"low": 0, "medium": 0, "high": 0}
+        quality_signal_counts = {}
+        shadow_disagreement_count = 0
+        avg_confidence_delta_with_consult = 0.0
 
     severity_dist: dict[str, int] = {}
     for f in review_entries:
@@ -912,6 +1078,11 @@ async def get_feedback_summary():
     for f in review_entries:
         domain = f.get("domain", "unknown")
         domain_dist[domain] = domain_dist.get(domain, 0) + 1
+    
+    image_quality_dist: dict[str, int] = {}
+    for f in review_entries:
+        iq = f.get("image_quality", "unknown")
+        image_quality_dist[iq] = image_quality_dist.get(iq, 0) + 1
 
     return JSONResponse({
         "status": "available",
@@ -923,11 +1094,63 @@ async def get_feedback_summary():
             "avg_agreements_per_review": round(avg_agreements, 2),
             "avg_disagreements_per_review": round(avg_disagreements, 2),
             "avg_uncertainties_per_review": round(avg_uncertainties, 2),
+            "avg_summary_length_chars": round(avg_summary_len, 1),
             "shadow_analysis_count": shadow_analyzed_count,
+            "shadow_disagreement_instances": shadow_disagreement_count,
+            "confidence_distribution": conf_buckets,
+            "confidence_delta_vs_consult_avg": round(avg_confidence_delta_with_consult, 3),
+            "quality_signal_counts": quality_signal_counts,
             "severity_distribution": severity_dist,
             "domain_distribution": domain_dist,
+            "image_quality_distribution": image_quality_dist,
         },
+        "insights": _generate_feedback_insights(review_entries, quality_signal_counts, conf_buckets, shadow_disagreement_count),
     })
+
+
+def _generate_feedback_insights(review_entries: list[dict], quality_signals: dict, conf_buckets: dict, shadow_disagreements: int) -> dict:
+    """
+    Generate actionable insights from feedback data.
+    """
+    insights = {
+        "summary": "",
+        "recommendations": [],
+        "flags": [],
+    }
+    
+    if not review_entries:
+        return insights
+    
+    total = len(review_entries)
+    
+    # Confidence insights
+    low_conf_pct = (conf_buckets.get("low", 0) / total) * 100 if total > 0 else 0
+    if low_conf_pct > 30:
+        insights["flags"].append(f"High rate of low-confidence reviews ({low_conf_pct:.1f}%)")
+        insights["recommendations"].append("Investigate if image quality issues or case complexity driving low confidence")
+    
+    # Quality signal insights
+    if quality_signals.get("uncertainty_overload", 0) > total * 0.2:
+        insights["flags"].append("Many reviews with uncertainty overload")
+        insights["recommendations"].append("Consider if differential_considerations and followup recommendations are too verbose")
+    
+    if quality_signals.get("summary_too_brief", 0) > total * 0.15:
+        insights["flags"].append("Some reviews have overly brief summaries")
+        insights["recommendations"].append("Enforce minimum summary length requirements in prompt")
+    
+    # Shadow disagreement insights
+    shadow_pct = (shadow_disagreements / total) * 100 if total > 0 else 0
+    if shadow_pct > 40:
+        insights["flags"].append(f"High 7B-32B disagreement rate ({shadow_pct:.1f}%)")
+        insights["recommendations"].append("Review if 32B is appropriately calibrated against 7B baseline")
+    
+    # Generate summary
+    if insights["flags"]:
+        insights["summary"] = f"{len(insights['flags'])} quality flag(s) detected, {len(insights['recommendations'])} recommendation(s) generated"
+    else:
+        insights["summary"] = "No significant quality issues detected"
+    
+    return insights
 
 
 @app.post("/feedback/record")
