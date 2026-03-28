@@ -21,7 +21,7 @@ import re
 from threading import Lock
 from typing import Any, Optional
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Header, BackgroundTasks
 from fastapi.responses import JSONResponse
@@ -100,6 +100,14 @@ MAX_SHADOW_HISTORY = int(os.environ.get("MAX_SHADOW_HISTORY", "1000"))
 OUTCOME_FEEDBACK: list[dict] = []
 MAX_FEEDBACK_HISTORY = 1000
 
+# Dead letter queue for failed callback processing
+DEAD_LETTER_QUEUE: list[dict] = []
+MAX_DEAD_LETTER_HISTORY = 500
+
+# Review state transition tracking
+REVIEW_STATE_TRANSITIONS: list[dict] = []
+MAX_STATE_TRANSITIONS_HISTORY = 1000
+
 
 # =============================================================================
 # Global model instances (lazy loaded)
@@ -170,6 +178,41 @@ def generate_case_id(request: AsyncReviewRequest) -> str:
         default=str,
     )
     return hashlib.sha256(content.encode()).hexdigest()[:16]
+
+
+def _record_state_transition(case_id: str, state: str, metadata: dict | None = None) -> None:
+    entry = {
+        "case_id": case_id,
+        "state": state,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "metadata": metadata or {},
+    }
+    with STATE_LOCK:
+        REVIEW_STATE_TRANSITIONS.append(entry)
+        if len(REVIEW_STATE_TRANSITIONS) > MAX_STATE_TRANSITIONS_HISTORY:
+            del REVIEW_STATE_TRANSITIONS[:-MAX_STATE_TRANSITIONS_HISTORY]
+
+
+def _append_dead_letter_entry(
+    case_id: str,
+    callback_url: str,
+    payload: dict[str, Any],
+    error: str,
+) -> None:
+    entry = {
+        "case_id": case_id,
+        "callback_url": callback_url,
+        "payload": payload,
+        "error": error,
+        "retry_status": "pending",
+        "retry_count": 0,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "last_retry_at": None,
+    }
+    with STATE_LOCK:
+        DEAD_LETTER_QUEUE.append(entry)
+        if len(DEAD_LETTER_QUEUE) > MAX_DEAD_LETTER_HISTORY:
+            del DEAD_LETTER_QUEUE[:-MAX_DEAD_LETTER_HISTORY]
 
 
 # =============================================================================
@@ -552,6 +595,10 @@ async def generate_review(request: AsyncReviewRequest, case_id: str) -> ReviewRe
 async def process_review_task(request: AsyncReviewRequest):
     """Background task to process review with retry and callback hardening."""
     case_id = generate_case_id(request)
+    _record_state_transition(case_id, "processing", {
+        "has_callback_url": bool(request.callback_url),
+        "severity": request.severity,
+    })
     try:
         result = await generate_review(request, case_id)
         with STATE_LOCK:
@@ -569,13 +616,21 @@ async def process_review_task(request: AsyncReviewRequest):
         
         # Callback with retry hardening
         if request.callback_url:
-            await _robust_callback(case_id, request.callback_url, result)
+            callback_ok = await _robust_callback(case_id, request.callback_url, result)
+            _record_state_transition(
+                case_id,
+                "callback_succeeded" if callback_ok else "callback_dead_letter",
+                {"callback_url": request.callback_url},
+            )
+        else:
+            _record_state_transition(case_id, "completed_without_callback")
                 
     except Exception as e:
         logger.error("Processing error for case %s", case_id, exc_info=e)
         with STATE_LOCK:
             if case_id in PROCESSING_QUEUE:
                 PROCESSING_QUEUE.remove(case_id)
+        _record_state_transition(case_id, "failed", {"error": str(e)[:200]})
 
 
 async def _robust_callback(case_id: str, callback_url: str, result: ReviewResponse) -> bool:
@@ -595,6 +650,8 @@ async def _robust_callback(case_id: str, callback_url: str, result: ReviewRespon
         "final": True,  # Will be set to False on retry
     }
     
+    last_error = "Unknown callback failure"
+
     for attempt in range(MAX_CALLBACK_RETRIES):
         payload["_callback_metadata"]["attempt"] = attempt + 1
         try:
@@ -607,21 +664,25 @@ async def _robust_callback(case_id: str, callback_url: str, result: ReviewRespon
                     )
                     return True
                 else:
+                    last_error = f"HTTP {response.status_code}: {response.text[:120]}"
                     logger.warning(
                         "Callback returned %d for case %s, attempt %d/%d",
                         response.status_code, case_id, attempt + 1, MAX_CALLBACK_RETRIES
                     )
         except httpx.TimeoutException:
+            last_error = "Timeout while delivering callback"
             logger.warning(
                 "Callback timeout for case %s, attempt %d/%d",
                 case_id, attempt + 1, MAX_CALLBACK_RETRIES
             )
         except httpx.ConnectError as e:
+            last_error = f"Connection error: {e}"
             logger.warning(
                 "Callback connection error for case %s: %s, attempt %d/%d",
                 case_id, e, attempt + 1, MAX_CALLBACK_RETRIES
             )
         except Exception as e:
+            last_error = str(e)
             logger.error(
                 "Callback unexpected error for case %s: %s, attempt %d/%d",
                 case_id, e, attempt + 1, MAX_CALLBACK_RETRIES
@@ -637,6 +698,7 @@ async def _robust_callback(case_id: str, callback_url: str, result: ReviewRespon
         "Callback FAILED permanently for case %s after %d attempts",
         case_id, MAX_CALLBACK_RETRIES
     )
+    _append_dead_letter_entry(case_id, callback_url, payload, last_error[:200])
     return False
 
 
@@ -674,6 +736,26 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         if best_score >= threshold:
             return (best_idx, best_score)
         return None
+
+    def classify_disagreement_type(text: str) -> str:
+        lower = text.lower()
+        if any(keyword in lower for keyword in ["diagnos", "lesion", "infection", "mass", "fracture", "tumor"]):
+            return "diagnostic"
+        if any(keyword in lower for keyword in ["treat", "medicat", "bandage", "clean", "antibiotic"]):
+            return "treatment"
+        if any(keyword in lower for keyword in ["urgent", "emergency", "er", "immediate", "hospital"]):
+            return "urgency"
+        if any(keyword in lower for keyword in ["monitor", "recheck", "follow-up", "progress", "worsen"]):
+            return "prognostic"
+        return "other"
+
+    def classify_disagreement_severity(text: str) -> str:
+        lower = text.lower()
+        if any(keyword in lower for keyword in ["urgent", "emergency", "er", "hospital", "critical"]):
+            return "HIGH_SEVERITY"
+        if any(keyword in lower for keyword in ["uncertain", "unclear", "cannot", "hard to judge", "limited"]):
+            return "UNCERTAINTY_TYPE"
+        return "STANDARD"
     
     consult_agreements = consult_opinion.get("agreements", [])
     consult_disagreements = consult_opinion.get("disagreements", [])
@@ -698,6 +780,8 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
             consult_opinion.get("confidence", 0.5) - review_result.confidence
         ),
         "semantic_matches": [],  # Enhanced: track semantic similarity matches
+        "disagreement_classifications": [],
+        "requires_attention": False,
         "synopsis": "",
     }
     
@@ -755,6 +839,20 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
     n_disagreements = len(shadow_summary["disagreement_points"])
     n_unc_divs = len(shadow_summary["uncertainty_divergence"])
     conf_delta = shadow_summary["confidence_delta"]
+
+    for point in shadow_summary["disagreement_points"]:
+        disagreement_type = classify_disagreement_type(point)
+        severity = classify_disagreement_severity(point)
+        shadow_summary["disagreement_classifications"].append({
+            "text": point[:160],
+            "type": disagreement_type,
+            "severity": severity,
+        })
+
+    shadow_summary["requires_attention"] = any(
+        item["severity"] == "HIGH_SEVERITY" or item["type"] in {"diagnostic", "urgency"}
+        for item in shadow_summary["disagreement_classifications"]
+    )
     
     # Determine alignment level
     if n_disagreements == 0 and conf_delta < 0.15:
@@ -777,6 +875,16 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
             f"7B-32B disagreement detected. Consider if 32B's more thorough analysis "
             f"reveals genuine clinical nuance or if it reflects model's higher capacity "
             f"for uncertainty articulation."
+        )
+    elif n_unc_divs > 0:
+        shadow_summary["clinical_signal"] = (
+            "32B review expressed uncertainty not present in the 7B consult, which may reflect "
+            "more cautious specialist reasoning for this case."
+        )
+    else:
+        shadow_summary["clinical_signal"] = (
+            "7B and 32B outputs are broadly aligned, which supports promoting the consult path "
+            "once latency and fallback rates are acceptable."
         )
     
     return shadow_summary
@@ -1379,7 +1487,7 @@ async def get_feedback_trends(window_hours: int = 24):
     """
     from datetime import timedelta
     
-    cutoff_time = datetime.utcnow() - timedelta(hours=window_hours)
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=window_hours)
     
     with STATE_LOCK:
         feedback_entries = list(OUTCOME_FEEDBACK)
@@ -1448,8 +1556,58 @@ async def list_reviews(limit: int = 10):
 # Dead Letter Queue Management Endpoints
 # =============================================================================
 
+
+async def _retry_dead_letter_entry(entry: dict) -> bool:
+    """
+    Internal helper to retry a dead letter queue entry.
+    
+    Args:
+        entry: The dead letter entry to retry
+        
+    Returns:
+        True if retry was successful, False otherwise
+    """
+    import httpx
+
+    case_id = entry.get("case_id")
+    callback_url = entry.get("callback_url")
+    payload = entry.get("payload")
+    retry_count = entry.get("retry_count", 0)
+    
+    if not callback_url or not isinstance(payload, dict):
+        entry["retry_status"] = "abandoned"
+        entry["error"] = "Missing callback_url or payload"
+        return False
+
+    if retry_count >= MAX_CALLBACK_RETRIES:
+        entry["retry_status"] = "abandoned"
+        return False
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(callback_url, json=payload)
+        if response.status_code >= 400:
+            raise RuntimeError(f"HTTP {response.status_code}: {response.text[:120]}")
+
+        entry["retry_status"] = "resolved"
+        entry["retry_count"] = retry_count + 1
+        entry["last_retry_at"] = datetime.now(timezone.utc).isoformat()
+        _record_state_transition(case_id, "dead_letter_resolved", {"retry_count": entry["retry_count"]})
+        return True
+    except Exception as e:
+        entry["retry_status"] = "failed" if retry_count + 1 < MAX_CALLBACK_RETRIES else "abandoned"
+        entry["retry_count"] = retry_count + 1
+        entry["error"] = str(e)[:200]
+        entry["last_retry_at"] = datetime.now(timezone.utc).isoformat()
+        return False
+
+
 @app.get("/dead-letter")
-async def get_dead_letter_queue(limit: int = 50, status: str = None):
+async def get_dead_letter_queue(
+    limit: int = 50,
+    status: str = None,
+    authorization: str | None = Header(default=None),
+):
     """
     Get entries from the dead letter queue for inspection and retry.
     
@@ -1457,8 +1615,21 @@ async def get_dead_letter_queue(limit: int = 50, status: str = None):
         limit: Maximum number of entries to return
         status: Filter by status (pending, retried, resolved, abandoned)
     """
+    validate_auth(authorization)
+
     with STATE_LOCK:
-        entries = list(DEAD_LETTER_QUEUE)
+        entries = [
+            {
+                "case_id": entry.get("case_id"),
+                "callback_url": entry.get("callback_url"),
+                "retry_status": entry.get("retry_status"),
+                "retry_count": entry.get("retry_count", 0),
+                "recorded_at": entry.get("recorded_at"),
+                "last_retry_at": entry.get("last_retry_at"),
+                "error": entry.get("error"),
+            }
+            for entry in DEAD_LETTER_QUEUE
+        ]
     
     if status:
         entries = [e for e in entries if e.get("retry_status") == status]
@@ -1471,12 +1642,17 @@ async def get_dead_letter_queue(limit: int = 50, status: str = None):
 
 
 @app.post("/dead-letter/{case_id}/retry")
-async def retry_dead_letter_entry(case_id: str):
+async def retry_dead_letter_entry(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
     """
     Attempt to retry a specific dead letter queue entry.
     
     Returns the result of the retry attempt.
     """
+    validate_auth(authorization)
+    
     with STATE_LOCK:
         entry = next((e for e in DEAD_LETTER_QUEUE if e.get("case_id") == case_id), None)
     
@@ -1494,12 +1670,16 @@ async def retry_dead_letter_entry(case_id: str):
 
 
 @app.post("/dead-letter/retry-all")
-async def retry_all_dead_letter_entries():
+async def retry_all_dead_letter_entries(
+    authorization: str | None = Header(default=None),
+):
     """
     Attempt to retry all pending dead letter queue entries.
     
     Returns summary of retry results.
     """
+    validate_auth(authorization)
+    
     with STATE_LOCK:
         pending_entries = [e for e in DEAD_LETTER_QUEUE if e.get("retry_status") == "pending"]
     
@@ -1526,8 +1706,13 @@ async def retry_all_dead_letter_entries():
 
 
 @app.delete("/dead-letter/{case_id}")
-async def delete_dead_letter_entry(case_id: str):
+async def delete_dead_letter_entry(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
     """Delete a specific dead letter queue entry (mark as abandoned)."""
+    validate_auth(authorization)
+    
     with STATE_LOCK:
         for i, e in enumerate(DEAD_LETTER_QUEUE):
             if e.get("case_id") == case_id:
