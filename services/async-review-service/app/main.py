@@ -1738,6 +1738,695 @@ async def delete_review(case_id: str):
     raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
 
 
+# =============================================================================
+# Shadow Disagreement Clustering
+# =============================================================================
+# Groups cases where model predictions diverge significantly from expected outcomes
+# without triggering direct corrections, enabling learning from implicit feedback.
+
+SHADOW_DISAGREEMENT_CLUSTERS: list[dict] = []
+MAX_SHADOW_CLUSTER_HISTORY = 500
+
+
+def _compute_disagreement_score(case_id: str) -> float:
+    """
+    Compute disagreement score for a shadow disagreement case.
+    
+    Higher scores indicate greater divergence between model prediction and expected outcome.
+    """
+    if case_id not in SHADOW_DISAGREEMENTS:
+        return 0.0
+    
+    disagreement = SHADOW_DISAGREEMENTS[case_id]
+    severity_weight = disagreement.get("severity_impact", 0.5)
+    confidence_delta = abs(disagreement.get("consult_confidence", 0.5) - disagreement.get("expected_confidence", 0.5))
+    
+    return (severity_weight * 0.6) + (confidence_delta * 0.4)
+
+
+def _cluster_similar_disagreements(disagreement: dict, clusters: list[dict]) -> int | None:
+    """
+    Find a cluster index for a similar disagreement, or None if no match.
+    
+    Similarity is based on domain, body region, and disagreement pattern.
+    """
+    for i, cluster in enumerate(clusters):
+        if cluster.get("domain") == disagreement.get("domain") and \
+           cluster.get("body_region") == disagreement.get("body_region") and \
+           cluster.get("pattern_type") == disagreement.get("pattern_type"):
+            return i
+    return None
+
+
+@app.get("/shadow/disagreements")
+async def get_shadow_disagreements(
+    limit: int = 50,
+    min_score: float = 0.0,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get shadow disagreements for analysis.
+    
+    Returns cases where 7B consult predictions diverged from 32B review opinions,
+    enabling analysis of implicit feedback patterns.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        disagreements = [
+            {
+                "case_id": case_id,
+                "disagreement_score": _compute_disagreement_score(case_id),
+                **disagreement
+            }
+            for case_id, disagreement in SHADOW_DISAGREEMENTS.items()
+        ]
+    
+    # Filter by minimum score
+    disagreements = [d for d in disagreements if d["disagreement_score"] >= min_score]
+    
+    # Sort by score descending
+    disagreements.sort(key=lambda x: x["disagreement_score"], reverse=True)
+    
+    return {
+        "total": len(disagreements),
+        "disagreements": disagreements[:limit]
+    }
+
+
+@app.get("/shadow/clusters")
+async def get_shadow_clusters(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get clustered shadow disagreements.
+    
+    Groups similar disagreement patterns together for pattern analysis.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total_clusters": len(SHADOW_DISAGREEMENT_CLUSTERS),
+            "clusters": list(SHADOW_DISAGREEMENT_CLUSTERS)
+        }
+
+
+@app.post("/shadow/analyze")
+async def analyze_shadow_patterns(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Analyze shadow disagreement patterns and update clusters.
+    
+    This endpoint processes all shadow disagreements and groups them
+    into clusters based on similarity of domain, body region, and pattern.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        # Build new clusters from current disagreements
+        new_clusters = []
+        
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            cluster_idx = _cluster_similar_disagreements(disagreement, new_clusters)
+            
+            if cluster_idx is not None:
+                # Add to existing cluster
+                new_clusters[cluster_idx]["case_count"] += 1
+                new_clusters[cluster_idx]["cases"].append(case_id)
+                new_clusters[cluster_idx]["avg_score"] = (
+                    (new_clusters[cluster_idx]["avg_score"] * (new_clusters[cluster_idx]["case_count"] - 1) +
+                     _compute_disagreement_score(case_id)) / new_clusters[cluster_idx]["case_count"]
+                )
+            else:
+                # Create new cluster
+                new_clusters.append({
+                    "domain": disagreement.get("domain", "unknown"),
+                    "body_region": disagreement.get("body_region", "unknown"),
+                    "pattern_type": disagreement.get("pattern_type", "unknown"),
+                    "case_count": 1,
+                    "cases": [case_id],
+                    "avg_score": _compute_disagreement_score(case_id),
+                    "representative_pattern": disagreement.get("consult_summary", "")[:200]
+                })
+        
+        SHADOW_DISAGREEMENT_CLUSTERS = new_clusters[-MAX_SHADOW_CLUSTER_HISTORY:]
+        
+        return {
+            "total_clusters": len(SHADOW_DISAGREEMENT_CLUSTERS),
+            "clusters": SHADOW_DISAGREEMENT_CLUSTERS
+        }
+
+
+# =============================================================================
+# Severity Synthesis Logic
+# =============================================================================
+# Aggregates and weighs multiple severity indicators to produce calibrated risk scores.
+
+SEVERITY_INDICATORS: list[dict] = []
+MAX_SEVERITY_HISTORY = 1000
+
+
+def _synthesize_risk_score(indicators: list[dict]) -> dict:
+    """
+    Synthesize a calibrated risk score from multiple severity indicators.
+    
+    Uses weighted averaging based on indicator reliability and relevance.
+    """
+    if not indicators:
+        return {"risk_score": 0.0, "confidence": 0.0, "calibration": "insufficient_data"}
+    
+    # Weight factors for different indicator sources
+    source_weights = {
+        "consult": 0.3,
+        "review": 0.4,
+        "outcome": 0.3
+    }
+    
+    weighted_sum = 0.0
+    weight_total = 0.0
+    
+    for indicator in indicators:
+        source = indicator.get("source", "unknown")
+        severity = indicator.get("severity", 0.5)
+        reliability = indicator.get("reliability", 0.5)
+        
+        weight = source_weights.get(source, 0.2) * reliability
+        weighted_sum += severity * weight
+        weight_total += weight
+    
+    if weight_total == 0:
+        return {"risk_score": 0.0, "confidence": 0.0, "calibration": "no_weighted_indicators"}
+    
+    raw_score = weighted_sum / weight_total
+    
+    # Calibrate score based on agreement between indicators
+    severities = [ind.get("severity", 0.5) for ind in indicators]
+    std_dev = _calculate_std_dev(severities)
+    
+    if std_dev < 0.1:
+        calibration = "high_agreement"
+        confidence = 0.9
+    elif std_dev < 0.2:
+        calibration = "moderate_agreement"
+        confidence = 0.7
+    else:
+        calibration = "low_agreement"
+        confidence = 0.5
+    
+    # Apply calibration to score
+    calibrated_score = raw_score * confidence
+    
+    return {
+        "risk_score": round(calibrated_score, 3),
+        "raw_score": round(raw_score, 3),
+        "confidence": round(confidence, 3),
+        "calibration": calibration,
+        "indicator_count": len(indicators),
+        "agreement_std_dev": round(std_dev, 3)
+    }
+
+
+def _calculate_std_dev(values: list[float]) -> float:
+    """Calculate standard deviation of a list of values."""
+    if len(values) < 2:
+        return 0.0
+    
+    mean = sum(values) / len(values)
+    variance = sum((x - mean) ** 2 for x in values) / len(values)
+    return variance ** 0.5
+
+
+@app.post("/severity/synthesize")
+async def synthesize_severity(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Synthesize a calibrated risk score from multiple severity indicators for a case.
+    
+    Aggregates indicators from consult, review, and outcome data to produce
+    a calibrated risk score with confidence assessment.
+    """
+    validate_auth(authorization)
+    
+    indicators = []
+    
+    # Collect from shadow disagreements
+    if case_id in SHADOW_DISAGREEMENTS:
+        disagreement = SHADOW_DISAGREEMENTS[case_id]
+        indicators.append({
+            "source": "consult",
+            "severity": disagreement.get("severity_impact", 0.5),
+            "reliability": 0.6,
+            "description": "7B consult severity assessment"
+        })
+    
+    # Collect from review results
+    if case_id in REVIEW_RESULTS:
+        result = REVIEW_RESULTS[case_id]
+        indicators.append({
+            "source": "review",
+            "severity": result.get("review_severity", 0.5),
+            "reliability": 0.8,
+            "description": "32B review severity assessment"
+        })
+    
+    # Collect from outcome feedback
+    with STATE_LOCK:
+        for feedback in OUTCOME_FEEDBACK:
+            if feedback.get("case_id") == case_id:
+                indicators.append({
+                    "source": "outcome",
+                    "severity": feedback.get("outcome_severity", 0.5),
+                    "reliability": 0.7,
+                    "description": "Outcome-based severity"
+                })
+                break
+    
+    synthesis = _synthesize_risk_score(indicators)
+    
+    # Record the synthesis for historical tracking
+    with STATE_LOCK:
+        SEVERITY_INDICATORS.append({
+            "case_id": case_id,
+            "synthesized_at": datetime.now(timezone.utc).isoformat(),
+            **synthesis,
+            "indicators": indicators
+        })
+        SEVERITY_INDICATORS[-MAX_SEVERITY_HISTORY:]
+    
+    return {
+        "case_id": case_id,
+        "synthesis": synthesis
+    }
+
+
+@app.get("/severity/indicators")
+async def get_severity_indicators(
+    limit: int = 100,
+    authorization: str | None = Header(default=None),
+):
+    """Get historical severity synthesis records."""
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total": len(SEVERITY_INDICATORS),
+            "indicators": SEVERITY_INDICATORS[-limit:]
+        }
+
+
+# =============================================================================
+# Outcome-Learning Heuristics
+# =============================================================================
+# Tracks case resolution patterns and extracts actionable insights.
+
+OUTCOME_LEARNING: list[dict] = []
+MAX_LEARNING_HISTORY = 500
+
+
+def _extract_resolution_pattern(case_id: str, outcome: dict) -> dict:
+    """Extract resolution pattern from case outcome."""
+    return {
+        "case_id": case_id,
+        "initial_severity": outcome.get("initial_severity", "unknown"),
+        "final_outcome": outcome.get("outcome", "unknown"),
+        "time_to_resolution": outcome.get("time_to_resolution"),
+        "interventions_applied": outcome.get("interventions", []),
+        "outcome_pattern": _classify_outcome_pattern(outcome)
+    }
+
+
+def _classify_outcome_pattern(outcome: dict) -> str:
+    """Classify the outcome pattern based on resolution characteristics."""
+    if outcome.get("outcome") == "resolved" and outcome.get("time_to_resolution"):
+        if outcome["time_to_resolution"] < 24:
+            return "rapid_resolution"
+        elif outcome["time_to_resolution"] < 72:
+            return "standard_resolution"
+        else:
+            return "prolonged_resolution"
+    
+    if outcome.get("outcome") == "escalated":
+        return "required_escalation"
+    
+    if outcome.get("outcome") == "pending":
+        return "ongoing_monitoring"
+    
+    return "undetermined"
+
+
+def _compute_learning_insights(patterns: list[dict]) -> list[dict]:
+    """Compute actionable insights from resolution patterns."""
+    insights = []
+    
+    # Group by outcome pattern
+    pattern_groups = {}
+    for pattern in patterns:
+        pattern_type = pattern.get("outcome_pattern", "unknown")
+        if pattern_type not in pattern_groups:
+            pattern_groups[pattern_type] = []
+        pattern_groups[pattern_type].append(pattern)
+    
+    # Generate insights for each pattern group
+    for pattern_type, cases in pattern_groups.items():
+        if len(cases) >= 3:
+            avg_time = sum(c.get("time_to_resolution", 0) for c in cases if c.get("time_to_resolution")) / len(cases)
+            
+            insights.append({
+                "insight_type": "resolution_pattern",
+                "pattern": pattern_type,
+                "case_count": len(cases),
+                "avg_resolution_time_hours": round(avg_time, 1) if avg_time > 0 else None,
+                "recommendation": f"Cases with {pattern_type} pattern ({len(cases)} occurrences) may benefit from early intervention review"
+            })
+    
+    return insights
+
+
+@app.post("/outcome/record")
+async def record_outcome(
+    case_id: str,
+    outcome: dict,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Record an outcome for a case to enable learning.
+    
+    The outcome data is used to extract resolution patterns and generate
+    actionable insights for improving future consultation quality.
+    """
+    validate_auth(authorization)
+    
+    pattern = _extract_resolution_pattern(case_id, outcome)
+    
+    with STATE_LOCK:
+        OUTCOME_LEARNING.append({
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+            **pattern
+        })
+        OUTCOME_LEARNING[-MAX_LEARNING_HISTORY:]
+    
+    return {
+        "ok": True,
+        "case_id": case_id,
+        "pattern": pattern
+    }
+
+
+@app.get("/outcome/insights")
+async def get_outcome_insights(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get actionable insights derived from outcome learning.
+    
+    Returns patterns and recommendations extracted from case resolution data.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        patterns = list(OUTCOME_LEARNING)
+    
+    insights = _compute_learning_insights(patterns)
+    
+    return {
+        "total_outcomes": len(patterns),
+        "insights": insights
+    }
+
+
+@app.get("/outcome/patterns")
+async def get_outcome_patterns(
+    limit: int = 100,
+    authorization: str | None = Header(default=None),
+):
+    """Get recorded outcome patterns for analysis."""
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total": len(OUTCOME_LEARNING),
+            "patterns": OUTCOME_LEARNING[-limit:]
+        }
+
+
+# =============================================================================
+# Cross-Case Narrative Summaries
+# =============================================================================
+# Synthesizes decision patterns, outcome trajectories, and key differentiating
+# factors across multiple patient cases for promotion threshold analysis.
+
+CROSS_CASE_SUMMARIES: list[dict] = []
+MAX_SUMMARY_HISTORY = 100
+
+
+@app.post("/summary/cross-case")
+async def generate_cross_case_summary(
+    case_ids: list[str],
+    summary_type: str = "decision_pattern",
+    authorization: str | None = Header(default=None),
+):
+    """
+    Generate a cross-case narrative summary.
+    
+    Synthesizes decision patterns, outcome trajectories, and differentiating
+    factors across multiple cases to support promotion threshold analysis.
+    
+    Summary types:
+    - decision_pattern: Analyzes how decisions were made across cases
+    - outcome_trajectory: Compares how cases evolved over time
+    - complexity_analysis: Identifies what makes cases simple vs complex
+    - performance_distinction: Highlights what differentiates satisfactory from exemplary
+    """
+    validate_auth(authorization)
+    
+    if len(case_ids) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 cases required for cross-case summary")
+    
+    cases_data = []
+    
+    # Collect data for each case
+    for case_id in case_ids:
+        case_info = {"case_id": case_id}
+        
+        # From review results
+        if case_id in REVIEW_RESULTS:
+            case_info["review"] = REVIEW_RESULTS[case_id]
+        
+        # From shadow disagreements
+        if case_id in SHADOW_DISAGREEMENTS:
+            case_info["shadow"] = SHADOW_DISAGREEMENTS[case_id]
+        
+        # From outcome learning
+        with STATE_LOCK:
+            for outcome in OUTCOME_LEARNING:
+                if outcome.get("case_id") == case_id:
+                    case_info["outcome"] = outcome
+                    break
+        
+        # From severity synthesis
+        with STATE_LOCK:
+            for severity in SEVERITY_INDICATORS:
+                if severity.get("case_id") == case_id:
+                    case_info["severity_synthesis"] = severity
+                    break
+        
+        cases_data.append(case_info)
+    
+    # Generate summary based on type
+    if summary_type == "decision_pattern":
+        summary_text = _synthesize_decision_pattern_summary(cases_data)
+    elif summary_type == "outcome_trajectory":
+        summary_text = _synthesize_outcome_trajectory_summary(cases_data)
+    elif summary_type == "complexity_analysis":
+        summary_text = _synthesize_complexity_analysis_summary(cases_data)
+    elif summary_type == "performance_distinction":
+        summary_text = _synthesize_performance_distinction_summary(cases_data)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown summary type: {summary_type}")
+    
+    summary_record = {
+        "summary_id": f"summary_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary_type": summary_type,
+        "case_count": len(cases_data),
+        "case_ids": case_ids,
+        "summary": summary_text,
+        "key_findings": _extract_key_findings(cases_data, summary_type),
+        "promotion_relevance": _assess_promotion_relevance(cases_data, summary_type)
+    }
+    
+    with STATE_LOCK:
+        CROSS_CASE_SUMMARIES.append(summary_record)
+        CROSS_CASE_SUMMARIES[-MAX_SUMMARY_HISTORY:]
+    
+    return summary_record
+
+
+def _synthesize_decision_pattern_summary(cases: list[dict]) -> str:
+    """Synthesize a decision pattern summary across cases."""
+    patterns = []
+    for case in cases:
+        if "review" in case:
+            review = case["review"]
+            patterns.append({
+                "case_id": case["case_id"],
+                "triage": review.get("triage_category", "unknown"),
+                "reasoning": review.get("reasoning", "")[:100]
+            })
+    
+    # Identify common patterns
+    triage_distribution = {}
+    for p in patterns:
+        triage = p.get("triage", "unknown")
+        triage_distribution[triage] = triage_distribution.get(triage, 0) + 1
+    
+    summary = f"Cross-case analysis of {len(cases)} cases identified {len(patterns)} decision points. "
+    summary += f"Triage distribution: {triage_distribution}. "
+    
+    return summary
+
+
+def _synthesize_outcome_trajectory_summary(cases: list[dict]) -> str:
+    """Synthesize an outcome trajectory summary across cases."""
+    trajectories = []
+    for case in cases:
+        if "outcome" in case:
+            trajectories.append({
+                "case_id": case["case_id"],
+                "initial": case["outcome"].get("initial_severity"),
+                "final": case["outcome"].get("final_outcome"),
+                "pattern": case["outcome"].get("outcome_pattern")
+            })
+    
+    if not trajectories:
+        return "Insufficient outcome data for trajectory analysis."
+    
+    summary = f"Outcome trajectory analysis across {len(trajectories)} cases. "
+    patterns = [t.get("pattern") for t in trajectories if t.get("pattern")]
+    if patterns:
+        from collections import Counter
+        pattern_counts = Counter(patterns)
+        summary += f"Pattern distribution: {dict(pattern_counts)}."
+    
+    return summary
+
+
+def _synthesize_complexity_analysis_summary(cases: list[dict]) -> str:
+    """Synthesize a complexity analysis summary across cases."""
+    complexity_factors = []
+    for case in cases:
+        factors = []
+        if "shadow" in case:
+            factors.append("shadow_disagreement")
+        if "severity_synthesis" in case:
+            score = case["severity_synthesis"].get("risk_score", 0)
+            if score > 0.6:
+                factors.append("high_risk")
+            elif score > 0.3:
+                factors.append("moderate_risk")
+            else:
+                factors.append("low_risk")
+        
+        complexity_factors.append({
+            "case_id": case["case_id"],
+            "factors": factors
+        })
+    
+    # Classify cases
+    simple = [c for c in complexity_factors if len(c["factors"]) <= 1]
+    complex = [c for c in complexity_factors if len(c["factors"]) > 1]
+    
+    summary = f"Complexity analysis of {len(cases)} cases: "
+    summary += f"{len(simple)} simple cases, {len(complex)} complex cases. "
+    
+    return summary
+
+
+def _synthesize_performance_distinction_summary(cases: list[dict]) -> str:
+    """Synthesize a performance distinction summary for promotion thresholds."""
+    # Classify performance based on outcome patterns
+    exemplary = []
+    satisfactory = []
+    
+    for case in cases:
+        if "outcome" in case:
+            pattern = case["outcome"].get("outcome_pattern", "")
+            if pattern in ["rapid_resolution", "standard_resolution"]:
+                satisfactory.append(case["case_id"])
+            elif pattern == "required_escalation":
+                exemplary.append(case["case_id"])  # Actually handled escalation well
+    
+    summary = f"Performance distinction analysis across {len(cases)} cases. "
+    summary += f"Satisfactory outcomes: {len(satisfactory)}, Exemplary handling: {len(exemplary)}. "
+    summary += "Exemplary cases demonstrate ability to recognize escalation needs."
+    
+    return summary
+
+
+def _extract_key_findings(cases: list[dict], summary_type: str) -> list[str]:
+    """Extract key findings from cases for the summary."""
+    findings = []
+    
+    # Aggregate severity scores
+    severity_scores = []
+    for case in cases:
+        if "severity_synthesis" in case:
+            severity_scores.append(case["severity_synthesis"].get("risk_score", 0))
+    
+    if severity_scores:
+        findings.append(f"Average risk score: {sum(severity_scores)/len(severity_scores):.2f}")
+        findings.append(f"Risk range: {min(severity_scores):.2f} - {max(severity_scores):.2f}")
+    
+    # Count shadow disagreements
+    shadow_count = sum(1 for case in cases if "shadow" in case)
+    if shadow_count > 0:
+        findings.append(f"Cases with shadow disagreement: {shadow_count}/{len(cases)}")
+    
+    return findings
+
+
+def _assess_promotion_relevance(cases: list[dict], summary_type: str) -> dict:
+    """Assess how this summary relates to promotion threshold decisions."""
+    # Calculate metrics relevant to promotion
+    high_risk_count = 0
+    exemplary_count = 0
+    
+    for case in cases:
+        if "severity_synthesis" in case:
+            if case["severity_synthesis"].get("risk_score", 0) > 0.6:
+                high_risk_count += 1
+        
+        if "outcome" in case:
+            if case["outcome"].get("outcome_pattern") in ["rapid_resolution", "standard_resolution"]:
+                exemplary_count += 1
+    
+    return {
+        "high_risk_cases": high_risk_count,
+        "exemplary_outcomes": exemplary_count,
+        "total_cases": len(cases),
+        "threshold_relevance": "high" if high_risk_count > len(cases) / 2 else "moderate"
+    }
+
+
+@app.get("/summary/history")
+async def get_summary_history(
+    limit: int = 20,
+    authorization: str | None = Header(default=None),
+):
+    """Get historical cross-case summaries."""
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total": len(CROSS_CASE_SUMMARIES),
+            "summaries": CROSS_CASE_SUMMARIES[-limit:]
+        }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8084)

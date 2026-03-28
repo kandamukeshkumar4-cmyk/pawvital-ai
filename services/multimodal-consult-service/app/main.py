@@ -38,6 +38,10 @@ class ConsultRequest(BaseModel):
     severity: str = Field(default="needs_review", description="Severity classification")
     contradictions: list[str] = Field(default_factory=list, description="Reported contradictions")
     deterministic_facts: dict = Field(default_factory=dict, description="Verified clinical facts")
+    # Enhanced rubric: Additional assessment dimensions
+    case_context: dict = Field(default_factory=dict, description="Historical case context for long-context comparison")
+    assessment_dimensions: dict = Field(default_factory=dict, description="Additional clinical assessment dimensions")
+    previous_findings: list[dict] = Field(default_factory=list, description="Previous related findings for temporal comparison")
 
 
 class ConsultResponse(BaseModel):
@@ -48,6 +52,12 @@ class ConsultResponse(BaseModel):
     uncertainties: list[str]
     confidence: float
     mode: str = "sync"
+    # Enhanced rubric: Nuanced clinical indicators
+    morphological_indicators: dict = Field(default_factory=dict, description="Detailed morphological assessment")
+    temporal_patterns: dict = Field(default_factory=dict, description="Temporal pattern analysis for chronicity")
+    risk_stratifiers: list[str] = Field(default_factory=list, description="Risk stratification factors")
+    recommended_next_steps: list[str] = Field(default_factory=list, description="Suggested follow-up actions")
+    comparison_to_baseline: dict = Field(default_factory=dict, description="Comparison with similar case patterns")
 
 
 # =============================================================================
@@ -110,17 +120,24 @@ def build_consult_prompt(request: ConsultRequest) -> str:
     """
     Build a structured prompt for veterinary image consult with strict output discipline.
     
-    The model receives:
+    Enhanced rubric incorporates additional assessment dimensions:
     1. Preprocess results (detected regions, domain, body region, quality)
     2. Owner description
     3. Severity from clinical matrix
     4. Known contradictions
     5. Deterministic facts
+    6. Case context (historical data for long-context comparison)
+    7. Assessment dimensions (additional clinical indicators)
+    8. Previous findings (temporal comparison)
     
     The model must respond with structured analysis that:
     - AGREE: points where specialist view confirms the clinical matrix assessment
     - DISAGREE: points where specialist view diverges (flagged as uncertainty)
     - UNCERTAINTIES: areas where specialist cannot provide confident opinion
+    - MORPHOLOGICAL_INDICATORS: detailed tissue/abnormality characterization
+    - TEMPORAL_PATTERNS: chronicity and progression indicators
+    - RISK_STRATIFIERS: risk categorization factors
+    - COMPARISON_TO_BASELINE: comparison with similar case patterns
     
     Output is validated against strict schema - malformed responses are reconstructed
     or replaced with minimal fallback.
@@ -144,6 +161,34 @@ def build_consult_prompt(request: ConsultRequest) -> str:
     contradictions_str = "\n".join([f"  - {c}" for c in request.contradictions]) if request.contradictions else "None"
     
     facts_str = "\n".join([f"  - {k}: {v}" for k, v in request.deterministic_facts.items()]) if request.deterministic_facts else "None"
+    
+    # Enhanced rubric: Case context for long-context comparison
+    case_context = request.case_context or {}
+    context_str = ""
+    if case_context:
+        context_items = []
+        for key, value in case_context.items():
+            context_items.append(f"  - {key}: {value}")
+        context_str = "\n".join(context_items)
+    
+    # Enhanced rubric: Assessment dimensions
+    assessment_dims = request.assessment_dimensions or {}
+    dims_str = ""
+    if assessment_dims:
+        dim_items = []
+        for dim_name, dim_value in assessment_dims.items():
+            dim_items.append(f"  - {dim_name}: {dim_value}")
+        dims_str = "\n".join(dim_items)
+    
+    # Enhanced rubric: Previous findings for temporal comparison
+    prev_findings_str = "No previous findings available."
+    if request.previous_findings:
+        finding_items = []
+        for pf in request.previous_findings[:5]:
+            date = pf.get("date", "unknown date")
+            finding = pf.get("finding", "unknown finding")
+            finding_items.append(f"  - [{date}] {finding}")
+        prev_findings_str = "\n".join(finding_items) if finding_items else "No previous findings available."
     
     prompt = f"""You are a veterinary specialist providing an additive second opinion on a clinical image case.
 
@@ -178,6 +223,17 @@ Deterministic Clinical Facts:
 Vision Summary:
 {request.vision_summary or "No vision summary available."}
 
+=== ENHANCED ASSESSMENT DIMENSIONS ===
+
+Case Context (for long-context comparison):
+{context_str or "No historical case context available."}
+
+Clinical Assessment Dimensions:
+{dims_str or "No additional assessment dimensions provided."}
+
+Previous Findings (for temporal pattern analysis):
+{prev_findings_str}
+
 === REQUIRED OUTPUT SCHEMA ===
 
 Respond ONLY with this exact JSON structure (no markdown, no text outside):
@@ -187,7 +243,26 @@ Respond ONLY with this exact JSON structure (no markdown, no text outside):
   "agreements": ["string: point where your view confirms clinical matrix", ...],
   "disagreements": ["string: point where your view diverges (advisory only)", ...],
   "uncertainties": ["string: area where you lack confident opinion", ...],
-  "confidence": 0.0-1.0
+  "confidence": 0.0-1.0,
+  "morphological_indicators": {{
+    "tissue_characterization": "string: detailed tissue/abnormality description",
+    "border_characteristics": "string: border definition (well-defined, irregular, etc.)",
+    "echogenicity_pattern": "string: echogenicity if ultrasound (anechoic, hypoechoic, etc.)",
+    "vascularization": "string: vascularization pattern if doppler available",
+    "compression_behavior": "string: compressibility if applicable"
+  }},
+  "temporal_patterns": {{
+    "chronicity_assessment": "string: acute, subacute, chronic, or indeterminate",
+    "progression_indicator": "string: improving, stable, progressing, or regressing",
+    "change_since_previous": "string: description of change from previous findings if available"
+  }},
+  "risk_stratifiers": ["string: risk factor 1", "string: risk factor 2", ...],
+  "recommended_next_steps": ["string: suggested follow-up action 1", ...],
+  "comparison_to_baseline": {{
+    "similar_cases_pattern": "string: pattern observed in similar cases",
+    "deviation_from_expected": "string: how this case deviates from typical pattern",
+    "complexity_assessment": "string: normal, elevated, or high complexity"
+  }}
 }}
 
 OUTPUT QUALITY DISCIPLINE:
@@ -196,6 +271,11 @@ OUTPUT QUALITY DISCIPLINE:
 - disagreements: Only genuine specialist concerns with severity implications. Minor variations in interpretation do not qualify. Maximum 3 items.
 - uncertainties: Explicitly state what image quality or information gaps limit your confidence. Include at minimum image_quality assessment if quality is not "good".
 - confidence: Calibrate honestly. 0.7-0.9 is typical for good quality images. Lower if image quality limits assessment.
+- morphological_indicators: Provide detailed tissue characterization when image quality permits assessment.
+- temporal_patterns: Compare with previous findings when available to assess disease trajectory.
+- risk_stratifiers: Identify modifiable and non-modifiable risk factors visible in the case.
+- recommended_next_steps: Suggest specific diagnostic or monitoring actions based on findings.
+- comparison_to_baseline: Compare against known patterns for similar case presentations.
 
 Respond with JSON only:
 """
@@ -547,6 +627,168 @@ async def consult(
             status_code=500,
             detail="Consult generation failed. Falling back to clinical matrix authority.",
         )
+
+
+# =============================================================================
+# Long-Context Case Comparison Endpoint
+# =============================================================================
+
+
+class CaseComparisonRequest(BaseModel):
+    """Request model for long-context case comparison."""
+    current_case: dict = Field(..., description="Current case data including image and findings")
+    historical_cases: list[dict] = Field(..., description="Historical cases for comparison")
+    comparison_mode: str = Field(default="temporal", description="Comparison mode: temporal, cross-sectional, or pattern")
+
+
+class CaseComparisonResponse(BaseModel):
+    """Response model for long-context case comparison."""
+    current_case_id: str
+    comparison_summary: str
+    pattern_matches: list[dict]
+    anomalies_detected: list[str]
+    progression_indicators: dict
+    risk_trajectory: str
+    confidence: float
+
+
+@app.post("/compare-cases", response_model=CaseComparisonResponse)
+async def compare_cases(
+    payload: CaseComparisonRequest,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Compare current case against historical cases spanning extended time periods.
+    
+    This endpoint enables:
+    - Temporal comparison: Track disease progression/regression over time
+    - Cross-sectional comparison: Compare with similar cases at same stage
+    - Pattern recognition: Identify common patterns across multiple cases
+    
+    Returns structured comparison analysis with pattern matching and anomaly detection.
+    """
+    validate_auth(authorization)
+    
+    try:
+        current_case = payload.current_case
+        historical_cases = payload.historical_cases
+        comparison_mode = payload.comparison_mode
+        
+        current_case_id = current_case.get("case_id", "unknown")
+        
+        # Pattern matching across historical cases
+        pattern_matches = []
+        anomalies_detected = []
+        progression_indicators = {
+            "direction": "stable",
+            "magnitude": 0.0,
+            "confidence": 0.5
+        }
+        
+        # Analyze temporal patterns if historical data exists
+        if len(historical_cases) >= 2 and comparison_mode == "temporal":
+            sorted_cases = sorted(historical_cases, key=lambda x: x.get("date", ""), reverse=True)
+            
+            # Compare current with most recent historical
+            most_recent = sorted_cases[0]
+            severity_current = current_case.get("severity", "")
+            severity_recent = most_recent.get("severity", "")
+            
+            if severity_current != severity_recent:
+                anomalies_detected.append(f"Severity change detected: {severity_recent} -> {severity_current}")
+            
+            # Track progression across multiple time points
+            severity_timeline = [c.get("severity", "unknown") for c in sorted_cases]
+            progression_indicators = {
+                "direction": _infer_progression_direction(severity_timeline),
+                "magnitude": len(set(severity_timeline)),
+                "timeline_points": len(severity_timeline),
+                "confidence": 0.8 if len(severity_timeline) >= 3 else 0.5
+            }
+        
+        # Cross-sectional pattern matching
+        if comparison_mode in ["cross-sectional", "pattern"]:
+            same_domain_cases = [c for c in historical_cases if c.get("domain") == current_case.get("domain")]
+            same_severity_cases = [c for c in historical_cases if c.get("severity") == current_case.get("severity")]
+            
+            if same_domain_cases:
+                pattern_matches.append({
+                    "pattern_type": "domain_association",
+                    "match_count": len(same_domain_cases),
+                    "description": f"{len(same_domain_cases)} cases with same domain"
+                })
+            
+            if same_severity_cases:
+                pattern_matches.append({
+                    "pattern_type": "severity_cluster",
+                    "match_count": len(same_severity_cases),
+                    "description": f"{len(same_severity_cases)} cases with same severity"
+                })
+        
+        # Risk trajectory assessment
+        risk_trajectory = _assess_risk_trajectory(current_case, historical_cases)
+        
+        # Calculate confidence based on data availability
+        confidence = min(0.9, 0.5 + (len(historical_cases) * 0.1))
+        
+        return CaseComparisonResponse(
+            current_case_id=current_case_id,
+            comparison_summary=f"Compared current case against {len(historical_cases)} historical cases using {comparison_mode} analysis.",
+            pattern_matches=pattern_matches,
+            anomalies_detected=anomalies_detected,
+            progression_indicators=progression_indicators,
+            risk_trajectory=risk_trajectory,
+            confidence=confidence
+        )
+        
+    except Exception as e:
+        logger.error("Case comparison failed", exc_info=e)
+        raise HTTPException(status_code=500, detail="Case comparison analysis failed")
+
+
+def _infer_progression_direction(severity_timeline: list[str]) -> str:
+    """Infer disease progression direction from severity timeline."""
+    if len(severity_timeline) < 2:
+        return "indeterminate"
+    
+    severity_order = {"low": 0, "medium": 1, "high": 2, "critical": 3, "unknown": 1}
+    numeric_timeline = [severity_order.get(s.lower(), 1) for s in severity_timeline]
+    
+    if numeric_timeline[0] > numeric_timeline[-1]:
+        return "improving"
+    elif numeric_timeline[0] < numeric_timeline[-1]:
+        return "progressing"
+    else:
+        return "stable"
+
+
+def _assess_risk_trajectory(current_case: dict, historical_cases: list[dict]) -> str:
+    """Assess overall risk trajectory based on current and historical patterns."""
+    current_severity = current_case.get("severity", "unknown").lower()
+    
+    if not historical_cases:
+        return "insufficient_data"
+    
+    # Calculate average severity of historical cases
+    severity_scores = []
+    severity_map = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+    for case in historical_cases:
+        sev = case.get("severity", "unknown").lower()
+        if sev in severity_map:
+            severity_scores.append(severity_map[sev])
+    
+    if not severity_scores:
+        return "insufficient_data"
+    
+    avg_historical = sum(severity_scores) / len(severity_scores)
+    current_score = severity_map.get(current_severity, 2)
+    
+    if current_score > avg_historical + 0.5:
+        return "elevated_risk"
+    elif current_score < avg_historical - 0.5:
+        return "reduced_risk"
+    else:
+        return "stable_risk"
 
 
 if __name__ == "__main__":
