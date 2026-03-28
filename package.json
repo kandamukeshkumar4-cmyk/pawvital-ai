@@ -13,6 +13,7 @@
     "verify:sidecars": "node scripts/verify-sidecars.mjs",
     "verify:sidecars:env": "node scripts/verify-sidecars.mjs env",
     "verify:sidecars:health": "node scripts/verify-sidecars.mjs health",
+    "verify:sidecars:strict": "node scripts/verify-sidecars.mjs all --strict",
     "db:apply-rag-schema": "node scripts/apply-rag-schema.mjs",
     "seed:public-corpus": "node scripts/seed-public-corpus.mjs",
     "seed:public-corpus:dry": "node scripts/seed-public-corpus.mjs --dry-run",

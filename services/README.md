@@ -29,4 +29,6 @@ npm run verify:sidecars:env
 npm run verify:sidecars:health
 ```
 
-Use `npm run verify:sidecars -- --strict` when you want warnings such as stub mode or missing sidecar URLs to fail the check.
+Use `npm run verify:sidecars:strict` when you want warnings such as stub mode or missing sidecar URLs to fail the check.
+
+See the full rollout procedure in [G:\MY Website\pawvital-ai\plans\SIDECAR_DEPLOYMENT_RUNBOOK.md](G:\MY Website\pawvital-ai\plans\SIDECAR_DEPLOYMENT_RUNBOOK.md).
