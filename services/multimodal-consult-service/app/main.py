@@ -107,7 +107,7 @@ def decode_image(image_data: str) -> Image.Image:
 
 def build_consult_prompt(request: ConsultRequest) -> str:
     """
-    Build a structured prompt for veterinary image consult.
+    Build a structured prompt for veterinary image consult with strict output discipline.
     
     The model receives:
     1. Preprocess results (detected regions, domain, body region, quality)
@@ -120,6 +120,9 @@ def build_consult_prompt(request: ConsultRequest) -> str:
     - AGREE: points where specialist view confirms the clinical matrix assessment
     - DISAGREE: points where specialist view diverges (flagged as uncertainty)
     - UNCERTAINTIES: areas where specialist cannot provide confident opinion
+    
+    Output is validated against strict schema - malformed responses are reconstructed
+    or replaced with minimal fallback.
     """
     
     preprocess = request.preprocess
@@ -143,8 +146,12 @@ def build_consult_prompt(request: ConsultRequest) -> str:
     
     prompt = f"""You are a veterinary specialist providing an additive second opinion on a clinical image case.
 
-IMPORTANT: You are NOT the authority. The clinical matrix makes final triage decisions. 
-Your role is to provide specialist insight that may inform, but never override, the clinical matrix.
+IMPORTANT CONSTRAINTS:
+1. You are NOT the authority. The clinical matrix makes final triage decisions.
+2. Your role is additive only - inform, never override.
+3. Respond ONLY with valid JSON matching the exact schema below.
+4. Do NOT include markdown code fences, explanations, or text outside the JSON.
+5. All array fields must be actual JSON arrays of strings, not single strings.
 
 === CASE INFORMATION ===
 
@@ -169,55 +176,176 @@ Deterministic Clinical Facts:
 Vision Summary:
 {request.vision_summary or "No vision summary available."}
 
-=== YOUR TASK ===
+=== REQUIRED OUTPUT SCHEMA ===
 
-Analyze this case as a veterinary specialist and provide a structured consult opinion.
+Respond ONLY with this exact JSON structure (no markdown, no text outside):
 
-Format your response as a JSON object with these fields:
-- "summary": A 2-3 sentence specialist assessment of the image findings
-- "agreements": Points where your specialist view CONFIRMS the clinical matrix assessment (array of strings)
-- "disagreements": Points where your specialist view DIVERGES from the clinical matrix (array of strings) - these are advisory only
-- "uncertainties": Areas where you cannot provide a confident specialist opinion (array of strings)
-- "confidence": A float between 0.0 and 1.0 indicating your confidence in this consult
+{{
+  "summary": "string: 2-3 sentence specialist assessment of image findings",
+  "agreements": ["string: point where your view confirms clinical matrix", ...],
+  "disagreements": ["string: point where your view diverges (advisory only)", ...],
+  "uncertainties": ["string: area where you lack confident opinion", ...],
+  "confidence": 0.0-1.0
+}}
 
-Focus on:
-1. Image-based findings (lesion morphology, distribution patterns, severity indicators)
-2. Consistency between image findings and reported symptoms
-3. Red flags that the clinical matrix should be aware of
-4. Breed-specific considerations where relevant
+DISCIPLINE RULES:
+- summary: MUST be 50-500 characters, descriptive, not generic
+- agreements: Be specific to this case, cite image findings
+- disagreements: Only genuine specialist concerns, not minor variations
+- uncertainties: Include image quality limitations explicitly if applicable
+- confidence: 0.0 = no confidence, 1.0 = absolute certainty; be calibrated
 
-Be conservative with disagreements - only flag genuine specialist concerns.
-If image quality limits your assessment, state this clearly in uncertainties.
-
-Respond ONLY with valid JSON. No markdown, no explanation outside the JSON.
+Respond with JSON only:
 """
     
     return prompt
 
 
 def parse_model_response(content: str) -> dict:
-    """Parse the model's JSON response with fallback handling."""
+    """
+    Parse the model's JSON response with strict schema enforcement.
+    
+    Validates output structure and ensures type safety for downstream consumers.
+    """
+    if not content or not content.strip():
+        return _minimal_fallback("Empty response from model")
+
+    # Track parsing issues for reporting
+    parse_issues: list[str] = []
+
+    # Step 1: Try direct JSON parse
     try:
-        # Try direct JSON parse
-        return json.loads(content)
-    except json.JSONDecodeError:
-        # Try to extract JSON from content
-        import re
-        json_match = re.search(r'\{[^{}]*\}', content, re.DOTALL)
-        if json_match:
-            try:
-                return json.loads(json_match.group())
-            except json.JSONDecodeError:
-                pass
-        
-        # Fallback to minimal structure
-        return {
-            "summary": content[:500] if content else "Unable to generate consult summary.",
-            "agreements": [],
-            "disagreements": [],
-            "uncertainties": ["Failed to parse structured response from model"],
-            "confidence": 0.3
-        }
+        result = json.loads(content)
+        _validate_response_schema(result, parse_issues)
+        if not parse_issues:
+            return result
+    except json.JSONDecodeError as e:
+        parse_issues.append(f"JSON decode error: {e}")
+
+    # Step 2: Try to extract JSON from content with improved regex
+    import re
+    # Match balanced braces more robustly
+    json_match = re.search(r'\{[\s\S]*\}', content, re.DOTALL)
+    if json_match:
+        try:
+            result = json.loads(json_match.group())
+            _validate_response_schema(result, parse_issues)
+            if not parse_issues:
+                return result
+        except json.JSONDecodeError as e:
+            parse_issues.append(f"Extracted JSON parse error: {e}")
+
+    # Step 3: Try JSON with markdown code fences stripped
+    cleaned = re.sub(r'^```(?:json)?\s*', '', content.strip(), flags=re.MULTILINE)
+    cleaned = re.sub(r'\s*```$', '', cleaned)
+    if cleaned != content:
+        try:
+            result = json.loads(cleaned)
+            _validate_response_schema(result, parse_issues)
+            if not parse_issues:
+                return result
+        except json.JSONDecodeError:
+            parse_issues.append("Markdown-stripped JSON also failed")
+
+    # Step 4: Partial recovery - extract what we can
+    partial = _extract_partial_fields(content)
+    if partial:
+        remaining_issues = [p for p in parse_issues if p not in partial.get("_parse_notes", [])]
+        if remaining_issues:
+            partial.setdefault("uncertainties", []).extend(remaining_issues)
+        return partial
+
+    # Final fallback
+    return _minimal_fallback("; ".join(parse_issues) if parse_issues else "Unknown parse failure")
+
+
+def _validate_response_schema(result: dict, issues: list[str]) -> None:
+    """
+    Validate response has required fields with correct types.
+    
+    Issues are appended to `issues` list for reporting in uncertainties.
+    """
+    required_fields = {
+        "summary": (str,),
+        "agreements": (list,),
+        "disagreements": (list,),
+        "uncertainties": (list,),
+        "confidence": (int, float),
+    }
+
+    for field, expected_types in required_fields.items():
+        if field not in result:
+            issues.append(f"Missing required field: {field}")
+            continue
+        if not isinstance(result[field], expected_types):
+            issues.append(
+                f"Field '{field}' has wrong type: expected {expected_types[0].__name__}, "
+                f"got {type(result[field]).__name__}"
+            )
+            # Coerce type if possible
+            if expected_types[0] in (int, float) and isinstance(result[field], (int, float)):
+                result[field] = expected_types[0](result[field])
+            elif expected_types[0] == list and not isinstance(result[field], list):
+                result[field] = [result[field]]
+
+    # Validate confidence range
+    if "confidence" in result:
+        conf = result["confidence"]
+        if isinstance(conf, (int, float)):
+            if conf < 0.0 or conf > 1.0:
+                issues.append(f"Confidence {conf} outside valid range [0.0, 1.0], clamping")
+                result["confidence"] = max(0.0, min(1.0, conf))
+
+    # Ensure arrays are actually arrays
+    for array_field in ("agreements", "disagreements", "uncertainties"):
+        if array_field in result and not isinstance(result[array_field], list):
+            result[array_field] = [str(result[array_field])] if result[array_field] else []
+
+
+def _extract_partial_fields(content: str) -> dict | None:
+    """Try to extract valid partial fields from malformed content."""
+    import re
+
+    partial: dict[str, any] = {"_parse_notes": []}
+
+    # Try to extract summary
+    summary_match = re.search(r'"summary"\s*:\s*"([^"]*)"', content)
+    if summary_match:
+        partial["summary"] = summary_match.group(1)
+    else:
+        # Try unquoted
+        summary_match = re.search(r'"summary"\s*:\s*([^\s,}]+)', content)
+        if summary_match:
+            partial["summary"] = summary_match.group(1)[:200]
+
+    # Try to extract confidence
+    conf_match = re.search(r'"confidence"\s*:\s*([0-9.]+)', content)
+    if conf_match:
+        try:
+            partial["confidence"] = float(conf_match.group(1))
+        except ValueError:
+            pass
+
+    # Only return if we got at least summary
+    if "summary" in partial:
+        partial.setdefault("agreements", [])
+        partial.setdefault("disagreements", [])
+        partial.setdefault("uncertainties", ["Partial parse - some fields missing"])
+        partial.setdefault("confidence", partial.get("confidence", 0.3))
+        return partial
+
+    return None
+
+
+def _minimal_fallback(reason: str) -> dict:
+    """Return minimal valid fallback response with failure reason."""
+    return {
+        "summary": f"Consult generation failed: {reason}. Clinical matrix remains authority.",
+        "agreements": [],
+        "disagreements": [],
+        "uncertainties": [f"Consult parse failure: {reason}"],
+        "confidence": 0.1,
+    }
 
 
 async def generate_consult(request: ConsultRequest) -> ConsultResponse:
