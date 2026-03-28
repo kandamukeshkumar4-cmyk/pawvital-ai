@@ -210,7 +210,8 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - Curated corpus activation prep now has a shared registry plus a live-corpus verification script that flags mapped-but-empty dataset sources before activation.
 - Four previously misclassified Roboflow image sources have now been moved out of `live` status into `pending_assets` until real files are populated on disk.
 - Production verification has now confirmed that Vercel is still missing all `HF_*` sidecar URL env vars, so Phase 4 cannot be truthfully marked started yet.
-- Live probes against `https://pawvital-ai.vercel.app/api/ai/sidecar-readiness` and `/api/ai/shadow-rollout` are currently returning `401`, so the deployment-time debug secret alignment still needs to be completed before remote readiness checks can pass.
+- Vercel production now has `HF_SIDECAR_API_KEY` configured, and live probes against `https://pawvital-ai.vercel.app/api/ai/sidecar-readiness` and `/api/ai/shadow-rollout` are passing again.
+- The remaining Phase 4 blocker is now narrower: the five `HF_*_URL` sidecar endpoints still do not exist in Vercel production, so the app can authenticate the debug routes but still cannot call any deployed sidecar service.
 - The next fastest path is to finish Phase 4 wiring, then shadow the deployed sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership
