@@ -192,6 +192,7 @@ To move faster without breaking `master`, parallel work should follow explicit f
   - retrieval sidecars now support optional model-backed reranking with deterministic fallback
 - App-level smoke coverage now exercises all five sidecar contracts through `hf-sidecars.ts` and the async review route.
 - Phase 4 prep now has an executable deployment-readiness script for sidecar env and `/healthz` verification.
+- Phase 4 verification now also has a dedicated shadow-route probe command for checking the guarded app-side rollout summary path.
 - Phase 4 now also has a deployment runbook covering env ownership, rollout order, shadow-mode promotion, and rollback.
 - Shadow-mode verification now has a session-level rollout summary helper that turns sidecar observations into per-service promotion status (`ready`, `watch`, `blocked`, `insufficient_data`).
 - Shadow rollout readiness is now exposed through a guarded debug API route so promotion status can be inspected without exposing raw case payloads.

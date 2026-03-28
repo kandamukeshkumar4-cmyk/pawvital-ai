@@ -27,6 +27,7 @@ Deployment-readiness verification:
 ```bash
 npm run verify:sidecars:env
 npm run verify:sidecars:health
+npm run verify:sidecars:shadow
 ```
 
 Use `npm run verify:sidecars:strict` when you want warnings such as stub mode or missing sidecar URLs to fail the check.
