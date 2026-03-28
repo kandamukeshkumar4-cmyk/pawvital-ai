@@ -86,6 +86,7 @@ class ReviewResponse(BaseModel):
 
 # In-memory review storage (in production, use Redis or a database)
 REVIEW_RESULTS: dict[str, ReviewResponse] = {}
+REVIEW_CONTEXT: dict[str, dict] = {}
 PROCESSING_QUEUE: list[str] = []
 STATE_LOCK = Lock()
 
@@ -108,6 +109,13 @@ MAX_DEAD_LETTER_HISTORY = 500
 REVIEW_STATE_TRANSITIONS: list[dict] = []
 MAX_STATE_TRANSITIONS_HISTORY = 1000
 
+SEVERITY_SCORE_MAP = {
+    "monitor": 0.25,
+    "needs_review": 0.5,
+    "urgent": 0.75,
+    "emergency": 1.0,
+}
+
 
 # =============================================================================
 # Global model instances (lazy loaded)
@@ -120,6 +128,28 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 STUB_MODE = os.environ.get("STUB_MODE", "false").strip().lower() == "true"
 EXPECTED_API_KEY = os.environ.get("SIDECAR_API_KEY", "").strip()
 logger = logging.getLogger("async-review-service")
+
+
+def _trim_list_in_place(values: list[Any], max_items: int) -> None:
+    if max_items > 0 and len(values) > max_items:
+        del values[:-max_items]
+
+
+def _review_context_for_case(case_id: str) -> dict[str, Any]:
+    with STATE_LOCK:
+        return dict(REVIEW_CONTEXT.get(case_id, {}))
+
+
+def _review_result_dict(case_id: str) -> dict[str, Any]:
+    with STATE_LOCK:
+        review = REVIEW_RESULTS.get(case_id)
+    if review is None:
+        return {}
+    if isinstance(review, BaseModel):
+        return review.model_dump()
+    if isinstance(review, dict):
+        return dict(review)
+    return {}
 
 
 def validate_auth(authorization: str | None) -> None:
@@ -603,6 +633,12 @@ async def process_review_task(request: AsyncReviewRequest):
         result = await generate_review(request, case_id)
         with STATE_LOCK:
             REVIEW_RESULTS[case_id] = result
+            REVIEW_CONTEXT[case_id] = {
+                "preprocess": dict(request.preprocess or {}),
+                "requested_severity": request.severity,
+                "owner_text": request.owner_text,
+                "vision_summary": request.vision_summary,
+            }
             if case_id in PROCESSING_QUEUE:
                 PROCESSING_QUEUE.remove(case_id)
 
@@ -771,6 +807,7 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "consult_model": consult_opinion.get("model", "unknown"),
         "review_model": review_result.model,
+        "consult_summary": consult_opinion.get("summary", "")[:240],
         "consult_confidence": consult_opinion.get("confidence", 0.5),
         "review_confidence": review_result.confidence,
         "agreement_overlap": [],
@@ -782,6 +819,8 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         "semantic_matches": [],  # Enhanced: track semantic similarity matches
         "disagreement_classifications": [],
         "requires_attention": False,
+        "pattern_type": "alignment",
+        "severity_impact": 0.35,
         "synopsis": "",
     }
     
@@ -853,6 +892,20 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
         item["severity"] == "HIGH_SEVERITY" or item["type"] in {"diagnostic", "urgency"}
         for item in shadow_summary["disagreement_classifications"]
     )
+
+    if shadow_summary["disagreement_classifications"]:
+        top_classification = shadow_summary["disagreement_classifications"][0]
+        shadow_summary["pattern_type"] = top_classification["type"]
+
+    if any(item["severity"] == "HIGH_SEVERITY" for item in shadow_summary["disagreement_classifications"]):
+        shadow_summary["severity_impact"] = 0.9
+    elif any(item["type"] in {"diagnostic", "urgency"} for item in shadow_summary["disagreement_classifications"]):
+        shadow_summary["severity_impact"] = 0.75
+    elif n_disagreements > 0:
+        shadow_summary["severity_impact"] = 0.6
+    elif n_unc_divs > 0:
+        shadow_summary["pattern_type"] = "uncertainty_gap"
+        shadow_summary["severity_impact"] = 0.45
     
     # Determine alignment level
     if n_disagreements == 0 and conf_delta < 0.15:
@@ -969,8 +1022,7 @@ def _store_outcome_feedback(case_id: str, review_result: ReviewResponse, request
             feedback_entry["shadow_alignment"] = shadow.get("synopsis", "")[:200]
             feedback_entry["shadow_n_disagreements"] = len(shadow.get("disagreement_points", []))
         OUTCOME_FEEDBACK.append(feedback_entry)
-        if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
-            OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
+        _trim_list_in_place(OUTCOME_FEEDBACK, MAX_FEEDBACK_HISTORY)
         total_feedback_entries = len(OUTCOME_FEEDBACK)
     
     logger.debug(
@@ -1290,8 +1342,7 @@ async def record_outcome_feedback(feedback_data: dict):
     
     with STATE_LOCK:
         OUTCOME_FEEDBACK.append(entry)
-        if len(OUTCOME_FEEDBACK) > MAX_FEEDBACK_HISTORY:
-            OUTCOME_FEEDBACK = OUTCOME_FEEDBACK[-MAX_FEEDBACK_HISTORY:]
+        _trim_list_in_place(OUTCOME_FEEDBACK, MAX_FEEDBACK_HISTORY)
         total_feedback_entries = len(OUTCOME_FEEDBACK)
     
     logger.info("Recorded manual outcome feedback for case %s", feedback_data["case_id"])
@@ -1728,6 +1779,7 @@ async def delete_review(case_id: str):
     with STATE_LOCK:
         if case_id in REVIEW_RESULTS:
             del REVIEW_RESULTS[case_id]
+            REVIEW_CONTEXT.pop(case_id, None)
             SHADOW_DISAGREEMENTS.pop(case_id, None)
             return {"ok": True, "message": f"Review {case_id} deleted"}
 
@@ -1736,6 +1788,1221 @@ async def delete_review(case_id: str):
             return {"ok": True, "message": f"Queued review {case_id} cancelled"}
     
     raise HTTPException(status_code=404, detail=f"Case {case_id} not found")
+
+
+# =============================================================================
+# Shadow Disagreement Clustering
+# =============================================================================
+# Groups cases where model predictions diverge significantly from expected outcomes
+# without triggering direct corrections, enabling learning from implicit feedback.
+
+SHADOW_DISAGREEMENT_CLUSTERS: list[dict] = []
+MAX_SHADOW_CLUSTER_HISTORY = 500
+
+
+def _compute_disagreement_score(case_id: str) -> float:
+    """
+    Compute disagreement score for a shadow disagreement case.
+    
+    Higher scores indicate greater divergence between model prediction and expected outcome.
+    """
+    if case_id not in SHADOW_DISAGREEMENTS:
+        return 0.0
+    
+    disagreement = SHADOW_DISAGREEMENTS[case_id]
+    severity_weight = disagreement.get("severity_impact", 0.5)
+    confidence_delta = abs(
+        disagreement.get("consult_confidence", 0.5)
+        - disagreement.get("review_confidence", 0.5)
+    )
+    
+    return (severity_weight * 0.6) + (confidence_delta * 0.4)
+
+
+def _cluster_similar_disagreements(disagreement: dict, clusters: list[dict]) -> int | None:
+    """
+    Find a cluster index for a similar disagreement, or None if no match.
+    
+    Similarity is based on domain, body region, and disagreement pattern.
+    """
+    for i, cluster in enumerate(clusters):
+        if cluster.get("domain") == disagreement.get("domain") and \
+           cluster.get("body_region") == disagreement.get("body_region") and \
+           cluster.get("pattern_type") == disagreement.get("pattern_type"):
+            return i
+    return None
+
+
+@app.get("/shadow/disagreements")
+async def get_shadow_disagreements(
+    limit: int = 50,
+    min_score: float = 0.0,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get shadow disagreements for analysis.
+    
+    Returns cases where 7B consult predictions diverged from 32B review opinions,
+    enabling analysis of implicit feedback patterns.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        disagreements = [
+            {
+                "case_id": case_id,
+                "disagreement_score": _compute_disagreement_score(case_id),
+                **disagreement
+            }
+            for case_id, disagreement in SHADOW_DISAGREEMENTS.items()
+        ]
+    
+    # Filter by minimum score
+    disagreements = [d for d in disagreements if d["disagreement_score"] >= min_score]
+    
+    # Sort by score descending
+    disagreements.sort(key=lambda x: x["disagreement_score"], reverse=True)
+    
+    return {
+        "total": len(disagreements),
+        "disagreements": disagreements[:limit]
+    }
+
+
+@app.get("/shadow/clusters")
+async def get_shadow_clusters(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get clustered shadow disagreements.
+    
+    Groups similar disagreement patterns together for pattern analysis.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total_clusters": len(SHADOW_DISAGREEMENT_CLUSTERS),
+            "clusters": list(SHADOW_DISAGREEMENT_CLUSTERS)
+        }
+
+
+@app.post("/shadow/analyze")
+async def analyze_shadow_patterns(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Analyze shadow disagreement patterns and update clusters.
+    
+    This endpoint processes all shadow disagreements and groups them
+    into clusters based on similarity of domain, body region, and pattern.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        # Build new clusters from current disagreements
+        new_clusters = []
+        
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            cluster_idx = _cluster_similar_disagreements(disagreement, new_clusters)
+            
+            if cluster_idx is not None:
+                # Add to existing cluster
+                new_clusters[cluster_idx]["case_count"] += 1
+                new_clusters[cluster_idx]["cases"].append(case_id)
+                new_clusters[cluster_idx]["avg_score"] = (
+                    (new_clusters[cluster_idx]["avg_score"] * (new_clusters[cluster_idx]["case_count"] - 1) +
+                     _compute_disagreement_score(case_id)) / new_clusters[cluster_idx]["case_count"]
+                )
+            else:
+                # Create new cluster
+                new_clusters.append({
+                    "domain": disagreement.get("domain", "unknown"),
+                    "body_region": disagreement.get("body_region", "unknown"),
+                    "pattern_type": disagreement.get("pattern_type", "unknown"),
+                    "case_count": 1,
+                    "cases": [case_id],
+                    "avg_score": _compute_disagreement_score(case_id),
+                    "representative_pattern": disagreement.get("consult_summary", "")[:200]
+                })
+        
+        SHADOW_DISAGREEMENT_CLUSTERS[:] = new_clusters[-MAX_SHADOW_CLUSTER_HISTORY:]
+        
+        return {
+            "total_clusters": len(SHADOW_DISAGREEMENT_CLUSTERS),
+            "clusters": SHADOW_DISAGREEMENT_CLUSTERS
+        }
+
+
+# =============================================================================
+# Severity Synthesis Logic
+# =============================================================================
+# Aggregates and weighs multiple severity indicators to produce calibrated risk scores.
+
+SEVERITY_INDICATORS: list[dict] = []
+MAX_SEVERITY_HISTORY = 1000
+
+
+def _synthesize_risk_score(indicators: list[dict]) -> dict:
+    """
+    Synthesize a calibrated risk score from multiple severity indicators.
+    
+    Uses weighted averaging based on indicator reliability and relevance.
+    """
+    if not indicators:
+        return {"risk_score": 0.0, "confidence": 0.0, "calibration": "insufficient_data"}
+    
+    # Weight factors for different indicator sources
+    source_weights = {
+        "consult": 0.3,
+        "review": 0.4,
+        "outcome": 0.3
+    }
+    
+    weighted_sum = 0.0
+    weight_total = 0.0
+    
+    for indicator in indicators:
+        source = indicator.get("source", "unknown")
+        severity = indicator.get("severity", 0.5)
+        reliability = indicator.get("reliability", 0.5)
+        
+        weight = source_weights.get(source, 0.2) * reliability
+        weighted_sum += severity * weight
+        weight_total += weight
+    
+    if weight_total == 0:
+        return {"risk_score": 0.0, "confidence": 0.0, "calibration": "no_weighted_indicators"}
+    
+    raw_score = weighted_sum / weight_total
+    
+    # Calibrate score based on agreement between indicators
+    severities = [ind.get("severity", 0.5) for ind in indicators]
+    std_dev = _calculate_std_dev(severities)
+    
+    if std_dev < 0.1:
+        calibration = "high_agreement"
+        confidence = 0.9
+    elif std_dev < 0.2:
+        calibration = "moderate_agreement"
+        confidence = 0.7
+    else:
+        calibration = "low_agreement"
+        confidence = 0.5
+    
+    # Apply calibration to score
+    calibrated_score = raw_score * confidence
+    
+    return {
+        "risk_score": round(calibrated_score, 3),
+        "raw_score": round(raw_score, 3),
+        "confidence": round(confidence, 3),
+        "calibration": calibration,
+        "indicator_count": len(indicators),
+        "agreement_std_dev": round(std_dev, 3)
+    }
+
+
+def _calculate_std_dev(values: list[float]) -> float:
+    """Calculate standard deviation of a list of values."""
+    if len(values) < 2:
+        return 0.0
+    
+    mean = sum(values) / len(values)
+    variance = sum((x - mean) ** 2 for x in values) / len(values)
+    return variance ** 0.5
+
+
+@app.post("/severity/synthesize")
+async def synthesize_severity(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Synthesize a calibrated risk score from multiple severity indicators for a case.
+    
+    Aggregates indicators from consult, review, and outcome data to produce
+    a calibrated risk score with confidence assessment.
+    """
+    validate_auth(authorization)
+    
+    indicators = []
+    
+    # Collect from shadow disagreements
+    if case_id in SHADOW_DISAGREEMENTS:
+        disagreement = SHADOW_DISAGREEMENTS[case_id]
+        indicators.append({
+            "source": "consult",
+            "severity": disagreement.get("severity_impact", 0.5),
+            "reliability": 0.6,
+            "description": "7B consult severity assessment"
+        })
+    
+    # Collect from review results
+    if case_id in REVIEW_RESULTS:
+        review_context = _review_context_for_case(case_id)
+        indicators.append({
+            "source": "review",
+            "severity": SEVERITY_SCORE_MAP.get(
+                str(review_context.get("requested_severity", "needs_review")).lower(),
+                0.5,
+            ),
+            "reliability": 0.8,
+            "description": "32B review severity assessment"
+        })
+    
+    # Collect from outcome feedback
+    with STATE_LOCK:
+        for feedback in OUTCOME_FEEDBACK:
+            if feedback.get("case_id") == case_id:
+                indicators.append({
+                    "source": "outcome",
+                    "severity": feedback.get("outcome_severity", 0.5),
+                    "reliability": 0.7,
+                    "description": "Outcome-based severity"
+                })
+                break
+    
+    synthesis = _synthesize_risk_score(indicators)
+    
+    # Record the synthesis for historical tracking
+    with STATE_LOCK:
+        SEVERITY_INDICATORS.append({
+            "case_id": case_id,
+            "synthesized_at": datetime.now(timezone.utc).isoformat(),
+            **synthesis,
+            "indicators": indicators
+        })
+        _trim_list_in_place(SEVERITY_INDICATORS, MAX_SEVERITY_HISTORY)
+    
+    return {
+        "case_id": case_id,
+        "synthesis": synthesis
+    }
+
+
+@app.get("/severity/indicators")
+async def get_severity_indicators(
+    limit: int = 100,
+    authorization: str | None = Header(default=None),
+):
+    """Get historical severity synthesis records."""
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total": len(SEVERITY_INDICATORS),
+            "indicators": SEVERITY_INDICATORS[-limit:]
+        }
+
+
+# =============================================================================
+# Outcome-Learning Heuristics
+# =============================================================================
+# Tracks case resolution patterns and extracts actionable insights.
+
+OUTCOME_LEARNING: list[dict] = []
+MAX_LEARNING_HISTORY = 500
+
+
+def _extract_resolution_pattern(case_id: str, outcome: dict) -> dict:
+    """Extract resolution pattern from case outcome."""
+    return {
+        "case_id": case_id,
+        "initial_severity": outcome.get("initial_severity", "unknown"),
+        "final_outcome": outcome.get("outcome", "unknown"),
+        "time_to_resolution": outcome.get("time_to_resolution"),
+        "interventions_applied": outcome.get("interventions", []),
+        "outcome_pattern": _classify_outcome_pattern(outcome)
+    }
+
+
+def _classify_outcome_pattern(outcome: dict) -> str:
+    """Classify the outcome pattern based on resolution characteristics."""
+    if outcome.get("outcome") == "resolved" and outcome.get("time_to_resolution"):
+        if outcome["time_to_resolution"] < 24:
+            return "rapid_resolution"
+        elif outcome["time_to_resolution"] < 72:
+            return "standard_resolution"
+        else:
+            return "prolonged_resolution"
+    
+    if outcome.get("outcome") == "escalated":
+        return "required_escalation"
+    
+    if outcome.get("outcome") == "pending":
+        return "ongoing_monitoring"
+    
+    return "undetermined"
+
+
+def _compute_learning_insights(patterns: list[dict]) -> list[dict]:
+    """Compute actionable insights from resolution patterns."""
+    insights = []
+    
+    # Group by outcome pattern
+    pattern_groups = {}
+    for pattern in patterns:
+        pattern_type = pattern.get("outcome_pattern", "unknown")
+        if pattern_type not in pattern_groups:
+            pattern_groups[pattern_type] = []
+        pattern_groups[pattern_type].append(pattern)
+    
+    # Generate insights for each pattern group
+    for pattern_type, cases in pattern_groups.items():
+        if len(cases) >= 3:
+            avg_time = sum(c.get("time_to_resolution", 0) for c in cases if c.get("time_to_resolution")) / len(cases)
+            
+            insights.append({
+                "insight_type": "resolution_pattern",
+                "pattern": pattern_type,
+                "case_count": len(cases),
+                "avg_resolution_time_hours": round(avg_time, 1) if avg_time > 0 else None,
+                "recommendation": f"Cases with {pattern_type} pattern ({len(cases)} occurrences) may benefit from early intervention review"
+            })
+    
+    return insights
+
+
+@app.post("/outcome/record")
+async def record_outcome(
+    case_id: str,
+    outcome: dict,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Record an outcome for a case to enable learning.
+    
+    The outcome data is used to extract resolution patterns and generate
+    actionable insights for improving future consultation quality.
+    """
+    validate_auth(authorization)
+    
+    pattern = _extract_resolution_pattern(case_id, outcome)
+    
+    with STATE_LOCK:
+        OUTCOME_LEARNING.append({
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+            **pattern
+        })
+        _trim_list_in_place(OUTCOME_LEARNING, MAX_LEARNING_HISTORY)
+    
+    return {
+        "ok": True,
+        "case_id": case_id,
+        "pattern": pattern
+    }
+
+
+@app.get("/outcome/insights")
+async def get_outcome_insights(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get actionable insights derived from outcome learning.
+    
+    Returns patterns and recommendations extracted from case resolution data.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        patterns = list(OUTCOME_LEARNING)
+    
+    insights = _compute_learning_insights(patterns)
+    
+    return {
+        "total_outcomes": len(patterns),
+        "insights": insights
+    }
+
+
+@app.get("/outcome/patterns")
+async def get_outcome_patterns(
+    limit: int = 100,
+    authorization: str | None = Header(default=None),
+):
+    """Get recorded outcome patterns for analysis."""
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total": len(OUTCOME_LEARNING),
+            "patterns": OUTCOME_LEARNING[-limit:]
+        }
+
+
+# =============================================================================
+# Cross-Case Narrative Summaries
+# =============================================================================
+# Synthesizes decision patterns, outcome trajectories, and key differentiating
+# factors across multiple patient cases for promotion threshold analysis.
+
+CROSS_CASE_SUMMARIES: list[dict] = []
+MAX_SUMMARY_HISTORY = 100
+
+
+@app.post("/summary/cross-case")
+async def generate_cross_case_summary(
+    case_ids: list[str],
+    summary_type: str = "decision_pattern",
+    authorization: str | None = Header(default=None),
+):
+    """
+    Generate a cross-case narrative summary.
+    
+    Synthesizes decision patterns, outcome trajectories, and differentiating
+    factors across multiple cases to support promotion threshold analysis.
+    
+    Summary types:
+    - decision_pattern: Analyzes how decisions were made across cases
+    - outcome_trajectory: Compares how cases evolved over time
+    - complexity_analysis: Identifies what makes cases simple vs complex
+    - performance_distinction: Highlights what differentiates satisfactory from exemplary
+    """
+    validate_auth(authorization)
+    
+    if len(case_ids) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 cases required for cross-case summary")
+    
+    cases_data = []
+    
+    # Collect data for each case
+    for case_id in case_ids:
+        case_info = {"case_id": case_id}
+        
+        # From review results
+        if case_id in REVIEW_RESULTS:
+            case_info["review"] = _review_result_dict(case_id)
+            case_info["review_context"] = _review_context_for_case(case_id)
+        
+        # From shadow disagreements
+        if case_id in SHADOW_DISAGREEMENTS:
+            case_info["shadow"] = SHADOW_DISAGREEMENTS[case_id]
+        
+        # From outcome learning
+        with STATE_LOCK:
+            for outcome in OUTCOME_LEARNING:
+                if outcome.get("case_id") == case_id:
+                    case_info["outcome"] = outcome
+                    break
+        
+        # From severity synthesis
+        with STATE_LOCK:
+            for severity in SEVERITY_INDICATORS:
+                if severity.get("case_id") == case_id:
+                    case_info["severity_synthesis"] = severity
+                    break
+        
+        cases_data.append(case_info)
+    
+    # Generate summary based on type
+    if summary_type == "decision_pattern":
+        summary_text = _synthesize_decision_pattern_summary(cases_data)
+    elif summary_type == "outcome_trajectory":
+        summary_text = _synthesize_outcome_trajectory_summary(cases_data)
+    elif summary_type == "complexity_analysis":
+        summary_text = _synthesize_complexity_analysis_summary(cases_data)
+    elif summary_type == "performance_distinction":
+        summary_text = _synthesize_performance_distinction_summary(cases_data)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown summary type: {summary_type}")
+    
+    summary_record = {
+        "summary_id": f"summary_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "summary_type": summary_type,
+        "case_count": len(cases_data),
+        "case_ids": case_ids,
+        "summary": summary_text,
+        "key_findings": _extract_key_findings(cases_data, summary_type),
+        "promotion_relevance": _assess_promotion_relevance(cases_data, summary_type)
+    }
+    
+    with STATE_LOCK:
+        CROSS_CASE_SUMMARIES.append(summary_record)
+        _trim_list_in_place(CROSS_CASE_SUMMARIES, MAX_SUMMARY_HISTORY)
+    
+    return summary_record
+
+
+def _synthesize_decision_pattern_summary(cases: list[dict]) -> str:
+    """Synthesize a decision pattern summary across cases."""
+    patterns = []
+    for case in cases:
+        if "review" in case:
+            review = case["review"]
+            review_context = case.get("review_context", {})
+            patterns.append({
+                "case_id": case["case_id"],
+                "triage": review_context.get(
+                    "requested_severity",
+                    review.get("requested_severity", "unknown"),
+                ),
+                "reasoning": review.get("summary", "")[:100]
+            })
+    
+    # Identify common patterns
+    triage_distribution = {}
+    for p in patterns:
+        triage = p.get("triage", "unknown")
+        triage_distribution[triage] = triage_distribution.get(triage, 0) + 1
+    
+    summary = f"Cross-case analysis of {len(cases)} cases identified {len(patterns)} decision points. "
+    summary += f"Triage distribution: {triage_distribution}. "
+    
+    return summary
+
+
+def _synthesize_outcome_trajectory_summary(cases: list[dict]) -> str:
+    """Synthesize an outcome trajectory summary across cases."""
+    trajectories = []
+    for case in cases:
+        if "outcome" in case:
+            trajectories.append({
+                "case_id": case["case_id"],
+                "initial": case["outcome"].get("initial_severity"),
+                "final": case["outcome"].get("final_outcome"),
+                "pattern": case["outcome"].get("outcome_pattern")
+            })
+    
+    if not trajectories:
+        return "Insufficient outcome data for trajectory analysis."
+    
+    summary = f"Outcome trajectory analysis across {len(trajectories)} cases. "
+    patterns = [t.get("pattern") for t in trajectories if t.get("pattern")]
+    if patterns:
+        from collections import Counter
+        pattern_counts = Counter(patterns)
+        summary += f"Pattern distribution: {dict(pattern_counts)}."
+    
+    return summary
+
+
+def _synthesize_complexity_analysis_summary(cases: list[dict]) -> str:
+    """Synthesize a complexity analysis summary across cases."""
+    complexity_factors = []
+    for case in cases:
+        factors = []
+        if "shadow" in case:
+            factors.append("shadow_disagreement")
+        if "severity_synthesis" in case:
+            score = case["severity_synthesis"].get("risk_score", 0)
+            if score > 0.6:
+                factors.append("high_risk")
+            elif score > 0.3:
+                factors.append("moderate_risk")
+            else:
+                factors.append("low_risk")
+        
+        complexity_factors.append({
+            "case_id": case["case_id"],
+            "factors": factors
+        })
+    
+    # Classify cases
+    simple = [c for c in complexity_factors if len(c["factors"]) <= 1]
+    complex = [c for c in complexity_factors if len(c["factors"]) > 1]
+    
+    summary = f"Complexity analysis of {len(cases)} cases: "
+    summary += f"{len(simple)} simple cases, {len(complex)} complex cases. "
+    
+    return summary
+
+
+def _synthesize_performance_distinction_summary(cases: list[dict]) -> str:
+    """Synthesize a performance distinction summary for promotion thresholds."""
+    # Classify performance based on outcome patterns
+    exemplary = []
+    satisfactory = []
+    
+    for case in cases:
+        if "outcome" in case:
+            pattern = case["outcome"].get("outcome_pattern", "")
+            if pattern in ["rapid_resolution", "standard_resolution"]:
+                satisfactory.append(case["case_id"])
+            elif pattern == "required_escalation":
+                exemplary.append(case["case_id"])  # Actually handled escalation well
+    
+    summary = f"Performance distinction analysis across {len(cases)} cases. "
+    summary += f"Satisfactory outcomes: {len(satisfactory)}, Exemplary handling: {len(exemplary)}. "
+    summary += "Exemplary cases demonstrate ability to recognize escalation needs."
+    
+    return summary
+
+
+def _extract_key_findings(cases: list[dict], summary_type: str) -> list[str]:
+    """Extract key findings from cases for the summary."""
+    findings = []
+    
+    # Aggregate severity scores
+    severity_scores = []
+    for case in cases:
+        if "severity_synthesis" in case:
+            severity_scores.append(case["severity_synthesis"].get("risk_score", 0))
+    
+    if severity_scores:
+        findings.append(f"Average risk score: {sum(severity_scores)/len(severity_scores):.2f}")
+        findings.append(f"Risk range: {min(severity_scores):.2f} - {max(severity_scores):.2f}")
+    
+    # Count shadow disagreements
+    shadow_count = sum(1 for case in cases if "shadow" in case)
+    if shadow_count > 0:
+        findings.append(f"Cases with shadow disagreement: {shadow_count}/{len(cases)}")
+    
+    return findings
+
+
+def _assess_promotion_relevance(cases: list[dict], summary_type: str) -> dict:
+    """Assess how this summary relates to promotion threshold decisions."""
+    # Calculate metrics relevant to promotion
+    high_risk_count = 0
+    exemplary_count = 0
+    
+    for case in cases:
+        if "severity_synthesis" in case:
+            if case["severity_synthesis"].get("risk_score", 0) > 0.6:
+                high_risk_count += 1
+        
+        if "outcome" in case:
+            if case["outcome"].get("outcome_pattern") in ["rapid_resolution", "standard_resolution"]:
+                exemplary_count += 1
+    
+    return {
+        "high_risk_cases": high_risk_count,
+        "exemplary_outcomes": exemplary_count,
+        "total_cases": len(cases),
+        "threshold_relevance": "high" if high_risk_count > len(cases) / 2 else "moderate"
+    }
+
+
+@app.get("/summary/history")
+async def get_summary_history(
+    limit: int = 20,
+    authorization: str | None = Header(default=None),
+):
+    """Get historical cross-case summaries."""
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        return {
+            "total": len(CROSS_CASE_SUMMARIES),
+            "summaries": CROSS_CASE_SUMMARIES[-limit:]
+        }
+
+
+# =============================================================================
+# Cross-Case Review Intelligence
+# =============================================================================
+# Enhanced disagreement clustering, promotion thresholds, and reviewer calibration.
+
+
+# Global storage for cross-case intelligence
+CROSS_CASE_INTELLIGENCE: dict = {
+    "disagreement_clusters": [],
+    "promotion_thresholds": [],
+    "calibration_narratives": [],
+    "body_region_patterns": [],
+    "severity_patterns": [],
+    "quality_patterns": []
+}
+MAX_PATTERN_HISTORY = 200
+
+
+def _build_disagreement_cluster_key(disagreement: dict) -> str:
+    """Build a unique key for grouping similar disagreements across cases."""
+    domain = disagreement.get("domain", "unknown")
+    body_region = disagreement.get("body_region", "unknown")
+    pattern_type = disagreement.get("pattern_type", "unknown")
+    severity_impact = disagreement.get("severity_impact", "medium")
+    return f"{domain}:{body_region}:{pattern_type}:{severity_impact}"
+
+
+def _mine_body_region_patterns() -> list[dict]:
+    """Mine outcome feedback patterns grouped by body region."""
+    patterns = {}
+    
+    with STATE_LOCK:
+        for feedback in OUTCOME_FEEDBACK:
+            case_id = feedback.get("case_id", "")
+            # Extract body region from review results if available
+            body_region = "unknown"
+            if case_id in REVIEW_CONTEXT:
+                preprocess = REVIEW_CONTEXT[case_id].get("preprocess", {})
+                body_region = preprocess.get("bodyRegion") or preprocess.get("body_region", "unknown")
+            
+            if body_region not in patterns:
+                patterns[body_region] = {
+                    "body_region": body_region,
+                    "cases": [],
+                    "outcomes": [],
+                    "resolutions": []
+                }
+            
+            patterns[body_region]["cases"].append(case_id)
+            if "outcome" in feedback:
+                patterns[body_region]["outcomes"].append(feedback["outcome"])
+            if "resolution_pattern" in feedback:
+                patterns[body_region]["resolutions"].append(feedback["resolution_pattern"])
+    
+    # Compute statistics for each body region
+    result = []
+    for region, data in patterns.items():
+        outcome_dist = {}
+        for outcome in data["outcomes"]:
+            outcome_dist[outcome] = outcome_dist.get(outcome, 0) + 1
+        
+        resolution_dist = {}
+        for res in data["resolutions"]:
+            resolution_dist[res] = resolution_dist.get(res, 0) + 1
+        
+        result.append({
+            "body_region": region,
+            "case_count": len(data["cases"]),
+            "outcome_distribution": outcome_dist,
+            "resolution_distribution": resolution_dist,
+            "dominant_outcome": max(outcome_dist, key=outcome_dist.get) if outcome_dist else "unknown",
+            "avg_resolution_rate": sum(1 for r in data["resolutions"] if r in ["rapid_resolution", "standard_resolution"]) / max(len(data["resolutions"]), 1)
+        })
+    
+    return sorted(result, key=lambda x: x["case_count"], reverse=True)
+
+
+def _mine_severity_patterns() -> list[dict]:
+    """Mine outcome feedback patterns grouped by severity."""
+    patterns = {}
+    
+    with STATE_LOCK:
+        for feedback in OUTCOME_FEEDBACK:
+            severity = feedback.get("initial_severity", "unknown")
+            if severity not in patterns:
+                patterns[severity] = {
+                    "severity": severity,
+                    "cases": [],
+                    "outcomes": [],
+                    "final_outcomes": []
+                }
+            
+            patterns[severity]["cases"].append(feedback.get("case_id"))
+            if "outcome" in feedback:
+                patterns[severity]["outcomes"].append(feedback["outcome"])
+            if "final_outcome" in feedback:
+                patterns[severity]["final_outcomes"].append(feedback["final_outcome"])
+    
+    result = []
+    for severity, data in patterns.items():
+        outcome_dist = {}
+        for outcome in data["outcomes"]:
+            outcome_dist[outcome] = outcome_dist.get(outcome, 0) + 1
+        
+        escalation_rate = sum(1 for fo in data["final_outcomes"] if fo == "escalated") / max(len(data["final_outcomes"]), 1)
+        
+        result.append({
+            "severity": severity,
+            "case_count": len(data["cases"]),
+            "outcome_distribution": outcome_dist,
+            "escalation_rate": round(escalation_rate, 3),
+            "avg_resolution_time": sum(feedback.get("time_to_resolution", 0) for feedback in OUTCOME_FEEDBACK 
+                                       if feedback.get("initial_severity") == severity and feedback.get("time_to_resolution")) / max(len(data["cases"]), 1)
+        })
+    
+    return sorted(result, key=lambda x: x["case_count"], reverse=True)
+
+
+def _mine_image_quality_patterns() -> list[dict]:
+    """Mine outcome feedback patterns grouped by image quality."""
+    patterns = {}
+    
+    with STATE_LOCK:
+        for feedback in OUTCOME_FEEDBACK:
+            case_id = feedback.get("case_id", "")
+            # Extract image quality from review results if available
+            image_quality = "unknown"
+            if case_id in REVIEW_CONTEXT:
+                preprocess = REVIEW_CONTEXT[case_id].get("preprocess", {})
+                image_quality = preprocess.get("imageQuality", "unknown")
+            
+            if image_quality not in patterns:
+                patterns[image_quality] = {
+                    "image_quality": image_quality,
+                    "cases": [],
+                    "outcomes": []
+                }
+            
+            patterns[image_quality]["cases"].append(case_id)
+            if "outcome" in feedback:
+                patterns[image_quality]["outcomes"].append(feedback["outcome"])
+    
+    result = []
+    for quality, data in patterns.items():
+        outcome_dist = {}
+        for outcome in data["outcomes"]:
+            outcome_dist[outcome] = outcome_dist.get(outcome, 0) + 1
+        
+        result.append({
+            "image_quality": quality,
+            "case_count": len(data["cases"]),
+            "outcome_distribution": outcome_dist,
+            "success_rate": sum(1 for o in data["outcomes"] if o in ["resolved", "rapid_resolution", "standard_resolution"]) / max(len(data["outcomes"]), 1)
+        })
+    
+    return sorted(result, key=lambda x: x["case_count"], reverse=True)
+
+
+def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
+    """
+    Generate a narrative explaining when the 32B reviewer should be trusted more than 7B consult.
+    
+    Returns calibration assessment with reasoning.
+    """
+    narrative = {
+        "case_id": case_id,
+        "trust_32b_over_7b": False,
+        "calibration_score": 0.5,
+        "reasons": [],
+        "conditions": []
+    }
+    
+    if case_id not in SHADOW_DISAGREEMENTS:
+        narrative["reasons"].append("No shadow disagreement data available for calibration")
+        return narrative
+    
+    disagreement = SHADOW_DISAGREEMENTS[case_id]
+    
+    # Check conditions that favor trusting 32B over 7B
+    conditions_favoring_32b = []
+    
+    # High severity impact disagreements favor 32B's more thorough analysis
+    severity_impact = disagreement.get("severity_impact", 0.5)
+    if severity_impact > 0.7:
+        conditions_favoring_32b.append("High severity impact disagreement - 32B's thorough analysis is critical")
+        narrative["calibration_score"] += 0.2
+    
+    # Large confidence delta suggests 32B sees something 7B missed
+    conf_delta = abs(disagreement.get("consult_confidence", 0.5) - disagreement.get("expected_confidence", 0.5))
+    if conf_delta > 0.25:
+        conditions_favoring_32b.append(f"Large confidence delta ({conf_delta:.2f}) suggests 32B detected nuanced findings")
+        narrative["calibration_score"] += 0.15
+    
+    # Multiple disagreement points suggests complex case
+    n_disagreements = disagreement.get("n_disagreements", 0)
+    if n_disagreements > 2:
+        conditions_favoring_32b.append(f"Multiple disagreement points ({n_disagreements}) indicates case complexity")
+        narrative["calibration_score"] += 0.15
+    
+    # Domain-specific: certain domains benefit more from 32B
+    domain = disagreement.get("domain", "unknown")
+    complex_domains = ["dermatology", "ophthalmology", "cardiology", "neurology"]
+    if domain in complex_domains:
+        conditions_favoring_32b.append(f"Complex domain ({domain}) benefits from 32B's depth")
+        narrative["calibration_score"] += 0.1
+    
+    # Image quality issues favor 32B because it handles ambiguity better
+    if disagreement.get("image_quality", "good") != "good":
+        conditions_favoring_32b.append("Lower image quality - 32B's advanced reasoning better handles ambiguity")
+        narrative["calibration_score"] += 0.1
+    
+    # Cap calibration score at 1.0
+    narrative["calibration_score"] = min(1.0, narrative["calibration_score"])
+    
+    if conditions_favoring_32b:
+        narrative["trust_32b_over_7b"] = True
+        narrative["reasons"] = conditions_favoring_32b
+        narrative["conditions"] = conditions_favoring_32b
+    else:
+        narrative["reasons"].append("No strong conditions favoring 32B over 7B for this case")
+        narrative["conditions"].append("Consider 7B consult as sufficient for straightforward cases")
+    
+    return narrative
+
+
+def _compute_promotion_threshold(recommendation_type: str = "general") -> dict:
+    """
+    Compute promotion threshold recommendations based on accumulated intelligence.
+    
+    Returns thresholds for what distinguishes satisfactory from exemplary performance.
+    """
+    thresholds = {
+        "recommendation_type": recommendation_type,
+        "thresholds": {},
+        "criteria": [],
+        "confidence": 0.5
+    }
+    
+    # Analyze shadow disagreement patterns
+    high_score_disagreements = []
+    with STATE_LOCK:
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            score = _compute_disagreement_score(case_id)
+            if score > 0.6:
+                high_score_disagreements.append({
+                    "case_id": case_id,
+                    "score": score,
+                    "domain": disagreement.get("domain"),
+                    "outcome": disagreement.get("outcome", "unknown")
+                })
+    
+    if len(high_score_disagreements) >= 5:
+        # Compute domain-specific thresholds
+        domain_outcomes = {}
+        for item in high_score_disagreements:
+            domain = item.get("domain", "unknown")
+            if domain not in domain_outcomes:
+                domain_outcomes[domain] = []
+            domain_outcomes[domain].append(item["outcome"])
+        
+        thresholds["thresholds"]["high_disagreement_score"] = 0.6
+        thresholds["criteria"].append("Cases with disagreement score > 0.6 require 32B review")
+        
+        # Check if certain domains have worse outcomes when 7B is used alone
+        for domain, outcomes in domain_outcomes.items():
+            escalated = sum(1 for o in outcomes if o == "escalated")
+            if escalated > len(outcomes) * 0.3:
+                thresholds["thresholds"][f"{domain}_escalation_risk"] = 0.3
+                thresholds["criteria"].append(f"{domain}: >30% escalation rate when 7B disagrees - promote to 32B")
+        
+        thresholds["confidence"] = min(0.9, 0.5 + len(high_score_disagreements) * 0.05)
+    
+    # Analyze outcome patterns
+    with STATE_LOCK:
+        total_outcomes = len(OUTCOME_LEARNING)
+        if total_outcomes >= 10:
+            rapid_resolutions = sum(1 for o in OUTCOME_LEARNING if o.get("outcome_pattern") == "rapid_resolution")
+            standard_resolutions = sum(1 for o in OUTCOME_LEARNING if o.get("outcome_pattern") == "standard_resolution")
+            required_escalation = sum(1 for o in OUTCOME_LEARNING if o.get("outcome_pattern") == "required_escalation")
+            
+            thresholds["thresholds"]["exemplary_rate"] = rapid_resolutions / total_outcomes
+            thresholds["thresholds"]["satisfactory_rate"] = standard_resolutions / total_outcomes
+            thresholds["thresholds"]["escalation_rate"] = required_escalation / total_outcomes
+            
+            thresholds["criteria"].append(f"Exemplary: rapid resolution rate > {thresholds['thresholds']['exemplary_rate']:.1%}")
+            thresholds["criteria"].append(f"Satisfactory: standard resolution rate > {thresholds['thresholds']['satisfactory_rate']:.1%}")
+            thresholds["criteria"].append(f"Unsatisfactory: escalation rate > {thresholds['thresholds']['escalation_rate']:.1%}")
+            
+            thresholds["confidence"] = min(0.9, 0.5 + total_outcomes * 0.02)
+    
+    return thresholds
+
+
+@app.get("/intelligence/disagreement-clusters")
+async def get_cross_case_disagreement_clusters(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get enhanced disagreement clustering across multiple cases.
+    
+    Groups disagreements by domain, body region, pattern type, and severity impact
+    to identify systemic 7B-32B calibration issues.
+    """
+    validate_auth(authorization)
+    
+    clusters = {}
+    
+    with STATE_LOCK:
+        for case_id, disagreement in SHADOW_DISAGREEMENTS.items():
+            cluster_key = _build_disagreement_cluster_key(disagreement)
+            if cluster_key not in clusters:
+                clusters[cluster_key] = {
+                    "cluster_key": cluster_key,
+                    "domain": disagreement.get("domain", "unknown"),
+                    "body_region": disagreement.get("body_region", "unknown"),
+                    "pattern_type": disagreement.get("pattern_type", "unknown"),
+                    "severity_impact": disagreement.get("severity_impact", "medium"),
+                    "cases": [],
+                    "total_score": 0.0,
+                    "count": 0
+                }
+            
+            score = _compute_disagreement_score(case_id)
+            clusters[cluster_key]["cases"].append(case_id)
+            clusters[cluster_key]["total_score"] += score
+            clusters[cluster_key]["count"] += 1
+    
+    # Compute averages and sort by significance
+    result = []
+    for cluster in clusters.values():
+        cluster["avg_score"] = cluster["total_score"] / cluster["count"] if cluster["count"] > 0 else 0
+        cluster["significance"] = cluster["avg_score"] * cluster["count"]
+        result.append(cluster)
+    
+    result.sort(key=lambda x: x["significance"], reverse=True)
+    
+    return {
+        "total_clusters": len(result),
+        "clusters": result[:50]
+    }
+
+
+@app.get("/intelligence/promotion-thresholds")
+async def get_promotion_threshold_recommendations(
+    recommendation_type: str = "general",
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get promotion-threshold recommendations.
+    
+    Analyzes when cases should be escalated from 7B consult to 32B review
+    based on historical patterns that distinguish satisfactory from exemplary outcomes.
+    """
+    validate_auth(authorization)
+    
+    thresholds = _compute_promotion_threshold(recommendation_type)
+    
+    with STATE_LOCK:
+        CROSS_CASE_INTELLIGENCE["promotion_thresholds"].append({
+            "computed_at": datetime.now(timezone.utc).isoformat(),
+            "recommendation_type": recommendation_type,
+            **thresholds
+        })
+        _trim_list_in_place(
+            CROSS_CASE_INTELLIGENCE["promotion_thresholds"], MAX_PATTERN_HISTORY
+        )
+    
+    return thresholds
+
+
+@app.get("/intelligence/calibration/{case_id}")
+async def get_reviewer_calibration_narrative(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get reviewer calibration narrative for a specific case.
+    
+    Explains when the 32B reviewer should be trusted more than the 7B consult
+    based on disagreement characteristics, severity, and case complexity.
+    """
+    validate_auth(authorization)
+    
+    narrative = _generate_reviewer_calibration_narrative(case_id)
+    
+    with STATE_LOCK:
+        CROSS_CASE_INTELLIGENCE["calibration_narratives"].append({
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            **narrative
+        })
+        _trim_list_in_place(
+            CROSS_CASE_INTELLIGENCE["calibration_narratives"], MAX_PATTERN_HISTORY
+        )
+    
+    return narrative
+
+
+@app.get("/intelligence/patterns/body-region")
+async def get_body_region_patterns(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get outcome-feedback pattern mining by body region.
+    
+    Returns patterns of outcomes, resolutions, and escalation rates
+    segmented by body region to identify region-specific calibration needs.
+    """
+    validate_auth(authorization)
+    
+    patterns = _mine_body_region_patterns()
+    
+    with STATE_LOCK:
+        CROSS_CASE_INTELLIGENCE["body_region_patterns"] = patterns[-MAX_PATTERN_HISTORY:]
+    
+    return {
+        "total_body_regions": len(patterns),
+        "patterns": patterns
+    }
+
+
+@app.get("/intelligence/patterns/severity")
+async def get_severity_patterns(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get outcome-feedback pattern mining by severity.
+    
+    Returns escalation rates, resolution times, and outcome distributions
+    segmented by initial severity to calibrate severity-based routing.
+    """
+    validate_auth(authorization)
+    
+    patterns = _mine_severity_patterns()
+    
+    with STATE_LOCK:
+        CROSS_CASE_INTELLIGENCE["severity_patterns"] = patterns[-MAX_PATTERN_HISTORY:]
+    
+    return {
+        "total_severity_levels": len(patterns),
+        "patterns": patterns
+    }
+
+
+@app.get("/intelligence/patterns/image-quality")
+async def get_image_quality_patterns(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get outcome-feedback pattern mining by image quality.
+    
+    Returns success rates and outcome distributions segmented by image quality
+    to calibrate when lower-quality images should prompt 32B review.
+    """
+    validate_auth(authorization)
+    
+    patterns = _mine_image_quality_patterns()
+    
+    with STATE_LOCK:
+        CROSS_CASE_INTELLIGENCE["quality_patterns"] = patterns[-MAX_PATTERN_HISTORY:]
+    
+    return {
+        "total_quality_levels": len(patterns),
+        "patterns": patterns
+    }
+
+
+@app.post("/intelligence/analyze-all")
+async def analyze_all_cross_case_intelligence(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Run full cross-case intelligence analysis.
+    
+    Generates disagreement clusters, promotion thresholds, calibration narratives,
+    and all pattern mining (body region, severity, image quality).
+    """
+    validate_auth(authorization)
+    
+    # Run all analyses
+    clusters_result = await get_cross_case_disagreement_clusters(authorization)
+    thresholds = _compute_promotion_threshold("comprehensive")
+    body_region_patterns = _mine_body_region_patterns()
+    severity_patterns = _mine_severity_patterns()
+    quality_patterns = _mine_image_quality_patterns()
+    
+    # Generate calibration narratives for high-disagreement cases
+    calibration_narratives = []
+    with STATE_LOCK:
+        high_disagreement_cases = [
+            case_id for case_id, d in SHADOW_DISAGREEMENTS.items()
+            if _compute_disagreement_score(case_id) > 0.6
+        ]
+    
+    for case_id in high_disagreement_cases[:20]:  # Limit to 20 for performance
+        narrative = _generate_reviewer_calibration_narrative(case_id)
+        calibration_narratives.append(narrative)
+    
+    return {
+        "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
+        "disagreement_clusters": clusters_result,
+        "promotion_thresholds": thresholds,
+        "calibration_narratives_count": len(calibration_narratives),
+        "body_region_patterns": body_region_patterns,
+        "severity_patterns": severity_patterns,
+        "image_quality_patterns": quality_patterns,
+        "summary": {
+            "total_clusters": len(clusters_result.get("clusters", [])),
+            "total_high_disagreement_cases": len(high_disagreement_cases),
+            "total_body_regions_analyzed": len(body_region_patterns),
+            "total_severity_levels_analyzed": len(severity_patterns),
+            "total_quality_levels_analyzed": len(quality_patterns)
+        }
+    }
 
 
 if __name__ == "__main__":
