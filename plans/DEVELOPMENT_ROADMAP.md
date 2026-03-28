@@ -200,6 +200,8 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - Phase 4 now also has a deployment runbook covering env ownership, rollout order, shadow-mode promotion, and rollback.
 - Shadow-mode verification now has a session-level rollout summary helper that turns sidecar observations into per-service promotion status (`ready`, `watch`, `blocked`, `insufficient_data`).
 - Shadow rollout readiness is now exposed through a guarded debug API route so promotion status can be inspected without exposing raw case payloads.
+- Sidecar env + health readiness is now exposed through a guarded app route so deployment wiring can be verified from the app boundary, not just from shell scripts.
+- Curated corpus activation prep now has a shared registry plus a live-corpus verification script that flags mapped-but-empty dataset sources before activation.
 - The next fastest path is to finish Phase 4 wiring, then shadow the deployed sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership

@@ -16,39 +16,12 @@ const command = (process.argv[2] || "all").toLowerCase();
 const strictMode = process.argv.includes("--strict");
 const APP_BASE_URL =
   (process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim();
-
-const services = [
-  {
-    name: "vision-preprocess-service",
-    env: "HF_VISION_PREPROCESS_URL",
-    expectedPath: "/infer",
-    expectedHealthService: "vision-preprocess-service",
-  },
-  {
-    name: "text-retrieval-service",
-    env: "HF_TEXT_RETRIEVAL_URL",
-    expectedPath: "/search",
-    expectedHealthService: "text-retrieval-service",
-  },
-  {
-    name: "image-retrieval-service",
-    env: "HF_IMAGE_RETRIEVAL_URL",
-    expectedPath: "/search",
-    expectedHealthService: "image-retrieval-service",
-  },
-  {
-    name: "multimodal-consult-service",
-    env: "HF_MULTIMODAL_CONSULT_URL",
-    expectedPath: "/consult",
-    expectedHealthService: "multimodal-consult-service",
-  },
-  {
-    name: "async-review-service",
-    env: "HF_ASYNC_REVIEW_URL",
-    expectedPath: "/review",
-    expectedHealthService: "async-review-service",
-  },
-];
+const services = JSON.parse(
+  fs.readFileSync(
+    path.join(rootDir, "src", "lib", "sidecar-service-registry.json"),
+    "utf8"
+  )
+);
 
 function statusLine(level, message) {
   const prefix =
@@ -136,6 +109,33 @@ async function postJson(url, payload, timeoutMs = 7000) {
           : {}),
       },
       body: JSON.stringify(payload),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let parsed = null;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      parsed = null;
+    }
+    return { status: response.status, ok: response.ok, body: parsed, rawText: text };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function fetchJson(url, timeoutMs = 7000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...(readEnv("HF_SIDECAR_API_KEY")
+          ? { Authorization: `Bearer ${readEnv("HF_SIDECAR_API_KEY")}` }
+          : {}),
+      },
       cache: "no-store",
       signal: controller.signal,
     });
@@ -384,13 +384,68 @@ async function runShadowChecks() {
   return { failures, warnings };
 }
 
+async function runReadinessChecks() {
+  let failures = 0;
+  let warnings = 0;
+
+  if (!APP_BASE_URL) {
+    warnings += 1;
+    statusLine(
+      "warn",
+      "Skipping sidecar readiness route check because APP_BASE_URL/NEXT_PUBLIC_APP_URL is unset"
+    );
+    return { failures, warnings };
+  }
+
+  let routeUrl;
+  try {
+    routeUrl = buildAppRouteUrl(APP_BASE_URL, "/api/ai/sidecar-readiness");
+  } catch (error) {
+    failures += 1;
+    statusLine(
+      "fail",
+      `APP_BASE_URL is not a valid URL: ${error instanceof Error ? error.message : String(error)}`
+    );
+    return { failures, warnings };
+  }
+
+  try {
+    const result = await fetchJson(routeUrl);
+    if (!result.ok || !result.body || result.body.ok !== true) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `sidecar readiness route failed at ${routeUrl} (${result.status})`
+      );
+      return { failures, warnings };
+    }
+
+    statusLine(
+      "ok",
+      `sidecar readiness route healthy at ${routeUrl} (configured=${Number(
+        result.body.readiness?.configuredCount ?? 0
+      )}, healthy=${Number(result.body.readiness?.healthyCount ?? 0)}, stub=${Number(
+        result.body.readiness?.stubCount ?? 0
+      )})`
+    );
+  } catch (error) {
+    failures += 1;
+    statusLine(
+      "fail",
+      `sidecar readiness route request failed at ${routeUrl}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  return { failures, warnings };
+}
+
 async function main() {
   let failures = 0;
   let warnings = 0;
 
-  if (!["env", "health", "shadow", "all"].includes(command)) {
+  if (!["env", "health", "shadow", "readiness", "all"].includes(command)) {
     console.error(
-      `Unknown command "${command}". Use env, health, shadow, or all.`
+      `Unknown command "${command}". Use env, health, shadow, readiness, or all.`
     );
     process.exit(1);
   }
@@ -415,6 +470,13 @@ async function main() {
   if (command === "shadow") {
     console.log("== Shadow rollout route check ==");
     const result = await runShadowChecks();
+    failures += result.failures;
+    warnings += result.warnings;
+  }
+
+  if (command === "readiness") {
+    console.log("== Sidecar readiness route check ==");
+    const result = await runReadinessChecks();
     failures += result.failures;
     warnings += result.warnings;
   }

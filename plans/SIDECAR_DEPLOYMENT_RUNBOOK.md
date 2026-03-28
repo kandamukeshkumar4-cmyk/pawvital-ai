@@ -93,7 +93,9 @@ Run:
 ```bash
 npm run verify:sidecars:env
 npm run verify:sidecars:health
+npm run verify:sidecars:readiness
 npm run verify:sidecars:shadow
+npm run verify:corpus:live
 ```
 
 Use strict mode when promoting:
@@ -131,6 +133,17 @@ In shadow mode:
 - the result is logged into observability
 - the fallback/live path still drives the app response
 - the guarded `/api/ai/shadow-rollout` route can be checked with `npm run verify:sidecars:shadow` to confirm the app can summarize rollout readiness from a real session payload
+- the guarded `/api/ai/sidecar-readiness` route can be checked with `npm run verify:sidecars:readiness` to confirm the app can summarize env wiring and live sidecar health from the deployed app boundary
+
+### Step 5.5: Confirm curated corpus readiness
+
+Before turning live retrieval on for production-sensitive image paths, run:
+
+```bash
+npm run verify:corpus:live
+```
+
+This check confirms that the live corpus registry points at real on-disk dataset folders and highlights any mapped-but-empty image sources that still need curation or ingestion.
 
 ### Step 6: Compare before promotion
 
