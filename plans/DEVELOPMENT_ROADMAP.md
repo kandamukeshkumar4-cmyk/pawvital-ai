@@ -193,6 +193,7 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - App-level smoke coverage now exercises all five sidecar contracts through `hf-sidecars.ts` and the async review route.
 - Phase 4 prep now has an executable deployment-readiness script for sidecar env and `/healthz` verification.
 - Phase 4 now also has a deployment runbook covering env ownership, rollout order, shadow-mode promotion, and rollback.
+- Shadow-mode verification now has a session-level rollout summary helper that turns sidecar observations into per-service promotion status (`ready`, `watch`, `blocked`, `insufficient_data`).
 - The next fastest path is to finish app integration, then deploy and shadow the sidecars instead of expanding architecture again.
 
 ### Strength-aligned ownership
