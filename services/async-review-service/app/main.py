@@ -2670,7 +2670,9 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     """
     Generate a narrative explaining when the 32B reviewer should be trusted more than 7B consult.
     
-    Returns comprehensive calibration assessment with reasoning, confidence bands, and concrete recommendations.
+    Returns comprehensive calibration assessment with reasoning, confidence bands, concrete recommendations,
+    and policy explanations detailing why thresholds were crossed, what evidence dominated, and when
+    confidence should be discounted.
     """
     narrative = {
         "case_id": case_id,
@@ -2681,7 +2683,12 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
         "conditions": [],
         "promotion_recommendation": None,
         "promotion_confidence": 0.0,
-        "calibration_narrative": ""
+        "calibration_narrative": "",
+        # Policy explanation fields
+        "threshold_crossings": [],
+        "dominant_evidence": None,
+        "confidence_discounts": [],
+        "policy_explanation": ""
     }
     
     if case_id not in SHADOW_DISAGREEMENTS:
@@ -2689,6 +2696,12 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
         narrative["confidence_band"] = "no_data"
         narrative["promotion_recommendation"] = "standard_review"
         narrative["promotion_confidence"] = 0.3
+        narrative["policy_explanation"] = "INSUFFICIENT DATA: No historical disagreement data available for this case. Policy defaults to standard 7B review unless high-severity indicators are present."
+        narrative["confidence_discounts"].append({
+            "reason": "no_historical_data",
+            "impact": 0.4,
+            "description": "No shadow disagreement data available - cannot establish historical pattern"
+        })
         narrative["calibration_narrative"] = "Insufficient historical data for calibration. Default to standard 7B review unless case presents high-severity indicators."
         return narrative
     
@@ -2697,17 +2710,40 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     # Check conditions that favor trusting 32B over 7B
     conditions_favoring_32b = []
     confidence_components = []
+    threshold_crossings = []  # Track which thresholds were crossed
+    dominant_evidence = None
     
     # =================================================================
     # Severity Assessment
     # =================================================================
     severity_impact = disagreement.get("severity_impact", 0.5)
+    severity_contribution = 0
     if severity_impact > 0.7:
         conditions_favoring_32b.append("HIGH: Severe disagreement - 32B's thorough analysis is critical")
         confidence_components.append(("severity", 0.25, "high"))
+        severity_contribution = 0.25
+        threshold_crossings.append({
+            "threshold": "severity_impact",
+            "value": severity_impact,
+            "operator": ">",
+            "threshold_value": 0.7,
+            "severity_level": "HIGH",
+            "contribution": 0.25,
+            "explanation": f"Severity impact of {severity_impact:.0%} exceeds HIGH threshold (0.7). This indicates potentially critical findings that require deeper 32B analysis."
+        })
     elif severity_impact > 0.5:
         conditions_favoring_32b.append("MEDIUM: Moderate severity impact favors 32B's depth")
         confidence_components.append(("severity", 0.15, "medium"))
+        severity_contribution = 0.15
+        threshold_crossings.append({
+            "threshold": "severity_impact",
+            "value": severity_impact,
+            "operator": ">",
+            "threshold_value": 0.5,
+            "severity_level": "MEDIUM",
+            "contribution": 0.15,
+            "explanation": f"Severity impact of {severity_impact:.0%} exceeds MEDIUM threshold (0.5). Moderate findings benefit from 32B's thorough analysis."
+        })
     elif severity_impact > 0.35:
         confidence_components.append(("severity", 0.05, "low"))
     
@@ -2721,9 +2757,27 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     if conf_delta > 0.30:
         conditions_favoring_32b.append(f"HIGH: Large confidence delta ({conf_delta:.2f}) - 32B detected significant findings 7B missed")
         confidence_components.append(("confidence_delta", 0.20, "high"))
+        threshold_crossings.append({
+            "threshold": "confidence_delta",
+            "value": conf_delta,
+            "operator": ">",
+            "threshold_value": 0.30,
+            "severity_level": "HIGH",
+            "contribution": 0.20,
+            "explanation": f"Confidence delta of {conf_delta:.0%} exceeds HIGH threshold (0.30). Large gap suggests 32B detected significant findings that 7B model missed or undervalued."
+        })
     elif conf_delta > 0.20:
         conditions_favoring_32b.append(f"MEDIUM: Moderate confidence delta ({conf_delta:.2f}) suggests nuanced findings")
         confidence_components.append(("confidence_delta", 0.12, "medium"))
+        threshold_crossings.append({
+            "threshold": "confidence_delta",
+            "value": conf_delta,
+            "operator": ">",
+            "threshold_value": 0.20,
+            "severity_level": "MEDIUM",
+            "contribution": 0.12,
+            "explanation": f"Confidence delta of {conf_delta:.0%} exceeds MEDIUM threshold (0.20). Moderate gap suggests nuanced findings that benefit from 32B's deeper analysis."
+        })
     elif conf_delta > 0.10:
         confidence_components.append(("confidence_delta", 0.05, "low"))
     
@@ -2737,9 +2791,27 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     if total_divergence > 4:
         conditions_favoring_32b.append(f"HIGH: Complex case with {total_divergence} divergence points indicates intricate findings")
         confidence_components.append(("complexity", 0.20, "high"))
+        threshold_crossings.append({
+            "threshold": "total_divergence",
+            "value": total_divergence,
+            "operator": ">",
+            "threshold_value": 4,
+            "severity_level": "HIGH",
+            "contribution": 0.20,
+            "explanation": f"Case complexity with {total_divergence} divergence points exceeds HIGH threshold (4). Multiple areas of disagreement indicate intricate findings requiring comprehensive 32B review."
+        })
     elif total_divergence > 2:
         conditions_favoring_32b.append(f"MEDIUM: {total_divergence} divergence points suggests moderate complexity")
         confidence_components.append(("complexity", 0.12, "medium"))
+        threshold_crossings.append({
+            "threshold": "total_divergence",
+            "value": total_divergence,
+            "operator": ">",
+            "threshold_value": 2,
+            "severity_level": "MEDIUM",
+            "contribution": 0.12,
+            "explanation": f"Case complexity with {total_divergence} divergence points exceeds MEDIUM threshold (2). Moderate complexity suggests benefit from 32B's thorough analysis."
+        })
     elif total_divergence > 0:
         confidence_components.append(("complexity", 0.05, "low"))
     
@@ -2754,6 +2826,15 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     if domain in complex_domains:
         conditions_favoring_32b.append(f"MEDIUM: Complex domain ({domain}) benefits from 32B's reasoning depth")
         confidence_components.append(("domain", 0.10, "medium"))
+        threshold_crossings.append({
+            "threshold": "domain_complexity",
+            "value": domain,
+            "operator": "in",
+            "threshold_value": complex_domains,
+            "severity_level": "MEDIUM",
+            "contribution": 0.10,
+            "explanation": f"Domain '{domain}' is classified as complex. Specialist domains benefit from 32B's superior reasoning depth and domain knowledge."
+        })
     
     # =================================================================
     # Pattern Type Assessment
@@ -2762,6 +2843,15 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     if pattern_type in high_risk_patterns:
         conditions_favoring_32b.append(f"HIGH: {pattern_type} pattern type requires 32B's thorough analysis")
         confidence_components.append(("pattern", 0.15, "high"))
+        threshold_crossings.append({
+            "threshold": "pattern_type",
+            "value": pattern_type,
+            "operator": "in",
+            "threshold_value": high_risk_patterns,
+            "severity_level": "HIGH",
+            "contribution": 0.15,
+            "explanation": f"Pattern type '{pattern_type}' is high-risk. Diagnostic, urgency, and prognostic patterns require thorough 32B analysis due to potential downstream impact on treatment decisions."
+        })
     
     # =================================================================
     # Body Region Assessment
@@ -2770,6 +2860,15 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
     if body_region in sensitive_regions:
         conditions_favoring_32b.append(f"MEDIUM: Sensitive body region ({body_region}) warrants careful 32B review")
         confidence_components.append(("region", 0.08, "medium"))
+        threshold_crossings.append({
+            "threshold": "body_region_sensitivity",
+            "value": body_region,
+            "operator": "in",
+            "threshold_value": sensitive_regions,
+            "severity_level": "MEDIUM",
+            "contribution": 0.08,
+            "explanation": f"Body region '{body_region}' is sensitive. Errors in analyzing critical structures can have severe consequences, warranting 32B's more thorough review."
+        })
     
     # =================================================================
     # Historical Cluster Performance
@@ -2782,6 +2881,15 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
             f"cases like this frequently require escalation"
         )
         confidence_components.append(("cluster", 0.18, "high"))
+        threshold_crossings.append({
+            "threshold": "cluster_escalation_rate",
+            "value": cluster_data.get("escalation_rate", 0),
+            "operator": ">",
+            "threshold_value": 0.3,
+            "severity_level": "HIGH",
+            "contribution": 0.18,
+            "explanation": f"Historical cluster escalation rate of {cluster_data['escalation_rate']:.1%} exceeds threshold (0.30). Based on {cluster_data.get('case_count', 0)} similar cases, this pattern frequently requires escalation."
+        })
     
     # =================================================================
     # Compute Final Calibration Score and Confidence Band
@@ -2799,12 +2907,50 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
         narrative["confidence_band"] = "low_confidence"
     
     # =================================================================
+    # Determine Dominant Evidence
+    # =================================================================
+    if confidence_components:
+        sorted_components = sorted(confidence_components, key=lambda x: x[1], reverse=True)
+        dominant = sorted_components[0]
+        dominant_evidence = {
+            "component": dominant[0],
+            "contribution": dominant[1],
+            "level": dominant[2],
+            "explanation": _get_evidence_explanation(dominant[0], dominant[1], disagreement)
+        }
+        # Add second dominant if exists
+        if len(sorted_components) > 1:
+            second = sorted_components[1]
+            dominant_evidence["secondary"] = {
+                "component": second[0],
+                "contribution": second[1],
+                "level": second[2]
+            }
+    
+    # =================================================================
+    # Compute Confidence Discounts
+    # =================================================================
+    confidence_discounts = _compute_confidence_discounts(
+        case_id, disagreement, confidence_components, cluster_data
+    )
+    
+    # =================================================================
     # Generate Concrete Promotion Recommendation
     # =================================================================
     recommendation = _compute_concrete_promotion_recommendation(
         case_id, disagreement, narrative["calibration_score"], confidence_components
     )
     narrative.update(recommendation)
+    
+    # =================================================================
+    # Build Policy Explanation
+    # =================================================================
+    narrative["threshold_crossings"] = threshold_crossings
+    narrative["dominant_evidence"] = dominant_evidence
+    narrative["confidence_discounts"] = confidence_discounts
+    narrative["policy_explanation"] = _build_policy_explanation(
+        case_id, disagreement, narrative, threshold_crossings, dominant_evidence, confidence_discounts
+    )
     
     # =================================================================
     # Generate Human-Readable Calibration Narrative
@@ -2822,6 +2968,156 @@ def _generate_reviewer_calibration_narrative(case_id: str) -> dict:
         narrative["conditions"].append("Consider 7B consult as sufficient for straightforward cases")
     
     return narrative
+
+
+def _get_evidence_explanation(component: str, contribution: float, disagreement: dict) -> str:
+    """
+    Get a human-readable explanation of why a particular evidence component is significant.
+    """
+    explanations = {
+        "severity": f"Severity impact ({disagreement.get('severity_impact', 0):.0%}) is the primary indicator because it directly reflects potential clinical consequences of under-treatment.",
+        "confidence_delta": f"Confidence delta ({abs(disagreement.get('consult_confidence', 0.5) - disagreement.get('review_confidence', 0.5)):.0%}) indicates 7B and 32B models significantly disagree on case confidence.",
+        "complexity": f"Case complexity ({disagreement.get('n_disagreements', 0) + disagreement.get('n_uncertainty_divergence', 0)} divergence points) shows multiple areas requiring nuanced assessment.",
+        "domain": f"Domain '{disagreement.get('domain', 'unknown')}' is inherently complex, requiring specialized reasoning capabilities.",
+        "pattern": f"Pattern type '{disagreement.get('pattern_type', 'unknown')}' has high-risk characteristics requiring thorough analysis.",
+        "region": f"Body region '{disagreement.get('body_region', 'unknown')}' involves sensitive structures where accuracy is critical.",
+        "cluster": f"Historical cluster performance shows elevated escalation rates, indicating this case pattern requires careful review."
+    }
+    return explanations.get(component, f"Component '{component}' contributed {contribution:.0%} to the overall confidence.")
+
+
+def _compute_confidence_discounts(
+    case_id: str,
+    disagreement: dict,
+    confidence_components: list[tuple],
+    cluster_data: dict | None
+) -> list[dict]:
+    """
+    Compute conditions under which the promotion confidence should be discounted.
+    
+    Returns list of discount reasons with impact and explanation.
+    """
+    discounts = []
+    
+    # Discount 1: Low cluster evidence
+    if cluster_data and cluster_data.get("case_count", 0) < 5:
+        discounts.append({
+            "reason": "limited_cluster_history",
+            "impact": 0.15,
+            "description": f"Cluster has only {cluster_data.get('case_count', 0)} historical cases. Limited data may not reliably predict this case's behavior."
+        })
+    
+    # Discount 2: Inconsistent evidence
+    if len(confidence_components) >= 3:
+        contributions = [c[1] for c in confidence_components]
+        max_contribution = max(contributions)
+        min_contribution = min(contributions)
+        if max_contribution - min_contribution < 0.05:
+            discounts.append({
+                "reason": "diffuse_evidence",
+                "impact": 0.10,
+                "description": "Evidence is diffuse across multiple factors with no clear dominant signal. This may indicate mixed case characteristics."
+            })
+    
+    # Discount 3: High base uncertainty
+    if disagreement.get("n_uncertainty_divergence", 0) > disagreement.get("n_disagreements", 0):
+        discounts.append({
+            "reason": "uncertainty_dominant",
+            "impact": 0.12,
+            "description": "Uncertainty divergences exceed disagreements. This suggests case characteristics that are genuinely ambiguous rather than definitively complex."
+        })
+    
+    # Discount 4: Novel case features
+    if disagreement.get("pattern_type") == "alignment":
+        discounts.append({
+            "reason": "low_disagreement_pattern",
+            "impact": 0.08,
+            "description": "Pattern type is 'alignment' suggesting 7B and 32B largely agree. Escalation benefits may be limited."
+        })
+    
+    # Discount 5: Low confidence values overall
+    avg_confidence = (disagreement.get("consult_confidence", 0.5) + disagreement.get("review_confidence", 0.5)) / 2
+    if avg_confidence < 0.4:
+        discounts.append({
+            "reason": "low_base_confidence",
+            "impact": 0.10,
+            "description": f"Both models show low base confidence ({avg_confidence:.0%}). This may indicate inherent case difficulty or data quality issues."
+        })
+    
+    return discounts
+
+
+def _build_policy_explanation(
+    case_id: str,
+    disagreement: dict,
+    narrative: dict,
+    threshold_crossings: list[dict],
+    dominant_evidence: dict | None,
+    confidence_discounts: list[dict]
+) -> str:
+    """
+    Build comprehensive policy explanation text.
+    """
+    parts = []
+    
+    # Header
+    parts.append(f"POLICY EXPLANATION FOR CASE {case_id}")
+    parts.append("=" * 60)
+    
+    # Recommendation Summary
+    parts.append(f"\nRECOMMENDATION: {narrative['promotion_recommendation'].upper().replace('_', ' ')}")
+    parts.append(f"Confidence: {narrative['promotion_confidence']:.0%}")
+    parts.append(f"Confidence Band: {narrative['confidence_band'].upper().replace('_', ' ')}")
+    
+    # Why Threshold Was Crossed
+    if threshold_crossings:
+        parts.append(f"\nTHRESHOLD CROSSINGS ({len(threshold_crossings)} total):")
+        for i, crossing in enumerate(threshold_crossings, 1):
+            parts.append(f"\n{i}. {crossing['threshold'].upper()}")
+            parts.append(f"   Value: {crossing['value']} {crossing['operator']} {crossing['threshold_value']}")
+            parts.append(f"   Severity: {crossing['severity_level']}")
+            parts.append(f"   Contribution: {crossing['contribution']:.0%}")
+            parts.append(f"   Explanation: {crossing['explanation']}")
+    
+    # Dominant Evidence
+    if dominant_evidence:
+        parts.append(f"\nDOMINANT EVIDENCE:")
+        parts.append(f"  Primary Factor: {dominant_evidence['component'].upper().replace('_', ' ')}")
+        parts.append(f"  Contribution: {dominant_evidence['contribution']:.0%}")
+        parts.append(f"  Why Dominant: {dominant_evidence['explanation']}")
+        if "secondary" in dominant_evidence:
+            parts.append(f"  Secondary Factor: {dominant_evidence['secondary']['component'].upper().replace('_', ' ')}")
+            parts.append(f"  Secondary Contribution: {dominant_evidence['secondary']['contribution']:.0%}")
+    
+    # Confidence Discounts
+    if confidence_discounts:
+        parts.append(f"\nCONFIDENCE DISCOUNTS ({len(confidence_discounts)} total):")
+        total_discount = 0
+        for i, discount in enumerate(confidence_discounts, 1):
+            parts.append(f"\n{i}. {discount['reason'].upper().replace('_', ' ')}")
+            parts.append(f"   Impact: -{discount['impact']:.0%}")
+            parts.append(f"   Reason: {discount['description']}")
+            total_discount += discount['impact']
+        adjusted_confidence = max(0.0, narrative["promotion_confidence"] - total_discount)
+        parts.append(f"\n  TOTAL DISCOUNT: -{total_discount:.0%}")
+        parts.append(f"  ADJUSTED CONFIDENCE: {adjusted_confidence:.0%}")
+    else:
+        parts.append(f"\nCONFIDENCE DISCOUNTS: None")
+        parts.append(f"  No factors identified that should reduce confidence in this recommendation.")
+    
+    # Policy Summary
+    parts.append(f"\n" + "=" * 60)
+    rec = narrative['promotion_recommendation']
+    if rec == "mandatory_32b_review":
+        parts.append("POLICY SUMMARY: This case MUST be escalated to 32B review. Multiple high-severity thresholds exceeded with strong evidence support.")
+    elif rec == "promote_to_32b":
+        parts.append("POLICY SUMMARY: This case SHOULD be escalated to 32B review. Strong evidence supports escalation with high confidence.")
+    elif rec == "consider_32b":
+        parts.append("POLICY SUMMARY: Consider escalating to 32B review. Evidence is mixed but warrants careful consideration of 32B enhancement.")
+    else:
+        parts.append("POLICY SUMMARY: Standard 7B review is sufficient. Case does not meet escalation thresholds or evidence does not strongly support escalation.")
+    
+    return "\n".join(parts)
 
 
 def _get_cluster_performance(cluster_key: str) -> dict | None:
