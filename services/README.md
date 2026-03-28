@@ -30,9 +30,18 @@ npm run verify:sidecars:health
 npm run verify:sidecars:readiness
 npm run verify:sidecars:shadow
 npm run verify:sidecars:vercel
+npm run sync:sidecars:vercel
 npm run verify:corpus:live
 ```
 
 Use `npm run verify:sidecars:strict` when you want warnings such as stub mode or missing sidecar URLs to fail the check.
+
+When real sidecar endpoint URLs exist locally in `.env.sidecars`, `.env.local`, or `.env`, use:
+
+```bash
+npm run sync:sidecars:vercel:apply
+```
+
+to push the five `HF_*_URL` vars into Vercel production in one step.
 
 See the full rollout procedure in [G:\MY Website\pawvital-ai\plans\SIDECAR_DEPLOYMENT_RUNBOOK.md](G:\MY Website\pawvital-ai\plans\SIDECAR_DEPLOYMENT_RUNBOOK.md).

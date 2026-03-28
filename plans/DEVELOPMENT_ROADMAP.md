@@ -99,7 +99,7 @@ That means:
 - working first-pass implementations now exist for all five HF sidecars
 - shared app contracts now distinguish sync consults from async review queue submission
 - async review now has dead-letter persistence, review state tracking, richer shadow disagreement analysis, and stronger feedback synthesis on `master`
-- the reasoning-heavy MiniMax service lane is now merged locally on `master`, including cross-case review intelligence and deeper consult rubric coverage
+- the reasoning-heavy MiniMax service lane is now merged locally on `master`, including cross-case review intelligence, explicit promotion-policy bands, and deeper consult longitudinal uncertainty coverage
 - the main unfinished work is deepening real model runtime coverage, deployment wiring, and shadow-mode validation
 - Vercel production now has the shared sidecar auth secret aligned, and guarded readiness / shadow routes respond correctly on the live app
 - the current Phase 4 blocker is narrower: Vercel production still does not have the five `HF_*_URL` sidecar endpoint vars configured, so the live app still cannot call any deployed sidecar service
@@ -203,6 +203,7 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - App-level smoke coverage now exercises all five sidecar contracts through `hf-sidecars.ts` and the async review route.
 - Phase 4 prep now has an executable deployment-readiness script for sidecar env and `/healthz` verification.
 - Phase 4 prep now has an executable Vercel production env audit so missing `HF_*` sidecar URLs are reported directly instead of being discovered manually.
+- Phase 4 now has a Vercel env sync script so once real sidecar endpoint URLs exist they can be pushed into production in one step instead of being entered manually.
 - Phase 4 verification now also has a dedicated shadow-route probe command for checking the guarded app-side rollout summary path.
 - Phase 4 now also has a deployment runbook covering env ownership, rollout order, shadow-mode promotion, and rollback.
 - Shadow-mode verification now has a session-level rollout summary helper that turns sidecar observations into per-service promotion status (`ready`, `watch`, `blocked`, `insufficient_data`).

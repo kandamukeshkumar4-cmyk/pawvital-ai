@@ -86,6 +86,18 @@ Recommended first pass:
 - set `HF_SIDECAR_SHADOW_MODE=true`
 - leave the service-specific flags unset unless selectively testing
 
+When the real sidecar endpoint URLs are present locally in `.env.sidecars`, `.env.local`, or `.env`, preview the Vercel sync with:
+
+```bash
+npm run sync:sidecars:vercel
+```
+
+Then apply it with:
+
+```bash
+npm run sync:sidecars:vercel:apply
+```
+
 ### Step 3: Verify env and health
 
 Run:
@@ -97,6 +109,7 @@ npm run verify:sidecars:readiness
 npm run verify:sidecars:shadow
 npm run verify:sidecars:vercel
 npm run verify:corpus:live
+npm run sync:sidecars:vercel
 ```
 
 Use strict mode when promoting:
