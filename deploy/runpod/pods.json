@@ -1,6 +1,6 @@
 {
   "consult_retrieval": {
-    "pod_id": "s99tebir38rq1v",
+    "pod_id": "eg28ts30c2qfei",
     "name": "pawvital-consult-retrieval-v6",
     "gpu": "NVIDIA RTX 6000 Ada Generation",
     "services": [
@@ -8,8 +8,8 @@
       "image-retrieval-service:8082",
       "multimodal-consult-service:8083"
     ],
-    "proxy_base": "https://s99tebir38rq1v-{port}.proxy.runpod.net",
-    "status": "healthy_stub",
+    "proxy_base": "https://eg28ts30c2qfei-{port}.proxy.runpod.net",
+    "status": "booting",
     "created": "2026-03-30"
   },
   "async_review": {
