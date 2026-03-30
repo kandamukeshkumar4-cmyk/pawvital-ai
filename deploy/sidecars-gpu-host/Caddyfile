@@ -1,0 +1,30 @@
+{
+  email {$ACME_EMAIL}
+}
+
+vision-preprocess.{$SIDECAR_BASE_DOMAIN} {
+  reverse_proxy vision-preprocess-service:8080
+}
+
+text-retrieval.{$SIDECAR_BASE_DOMAIN} {
+  reverse_proxy text-retrieval-service:8081
+}
+
+image-retrieval.{$SIDECAR_BASE_DOMAIN} {
+  reverse_proxy image-retrieval-service:8082
+}
+
+# Extended timeouts for synchronous VL inference (7B model, 3–90 s depending on hardware)
+multimodal-consult.{$SIDECAR_BASE_DOMAIN} {
+  reverse_proxy multimodal-consult-service:8083 {
+    transport http {
+      response_header_timeout 120s
+      read_timeout 120s
+    }
+  }
+}
+
+# Async review only submits to an in-process queue — response is fast, no extended timeout needed
+async-review.{$SIDECAR_BASE_DOMAIN} {
+  reverse_proxy async-review-service:8084
+}

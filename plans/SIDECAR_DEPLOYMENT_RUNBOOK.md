@@ -20,6 +20,7 @@ This runbook is the operational guide for moving the Hugging Face sidecars from 
 - That means Phase 4 is now split:
   1. Vercel wiring for the app and the lightweight vision-preprocess sidecar
   2. alternative hosting for the four heavier model-backed sidecars
+- a Docker-native alternative-host bundle now exists at [G:\MY Website\pawvital-ai\deploy\sidecars-gpu-host\README.md](G:\MY Website\pawvital-ai\deploy\sidecars-gpu-host\README.md) so the four heavy sidecars can be stood up behind one reverse proxy without changing the app contract
 
 ## Environment Matrix
 
@@ -88,6 +89,7 @@ Expected paths:
 Current result:
 - verified on Vercel: `vision-preprocess-service`
 - blocked on Vercel footprint: `text-retrieval-service`, `image-retrieval-service`, `multimodal-consult-service`, `async-review-service`
+- bridge path available now: `deploy/sidecars-gpu-host/docker-compose.yml` + `deploy/sidecars-gpu-host/Caddyfile`
 
 ### Step 2: Wire app envs
 
@@ -108,6 +110,12 @@ Then apply it with:
 
 ```bash
 npm run sync:sidecars:vercel:apply
+```
+
+If the heavy sidecars are being exposed behind one subdomain-based reverse proxy, generate the app-facing `HF_*_URL` values first with:
+
+```bash
+npm run render:sidecars:host-envs -- --base-domain sidecars.example.com
 ```
 
 ### Step 3: Verify env and health

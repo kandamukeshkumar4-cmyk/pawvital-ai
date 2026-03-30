@@ -8,6 +8,7 @@ Current status:
 - Some services still use heuristic or optional model-backed fallbacks, so production rollout should go through shadow mode first.
 - `vision-preprocess-service` is now confirmed deployable on Vercel with a live `/healthz` and `/infer` surface.
 - `text-retrieval-service`, `image-retrieval-service`, `multimodal-consult-service`, and `async-review-service` currently exceed Vercel's 500 MB Python/Lambda storage ceiling as-is, so they need a different hosting target or slimmer runtime bundles before full Phase 4 rollout.
+- a Docker-native alternative-host bundle now exists under [G:\MY Website\pawvital-ai\deploy\sidecars-gpu-host\README.md](G:\MY Website\pawvital-ai\deploy\sidecars-gpu-host\README.md) for the heavy sidecars
 
 Services:
 - `vision-preprocess-service` on `:8080` -> `/infer`
@@ -37,6 +38,13 @@ npm run verify:corpus:live
 ```
 
 Use `npm run verify:sidecars:strict` when you want warnings such as stub mode or missing sidecar URLs to fail the check.
+
+Alternative-host helpers:
+
+```bash
+npm run render:sidecars:host-envs -- --base-domain sidecars.example.com
+npm run compose:sidecars:gpu-host
+```
 
 When real sidecar endpoint URLs exist locally in `.env.sidecars`, `.env.local`, or `.env`, use:
 
