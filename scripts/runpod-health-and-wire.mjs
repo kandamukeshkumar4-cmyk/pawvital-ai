@@ -246,28 +246,13 @@ curl -L --fail https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/archive/ref
 tar -xzf /workspace/repo.tgz -C /workspace
 mv /workspace/pawvital-ai-master /workspace/pawvital-ai
 cd /workspace/pawvital-ai
-# Phase 1: fast stub venv — services up in <90s, proxy health passes immediately
-python3 -m venv /workspace/venvs/fast
-/workspace/venvs/fast/bin/pip install -q fastapi "uvicorn[standard]" requests Pillow python-multipart pydantic
-nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=true /workspace/venvs/fast/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/text-retrieval-service --host 0.0.0.0 --port 8081 > /workspace/logs/text-retrieval.log 2>&1 &
-nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=true /workspace/venvs/fast/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/image-retrieval-service --host 0.0.0.0 --port 8082 > /workspace/logs/image-retrieval.log 2>&1 &
-nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=true /workspace/venvs/fast/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/multimodal-consult-service --host 0.0.0.0 --port 8083 > /workspace/logs/multimodal-consult.log 2>&1 &
-sleep 6
-ss -ltnp | grep -E "808[123]" || true
-# Phase 2: full install + live restart in background
-(
-  python3 -m venv /workspace/venvs/consult
-  /workspace/venvs/consult/bin/pip install --upgrade pip setuptools wheel
-  /workspace/venvs/consult/bin/pip install -r services/text-retrieval-service/requirements.txt -r services/image-retrieval-service/requirements.txt -r services/multimodal-consult-service/requirements.txt
-  pkill -f "services/text-retrieval-service --host 0.0.0.0 --port 8081" || true
-  pkill -f "services/image-retrieval-service --host 0.0.0.0 --port 8082" || true
-  pkill -f "services/multimodal-consult-service --host 0.0.0.0 --port 8083" || true
-  sleep 2
-  nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" SUPABASE_URL="\${SUPABASE_URL}" SUPABASE_SERVICE_ROLE_KEY="\${SUPABASE_SERVICE_ROLE_KEY}" STUB_MODE=false TEXT_MODEL_ENABLED=true TEXT_EMBED_MODEL_NAME=BAAI/bge-m3 TEXT_RERANK_MODEL_NAME=BAAI/bge-reranker-v2-m3 HF_HOME=/workspace/model-cache/consult /workspace/venvs/consult/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/text-retrieval-service --host 0.0.0.0 --port 8081 >> /workspace/logs/text-retrieval.log 2>&1 &
-  nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" SUPABASE_URL="\${SUPABASE_URL}" SUPABASE_SERVICE_ROLE_KEY="\${SUPABASE_SERVICE_ROLE_KEY}" STUB_MODE=false IMAGE_MODEL_ENABLED=true IMAGE_RETRIEVAL_MODEL_NAME=microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224 HF_HOME=/workspace/model-cache/consult /workspace/venvs/consult/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/image-retrieval-service --host 0.0.0.0 --port 8082 >> /workspace/logs/image-retrieval.log 2>&1 &
-  nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=false HF_HOME=/workspace/model-cache/consult CONSULT_MODEL_ID=Qwen/Qwen2.5-VL-7B-Instruct /workspace/venvs/consult/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/multimodal-consult-service --host 0.0.0.0 --port 8083 >> /workspace/logs/multimodal-consult.log 2>&1 &
-  echo "[live] all services restarted in LIVE mode" >> /workspace/logs/startup.log
-) > /workspace/logs/full-install.log 2>&1 &
+/usr/bin/env python3 -m venv /workspace/venvs/consult
+/workspace/venvs/consult/bin/pip install --upgrade pip setuptools wheel > /workspace/logs/full-install.log 2>&1
+/workspace/venvs/consult/bin/pip install -r services/text-retrieval-service/requirements.txt -r services/image-retrieval-service/requirements.txt -r services/multimodal-consult-service/requirements.txt >> /workspace/logs/full-install.log 2>&1
+nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" SUPABASE_URL="\${SUPABASE_URL}" SUPABASE_SERVICE_ROLE_KEY="\${SUPABASE_SERVICE_ROLE_KEY}" STUB_MODE=false TEXT_MODEL_ENABLED=true TEXT_EMBED_MODEL_NAME=BAAI/bge-m3 TEXT_RERANK_MODEL_NAME=BAAI/bge-reranker-v2-m3 HF_HOME=/workspace/model-cache/consult /workspace/venvs/consult/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/text-retrieval-service --host 0.0.0.0 --port 8081 > /workspace/logs/text-retrieval.log 2>&1 &
+nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" SUPABASE_URL="\${SUPABASE_URL}" SUPABASE_SERVICE_ROLE_KEY="\${SUPABASE_SERVICE_ROLE_KEY}" STUB_MODE=false IMAGE_MODEL_ENABLED=true IMAGE_RETRIEVAL_MODEL_NAME=microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224 HF_HOME=/workspace/model-cache/consult /workspace/venvs/consult/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/image-retrieval-service --host 0.0.0.0 --port 8082 > /workspace/logs/image-retrieval.log 2>&1 &
+nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=false HF_HOME=/workspace/model-cache/consult CONSULT_MODEL_ID=Qwen/Qwen2.5-VL-7B-Instruct /workspace/venvs/consult/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/multimodal-consult-service --host 0.0.0.0 --port 8083 > /workspace/logs/multimodal-consult.log 2>&1 &
+echo "[live] consult services started in LIVE mode" >> /workspace/logs/startup.log
 exec tail -F /workspace/logs/text-retrieval.log /workspace/logs/image-retrieval.log /workspace/logs/multimodal-consult.log`;
 }
 
@@ -288,22 +273,11 @@ curl -L --fail https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/archive/ref
 tar -xzf /workspace/repo.tgz -C /workspace
 mv /workspace/pawvital-ai-master /workspace/pawvital-ai
 cd /workspace/pawvital-ai
-# Phase 1: fast stub — service up immediately
-python3 -m venv /workspace/venvs/fast
-/workspace/venvs/fast/bin/pip install -q fastapi "uvicorn[standard]" requests Pillow python-multipart pydantic redis httpx
-nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=true /workspace/venvs/fast/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/async-review-service --host 0.0.0.0 --port 8084 > /workspace/logs/async-review.log 2>&1 &
-sleep 6
-ss -ltnp | grep 8084 || true
-# Phase 2: full install + live restart in background
-(
-  python3 -m venv /workspace/venvs/review
-  /workspace/venvs/review/bin/pip install --upgrade pip setuptools wheel
-  /workspace/venvs/review/bin/pip install -r services/async-review-service/requirements.txt
-  pkill -f "services/async-review-service --host 0.0.0.0 --port 8084" || true
-  sleep 2
-  nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=false HF_HOME=/workspace/model-cache/review REVIEW_MODEL_ID=Qwen/Qwen2.5-VL-32B-Instruct /workspace/venvs/review/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/async-review-service --host 0.0.0.0 --port 8084 >> /workspace/logs/async-review.log 2>&1 &
-  echo "[live] async-review restarted in LIVE mode" >> /workspace/logs/startup.log
-) > /workspace/logs/full-install.log 2>&1 &
+/usr/bin/env python3 -m venv /workspace/venvs/review
+/workspace/venvs/review/bin/pip install --upgrade pip setuptools wheel > /workspace/logs/full-install.log 2>&1
+/workspace/venvs/review/bin/pip install -r services/async-review-service/requirements.txt >> /workspace/logs/full-install.log 2>&1
+nohup env SIDECAR_API_KEY="\${SIDECAR_API_KEY}" STUB_MODE=false HF_HOME=/workspace/model-cache/review REVIEW_MODEL_ID=Qwen/Qwen2.5-VL-32B-Instruct /workspace/venvs/review/bin/python -m uvicorn app.main:app --app-dir /workspace/pawvital-ai/services/async-review-service --host 0.0.0.0 --port 8084 > /workspace/logs/async-review.log 2>&1 &
+echo "[live] async-review started in LIVE mode" >> /workspace/logs/startup.log
 exec tail -F /workspace/logs/async-review.log`;
 }
 
