@@ -28,6 +28,7 @@
     "runpod:provision:review": "node scripts/runpod-health-and-wire.mjs --provision-review",
     "runpod:stop:all": "node scripts/runpod-health-and-wire.mjs --stop-all",
     "phase5:report": "node scripts/report-phase5-shadow.mjs",
+    "phase5:cycle": "node scripts/runpod-phase5-cycle.mjs",
     "verify:sidecars:strict": "node scripts/verify-sidecars.mjs all --strict",
     "verify:corpus:live": "node scripts/verify-live-corpus.mjs",
     "db:apply-rag-schema": "node scripts/apply-rag-schema.mjs",
