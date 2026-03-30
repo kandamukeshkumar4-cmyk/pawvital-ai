@@ -974,6 +974,37 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
 
+  it.each(["no", "no it's not"])(
+    "accepts a bare negative water-intake response (%s) instead of repeating the same question",
+    async (message) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "water_intake";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.water_intake).toBe(
+        "less_than_usual"
+      );
+      expect(payload.session.answered_questions).toContain("water_intake");
+      expect(payload.session.last_question_asked).not.toBe("water_intake");
+    }
+  );
+
   it("prioritizes breathing follow-up over coughing when both symptoms are reported together", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,

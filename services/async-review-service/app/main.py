@@ -8734,6 +8734,707 @@ async def analyze_all_cross_case_intelligence(
     }
 
 
+# =============================================================================
+# Phase 5 Shadow Calibration Summary Layer
+# =============================================================================
+# Produces clear promotion recommendations: keep_in_shadow, promote_cautiously, block_promotion
+# Explains: disagreement patterns, FP/FN autopsies, ambiguity type, confidence bands,
+#           body region / severity / image quality / temporal context trends
+
+PHASE5_SHADOW_CALIBRATION_HISTORY: list[dict] = []
+MAX_PHASE5_HISTORY = 500
+
+
+def _classify_disagreement_pattern(disagreement: dict) -> str:
+    """
+    Classify the type of disagreement pattern observed.
+
+    Returns pattern classification based on the nature of 7B-32B disagreement.
+    """
+    disagreement_points = disagreement.get("disagreement_points", [])
+    pattern_type = disagreement.get("pattern_type", "unknown")
+    severity_impact = disagreement.get("severity_impact", 0.5)
+    conf_delta = abs(
+        disagreement.get("consult_confidence", 0.5) -
+        disagreement.get("review_confidence", 0.5)
+    )
+
+    # Count urgency-related disagreements
+    urgency_keywords = ["urgent", "emergency", "critical", "severe", "acute"]
+    urgency_disagreements = sum(
+        1 for dp in disagreement_points
+        if any(kw in str(dp).lower() for kw in urgency_keywords)
+    )
+
+    # Count diagnostic disagreements
+    diagnostic_keywords = ["diagnosis", "differential", "likely", "probable", "rule out"]
+    diagnostic_disagreements = sum(
+        1 for dp in disagreement_points
+        if any(kw in str(dp).lower() for kw in diagnostic_keywords)
+    )
+
+    # Count treatment disagreements
+    treatment_keywords = ["treatment", "therapy", "medication", "surgery", "intervention"]
+    treatment_disagreements = sum(
+        1 for dp in disagreement_points
+        if any(kw in str(dp).lower() for kw in treatment_keywords)
+    )
+
+    # Classify based on predominant pattern
+    if urgency_disagreements > max(diagnostic_disagreements, treatment_disagreements):
+        return "urgency_mismatch"
+    elif diagnostic_disagreements > max(urgency_disagreements, treatment_disagreements):
+        return "diagnostic_divergence"
+    elif treatment_disagreements > max(urgency_disagreements, diagnostic_disagreements):
+        return "treatment_disagreement"
+    elif pattern_type != "unknown":
+        return pattern_type
+    elif conf_delta > 0.3:
+        return "confidence_calibration_issue"
+    elif severity_impact > 0.7:
+        return "high_stakes_ambiguity"
+    else:
+        return "minor_interpretation_difference"
+
+
+def _classify_ambiguity_type(disagreement: dict) -> str:
+    """
+    Classify the type of ambiguity present in the disagreement.
+
+    Returns ambiguity classification: visual_ambiguity, contextual_ambiguity,
+    severity_ambiguity, temporal_ambiguity, or multi_factor_ambiguity.
+    """
+    ambiguity_indicators = disagreement.get("ambiguity_indicators", {})
+    image_quality = disagreement.get("image_quality", "unknown")
+    temporal_context = disagreement.get("temporal_context_availability", "unknown")
+
+    visual_indicators = ambiguity_indicators.get("visual", [])
+    contextual_indicators = ambiguity_indicators.get("contextual", [])
+    severity_indicators = ambiguity_indicators.get("severity", [])
+    temporal_indicators = ambiguity_indicators.get("temporal", [])
+
+    scores = {
+        "visual_ambiguity": len(visual_indicators) + (1 if image_quality in ["poor", "marginal"] else 0),
+        "contextual_ambiguity": len(contextual_indicators),
+        "severity_ambiguity": len(severity_indicators),
+        "temporal_ambiguity": len(temporal_indicators) + (1 if temporal_context == "insufficient" else 0),
+    }
+
+    max_score = max(scores.values())
+    if max_score == 0:
+        return "minimal_ambiguity"
+
+    # Check for multi-factor ambiguity
+    significant_factors = sum(1 for s in scores.values() if s >= 1)
+    if significant_factors >= 3:
+        return "multi_factor_ambiguity"
+    elif significant_factors >= 2:
+        return "compound_ambiguity"
+
+    return max(scores, key=scores.get) or "minimal_ambiguity"
+
+
+def _compute_phase5_shadow_calibration_summary(case_id: str) -> dict[str, Any]:
+    """
+    Phase 5 Shadow Calibration Summary Layer.
+
+    Produces a comprehensive calibration summary with clear promotion recommendation:
+    - keep_in_shadow: 32B should remain in shadow mode
+    - promote_cautiously: 32B can be promoted with monitoring
+    - block_promotion: 32B should not be promoted
+
+    The summary explains:
+    - Disagreement patterns
+    - False positive / false negative autopsies
+    - Ambiguity type
+    - Confidence bands
+    - Body region / severity / image quality / temporal context trends
+    """
+    global PHASE5_SHADOW_CALIBRATION_HISTORY
+
+    summary = {
+        "case_id": case_id,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "recommendation": None,  # keep_in_shadow, promote_cautiously, block_promotion
+        "recommendation_confidence": 0.0,
+        "recommendation_rationale": "",
+        "disagreement_pattern": None,
+        "disagreement_pattern_explanation": "",
+        "false_positive_autopsy": None,
+        "false_negative_autopsy": None,
+        "ambiguity_type": None,
+        "ambiguity_explanation": "",
+        "confidence_band": "uncertain",
+        "confidence_band_explanation": "",
+        "body_region_trends": {},
+        "severity_trends": {},
+        "image_quality_trends": {},
+        "temporal_context_trends": {},
+        "promotion_barriers": [],
+        "promotion_enablers": [],
+        "recommended_actions": [],
+        "monitoring_requirements": [],
+    }
+
+    if case_id not in SHADOW_DISAGREEMENTS:
+        summary["recommendation"] = "keep_in_shadow"
+        summary["recommendation_rationale"] = "No shadow disagreement data available for this case"
+        summary["confidence_band"] = "no_data"
+        return summary
+
+    disagreement = SHADOW_DISAGREEMENTS[case_id]
+
+    # 1. Classify disagreement pattern
+    disagreement_pattern = _classify_disagreement_pattern(disagreement)
+    summary["disagreement_pattern"] = disagreement_pattern
+
+    pattern_explanations = {
+        "urgency_mismatch": "32B and 7B disagree primarily on urgency level. 7B may be over- or under-escalating.",
+        "diagnostic_divergence": "Models disagree on the most likely diagnosis. This suggests knowledge or reasoning differences.",
+        "treatment_disagreement": "Models suggest different treatments. This is a high-stakes disagreement requiring careful review.",
+        "confidence_calibration_issue": "Large confidence gap between models indicates calibration differences.",
+        "high_stakes_ambiguity": "Case has high severity impact with ambiguous features. Both models show uncertainty.",
+        "minor_interpretation_difference": "Models have minor differences in interpretation but agree on key findings.",
+        "unknown": "Unable to classify the disagreement pattern from available data."
+    }
+    summary["disagreement_pattern_explanation"] = pattern_explanations.get(
+        disagreement_pattern, "Unknown disagreement pattern."
+    )
+
+    # 2. Analyze false positive / false negative patterns
+    calibration_score = disagreement.get("calibration_score", 0.5)
+    severity_impact = disagreement.get("severity_impact", 0.5)
+    conf_delta = abs(
+        disagreement.get("consult_confidence", 0.5) -
+        disagreement.get("review_confidence", 0.5)
+    )
+
+    # FP Autopsy: 32B was more aggressive than warranted
+    if disagreement_pattern == "urgency_mismatch":
+        if disagreement.get("review_confidence", 0.5) > disagreement.get("consult_confidence", 0.5) + 0.15:
+            summary["false_positive_autopsy"] = {
+                "type": "potential_over_escalation",
+                "description": "32B appears to have escalated urgency beyond what 7B recommended",
+                "evidence": f"32B confidence: {disagreement.get('review_confidence', 0.5):.2f}, 7B confidence: {disagreement.get('consult_confidence', 0.5):.2f}",
+                "root_cause_hypothesis": "32B may be more sensitive to alarming visual features, leading to false positive urgency"
+            }
+        # FN Autopsy: 32B was more conservative than warranted
+        elif disagreement.get("consult_confidence", 0.5) > disagreement.get("review_confidence", 0.5) + 0.15:
+            summary["false_negative_autopsy"] = {
+                "type": "potential_under_escalation",
+                "description": "32B appears to have de-escalated or remained neutral when 7B recommended higher urgency",
+                "evidence": f"7B confidence: {disagreement.get('consult_confidence', 0.5):.2f}, 32B confidence: {disagreement.get('review_confidence', 0.5):.2f}",
+                "root_cause_hypothesis": "32B may be requiring higher certainty before committing to urgent classification"
+            }
+
+    # 3. Classify ambiguity type
+    ambiguity_type = _classify_ambiguity_type(disagreement)
+    summary["ambiguity_type"] = ambiguity_type
+
+    ambiguity_explanations = {
+        "visual_ambiguity": "Image quality or visual features are unclear, leading to interpretation differences",
+        "contextual_ambiguity": "Insufficient clinical context (history, symptoms) contributes to disagreement",
+        "severity_ambiguity": "Severity indicators are borderline or contradictory",
+        "temporal_ambiguity": "Changes over time are unclear or images lack temporal reference",
+        "compound_ambiguity": "Multiple ambiguity factors contribute to the disagreement",
+        "multi_factor_ambiguity": "All major ambiguity factors are present",
+        "minimal_ambiguity": "Disagreement occurs despite clear evidence - suggests reasoning differences"
+    }
+    summary["ambiguity_explanation"] = ambiguity_explanations.get(
+        ambiguity_type, "Unable to determine ambiguity type."
+    )
+
+    # 4. Determine confidence band
+    confidence_components = disagreement.get("confidence_components", [])
+    high_conf_components = sum(1 for c in confidence_components if len(c) >= 3 and c[2] == "high")
+    medium_conf_components = sum(1 for c in confidence_components if len(c) >= 3 and c[2] == "medium")
+
+    if calibration_score >= 0.7 and high_conf_components >= 3:
+        summary["confidence_band"] = "high_confidence"
+        summary["confidence_band_explanation"] = "Strong calibration with multiple high-confidence indicators"
+    elif calibration_score >= 0.6 and high_conf_components >= 2:
+        summary["confidence_band"] = "medium-high_confidence"
+        summary["confidence_band_explanation"] = "Good calibration with several confident indicators"
+    elif calibration_score >= 0.4:
+        summary["confidence_band"] = "medium_confidence"
+        summary["confidence_band_explanation"] = "Moderate calibration - some indicators are uncertain"
+    elif calibration_score >= 0.25:
+        summary["confidence_band"] = "low_confidence"
+        summary["confidence_band_explanation"] = "Weak calibration with many uncertain indicators"
+    else:
+        summary["confidence_band"] = "insufficient_confidence"
+        summary["confidence_band_explanation"] = "Insufficient evidence to make reliable calibration judgment"
+
+    # 5. Analyze trends by dimension
+    # Body region trends
+    body_region = disagreement.get("body_region", "unknown")
+    summary["body_region_trends"] = {
+        "current_case_region": body_region,
+        "region_specific_note": f"Disagreement occurred in {body_region} region"
+    }
+
+    # Severity trends
+    initial_severity = disagreement.get("initial_severity", "unknown")
+    summary["severity_trends"] = {
+        "case_severity": initial_severity,
+        "severity_impact_score": severity_impact,
+        "severity_note": f"Case has {severity_impact:.0%} severity impact"
+    }
+
+    # Image quality trends
+    image_quality = _resolve_image_quality_for_case(case_id, disagreement)
+    summary["image_quality_trends"] = {
+        "image_quality": image_quality,
+        "quality_impact": "Image quality affects ability to resolve disagreement" if image_quality in ["poor", "marginal"] else "Image quality is adequate"
+    }
+
+    # Temporal context trends
+    temporal_availability = disagreement.get("temporal_context_availability", "unknown")
+    summary["temporal_context_trends"] = {
+        "temporal_availability": temporal_availability,
+        "temporal_impact": "Limited temporal context contributes to uncertainty" if temporal_availability == "insufficient" else "Temporal context is adequate"
+    }
+
+    # 6. Identify promotion barriers and enablers
+    if calibration_score < 0.4:
+        summary["promotion_barriers"].append(f"Low calibration score ({calibration_score:.0%}) indicates unreliable reasoning")
+    if severity_impact >= 0.75:
+        summary["promotion_barriers"].append("High-severity case with disagreement - cannot safely promote")
+    if disagreement_pattern == "urgency_mismatch" and conf_delta > 0.25:
+        summary["promotion_barriers"].append("Large urgency calibration gap suggests systemic reasoning difference")
+    if ambiguity_type in ["visual_ambiguity", "contextual_ambiguity"]:
+        summary["promotion_barriers"].append(f"{ambiguity_type.replace('_', ' ')} limits ability to validate model reasoning")
+
+    if calibration_score >= 0.7:
+        summary["promotion_enablers"].append(f"High calibration score ({calibration_score:.0%}) supports promotion")
+    if disagreement_pattern == "minor_interpretation_difference":
+        summary["promotion_enablers"].append("Disagreement is minor and does not affect clinical outcomes")
+    if image_quality == "good":
+        summary["promotion_enablers"].append("High-quality images allow confident model evaluation")
+    if temporal_availability == "sufficient":
+        summary["promotion_enablers"].append("Rich temporal context enables proper longitudinal reasoning")
+
+    # 7. Generate final recommendation
+    recommendation_data = _compute_phase5_recommendation(
+        case_id, disagreement, calibration_score, severity_impact,
+        disagreement_pattern, ambiguity_type, conf_delta
+    )
+    summary.update(recommendation_data)
+
+    # 8. Generate recommended actions and monitoring requirements
+    if summary["recommendation"] == "keep_in_shadow":
+        summary["recommended_actions"].append("Continue shadow mode evaluation")
+        summary["recommended_actions"].append("Collect more cases with similar disagreement pattern")
+        summary["monitoring_requirements"].append("Track calibration score over next 50 cases")
+        summary["monitoring_requirements"].append("Monitor for pattern stability")
+    elif summary["recommendation"] == "promote_cautiously":
+        summary["recommended_actions"].append("Allow 32B promotion with active monitoring")
+        summary["recommended_actions"].append("Set up automated calibration tracking")
+        summary["recommended_actions"].append("Establish human review triggers for high-disagreement cases")
+        summary["monitoring_requirements"].append("Review calibration metrics weekly")
+        summary["monitoring_requirements"].append("Track disagreement rate per body region")
+        summary["monitoring_requirements"].append("Monitor false positive/negative rates closely")
+    elif summary["recommendation"] == "block_promotion":
+        summary["recommended_actions"].append("Block 32B promotion for this case type")
+        summary["recommended_actions"].append("Return to shadow mode for pattern refinement")
+        summary["recommended_actions"].append("Consider threshold adjustments for this body region")
+        summary["monitoring_requirements"].append("Do not deploy until calibration improves")
+        summary["monitoring_requirements"].append("Re-evaluate after collecting 100+ similar cases")
+
+    # Store in history
+    with STATE_LOCK:
+        PHASE5_SHADOW_CALIBRATION_HISTORY.append(summary)
+        if len(PHASE5_SHADOW_CALIBRATION_HISTORY) > MAX_PHASE5_HISTORY:
+            PHASE5_SHADOW_CALIBRATION_HISTORY = PHASE5_SHADOW_CALIBRATION_HISTORY[-MAX_PHASE5_HISTORY:]
+
+    return summary
+
+
+def _compute_phase5_recommendation(
+    case_id: str,
+    disagreement: dict,
+    calibration_score: float,
+    severity_impact: float,
+    disagreement_pattern: str,
+    ambiguity_type: str,
+    conf_delta: float
+) -> dict[str, Any]:
+    """
+    Compute Phase 5 promotion recommendation with keep_in_shadow, promote_cautiously, block_promotion.
+
+    This focuses on reasoning output analysis rather than changing deployment logic.
+    """
+    recommendation = {
+        "recommendation": "keep_in_shadow",
+        "recommendation_confidence": 0.5,
+        "recommendation_rationale": "Insufficient evidence to recommend promotion",
+        "blocking_factors": [],
+        "enabling_factors": [],
+    }
+
+    blocking_factors = []
+    enabling_factors = []
+
+    # BLOCK PROMOTION conditions
+    if calibration_score < 0.25:
+        blocking_factors.append(f"Critically low calibration score ({calibration_score:.0%})")
+    if severity_impact >= 0.85 and calibration_score < 0.7:
+        blocking_factors.append(f"High-severity case ({severity_impact:.0%}) with insufficient calibration")
+    if disagreement_pattern == "urgency_mismatch" and conf_delta > 0.35:
+        blocking_factors.append(f"Large confidence delta ({conf_delta:.0%}) indicates fundamental reasoning disagreement")
+    if ambiguity_type == "multi_factor_ambiguity" and calibration_score < 0.5:
+        blocking_factors.append("Multiple ambiguity factors prevent reliable reasoning validation")
+
+    # KEEP IN SHADOW conditions
+    if 0.25 <= calibration_score < 0.45:
+        blocking_factors.append(f"Calibration score ({calibration_score:.0%}) below promotion threshold")
+    if disagreement_pattern in ["diagnostic_divergence", "treatment_disagreement"] and severity_impact > 0.6:
+        blocking_factors.append(f"High-stakes disagreement pattern in {disagreement_pattern}")
+    if ambiguity_type in ["visual_ambiguity", "contextual_ambiguity"] and calibration_score < 0.6:
+        blocking_factors.append(f"{ambiguity_type.replace('_', ' ')} limits reasoning validation")
+
+    # PROMOTE CAUTIOUSLY conditions
+    if 0.45 <= calibration_score < 0.7:
+        enabling_factors.append(f"Calibration score ({calibration_score:.0%}) supports cautious promotion")
+    if disagreement_pattern == "minor_interpretation_difference":
+        enabling_factors.append("Disagreement is clinically minor")
+    if severity_impact < 0.5:
+        enabling_factors.append("Low-severity case allows monitoring without high risk")
+
+    # HIGH CONFIDENCE PROMOTE conditions
+    if calibration_score >= 0.7 and severity_impact < 0.75:
+        enabling_factors.append(f"Strong calibration ({calibration_score:.0%}) supports promotion")
+    if disagreement_pattern == "minor_interpretation_difference" and calibration_score >= 0.6:
+        enabling_factors.append("Pattern and calibration support promotion")
+
+    recommendation["blocking_factors"] = blocking_factors
+    recommendation["enabling_factors"] = enabling_factors
+
+    # Determine final recommendation
+    if blocking_factors and not enabling_factors:
+        recommendation["recommendation"] = "block_promotion"
+        recommendation["recommendation_confidence"] = min(0.9, 0.6 + calibration_score * 0.3)
+        recommendation["recommendation_rationale"] = (
+            f"Blocking promotion due to: {'; '.join(blocking_factors[:2])}"
+        )
+    elif enabling_factors and not blocking_factors:
+        recommendation["recommendation"] = "promote_cautiously"
+        recommendation["recommendation_confidence"] = min(0.85, 0.5 + calibration_score * 0.4)
+        recommendation["recommendation_rationale"] = (
+            f"Promoting cautiously with monitoring: {'; '.join(enabling_factors[:2])}"
+        )
+    elif enabling_factors and blocking_factors:
+        # Mixed signals - default to cautious
+        recommendation["recommendation"] = "keep_in_shadow"
+        recommendation["recommendation_confidence"] = 0.4
+        recommendation["recommendation_rationale"] = (
+            f"Mixed signals detected. Blocking: {'; '.join(blocking_factors[:1])}. "
+            f"Supporting: {'; '.join(enabling_factors[:1])}. Recommend continued shadow evaluation."
+        )
+    else:
+        recommendation["recommendation"] = "keep_in_shadow"
+        recommendation["recommendation_confidence"] = 0.5
+        recommendation["recommendation_rationale"] = "Insufficient evidence for promotion decision"
+
+    return recommendation
+
+
+# =============================================================================
+# Phase 5 Threshold Tuning Insight Layer
+# =============================================================================
+# Identifies where 32B is over-escalating or under-escalating
+# Focuses on reasoning output first - does NOT change deployment logic
+
+THRESHOLD_TUNING_HISTORY: list[dict] = []
+MAX_TUNING_HISTORY = 500
+
+
+def _analyze_reasoning_output_escalation_patterns() -> dict[str, Any]:
+    """
+    Analyze reasoning output to identify where 32B is over-escalating or under-escalating.
+
+    Focuses on the model's reasoning output (not deployment) to identify patterns
+    of over-escalation (false positives) or under-escalation (false negatives).
+    """
+    analysis = {
+        "analyzed_at": datetime.now(timezone.utc).isoformat(),
+        "total_cases_analyzed": 0,
+        "over_escalation_patterns": [],
+        "under_escalation_patterns": [],
+        "reasoning_based_insights": [],
+        "recommended_threshold_adjustments": [],
+        "escalation_ratio_by_body_region": {},
+        "escalation_ratio_by_severity": {},
+        "escalation_ratio_by_image_quality": {},
+        "confidence_delta_distribution": {},
+        "pattern_stability_score": 0.0,
+    }
+
+    with STATE_LOCK:
+        shadow_cases = list(SHADOW_DISAGREEMENTS.items())
+
+    if not shadow_cases:
+        analysis["message"] = "No shadow disagreement data available for threshold tuning analysis"
+        return analysis
+
+    analysis["total_cases_analyzed"] = len(shadow_cases)
+
+    # Aggregate escalation patterns
+    over_escalation_cases = []
+    under_escalation_cases = []
+    confidence_deltas = []
+    body_region_escalation = {}
+    severity_escalation = {}
+    quality_escalation = {}
+
+    for case_id, disagreement in shadow_cases:
+        consult_conf = disagreement.get("consult_confidence", 0.5)
+        review_conf = disagreement.get("review_confidence", 0.5)
+        conf_delta = review_conf - consult_conf
+        confidence_deltas.append(conf_delta)
+
+        body_region = disagreement.get("body_region", "unknown")
+        initial_severity = disagreement.get("initial_severity", "unknown")
+        image_quality = _resolve_image_quality_for_case(case_id, disagreement)
+
+        # Classify escalation
+        if conf_delta > 0.15:
+            over_escalation_cases.append({
+                "case_id": case_id,
+                "delta": conf_delta,
+                "body_region": body_region,
+                "severity": initial_severity,
+                "image_quality": image_quality,
+                "disagreement_pattern": disagreement.get("pattern_type", "unknown")
+            })
+            # Track by dimension
+            body_region_escalation[body_region] = body_region_escalation.get(body_region, {"over": 0, "under": 0, "total": 0})
+            body_region_escalation[body_region]["over"] += 1
+            body_region_escalation[body_region]["total"] += 1
+
+            severity_escalation[initial_severity] = severity_escalation.get(initial_severity, {"over": 0, "under": 0, "total": 0})
+            severity_escalation[initial_severity]["over"] += 1
+            severity_escalation[initial_severity]["total"] += 1
+
+            quality_escalation[image_quality] = quality_escalation.get(image_quality, {"over": 0, "under": 0, "total": 0})
+            quality_escalation[image_quality]["over"] += 1
+            quality_escalation[image_quality]["total"] += 1
+
+        elif conf_delta < -0.15:
+            under_escalation_cases.append({
+                "case_id": case_id,
+                "delta": conf_delta,
+                "body_region": body_region,
+                "severity": initial_severity,
+                "image_quality": image_quality,
+                "disagreement_pattern": disagreement.get("pattern_type", "unknown")
+            })
+            # Track by dimension
+            body_region_escalation[body_region] = body_region_escalation.get(body_region, {"over": 0, "under": 0, "total": 0})
+            body_region_escalation[body_region]["under"] += 1
+            body_region_escalation[body_region]["total"] += 1
+
+            severity_escalation[initial_severity] = severity_escalation.get(initial_severity, {"over": 0, "under": 0, "total": 0})
+            severity_escalation[initial_severity]["under"] += 1
+            severity_escalation[initial_severity]["total"] += 1
+
+            quality_escalation[image_quality] = quality_escalation.get(image_quality, {"over": 0, "under": 0, "total": 0})
+            quality_escalation[image_quality]["under"] += 1
+            quality_escalation[image_quality]["total"] += 1
+
+    # Store results
+    analysis["over_escalation_patterns"] = over_escalation_cases
+    analysis["under_escalation_patterns"] = under_escalation_cases
+
+    # Compute confidence delta distribution
+    if confidence_deltas:
+        avg_delta = sum(confidence_deltas) / len(confidence_deltas)
+        pos_deltas = [d for d in confidence_deltas if d > 0]
+        neg_deltas = [d for d in confidence_deltas if d < 0]
+        analysis["confidence_delta_distribution"] = {
+            "mean_delta": round(avg_delta, 3),
+            "median_delta": round(sorted(confidence_deltas)[len(confidence_deltas) // 2], 3),
+            "positive_delta_count": len(pos_deltas),
+            "negative_delta_count": len(neg_deltas),
+            "positive_delta_avg": round(sum(pos_deltas) / len(pos_deltas), 3) if pos_deltas else 0.0,
+            "negative_delta_avg": round(sum(neg_deltas) / len(neg_deltas), 3) if neg_deltas else 0.0,
+        }
+
+    # Compute escalation ratios by dimension
+    analysis["escalation_ratio_by_body_region"] = {
+        region: {
+            "over_ratio": round(data["over"] / max(data["total"], 1), 3),
+            "under_ratio": round(data["under"] / max(data["total"], 1), 3),
+            "total_cases": data["total"]
+        }
+        for region, data in body_region_escalation.items()
+    }
+
+    analysis["escalation_ratio_by_severity"] = {
+        severity: {
+            "over_ratio": round(data["over"] / max(data["total"], 1), 3),
+            "under_ratio": round(data["under"] / max(data["total"], 1), 3),
+            "total_cases": data["total"]
+        }
+        for severity, data in severity_escalation.items()
+    }
+
+    analysis["escalation_ratio_by_image_quality"] = {
+        quality: {
+            "over_ratio": round(data["over"] / max(data["total"], 1), 3),
+            "under_ratio": round(data["under"] / max(data["total"], 1), 3),
+            "total_cases": data["total"]
+        }
+        for quality, data in quality_escalation.items()
+    }
+
+    # Generate reasoning-based insights
+    if avg_delta > 0.1:
+        analysis["reasoning_based_insights"].append(
+            f"32B consistently more confident than 7B (avg delta: {avg_delta:+.1%}). "
+            f"This suggests 32B may be over-escalating in its reasoning."
+        )
+    elif avg_delta < -0.1:
+        analysis["reasoning_based_insights"].append(
+            f"32B consistently less confident than 7B (avg delta: {avg_delta:+.1%}). "
+            f"This suggests 32B may be under-escalating in its reasoning."
+        )
+
+    # Identify specific body region patterns
+    for region, ratios in analysis["escalation_ratio_by_body_region"].items():
+        if ratios["over_ratio"] > 0.6:
+            analysis["reasoning_based_insights"].append(
+                f"32B over-escalates in {region} region ({ratios['over_ratio']:.0%} of cases). "
+                f"Consider adjusting confidence thresholds for this region."
+            )
+        elif ratios["under_ratio"] > 0.6:
+            analysis["reasoning_based_insights"].append(
+                f"32B under-escalates in {region} region ({ratios['under_ratio']:.0%} of cases). "
+                f"Consider adjusting confidence thresholds for this region."
+            )
+
+    # Identify severity patterns
+    for severity, ratios in analysis["escalation_ratio_by_severity"].items():
+        if ratios["over_ratio"] > 0.6:
+            analysis["reasoning_based_insights"].append(
+                f"32B over-escalates at {severity} severity ({ratios['over_ratio']:.0%} of cases). "
+                f"Review urgency reasoning for this severity level."
+            )
+        elif ratios["under_ratio"] > 0.6:
+            analysis["reasoning_based_insights"].append(
+                f"32B under-escalates at {severity} severity ({ratios['under_ratio']:.0%} of cases). "
+                f"Review urgency reasoning for this severity level."
+            )
+
+    # Generate recommended threshold adjustments (reasoning output focus only)
+    for region, ratios in analysis["escalation_ratio_by_body_region"].items():
+        if ratios["total_cases"] >= 5:  # Only suggest if we have enough data
+            if ratios["over_ratio"] > 0.5:
+                analysis["recommended_threshold_adjustments"].append({
+                    "dimension": "body_region",
+                    "value": region,
+                    "adjustment_type": "increase_confidence_threshold",
+                    "current_over_rate": ratios["over_ratio"],
+                    "suggested_threshold_delta": 0.1,
+                    "rationale": f"32B over-escalates in {region} - increase threshold to require higher confidence before escalation"
+                })
+            elif ratios["under_ratio"] > 0.5:
+                analysis["recommended_threshold_adjustments"].append({
+                    "dimension": "body_region",
+                    "value": region,
+                    "adjustment_type": "decrease_confidence_threshold",
+                    "current_under_rate": ratios["under_ratio"],
+                    "suggested_threshold_delta": 0.1,
+                    "rationale": f"32B under-escalates in {region} - decrease threshold to enable earlier escalation"
+                })
+
+    # Compute pattern stability score
+    total_cases = len(shadow_cases)
+    if total_cases >= 10:
+        consistent_patterns = sum(
+            1 for region, data in body_region_escalation.items()
+            if data["total"] >= 3 and (data["over"] / data["total"] > 0.7 or data["under"] / data["total"] > 0.7)
+        )
+        analysis["pattern_stability_score"] = round(consistent_patterns / max(len(body_region_escalation), 1), 3)
+    else:
+        analysis["pattern_stability_score"] = 0.0
+        analysis["reasoning_based_insights"].append(
+            "Insufficient data for stable threshold recommendations. Continue shadow evaluation."
+        )
+
+    # Store in history
+    with STATE_LOCK:
+        THRESHOLD_TUNING_HISTORY.append(analysis)
+        if len(THRESHOLD_TUNING_HISTORY) > MAX_TUNING_HISTORY:
+            THRESHOLD_TUNING_HISTORY = THRESHOLD_TUNING_HISTORY[-MAX_TUNING_HISTORY:]
+
+    return analysis
+
+
+@app.get("/calibration/phase5-summary/{case_id}")
+async def get_phase5_shadow_calibration_summary(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get Phase 5 shadow calibration summary for a specific case.
+
+    Returns comprehensive calibration summary with clear promotion recommendation:
+    - keep_in_shadow: 32B should remain in shadow mode
+    - promote_cautiously: 32B can be promoted with monitoring
+    - block_promotion: 32B should not be promoted
+
+    Includes disagreement patterns, FP/FN autopsies, ambiguity type,
+    confidence bands, and body region/severity/image quality/temporal trends.
+    """
+    validate_auth(authorization)
+
+    summary = _compute_phase5_shadow_calibration_summary(case_id)
+
+    return {
+        "summary": summary,
+        "endpoints": {
+            "threshold_insights": "/calibration/threshold-insights",
+            "cross_case_analysis": "/intelligence/analyze-all",
+            "promotion_readiness": f"/intelligence/promotion-readiness/{case_id}"
+        }
+    }
+
+
+@app.get("/calibration/threshold-insights")
+async def get_threshold_tuning_insights(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get threshold tuning insights for 32B model.
+
+    Analyzes where 32B is over-escalating or under-escalating based on
+    reasoning output patterns. Does NOT change deployment logic.
+
+    Returns:
+    - Over-escalation patterns by body region, severity, image quality
+    - Under-escalation patterns by body region, severity, image quality
+    - Reasoning-based insights
+    - Recommended threshold adjustments (reasoning output focus only)
+    - Pattern stability scores
+    """
+    validate_auth(authorization)
+
+    insights = _analyze_reasoning_output_escalation_patterns()
+
+    return {
+        "insights": insights,
+        "note": "These insights focus on reasoning output analysis. "
+                "No deployment logic changes are made.",
+        "interpretation_guide": {
+            "over_escalation": "32B is more confident/urgent than 7B - may indicate false positive tendency",
+            "under_escalation": "32B is less confident/urgent than 7B - may indicate false negative tendency",
+            "positive_delta": "32B confidence - 7B confidence > 0.15 indicates over-escalation",
+            "negative_delta": "32B confidence - 7B confidence < -0.15 indicates under-escalation"
+        }
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8084)
