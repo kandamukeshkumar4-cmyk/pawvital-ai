@@ -44,23 +44,6 @@ function runNodeScript(scriptPath, args = []) {
   run(nodeBin, [scriptPath, ...args]);
 }
 
-function getCurrentGitSha() {
-  const result = spawnSync("git", ["rev-parse", "HEAD"], {
-    cwd: rootDir,
-    stdio: ["ignore", "pipe", "pipe"],
-    encoding: "utf8",
-    shell: false,
-  });
-  if (result.status !== 0) {
-    throw new Error(`git rev-parse HEAD exited with ${result.status ?? 1}`);
-  }
-  const sha = result.stdout.trim();
-  if (!sha) {
-    throw new Error("Unable to determine current git SHA");
-  }
-  return sha;
-}
-
 function readPods() {
   if (!fs.existsSync(podsPath)) {
     return {};
@@ -125,50 +108,139 @@ async function waitForHealthy() {
   throw new Error("Timed out waiting for RunPod services to become healthy");
 }
 
-async function waitForProductionDeployment() {
-  const token = process.env.VERCEL_TOKEN || "";
+async function getVercelTeamContext(token) {
+  const userResponse = await fetch(`https://api.vercel.com/v2/user`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const userText = await userResponse.text();
+  if (!userResponse.ok) {
+    throw new Error(`Unable to read Vercel user info: HTTP ${userResponse.status} ${userText.slice(0, 120)}`);
+  }
+
+  let userBody = null;
+  try {
+    userBody = userText ? JSON.parse(userText) : null;
+  } catch {
+    throw new Error("Unable to parse Vercel user response");
+  }
+
+  const teamId = userBody?.user?.defaultTeamId || "";
+  if (!teamId) {
+    throw new Error("Unable to determine Vercel default team id");
+  }
+
+  const teamResponse = await fetch(`https://api.vercel.com/v2/teams/${teamId}`, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const teamText = await teamResponse.text();
+  if (!teamResponse.ok) {
+    throw new Error(`Unable to read Vercel team info: HTTP ${teamResponse.status} ${teamText.slice(0, 120)}`);
+  }
+
+  let teamBody = null;
+  try {
+    teamBody = teamText ? JSON.parse(teamText) : null;
+  } catch {
+    throw new Error("Unable to parse Vercel team response");
+  }
+
+  const teamSlug = teamBody?.slug || "";
+  if (!teamSlug) {
+    throw new Error("Unable to determine Vercel team slug");
+  }
+
+  return { teamId, teamSlug };
+}
+
+async function fetchVercelDeployments(token) {
   const projectId = process.env.VERCEL_PROJECT_ID || "pawvital-ai";
   const teamId = process.env.VERCEL_TEAM_ID || "";
+  const url = teamId
+    ? `https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&limit=5&teamId=${encodeURIComponent(teamId)}`
+    : `https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&limit=5`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Unable to read Vercel deployments: HTTP ${response.status} ${text.slice(0, 120)}`);
+  }
+
+  try {
+    const body = text ? JSON.parse(text) : null;
+    return Array.isArray(body?.deployments) ? body.deployments : [];
+  } catch {
+    throw new Error("Unable to parse Vercel deployments response");
+  }
+}
+
+async function redeployLatestProductionDeployment() {
+  const token = process.env.VERCEL_TOKEN || "";
+  if (!token) {
+    console.log("[phase5] skipping Vercel redeploy (no VERCEL_TOKEN)");
+    return null;
+  }
+
+  const { teamId, teamSlug } = await getVercelTeamContext(token);
+  const deployments = await fetchVercelDeployments(token);
+  const latest = deployments[0];
+  if (!latest?.id) {
+    throw new Error("Unable to find a production deployment to redeploy");
+  }
+
+  const redeployUrl = `https://api.vercel.com/v13/deployments?teamId=${encodeURIComponent(teamId)}&slug=${encodeURIComponent(teamSlug)}`;
+  const response = await fetch(redeployUrl, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      deploymentId: latest.id,
+      name: latest.name || "pawvital-ai",
+      project: latest.name || "pawvital-ai",
+      target: "production",
+      withLatestCommit: true,
+    }),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Unable to request Vercel redeploy: HTTP ${response.status} ${text.slice(0, 160)}`);
+  }
+
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    throw new Error("Unable to parse Vercel redeploy response");
+  }
+}
+
+async function waitForProductionDeployment(targetDeploymentId) {
+  const token = process.env.VERCEL_TOKEN || "";
 
   if (!token) {
     console.log("[phase5] skipping Vercel deployment wait (no VERCEL_TOKEN)");
     return;
   }
 
-  const currentSha = getCurrentGitSha();
-  const baseUrl = teamId
-    ? `https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&limit=5&teamId=${encodeURIComponent(teamId)}`
-    : `https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&limit=5`;
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    const response = await fetch(baseUrl, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const raw = await response.text();
-    let body = null;
-    try {
-      body = raw ? JSON.parse(raw) : null;
-    } catch {
-      body = raw;
-    }
-
-    if (!response.ok) {
-      console.log(`[phase5] deployment snapshot -> HTTP ${response.status}`);
-      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-      continue;
-    }
-
-    const deployments = Array.isArray(body?.deployments) ? body.deployments : [];
+    const deployments = await fetchVercelDeployments(token);
+    const target = deployments.find((deployment) => deployment?.id === targetDeploymentId);
     const latest = deployments[0];
-    const latestSha = latest?.meta?.githubCommitSha || "";
-    const latestState = latest?.state || "unknown";
-    const latestReadyState = latest?.readyState || "unknown";
-    console.log(`[phase5] deployment snapshot -> ${latestSha || "no-sha"}:${latestState}/${latestReadyState}`);
+    const latestDescriptor = `${latest?.id || "no-id"}:${latest?.state || "unknown"}/${latest?.readyState || "unknown"}`;
+    const targetDescriptor = target
+      ? `${target.id}:${target.state || "unknown"}/${target.readyState || "unknown"}`
+      : `missing:${targetDeploymentId}`;
+    console.log(`[phase5] deployment snapshot -> latest ${latestDescriptor}; target ${targetDescriptor}`);
 
-    if (latestSha === currentSha && latestState === "READY" && latestReadyState === "READY") {
-      return latest;
+    if (target && target.state === "READY" && target.readyState === "READY") {
+      return target;
     }
 
     await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
@@ -214,8 +286,11 @@ async function main() {
     console.log("[phase5] wiring live pod URLs into Vercel");
     runNodeScript("scripts/runpod-health-and-wire.mjs", ["--wire"]);
 
+    console.log("[phase5] requesting Vercel production redeploy");
+    const redeploy = await redeployLatestProductionDeployment();
+
     console.log("[phase5] waiting for Vercel production deployment");
-    await waitForProductionDeployment();
+    await waitForProductionDeployment(redeploy?.id || "");
 
     console.log("[phase5] running shadow validation report");
     runNodeScript("scripts/report-phase5-shadow.mjs");
