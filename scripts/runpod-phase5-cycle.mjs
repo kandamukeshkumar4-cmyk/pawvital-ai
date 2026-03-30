@@ -8,6 +8,11 @@ const podsPath = path.join(rootDir, "deploy", "runpod", "pods.json");
 const nodeBin = process.execPath;
 const pollIntervalMs = 20_000;
 const timeoutMs = 45 * 60_000;
+const phase5BudgetUsdRaw = process.env.RUNPOD_PHASE5_BUDGET_USD || process.env.RUNPOD_BUDGET_USD || "";
+const phase5BudgetUsd = Number(phase5BudgetUsdRaw);
+const phase5StopAtRemainingPctRaw =
+  process.env.RUNPOD_STOP_AT_REMAINING_PCT || process.env.RUNPOD_PHASE5_STOP_AT_REMAINING_PCT || "1";
+const phase5StopAtRemainingPct = Number(phase5StopAtRemainingPctRaw);
 
 function loadEnvFiles() {
   for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
@@ -49,6 +54,110 @@ function readPods() {
     return {};
   }
   return JSON.parse(fs.readFileSync(podsPath, "utf8"));
+}
+
+function formatUsd(amount) {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) {
+    return "$0.00";
+  }
+  return `$${value.toFixed(2)}`;
+}
+
+function getTrackedPodIds() {
+  const pods = readPods();
+  return Array.from(
+    new Set(
+      Object.values(pods)
+        .map((pod) => pod?.pod_id)
+        .filter((podId) => typeof podId === "string" && podId.length > 0)
+    )
+  );
+}
+
+async function fetchBillingRecordsForPod(podId, startTimeIso, endTimeIso) {
+  const params = new URLSearchParams({
+    bucketSize: "hour",
+    grouping: "podId",
+    podId,
+    startTime: startTimeIso,
+    endTime: endTimeIso,
+  });
+
+  const response = await fetch(`https://rest.runpod.io/v1/billing/pods?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${process.env.RUNPOD_API_KEY || ""}`,
+    },
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Unable to read RunPod billing for ${podId}: HTTP ${response.status} ${text.slice(0, 120)}`);
+  }
+
+  try {
+    const body = text ? JSON.parse(text) : null;
+    return Array.isArray(body) ? body : [];
+  } catch {
+    throw new Error(`Unable to parse RunPod billing response for ${podId}`);
+  }
+}
+
+async function getPhase5SpendSnapshot(cycleStartIso) {
+  const budgetUsd = Number.isFinite(phase5BudgetUsd) && phase5BudgetUsd > 0 ? phase5BudgetUsd : 0;
+  if (budgetUsd <= 0) {
+    return { enabled: false, budgetUsd: 0, spentUsd: 0, remainingUsd: 0, remainingPct: 100, breakdown: [] };
+  }
+
+  const podIds = getTrackedPodIds();
+  const endTimeIso = new Date().toISOString();
+  const breakdown = [];
+  let spentUsd = 0;
+
+  for (const podId of podIds) {
+    const records = await fetchBillingRecordsForPod(podId, cycleStartIso, endTimeIso);
+    const podSpentUsd = records.reduce((sum, record) => sum + Number(record?.amount || 0), 0);
+    spentUsd += podSpentUsd;
+    breakdown.push({ podId, spentUsd: podSpentUsd, records: records.length });
+  }
+
+  const remainingUsd = Math.max(0, budgetUsd - spentUsd);
+  const remainingPct = budgetUsd > 0 ? (remainingUsd / budgetUsd) * 100 : 0;
+
+  return { enabled: true, budgetUsd, spentUsd, remainingUsd, remainingPct, breakdown };
+}
+
+async function maybeStopForBudget(stage, cycleStartIso) {
+  if (!Number.isFinite(phase5BudgetUsd) || phase5BudgetUsd <= 0) {
+    if (stage === "preflight") {
+      console.log("[phase5] budget guard disabled (set RUNPOD_PHASE5_BUDGET_USD or RUNPOD_BUDGET_USD to enable)");
+    }
+    return false;
+  }
+
+  const snapshot = await getPhase5SpendSnapshot(cycleStartIso);
+  const breakdown = snapshot.breakdown.length
+    ? snapshot.breakdown.map((entry) => `${entry.podId}:${formatUsd(entry.spentUsd)}`).join(", ")
+    : "no-active-pods";
+
+  console.log(
+    `[phase5] budget snapshot @ ${stage} -> spent ${formatUsd(snapshot.spentUsd)} / ${formatUsd(snapshot.budgetUsd)} ` +
+      `(remaining ${formatUsd(snapshot.remainingUsd)}; ${snapshot.remainingPct.toFixed(1)}%) [${breakdown}]`
+  );
+
+  if (snapshot.remainingPct <= phase5StopAtRemainingPct) {
+    console.warn(
+      `[phase5] remaining budget at or below ${phase5StopAtRemainingPct.toFixed(1)}% - stopping RunPod now`
+    );
+    try {
+      runNodeScript("scripts/runpod-health-and-wire.mjs", ["--stop-all"]);
+    } catch (error) {
+      console.error("[phase5] budget stop failed:", error instanceof Error ? error.message : String(error));
+    }
+    return true;
+  }
+
+  return false;
 }
 
 function buildHealthTargets() {
@@ -251,6 +360,11 @@ async function waitForProductionDeployment(targetDeploymentId) {
 
 async function main() {
   loadEnvFiles();
+  const cycleStartIso = new Date().toISOString();
+
+  if (await maybeStopForBudget("preflight", cycleStartIso)) {
+    return;
+  }
 
   const currentTargets = buildHealthTargets();
   const currentHealth = await Promise.all(
@@ -283,8 +397,16 @@ async function main() {
       console.log("[phase5] pods already healthy, skipping provisioning");
     }
 
+    if (await maybeStopForBudget("post-health", cycleStartIso)) {
+      return;
+    }
+
     console.log("[phase5] wiring live pod URLs into Vercel");
     runNodeScript("scripts/runpod-health-and-wire.mjs", ["--wire"]);
+
+    if (await maybeStopForBudget("post-wire", cycleStartIso)) {
+      return;
+    }
 
     console.log("[phase5] requesting Vercel production redeploy");
     const redeploy = await redeployLatestProductionDeployment();
@@ -292,8 +414,14 @@ async function main() {
     console.log("[phase5] waiting for Vercel production deployment");
     await waitForProductionDeployment(redeploy?.id || "");
 
+    if (await maybeStopForBudget("post-redeploy", cycleStartIso)) {
+      return;
+    }
+
     console.log("[phase5] running shadow validation report");
     runNodeScript("scripts/report-phase5-shadow.mjs");
+
+    await maybeStopForBudget("post-report", cycleStartIso);
 
     console.log("[phase5] phase 5 cycle complete");
   } finally {
