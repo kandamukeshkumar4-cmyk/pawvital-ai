@@ -1,0 +1,163 @@
+version: "3.9"
+
+services:
+  caddy:
+    image: caddy:2.10.2
+    restart: unless-stopped
+    depends_on:
+      - vision-preprocess-service
+      - text-retrieval-service
+      - image-retrieval-service
+      - multimodal-consult-service
+      - async-review-service
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SIDECAR_BASE_DOMAIN: ${SIDECAR_BASE_DOMAIN:?Set SIDECAR_BASE_DOMAIN in sidecars.env}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  vision-preprocess-service:
+    build:
+      context: ../../services/vision-preprocess-service
+    restart: unless-stopped
+    env_file:
+      - ./sidecars.env
+    environment:
+      SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
+      STUB_MODE: ${VISION_PREPROCESS_STUB_MODE:-false}
+    expose:
+      - "8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  text-retrieval-service:
+    build:
+      context: ../../services/text-retrieval-service
+    restart: unless-stopped
+    env_file:
+      - ./sidecars.env
+    environment:
+      SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
+      STUB_MODE: ${TEXT_RETRIEVAL_STUB_MODE:-false}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_TIMEOUT_SECONDS: ${SUPABASE_TIMEOUT_SECONDS:-8}
+      TEXT_MODEL_ENABLED: ${TEXT_MODEL_ENABLED:-true}
+      TEXT_EMBED_MODEL_NAME: ${TEXT_EMBED_MODEL_NAME:-BAAI/bge-m3}
+      TEXT_RERANK_MODEL_NAME: ${TEXT_RERANK_MODEL_NAME:-BAAI/bge-reranker-v2-m3}
+      TEXT_MODEL_MAX_CANDIDATES: ${TEXT_MODEL_MAX_CANDIDATES:-24}
+    expose:
+      - "8081"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  image-retrieval-service:
+    build:
+      context: ../../services/image-retrieval-service
+    restart: unless-stopped
+    env_file:
+      - ./sidecars.env
+    environment:
+      SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
+      STUB_MODE: ${IMAGE_RETRIEVAL_STUB_MODE:-false}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      SUPABASE_TIMEOUT_SECONDS: ${SUPABASE_TIMEOUT_SECONDS:-8}
+      IMAGE_MODEL_ENABLED: ${IMAGE_MODEL_ENABLED:-true}
+      IMAGE_RETRIEVAL_MODEL_NAME: ${IMAGE_RETRIEVAL_MODEL_NAME:-microsoft/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224}
+      IMAGE_MODEL_MAX_ASSETS: ${IMAGE_MODEL_MAX_ASSETS:-12}
+      IMAGE_FETCH_TIMEOUT_SECONDS: ${IMAGE_FETCH_TIMEOUT_SECONDS:-6}
+    expose:
+      - "8082"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/healthz', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  multimodal-consult-service:
+    build:
+      context: ../../services/multimodal-consult-service
+    restart: unless-stopped
+    env_file:
+      - ./sidecars.env
+    environment:
+      SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
+      STUB_MODE: ${MULTIMODAL_CONSULT_STUB_MODE:-true}
+    expose:
+      - "8083"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/healthz', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  async-review-service:
+    build:
+      context: ../../services/async-review-service
+    restart: unless-stopped
+    env_file:
+      - ./sidecars.env
+    environment:
+      SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
+      STUB_MODE: ${ASYNC_REVIEW_STUB_MODE:-true}
+      MAX_CALLBACK_RETRIES: ${MAX_CALLBACK_RETRIES:-3}
+      CALLBACK_RETRY_DELAY_SECONDS: ${CALLBACK_RETRY_DELAY_SECONDS:-5}
+      MAX_SHADOW_HISTORY: ${MAX_SHADOW_HISTORY:-1000}
+    expose:
+      - "8084"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8084/healthz', timeout=5).read()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  caddy_data:
+  caddy_config:
