@@ -2278,6 +2278,15 @@ class EnhancedCaseComparisonResponse(BaseModel):
     most_valuable_clarifications: list[dict] = Field(default_factory=list)
     deep_uncertainty_narrative: dict = Field(default_factory=dict)
     evolution_summary: str = Field(default="", description="Natural-language summary of how the differential evolved")
+    # Phase 5: Enhanced longitudinal reasoning fields
+    confidence_shift_narrative: dict = Field(
+        default_factory=dict,
+        description="Phase 5: Natural-language explanation of what changed confidence most"
+    )
+    highest_value_next_question: dict = Field(
+        default_factory=dict,
+        description="Phase 5: Which clarification question would most reduce uncertainty"
+    )
 
 
 @app.post("/compare-cases/enhanced", response_model=EnhancedCaseComparisonResponse)
@@ -2383,6 +2392,9 @@ async def enhanced_case_comparison(
     most_valuable_clarifications: list[dict] = []
     deep_uncertainty_narrative: dict = {}
     evolution_summary = ""
+    # Phase 5: Enhanced longitudinal reasoning
+    confidence_shift_narrative: dict = {}
+    highest_value_next_question: dict = {}
     
     if include_uncertainty:
         # Extract uncertainty sources
@@ -2428,6 +2440,23 @@ async def enhanced_case_comparison(
             confidence_shift_points,
             most_valuable_clarifications,
         )
+        
+        # Phase 5: Enhanced longitudinal reasoning - confidence shift narrative
+        differential_evolution_dicts = [dict(record) for record in evolution_models]
+        confidence_shift_narrative = _build_confidence_shift_narrative(
+            differential_evolution_dicts,
+            confidence_shift_points,
+            uncertainties,
+        )
+        
+        # Phase 5: Highest value next question tied to differential evolution
+        highest_value_question = _compute_highest_value_next_question(
+            differential_evolution_dicts,
+            confidence_shift_points,
+            uncertainty_metrics.primary_uncertainty_drivers,
+            confidence,
+        )
+        
         deep_uncertainty_narrative = _build_deep_uncertainty_narrative(
             case_context,
             image_quality,
@@ -2476,7 +2505,203 @@ async def enhanced_case_comparison(
         most_valuable_clarifications=most_valuable_clarifications,
         deep_uncertainty_narrative=deep_uncertainty_narrative,
         evolution_summary=evolution_summary,
+        # Phase 5: Enhanced longitudinal reasoning
+        confidence_shift_narrative=confidence_shift_narrative,
+        highest_value_next_question=highest_value_question,
     )
+
+
+# =============================================================================
+# Phase 5: Enhanced Longitudinal Reasoning
+# =============================================================================
+
+def _build_confidence_shift_narrative(
+    evolution: list[dict],
+    shift_points: list[dict],
+    uncertainties: list[str]
+) -> dict[str, Any]:
+    """
+    Build Phase 5 natural-language narrative explaining what changed confidence most
+    and what evidence caused the shift.
+    
+    Produces:
+    - primary_shift_narrative: What changed confidence most
+    - evidence_causing_shift: What evidence caused the largest shift
+    - secondary_shifts: Other significant shifts
+    - natural_language_summary: Comprehensive explanation
+    """
+    narrative = {
+        "primary_shift_narrative": "",
+        "evidence_causing_shift": [],
+        "secondary_shifts": [],
+        "natural_language_summary": "",
+        "largest_shift_magnitude": 0.0,
+        "largest_shift_direction": "none",
+    }
+    
+    if not shift_points:
+        narrative["primary_shift_narrative"] = (
+            "No significant confidence shifts detected across the consultation sequence. "
+            "Confidence remained stable, indicating consistent diagnostic reasoning."
+        )
+        narrative["natural_language_summary"] = narrative["primary_shift_narrative"]
+        return narrative
+    
+    # Primary shift (largest magnitude)
+    primary = shift_points[0]
+    narrative["largest_shift_magnitude"] = primary["magnitude"]
+    narrative["largest_shift_direction"] = primary["direction"]
+    
+    # Build primary narrative
+    if primary["differential_changed"]:
+        narrative["primary_shift_narrative"] = (
+            f"The largest confidence shift ({primary['magnitude']:+.0%}) occurred at timepoint {primary['position']}. "
+            f"The leading differential changed from '{primary.get('previous_leading', 'N/A')}' "
+            f"to '{primary.get('leading_differential', 'N/A')}'. "
+            f"{primary.get('cause_analysis', '')}"
+        )
+    else:
+        narrative["primary_shift_narrative"] = (
+            f"The largest confidence shift ({primary['magnitude']:+.0%}) occurred at timepoint {primary['position']}. "
+            f"Confidence in '{primary.get('leading_differential', 'unknown')}' "
+            f"{primary['direction']} without a differential change. "
+            f"{primary.get('cause_analysis', '')}"
+        )
+    
+    # Evidence causing shift
+    evidence = primary.get("evidence_at_shift", [])
+    if evidence:
+        narrative["evidence_causing_shift"] = evidence[:3]  # Top 3 pieces of evidence
+    
+    # Secondary shifts
+    if len(shift_points) > 1:
+        for shift in shift_points[1:3]:  # Next 2 most significant
+            secondary = {
+                "position": shift["position"],
+                "magnitude": shift["magnitude"],
+                "direction": shift["direction"],
+                "differential": shift.get("leading_differential", "unknown"),
+                "summary": f"Shift of {shift['magnitude']:+.0%} at position {shift['position']}"
+            }
+            narrative["secondary_shifts"].append(secondary)
+    
+    # Full natural language summary
+    n_shifts = len(shift_points)
+    if n_shifts == 1:
+        narrative["natural_language_summary"] = (
+            f"One significant confidence shift detected. "
+            f"{narrative['primary_shift_narrative']} "
+            f"{len(evidence)} evidence items contributed to this shift."
+        )
+    else:
+        narrative["natural_language_summary"] = (
+            f"{n_shifts} significant confidence shifts detected across the consultation sequence. "
+            f"Primary shift ({primary['magnitude']:+.0%}): {narrative['primary_shift_narrative']} "
+            f"Secondary shifts: {'; '.join(s['summary'] for s in narrative['secondary_shifts'])}. "
+            f"This pattern suggests {'rapid diagnostic refinement' if primary['direction'] == 'increased' else 'emerging diagnostic complexity'} "
+            f"as the consultation progressed."
+        )
+    
+    return narrative
+
+
+def _compute_highest_value_next_question(
+    evolution: list[dict],
+    shift_points: list[dict],
+    uncertainty_drivers: list[str],
+    current_confidence: float
+) -> dict[str, Any]:
+    """
+    Phase 5: Compute which single clarification question would most reduce
+    uncertainty, directly tied to the differential evolution pattern.
+    
+    Returns:
+    - question: The highest value question
+    - rationale: Why this question specifically
+    - estimated_uncertainty_reduction: Expected improvement (0-1)
+    - tied_to_shift: Which confidence shift this addresses
+    """
+    result = {
+        "question": "",
+        "rationale": "",
+        "estimated_uncertainty_reduction": 0.0,
+        "tied_to_shift": None,
+        "category": "unknown",
+    }
+    
+    if not shift_points and not uncertainty_drivers:
+        result["question"] = "What additional clinical context or history can be provided to refine the differential diagnosis?"
+        result["rationale"] = "No specific uncertainty drivers identified. General context clarification recommended."
+        result["estimated_uncertainty_reduction"] = 0.15
+        return result
+    
+    # Primary shift analysis
+    if shift_points:
+        primary = shift_points[0]
+        shift_position = primary["position"]
+        shift_direction = primary["direction"]
+        differential = primary.get("leading_differential", "")
+        
+        # If confidence increased, we understood something - ask about what we might have missed
+        if shift_direction == "increased":
+            result["question"] = (
+                f"Can you provide additional context about '{differential}' that would confirm "
+                f"this diagnosis? Specifically, any relevant history or progression details?"
+            )
+            result["rationale"] = (
+                f"Confidence increased when '{differential}' emerged. "
+                f"Confirming evidence would solidify this shift and reduce remaining uncertainty."
+            )
+            result["estimated_uncertainty_reduction"] = 0.20
+            result["tied_to_shift"] = f"position_{shift_position}_{differential}"
+            result["category"] = "confidence_building"
+        
+        # If confidence decreased, we're uncertain - ask what we need to know
+        else:
+            result["question"] = (
+                f"What additional findings or history would help distinguish between "
+                f"competing differentials at the current timepoint?"
+            )
+            result["rationale"] = (
+                f"Confidence decreased at position {shift_position}, indicating emerging uncertainty. "
+                f"Clarification would help resolve the competing diagnostic possibilities."
+            )
+            result["estimated_uncertainty_reduction"] = 0.25
+            result["tied_to_shift"] = f"position_{shift_position}_uncertainty"
+            result["category"] = "uncertainty_resolution"
+    
+    # Tie to specific uncertainty drivers
+    if uncertainty_drivers and result["estimated_uncertainty_reduction"] < 0.2:
+        top_driver = uncertainty_drivers[0] if uncertainty_drivers else "knowledge_gaps"
+        
+        driver_question_map = {
+            "knowledge_gaps": "Can additional diagnostic testing (biopsy, cytology, bloodwork) be performed to address knowledge gaps?",
+            "image_quality": "Can higher quality or additional imaging angles be obtained?",
+            "temporal_context": "What is the timeline of symptom progression? When did changes first appear?",
+            "sequence_position": "Are there additional images from other timepoints for comparison?",
+            "follow_up_trajectory": "Has any treatment been initiated? What has been the response so far?",
+        }
+        
+        result["question"] = driver_question_map.get(top_driver, driver_question_map["knowledge_gaps"])
+        result["rationale"] = (
+            f"Primary uncertainty driver is '{top_driver.replace('_', ' ')}'. "
+            f"Addressing this specific gap would have the highest impact on reducing uncertainty."
+        )
+        result["estimated_uncertainty_reduction"] = 0.18
+        result["category"] = f"driver_specific_{top_driver}"
+    
+    # Confidence-based adjustment
+    if current_confidence < 0.5 and result["estimated_uncertainty_reduction"] < 0.25:
+        result["estimated_uncertainty_reduction"] = 0.25
+        result["question"] = (
+            "Given low confidence, what is the most urgent clinical concern to address first?"
+        )
+        result["rationale"] = (
+            "Current confidence is low. Prioritizing the most urgent concern would "
+            "provide the clearest path forward."
+        )
+    
+    return result
 
 
 @app.get("/uncertainty/discipline-report")
