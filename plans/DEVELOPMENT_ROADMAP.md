@@ -104,7 +104,6 @@ That means:
 - Vercel production now has the shared sidecar auth secret aligned, and guarded readiness / shadow routes respond correctly on the live app
 - Vercel production now also has `HF_VISION_PREPROCESS_URL` configured, and the live app reports `configured=1, healthy=1` on `/api/ai/sidecar-readiness`
 - the current Phase 4 blocker is now explicit: only `vision-preprocess-service` is Vercel-deployable as-is; the other four sidecars exceed Vercel's Python/Lambda storage ceiling and need a different hosting target or slimmer runtimes before their `HF_*_URL` vars can be wired
-- the repo now includes a Docker-native alternative-host bundle under `deploy/sidecars-gpu-host` so the heavy sidecars can move onto a single GPU/VM-style host without changing the app-side contract
 
 ## What Is Live In The Repo Right Now
 
@@ -208,7 +207,6 @@ To move faster without breaking `master`, parallel work should follow explicit f
 - Phase 4 prep now has an executable deployment-readiness script for sidecar env and `/healthz` verification.
 - Phase 4 prep now has an executable Vercel production env audit so missing `HF_*` sidecar URLs are reported directly instead of being discovered manually.
 - Phase 4 now has a Vercel env sync script so once real sidecar endpoint URLs exist they can be pushed into production in one step instead of being entered manually.
-- Phase 4 now also has a heavy-sidecar host bundle with subdomain routing plus a URL-render helper so generated `HF_*_URL` values stay aligned with the service registry.
 - Phase 4 verification now also has a dedicated shadow-route probe command for checking the guarded app-side rollout summary path.
 - Phase 4 now also has a deployment runbook covering env ownership, rollout order, shadow-mode promotion, and rollback.
 - Shadow-mode verification now has a session-level rollout summary helper that turns sidecar observations into per-service promotion status (`ready`, `watch`, `blocked`, `insufficient_data`).
