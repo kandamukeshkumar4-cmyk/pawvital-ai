@@ -5,8 +5,7 @@ import { spawnSync } from "node:child_process";
 
 const rootDir = process.cwd();
 const podsPath = path.join(rootDir, "deploy", "runpod", "pods.json");
-const isWin = process.platform === "win32";
-const npmBin = isWin ? "npm.cmd" : "npm";
+const nodeBin = process.execPath;
 const pollIntervalMs = 20_000;
 const timeoutMs = 45 * 60_000;
 
@@ -41,8 +40,8 @@ function run(command, args, options = {}) {
   }
 }
 
-function npmRun(scriptName) {
-  run(npmBin, ["run", scriptName]);
+function runNodeScript(scriptPath, args = []) {
+  run(nodeBin, [scriptPath, ...args]);
 }
 
 function readPods() {
@@ -130,11 +129,11 @@ async function main() {
     if (!isFullyHealthy) {
       if (!consultHealthy) {
         console.log("[phase5] provisioning consult pod");
-        npmRun("runpod:provision:consult");
+        runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-consult"]);
       }
       if (!reviewHealthy) {
         console.log("[phase5] provisioning review pod");
-        npmRun("runpod:provision:review");
+        runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-review"]);
       }
 
       console.log("[phase5] waiting for pod health");
@@ -144,13 +143,13 @@ async function main() {
     }
 
     console.log("[phase5] running shadow validation report");
-    npmRun("phase5:report");
+    runNodeScript("scripts/report-phase5-shadow.mjs");
 
     console.log("[phase5] phase 5 cycle complete");
   } finally {
     console.log("[phase5] stopping pods");
     try {
-      npmRun("runpod:stop:all");
+      runNodeScript("scripts/runpod-health-and-wire.mjs", ["--stop-all"]);
     } catch (error) {
       console.error("[phase5] stop failed:", error instanceof Error ? error.message : String(error));
     }
