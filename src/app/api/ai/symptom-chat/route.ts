@@ -2824,6 +2824,11 @@ function coerceAnswerForQuestion(
   }
 
   if (question.data_type === "choice") {
+    const intentChoice = coerceChoiceAnswerFromIntent(questionId, message);
+    if (intentChoice !== null) {
+      return intentChoice;
+    }
+
     if (questionId === "wound_discharge") {
       if (/(^|\b)(no|none|nothing|dry)\b/.test(lower)) return "none";
       if (lower.includes("clear")) return "clear_fluid";
@@ -2866,6 +2871,169 @@ function coerceAnswerForQuestion(
   }
 
   return message;
+}
+
+function normalizeChoiceLabel(choice: string): string {
+  return String(choice).toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function pickChoiceByPriority(
+  choices: readonly string[] | undefined,
+  keywordGroups: string[][]
+): string | null {
+  if (!Array.isArray(choices) || choices.length === 0) {
+    return null;
+  }
+
+  const normalizedChoices = choices.map((choice) => ({
+    choice,
+    normalized: normalizeChoiceLabel(choice),
+  }));
+
+  for (const keywordGroup of keywordGroups) {
+    const matchedChoice = normalizedChoices.find(({ normalized }) =>
+      keywordGroup.every((keyword) => normalized.includes(keyword))
+    );
+    if (matchedChoice) {
+      return matchedChoice.choice;
+    }
+  }
+
+  return null;
+}
+
+function isShortAffirmativeResponse(lower: string): boolean {
+  return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely)$/.test(
+    lower.trim().replace(/[.!?]+$/g, "")
+  );
+}
+
+function isShortNegativeResponse(lower: string): boolean {
+  return /^(no|nope|nah|not really|not at all|no way|no thanks|no it's not|no isnt it|not)$/.test(
+    lower.trim().replace(/[.!?]+$/g, "")
+  );
+}
+
+function isStrongWaterNegativeResponse(lower: string): boolean {
+  return /\b(not drinking|won't drink|wont drink|refusing water|no water|nothing to drink)\b/.test(
+    lower
+  );
+}
+
+function isNormalityQuestion(question: {
+  question_text?: string;
+  choices?: readonly string[];
+}): boolean {
+  const questionText = String(question.question_text ?? "").toLowerCase();
+  return (
+    /\bnormal(?:ly)?|usual\b/.test(questionText) ||
+    (Array.isArray(question.choices) &&
+      question.choices.some((choice) => normalizeChoiceLabel(choice) === "normal"))
+  );
+}
+
+function coerceChoiceAnswerFromIntent(
+  questionId: string,
+  rawMessage: string
+): string | null {
+  const question = FOLLOW_UP_QUESTIONS[questionId];
+  if (!question || question.data_type !== "choice") {
+    return null;
+  }
+
+  const choices = Array.isArray(question.choices) ? question.choices : [];
+  if (choices.length === 0) {
+    return null;
+  }
+
+  const lower = rawMessage.trim().toLowerCase();
+  if (!lower) {
+    return null;
+  }
+
+  if (questionId === "water_intake") {
+    if (
+      /\b(drinking more|drinking a lot|very thirsty|constantly drinking|more water)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [
+        ["more", "usual"],
+        ["more"],
+        ["drinking", "more"],
+        ["thirsty"],
+      ]);
+    }
+
+    if (
+      /\b(drinking less|hardly drinking|less water|not much water|drinking a bit less)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [
+        ["less", "than", "usual"],
+        ["less"],
+        ["reduc"],
+        ["decreas"],
+      ]);
+    }
+
+    if (
+      /\b(drinking normally|water is normal|normal drinking|yes.*normal)\b/.test(lower)
+    ) {
+      return pickChoiceByPriority(choices, [["normal"], ["usual"]]);
+    }
+
+    if (isStrongWaterNegativeResponse(lower)) {
+      return pickChoiceByPriority(choices, [
+        ["not", "drink"],
+        ["not"],
+        ["none"],
+        ["absent"],
+      ]);
+    }
+  }
+
+  if (isShortAffirmativeResponse(lower)) {
+    const affirmativeChoice = pickChoiceByPriority(choices, [
+      ["normal"],
+      ["yes"],
+      ["true"],
+      ["present"],
+    ]);
+    if (affirmativeChoice !== null) {
+      return affirmativeChoice;
+    }
+  }
+
+  if (isShortNegativeResponse(lower)) {
+    const negativePriority = isNormalityQuestion(question)
+      ? [
+          ["less"],
+          ["reduc"],
+          ["decreas"],
+          ["not", "drink"],
+          ["not"],
+          ["none"],
+          ["absent"],
+          ["no"],
+          ["false"],
+        ]
+      : [
+          ["not", "drink"],
+          ["none"],
+          ["absent"],
+          ["less"],
+          ["reduc"],
+          ["decreas"],
+          ["not"],
+          ["no"],
+          ["false"],
+        ];
+    return pickChoiceByPriority(choices, negativePriority);
+  }
+
+  return null;
 }
 
 function coerceFallbackAnswerForPendingQuestion(
@@ -3255,22 +3423,7 @@ function extractGumColor(rawMessage: string): string | null {
 }
 
 function extractWaterIntake(rawMessage: string): string | null {
-  const lower = rawMessage.toLowerCase();
-
-  if (/\b(not drinking|won't drink|wont drink|refusing water|no water)\b/.test(lower)) {
-    return "not_drinking";
-  }
-  if (/\b(drinking more|drinking a lot|very thirsty|constantly drinking|more water)\b/.test(lower)) {
-    return "more_than_usual";
-  }
-  if (/\b(drinking less|hardly drinking|less water)\b/.test(lower)) {
-    return "less_than_usual";
-  }
-  if (/\b(drinking normally|water is normal|normal drinking)\b/.test(lower)) {
-    return "normal";
-  }
-
-  return null;
+  return coerceChoiceAnswerFromIntent("water_intake", rawMessage);
 }
 
 function extractConsciousnessLevel(rawMessage: string): string | null {
