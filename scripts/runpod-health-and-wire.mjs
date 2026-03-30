@@ -201,19 +201,24 @@ async function wireVercel(healthResults) {
   const baseUrl = VERCEL_TEAM_ID
     ? `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env?teamId=${VERCEL_TEAM_ID}`
     : `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env`;
+  const currentEnvList = await fetchJson(baseUrl, {
+    method: "GET",
+    headers: { Authorization: `Bearer ${VERCEL_TOKEN}` },
+  });
+  const existingByKey = new Map(
+    Array.isArray(currentEnvList.body?.envs)
+      ? currentEnvList.body.envs
+          .filter((env) => Array.isArray(env.target) && env.target.includes("production"))
+          .map((env) => [env.key, env])
+      : []
+  );
 
   for (const { key, value } of toSet) {
-    const r = await fetchJson(baseUrl, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, "Content-Type": "application/json" },
-      body: { key, value, type: "encrypted", target: ["production", "preview"] },
-    });
-    if (r.status === 200 || r.status === 201) {
-      statusLine("ok", `Vercel: set ${key}=${value}`);
-    } else if (r.status === 409) {
+    const existing = existingByKey.get(key);
+    if (existing?.id) {
       const patchUrl = VERCEL_TEAM_ID
-        ? `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env/${r.body?.existing?.id}?teamId=${VERCEL_TEAM_ID}`
-        : `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env/${r.body?.existing?.id}`;
+        ? `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env/${existing.id}?teamId=${VERCEL_TEAM_ID}`
+        : `https://api.vercel.com/v10/projects/${VERCEL_PROJECT_ID}/env/${existing.id}`;
       const pr = await fetchJson(patchUrl, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, "Content-Type": "application/json" },
@@ -221,7 +226,16 @@ async function wireVercel(healthResults) {
       });
       statusLine(pr.status < 300 ? "ok" : "fail", `Vercel PATCH ${key}: HTTP ${pr.status}`);
     } else {
-      statusLine("fail", `Vercel set ${key}: HTTP ${r.status} - ${JSON.stringify(r.body).slice(0, 120)}`);
+      const r = await fetchJson(baseUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, "Content-Type": "application/json" },
+        body: { key, value, type: "encrypted", target: ["production", "preview"] },
+      });
+      if (r.status === 200 || r.status === 201) {
+        statusLine("ok", `Vercel: set ${key}=${value}`);
+      } else {
+        statusLine("fail", `Vercel set ${key}: HTTP ${r.status} - ${JSON.stringify(r.body).slice(0, 120)}`);
+      }
     }
   }
 }
