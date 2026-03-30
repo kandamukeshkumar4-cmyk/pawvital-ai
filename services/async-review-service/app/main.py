@@ -27,9 +27,18 @@ from fastapi import FastAPI, HTTPException, Header, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from PIL import Image
-import torch
-from transformers import AutoProcessor, AutoModelForVision2Seq
-from qwen_vl_utils import process_vision_info
+
+try:
+    import torch
+    from transformers import AutoProcessor, AutoModelForVision2Seq
+    from qwen_vl_utils import process_vision_info
+    _TORCH_AVAILABLE = True
+except ImportError:
+    torch = None  # type: ignore[assignment]
+    AutoProcessor = None  # type: ignore[assignment,misc]
+    AutoModelForVision2Seq = None  # type: ignore[assignment,misc]
+    process_vision_info = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
 
 
 # =============================================================================
@@ -124,7 +133,7 @@ SEVERITY_SCORE_MAP = {
 MODEL_NAME = "Qwen/Qwen2.5-VL-32B-Instruct"
 MODEL = None
 PROCESSOR = None
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda" if (_TORCH_AVAILABLE and torch.cuda.is_available()) else "cpu"
 STUB_MODE = os.environ.get("STUB_MODE", "false").strip().lower() == "true"
 EXPECTED_API_KEY = os.environ.get("SIDECAR_API_KEY", "").strip()
 logger = logging.getLogger("async-review-service")
