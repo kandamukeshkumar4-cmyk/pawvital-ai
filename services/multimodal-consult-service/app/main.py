@@ -1406,6 +1406,359 @@ def _assess_chronological_reasoning_quality(
     return max(0.0, min(1.0, quality_score))
 
 
+# =============================================================================
+# Phase 5: Enhanced Longitudinal Reasoning for Multimodal Consult
+# =============================================================================
+
+def _generate_deep_uncertainty_narrative(
+    knowledge_uncertainty: float,
+    image_quality_uncertainty: float,
+    temporal_uncertainty: float,
+    sequence_uncertainty: float,
+    follow_up_uncertainty: float,
+    trajectory_clarity: float,
+    cross_image_agreement: float,
+    chronological_quality: float,
+    confidence_calibration: float,
+    primary_drivers: list[str],
+    previous_findings: list[dict] | None = None
+) -> dict[str, Any]:
+    """
+    Generate deep uncertainty narrative with Phase 5 enhancements.
+    
+    Provides comprehensive uncertainty analysis including:
+    - Specific evidence attribution
+    - What information would reduce uncertainty
+    - Confidence in the uncertainty assessment itself
+    - Actionable recommendations
+    
+    Returns:
+        - narrative: Human-readable uncertainty explanation
+        - uncertainty_sources: Ranked list of sources
+        - reduction_pathways: How uncertainty could be reduced
+        - assessment_confidence: Confidence in this assessment
+        - temporal_context_assessment: Longitudinal reasoning quality
+    """
+    result = {
+        "narrative": "",
+        "uncertainty_sources": [],
+        "reduction_pathways": [],
+        "assessment_confidence": "medium",
+        "temporal_context_assessment": {},
+        "evidence_gaps": [],
+        "recommended_actions": [],
+    }
+    
+    narrative_parts = []
+    
+    # Calculate total uncertainty
+    total_uncertainty = (
+        knowledge_uncertainty * 0.25 +
+        image_quality_uncertainty * 0.30 +
+        temporal_uncertainty * 0.20 +
+        sequence_uncertainty * 0.15 +
+        follow_up_uncertainty * 0.10
+    )
+    
+    # Rank uncertainty sources
+    sources = [
+        ("knowledge_gaps", knowledge_uncertainty, "Knowledge limitations in differential diagnosis"),
+        ("image_quality", image_quality_uncertainty, f"Image quality rated as {image_quality_uncertainty:.0%}"),
+        ("temporal_context", temporal_uncertainty, "Insufficient historical context for comparison"),
+        ("sequence_position", sequence_uncertainty, "Multi-image sequence position uncertainty"),
+        ("follow_up_trajectory", follow_up_uncertainty, f"Follow-up trajectory clarity: {trajectory_clarity:.0%}"),
+    ]
+    sources.sort(key=lambda x: x[1], reverse=True)
+    
+    result["uncertainty_sources"] = [
+        {
+            "source": s[0],
+            "magnitude": round(s[1], 3),
+            "description": s[2],
+            "priority": i + 1
+        }
+        for i, s in enumerate(sources)
+    ]
+    
+    # Identify evidence gaps
+    if image_quality_uncertainty > 0.3:
+        result["evidence_gaps"].append({
+            "gap": "image_quality",
+            "description": "Image quality is insufficient for reliable feature assessment",
+            "impact": "Cannot confidently validate visual findings",
+            "specific_missing": "Higher resolution images, better lighting, multiple angles"
+        })
+    
+    if temporal_uncertainty > 0.2:
+        result["evidence_gaps"].append({
+            "gap": "temporal_context",
+            "description": "Missing historical baseline for comparison",
+            "impact": "Cannot determine if findings are new, stable, or progressive",
+            "specific_missing": "Previous images, symptom timeline, prior diagnoses"
+        })
+    
+    if sequence_uncertainty > 0.15:
+        result["evidence_gaps"].append({
+            "gap": "image_sequence",
+            "description": "Incomplete image sequence prevents cross-validation",
+            "impact": "Cannot reconcile conflicting findings across images",
+            "specific_missing": f"Additional images (currently {previous_findings[0].get('image_count', 'unknown') if previous_findings else 'N/A'})"
+        })
+    
+    # Generate reduction pathways
+    for gap in result["evidence_gaps"]:
+        if gap["gap"] == "image_quality":
+            result["reduction_pathways"].append({
+                "action": "obtain_better_images",
+                "description": "Request higher quality images with improved lighting and resolution",
+                "estimated_uncertainty_reduction": 0.15,
+                "feasibility": "medium",
+                "priority": 1
+            })
+        elif gap["gap"] == "temporal_context":
+            result["reduction_pathways"].append({
+                "action": "obtain_historical_data",
+                "description": "Request previous images and medical history",
+                "estimated_uncertainty_reduction": 0.20,
+                "feasibility": "medium",
+                "priority": 1
+            })
+        elif gap["gap"] == "image_sequence":
+            result["reduction_pathways"].append({
+                "action": "complete_image_sequence",
+                "description": "Capture additional images from different angles or timepoints",
+                "estimated_uncertainty_reduction": 0.12,
+                "feasibility": "high",
+                "priority": 2
+            })
+    
+    # Assessment confidence based on evidence availability
+    if len(result["evidence_gaps"]) == 0:
+        result["assessment_confidence"] = "high"
+    elif len(result["evidence_gaps"]) == 1:
+        result["assessment_confidence"] = "medium-high"
+    elif len(result["evidence_gaps"]) == 2:
+        result["assessment_confidence"] = "medium"
+    else:
+        result["assessment_confidence"] = "low"
+    
+    # Temporal context assessment
+    result["temporal_context_assessment"] = {
+        "trajectory_clarity": round(trajectory_clarity, 3),
+        "chronological_reasoning_quality": round(chronological_quality, 3),
+        "cross_image_agreement": round(cross_image_agreement, 3),
+        "longitudinal_reasoning_depth": _assess_longitudinal_reasoning_depth(
+            previous_findings or [], trajectory_clarity, chronological_quality
+        )
+    }
+    
+    # Generate narrative
+    if confidence_calibration > 0.85:
+        narrative_parts.append(
+            "EXCELLENT CALIBRATION: The reported confidence aligns well with identified uncertainty sources. "
+        )
+    elif confidence_calibration > 0.7:
+        narrative_parts.append(
+            "GOOD CALIBRATION: Confidence reasonably reflects uncertainty levels. "
+        )
+    elif confidence_calibration > 0.5:
+        narrative_parts.append(
+            "MODERATE CALIBRATION: Some mismatch between reported confidence and actual uncertainty. "
+        )
+    else:
+        narrative_parts.append(
+            "POOR CALIBRATION: Confidence significantly misaligned with uncertainty sources. "
+        )
+    
+    # Primary drivers
+    if primary_drivers:
+        driver_descriptions = {
+            "knowledge_gaps": "knowledge limitations",
+            "image_quality": "image quality constraints",
+            "temporal_context": "insufficient historical context",
+            "sequence_position": "multi-image sequence position",
+            "follow_up_trajectory": "follow-up trajectory ambiguity"
+        }
+        driver_text = ", ".join(driver_descriptions.get(d, d) for d in primary_drivers[:3])
+        narrative_parts.append(f"Primary uncertainty drivers: {driver_text}. ")
+    
+    # Image sequence assessment
+    if sequence_uncertainty > 0.15:
+        if cross_image_agreement < 0.5:
+            narrative_parts.append(
+                f"CONCERN: Low cross-image agreement ({cross_image_agreement:.0%}) indicates "
+                "conflicting findings across the image sequence. This may require clarification "
+                "or additional imaging. "
+            )
+        else:
+            narrative_parts.append(
+                f"Image sequence contributes moderate uncertainty ({sequence_uncertainty:.0%}). "
+            )
+    
+    # Trajectory assessment
+    if follow_up_uncertainty > 0.12:
+        if trajectory_clarity < 0.4:
+            narrative_parts.append(
+                f"WARN: Low trajectory clarity ({trajectory_clarity:.0%}) - the follow-up "
+                "progression is ambiguous. Temporal context would strengthen the analysis. "
+            )
+        else:
+            narrative_parts.append(
+                f"Follow-up trajectory clarity is {trajectory_clarity:.0%}. "
+            )
+    
+    # Chronological reasoning quality
+    if chronological_quality < 0.4:
+        narrative_parts.append(
+            "CHRONOLOGICAL REASONING WEAK: Disease progression/regression reasoning "
+            "may not fully account for temporal relationships between findings. "
+        )
+    
+    # Overall uncertainty level
+    if total_uncertainty < 0.15:
+        narrative_parts.append(
+            f"Overall uncertainty is LOW ({total_uncertainty:.0%}). "
+            "This case can be managed with standard protocols."
+        )
+    elif total_uncertainty < 0.30:
+        narrative_parts.append(
+            f"Overall uncertainty is MODERATE ({total_uncertainty:.0%}). "
+            "Consider additional context if available."
+        )
+    else:
+        narrative_parts.append(
+            f"Overall uncertainty is HIGH ({total_uncertainty:.0%}). "
+            "This case may benefit from specialist consultation."
+        )
+    
+    # Recommended actions
+    if result["reduction_pathways"]:
+        top_actions = sorted(result["reduction_pathways"], key=lambda x: x["priority"])[:2]
+        action_texts = [a["description"] for a in top_actions]
+        narrative_parts.append(
+            f"Recommended: {'; '.join(action_texts)}."
+        )
+        result["recommended_actions"] = action_texts
+    
+    result["narrative"] = "".join(narrative_parts)
+    
+    return result
+
+
+def _assess_longitudinal_reasoning_depth(
+    previous_findings: list[dict],
+    trajectory_clarity: float,
+    chronological_quality: float
+) -> dict[str, Any]:
+    """
+    Assess the depth of longitudinal reasoning available for this case.
+    
+    Phase 5: Provides detailed analysis of longitudinal reasoning quality
+    including what can and cannot be determined from available temporal data.
+    
+    Returns:
+        - depth_level: none | limited | moderate | comprehensive
+        - what_can_be_determined: List of determinable aspects
+        - what_cannot_be_determined: List of aspects that require additional data
+        - confidence_in_trajectory: How confident we are in trajectory assessment
+        - recommended_follow_up: Suggested follow-up actions
+    """
+    result = {
+        "depth_level": "none",
+        "what_can_be_determined": [],
+        "what_cannot_be_determined": [],
+        "confidence_in_trajectory": 0.0,
+        "recommended_follow_up": [],
+    }
+    
+    n_findings = len(previous_findings)
+    
+    if n_findings == 0:
+        result["depth_level"] = "none"
+        result["what_cannot_be_determined"] = [
+            "Disease trajectory (no baseline available)",
+            "Treatment response (no previous consults)",
+            "Progression rate (insufficient timepoints)",
+            "Chronological evolution of findings"
+        ]
+        result["recommended_follow_up"] = [
+            "Establish baseline imaging protocol",
+            "Document current findings as reference point",
+            "Schedule follow-up for trajectory assessment"
+        ]
+    elif n_findings == 1:
+        result["depth_level"] = "limited"
+        result["what_can_be_determined"] = [
+            "Current findings at single timepoint",
+            "Initial presentation characteristics"
+        ]
+        result["what_cannot_be_determined"] = [
+            "Disease trajectory (only one timepoint)",
+            "Treatment response (no previous treatment)",
+            "Progression or improvement rate"
+        ]
+        result["confidence_in_trajectory"] = 0.2
+        result["recommended_follow_up"] = [
+            "Schedule follow-up imaging for trajectory assessment",
+            "Document timeline of symptom onset",
+            "Obtain any historical images if available"
+        ]
+    elif n_findings < 4:
+        result["depth_level"] = "limited"
+        result["what_can_be_determined"] = [
+            "Emerging patterns in early trajectory",
+            "Initial response indicators (if treatment started)"
+        ]
+        result["what_cannot_be_determined"] = [
+            "Definitive trajectory (insufficient timepoints)",
+            "Long-term treatment response",
+            "Stable vs progressive condition"
+        ]
+        result["confidence_in_trajectory"] = 0.4
+        result["recommended_follow_up"] = [
+            "Continue monitoring with additional timepoints",
+            f"Current trajectory clarity: {trajectory_clarity:.0%}",
+            "Consider extended follow-up for definitive assessment"
+        ]
+    elif n_findings < 6:
+        result["depth_level"] = "moderate"
+        result["what_can_be_determined"] = [
+            "Clearer trajectory pattern emerging",
+            "Treatment response trends (if applicable)",
+            "Progression vs stable identification"
+        ]
+        result["what_cannot_be_determined"] = [
+            "Long-term prognosis (follow-up too short)",
+            "Complete treatment response profile"
+        ]
+        result["confidence_in_trajectory"] = 0.6
+        result["recommended_follow_up"] = [
+            "Current longitudinal data is informative",
+            f"Chronological reasoning quality: {chronological_quality:.0%}",
+            "Continue follow-up for trajectory confirmation"
+        ]
+    else:
+        result["depth_level"] = "comprehensive"
+        result["what_can_be_determined"] = [
+            "Definitive disease trajectory",
+            "Treatment response profile",
+            "Progression or improvement rate",
+            "Chronological evolution of condition"
+        ]
+        result["what_cannot_be_determined"] = [
+            "Complete cure vs remission distinction",
+            "Long-term prognosis beyond available data"
+        ]
+        result["confidence_in_trajectory"] = 0.85
+        result["recommended_follow_up"] = [
+            "Comprehensive longitudinal data available",
+            "Trajectory assessment is reliable",
+            "Continue monitoring as clinically indicated"
+        ]
+    
+    return result
+
+
 def _generate_uncertainty_narrative(
     knowledge_uncertainty: float,
     image_quality_uncertainty: float,
