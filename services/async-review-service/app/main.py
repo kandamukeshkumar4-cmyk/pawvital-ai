@@ -1168,7 +1168,7 @@ def _generate_arbitration_rationale(
         verdict["why_32b_helped"] = (
             f"32B's larger model capacity enabled more thorough diagnostic reasoning. "
             f"The {n_disagreements} diagnostic disagreement(s) reflect specialist-level pattern "
-            f"recognition that 7B's faster inference may have surfacialy assessed."
+            f"recognition that 7B's faster inference may have only assessed superficially."
         )
         verdict["recommended_action"] = (
             "Strongly consider 32B's diagnostic interpretation. If promoting consult path, "
