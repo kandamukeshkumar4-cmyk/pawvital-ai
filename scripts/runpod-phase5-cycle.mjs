@@ -142,6 +142,9 @@ async function main() {
       console.log("[phase5] pods already healthy, skipping provisioning");
     }
 
+    console.log("[phase5] wiring live pod URLs into Vercel");
+    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--wire"]);
+
     console.log("[phase5] running shadow validation report");
     runNodeScript("scripts/report-phase5-shadow.mjs");
 
