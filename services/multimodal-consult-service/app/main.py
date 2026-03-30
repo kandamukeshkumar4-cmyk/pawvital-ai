@@ -3085,6 +3085,488 @@ async def get_uncertainty_discipline_report(
     }
 
 
+# =============================================================================
+# Phase 5 Live Longitudinal Uncertainty Report Layer
+# =============================================================================
+# Provides live uncertainty reporting that explains:
+# - what changed confidence most
+# - which evidence was decisive
+# - the best next clarification question by expected uncertainty reduction
+# - whether the trajectory is limited, moderate, or comprehensive
+
+LONGITUDINAL_UNCERTAINTY_REPORTS: list[dict] = []
+MAX_LONGITUDINAL_REPORTS = 500
+
+
+class LongitudinalUncertaintyReportRequest(BaseModel):
+    """Request model for live longitudinal uncertainty report."""
+    case_context: dict = Field(..., description="Current case context")
+    current_consult_result: dict = Field(..., description="Current consultation result")
+    historical_consults: list[dict] = Field(default_factory=list, description="Previous consults in sequence")
+    image_sequence_position: int = Field(default=0, description="Position in image sequence (0-indexed)")
+    total_images_in_sequence: int = Field(default=1, description="Total images in sequence")
+
+
+class LongitudinalUncertaintyReport(BaseModel):
+    """Live longitudinal uncertainty report with confidence trajectory analysis."""
+    # What changed confidence most
+    confidence_change_summary: str = Field(..., description="Natural language summary of what changed confidence")
+    primary_confidence_driver: str = Field(..., description="The factor that changed confidence most")
+    confidence_change_magnitude: float = Field(..., description="Magnitude of confidence change (-1 to 1)")
+
+    # Which evidence was decisive
+    decisive_evidence: list[dict] = Field(..., description="Evidence that was most decisive in the assessment")
+    evidence_weight_ranking: list[dict] = Field(..., description="Evidence ranked by weight in decision")
+
+    # Best next clarification question
+    highest_value_next_question: str = Field(..., description="Best next question to reduce uncertainty")
+    question_rationale: str = Field(..., description="Why this question is most valuable")
+    expected_uncertainty_reduction: float = Field(..., description="Expected reduction in uncertainty (0-1)")
+    alternative_questions: list[dict] = Field(..., description="Alternative questions with lower priority")
+
+    # Trajectory classification
+    trajectory_classification: str = Field(..., description="limited, moderate, or comprehensive")
+    trajectory_explanation: str = Field(..., description="Explanation of trajectory classification")
+    trajectory_indicators: dict = Field(..., description="Indicators used for trajectory classification")
+
+    # Uncertainty components
+    uncertainty_breakdown: dict = Field(..., description="Breakdown of uncertainty by source")
+    total_uncertainty_score: float = Field(..., description="Overall uncertainty score (0-1)")
+
+    # Confidence trajectory over time
+    confidence_trajectory: list[dict] = Field(..., description="Confidence levels at each timepoint")
+    trajectory_stability: str = Field(..., description="stable, improving, declining, or fluctuating")
+
+    # Recommendations
+    recommended_actions: list[str] = Field(..., description="Recommended next actions")
+    monitoring_requirements: list[str] = Field(..., description="What to monitor going forward")
+
+
+def _classify_trajectory(
+    case_context: dict,
+    historical_consults: list[dict],
+    uncertainty_metrics: UncertaintyMetrics,
+    evolution_models: list[DifferentialEvolutionRecord]
+) -> tuple[str, str, dict]:
+    """
+    Classify whether the longitudinal trajectory is limited, moderate, or comprehensive.
+
+    Returns (classification, explanation, indicators).
+    """
+    indicators = {
+        "n_historical_consults": len(historical_consults),
+        "n_evolution_points": len(evolution_models),
+        "temporal_uncertainty": uncertainty_metrics.temporal_uncertainty,
+        "follow_up_uncertainty": uncertainty_metrics.follow_up_uncertainty,
+        "chronological_reasoning_quality": uncertainty_metrics.chronological_reasoning_quality,
+        "trajectory_clarity": uncertainty_metrics.trajectory_clarity_score,
+    }
+
+    # Limited trajectory: < 2 historical points, high uncertainty
+    if len(historical_consults) < 2:
+        if uncertainty_metrics.temporal_uncertainty > 0.4:
+            classification = "limited"
+            explanation = (
+                "Limited trajectory: Insufficient historical data (fewer than 2 prior consults) "
+                "and high temporal uncertainty prevent confident longitudinal reasoning. "
+                "Cannot establish disease progression or treatment response patterns."
+            )
+        elif uncertainty_metrics.follow_up_uncertainty > 0.3:
+            classification = "limited"
+            explanation = (
+                "Limited trajectory: Few historical points and unclear follow-up trajectory "
+                "prevent confident assessment of disease progression."
+            )
+        else:
+            classification = "moderate"
+            explanation = (
+                "Moderate trajectory: Limited historical data but uncertainty is manageable. "
+                "Can provide useful consultation but longitudinal reasoning is constrained."
+            )
+
+    # Moderate trajectory: 2-3 historical points or moderate uncertainty
+    elif len(historical_consults) <= 3:
+        if uncertainty_metrics.temporal_uncertainty > 0.3 or uncertainty_metrics.follow_up_uncertainty > 0.25:
+            classification = "moderate"
+            explanation = (
+                f"Moderate trajectory: {len(historical_consults)} historical consults available. "
+                "Can identify trends but insufficient data for definitive longitudinal conclusions. "
+                "Temporal gaps or trajectory ambiguity limit confidence."
+            )
+        else:
+            classification = "moderate"
+            explanation = (
+                f"Moderate trajectory: {len(historical_consults)} historical consults with manageable uncertainty. "
+                "Can provide meaningful longitudinal analysis with appropriate uncertainty communication."
+            )
+
+    # Comprehensive trajectory: >= 4 historical points, low uncertainty
+    else:  # len(historical_consults) >= 4
+        if uncertainty_metrics.chronological_reasoning_quality < 0.5:
+            classification = "moderate"
+            explanation = (
+                "Moderate trajectory: Multiple historical consults but chronological reasoning quality is low. "
+                "Data exists but may have temporal inconsistencies or gaps."
+            )
+        elif uncertainty_metrics.temporal_uncertainty < 0.2 and uncertainty_metrics.follow_up_uncertainty < 0.15:
+            classification = "comprehensive"
+            explanation = (
+                f"Comprehensive trajectory: {len(historical_consults)} historical consults with rich temporal context. "
+                "Low uncertainty enables confident longitudinal reasoning about disease progression, "
+                "treatment response, and prognosis."
+            )
+        else:
+            classification = "moderate"
+            explanation = (
+                f"Moderate-to-comprehensive trajectory: {len(historical_consults)} historical consults available. "
+                "Some uncertainty remains but substantial longitudinal analysis is possible."
+            )
+
+    # Check evolution model quality
+    if len(evolution_models) >= 3:
+        evolution_confidences = [m.confidence_at_position for m in evolution_models]
+        if all(c > 0.6 for c in evolution_confidences):
+            if classification == "moderate":
+                classification = "comprehensive"
+                explanation += " Evolution model shows consistently high confidence across timepoints."
+
+    return classification, explanation, indicators
+
+
+def _identify_decisive_evidence(
+    evolution_models: list[DifferentialEvolutionRecord],
+    uncertainty_metrics: UncertaintyMetrics,
+    current_case: dict
+) -> tuple[list[dict], list[dict]]:
+    """
+    Identify which evidence was most decisive in the assessment.
+
+    Returns (decisive_evidence, evidence_ranking).
+    """
+    decisive_evidence = []
+    evidence_ranking = []
+
+    # Evidence from evolution models
+    for record in evolution_models:
+        if record.position == len(evolution_models) - 1:  # Most recent
+            for i, evidence in enumerate(record.evidence_supports):
+                decisive_evidence.append({
+                    "evidence": evidence,
+                    "position": record.position,
+                    "differential": record.leading_differential,
+                    "confidence_at_point": record.confidence_at_position,
+                    "decisive_weight": 0.8 - (i * 0.1),  # First evidence is most decisive
+                    "source": "evolution_model"
+                })
+
+    # Evidence from uncertainty metrics
+    if uncertainty_metrics.cross_image_agreement_score > 0.7:
+        decisive_evidence.append({
+            "evidence": f"High cross-image agreement ({uncertainty_metrics.cross_image_agreement_score:.0%})",
+            "position": "all",
+            "differential": "consistent across images",
+            "confidence_at_point": uncertainty_metrics.cross_image_agreement_score,
+            "decisive_weight": 0.75,
+            "source": "cross_image_agreement"
+        })
+
+    if uncertainty_metrics.chronological_reasoning_quality > 0.7:
+        decisive_evidence.append({
+            "evidence": f"High chronological reasoning quality ({uncertainty_metrics.chronological_reasoning_quality:.0%})",
+            "position": "temporal",
+            "differential": "temporal patterns established",
+            "confidence_at_point": uncertainty_metrics.chronological_reasoning_quality,
+            "decisive_weight": 0.7,
+            "source": "chronological_reasoning"
+        })
+
+    # Evidence from case context
+    context_evidence = current_case.get("context", {}).get("supporting_evidence", [])
+    for i, evidence in enumerate(context_evidence[:3]):  # Top 3
+        decisive_evidence.append({
+            "evidence": evidence,
+            "position": "context",
+            "differential": "case context",
+            "confidence_at_point": 0.7 - (i * 0.1),
+            "decisive_weight": 0.6 - (i * 0.1),
+            "source": "case_context"
+        })
+
+    # Sort by decisive weight
+    evidence_ranking = sorted(decisive_evidence, key=lambda x: x.get("decisive_weight", 0), reverse=True)
+
+    return decisive_evidence, evidence_ranking
+
+
+def _build_live_longitudinal_uncertainty_report(
+    request: LongitudinalUncertaintyReportRequest
+) -> LongitudinalUncertaintyReport:
+    """
+    Build a live longitudinal uncertainty report.
+
+    This Phase 5 enhancement explains:
+    - what changed confidence most
+    - which evidence was decisive
+    - the best next clarification question by expected uncertainty reduction
+    - whether the trajectory is limited, moderate, or comprehensive
+    """
+    global LONGITUDINAL_UNCERTAINTY_REPORTS
+
+    case_context = request.case_context
+    current_result = request.current_consult_result
+    historical_consults = request.historical_consults
+    image_sequence_position = request.image_sequence_position
+    total_images = request.total_images_in_sequence
+
+    # Extract metrics
+    uncertainties = current_result.get("uncertainties", [])
+    reported_confidence = current_result.get("confidence", 0.5)
+    image_quality = case_context.get("image_quality", "unknown")
+
+    # Compute uncertainty metrics
+    uncertainty_metrics = _compute_uncertainty_metrics(
+        case_context=case_context,
+        uncertainties=uncertainties,
+        confidence=reported_confidence,
+        image_sequence_position=image_sequence_position,
+        total_images_in_sequence=total_images
+    )
+
+    # Build differential evolution
+    findings_sequence = historical_consults + [current_result]
+    evolution_models = _build_differential_evolution(
+        findings_sequence,
+        case_context
+    )
+
+    # Identify confidence shift points
+    confidence_shift_points = _identify_confidence_shift_points(evolution_models)
+
+    # Classify trajectory
+    trajectory_classification, trajectory_explanation, trajectory_indicators = _classify_trajectory(
+        case_context, historical_consults, uncertainty_metrics, evolution_models
+    )
+
+    # Identify decisive evidence
+    decisive_evidence, evidence_ranking = _identify_decisive_evidence(
+        evolution_models, uncertainty_metrics, case_context
+    )
+
+    # Build confidence shift narrative
+    evolution_dicts = [dict(record) for record in evolution_models]
+    confidence_shift_narrative = _build_confidence_shift_narrative(
+        evolution_dicts,
+        confidence_shift_points,
+        uncertainties,
+        uncertainty_metrics.primary_uncertainty_drivers
+    )
+
+    # Identify highest value next question
+    next_question = _identify_highest_value_next_question(
+        evolution_models,
+        confidence_shift_points,
+        uncertainty_metrics.primary_uncertainty_drivers,
+        reported_confidence
+    )
+
+    # Build confidence trajectory
+    confidence_trajectory = []
+    for record in evolution_models:
+        confidence_trajectory.append({
+            "position": record.position,
+            "timestamp": record.timestamp,
+            "leading_differential": record.leading_differential,
+            "confidence": record.confidence_at_position,
+            "confidence_shift": record.confidence_shift_from_previous
+        })
+
+    # Determine trajectory stability
+    if len(confidence_trajectory) >= 2:
+        shifts = [ct["confidence_shift"] for ct in confidence_trajectory[1:]]
+        avg_shift = sum(abs(s) for s in shifts) / len(shifts)
+        if avg_shift < 0.05:
+            trajectory_stability = "stable"
+        elif all(s > 0 for s in shifts):
+            trajectory_stability = "improving"
+        elif all(s < 0 for s in shifts):
+            trajectory_stability = "declining"
+        else:
+            trajectory_stability = "fluctuating"
+    else:
+        trajectory_stability = "insufficient_data"
+
+    # Generate recommendations
+    recommended_actions = []
+    monitoring_requirements = []
+
+    if trajectory_classification == "limited":
+        recommended_actions.append("Continue monitoring - insufficient longitudinal data for definitive conclusions")
+        recommended_actions.append("Collect additional historical consults when available")
+        monitoring_requirements.append("Track confidence levels closely")
+        monitoring_requirements.append("Review uncertainty metrics at each consult")
+    elif trajectory_classification == "moderate":
+        recommended_actions.append("Provide consultation with clear uncertainty communication")
+        recommended_actions.append("Consider follow-up to gather additional timepoints")
+        monitoring_requirements.append("Monitor trajectory stability")
+        monitoring_requirements.append("Watch for confidence shifts in subsequent consults")
+    else:  # comprehensive
+        recommended_actions.append("High confidence longitudinal analysis available")
+        recommended_actions.append("Can provide definitive progression assessment")
+        monitoring_requirements.append("Continue routine monitoring")
+        monitoring_requirements.append("Alert if trajectory deviates from established pattern")
+
+    # Add question-specific recommendations
+    if next_question.get("estimated_uncertainty_reduction", 0) > 0.2:
+        recommended_actions.append(
+            f"Prioritize: {next_question.get('question', 'Unknown question')}"
+        )
+
+    # Build final report
+    report = LongitudinalUncertaintyReport(
+        confidence_change_summary=confidence_shift_narrative.get("primary_shift_narrative", "No significant shifts detected"),
+        primary_confidence_driver=uncertainty_metrics.primary_uncertainty_drivers[0] if uncertainty_metrics.primary_uncertainty_drivers else "unknown",
+        confidence_change_magnitude=confidence_shift_narrative.get("largest_shift_magnitude", 0.0),
+        decisive_evidence=decisive_evidence,
+        evidence_weight_ranking=evidence_ranking,
+        highest_value_next_question=next_question.get("question", "What additional context can be provided?"),
+        question_rationale=next_question.get("rationale", "No specific rationale available"),
+        expected_uncertainty_reduction=next_question.get("estimated_uncertainty_reduction", 0.15),
+        alternative_questions=[
+            {"question": q.get("question", ""), "rationale": q.get("rationale", "")}
+            for q in next_question.get("alternatives", [])[:2]
+        ] if isinstance(next_question.get("alternatives"), list) else [],
+        trajectory_classification=trajectory_classification,
+        trajectory_explanation=trajectory_explanation,
+        trajectory_indicators=trajectory_indicators,
+        uncertainty_breakdown={
+            "knowledge_uncertainty": uncertainty_metrics.knowledge_uncertainty,
+            "image_quality_uncertainty": uncertainty_metrics.image_quality_uncertainty,
+            "temporal_uncertainty": uncertainty_metrics.temporal_uncertainty,
+            "sequence_uncertainty": uncertainty_metrics.sequence_uncertainty,
+            "follow_up_uncertainty": uncertainty_metrics.follow_up_uncertainty,
+            "confidence_calibration": uncertainty_metrics.confidence_calibration
+        },
+        total_uncertainty_score=1.0 - reported_confidence,  # Inverse of confidence
+        confidence_trajectory=confidence_trajectory,
+        trajectory_stability=trajectory_stability,
+        recommended_actions=recommended_actions,
+        monitoring_requirements=monitoring_requirements
+    )
+
+    # Store in history
+    LONGITUDINAL_UNCERTAINTY_REPORTS.append(report.model_dump())
+    if len(LONGITUDINAL_UNCERTAINTY_REPORTS) > MAX_LONGITUDINAL_REPORTS:
+        LONGITUDINAL_UNCERTAINTY_REPORTS = LONGITUDINAL_UNCERTAINTY_REPORTS[-MAX_LONGITUDINAL_REPORTS:]
+
+    return report
+
+
+@app.post("/uncertainty/live-longitudinal-report", response_model=LongitudinalUncertaintyReport)
+async def get_live_longitudinal_uncertainty_report(
+    request: LongitudinalUncertaintyReportRequest,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Generate a live longitudinal uncertainty report.
+
+    Phase 5 enhancement that provides real-time uncertainty analysis explaining:
+    - What changed confidence most
+    - Which evidence was decisive
+    - The best next clarification question by expected uncertainty reduction
+    - Whether the trajectory is limited, moderate, or comprehensive
+
+    Use this endpoint to get immediate uncertainty analysis for ongoing consultations
+    with longitudinal context.
+    """
+    validate_auth(authorization)
+
+    report = _build_live_longitudinal_uncertainty_report(request)
+
+    return report
+
+
+@app.get("/uncertainty/longitudinal-history")
+async def get_longitudinal_uncertainty_history(
+    limit: int = 20,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get historical longitudinal uncertainty reports.
+
+    Returns recent uncertainty reports for trend analysis and pattern identification.
+    """
+    validate_auth(authorization)
+
+    with STATE_LOCK:
+        history = list(LONGITUDINAL_UNCERTAINTY_REPORTS[-limit:])
+
+    return {
+        "reports": history,
+        "total_available": len(LONGITUDINAL_UNCERTAINTY_REPORTS),
+        "returned_count": len(history)
+    }
+
+
+@app.get("/uncertainty/trajectory-analysis")
+async def get_trajectory_analysis(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get aggregate trajectory analysis across all recent consults.
+
+    Analyzes trajectory classifications and stability patterns to identify
+    systemic trends in longitudinal uncertainty.
+    """
+    validate_auth(authorization)
+
+    with STATE_LOCK:
+        reports = list(LONGITUDINAL_UNCERTAINTY_REPORTS)
+
+    if not reports:
+        return {
+            "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
+            "total_reports": 0,
+            "message": "No longitudinal uncertainty reports available"
+        }
+
+    # Aggregate trajectory classifications
+    trajectory_counts = {"limited": 0, "moderate": 0, "comprehensive": 0}
+    stability_counts = {"stable": 0, "improving": 0, "declining": 0, "fluctuating": 0, "insufficient_data": 0}
+    avg_uncertainty_reduction = []
+    trajectory_classifications = []
+
+    for report in reports:
+        tc = report.get("trajectory_classification", "unknown")
+        if tc in trajectory_counts:
+            trajectory_counts[tc] += 1
+        trajectory_classifications.append(tc)
+
+        ts = report.get("trajectory_stability", "unknown")
+        if ts in stability_counts:
+            stability_counts[ts] += 1
+
+        eur = report.get("expected_uncertainty_reduction", 0)
+        if eur > 0:
+            avg_uncertainty_reduction.append(eur)
+
+    return {
+        "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
+        "total_reports": len(reports),
+        "trajectory_distribution": trajectory_counts,
+        "trajectory_percentages": {
+            k: round(v / len(reports), 3) for k, v in trajectory_counts.items()
+        },
+        "stability_distribution": stability_counts,
+        "avg_expected_uncertainty_reduction": round(sum(avg_uncertainty_reduction) / len(avg_uncertainty_reduction), 3) if avg_uncertainty_reduction else 0.0,
+        "insights": [
+            f"{trajectory_counts['comprehensive']} of {len(reports)} cases have sufficient longitudinal data for comprehensive analysis"
+            if trajectory_counts['comprehensive'] > 0 else "Most cases have limited longitudinal context",
+            f"{stability_counts['stable']} cases showed stable confidence trajectories"
+            if stability_counts['stable'] > 0 else "Confidence trajectories are variable"
+        ]
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8083)
