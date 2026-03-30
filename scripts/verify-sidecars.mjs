@@ -2,21 +2,79 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
-import dotenv from "dotenv";
 
 const rootDir = process.cwd();
+const vercelProjectConfigPath = path.join(rootDir, ".vercel", "project.json");
 
-for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
-  const fullPath = path.join(rootDir, relativePath);
-  if (fs.existsSync(fullPath)) {
-    dotenv.config({ path: fullPath, override: false });
+function inferWorkspaceProjectName() {
+  return path.basename(rootDir).replace(/-(codex|claude|minimax)$/i, "");
+}
+
+function loadEnvFiles() {
+  for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
+    const fullPath = path.join(rootDir, relativePath);
+    if (!fs.existsSync(fullPath)) continue;
+
+    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq < 0) continue;
+      const key = trimmed.slice(0, eq).trim();
+      const value = trimmed.slice(eq + 1).trim();
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
   }
+}
+loadEnvFiles();
+
+function readVercelProjectConfigBase() {
+  const envProjectId = String(process.env.VERCEL_PROJECT_ID || "").trim();
+  const envTeamId = String(
+    process.env.VERCEL_TEAM_ID || process.env.VERCEL_ORG_ID || ""
+  ).trim();
+  if (envProjectId) {
+    return {
+      projectId: envProjectId,
+      teamId: envTeamId,
+      projectName: inferWorkspaceProjectName(),
+    };
+  }
+
+  if (!fs.existsSync(vercelProjectConfigPath)) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(fs.readFileSync(vercelProjectConfigPath, "utf8"));
+    return {
+      projectId: String(parsed.projectId || "").trim(),
+      teamId: String(parsed.orgId || "").trim(),
+      projectName: String(parsed.projectName || "").trim(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function inferDefaultAppBaseUrl() {
+  const config = readVercelProjectConfigBase();
+  if (config?.projectName) {
+    return `https://${config.projectName}.vercel.app`;
+  }
+  return `https://${inferWorkspaceProjectName()}.vercel.app`;
 }
 
 const command = (process.argv[2] || "all").toLowerCase();
 const strictMode = process.argv.includes("--strict");
 const APP_BASE_URL =
-  (process.env.APP_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "").trim();
+  (
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    inferDefaultAppBaseUrl()
+  ).trim();
 const services = JSON.parse(
   fs.readFileSync(
     path.join(rootDir, "src", "lib", "sidecar-service-registry.json"),
@@ -28,7 +86,6 @@ const DEBUG_ROUTE_SECRET_ENV_NAMES = [
   "HF_SIDECAR_API_KEY",
   "ASYNC_REVIEW_WEBHOOK_SECRET",
 ];
-
 function statusLine(level, message) {
   const prefix =
     level === "ok" ? "[OK]" : level === "warn" ? "[WARN]" : "[FAIL]";
@@ -191,6 +248,61 @@ function parseVercelEnvNames(output) {
       return match?.[1] || "";
     })
     .filter(Boolean);
+}
+
+function readVercelProjectConfig() {
+  const config = readVercelProjectConfigBase();
+  if (!config?.projectId) return null;
+  return { projectId: config.projectId, teamId: config.teamId };
+}
+
+async function fetchVercelEnvNamesViaApi(environment = "production") {
+  const token = readEnv("VERCEL_TOKEN");
+  const config = readVercelProjectConfig();
+  if (!token || !config) {
+    return null;
+  }
+
+  const params = new URLSearchParams();
+  if (config.teamId) {
+    params.set("teamId", config.teamId);
+  }
+
+  const url =
+    `https://api.vercel.com/v10/projects/${config.projectId}/env` +
+    (params.toString() ? `?${params}` : "");
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    signal: controller.signal,
+    cache: "no-store",
+  });
+  clearTimeout(timeoutId);
+  const rawText = await response.text();
+  let body = null;
+  try {
+    body = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    body = null;
+  }
+  if (!response.ok || !body || !Array.isArray(body.envs)) {
+    throw new Error(
+      `Failed to query Vercel envs via API (${response.status}): ${String(rawText || "").slice(0, 240)}`
+    );
+  }
+
+  const names = new Set(
+    body.envs
+      .filter((env) => Array.isArray(env?.target) && env.target.includes(environment))
+      .map((env) => String(env.key || "").trim())
+      .filter(Boolean)
+  );
+
+  return names;
 }
 
 function runEnvChecks() {
@@ -488,32 +600,49 @@ async function runReadinessChecks() {
   return { failures, warnings };
 }
 
-function runVercelChecks() {
+async function runVercelChecks() {
   let failures = 0;
   let warnings = 0;
 
-  const result = runVercelEnvList("production");
-  if (result.error) {
-    failures += 1;
+  let names = null;
+  try {
+    names = await fetchVercelEnvNamesViaApi("production");
+    if (names) {
+      statusLine("ok", "Loaded Vercel production env names via API");
+    }
+  } catch (error) {
+    warnings += 1;
     statusLine(
-      "fail",
-      `Failed to run "vercel env ls production": ${result.error.message}`
+      "warn",
+      `Falling back to Vercel CLI env listing: ${error instanceof Error ? error.message : String(error)}`
     );
-    return { failures, warnings };
   }
 
-  if (result.status !== 0) {
-    failures += 1;
-    statusLine(
-      "fail",
-      `vercel env ls production failed (${result.status}): ${String(
-        result.stderr || result.stdout || ""
-      ).trim()}`
-    );
-    return { failures, warnings };
+  if (!names) {
+    const result = runVercelEnvList("production");
+    if (result.error) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `Failed to run "vercel env ls production": ${result.error.message}`
+      );
+      return { failures, warnings };
+    }
+
+    if (result.status !== 0) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `vercel env ls production failed (${result.status}): ${String(
+          result.stderr || result.stdout || ""
+        ).trim()}`
+      );
+      return { failures, warnings };
+    }
+
+    names = new Set(parseVercelEnvNames(result.stdout || ""));
   }
 
-  const names = new Set(parseVercelEnvNames(result.stdout || ""));
   if (names.size === 0) {
     failures += 1;
     statusLine("fail", "Could not parse any Vercel production environment variables");
@@ -589,7 +718,7 @@ async function main() {
 
   if (command === "vercel") {
     console.log("== Vercel production env check ==");
-    const result = runVercelChecks();
+    const result = await runVercelChecks();
     failures += result.failures;
     warnings += result.warnings;
   }
