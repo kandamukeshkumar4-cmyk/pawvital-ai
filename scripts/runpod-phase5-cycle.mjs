@@ -44,6 +44,23 @@ function runNodeScript(scriptPath, args = []) {
   run(nodeBin, [scriptPath, ...args]);
 }
 
+function getCurrentGitSha() {
+  const result = spawnSync("git", ["rev-parse", "HEAD"], {
+    cwd: rootDir,
+    stdio: ["ignore", "pipe", "pipe"],
+    encoding: "utf8",
+    shell: false,
+  });
+  if (result.status !== 0) {
+    throw new Error(`git rev-parse HEAD exited with ${result.status ?? 1}`);
+  }
+  const sha = result.stdout.trim();
+  if (!sha) {
+    throw new Error("Unable to determine current git SHA");
+  }
+  return sha;
+}
+
 function readPods() {
   if (!fs.existsSync(podsPath)) {
     return {};
@@ -108,6 +125,58 @@ async function waitForHealthy() {
   throw new Error("Timed out waiting for RunPod services to become healthy");
 }
 
+async function waitForProductionDeployment() {
+  const token = process.env.VERCEL_TOKEN || "";
+  const projectId = process.env.VERCEL_PROJECT_ID || "pawvital-ai";
+  const teamId = process.env.VERCEL_TEAM_ID || "";
+
+  if (!token) {
+    console.log("[phase5] skipping Vercel deployment wait (no VERCEL_TOKEN)");
+    return;
+  }
+
+  const currentSha = getCurrentGitSha();
+  const baseUrl = teamId
+    ? `https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&limit=5&teamId=${encodeURIComponent(teamId)}`
+    : `https://api.vercel.com/v6/deployments?projectId=${encodeURIComponent(projectId)}&limit=5`;
+  const deadline = Date.now() + timeoutMs;
+
+  while (Date.now() < deadline) {
+    const response = await fetch(baseUrl, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const raw = await response.text();
+    let body = null;
+    try {
+      body = raw ? JSON.parse(raw) : null;
+    } catch {
+      body = raw;
+    }
+
+    if (!response.ok) {
+      console.log(`[phase5] deployment snapshot -> HTTP ${response.status}`);
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      continue;
+    }
+
+    const deployments = Array.isArray(body?.deployments) ? body.deployments : [];
+    const latest = deployments[0];
+    const latestSha = latest?.meta?.githubCommitSha || "";
+    const latestState = latest?.state || "unknown";
+    const latestReadyState = latest?.readyState || "unknown";
+    console.log(`[phase5] deployment snapshot -> ${latestSha || "no-sha"}:${latestState}/${latestReadyState}`);
+
+    if (latestSha === currentSha && latestState === "READY" && latestReadyState === "READY") {
+      return latest;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+  }
+
+  throw new Error("Timed out waiting for Vercel production deployment to become ready");
+}
+
 async function main() {
   loadEnvFiles();
 
@@ -144,6 +213,9 @@ async function main() {
 
     console.log("[phase5] wiring live pod URLs into Vercel");
     runNodeScript("scripts/runpod-health-and-wire.mjs", ["--wire"]);
+
+    console.log("[phase5] waiting for Vercel production deployment");
+    await waitForProductionDeployment();
 
     console.log("[phase5] running shadow validation report");
     runNodeScript("scripts/report-phase5-shadow.mjs");
