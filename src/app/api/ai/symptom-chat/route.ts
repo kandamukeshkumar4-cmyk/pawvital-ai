@@ -104,14 +104,14 @@ import {
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 
 // =============================================================================
-// HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
+// HYBRID STATE MACHINE API â€” 4-Model NVIDIA NIM Pipeline
 //
 // Pipeline:
-//   Qwen 3.5 122B    → Data extraction (structured JSON from user text)
-//   Clinical Matrix   → All medical logic (pure code, deterministic)
-//   Kimi K2.5         → Question phrasing (warm, empathetic)
-//   Nemotron Ultra    → Diagnosis report (deep clinical reasoning)
-//   GLM-5             → Safety verification (catch missed emergencies)
+//   Qwen 3.5 122B    â†’ Data extraction (structured JSON from user text)
+//   Clinical Matrix   â†’ All medical logic (pure code, deterministic)
+//   Kimi K2.5         â†’ Question phrasing (warm, empathetic)
+//   Nemotron Ultra    â†’ Diagnosis report (deep clinical reasoning)
+//   GLM-5             â†’ Safety verification (catch missed emergencies)
 //
 // Claude serves as fallback if any NVIDIA model fails.
 // =============================================================================
@@ -131,7 +131,7 @@ interface RequestBody {
 
 export async function POST(request: Request) {
   try {
-    // ── Rate limiting ─────────────────────────────────────────────────────
+    // â”€â”€ Rate limiting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const rlResult = await checkRateLimit(
       symptomChatLimiter,
       getRateLimitId(request)
@@ -208,10 +208,10 @@ export async function POST(request: Request) {
       lastUserMessage.content
     );
 
-    // ═══════════════════════════════════════════════════════════════════
-    // STEP 0 (optional): VISION — Llama 4 Maverick image analysis
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // STEP 0 (optional): VISION â€” Llama 4 Maverick image analysis
     // Enhanced: breed-aware prompting + auto-extract symptoms/red flags
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     let visionAnalysis: string | null = null;
     let visionSymptoms: string[] = [];
     let visionRedFlags: string[] = [];
@@ -397,7 +397,7 @@ export async function POST(request: Request) {
         visionAnalysis = visionResult.combined;
         visionSeverity = visionResult.severity;
 
-        console.log(`[Engine] Vision Pipeline: tiers=${visionResult.tiersUsed.join("→")}, wound=${visionResult.woundDetected}, severity=${visionSeverity}`);
+        console.log(`[Engine] Vision Pipeline: tiers=${visionResult.tiersUsed.join("â†’")}, wound=${visionResult.woundDetected}, severity=${visionSeverity}`);
         console.log("[Engine] Vision output:", visionResult.tier1_fast.substring(0, 400));
 
         // Parse vision results into clinical matrix data
@@ -432,7 +432,7 @@ export async function POST(request: Request) {
           }
         }
 
-        console.log(`[Engine] Vision → Matrix: symptoms=${visionSymptoms.join(",")}, redFlags=${visionRedFlags.join(",")}, severity=${visionSeverity}`);
+        console.log(`[Engine] Vision â†’ Matrix: symptoms=${visionSymptoms.join(",")}, redFlags=${visionRedFlags.join(",")}, severity=${visionSeverity}`);
 
         visualEvidence = buildVisionClinicalEvidence({
           preprocess: imagePreprocess,
@@ -447,7 +447,7 @@ export async function POST(request: Request) {
           session.latest_visual_evidence = visualEvidence;
         }
 
-        // ── Stage 5: Hardcoded Visual Red Flag Guardrails ──
+        // â”€â”€ Stage 5: Hardcoded Visual Red Flag Guardrails â”€â”€
         // Override everything if critical wound signs detected
         try {
           let tier1Json = visionResult.tier1_fast;
@@ -461,7 +461,7 @@ export async function POST(request: Request) {
 
             // Inject guardrail red flags into session
             for (const flag of guardrail.flags) {
-              const shortFlag = flag.split("→")[0].trim().toLowerCase().replace(/\s+/g, "_");
+              const shortFlag = flag.split("â†’")[0].trim().toLowerCase().replace(/\s+/g, "_");
               if (!visionRedFlags.includes(shortFlag)) {
                 visionRedFlags.push(shortFlag);
               }
@@ -501,7 +501,7 @@ export async function POST(request: Request) {
 
               return NextResponse.json({
                 type: "emergency",
-                message: `Based on my analysis of ${pet.name}'s photo, I've detected signs that require IMMEDIATE veterinary attention:\n\n${guardrail.flags.map(f => `• ${f}`).join("\n")}\n\nPlease take ${pet.name} to the nearest emergency veterinary hospital NOW. Do not wait. Call ahead so they can prepare. I can generate a full report for the vet while you're on the way.`,
+                message: `Based on my analysis of ${pet.name}'s photo, I've detected signs that require IMMEDIATE veterinary attention:\n\n${guardrail.flags.map(f => `â€¢ ${f}`).join("\n")}\n\nPlease take ${pet.name} to the nearest emergency veterinary hospital NOW. Do not wait. Call ahead so they can prepare. I can generate a full report for the vet while you're on the way.`,
                 session,
                 ready_for_report: true,
               });
@@ -533,9 +533,9 @@ export async function POST(request: Request) {
       console.log("[Image Gate] Skipping image analysis for unsupported image domain");
     }
 
-    // ═══════════════════════════════════════════════════════════════════
-    // STEP 1: EXTRACT structured data — Qwen 3.5 122B (Claude fallback)
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // STEP 1: EXTRACT structured data â€” Qwen 3.5 122B (Claude fallback)
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     const seededExtractionSymptoms = Array.from(
       new Set([
         ...session.known_symptoms,
@@ -563,9 +563,9 @@ export async function POST(request: Request) {
         compactImageSignals
       ));
 
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // STEP 2: Update Internal State (pure code, NO LLM)
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     // 2a: Inject vision-detected symptoms FIRST (image is ground truth)
     if (visionSymptoms.length > 0) {
@@ -616,14 +616,14 @@ export async function POST(request: Request) {
       }
     }
 
-    // ── Fix: Handle negative/null answers so questions don't loop ──
+    // â”€â”€ Fix: Handle negative/null answers so questions don't loop â”€â”€
     // If the session had a pending question and extraction didn't capture
     // the answer (e.g. user said "no", "nothing", "I don't know"), force-
     // record the user's raw text so the question is marked answered.
     const pendingQ = session.last_question_asked;
     if (pendingQ && !session.answered_questions.includes(pendingQ)) {
       // Build a rich combined answer from text + vision analysis
-      // e.g. user sent "left leg" + photo → combined = "left leg [vision: wound on left leg, raw area]"
+      // e.g. user sent "left leg" + photo â†’ combined = "left leg [vision: wound on left leg, raw area]"
       const combinedUserSignal = [
         lastUserMessage.content,
         visionAnalysis ? `[vision: ${visionAnalysis.substring(0, 200)}]` : null,
@@ -786,9 +786,9 @@ export async function POST(request: Request) {
       missingQuestionIds: getMissingQuestions(session),
     });
 
-    // ═══════════════════════════════════════════════════════════════════
-    // STEP 3: Check red flags — EMERGENCY OVERRIDE (pure code)
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // STEP 3: Check red flags â€” EMERGENCY OVERRIDE (pure code)
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     if (session.red_flags_triggered.length > 0) {
       const flags = session.red_flags_triggered.join(", ");
       return NextResponse.json({
@@ -799,9 +799,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // STEP 4: Query Clinical Matrix (pure deterministic code)
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     const ready = isReadyForDiagnosis(session);
 
     if (ready) {
@@ -888,9 +888,9 @@ export async function POST(request: Request) {
     // Track which question we're asking so we can detect unanswered loops
     session.last_question_asked = nextQuestionId;
 
-    // ═══════════════════════════════════════════════════════════════════
-    // STEP 5: PHRASE question — Llama 3.3 70B + Nemotron verifier
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // STEP 5: PHRASE question â€” Llama 3.3 70B + Nemotron verifier
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     const questionText = getQuestionText(nextQuestionId);
     // Include image context when:
     //  a) vision just ran this turn (visionAnalysis is freshly populated), OR
@@ -949,7 +949,7 @@ export async function POST(request: Request) {
 }
 
 // =============================================================================
-// STEP 1: Data Extraction — Qwen 3.5 122B → Claude fallback
+// STEP 1: Data Extraction â€” Qwen 3.5 122B â†’ Claude fallback
 // =============================================================================
 
 async function extractDataFromMessage(
@@ -1003,7 +1003,7 @@ Output ONLY the JSON object. No explanation, no thinking, no markdown.`;
     let rawText: string;
 
     if (useNvidia) {
-      // PRIMARY: Qwen 3.5 122B — fast, accurate structured extraction
+      // PRIMARY: Qwen 3.5 122B â€” fast, accurate structured extraction
       rawText = await extractWithQwen(prompt);
       console.log("[Engine] Extraction: Qwen 3.5 122B");
     } else if (isAnthropicConfigured) {
@@ -1532,7 +1532,7 @@ RULES:
 }
 
 // =============================================================================
-// STEP 5: Question Phrasing — Llama 3.3 70B → Claude fallback
+// STEP 5: Question Phrasing â€” Llama 3.3 70B â†’ Claude fallback
 // =============================================================================
 
 async function phraseQuestion(
@@ -1562,10 +1562,10 @@ async function phraseQuestion(
 }
 
 // =============================================================================
-// STEP 6: Diagnosis Report — Nemotron Ultra 253B (reasoning) + GLM-5 (safety)
+// STEP 6: Diagnosis Report â€” Nemotron Ultra 253B (reasoning) + GLM-5 (safety)
 // =============================================================================
 
-// ── Server-side Supabase save (uses service role to bypass RLS) ──
+// â”€â”€ Server-side Supabase save (uses service role to bypass RLS) â”€â”€
 function buildVetHandoffSummary(
   session: TriageSession,
   pet: PetProfile,
@@ -1667,7 +1667,7 @@ async function generateReport(
   const top5Formatted = context.top5
     .map(
       (d, i) =>
-        `${i + 1}. ${d.medical_term} (score: ${d.final_score.toFixed(3)}, breed×${d.breed_multiplier}, age×${d.age_multiplier}, urgency: ${d.urgency})\n   Key differentiators: ${d.key_differentiators.join("; ")}\n   Typical tests: ${d.typical_tests.join("; ")}`
+        `${i + 1}. ${d.medical_term} (score: ${d.final_score.toFixed(3)}, breedÃ—${d.breed_multiplier}, ageÃ—${d.age_multiplier}, urgency: ${d.urgency})\n   Key differentiators: ${d.key_differentiators.join("; ")}\n   Typical tests: ${d.typical_tests.join("; ")}`
     )
     .join("\n\n");
 
@@ -1693,7 +1693,7 @@ async function generateReport(
 
   const reportPrompt = `You are a board-certified veterinary internist (DACVIM) with 15+ years of clinical experience writing a detailed clinical report.
 
-IMPORTANT — USE CORRECT CANINE ANATOMY: "front leg/forelimb" (NOT arm/forearm), "hind leg" (NOT leg), "paw" (NOT hand/foot), "digits" (NOT fingers/toes), "carpus" (NOT wrist), "hock/tarsus" (NOT ankle), "stifle" (NOT knee), "muzzle" (NOT face). Dogs do not have human body parts.
+IMPORTANT â€” USE CORRECT CANINE ANATOMY: "front leg/forelimb" (NOT arm/forearm), "hind leg" (NOT leg), "paw" (NOT hand/foot), "digits" (NOT fingers/toes), "carpus" (NOT wrist), "hock/tarsus" (NOT ankle), "stifle" (NOT knee), "muzzle" (NOT face). Dogs do not have human body parts.
 
 PATIENT: ${pet.name}, ${pet.age_years}yr ${pet.breed}, ${pet.weight} lbs
 Known conditions: ${pet.existing_conditions?.join(", ") || "None"}
@@ -1705,7 +1705,7 @@ ${conversationSummary}
 STRUCTURED CASE MEMORY:
 ${session.case_memory?.compressed_summary || buildDeterministicCaseSummary(session, pet)}
 
-CLINICAL MATRIX CALCULATIONS (pre-calculated disease probabilities — use as your ranking):
+CLINICAL MATRIX CALCULATIONS (pre-calculated disease probabilities â€” use as your ranking):
 ${top5Formatted}
 
 BREED RISK PROFILE: ${context.breed_risk_summary}
@@ -1743,7 +1743,7 @@ For each differential diagnosis, provide:
 - Expected disease progression if untreated
 
 For recommended tests, be SPECIFIC:
-- Name exact diagnostic procedures (e.g., "Orthogonal radiographs of the stifle — lateral and craniocaudal views" not just "X-ray")
+- Name exact diagnostic procedures (e.g., "Orthogonal radiographs of the stifle â€” lateral and craniocaudal views" not just "X-ray")
 - Explain what each test confirms or rules out
 
 Output ONLY valid JSON (no markdown, no code blocks, no thinking):
@@ -1785,7 +1785,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     let rawReport: string;
 
     if (useNvidia) {
-      // PRIMARY: Nemotron Ultra 253B — NVIDIA's most powerful for clinical reasoning
+      // PRIMARY: Nemotron Ultra 253B â€” NVIDIA's most powerful for clinical reasoning
       rawReport = await diagnoseWithDeepSeek(reportPrompt);
       console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
     } else {
@@ -1831,9 +1831,9 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       retrievalBundle
     );
 
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // SAFETY LAYER: GLM-5 reviews the report for missed emergencies
-    // ═══════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     let finalReport = report;
     if (useNvidia) {
       try {
@@ -1844,7 +1844,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       }
     }
 
-    // ── Save to Supabase (non-blocking) ──
+    // â”€â”€ Save to Supabase (non-blocking) â”€â”€
     let asyncReviewScheduled = false;
     const reviewImage = image;
     const shouldAttemptAsyncReview =
@@ -2824,6 +2824,29 @@ function coerceAnswerForQuestion(
   }
 
   if (question.data_type === "choice") {
+    // Handle negative responses as valid answers for choice questions
+    // If user says "no" or negative, map to appropriate negative choice if available
+    if (/^\s*(no+|nope|nah|not|neither|not really)\s*$/.test(lower) ||
+        lower.includes("not drinking") ||
+        lower.includes("won't drink") ||
+        lower.includes("wont drink") ||
+        lower.includes("refusing water")) {
+      // Prefer "not_drinking" > "less_than_usual" > first negative-sounding choice
+      if (question.choices?.includes("not_drinking")) {
+        return "not_drinking";
+      }
+      if (question.choices?.includes("less_than_usual")) {
+        return "less_than_usual";
+      }
+      // Find any choice that sounds negative
+      const negativeChoice = [...(question.choices || [])].find(c =>
+        String(c).toLowerCase().includes("not") ||
+        String(c).toLowerCase().includes("less") ||
+        String(c).toLowerCase().includes("reduced")
+      );
+      if (negativeChoice) return negativeChoice;
+    }
+
     if (questionId === "wound_discharge") {
       if (/(^|\b)(no|none|nothing|dry)\b/.test(lower)) return "none";
       if (lower.includes("clear")) return "clear_fluid";
@@ -3257,16 +3280,26 @@ function extractGumColor(rawMessage: string): string | null {
 function extractWaterIntake(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
-  if (/\b(not drinking|won't drink|wont drink|refusing water|no water)\b/.test(lower)) {
+  // Handle negative responses: "no", "not", "no it's not", "nope"
+  if (/^\s*no\s*(it's?\s*not)?\s*$/.test(lower) ||
+      lower === "nope" ||
+      lower === "nah" ||
+      lower.includes("no it's not") ||
+      lower.includes("no am not") ||
+      lower.includes("not drinking") ||
+      lower.includes("won't drink") ||
+      lower.includes("wont drink") ||
+      lower.includes("refusing water") ||
+      lower.includes("no water")) {
     return "not_drinking";
   }
   if (/\b(drinking more|drinking a lot|very thirsty|constantly drinking|more water)\b/.test(lower)) {
     return "more_than_usual";
   }
-  if (/\b(drinking less|hardly drinking|less water)\b/.test(lower)) {
+  if (/\b(drinking less|hardly drinking|less water|not much water)\b/.test(lower)) {
     return "less_than_usual";
   }
-  if (/\b(drinking normally|water is normal|normal drinking)\b/.test(lower)) {
+  if (/\b(drinking normally|water is normal|normal drinking|yes.*normal)\b/.test(lower)) {
     return "normal";
   }
 
@@ -3509,7 +3542,7 @@ function buildQuestionPhrasingContext(
 
   // Include actual vision findings so the AI can reference what it SAW
   if (session.vision_analysis) {
-    // Trim to most relevant 300 chars — this is what the AI will reference
+    // Trim to most relevant 300 chars â€” this is what the AI will reference
     const visionSummary = session.vision_analysis
       .replace(/<think>[\s\S]*?<\/think>/g, "")
       .trim()
@@ -3874,14 +3907,14 @@ function demoResponse(action: string, pet: PetProfile) {
       report: {
         severity: "high",
         recommendation: "vet_48h",
-        title: "Demo Mode — Configure API Keys",
+        title: "Demo Mode â€” Configure API Keys",
         explanation: `This is demo mode. Add your NVIDIA NIM API keys or ANTHROPIC_API_KEY to enable the 4-model clinical diagnosis engine for ${pet.name}.`,
         differential_diagnoses: [
           {
             condition: "Demo Mode",
             likelihood: "high",
             description:
-              "Configure API keys to unlock: Qwen 3.5 (extraction) → DeepSeek R1 (diagnosis) → GLM-5 (safety verification).",
+              "Configure API keys to unlock: Qwen 3.5 (extraction) â†’ DeepSeek R1 (diagnosis) â†’ GLM-5 (safety verification).",
           },
         ],
         clinical_notes: "Demo mode active.",
