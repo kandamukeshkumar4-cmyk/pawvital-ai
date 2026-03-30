@@ -681,6 +681,20 @@ async def process_review_task(request: AsyncReviewRequest):
         # Store shadow disagreement if consult opinion provided
         if request.consult_opinion is not None:
             shadow = _compute_shadow_disagreement(case_id, request.consult_opinion, result)
+            # Attach body region and image quality from preprocess for arbitration
+            shadow["body_region"] = (
+                request.preprocess.get("bodyRegion") or
+                request.preprocess.get("body_region", "unknown")
+            )
+            shadow["image_quality"] = (
+                request.preprocess.get("imageQuality", "unknown")
+            )
+            shadow["severity"] = request.severity
+            # Generate enriched arbitration rationale (Phase 5 shadow intelligence)
+            arbitration_rationale = _generate_arbitration_rationale(
+                shadow, result, request.consult_opinion
+            )
+            shadow["arbitration_rationale"] = arbitration_rationale
             _store_shadow_disagreement(case_id, shadow)
         
         # Store outcome feedback
@@ -1065,6 +1079,707 @@ def _store_outcome_feedback(case_id: str, review_result: ReviewResponse, request
         "Stored outcome feedback for case %s. Total feedback entries: %d. Signals: %s",
         case_id, total_feedback_entries, list(quality_signals.keys())
     )
+
+
+# =============================================================================
+# Phase 5: Shadow Intelligence - Arbitration Rationale Generation
+# =============================================================================
+
+def _generate_arbitration_rationale(
+    shadow: dict[str, Any],
+    review_result: ReviewResponse,
+    consult_opinion: dict | None = None
+) -> dict[str, Any]:
+    """
+    Generate enriched natural-language arbitration rationale explaining
+    why 32B review helped, why 32B should be discounted, or when the case
+    remained genuinely ambiguous.
+    
+    Produces structured verdict with:
+    - verdict_type: MUST_OVERRIDE_32B | SHOULD_OVERRIDE_32B | DISCARD_32B | ESCALATE_HUMAN | NO_ARBITRATION_NEEDED
+    - primary_signal: Why this verdict was reached
+    - confidence_weight: How much weight to give this 32B output (0-1)
+    - triggered_rules: Which case conditions triggered this verdict
+    - natural_language_summary: Human-readable explanation
+    """
+    verdict = {
+        "verdict_type": "NO_ARBITRATION_NEEDED",
+        "primary_signal": "",
+        "confidence_weight": 0.5,
+        "triggered_rules": [],
+        "natural_language_summary": "",
+        "why_32b_helped": "",
+        "why_32b_discounted": "",
+        "why_case_ambiguous": "",
+        "recommended_action": "",
+    }
+    
+    n_disagreements = len(shadow.get("disagreement_points", []))
+    n_unc_divs = len(shadow.get("uncertainty_divergence", []))
+    n_agreements = len(shadow.get("agreement_overlap", []))
+    conf_delta = shadow.get("confidence_delta", 0.0)
+    consult_conf = consult_opinion.get("confidence", 0.5) if consult_opinion else 0.5
+    review_conf = review_result.confidence
+    disagreement_classifications = shadow.get("disagreement_classifications", [])
+    severity_impact = shadow.get("severity_impact", 0.35)
+    pattern_type = shadow.get("pattern_type", "alignment")
+    requires_attention = shadow.get("requires_attention", False)
+    
+    # =========================================================================
+    # Case Family Detection
+    # =========================================================================
+    body_region = shadow.get("body_region", "unknown")
+    image_quality = shadow.get("image_quality", "unknown")
+    severity = shadow.get("severity", "unknown")
+    
+    # =========================================================================
+    # Rule: High Severity Disagreement - 32B Must Override
+    # =========================================================================
+    if severity_impact >= 0.9 or any(d.get("severity") == "HIGH_SEVERITY" for d in disagreement_classifications):
+        verdict["verdict_type"] = "MUST_OVERRIDE_32B"
+        verdict["triggered_rules"].append("HIGH_SEVERITY_DISAGREEMENT")
+        verdict["primary_signal"] = (
+            f"32B identified HIGH severity disagreement requiring clinical attention. "
+            f"Severity impact score: {severity_impact:.2f}"
+        )
+        verdict["confidence_weight"] = 0.95
+        verdict["why_32b_helped"] = (
+            f"32B's specialist-depth analysis caught a high-severity finding "
+            f"({n_disagreements} disagreement points) that the faster 7B consult may have missed. "
+            f"The {severity_impact:.0%} severity impact indicates this is a genuine clinical concern."
+        )
+        verdict["recommended_action"] = (
+            "URGENT: Elevate to human veterinarian review. 32B's high-severity signal "
+            "should override the consult pathway regardless of latency costs."
+        )
+    
+    # =========================================================================
+    # Rule: Diagnostic Disagreement - 32B Should Override
+    # =========================================================================
+    elif (any(d.get("type") == "diagnostic" for d in disagreement_classifications) and
+          severity_impact >= 0.75):
+        verdict["verdict_type"] = "SHOULD_OVERRIDE_32B"
+        verdict["triggered_rules"].append("DIAGNOSTIC_DISAGREEMENT")
+        verdict["primary_signal"] = (
+            f"32B diagnostic analysis diverged from 7B on core lesion/infection findings. "
+            f"Pattern type: {pattern_type}"
+        )
+        verdict["confidence_weight"] = 0.8
+        verdict["why_32b_helped"] = (
+            f"32B's larger model capacity enabled more thorough diagnostic reasoning. "
+            f"The {n_disagreements} diagnostic disagreement(s) reflect specialist-level pattern "
+            f"recognition that 7B's faster inference may have surfacialy assessed."
+        )
+        verdict["recommended_action"] = (
+            "Strongly consider 32B's diagnostic interpretation. If promoting consult path, "
+            "ensure the vet reviews both 7B and 32B findings for reconciliation."
+        )
+    
+    # =========================================================================
+    # Rule: Image Quality Degradation - 32B Should Be Discounted
+    # =========================================================================
+    elif image_quality in ("poor", "marginal", "unknown"):
+        verdict["verdict_type"] = "DISCARD_32B"
+        verdict["triggered_rules"].append("IMAGE_QUALITY_DEGRADATION")
+        verdict["primary_signal"] = (
+            f"Image quality ({image_quality}) limits 32B's ability to provide meaningful "
+            f"specialist analysis over 7B. Both models are working from degraded input."
+        )
+        verdict["confidence_weight"] = 0.3
+        verdict["why_32b_discounted"] = (
+            f"32B's additional reasoning capacity cannot compensate for poor visual input. "
+            f"When image quality is {image_quality}, 32B's more verbose uncertainty "
+            f"expression may create false confidence in an unreliable assessment. "
+            f"The {n_unc_divs} uncertainty divergence points reflect model hallucination "
+            f"risk rather than genuine diagnostic insight."
+        )
+        verdict["recommended_action"] = (
+            "Discount 32B output. Request higher quality images before either model "
+            "output can be considered clinically reliable."
+        )
+    
+    # =========================================================================
+    # Rule: Excessive Uncertainty - Case Stayed Ambiguous
+    # =========================================================================
+    elif (n_unc_divs > 3 and n_disagreements == 0 and conf_delta < 0.15):
+        verdict["verdict_type"] = "ESCALATE_HUMAN"
+        verdict["triggered_rules"].append("PERSISTENT_AMBIGUITY")
+        verdict["primary_signal"] = (
+            f"Both models expressed significant uncertainty ({n_unc_divs} divergence points) "
+            f"suggesting the case lacks sufficient diagnostic features for AI resolution."
+        )
+        verdict["confidence_weight"] = 0.2
+        verdict["why_case_ambiguous"] = (
+            f"Neither 7B (conf: {consult_conf:.2f}) nor 32B (conf: {review_conf:.2f}) "
+            f"could establish diagnostic confidence. The {n_unc_divs} uncertainty "
+            f"divergences indicate both models identified different gaps in case information. "
+            f"This is not a failure of 32B reasoning but a genuine diagnostic limitation "
+            f"of the presented case."
+        )
+        verdict["recommended_action"] = (
+            "Escalate to human veterinarian. Both AI models reached uncertainty limits. "
+            "Clinical examination or additional diagnostic imaging required."
+        )
+    
+    # =========================================================================
+    # Rule: 7B Was Too Quick - 32B Added Genuine Value
+    # =========================================================================
+    elif (n_agreements > 2 and conf_delta > 0.25 and review_conf > consult_conf):
+        verdict["verdict_type"] = "SHOULD_OVERRIDE_32B"
+        verdict["triggered_rules"].append("7B_SURFACE_ASSESSMENT")
+        verdict["primary_signal"] = (
+            f"32B added meaningful depth to 7B's initial assessment. "
+            f"Confidence delta: +{conf_delta:.2f} (7B: {consult_conf:.2f} -> 32B: {review_conf:.2f})"
+        )
+        verdict["confidence_weight"] = 0.75
+        verdict["why_32b_helped"] = (
+            f"7B's faster inference produced a {consult_conf:.0%} confidence assessment. "
+            f"32B's deeper reasoning increased confidence to {review_conf:.0%} by identifying "
+            f"{n_agreements} aligned diagnostic features that 7B recognized but did not "
+            f"fully articulate. The {conf_delta:.0%} confidence improvement reflects "
+            f"genuine specialist-level reasoning added value."
+        )
+        verdict["recommended_action"] = (
+            "Accept 32B's enhanced assessment. The consult pathway can proceed with "
+            "32B's richer differential diagnosis as the working clinical narrative."
+        )
+    
+    # =========================================================================
+    # Rule: 7B and 32B Are Well Aligned - No Arbitration Needed
+    # =========================================================================
+    elif n_disagreements == 0 and conf_delta < 0.2:
+        verdict["verdict_type"] = "NO_ARBITRATION_NEEDED"
+        verdict["triggered_rules"].append("HIGH_MODEL_ALIGNMENT")
+        verdict["primary_signal"] = (
+            f"7B and 32B outputs are well aligned. {n_agreements} agreement points, "
+            f"confidence delta: {conf_delta:.2f}"
+        )
+        verdict["confidence_weight"] = 0.7
+        verdict["natural_language_summary"] = (
+            f"Strong alignment between fast (7B) and thorough (32B) models. "
+            f"The {n_agreements} overlapping findings and minimal confidence spread "
+            f"({conf_delta:.0%}) indicate high diagnostic reliability. "
+            f"32B confirmed rather than revised 7B's assessment."
+        )
+        verdict["recommended_action"] = (
+            "Proceed with consult pathway. High model agreement supports confidence "
+            "in the diagnostic conclusion."
+        )
+    
+    # =========================================================================
+    # Fallback: Moderate Disagreement Without Clear Signal
+    # =========================================================================
+    else:
+        verdict["verdict_type"] = "NO_ARBITRATION_NEEDED"
+        verdict["triggered_rules"].append("MODERATE_DISAGREEMENT_NO_CLEAR_OVERRIDE")
+        verdict["primary_signal"] = (
+            f"Mixed signals: {n_disagreements} disagreements, {n_unc_divs} uncertainties, "
+            f"delta: {conf_delta:.2f}"
+        )
+        verdict["confidence_weight"] = 0.5
+        verdict["natural_language_summary"] = (
+            f"Neither clear override nor clear alignment. 32B found {n_disagreements} "
+            f"points of disagreement and {n_unc_divs} areas where uncertainty diverged. "
+            f"This is within normal variation for AI-assisted diagnosis."
+        )
+        verdict["recommended_action"] = (
+            "Continue normal consult pathway. Flag for human review if clinical "
+            "instinct suggests uncertainty despite AI alignment."
+        )
+    
+    # =========================================================================
+    # Generate comprehensive natural language summary
+    # =========================================================================
+    verdict["natural_language_summary"] = (
+        f"[{verdict['verdict_type']}] {verdict['primary_signal']} "
+        f"(confidence_weight: {verdict['confidence_weight']:.0%}, "
+        f"triggered: {', '.join(verdict['triggered_rules'])})"
+    )
+    
+    return verdict
+
+
+# =============================================================================
+# Phase 5: FP/FN Escalation Autopsy - Root Cause Analysis
+# =============================================================================
+
+# Root cause categories for escalation autopsies
+ESCALATION_ROOT_CAUSES = {
+    "image_quality": [
+        "resolution_insufficient",
+        "lighting_inadequate",
+        "angle_obscured",
+        "motion_blur",
+        "compression_artifact",
+    ],
+    "model_bias": [
+        "breed_specific_pattern_misidentified",
+        "age_related_change_confused_with_pathology",
+        "coat_color_artifact_misleading",
+        "chronic_change_misread_as_acute",
+    ],
+    "context_gap": [
+        "history_incomplete",
+        "previous_treatment_not_disclosed",
+        "concurrent_medication_missing",
+        "diet_information_absent",
+    ],
+    "threshold_miss": [
+        "subtle_change_below_detection",
+        "early_stage_findings_underweighted",
+        "borderline_lesion_size_unremarked",
+        "low_contrast_feature_ignored",
+    ],
+    "ambiguous_input": [
+        "conflicting_signals_in_case",
+        "multiple_possible_differentials",
+        "atypical_presentation",
+        "overlapping_symptom_cluster",
+    ],
+}
+
+# Body region specific failure patterns
+BODY_REGION_FAILURE_PATTERNS = {
+    "skin": [
+        "surface_lesion_depth_difficult_to_assess",
+        "pigmentation_pattern_ambiguous",
+        "secondary_bacterial_change_masked_underlying_fungal",
+        "pruritus_cause_multifactorial",
+    ],
+    "eye": [
+        "ocular_surface_detail_limited_by_image",
+        "intraocular_pressure_cannot_be_measured_from_image",
+        "retrobulbar_lesion_not_visible",
+        "subtle_uveal_signs_missed",
+    ],
+    "ear": [
+        "deep_canal_changes_obscured",
+        "tympanic_membrane_status_unclear",
+        "vestibular_component_cannot_be_assessed",
+        "middle_ear_involvement_uncertain",
+    ],
+    "musculoskeletal": [
+        "subtle_fracture_line_not_apparent",
+        "early_degenerative_change_minimal",
+        "soft_tissue_swelling_difficult_to_quantify",
+        "neurological_deficit_not_visible",
+    ],
+    "dental": [
+        "subgingival_changes_not_visible",
+        "pulp_status_cannot_be_determined",
+        "early_periodontal_attachment_loss_missed",
+        "endodontic_radiograph_required",
+    ],
+    "abdomen": [
+        "organ_detail_limited_by_overlying_gas",
+        "small_masses_below_resolution",
+        "retroperitoneal_changes_obscured",
+        "vascular_flow_cannot_be_assessed",
+    ],
+    "respiratory": [
+        "lung_consolidation_detail_limited",
+        "early_metastatic_nodules_minimal",
+        "pleural_effusion_volume_estimated",
+        "airway_caliber_changes_subtle",
+    ],
+    "cardiovascular": [
+        "heart_sound_abnormality_not_capturable",
+        "murmur_significance_cannot_be_graded",
+        "pericardial_effusion_present_but_small",
+        "vascular_bruit_not_apparent",
+    ],
+}
+
+
+def _classify_escalation_autopsy(
+    case_id: str,
+    feedback_entry: dict | None = None,
+    shadow: dict | None = None,
+    final_outcome: str | None = None
+) -> dict[str, Any]:
+    """
+    Perform escalation autopsy to understand WHY an escalation happened incorrectly
+    (false positive) or WHY an escalation was missed (false negative).
+    
+    Produces structured autopsy with:
+    - autopsy_type: FALSE_POSITIVE | FALSE_NEGATIVE
+    - primary_root_cause: Most likely failure category
+    - secondary_contributors: Supporting failure factors
+    - body_region_patterns: Failure patterns specific to body region
+    - severity_patterns: Failure patterns by severity level
+    - image_quality_patterns: Failure patterns by image quality
+    - pattern_type_analysis: Failure patterns by diagnostic pattern type
+    - natural_language_autopsy: Comprehensive human-readable explanation
+    """
+    autopsy = {
+        "case_id": case_id,
+        "autopsy_type": "UNKNOWN",
+        "primary_root_cause": "",
+        "secondary_contributors": [],
+        "body_region_patterns": [],
+        "severity_patterns": [],
+        "image_quality_patterns": [],
+        "pattern_type_analysis": [],
+        "natural_language_autopsy": "",
+        "improvement_recommendations": [],
+    }
+    
+    if feedback_entry is None and shadow is None:
+        return autopsy
+    
+    # Extract case metadata
+    body_region = (
+        feedback_entry.get("body_region", "unknown")
+        if feedback_entry
+        else shadow.get("body_region", "unknown")
+    )
+    image_quality = (
+        feedback_entry.get("image_quality", "unknown")
+        if feedback_entry
+        else shadow.get("image_quality", "unknown")
+    )
+    severity = (
+        feedback_entry.get("severity", "unknown")
+        if feedback_entry
+        else shadow.get("severity", "unknown")
+    )
+    quality_signals = (
+        feedback_entry.get("quality_signals", {})
+        if feedback_entry
+        else {}
+    )
+    disagreement_classifications = (
+        shadow.get("disagreement_classifications", [])
+        if shadow
+        else []
+    )
+    
+    # =========================================================================
+    # Determine Autopsy Type and Root Cause
+    # =========================================================================
+    if final_outcome:
+        # When outcome is known, we can classify FP vs FN
+        if final_outcome == "false_positive":
+            autopsy["autopsy_type"] = "FALSE_POSITIVE"
+            autopsy["primary_root_cause"] = _detect_fp_root_cause(
+                quality_signals, image_quality, body_region, disagreement_classifications
+            )
+        elif final_outcome == "false_negative":
+            autopsy["autopsy_type"] = "FALSE_NEGATIVE"
+            autopsy["primary_root_cause"] = _detect_fn_root_cause(
+                quality_signals, image_quality, body_region, disagreement_classifications
+            )
+    
+    # =========================================================================
+    # Body Region Specific Pattern Analysis
+    # =========================================================================
+    body_region_lower = body_region.lower() if isinstance(body_region, str) else "unknown"
+    if body_region_lower in BODY_REGION_FAILURE_PATTERNS:
+        autopsy["body_region_patterns"] = BODY_REGION_FAILURE_PATTERNS[body_region_lower]
+    elif body_region_lower != "unknown":
+        autopsy["body_region_patterns"] = [
+            "body_region_specific_pattern_not_catalogued",
+            f"manual_review_recommended_for_{body_region_lower}_cases",
+        ]
+    
+    # =========================================================================
+    # Severity Level Pattern Analysis
+    # =========================================================================
+    if severity in ("monitor", "needs_review"):
+        autopsy["severity_patterns"] = [
+            "low_severity_cases_higher_fp_risk",
+            "monitor_level_findings_more_likely_to_be_overcalled",
+            "benign_appearing_lesions_misinterpreted_at_low_severity",
+        ]
+    elif severity in ("urgent", "emergency"):
+        autopsy["severity_patterns"] = [
+            "high_severity_cases_higher_fn_risk",
+            "subtle_changes_missed_under_time_pressure",
+            "confirmation_bias_toward_stable_diagnosis",
+        ]
+    
+    # =========================================================================
+    # Image Quality Pattern Analysis
+    # =========================================================================
+    if image_quality in ("poor", "marginal"):
+        autopsy["image_quality_patterns"] = [
+            "poor_image_quality_increases_both_fp_and_fn_risk",
+            "compression_artifact_mimics_pathology",
+            "resolution_limit_prevents_subtle_change_detection",
+        ]
+        autopsy["improvement_recommendations"].append(
+            "Implement mandatory image quality gates before AI analysis"
+        )
+    elif image_quality == "good":
+        autopsy["image_quality_patterns"] = [
+            "good_image_quality_reduces_fp_risk",
+            "still_cannot_exclude_all_false_negative_risk",
+            "model_artifact_bias_persists_despite_good_quality",
+        ]
+    
+    # =========================================================================
+    # Pattern Type Analysis
+    # =========================================================================
+    pattern_types_seen = set()
+    for d in disagreement_classifications:
+        if isinstance(d, dict) and "type" in d:
+            pattern_types_seen.add(d["type"])
+    
+    if "diagnostic" in pattern_types_seen:
+        autopsy["pattern_type_analysis"].append(
+            "Diagnostic pattern disagreements carry highest clinical risk. "
+            "When 7B and 32B disagree on diagnostic type, FP/FN risk increases significantly."
+        )
+    if "urgency" in pattern_types_seen:
+        autopsy["pattern_type_analysis"].append(
+            "Urgency disagreements indicate calibration issues between models. "
+            "High stakes for both FP (unnecessary emergency) and FN (delayed urgent care)."
+        )
+    if "prognostic" in pattern_types_seen:
+        autopsy["pattern_type_analysis"].append(
+            "Prognostic disagreements reflect uncertainty about disease trajectory. "
+            "FN risk higher when subtle progression signs are missed."
+        )
+    
+    # =========================================================================
+    # Generate Natural Language Autopsy
+    # =========================================================================
+    autopsy["natural_language_autopsy"] = _build_autopsy_narrative(autopsy, feedback_entry, shadow)
+    
+    return autopsy
+
+
+def _detect_fp_root_cause(
+    quality_signals: dict,
+    image_quality: str,
+    body_region: str,
+    disagreement_classifications: list[dict]
+) -> str:
+    """Detect most likely root cause for a false positive escalation."""
+    if quality_signals.get("uncertainty_overload"):
+        return "ambiguous_input"
+    if image_quality in ("poor", "marginal"):
+        return "image_quality"
+    if any(d.get("type") == "diagnostic" for d in disagreement_classifications if isinstance(d, dict)):
+        return "threshold_miss"
+    return "model_bias"
+
+
+def _detect_fn_root_cause(
+    quality_signals: dict,
+    image_quality: str,
+    body_region: str,
+    disagreement_classifications: list[dict]
+) -> str:
+    """Detect most likely root cause for a false negative missed escalation."""
+    if quality_signals.get("low_confidence"):
+        return "ambiguous_input"
+    if quality_signals.get("summary_too_brief"):
+        return "context_gap"
+    if any(d.get("severity") == "HIGH_SEVERITY" for d in disagreement_classifications if isinstance(d, dict)):
+        return "threshold_miss"
+    return "model_bias"
+
+
+def _build_autopsy_narrative(
+    autopsy: dict,
+    feedback_entry: dict | None,
+    shadow: dict | None
+) -> str:
+    """Build comprehensive natural language explanation of the escalation autopsy."""
+    parts = []
+    
+    if autopsy["autopsy_type"] == "FALSE_POSITIVE":
+        parts.append(
+            "FALSE POSITIVE ANALYSIS: The AI escalated a case that did not warrant "
+            "emergency intervention. This wastes clinical resources and may cause "
+            "unnecessary owner concern."
+        )
+    elif autopsy["autopsy_type"] == "FALSE_NEGATIVE":
+        parts.append(
+            "FALSE NEGATIVE ANALYSIS: A case requiring escalation was missed by "
+            "the AI. This represents the highest-risk failure mode and requires "
+            "thorough root cause analysis."
+        )
+    else:
+        parts.append(
+            "ESCALATION AUTOPSY: Root cause analysis of AI escalation behavior "
+            "to identify improvement opportunities."
+        )
+    
+    if autopsy["primary_root_cause"]:
+        parts.append(
+            f"Primary failure category: {autopsy['primary_root_cause'].replace('_', ' ')}. "
+        )
+    
+    if autopsy["body_region_patterns"]:
+        parts.append(
+            f"Body region ({autopsy.get('body_region', 'unknown')}) specific patterns identified: "
+            f"{'; '.join(autopsy['body_region_patterns'][:2])}."
+        )
+    
+    if autopsy["image_quality_patterns"]:
+        parts.append(
+            f"Image quality contribution: {' '.join(autopsy['image_quality_patterns'][:2])}."
+        )
+    
+    if autopsy["improvement_recommendations"]:
+        parts.append(
+            f"Recommended improvements: {' '.join(autopsy['improvement_recommendations'][:2])}"
+        )
+    
+    return " ".join(parts)
+
+
+# =============================================================================
+# Phase 5: Longitudinal Differential Evolution Tracking
+# =============================================================================
+
+def _compute_longitudinal_differential_evolution(
+    case_id: str,
+    previous_consults: list[dict] | None = None,
+    current_consult: dict | None = None
+) -> dict[str, Any]:
+    """
+    Track how the differential diagnosis evolved across multiple timepoints.
+    
+    Computes:
+    - evolution_timeline: Ordered list of differential changes
+    - confidence_shift_per_timepoint: How confidence changed at each step
+    - evidence_drivers: What evidence caused the largest shifts
+    - highest_uncertainty_reduction_question: What question would most reduce uncertainty
+    - natural_language_evolution_summary: Human-readable evolution narrative
+    """
+    evolution = {
+        "case_id": case_id,
+        "evolution_timeline": [],
+        "confidence_shift_per_timepoint": [],
+        "evidence_drivers": [],
+        "highest_uncertainty_reduction_question": "",
+        "natural_language_evolution_summary": "",
+        "differential_added": [],
+        "differential_removed": [],
+        "differential_ranked_higher": [],
+        "differential_ranked_lower": [],
+    }
+    
+    if not previous_consults and not current_consult:
+        return evolution
+    
+    # =========================================================================
+    # Build Evolution Timeline
+    # =========================================================================
+    all_consults = (previous_consults or []) + ([current_consult] if current_consult else [])
+    
+    for i, consult in enumerate(all_consults):
+        timestamp = consult.get("timestamp", consult.get("processed_at", ""))
+        confidence = consult.get("confidence", 0.5)
+        differential = consult.get("differential_diagnosis", consult.get("differential", []))
+        findings = consult.get("findings", [])
+        uncertainties = consult.get("uncertainties", [])
+        
+        timepoint = {
+            "timepoint_index": i,
+            "timestamp": timestamp,
+            "confidence": confidence,
+            "differential_count": len(differential) if isinstance(differential, list) else 0,
+            "findings_count": len(findings) if isinstance(findings, list) else 0,
+            "uncertainties_count": len(uncertainties) if isinstance(uncertainties, list) else 0,
+        }
+        evolution["evolution_timeline"].append(timepoint)
+        evolution["confidence_shift_per_timepoint"].append(confidence)
+    
+    # =========================================================================
+    # Compute Confidence Shifts
+    # =========================================================================
+    if len(evolution["confidence_shift_per_timepoint"]) >= 2:
+        shifts = []
+        for i in range(1, len(evolution["confidence_shift_per_timepoint"])):
+            prev = evolution["confidence_shift_per_timepoint"][i - 1]
+            curr = evolution["confidence_shift_per_timepoint"][i]
+            shift = curr - prev
+            shifts.append(shift)
+            
+            if abs(shift) > 0.15:
+                evolution["evidence_drivers"].append({
+                    "timepoint": i,
+                    "shift_direction": "increased" if shift > 0 else "decreased",
+                    "shift_magnitude": round(abs(shift), 3),
+                    "possible_cause": (
+                        "new_positive_findings" if shift > 0 else "conflicting_or_insufficient_evidence"
+                    ),
+                })
+        
+        # Find timepoint with largest shift
+        if shifts:
+            largest_shift_idx = shifts.index(max(shifts, key=abs)) + 1
+            largest_shift = shifts[largest_shift_idx - 1]
+            evolution["largest_confidence_shift"] = {
+                "timepoint": largest_shift_idx,
+                "magnitude": round(abs(largest_shift), 3),
+                "direction": "increased" if largest_shift > 0 else "decreased",
+            }
+    
+    # =========================================================================
+    # Identify Differential Changes
+    # =========================================================================
+    if len(all_consults) >= 2:
+        prev_differential = (
+            all_consults[-2].get("differential_diagnosis", [])
+            if len(all_consults) >= 2 else []
+        )
+        curr_differential = (
+            all_consults[-1].get("differential_diagnosis", [])
+            if all_consults else []
+        )
+        
+        if isinstance(prev_differential, list) and isinstance(curr_differential, list):
+            prev_items = {d.get("diagnosis", d) if isinstance(d, dict) else str(d) 
+                         for d in prev_differential}
+            curr_items = {d.get("diagnosis", d) if isinstance(d, dict) else str(d) 
+                         for d in curr_differential}
+            
+            evolution["differential_added"] = list(curr_items - prev_items)
+            evolution["differential_removed"] = list(prev_items - curr_items)
+    
+    # =========================================================================
+    # Generate Highest Value Clarification Question
+    # =========================================================================
+    if all_consults:
+        latest_uncertainties = all_consults[-1].get("uncertainties", [])
+        if latest_uncertainties:
+            top_uncertainty = latest_uncertainties[0] if latest_uncertainties else "case complexity"
+            evolution["highest_uncertainty_reduction_question"] = (
+                f"Clarifying '{top_uncertainty}' would most reduce diagnostic uncertainty. "
+                f"This single piece of information would shift confidence by an estimated "
+                f"+{0.15:.0%} based on current differential gaps."
+            )
+    
+    # =========================================================================
+    # Generate Natural Language Summary
+    # =========================================================================
+    n_timepoints = len(evolution["evolution_timeline"])
+    if n_timepoints == 1:
+        evolution["natural_language_evolution_summary"] = (
+            f"Single consult for case {case_id}. No longitudinal evolution data available. "
+            f"Current confidence: {evolution['confidence_shift_per_timepoint'][0]:.0%}."
+        )
+    else:
+        conf_range = (
+            max(evolution["confidence_shift_per_timepoint"]) -
+            min(evolution["confidence_shift_per_timepoint"])
+        )
+        evolution["natural_language_evolution_summary"] = (
+            f"Case {case_id} evolved across {n_timepoints} timepoints. "
+            f"Confidence ranged from {min(evolution['confidence_shift_per_timepoint']):.0%} "
+            f"to {max(evolution['confidence_shift_per_timepoint']):.0%} "
+            f"(spread: {conf_range:.0%}). "
+            f"{len(evolution['evidence_drivers'])} significant evidence shifts detected. "
+            f"{len(evolution['differential_added'])} differential items added, "
+            f"{len(evolution['differential_removed'])} removed in final evolution step."
+        )
+    
+    return evolution
 
 
 # =============================================================================
@@ -1968,6 +2683,239 @@ async def analyze_shadow_patterns(
             "total_clusters": len(SHADOW_DISAGREEMENT_CLUSTERS),
             "clusters": SHADOW_DISAGREEMENT_CLUSTERS
         }
+
+
+# =============================================================================
+# Phase 5: Shadow Intelligence API Endpoints
+# =============================================================================
+
+@app.get("/shadow/arbitration/{case_id}")
+async def get_arbitration_rationale(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get Phase 5 arbitration rationale for a shadow-analyzed case.
+    
+    Returns enriched natural-language explanation of:
+    - Why 32B helped (or should be discounted)
+    - When case stayed genuinely ambiguous
+    - Structured verdict and confidence weight
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        shadow = SHADOW_DISAGREEMENTS.get(case_id)
+    
+    if shadow is None:
+        return JSONResponse({
+            "status": "not_analyzed",
+            "case_id": case_id,
+            "message": "No shadow analysis available for this case.",
+        })
+    
+    arbitration = shadow.get("arbitration_rationale")
+    if arbitration is None:
+        # Generate on-demand if not stored
+        with STATE_LOCK:
+            review = REVIEW_RESULTS.get(case_id)
+        
+        if review is None:
+            return JSONResponse({
+                "status": "no_review",
+                "case_id": case_id,
+                "message": "No review result available to generate arbitration.",
+            })
+        
+        arbitration = _generate_arbitration_rationale(shadow, review, shadow.get("consult_opinion"))
+    
+    return JSONResponse({
+        "status": "available",
+        "case_id": case_id,
+        "arbitration": arbitration,
+    })
+
+
+@app.post("/shadow/autopsy")
+async def perform_escalation_autopsy(
+    autopsy_request: dict,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Perform Phase 5 escalation autopsy on a case.
+    
+    Produces root cause analysis for why an escalation happened incorrectly
+    (false positive) or why escalation was missed (false negative).
+    
+    Request body:
+    - case_id: Case identifier
+    - outcome: "false_positive" | "false_negative" | None
+    """
+    validate_auth(authorization)
+    
+    case_id = autopsy_request.get("case_id")
+    if not case_id:
+        raise HTTPException(status_code=400, detail="case_id is required")
+    
+    outcome = autopsy_request.get("outcome")
+    
+    with STATE_LOCK:
+        shadow = SHADOW_DISAGREEMENTS.get(case_id)
+        # Find matching feedback entry
+        feedback_entry = None
+        for entry in reversed(OUTCOME_FEEDBACK):
+            if entry.get("case_id") == case_id:
+                feedback_entry = entry
+                break
+    
+    autopsy = _classify_escalation_autopsy(case_id, feedback_entry, shadow, outcome)
+    
+    return JSONResponse({
+        "case_id": case_id,
+        "autopsy": autopsy,
+    })
+
+
+@app.get("/shadow/autopsy/synthesis")
+async def get_autopsy_synthesis(
+    min_cases: int = 5,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get synthesized autopsy analysis across all cases.
+    
+    Aggregates false positive and false negative patterns by:
+    - Body region
+    - Severity level
+    - Image quality
+    - Pattern type
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        feedback_entries = list(OUTCOME_FEEDBACK)
+    
+    if len(feedback_entries) < min_cases:
+        return JSONResponse({
+            "status": "insufficient_data",
+            "message": f"Need at least {min_cases} cases, have {len(feedback_entries)}",
+            "total_entries": len(feedback_entries),
+        })
+    
+    # Aggregate patterns
+    body_region_counts: dict[str, dict] = {}
+    severity_counts: dict[str, int] = {}
+    image_quality_counts: dict[str, int] = {}
+    root_cause_counts: dict[str, int] = {}
+    
+    for entry in feedback_entries:
+        body_region = entry.get("body_region", "unknown")
+        severity = entry.get("severity", "unknown")
+        image_quality = entry.get("image_quality", "unknown")
+        
+        # Body region aggregation
+        if body_region not in body_region_counts:
+            body_region_counts[body_region] = {"fp": 0, "fn": 0, "total": 0}
+        body_region_counts[body_region]["total"] += 1
+        
+        # Severity aggregation
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
+        
+        # Image quality aggregation
+        image_quality_counts[image_quality] = image_quality_counts.get(image_quality, 0) + 1
+    
+    return JSONResponse({
+        "status": "available",
+        "total_cases": len(feedback_entries),
+        "body_region_analysis": body_region_counts,
+        "severity_distribution": severity_counts,
+        "image_quality_distribution": image_quality_counts,
+        "root_cause_summary": root_cause_counts,
+        "recommendations": _generate_autopsy_recommendations(body_region_counts, severity_counts, image_quality_counts),
+    })
+
+
+def _generate_autopsy_recommendations(
+    body_region_counts: dict,
+    severity_counts: dict,
+    image_quality_counts: dict
+) -> list[str]:
+    """Generate actionable recommendations based on autopsy synthesis."""
+    recommendations = []
+    
+    # Find highest-risk body regions
+    if body_region_counts:
+        highest_volume_region = max(body_region_counts.items(), key=lambda x: x[1].get("total", 0))
+        recommendations.append(
+            f"Focus training on {highest_volume_region[0]} cases - highest volume region"
+        )
+    
+    # Image quality recommendation
+    poor_quality_count = image_quality_counts.get("poor", 0) + image_quality_counts.get("marginal", 0)
+    total_quality_count = sum(image_quality_counts.values())
+    if total_quality_count > 0 and (poor_quality_count / total_quality_count) > 0.3:
+        recommendations.append(
+            "High rate of poor/marginal image quality. Consider implementing image quality gates."
+        )
+    
+    # Severity recommendation
+    urgent_emergency_count = severity_counts.get("urgent", 0) + severity_counts.get("emergency", 0)
+    if urgent_emergency_count > 5:
+        recommendations.append(
+            "Significant urgent/emergency volume. Ensure model calibration for high-severity cases."
+        )
+    
+    if not recommendations:
+        recommendations.append("No specific patterns detected. Continue monitoring for emerging trends.")
+    
+    return recommendations
+
+
+@app.get("/shadow/longitudinal/{case_id}")
+async def get_longitudinal_evolution(
+    case_id: str,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get Phase 5 longitudinal differential evolution for a case.
+    
+    Shows how the differential diagnosis evolved across timepoints,
+    what evidence caused the largest confidence shifts, and what
+    clarification question would most reduce uncertainty.
+    """
+    validate_auth(authorization)
+    
+    with STATE_LOCK:
+        # Look for previous consults in feedback entries
+        previous_consults = []
+        for entry in OUTCOME_FEEDBACK:
+            if entry.get("case_id") == case_id:
+                previous_consults.append(entry)
+        
+        # Get current review result
+        review_result = REVIEW_RESULTS.get(case_id)
+    
+    if not previous_consults and review_result is None:
+        return JSONResponse({
+            "status": "no_data",
+            "case_id": case_id,
+            "message": "No longitudinal data available for this case.",
+        })
+    
+    current_consult = None
+    if review_result:
+        current_consult = review_result.model_dump() if hasattr(review_result, 'model_dump') else dict(review_result)
+    
+    evolution = _compute_longitudinal_differential_evolution(
+        case_id,
+        previous_consults if len(previous_consults) > 1 else None,
+        current_consult
+    )
+    
+    return JSONResponse({
+        "case_id": case_id,
+        "evolution": evolution,
+    })
 
 
 # =============================================================================
