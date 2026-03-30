@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   caddy:
     image: caddy:2.10.2
@@ -26,7 +24,8 @@ services:
       context: ../../services/vision-preprocess-service
     restart: unless-stopped
     env_file:
-      - ./sidecars.env
+      - path: ./sidecars.env
+        required: false
     environment:
       SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
       STUB_MODE: ${VISION_PREPROCESS_STUB_MODE:-false}
@@ -50,7 +49,8 @@ services:
       context: ../../services/text-retrieval-service
     restart: unless-stopped
     env_file:
-      - ./sidecars.env
+      - path: ./sidecars.env
+        required: false
     environment:
       SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
       STUB_MODE: ${TEXT_RETRIEVAL_STUB_MODE:-false}
@@ -81,7 +81,8 @@ services:
       context: ../../services/image-retrieval-service
     restart: unless-stopped
     env_file:
-      - ./sidecars.env
+      - path: ./sidecars.env
+        required: false
     environment:
       SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
       STUB_MODE: ${IMAGE_RETRIEVAL_STUB_MODE:-false}
@@ -112,11 +113,12 @@ services:
       context: ../../services/multimodal-consult-service
     restart: unless-stopped
     env_file:
-      - ./sidecars.env
+      - path: ./sidecars.env
+        required: false
     environment:
       SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
       STUB_MODE: ${MULTIMODAL_CONSULT_STUB_MODE:-true}
-      # Model configuration — override STUB_MODE and set these when running on a GPU host
+      # Model configuration - override STUB_MODE and set these when running on a GPU host.
       HF_HOME: ${HF_HOME:-/model-cache}
       CONSULT_MODEL_ID: ${CONSULT_MODEL_ID:-Qwen/Qwen2.5-VL-7B-Instruct}
       SKIP_MODEL_DOWNLOAD: ${SKIP_MODEL_DOWNLOAD:-false}
@@ -135,7 +137,7 @@ services:
       interval: 30s
       timeout: 15s
       retries: 5
-      # Covers first-boot config + processor download (~few MB, fast even on slow links)
+      # Covers first-boot config + processor download (~few MB, fast even on slow links).
       start_period: 120s
 
   async-review-service:
@@ -143,14 +145,15 @@ services:
       context: ../../services/async-review-service
     restart: unless-stopped
     env_file:
-      - ./sidecars.env
+      - path: ./sidecars.env
+        required: false
     environment:
       SIDECAR_API_KEY: ${SIDECAR_API_KEY:-}
       STUB_MODE: ${ASYNC_REVIEW_STUB_MODE:-true}
       MAX_CALLBACK_RETRIES: ${MAX_CALLBACK_RETRIES:-3}
       CALLBACK_RETRY_DELAY_SECONDS: ${CALLBACK_RETRY_DELAY_SECONDS:-5}
       MAX_SHADOW_HISTORY: ${MAX_SHADOW_HISTORY:-1000}
-      # Model configuration — override STUB_MODE and set these when running on a GPU host
+      # Model configuration - override STUB_MODE and set these when running on a GPU host.
       HF_HOME: ${HF_HOME:-/model-cache}
       REVIEW_MODEL_ID: ${REVIEW_MODEL_ID:-Qwen/Qwen2.5-VL-32B-Instruct}
       SKIP_MODEL_DOWNLOAD: ${SKIP_MODEL_DOWNLOAD:-false}
@@ -176,6 +179,6 @@ volumes:
   caddy_config:
   # Persistent volumes for VL model weights.
   # On first boot with STUB_MODE=false the service downloads config + processor.
-  # Full weights are loaded lazily — pre-populate via docker volume or bind mount for fast restarts.
+  # Full weights are loaded lazily - pre-populate via docker volume or bind mount for fast restarts.
   model_cache_consult:
   model_cache_review:

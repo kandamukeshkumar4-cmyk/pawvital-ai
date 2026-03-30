@@ -14,7 +14,7 @@ image-retrieval.{$SIDECAR_BASE_DOMAIN} {
   reverse_proxy image-retrieval-service:8082
 }
 
-# Extended timeouts for synchronous VL inference (7B model, 3–90 s depending on hardware)
+# Extended timeouts for synchronous VL inference (7B model, 3-90 s depending on hardware)
 multimodal-consult.{$SIDECAR_BASE_DOMAIN} {
   reverse_proxy multimodal-consult-service:8083 {
     transport http {
@@ -24,7 +24,7 @@ multimodal-consult.{$SIDECAR_BASE_DOMAIN} {
   }
 }
 
-# Async review only submits to an in-process queue — response is fast, no extended timeout needed
+# Async review only submits to an in-process queue - response is fast, no extended timeout needed
 async-review.{$SIDECAR_BASE_DOMAIN} {
   reverse_proxy async-review-service:8084
 }
