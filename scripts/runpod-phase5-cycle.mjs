@@ -188,7 +188,7 @@ async function redeployLatestProductionDeployment() {
   const { teamId, teamSlug } = await getVercelTeamContext(token);
   const deployments = await fetchVercelDeployments(token);
   const latest = deployments[0];
-  if (!latest?.id) {
+  if (!latest?.uid) {
     throw new Error("Unable to find a production deployment to redeploy");
   }
 
@@ -200,7 +200,7 @@ async function redeployLatestProductionDeployment() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      deploymentId: latest.id,
+      deploymentId: latest.uid,
       name: latest.name || "pawvital-ai",
       project: latest.name || "pawvital-ai",
       target: "production",
@@ -231,11 +231,11 @@ async function waitForProductionDeployment(targetDeploymentId) {
 
   while (Date.now() < deadline) {
     const deployments = await fetchVercelDeployments(token);
-    const target = deployments.find((deployment) => deployment?.id === targetDeploymentId);
+    const target = deployments.find((deployment) => deployment?.uid === targetDeploymentId);
     const latest = deployments[0];
-    const latestDescriptor = `${latest?.id || "no-id"}:${latest?.state || "unknown"}/${latest?.readyState || "unknown"}`;
+    const latestDescriptor = `${latest?.uid || "no-id"}:${latest?.state || "unknown"}/${latest?.readyState || "unknown"}`;
     const targetDescriptor = target
-      ? `${target.id}:${target.state || "unknown"}/${target.readyState || "unknown"}`
+      ? `${target.uid}:${target.state || "unknown"}/${target.readyState || "unknown"}`
       : `missing:${targetDeploymentId}`;
     console.log(`[phase5] deployment snapshot -> latest ${latestDescriptor}; target ${targetDescriptor}`);
 
