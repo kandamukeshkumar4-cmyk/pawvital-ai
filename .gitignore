@@ -49,3 +49,4 @@ next-env.d.ts
 
 # IDE / editor
 Roo-Code
+.runpod_ssh

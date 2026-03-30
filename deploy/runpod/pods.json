@@ -1,0 +1,20 @@
+{
+  "consult_retrieval": {
+    "pod_id": "vxvnbm54p8pxju",
+    "name": "pawvital-consult-retrieval-v4",
+    "gpu": "NVIDIA RTX 6000 Ada Generation",
+    "services": ["text-retrieval-service:8081", "image-retrieval-service:8082", "multimodal-consult-service:8083"],
+    "proxy_base": "https://vxvnbm54p8pxju-{port}.proxy.runpod.net",
+    "status": "booting",
+    "created": "2026-03-30"
+  },
+  "async_review": {
+    "pod_id": null,
+    "name": "pawvital-async-review",
+    "gpu": "NVIDIA H200 or A100-80G",
+    "services": ["async-review-service:8084"],
+    "proxy_base": null,
+    "status": "pending_consult_health",
+    "note": "Provision after consult pod confirms healthy"
+  }
+}
