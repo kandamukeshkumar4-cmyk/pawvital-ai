@@ -604,7 +604,7 @@ export async function POST(request: Request) {
       lastUserMessage.content,
       session
     );
-    const mergedAnswers = mergeTurnAnswers(
+    let mergedAnswers = mergeTurnAnswers(
       session,
       deterministicSupplementalAnswers,
       extracted.answers || {}
@@ -1194,6 +1194,52 @@ function parseLooseJsonRecord(rawText: string): Record<string, unknown> {
   return JSON.parse(match ? match[0] : cleaned) as Record<string, unknown>;
 }
 
+function humanizeAnswerValue(value: string | boolean | number): string {
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  if (typeof value === "number") return String(value);
+  // Convert underscore/dash choice values to plain English
+  return String(value).replace(/[_-]+/g, " ");
+}
+
+function getRecentAnsweredQuestionIds(
+  session: TriageSession,
+  limit = 5
+): string[] {
+  const recent: string[] = [];
+  const seen = new Set<string>();
+
+  for (let index = session.answered_questions.length - 1; index >= 0; index -= 1) {
+    const questionId = session.answered_questions[index];
+    if (seen.has(questionId)) {
+      continue;
+    }
+
+    seen.add(questionId);
+    recent.push(questionId);
+
+    if (recent.length >= limit) {
+      break;
+    }
+  }
+
+  return recent.reverse();
+}
+
+function buildConfirmedQASummary(session: TriageSession, limit = 5): string {
+  const answered = getRecentAnsweredQuestionIds(session, limit);
+  if (answered.length === 0) return "";
+  const lines = answered
+    .map((qId) => {
+      const q = FOLLOW_UP_QUESTIONS[qId];
+      const rawVal = session.extracted_answers[qId];
+      if (!q || rawVal === undefined || rawVal === null || rawVal === "") return null;
+      const readable = humanizeAnswerValue(rawVal);
+      return `- ${q.question_text} -> ${readable}`;
+    })
+    .filter(Boolean);
+  return lines.join("\n");
+}
+
 function buildDeterministicQuestionFallback(
   petName: string,
   questionText: string,
@@ -1203,15 +1249,12 @@ function buildDeterministicQuestionFallback(
 ): string {
   const memory = ensureStructuredCaseMemory(session);
   const chiefComplaint = memory.chief_complaints[0]?.replace(/_/g, " ") || null;
-  const confirmedFacts = Object.keys(memory.confirmed_facts).length;
 
   let acknowledgment: string;
   if (hasPhoto && allowPhotoMention) {
     acknowledgment = `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`;
   } else if (chiefComplaint) {
-    acknowledgment = `I'm keeping track of what you've shared so far about ${petName}'s ${chiefComplaint}${confirmedFacts > 2 ? `, plus ${confirmedFacts - 1} more details` : ""}.`;
-  } else if (confirmedFacts > 0) {
-    acknowledgment = `I'm keeping track of the ${confirmedFacts} facts you've shared about ${petName}.`;
+    acknowledgment = `I'm keeping track of what you've shared so far about ${petName}'s ${chiefComplaint}.`;
   } else {
     acknowledgment = `Thanks for sharing that about ${petName}.`;
   }
@@ -1424,6 +1467,8 @@ async function phraseQuestionV2(
     return fallbackMessage;
   }
 
+  const confirmedQA = buildConfirmedQASummary(session);
+
   const prompt = `You are PawVital, a precise veterinary triage wording assistant.
 
 The clinical matrix already chose the next question. Do not invent clinical logic.
@@ -1436,7 +1481,7 @@ PET:
 
 FULL SESSION MEMORY:
 ${memorySnapshot}
-${phrasingContext ? `\nIMAGE REASONING CONTEXT:\n${phrasingContext}\n` : ""}
+${confirmedQA ? `\nCONFIRMED ANSWERS SO FAR:\n${confirmedQA}\n` : ""}${phrasingContext ? `\nIMAGE REASONING CONTEXT:\n${phrasingContext}\n` : ""}
 PHOTO SENT THIS TURN: ${hasPhoto ? "YES" : "NO"}
 EXPLICITLY REFERENCE PHOTO IN WORDING: ${allowPhotoMentionInWording ? "YES" : "NO"}
 
@@ -1446,12 +1491,12 @@ REQUIRED QUESTION:
 - Answer type: ${qDef?.data_type || "string"}
 
 WRITE EXACTLY 2 SENTENCES:
-1. One short acknowledgment that fits the whole session.
+1. One brief acknowledgment that SPECIFICALLY references 1-2 of the confirmed answers above (e.g. "Since ${pet.name} has been drinking less than usual and this has been going on for 3 days..."). Do NOT write a generic "I'm keeping track" phrase.
 2. Ask the exact required question in caring, simple language.
 
 HARD RULES:
 - Treat the latest owner answer and any attached photo as one combined turn about the same dog.
-- Never act like this turn exists in isolation.
+- Never act like this turn exists in isolation — always connect to what was already confirmed.
 - Never ask a different question than the required one.
 - Never mention species confusion, breed confusion, or made-up visual details.
 - Use image reasoning context when it exists so the question stays grounded in what is already known.
@@ -2908,6 +2953,7 @@ function normalizeIntentText(rawMessage: string): string {
     .trim()
     .toLowerCase()
     .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[,:;]+/g, " ")
     .replace(/[.!?]+$/g, "")
     .replace(/\s+/g, " ");
 }
@@ -3032,6 +3078,29 @@ function coerceChoiceAnswerFromIntent(
         (lower.includes("drink") || lower.includes("water") || lower.includes("yes")))
     ) {
       return pickChoiceByPriority(choices, [["normal"], ["usual"]]);
+    }
+
+    // Handle "not really" / "no not really" / "not much" patterns for reduced water intake
+    // These indicate the owner is being hesitant or negative about something
+    if (
+      /\b(not really|not at all|nothing much)\b/.test(lower) &&
+      (lower.includes("drink") || lower.includes("water") || lower.includes("thirsty"))
+    ) {
+      return pickChoiceByPriority(choices, [
+        ["less", "than", "usual"],
+        ["less"],
+        ["reduc"],
+      ]);
+    }
+
+    // Handle standalone "not really" with optional "no" prefix - common hesitation pattern
+    // e.g. "no not really", "not really" alone - these indicate reduced/normal at best
+    if (/^no\s+not\s+really$/.test(lower) || /^not\s+really$/.test(lower)) {
+      return pickChoiceByPriority(choices, [
+        ["less", "than", "usual"],
+        ["less"],
+        ["reduc"],
+      ]);
     }
 
     if (isStrongWaterNegativeResponse(lower)) {
@@ -4303,3 +4372,4 @@ function buildImageGateMessage(
 
   return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
 }
+
