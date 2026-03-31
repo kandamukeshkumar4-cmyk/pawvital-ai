@@ -1,6 +1,6 @@
 {
   "consult_retrieval": {
-    "pod_id": "rpq4l9pp0ismtz",
+    "pod_id": "",
     "name": "pawvital-consult-retrieval-v6",
     "gpu": "NVIDIA RTX 6000 Ada Generation",
     "services": [
@@ -8,19 +8,20 @@
       "image-retrieval-service:8082",
       "multimodal-consult-service:8083"
     ],
-    "proxy_base": "https://rpq4l9pp0ismtz-{port}.proxy.runpod.net",
-    "status": "stopped",
-    "created": "2026-03-31"
+    "proxy_base": "",
+    "status": "deleted",
+    "created": "2026-03-31",
+    "note": "Deleted on 2026-03-31 to stop ongoing storage billing. Reprovision before the next validation window."
   },
   "async_review": {
-    "pod_id": "x2mh4cjuel1dsu",
+    "pod_id": "",
     "name": "pawvital-async-review-v1",
     "gpu": "NVIDIA H200 or A100-80G",
     "services": [
       "async-review-service:8084"
     ],
-    "proxy_base": "https://x2mh4cjuel1dsu-{port}.proxy.runpod.net",
-    "status": "stopped",
-    "note": "Provision after consult pod confirms healthy"
+    "proxy_base": "",
+    "status": "deleted",
+    "note": "Deleted on 2026-03-31 to stop ongoing storage billing. Reprovision before the next validation window."
   }
 }
