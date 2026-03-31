@@ -100,7 +100,7 @@ def load_model():
 
     if STUB_MODE:
         return None, None
-    
+
     if MODEL is None or PROCESSOR is None:
         logger.info("Loading %s on %s", MODEL_NAME, DEVICE)
         PROCESSOR = AutoProcessor.from_pretrained(MODEL_NAME)
@@ -111,7 +111,7 @@ def load_model():
         )
         MODEL.eval()
         logger.info("Model loaded successfully")
-    
+
     return MODEL, PROCESSOR
 
 
@@ -119,7 +119,7 @@ def decode_image(image_data: str) -> Image.Image:
     """Decode base64 image string to PIL Image."""
     if image_data.startswith("data:image"):
         image_data = image_data.split(",")[1]
-    
+
     image_bytes = base64.b64decode(image_data)
     return Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
@@ -131,7 +131,7 @@ def decode_image(image_data: str) -> Image.Image:
 def build_consult_prompt(request: ConsultRequest) -> str:
     """
     Build a structured prompt for veterinary image consult with strict output discipline.
-    
+
     Enhanced rubric incorporates additional assessment dimensions:
     1. Preprocess results (detected regions, domain, body region, quality)
     2. Owner description
@@ -141,7 +141,7 @@ def build_consult_prompt(request: ConsultRequest) -> str:
     6. Case context (historical data for long-context comparison)
     7. Assessment dimensions (additional clinical indicators)
     8. Previous findings (temporal comparison)
-    
+
     The model must respond with structured analysis that:
     - AGREE: points where specialist view confirms the clinical matrix assessment
     - DISAGREE: points where specialist view diverges (flagged as uncertainty)
@@ -150,17 +150,17 @@ def build_consult_prompt(request: ConsultRequest) -> str:
     - TEMPORAL_PATTERNS: chronicity and progression indicators
     - RISK_STRATIFIERS: risk categorization factors
     - COMPARISON_TO_BASELINE: comparison with similar case patterns
-    
+
     Output is validated against strict schema - malformed responses are reconstructed
     or replaced with minimal fallback.
     """
-    
+
     preprocess = request.preprocess
     domain = preprocess.get("domain", "unknown")
     body_region = preprocess.get("bodyRegion") or preprocess.get("body_region", "unknown")
     detected_regions = preprocess.get("detectedRegions", [])
     image_quality = preprocess.get("imageQuality", "unknown")
-    
+
     regions_str = ""
     if detected_regions:
         region_items = []
@@ -169,11 +169,11 @@ def build_consult_prompt(request: ConsultRequest) -> str:
             confidence = r.get("confidence", 0.5)
             region_items.append(f"  - {label} (confidence: {confidence:.2f})")
         regions_str = "\n".join(region_items)
-    
+
     contradictions_str = "\n".join([f"  - {c}" for c in request.contradictions]) if request.contradictions else "None"
-    
+
     facts_str = "\n".join([f"  - {k}: {v}" for k, v in request.deterministic_facts.items()]) if request.deterministic_facts else "None"
-    
+
     # Enhanced rubric: Case context for long-context comparison
     case_context = request.case_context or {}
     context_str = ""
@@ -182,7 +182,7 @@ def build_consult_prompt(request: ConsultRequest) -> str:
         for key, value in case_context.items():
             context_items.append(f"  - {key}: {value}")
         context_str = "\n".join(context_items)
-    
+
     # Enhanced rubric: Assessment dimensions
     assessment_dims = request.assessment_dimensions or {}
     dims_str = ""
@@ -191,7 +191,7 @@ def build_consult_prompt(request: ConsultRequest) -> str:
         for dim_name, dim_value in assessment_dims.items():
             dim_items.append(f"  - {dim_name}: {dim_value}")
         dims_str = "\n".join(dim_items)
-    
+
     # Enhanced rubric: Previous findings for temporal comparison
     prev_findings_str = "No previous findings available."
     if request.previous_findings:
@@ -201,7 +201,7 @@ def build_consult_prompt(request: ConsultRequest) -> str:
             finding = pf.get("finding", "unknown finding")
             finding_items.append(f"  - [{date}] {finding}")
         prev_findings_str = "\n".join(finding_items) if finding_items else "No previous findings available."
-    
+
     prompt = f"""You are a veterinary specialist providing an additive second opinion on a clinical image case.
 
 IMPORTANT CONSTRAINTS - FOLLOW STRICTLY:
@@ -291,14 +291,14 @@ OUTPUT QUALITY DISCIPLINE:
 
 Respond with JSON only:
 """
-    
+
     return prompt
 
 
 def parse_model_response(content: str) -> dict:
     """
     Parse the model's JSON response with strict schema enforcement.
-    
+
     Validates output structure and ensures type safety for downstream consumers.
     """
     if not content or not content.strip():
@@ -356,7 +356,7 @@ def parse_model_response(content: str) -> dict:
 def _validate_response_schema(result: dict, issues: list[str]) -> None:
     """
     Validate response has required fields with correct types.
-    
+
     Issues are appended to `issues` list for reporting in uncertainties.
     Enhanced validation now enforces content quality minimums.
     """
@@ -527,9 +527,9 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
             confidence=0.25,
             mode="sync",
         )
-    
+
     model, processor = load_model()
-    
+
     # Decode image
     try:
         if request.image.startswith("http"):
@@ -541,10 +541,10 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
             image = decode_image(request.image)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to decode image: {str(e)}")
-    
+
     # Build prompt
     prompt = build_consult_prompt(request)
-    
+
     # Prepare messages for Qwen2.5-VL
     messages = [
         {
@@ -561,11 +561,11 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
             ],
         }
     ]
-    
+
     # Process inputs
     text = processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     image_inputs, video_inputs = process_vision_info(messages, device=DEVICE)
-    
+
     # Tokenize
     inputs = processor(
         text=[text],
@@ -575,7 +575,7 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
         return_tensors="pt",
     )
     inputs = inputs.to(DEVICE)
-    
+
     # Generate
     with torch.no_grad():
         generated_ids = model.generate(
@@ -585,7 +585,7 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
             temperature=None,
             top_p=None,
         )
-    
+
     # Decode
     generated_ids_trimmed = [
         out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
@@ -595,10 +595,10 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
         skip_special_tokens=True,
         clean_up_tokenization_spaces=False,
     )[0]
-    
+
     # Parse response
     parsed = parse_model_response(response_text)
-    
+
     return ConsultResponse(
         model=MODEL_NAME,
         summary=parsed.get("summary", "No summary generated."),
@@ -657,13 +657,13 @@ async def consult(
 ):
     """
     Generate a specialist consult opinion for a veterinary image case.
-    
+
     This endpoint provides additive second opinions - it never overrides
     the clinical matrix authority.
     """
-    
+
     validate_auth(authorization)
-    
+
     try:
         result = await generate_consult(payload)
         return result
@@ -710,23 +710,23 @@ async def compare_cases(
 ):
     """
     Compare current case against historical cases spanning extended time periods.
-    
+
     This endpoint enables:
     - Temporal comparison: Track disease progression/regression over time
     - Cross-sectional comparison: Compare with similar cases at same stage
     - Pattern recognition: Identify common patterns across multiple cases
-    
+
     Returns structured comparison analysis with pattern matching and anomaly detection.
     """
     validate_auth(authorization)
-    
+
     try:
         current_case = payload.current_case
         historical_cases = payload.historical_cases
         comparison_mode = payload.comparison_mode
-        
+
         current_case_id = current_case.get("case_id", "unknown")
-        
+
         # Pattern matching across historical cases
         pattern_matches = []
         anomalies_detected = []
@@ -735,19 +735,19 @@ async def compare_cases(
             "magnitude": 0.0,
             "confidence": 0.5
         }
-        
+
         # Analyze temporal patterns if historical data exists
         if len(historical_cases) >= 2 and comparison_mode == "temporal":
             sorted_cases = sorted(historical_cases, key=lambda x: x.get("date", ""), reverse=True)
-            
+
             # Compare current with most recent historical
             most_recent = sorted_cases[0]
             severity_current = current_case.get("severity", "")
             severity_recent = most_recent.get("severity", "")
-            
+
             if severity_current != severity_recent:
                 anomalies_detected.append(f"Severity change detected: {severity_recent} -> {severity_current}")
-            
+
             # Track progression across multiple time points
             severity_timeline = [c.get("severity", "unknown") for c in sorted_cases]
             progression_indicators = {
@@ -756,32 +756,32 @@ async def compare_cases(
                 "timeline_points": len(severity_timeline),
                 "confidence": 0.8 if len(severity_timeline) >= 3 else 0.5
             }
-        
+
         # Cross-sectional pattern matching
         if comparison_mode in ["cross-sectional", "pattern"]:
             same_domain_cases = [c for c in historical_cases if c.get("domain") == current_case.get("domain")]
             same_severity_cases = [c for c in historical_cases if c.get("severity") == current_case.get("severity")]
-            
+
             if same_domain_cases:
                 pattern_matches.append({
                     "pattern_type": "domain_association",
                     "match_count": len(same_domain_cases),
                     "description": f"{len(same_domain_cases)} cases with same domain"
                 })
-            
+
             if same_severity_cases:
                 pattern_matches.append({
                     "pattern_type": "severity_cluster",
                     "match_count": len(same_severity_cases),
                     "description": f"{len(same_severity_cases)} cases with same severity"
                 })
-        
+
         # Risk trajectory assessment
         risk_trajectory = _assess_risk_trajectory(current_case, historical_cases)
-        
+
         # Calculate confidence based on data availability
         confidence = min(0.9, 0.5 + (len(historical_cases) * 0.1))
-        
+
         return CaseComparisonResponse(
             current_case_id=current_case_id,
             comparison_summary=f"Compared current case against {len(historical_cases)} historical cases using {comparison_mode} analysis.",
@@ -791,7 +791,7 @@ async def compare_cases(
             risk_trajectory=risk_trajectory,
             confidence=confidence
         )
-        
+
     except Exception as e:
         logger.error("Case comparison failed", exc_info=e)
         raise HTTPException(status_code=500, detail="Case comparison analysis failed")
@@ -801,10 +801,10 @@ def _infer_progression_direction(severity_timeline: list[str]) -> str:
     """Infer disease progression direction from severity timeline."""
     if len(severity_timeline) < 2:
         return "indeterminate"
-    
+
     severity_order = {"low": 0, "medium": 1, "high": 2, "critical": 3, "unknown": 1}
     numeric_timeline = [severity_order.get(s.lower(), 1) for s in severity_timeline]
-    
+
     if numeric_timeline[0] > numeric_timeline[-1]:
         return "improving"
     elif numeric_timeline[0] < numeric_timeline[-1]:
@@ -816,10 +816,10 @@ def _infer_progression_direction(severity_timeline: list[str]) -> str:
 def _assess_risk_trajectory(current_case: dict, historical_cases: list[dict]) -> str:
     """Assess overall risk trajectory based on current and historical patterns."""
     current_severity = current_case.get("severity", "unknown").lower()
-    
+
     if not historical_cases:
         return "insufficient_data"
-    
+
     # Calculate average severity of historical cases
     severity_scores = []
     severity_map = {"low": 1, "medium": 2, "high": 3, "critical": 4}
@@ -827,13 +827,13 @@ def _assess_risk_trajectory(current_case: dict, historical_cases: list[dict]) ->
         sev = case.get("severity", "unknown").lower()
         if sev in severity_map:
             severity_scores.append(severity_map[sev])
-    
+
     if not severity_scores:
         return "insufficient_data"
-    
+
     avg_historical = sum(severity_scores) / len(severity_scores)
     current_score = severity_map.get(current_severity, 2)
-    
+
     if current_score > avg_historical + 0.5:
         return "elevated_risk"
     elif current_score < avg_historical - 0.5:
@@ -858,7 +858,7 @@ class UncertaintyMetrics(BaseModel):
     follow_up_uncertainty: float = Field(default=0.0, description="0-1 score for multi-turn follow-up trajectory")
     confidence_calibration: float = Field(..., description="How well confidence matches actual accuracy")
     uncertainty_disciplined: bool = Field(..., description="Whether uncertainty was properly communicated")
-    
+
     # Longitudinal multi-image reasoning fields
     sequence_position_confidence_delta: float = Field(
         default=0.0,
@@ -876,7 +876,7 @@ class UncertaintyMetrics(BaseModel):
         default=1.0,
         description="0-1 score for how completely the image sequence covers relevant body regions"
     )
-    
+
     # Longitudinal multi-turn follow-up fields
     trajectory_clarity_score: float = Field(
         default=0.5,
@@ -894,7 +894,7 @@ class UncertaintyMetrics(BaseModel):
         default=0.5,
         description="0-1 score for quality of chronological disease progression reasoning"
     )
-    
+
     # Uncertainty narration fields
     primary_uncertainty_drivers: list[str] = Field(
         default=[],
@@ -922,11 +922,11 @@ def _compute_uncertainty_metrics(
 ) -> UncertaintyMetrics:
     """
     Compute disciplined uncertainty metrics for a consult with deep longitudinal reasoning.
-    
+
     Quantifies and qualifies different sources of uncertainty to ensure
     proper calibration and communication. Enhanced for multi-image sequences
     and multi-turn follow-up cases with comprehensive narration.
-    
+
     Args:
         case_context: Full case context including history and presentation
         image_quality: Quality rating of current image
@@ -942,35 +942,35 @@ def _compute_uncertainty_metrics(
     # ==========================================================================
     knowledge_uncertainty = 0.0
     knowledge_drivers = []
-    
+
     if "unknown" in str(case_context).lower():
         knowledge_uncertainty += 0.2
         knowledge_drivers.append("Generic 'unknown' detected in case context")
-    
+
     if len(uncertainties) > 3:
         added_uncertainty = min(0.3, (len(uncertainties) - 3) * 0.1)
         knowledge_uncertainty += added_uncertainty
         knowledge_drivers.append(f"Multiple explicit uncertainties ({len(uncertainties)}) indicate knowledge gaps")
-    
+
     # Check for specific knowledge gaps in differential diagnosis
     case_str = str(case_context).lower()
     if "differential" in case_str and "unclear" in case_str:
         knowledge_uncertainty += 0.15
         knowledge_drivers.append("Differential diagnosis marked as unclear")
-    
+
     # ==========================================================================
     # IMAGE QUALITY UNCERTAINTY
     # ==========================================================================
     image_quality_uncertainty = 0.0
     quality_map = {"good": 0.0, "adequate": 0.2, "poor": 0.5, "marginal": 0.4, "unknown": 0.3}
     image_quality_uncertainty = quality_map.get(image_quality.lower(), 0.3)
-    
+
     # ==========================================================================
     # TEMPORAL UNCERTAINTY - Insufficient historical context
     # ==========================================================================
     temporal_uncertainty = 0.0
     temporal_drivers = []
-    
+
     if not previous_findings:
         temporal_uncertainty = 0.4
         temporal_drivers.append("No previous findings - first consult in sequence")
@@ -982,7 +982,7 @@ def _compute_uncertainty_metrics(
         temporal_drivers.append("Rich longitudinal history available")
     else:
         temporal_drivers.append(f"Moderate history ({len(previous_findings)} previous findings)")
-    
+
     # Check temporal context for date gaps or inconsistencies
     if case_temporal_context:
         time_delta_days = case_temporal_context.get("time_delta_days", 0)
@@ -992,7 +992,7 @@ def _compute_uncertainty_metrics(
         elif time_delta_days < 0:
             temporal_uncertainty += 0.15
             temporal_drivers.append("Temporal inconsistency detected (negative time delta)")
-    
+
     # ==========================================================================
     # MULTI-IMAGE SEQUENCE UNCERTAINTY - Deep longitudinal reasoning
     # ==========================================================================
@@ -1001,7 +1001,7 @@ def _compute_uncertainty_metrics(
     image_contribution_narrative = []
     cross_image_agreement = 1.0
     body_region_coverage = 1.0
-    
+
     if total_images_in_sequence > 1:
         # Position-based confidence adjustment
         if image_sequence_position == 0:
@@ -1025,12 +1025,12 @@ def _compute_uncertainty_metrics(
                 f"Image {image_sequence_position + 1}/{total_images_in_sequence}: "
                 "Final position - can confirm or contradict earlier findings."
             )
-        
+
         # Cross-image agreement analysis
         if previous_findings and len(previous_findings) >= 2:
             consistency = _compute_sequence_consistency(previous_findings)
             cross_image_agreement = consistency
-            
+
             if consistency < 0.4:
                 sequence_uncertainty += 0.20
                 cross_image_agreement = consistency
@@ -1047,13 +1047,13 @@ def _compute_uncertainty_metrics(
                 image_contribution_narrative.append(
                     f"STRONG: Cross-image agreement ({consistency:.0%}) supports consistent findings."
                 )
-        
+
         # Body region coverage assessment
         body_regions_covered = set()
         for finding in previous_findings:
             region = finding.get("body_region", "unknown")
             body_regions_covered.add(region)
-        
+
         # If we're covering multiple body regions, coverage is more complete
         if len(body_regions_covered) >= 2:
             body_region_coverage = min(1.0, 0.7 + (len(body_regions_covered) * 0.1))
@@ -1065,7 +1065,7 @@ def _compute_uncertainty_metrics(
         image_contribution_narrative.append(
             "Single image consult - no sequence comparison possible."
         )
-    
+
     # ==========================================================================
     # MULTI-TURN FOLLOW-UP UNCERTAINTY - Trajectory and change point analysis
     # ==========================================================================
@@ -1074,11 +1074,11 @@ def _compute_uncertainty_metrics(
     change_points = []
     treatment_signals = []
     chronological_quality = 0.5
-    
+
     if len(previous_findings) >= 3:
         # Extract trajectory indicators from last 3-5 findings
         trajectory_indicators = [pf.get("progression_indicator", "unknown") for pf in previous_findings[-5:]]
-        
+
         # Assess trajectory clarity
         unique_trajectories = set(trajectory_indicators)
         if len(unique_trajectories) > 2:
@@ -1093,19 +1093,19 @@ def _compute_uncertainty_metrics(
             trajectory_clarity = 0.85
         else:
             trajectory_clarity = 0.6
-        
+
         # Detect treatment response signals
         treatment_signals = _extract_treatment_response_signals(previous_findings)
-        
+
         # Assess chronological reasoning quality
         chronological_quality = _assess_chronological_reasoning_quality(
             previous_findings, case_temporal_context
         )
-        
+
         # Apply chronological quality to follow-up uncertainty
         if chronological_quality < 0.4:
             follow_up_uncertainty += 0.10
-    
+
     # ==========================================================================
     # CONFIDENCE CALIBRATION
     # ==========================================================================
@@ -1118,7 +1118,7 @@ def _compute_uncertainty_metrics(
     )
     expected_confidence = 1.0 - uncertainty_weight_sum
     confidence_calibration = 1.0 - abs(confidence - expected_confidence)
-    
+
     # ==========================================================================
     # UNCERTAINTY DISCIPLINE ASSESSMENT
     # ==========================================================================
@@ -1127,31 +1127,31 @@ def _compute_uncertainty_metrics(
         knowledge_uncertainty < 0.5 and
         image_quality_uncertainty < 0.6
     )
-    
+
     # ==========================================================================
     # PRIMARY UNCERTAINTY DRIVERS AND NARRATIVE
     # ==========================================================================
     all_drivers = []
-    
+
     # Rank uncertainty drivers by contribution
     if knowledge_uncertainty > 0.15:
         all_drivers.append(("knowledge_gaps", knowledge_uncertainty, knowledge_drivers))
     if image_quality_uncertainty > 0.2:
-        all_drivers.append(("image_quality", image_quality_uncertainty, 
+        all_drivers.append(("image_quality", image_quality_uncertainty,
             [f"Image quality rated as '{image_quality}'"]))
     if temporal_uncertainty > 0.15:
         all_drivers.append(("temporal_context", temporal_uncertainty, temporal_drivers))
     if sequence_uncertainty > 0.12:
-        all_drivers.append(("sequence_position", sequence_uncertainty, 
+        all_drivers.append(("sequence_position", sequence_uncertainty,
             [f"Image {image_sequence_position + 1} of {total_images_in_sequence} in sequence"]))
     if follow_up_uncertainty > 0.12:
         all_drivers.append(("follow_up_trajectory", follow_up_uncertainty,
             [f"Trajectory clarity: {trajectory_clarity:.0%}", f"Change points detected: {len(change_points)}"]))
-    
+
     # Sort by uncertainty contribution
     all_drivers.sort(key=lambda x: x[1], reverse=True)
     primary_drivers = [d[0] for d in all_drivers[:3]]
-    
+
     # Generate comprehensive uncertainty narrative
     uncertainty_narrative = _generate_uncertainty_narrative(
         knowledge_uncertainty=knowledge_uncertainty,
@@ -1165,7 +1165,7 @@ def _compute_uncertainty_metrics(
         confidence_calibration=confidence_calibration,
         primary_drivers=primary_drivers
     )
-    
+
     # Generate recommended clarification questions
     clarification_questions = _generate_clarification_questions(
         knowledge_uncertainty=knowledge_uncertainty,
@@ -1177,7 +1177,7 @@ def _compute_uncertainty_metrics(
         total_images_in_sequence=total_images_in_sequence,
         previous_findings=previous_findings
     )
-    
+
     return UncertaintyMetrics(
         knowledge_uncertainty=round(knowledge_uncertainty, 3),
         image_quality_uncertainty=round(image_quality_uncertainty, 3),
@@ -1203,12 +1203,12 @@ def _compute_uncertainty_metrics(
 def _compute_sequence_consistency(previous_findings: list[dict]) -> float:
     """
     Compute consistency score across findings in a multi-image sequence.
-    
+
     Returns a score between 0.0 (completely inconsistent) and 1.0 (fully consistent).
     """
     if len(previous_findings) < 2:
         return 0.5  # Insufficient data
-    
+
     # Extract key indicators for comparison
     key_indicators = []
     for finding in previous_findings:
@@ -1220,43 +1220,43 @@ def _compute_sequence_consistency(previous_findings: list[dict]) -> float:
             key_indicators.append(f"{chronicity}_{indicator}")
         else:
             key_indicators.append("unknown")
-    
+
     # Count matching indicators
     if not key_indicators:
         return 0.5
-    
+
     unique_indicators = set(key_indicators)
     consistency = 1.0 - (len(unique_indicators) - 1) / len(key_indicators)
-    
+
     return max(0.0, min(1.0, consistency))
 
 
 def _detect_change_points(previous_findings: list[dict]) -> list[dict]:
     """
     Detect significant change points in a follow-up sequence.
-    
+
     Identifies points where findings substantively change direction,
     suggesting disease progression, treatment response, or new pathology.
-    
+
     Returns:
         List of change point indicators with evidence and significance.
     """
     if len(previous_findings) < 3:
         return []
-    
+
     change_points = []
-    
+
     for i in range(1, len(previous_findings)):
         prev_finding = previous_findings[i - 1]
         curr_finding = previous_findings[i]
-        
+
         # Extract key metrics for comparison
         prev_severity = prev_finding.get("severity_score", prev_finding.get("chronicity_score", 0.5))
         curr_severity = curr_finding.get("severity_score", curr_finding.get("chronicity_score", 0.5))
-        
+
         prev_trajectory = prev_finding.get("progression_indicator", "unknown")
         curr_trajectory = curr_finding.get("progression_indicator", "unknown")
-        
+
         # Detect significant severity changes
         severity_delta = abs(curr_severity - prev_severity)
         if severity_delta > 0.3:
@@ -1269,7 +1269,7 @@ def _detect_change_points(previous_findings: list[dict]) -> list[dict]:
                 "evidence": f"Severity shifted from {prev_severity:.2f} to {curr_severity:.2f}",
                 "significance": "high" if severity_delta > 0.5 else "moderate"
             })
-        
+
         # Detect trajectory reversals
         if prev_trajectory != "unknown" and curr_trajectory != "unknown":
             trajectory_pairs = {
@@ -1287,34 +1287,34 @@ def _detect_change_points(previous_findings: list[dict]) -> list[dict]:
                     "evidence": f"Trajectory changed from {prev_trajectory} to {curr_trajectory}",
                     "significance": "high" if reversal_type in ("reversal", "recovery_signal") else "moderate"
                 })
-    
+
     return change_points
 
 
 def _extract_treatment_response_signals(previous_findings: list[dict]) -> list[str]:
     """
     Extract signals indicating response or non-response to treatment.
-    
+
     Analyzes findings for patterns suggesting treatment efficacy or lack thereof.
-    
+
     Returns:
         List of treatment response signals detected in the sequence.
     """
     signals = []
-    
+
     if len(previous_findings) < 2:
         return signals
-    
+
     # Look for improvement patterns after treatment indicators
     for i, finding in enumerate(previous_findings):
         treatment_mentioned = finding.get("treatment_given", "") or finding.get("intervention", "")
-        
+
         if treatment_mentioned and i < len(previous_findings) - 1:
             next_finding = previous_findings[i + 1]
             next_trajectory = next_finding.get("progression_indicator", "unknown")
             next_severity = next_finding.get("severity_score", 0.5)
             curr_severity = finding.get("severity_score", 0.5)
-            
+
             if next_trajectory == "improving" or next_severity < curr_severity:
                 signals.append(
                     f"POSITIVE_RESPONSE: Treatment '{treatment_mentioned}' at position {i} "
@@ -1325,7 +1325,7 @@ def _extract_treatment_response_signals(previous_findings: list[dict]) -> list[s
                     f"NEGATIVE_RESPONSE: Treatment '{treatment_mentioned}' at position {i} "
                     f"followed by worsening trajectory - consider alternative approach"
                 )
-    
+
     # Check for medication/treatment compliance indicators
     compliance_keywords = ["compliant", "adherent", "following", "tolerated"]
     for finding in previous_findings:
@@ -1335,7 +1335,7 @@ def _extract_treatment_response_signals(previous_findings: list[dict]) -> list[s
                 signals.append("COMPLIANCE_POSITIVE: Patient following treatment protocol with positive response")
             elif "not" in notes or "failed" in notes:
                 signals.append("COMPLIANCE_CONCERN: Potential issues with treatment compliance")
-    
+
     return signals
 
 
@@ -1345,19 +1345,19 @@ def _assess_chronological_reasoning_quality(
 ) -> float:
     """
     Assess the quality of chronological reasoning in the follow-up sequence.
-    
+
     Evaluates whether findings are properly interpreted in temporal context
     and whether disease progression/regression is logically reasoned.
-    
+
     Returns:
         Quality score from 0.0 (poor) to 1.0 (excellent).
     """
     quality_score = 0.5  # Default moderate quality
-    
+
     # Positive indicators
     positive_indicators = 0
     total_indicators = 0
-    
+
     # Check 1: Temporal markers present
     for finding in previous_findings:
         temporal_markers = [
@@ -1369,28 +1369,28 @@ def _assess_chronological_reasoning_quality(
         if any(tm is not None for tm in temporal_markers):
             positive_indicators += 1
         total_indicators += 1
-    
+
     # Check 2: Proper temporal sequencing in findings
     timestamps = []
     for i, finding in enumerate(previous_findings):
         ts = finding.get("consult_timestamp") or finding.get("finding_timestamp") or i
         timestamps.append(ts)
-    
+
     if timestamps == sorted(timestamps):
         positive_indicators += 1
     total_indicators += 1
-    
+
     # Check 3: Temporal context provided
     if case_temporal_context:
         if case_temporal_context.get("onset_date") and case_temporal_context.get("presentation_date"):
             positive_indicators += 1
         total_indicators += 1
-    
+
     # Check 4: Duration-appropriate reasoning
     if len(previous_findings) >= 2:
         first_severity = previous_findings[0].get("severity_score", 0.5)
         last_severity = previous_findings[-1].get("severity_score", 0.5)
-        
+
         # Acute cases (high initial severity) should show change
         if first_severity > 0.7 and abs(last_severity - first_severity) > 0.1:
             positive_indicators += 1
@@ -1401,11 +1401,11 @@ def _assess_chronological_reasoning_quality(
             total_indicators += 1
         else:
             total_indicators += 1
-    
+
     # Calculate quality score
     if total_indicators > 0:
         quality_score = positive_indicators / total_indicators
-    
+
     return max(0.0, min(1.0, quality_score))
 
 
@@ -1428,13 +1428,13 @@ def _generate_deep_uncertainty_narrative(
 ) -> dict[str, Any]:
     """
     Generate deep uncertainty narrative with Phase 5 enhancements.
-    
+
     Provides comprehensive uncertainty analysis including:
     - Specific evidence attribution
     - What information would reduce uncertainty
     - Confidence in the uncertainty assessment itself
     - Actionable recommendations
-    
+
     Returns:
         - narrative: Human-readable uncertainty explanation
         - uncertainty_sources: Ranked list of sources
@@ -1451,9 +1451,9 @@ def _generate_deep_uncertainty_narrative(
         "evidence_gaps": [],
         "recommended_actions": [],
     }
-    
+
     narrative_parts = []
-    
+
     # Calculate total uncertainty
     total_uncertainty = (
         knowledge_uncertainty * 0.25 +
@@ -1462,7 +1462,7 @@ def _generate_deep_uncertainty_narrative(
         sequence_uncertainty * 0.15 +
         follow_up_uncertainty * 0.10
     )
-    
+
     # Rank uncertainty sources
     sources = [
         ("knowledge_gaps", knowledge_uncertainty, "Knowledge limitations in differential diagnosis"),
@@ -1472,7 +1472,7 @@ def _generate_deep_uncertainty_narrative(
         ("follow_up_trajectory", follow_up_uncertainty, f"Follow-up trajectory clarity: {trajectory_clarity:.0%}"),
     ]
     sources.sort(key=lambda x: x[1], reverse=True)
-    
+
     result["uncertainty_sources"] = [
         {
             "source": s[0],
@@ -1482,7 +1482,7 @@ def _generate_deep_uncertainty_narrative(
         }
         for i, s in enumerate(sources)
     ]
-    
+
     # Identify evidence gaps
     if image_quality_uncertainty > 0.3:
         result["evidence_gaps"].append({
@@ -1491,7 +1491,7 @@ def _generate_deep_uncertainty_narrative(
             "impact": "Cannot confidently validate visual findings",
             "specific_missing": "Higher resolution images, better lighting, multiple angles"
         })
-    
+
     if temporal_uncertainty > 0.2:
         result["evidence_gaps"].append({
             "gap": "temporal_context",
@@ -1499,7 +1499,7 @@ def _generate_deep_uncertainty_narrative(
             "impact": "Cannot determine if findings are new, stable, or progressive",
             "specific_missing": "Previous images, symptom timeline, prior diagnoses"
         })
-    
+
     if sequence_uncertainty > 0.15:
         result["evidence_gaps"].append({
             "gap": "image_sequence",
@@ -1507,7 +1507,7 @@ def _generate_deep_uncertainty_narrative(
             "impact": "Cannot reconcile conflicting findings across images",
             "specific_missing": f"Additional images (currently {previous_findings[0].get('image_count', 'unknown') if previous_findings else 'N/A'})"
         })
-    
+
     # Generate reduction pathways
     for gap in result["evidence_gaps"]:
         if gap["gap"] == "image_quality":
@@ -1534,7 +1534,7 @@ def _generate_deep_uncertainty_narrative(
                 "feasibility": "high",
                 "priority": 2
             })
-    
+
     # Assessment confidence based on evidence availability
     if len(result["evidence_gaps"]) == 0:
         result["assessment_confidence"] = "high"
@@ -1544,7 +1544,7 @@ def _generate_deep_uncertainty_narrative(
         result["assessment_confidence"] = "medium"
     else:
         result["assessment_confidence"] = "low"
-    
+
     # Temporal context assessment
     result["temporal_context_assessment"] = {
         "trajectory_clarity": round(trajectory_clarity, 3),
@@ -1554,7 +1554,7 @@ def _generate_deep_uncertainty_narrative(
             previous_findings or [], trajectory_clarity, chronological_quality
         )
     }
-    
+
     # Generate narrative
     if confidence_calibration > 0.85:
         narrative_parts.append(
@@ -1572,7 +1572,7 @@ def _generate_deep_uncertainty_narrative(
         narrative_parts.append(
             "POOR CALIBRATION: Confidence significantly misaligned with uncertainty sources. "
         )
-    
+
     # Primary drivers
     if primary_drivers:
         driver_descriptions = {
@@ -1584,7 +1584,7 @@ def _generate_deep_uncertainty_narrative(
         }
         driver_text = ", ".join(driver_descriptions.get(d, d) for d in primary_drivers[:3])
         narrative_parts.append(f"Primary uncertainty drivers: {driver_text}. ")
-    
+
     # Image sequence assessment
     if sequence_uncertainty > 0.15:
         if cross_image_agreement < 0.5:
@@ -1597,7 +1597,7 @@ def _generate_deep_uncertainty_narrative(
             narrative_parts.append(
                 f"Image sequence contributes moderate uncertainty ({sequence_uncertainty:.0%}). "
             )
-    
+
     # Trajectory assessment
     if follow_up_uncertainty > 0.12:
         if trajectory_clarity < 0.4:
@@ -1609,14 +1609,14 @@ def _generate_deep_uncertainty_narrative(
             narrative_parts.append(
                 f"Follow-up trajectory clarity is {trajectory_clarity:.0%}. "
             )
-    
+
     # Chronological reasoning quality
     if chronological_quality < 0.4:
         narrative_parts.append(
             "CHRONOLOGICAL REASONING WEAK: Disease progression/regression reasoning "
             "may not fully account for temporal relationships between findings. "
         )
-    
+
     # Overall uncertainty level
     if total_uncertainty < 0.15:
         narrative_parts.append(
@@ -1633,7 +1633,7 @@ def _generate_deep_uncertainty_narrative(
             f"Overall uncertainty is HIGH ({total_uncertainty:.0%}). "
             "This case may benefit from specialist consultation."
         )
-    
+
     # Recommended actions
     if result["reduction_pathways"]:
         top_actions = sorted(result["reduction_pathways"], key=lambda x: x["priority"])[:2]
@@ -1642,9 +1642,9 @@ def _generate_deep_uncertainty_narrative(
             f"Recommended: {'; '.join(action_texts)}."
         )
         result["recommended_actions"] = action_texts
-    
+
     result["narrative"] = "".join(narrative_parts)
-    
+
     return result
 
 
@@ -1655,10 +1655,10 @@ def _assess_longitudinal_reasoning_depth(
 ) -> dict[str, Any]:
     """
     Assess the depth of longitudinal reasoning available for this case.
-    
+
     Phase 5: Provides detailed analysis of longitudinal reasoning quality
     including what can and cannot be determined from available temporal data.
-    
+
     Returns:
         - depth_level: none | limited | moderate | comprehensive
         - what_can_be_determined: List of determinable aspects
@@ -1673,9 +1673,9 @@ def _assess_longitudinal_reasoning_depth(
         "confidence_in_trajectory": 0.0,
         "recommended_follow_up": [],
     }
-    
+
     n_findings = len(previous_findings)
-    
+
     if n_findings == 0:
         result["depth_level"] = "none"
         result["what_cannot_be_determined"] = [
@@ -1758,7 +1758,7 @@ def _assess_longitudinal_reasoning_depth(
             "Trajectory assessment is reliable",
             "Continue monitoring as clinically indicated"
         ]
-    
+
     return result
 
 
@@ -1776,12 +1776,12 @@ def _generate_uncertainty_narrative(
 ) -> str:
     """
     Generate comprehensive human-readable uncertainty narrative.
-    
+
     Synthesizes all uncertainty components into a coherent explanation
     suitable for communication to reviewers and for audit purposes.
     """
     narrative_parts = []
-    
+
     # Overall confidence assessment
     if confidence_calibration > 0.85:
         narrative_parts.append(
@@ -1800,7 +1800,7 @@ def _generate_uncertainty_narrative(
             "POOR CALIBRATION: Confidence significantly misaligned with uncertainty sources - "
             "recommend confidence adjustment. "
         )
-    
+
     # Primary uncertainty drivers
     if primary_drivers:
         driver_descriptions = {
@@ -1816,7 +1816,7 @@ def _generate_uncertainty_narrative(
         narrative_parts.append(
             f"Primary uncertainty drivers: {driver_text}. "
         )
-    
+
     # Image sequence assessment
     if sequence_uncertainty > 0.15:
         if cross_image_agreement < 0.5:
@@ -1829,7 +1829,7 @@ def _generate_uncertainty_narrative(
             narrative_parts.append(
                 f"Image sequence contributes moderate uncertainty ({sequence_uncertainty:.0%}). "
             )
-    
+
     # Trajectory assessment
     if follow_up_uncertainty > 0.12:
         if trajectory_clarity < 0.4:
@@ -1841,14 +1841,14 @@ def _generate_uncertainty_narrative(
             narrative_parts.append(
                 f"Follow-up trajectory clarity is {trajectory_clarity:.0%}. "
             )
-    
+
     # Chronological reasoning quality
     if chronological_quality < 0.4:
         narrative_parts.append(
             "CHRONOLOGICAL REASONING WEAK: Disease progression/regression reasoning "
             "may not fully account for temporal relationships between findings. "
         )
-    
+
     # Composite uncertainty level
     total_uncertainty = (
         knowledge_uncertainty * 0.25 +
@@ -1857,7 +1857,7 @@ def _generate_uncertainty_narrative(
         sequence_uncertainty * 0.15 +
         follow_up_uncertainty * 0.10
     )
-    
+
     if total_uncertainty < 0.15:
         narrative_parts.append(
             f"Overall uncertainty is LOW ({total_uncertainty:.0%}). "
@@ -1873,7 +1873,7 @@ def _generate_uncertainty_narrative(
             f"Overall uncertainty is HIGH ({total_uncertainty:.0%}). "
             "This case may benefit from 32B model review or specialist consultation."
         )
-    
+
     return "".join(narrative_parts)
 
 
@@ -1889,31 +1889,31 @@ def _generate_clarification_questions(
 ) -> list[str]:
     """
     Generate targeted questions that would most reduce uncertainty if answered.
-    
+
     Prioritizes questions by uncertainty impact and feasibility of answering.
     """
     questions = []
-    
+
     # Image quality questions
     if image_quality_uncertainty > 0.3:
         questions.append(
             "Could higher-quality images or additional imaging angles be obtained?"
         )
-    
+
     # Sequence completion questions
     if sequence_uncertainty > 0.12 and total_images_in_sequence < 3:
         questions.append(
             f"Additional images from other angles or timepoints would strengthen the sequence "
             f"(currently {total_images_in_sequence} image(s))."
         )
-    
+
     # Cross-image conflict questions
     if cross_image_agreement < 0.5:
         questions.append(
             "Can you clarify the relationship between findings in different images? "
             "Are they from the same session or different timepoints?"
         )
-    
+
     # Temporal/context questions
     if temporal_uncertainty > 0.15:
         questions.append(
@@ -1923,7 +1923,7 @@ def _generate_clarification_questions(
         questions.append(
             "Are there prior images or consultations for comparison?"
         )
-    
+
     # Follow-up trajectory questions
     if follow_up_uncertainty > 0.12:
         questions.append(
@@ -1932,7 +1932,7 @@ def _generate_clarification_questions(
         questions.append(
             "What has been the progression of clinical signs since the previous consult?"
         )
-    
+
     # Knowledge gap questions based on specific uncertainties
     if knowledge_uncertainty > 0.2:
         # Check for specific unknown patterns
@@ -1948,7 +1948,7 @@ def _generate_clarification_questions(
                 questions.append(
                     "Has immune-mediated disease been confirmed with appropriate testing?"
                 )
-    
+
     # Deduplicate while preserving order
     seen = set()
     unique_questions = []
@@ -1956,7 +1956,7 @@ def _generate_clarification_questions(
         if q not in seen:
             seen.add(q)
             unique_questions.append(q)
-    
+
     return unique_questions[:5]  # Return top 5 most impactful questions
 
 
@@ -1983,57 +1983,57 @@ def _track_differential_evolution(
 ) -> list[DifferentialEvolutionRecord]:
     """
     Track how the likely differential changed across images/turns.
-    
+
     Analyzes the evolution of differential diagnoses through a sequence
     of images or consultation turns to identify shifting patterns.
-    
+
     Args:
         image_sequence: List of image data across the sequence
         findings_sequence: List of findings from each timepoint
-    
+
     Returns:
         List of DifferentialEvolutionRecord showing how differential evolved
     """
     evolution = []
-    
+
     if not findings_sequence:
         return evolution
-    
+
     for i, finding in enumerate(findings_sequence):
         # Extract differential at this position
         differential = finding.get("differential_diagnosis", [])
         if isinstance(differential, str):
             differential = [differential]
-        
+
         # Get confidence at this position
         confidence = finding.get("confidence", 0.5)
-        
+
         # Get evidence for and against each differential
         evidence_supports = []
         evidence_contradicts = []
-        
+
         # Extract supporting evidence
         supporting_evidence = finding.get("supporting_evidence", [])
         if isinstance(supporting_evidence, list):
             evidence_supports = supporting_evidence
-        
+
         # Extract contradicting evidence
         contradicting_evidence = finding.get("contradicting_evidence", [])
         if isinstance(contradicting_evidence, list):
             evidence_contradicts = contradicting_evidence
-        
+
         # Determine leading differential
         leading = differential[0] if differential else "unknown"
-        
+
         # Calculate confidence shift from previous
         confidence_shift = 0.0
         if i > 0:
             prev_confidence = findings_sequence[i-1].get("confidence", 0.5)
             confidence_shift = confidence - prev_confidence
-        
+
         # Get timestamp or generate one
         timestamp = finding.get("timestamp", finding.get("consult_timestamp", f"timepoint_{i}"))
-        
+
         evolution.append(DifferentialEvolutionRecord(
             position=i,
             timestamp=timestamp,
@@ -2044,22 +2044,22 @@ def _track_differential_evolution(
             leading_differential=leading,
             confidence_shift_from_previous=round(confidence_shift, 3)
         ))
-    
+
     return evolution
 
 
 def _identify_confidence_shift_points(evolution: list[DifferentialEvolutionRecord]) -> list[dict]:
     """
     Identify which image/timepoint changed confidence the most.
-    
+
     Analyzes the evolution record to find the most significant
     confidence shift points and what caused them.
-    
+
     Returns:
         List of shift points with causes
     """
     shift_points = []
-    
+
     for i, record in enumerate(evolution):
         if abs(record.confidence_shift_from_previous) > 0.15:  # Significant shift threshold
             shift_point = {
@@ -2073,10 +2073,10 @@ def _identify_confidence_shift_points(evolution: list[DifferentialEvolutionRecor
                 "evidence_at_shift": [],
                 "cause_analysis": ""
             }
-            
+
             # Collect evidence at this shift point
             shift_point["evidence_at_shift"] = record.evidence_supports + record.evidence_contradicts
-            
+
             # Build cause analysis
             if shift_point["differential_changed"]:
                 shift_point["cause_analysis"] = (
@@ -2094,30 +2094,30 @@ def _identify_confidence_shift_points(evolution: list[DifferentialEvolutionRecor
                     f"Evidence at this point: {len(record.evidence_supports)} supporting, "
                     f"{len(record.evidence_contradicts)} contradicting."
                 )
-            
+
             shift_points.append(shift_point)
-    
+
     # Sort by magnitude (most significant first)
     shift_points.sort(key=lambda x: x["magnitude"], reverse=True)
-    
+
     return shift_points
 
 
 def _identify_shift_cause(shift_point: dict, all_findings: list[dict]) -> str:
     """
     Identify what evidence caused the shift.
-    
+
     Analyzes the context around a shift point to determine
     what specific evidence or factor caused the change.
     """
     position = shift_point["position"]
     if position >= len(all_findings):
         return "Unable to determine shift cause - insufficient data"
-    
+
     finding = all_findings[position]
-    
+
     causes = []
-    
+
     # Check for severity changes
     if position > 0:
         prev_severity = all_findings[position-1].get("severity_score", 0.5)
@@ -2127,30 +2127,30 @@ def _identify_shift_cause(shift_point: dict, all_findings: list[dict]) -> str:
                 f"Severity change from {prev_severity:.0%} to {curr_severity:.0%} "
                 f"({'increased' if curr_severity > prev_severity else 'decreased'})"
             )
-    
+
     # Check for new evidence
     new_evidence = finding.get("new_evidence", [])
     if new_evidence:
         causes.append(f"New evidence presented: {', '.join(new_evidence[:3])}")
-    
+
     # Check for image quality changes
     image_quality = finding.get("image_quality", "unknown")
     if image_quality in ("poor", "marginal"):
         causes.append(f"Image quality limitations ({image_quality}) may affect confidence")
-    
+
     # Check for temporal factors
     temporal_context = finding.get("temporal_marker", "")
     if temporal_context:
         causes.append(f"Temporal context: {temporal_context}")
-    
+
     # Check for pattern detection
     detected_pattern = finding.get("detected_pattern", "")
     if detected_pattern:
         causes.append(f"Pattern detected: {detected_pattern}")
-    
+
     if not causes:
         return "Shift cause undetermined - no specific factor identified"
-    
+
     return " | ".join(causes)
 
 
@@ -2161,17 +2161,17 @@ def _compute_most_valuable_clarification(
 ) -> list[dict]:
     """
     Determine what clarification question would reduce uncertainty fastest.
-    
+
     Prioritizes clarification questions based on:
     - Which uncertainty drivers are most impactful
     - Which shift points have the most ambiguity
     - What evidence would resolve the differential
-    
+
     Returns:
         List of prioritized clarification questions with rationale
     """
     clarifications = []
-    
+
     # Question 1: Resolve the most uncertain differential
     if evolution:
         last_record = evolution[-1]
@@ -2182,7 +2182,7 @@ def _compute_most_valuable_clarification(
                 "impact": "high",
                 "targets": last_record.differential_at_position[:3]
             })
-    
+
     # Question 2: Address the biggest confidence shift
     if shift_points:
         biggest_shift = shift_points[0]
@@ -2193,7 +2193,7 @@ def _compute_most_valuable_clarification(
                 "impact": "high",
                 "targets": [biggest_shift.get("leading_differential")]
             })
-    
+
     # Question 3: Address specific uncertainty drivers
     driver_questions = {
         "knowledge_gaps": "What additional clinical history or presentation details are available?",
@@ -2202,7 +2202,7 @@ def _compute_most_valuable_clarification(
         "sequence_position": "Are there additional images from other timepoints available?",
         "follow_up_trajectory": "What treatment has been attempted and what was the response?"
     }
-    
+
     for driver in current_uncertainty_drivers[:2]:  # Top 2 drivers
         if driver in driver_questions:
             clarifications.append({
@@ -2211,7 +2211,7 @@ def _compute_most_valuable_clarification(
                 "impact": "medium",
                 "targets": [driver]
             })
-    
+
     # Question 4: Resolve conflicting evidence
     if shift_points:
         for shift in shift_points[:2]:
@@ -2223,7 +2223,7 @@ def _compute_most_valuable_clarification(
                     "impact": "medium",
                     "targets": evidence_at_shift[:3]
                 })
-    
+
     # Deduplicate and limit
     seen = set()
     unique_clarifications = []
@@ -2231,7 +2231,7 @@ def _compute_most_valuable_clarification(
         if c["question"] not in seen:
             seen.add(c["question"])
             unique_clarifications.append(c)
-    
+
     return unique_clarifications[:4]  # Return top 4
 
 
@@ -2244,14 +2244,14 @@ def _build_differential_evolution_summary(
     Build comprehensive natural language summary of differential evolution.
     """
     parts = []
-    
+
     parts.append("DIFFERENTIAL EVOLUTION ANALYSIS")
     parts.append("=" * 50)
-    
+
     if not evolution:
         parts.append("\nNo evolution data available.")
         return "\n".join(parts)
-    
+
     # Summary of evolution
     parts.append(f"\nEVOLUTION OVER {len(evolution)} TIMEPOINTS:")
     for record in evolution:
@@ -2260,7 +2260,7 @@ def _build_differential_evolution_summary(
             f"  [{record.position}] {record.leading_differential}: "
             f"{record.confidence_at_position:.0%} confidence{shift_indicator}"
         )
-    
+
     # Most significant shift
     if shift_points:
         biggest = shift_points[0]
@@ -2269,14 +2269,14 @@ def _build_differential_evolution_summary(
         parts.append(f"  Magnitude: {biggest['magnitude']:.0%}")
         parts.append(f"  Differential: {biggest.get('previous_leading', 'N/A')} → {biggest.get('leading_differential')}")
         parts.append(f"  Analysis: {biggest.get('cause_analysis', 'No analysis available')}")
-    
+
     # Recommendations
     if clarifications:
         parts.append(f"\nTOP CLARIFICATION QUESTIONS:")
         for i, c in enumerate(clarifications[:3], 1):
             parts.append(f"  {i}. {c['question']}")
             parts.append(f"     Impact: {c['impact']} | Rationale: {c['rationale']}")
-    
+
     return "\n".join(parts)
 
 
@@ -2289,19 +2289,19 @@ class DeepUncertaintyNarrative(BaseModel):
     """Deep uncertainty narrative with causal explanations."""
     overall_uncertainty_level: str = Field(..., description="LOW, MODERATE, or HIGH")
     total_uncertainty_score: float = Field(..., description="0-1 composite uncertainty score")
-    
+
     # Why uncertainty exists
     why_uncertainty_exists: str = Field(..., description="Root cause explanation")
     causal_factors: list[dict] = Field(default=[], description="Specific causal factors")
-    
+
     # What would change the conclusion
     what_would_change_conclusion: list[str] = Field(default=[], description="What evidence would flip the conclusion")
     conclusion_flip_conditions: list[dict] = Field(default=[], description="Conditions that would flip conclusion")
-    
+
     # What additional input is most valuable
     most_valuable_inputs: list[dict] = Field(default=[], description="Prioritized additional inputs")
     input_impact_analysis: list[str] = Field(default=[], description="Analysis of input value")
-    
+
     # Natural language narration
     full_narrative: str = Field(..., description="Complete natural language explanation")
 
@@ -2319,7 +2319,7 @@ def _build_deep_uncertainty_narrative(
     - NOT JUST that uncertainty exists, but WHY it exists
     - What would CHANGE the conclusion
     - What additional input is MOST VALUABLE
-    
+
     Returns:
         DeepUncertaintyNarrative with comprehensive explanations
     """
@@ -2329,7 +2329,7 @@ def _build_deep_uncertainty_narrative(
     temporal_uncertainty = uncertainty_metrics.temporal_uncertainty
     sequence_uncertainty = uncertainty_metrics.sequence_uncertainty
     follow_up_uncertainty = uncertainty_metrics.follow_up_uncertainty
-    
+
     # Composite uncertainty score
     total_uncertainty = (
         knowledge_uncertainty * 0.25 +
@@ -2338,7 +2338,7 @@ def _build_deep_uncertainty_narrative(
         sequence_uncertainty * 0.15 +
         follow_up_uncertainty * 0.10
     )
-    
+
     # Determine level
     if total_uncertainty < 0.15:
         level = "LOW"
@@ -2346,11 +2346,11 @@ def _build_deep_uncertainty_narrative(
         level = "MODERATE"
     else:
         level = "HIGH"
-    
+
     # WHY uncertainty exists
     causal_factors = []
     why_parts = []
-    
+
     if knowledge_uncertainty > 0.15:
         causal_factors.append({
             "factor": "knowledge_gaps",
@@ -2363,7 +2363,7 @@ def _build_deep_uncertainty_narrative(
             causal_factors[-1]["specifics"].append("Generic 'unknown' markers detected in case context")
         if len(uncertainties) > 3:
             causal_factors[-1]["specifics"].append(f"{len(uncertainties)} explicit uncertainties stated")
-    
+
     if image_quality_uncertainty > 0.2:
         causal_factors.append({
             "factor": "image_quality",
@@ -2372,7 +2372,7 @@ def _build_deep_uncertainty_narrative(
             "specifics": [f"Quality rating: {image_quality}"]
         })
         why_parts.append(f"Image quality limitations ({image_quality}) restrict confident interpretation")
-    
+
     if temporal_uncertainty > 0.15:
         causal_factors.append({
             "factor": "temporal_context",
@@ -2385,7 +2385,7 @@ def _build_deep_uncertainty_narrative(
             causal_factors[-1]["specifics"].append("No previous findings available")
         elif len(previous_findings) < 2:
             causal_factors[-1]["specifics"].append("Limited longitudinal history")
-    
+
     if sequence_uncertainty > 0.12:
         causal_factors.append({
             "factor": "sequence_position",
@@ -2398,7 +2398,7 @@ def _build_deep_uncertainty_narrative(
             causal_factors[-1]["specifics"].append(
                 f"Cross-image agreement is low ({uncertainty_metrics.cross_image_agreement_score:.0%})"
             )
-    
+
     if follow_up_uncertainty > 0.12:
         causal_factors.append({
             "factor": "follow_up_trajectory",
@@ -2411,13 +2411,13 @@ def _build_deep_uncertainty_narrative(
             causal_factors[-1]["specifics"].append(
                 f"Trajectory clarity is low ({uncertainty_metrics.trajectory_clarity_score:.0%})"
             )
-    
+
     why_uncertainty_exists = ". ".join(why_parts) if why_parts else "Uncertainty sources are minimal."
-    
+
     # WHAT would change the conclusion
     what_would_change = []
     flip_conditions = []
-    
+
     # If knowledge gap is the issue
     if knowledge_uncertainty > 0.15:
         what_would_change.append(
@@ -2428,7 +2428,7 @@ def _build_deep_uncertainty_narrative(
             "then": "Confidence would increase substantially",
             "uncertainty_reduced_by": knowledge_uncertainty * 0.4
         })
-    
+
     # If image quality is the issue
     if image_quality_uncertainty > 0.2:
         what_would_change.append(
@@ -2439,7 +2439,7 @@ def _build_deep_uncertainty_narrative(
             "then": f"Image quality uncertainty ({image_quality_uncertainty:.0%}) would be eliminated",
             "uncertainty_reduced_by": image_quality_uncertainty
         })
-    
+
     # If cross-image agreement is low
     if uncertainty_metrics.cross_image_agreement_score < 0.5:
         what_would_change.append(
@@ -2450,7 +2450,7 @@ def _build_deep_uncertainty_narrative(
             "then": "Cross-image agreement would increase, reducing sequence uncertainty",
             "uncertainty_reduced_by": sequence_uncertainty * 0.5
         })
-    
+
     # If temporal context is weak
     if temporal_uncertainty > 0.15:
         what_would_change.append(
@@ -2461,7 +2461,7 @@ def _build_deep_uncertainty_narrative(
             "then": "Temporal uncertainty would reduce significantly",
             "uncertainty_reduced_by": temporal_uncertainty * 0.6
         })
-    
+
     # If trajectory is unclear
     if follow_up_uncertainty > 0.12 and uncertainty_metrics.trajectory_clarity_score < 0.4:
         what_would_change.append(
@@ -2472,11 +2472,11 @@ def _build_deep_uncertainty_narrative(
             "then": "Trajectory clarity would improve",
             "uncertainty_reduced_by": follow_up_uncertainty * 0.4
         })
-    
+
     # MOST VALUABLE INPUT
     most_valuable = []
     impact_analysis = []
-    
+
     # Prioritize based on uncertainty weights
     uncertainty_weights = {
         "image_quality": image_quality_uncertainty * 0.30,
@@ -2485,13 +2485,13 @@ def _build_deep_uncertainty_narrative(
         "sequence": sequence_uncertainty * 0.15,
         "trajectory": follow_up_uncertainty * 0.10
     }
-    
+
     sorted_factors = sorted(uncertainty_weights.items(), key=lambda x: x[1], reverse=True)
-    
+
     for factor, weight in sorted_factors[:3]:
         if weight < 0.05:
             continue
-            
+
         if factor == "image_quality":
             most_valuable.append({
                 "input": "Higher quality images or additional imaging angles",
@@ -2547,13 +2547,13 @@ def _build_deep_uncertainty_narrative(
                 f"Follow-up trajectory contributes {follow_up_uncertainty:.0%} uncertainty. "
                 f"Clear progression documentation would reduce composite uncertainty by ~{follow_up_uncertainty * 0.10:.0%}."
             )
-    
+
     # BUILD FULL NARRATIVE
     full_narrative_parts = []
-    
+
     full_narrative_parts.append(f"UNCERTAINTY ANALYSIS: {level} LEVEL (Score: {total_uncertainty:.0%})")
     full_narrative_parts.append("=" * 60)
-    
+
     full_narrative_parts.append("\n## WHY UNCERTAINTY EXISTS")
     full_narrative_parts.append(why_uncertainty_exists)
     if causal_factors:
@@ -2562,20 +2562,20 @@ def _build_deep_uncertainty_narrative(
             full_narrative_parts.append(f"  - [{cf['severity'].upper()}] {cf['description']}")
             for spec in cf.get("specifics", []):
                 full_narrative_parts.append(f"      → {spec}")
-    
+
     full_narrative_parts.append("\n## WHAT WOULD CHANGE THE CONCLUSION")
     if what_would_change:
         for i, w in enumerate(what_would_change, 1):
             full_narrative_parts.append(f"  {i}. {w}")
     else:
         full_narrative_parts.append("  Uncertainty is already low. Current evidence is sufficient for confident decision.")
-    
+
     if flip_conditions:
         full_narrative_parts.append("\nConclusion flip conditions:")
         for fc in flip_conditions:
             full_narrative_parts.append(f"  → IF: {fc['if']}")
             full_narrative_parts.append(f"    THEN: {fc['then']}")
-    
+
     full_narrative_parts.append("\n## MOST VALUABLE ADDITIONAL INPUTS")
     if most_valuable:
         for mv in most_valuable:
@@ -2585,15 +2585,15 @@ def _build_deep_uncertainty_narrative(
             )
     else:
         full_narrative_parts.append("  No additional inputs identified as high-value.")
-    
+
     full_narrative_parts.append("\n## INPUT IMPACT ANALYSIS")
     if impact_analysis:
         for ia in impact_analysis:
             full_narrative_parts.append(f"  • {ia}")
-    
+
     full_narrative_parts.append("\n" + "=" * 60)
     full_narrative_parts.append(f"RECOMMENDATION: {'Manage with standard protocols' if level == 'LOW' else ('Consider specialist input' if level == 'MODERATE' else 'Escalate for comprehensive review')}")
-    
+
     return DeepUncertaintyNarrative(
         overall_uncertainty_level=level,
         total_uncertainty_score=round(total_uncertainty, 3),
@@ -2652,7 +2652,7 @@ async def enhanced_case_comparison(
 ):
     """
     Enhanced case comparison with stronger uncertainty discipline.
-    
+
     Provides comprehensive comparison including:
     - Pattern matching across historical cases
     - Anomaly detection
@@ -2661,29 +2661,29 @@ async def enhanced_case_comparison(
     - Confidence calibration
     """
     validate_auth(authorization)
-    
+
     current_case = payload.current_case
     historical_cases = payload.historical_cases
     comparison_mode = payload.comparison_mode
     include_uncertainty = payload.include_uncertainty_analysis
-    
+
     current_case_id = current_case.get("case_id", "unknown")
-    
+
     # Compute base comparison metrics
     pattern_matches = []
     anomalies_detected = []
     progression_indicators = {"direction": "stable", "magnitude": 0.0, "confidence": 0.5}
-    
+
     # Enhanced temporal analysis
     if len(historical_cases) >= 2 and comparison_mode in ["temporal", "comprehensive"]:
         sorted_cases = sorted(historical_cases, key=lambda x: x.get("date", ""), reverse=True)
-        
+
         # Compare severity progression
         severity_timeline = []
         for case in sorted_cases:
             sev = case.get("severity", "unknown").lower()
             severity_timeline.append(sev)
-        
+
         if len(severity_timeline) >= 2:
             direction = _infer_progression_direction(severity_timeline)
             progression_indicators = {
@@ -2693,13 +2693,13 @@ async def enhanced_case_comparison(
                 "timeline": severity_timeline,
                 "confidence": 0.8 if len(severity_timeline) >= 3 else 0.5
             }
-            
+
             # Detect anomalies in progression
             if direction == "improving" and current_case.get("severity", "").lower() in ["high", "critical"]:
                 anomalies_detected.append("Severity appears improving but current case is high/critical - verify data consistency")
             elif direction == "progressing":
                 anomalies_detected.append(f"Progressive deterioration detected across {len(severity_timeline)} time points")
-    
+
     # Cross-sectional pattern matching
     if comparison_mode in ["cross-sectional", "pattern", "comprehensive"]:
         # Domain-based patterns
@@ -2711,7 +2711,7 @@ async def enhanced_case_comparison(
                 "description": f"{len(same_domain)} cases with same domain ({current_case.get('domain')})",
                 "confidence": min(0.9, 0.5 + len(same_domain) * 0.1)
             })
-        
+
         # Body region patterns
         same_region = [c for c in historical_cases if c.get("body_region") == current_case.get("body_region")]
         if same_region:
@@ -2721,7 +2721,7 @@ async def enhanced_case_comparison(
                 "description": f"{len(same_region)} cases with same body region",
                 "confidence": min(0.9, 0.5 + len(same_region) * 0.1)
             })
-        
+
         # Severity cluster patterns
         same_severity = [c for c in historical_cases if c.get("severity") == current_case.get("severity")]
         if same_severity:
@@ -2731,13 +2731,13 @@ async def enhanced_case_comparison(
                 "description": f"{len(same_severity)} cases with same severity",
                 "confidence": min(0.9, 0.5 + len(same_severity) * 0.1)
             })
-    
+
     # Risk trajectory
     risk_trajectory = _assess_risk_trajectory(current_case, historical_cases)
-    
+
     # Base confidence
     confidence = min(0.9, 0.5 + len(historical_cases) * 0.05)
-    
+
     # Enhanced uncertainty discipline analysis
     uncertainty_metrics = {}
     uncertainty_discipline_score = 0.5
@@ -2751,7 +2751,7 @@ async def enhanced_case_comparison(
     # Phase 5: Enhanced longitudinal reasoning
     confidence_shift_narrative: dict = {}
     highest_value_next_question: dict = {}
-    
+
     if include_uncertainty:
         # Extract uncertainty sources
         case_context = current_case.get("context", {})
@@ -2760,7 +2760,7 @@ async def enhanced_case_comparison(
         uncertainties = current_case.get("uncertainties", [])
         reported_confidence = current_case.get("confidence", 0.7)
         temporal_context = current_case.get("temporal_context") or current_case.get("case_temporal_context")
-        
+
         uncertainty_metrics = _compute_uncertainty_metrics(
             case_context,
             image_quality,
@@ -2796,7 +2796,7 @@ async def enhanced_case_comparison(
             confidence_shift_points,
             most_valuable_clarifications,
         )
-        
+
         # Phase 5: Enhanced longitudinal reasoning - confidence shift narrative
         differential_evolution_dicts = [dict(record) for record in evolution_models]
         confidence_shift_narrative = _build_confidence_shift_narrative(
@@ -2804,7 +2804,7 @@ async def enhanced_case_comparison(
             confidence_shift_points,
             uncertainties,
         )
-        
+
         # Phase 5: Highest value next question tied to differential evolution
         highest_value_question = _compute_highest_value_next_question(
             differential_evolution_dicts,
@@ -2812,7 +2812,7 @@ async def enhanced_case_comparison(
             uncertainty_metrics.primary_uncertainty_drivers,
             confidence,
         )
-        
+
         deep_uncertainty_narrative = _build_deep_uncertainty_narrative(
             case_context,
             image_quality,
@@ -2821,13 +2821,13 @@ async def enhanced_case_comparison(
             reported_confidence,
             uncertainty_metrics,
         ).model_dump()
-        
+
         # Compute comparison fidelity - how reliable is this comparison?
         if len(historical_cases) >= 3:
             comparison_fidelity = min(0.9, 0.4 + len(historical_cases) * 0.15)
         else:
             comparison_fidelity = 0.3 + len(historical_cases) * 0.1
-        
+
         # Compute uncertainty discipline score
         uncertainty_discipline_score = (
             uncertainty_metrics.confidence_calibration * 0.4 +
@@ -2835,7 +2835,7 @@ async def enhanced_case_comparison(
             (1.0 - uncertainty_metrics.image_quality_uncertainty) * 0.2 +
             (1.0 - uncertainty_metrics.temporal_uncertainty) * 0.2
         )
-        
+
         # Recommend confidence adjustment based on uncertainty
         if uncertainty_metrics.knowledge_uncertainty > 0.4:
             recommended_confidence_adjustment = -0.1
@@ -2843,7 +2843,7 @@ async def enhanced_case_comparison(
             recommended_confidence_adjustment = max(recommended_confidence_adjustment, -0.15)
         if uncertainty_metrics.temporal_uncertainty > 0.3:
             recommended_confidence_adjustment = max(recommended_confidence_adjustment, -0.1)
-    
+
     return EnhancedCaseComparisonResponse(
         current_case_id=current_case_id,
         comparison_summary=f"Enhanced comparison of current case against {len(historical_cases)} historical cases using {comparison_mode} analysis with uncertainty discipline.",
@@ -2879,7 +2879,7 @@ def _build_confidence_shift_narrative(
     """
     Build Phase 5 natural-language narrative explaining what changed confidence most
     and what evidence caused the shift.
-    
+
     Produces:
     - primary_shift_narrative: What changed confidence most
     - evidence_causing_shift: What evidence caused the largest shift
@@ -2894,7 +2894,7 @@ def _build_confidence_shift_narrative(
         "largest_shift_magnitude": 0.0,
         "largest_shift_direction": "none",
     }
-    
+
     if not shift_points:
         narrative["primary_shift_narrative"] = (
             "No significant confidence shifts detected across the consultation sequence. "
@@ -2902,12 +2902,12 @@ def _build_confidence_shift_narrative(
         )
         narrative["natural_language_summary"] = narrative["primary_shift_narrative"]
         return narrative
-    
+
     # Primary shift (largest magnitude)
     primary = shift_points[0]
     narrative["largest_shift_magnitude"] = primary["magnitude"]
     narrative["largest_shift_direction"] = primary["direction"]
-    
+
     # Build primary narrative
     if primary["differential_changed"]:
         narrative["primary_shift_narrative"] = (
@@ -2923,12 +2923,12 @@ def _build_confidence_shift_narrative(
             f"{primary['direction']} without a differential change. "
             f"{primary.get('cause_analysis', '')}"
         )
-    
+
     # Evidence causing shift
     evidence = primary.get("evidence_at_shift", [])
     if evidence:
         narrative["evidence_causing_shift"] = evidence[:3]  # Top 3 pieces of evidence
-    
+
     # Secondary shifts
     if len(shift_points) > 1:
         for shift in shift_points[1:3]:  # Next 2 most significant
@@ -2940,7 +2940,7 @@ def _build_confidence_shift_narrative(
                 "summary": f"Shift of {shift['magnitude']:+.0%} at position {shift['position']}"
             }
             narrative["secondary_shifts"].append(secondary)
-    
+
     # Full natural language summary
     n_shifts = len(shift_points)
     if n_shifts == 1:
@@ -2957,7 +2957,7 @@ def _build_confidence_shift_narrative(
             f"This pattern suggests {'rapid diagnostic refinement' if primary['direction'] == 'increased' else 'emerging diagnostic complexity'} "
             f"as the consultation progressed."
         )
-    
+
     return narrative
 
 
@@ -2970,7 +2970,7 @@ def _compute_highest_value_next_question(
     """
     Phase 5: Compute which single clarification question would most reduce
     uncertainty, directly tied to the differential evolution pattern.
-    
+
     Returns:
     - question: The highest value question
     - rationale: Why this question specifically
@@ -2984,20 +2984,20 @@ def _compute_highest_value_next_question(
         "tied_to_shift": None,
         "category": "unknown",
     }
-    
+
     if not shift_points and not uncertainty_drivers:
         result["question"] = "What additional clinical context or history can be provided to refine the differential diagnosis?"
         result["rationale"] = "No specific uncertainty drivers identified. General context clarification recommended."
         result["estimated_uncertainty_reduction"] = 0.15
         return result
-    
+
     # Primary shift analysis
     if shift_points:
         primary = shift_points[0]
         shift_position = primary["position"]
         shift_direction = primary["direction"]
         differential = primary.get("leading_differential", "")
-        
+
         # If confidence increased, we understood something - ask about what we might have missed
         if shift_direction == "increased":
             result["question"] = (
@@ -3011,7 +3011,7 @@ def _compute_highest_value_next_question(
             result["estimated_uncertainty_reduction"] = 0.20
             result["tied_to_shift"] = f"position_{shift_position}_{differential}"
             result["category"] = "confidence_building"
-        
+
         # If confidence decreased, we're uncertain - ask what we need to know
         else:
             result["question"] = (
@@ -3025,11 +3025,11 @@ def _compute_highest_value_next_question(
             result["estimated_uncertainty_reduction"] = 0.25
             result["tied_to_shift"] = f"position_{shift_position}_uncertainty"
             result["category"] = "uncertainty_resolution"
-    
+
     # Tie to specific uncertainty drivers
     if uncertainty_drivers and result["estimated_uncertainty_reduction"] < 0.2:
         top_driver = uncertainty_drivers[0] if uncertainty_drivers else "knowledge_gaps"
-        
+
         driver_question_map = {
             "knowledge_gaps": "Can additional diagnostic testing (biopsy, cytology, bloodwork) be performed to address knowledge gaps?",
             "image_quality": "Can higher quality or additional imaging angles be obtained?",
@@ -3037,7 +3037,7 @@ def _compute_highest_value_next_question(
             "sequence_position": "Are there additional images from other timepoints for comparison?",
             "follow_up_trajectory": "Has any treatment been initiated? What has been the response so far?",
         }
-        
+
         result["question"] = driver_question_map.get(top_driver, driver_question_map["knowledge_gaps"])
         result["rationale"] = (
             f"Primary uncertainty driver is '{top_driver.replace('_', ' ')}'. "
@@ -3045,7 +3045,7 @@ def _compute_highest_value_next_question(
         )
         result["estimated_uncertainty_reduction"] = 0.18
         result["category"] = f"driver_specific_{top_driver}"
-    
+
     # Confidence-based adjustment
     if current_confidence < 0.5 and result["estimated_uncertainty_reduction"] < 0.25:
         result["estimated_uncertainty_reduction"] = 0.25
@@ -3056,7 +3056,7 @@ def _compute_highest_value_next_question(
             "Current confidence is low. Prioritizing the most urgent concern would "
             "provide the clearest path forward."
         )
-    
+
     return result
 
 
@@ -3066,12 +3066,12 @@ async def get_uncertainty_discipline_report(
 ):
     """
     Generate a report on uncertainty discipline across recent consults.
-    
+
     Returns aggregated statistics on how well uncertainty is being
     communicated and calibrated across the service.
     """
     validate_auth(authorization)
-    
+
     # This would typically analyze recent consults
     # For now, return structure for future implementation
     return {
@@ -3487,7 +3487,9 @@ def _identify_highest_value_next_question(
         "category": "unknown",
         "alternatives": [],
         "observed_based": False,
-        "confidence_adjustment": None
+        "confidence_adjustment": None,
+        "why_reduces_fastest": "",
+        "reduction_mechanism": "",
     }
 
     if not confidence_shift_points and not uncertainty_drivers:
@@ -3497,6 +3499,11 @@ def _identify_highest_value_next_question(
         result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
             "unknown", [], {}
         )
+        result["why_reduces_fastest"] = (
+            "General context clarification is recommended because no specific uncertainty drivers were identified. "
+            "This approach provides the broadest coverage for unknown gaps in the consultation."
+        )
+        result["reduction_mechanism"] = "Provides general diagnostic context that may address multiple uncertainty sources simultaneously."
         return result
 
     # Primary shift analysis
@@ -3520,10 +3527,23 @@ def _identify_highest_value_next_question(
             result["tied_to_shift"] = f"position_{shift_position}_{differential}"
 
             # Use observed data if available
+            observed_stats = _get_observed_reduction_for_question_type(result["category"])
             result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
                 result["category"], uncertainty_drivers, {}
             )
-            result["observed_based"] = _get_observed_reduction_for_question_type(result["category"])["count"] >= 5
+            result["observed_based"] = observed_stats["count"] >= 5
+
+            # Why this reduces uncertainty fastest
+            result["why_reduces_fastest"] = (
+                f"Confidence increased when '{differential}' emerged as the leading differential. "
+                f"Confirming this specific diagnosis directly addresses the emerging diagnostic direction. "
+                f"This question targets the most promising diagnostic pathway, which is why it should "
+                f"reduce uncertainty fastest ({result['estimated_uncertainty_reduction']:.0%} expected reduction)."
+            )
+            result["reduction_mechanism"] = (
+                f"Addresses the '{differential}' differential directly by providing confirmatory evidence. "
+                f"When confirmed, this collapses the differential to a single diagnosis, eliminating competing possibilities."
+            )
 
         else:  # decreased or unknown
             # Confidence decreased - ask what we need to resolve uncertainty
@@ -3538,10 +3558,22 @@ def _identify_highest_value_next_question(
             )
             result["tied_to_shift"] = f"position_{shift_position}_uncertainty"
 
+            observed_stats = _get_observed_reduction_for_question_type(result["category"])
             result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
                 result["category"], uncertainty_drivers, {}
             )
-            result["observed_based"] = _get_observed_reduction_for_question_type(result["category"])["count"] >= 5
+            result["observed_based"] = observed_stats["count"] >= 5
+
+            # Why this reduces uncertainty fastest
+            result["why_reduces_fastest"] = (
+                f"Confidence decreased at position {shift_position}, indicating competing differentials. "
+                f"Resolving which differential is correct directly addresses the source of uncertainty. "
+                f"This question targets the root cause of the confidence drop ({result['estimated_uncertainty_reduction']:.0%} expected reduction)."
+            )
+            result["reduction_mechanism"] = (
+                "Distinguishes between competing differentials by providing decisive evidence. "
+                "When one differential is confirmed, others can be ruled out, collapsing the uncertainty."
+            )
 
     # Tie to specific uncertainty drivers if reduction is still low
     if uncertainty_drivers and result["estimated_uncertainty_reduction"] < 0.2:
@@ -3550,23 +3582,28 @@ def _identify_highest_value_next_question(
         driver_question_map = {
             "knowledge_gaps": {
                 "question": "Can additional diagnostic testing (biopsy, cytology, bloodwork) be performed to address knowledge gaps?",
-                "category": "driver_specific_knowledge_gaps"
+                "category": "driver_specific_knowledge_gaps",
+                "mechanism": "Provides objective diagnostic data that directly informs the differential diagnosis"
             },
             "image_quality": {
                 "question": "Can higher quality or additional imaging angles be obtained?",
-                "category": "driver_specific_image_quality"
+                "category": "driver_specific_image_quality",
+                "mechanism": "Better visual evidence allows more confident feature identification and interpretation"
             },
             "temporal_context": {
                 "question": "What is the timeline of symptom progression? When did changes first appear?",
-                "category": "driver_specific_temporal_context"
+                "category": "driver_specific_temporal_context",
+                "mechanism": "Establishes acute vs chronic nature of findings, critical for urgency assessment"
             },
             "sequence_position": {
                 "question": "Are there additional images from other timepoints for comparison?",
-                "category": "driver_specific_sequence_position"
+                "category": "driver_specific_sequence_position",
+                "mechanism": "Temporal comparison reveals progression vs regression, distinguishing new vs old pathology"
             },
             "follow_up_trajectory": {
                 "question": "Has any treatment been initiated? What has been the response so far?",
-                "category": "driver_specific_follow_up_trajectory"
+                "category": "driver_specific_follow_up_trajectory",
+                "mechanism": "Treatment response directly informs diagnosis and prognosis, resolving diagnostic uncertainty"
             },
         }
 
@@ -3577,10 +3614,20 @@ def _identify_highest_value_next_question(
             f"Primary uncertainty driver is '{top_driver.replace('_', ' ')}'. "
             f"Addressing this specific gap would have the highest impact on reducing uncertainty."
         )
+        observed_stats = _get_observed_reduction_for_question_type(result["category"])
         result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
             result["category"], uncertainty_drivers, {}
         )
-        result["observed_based"] = _get_observed_reduction_for_question_type(result["category"])["count"] >= 5
+        result["observed_based"] = observed_stats["count"] >= 5
+
+        # Why this reduces uncertainty fastest
+        result["why_reduces_fastest"] = (
+            f"Primary uncertainty driver is '{top_driver.replace('_', ' ')}'. "
+            f"This is the single largest source of diagnostic uncertainty in the current case. "
+            f"Addressing it directly eliminates the biggest uncertainty blocker "
+            f"({result['estimated_uncertainty_reduction']:.0%} expected reduction)."
+        )
+        result["reduction_mechanism"] = driver_info.get("mechanism", "Directly addresses the identified uncertainty source")
 
     # Confidence-based adjustment
     if current_confidence < 0.5 and result["estimated_uncertainty_reduction"] < 0.25:
@@ -3599,25 +3646,28 @@ def _identify_highest_value_next_question(
         }
         result["estimated_uncertainty_reduction"] = 0.25
 
+        # Why this reduces uncertainty fastest
+        result["why_reduces_fastest"] = (
+            f"Current confidence is low ({current_confidence:.0%}), indicating diagnostic uncertainty. "
+            f"When uncertainty is high, prioritizing urgency focuses the diagnostic process on the most "
+            f"critical concern, which reduces uncertainty fastest by establishing a clear action path."
+        )
+        result["reduction_mechanism"] = (
+            "Establishes clear clinical priority, which provides direction even when full diagnosis is uncertain. "
+            "This focuses subsequent diagnostic steps on the most time-sensitive concern."
+        )
+
     # Build alternatives using observed patterns
     alternative_categories = [
-        "driver_specific_temporal_context",
-        "driver_specific_knowledge_gaps",
-        "uncertainty_resolution"
+        ("driver_specific_temporal_context", "timeline of symptom progression", "temporal_context"),
+        ("driver_specific_knowledge_gaps", "diagnostic testing to address knowledge gaps", "knowledge_gaps"),
+        ("uncertainty_resolution", "distinguishing between competing differentials", "uncertainty_resolution"),
     ]
 
-    for alt_cat in alternative_categories:
+    for alt_cat, alt_driver_text, alt_driver_key in alternative_categories:
         if alt_cat != result["category"]:
             alt_observed = _get_observed_reduction_for_question_type(alt_cat)
             alt_reduction = alt_observed["avg_reduction"] if alt_observed["count"] >= 3 else 0.15
-
-            alt_driver_map = {
-                "driver_specific_temporal_context": ("timeline of symptom progression", "temporal_context"),
-                "driver_specific_knowledge_gaps": ("diagnostic testing to address knowledge gaps", "knowledge_gaps"),
-                "uncertainty_resolution": ("distinguishing between competing differentials", "uncertainty_resolution")
-            }
-
-            alt_driver_text, alt_driver_key = alt_driver_map.get(alt_cat, ("additional context", "unknown"))
 
             result["alternatives"].append({
                 "question": f"What additional information about {alt_driver_text} would help clarify the diagnosis?",
@@ -3760,6 +3810,21 @@ def _build_live_longitudinal_uncertainty_report(
             f"Prioritize: {next_question.get('question', 'Unknown question')}"
         )
 
+    # Build enhanced question rationale with why_reduces_fastest explanation
+    base_rationale = next_question.get("rationale", "No specific rationale available")
+    why_reduces = next_question.get("why_reduces_fastest", "")
+    reduction_mechanism = next_question.get("reduction_mechanism", "")
+
+    # Combine into comprehensive rationale
+    if why_reduces:
+        combined_rationale = (
+            f"{base_rationale}\n\n"
+            f"WHY THIS REDUCES UNCERTAINTY FASTEST: {why_reduces}\n\n"
+            f"REDUCTION MECHANISM: {reduction_mechanism}"
+        )
+    else:
+        combined_rationale = base_rationale
+
     # Build final report
     report = LongitudinalUncertaintyReport(
         confidence_change_summary=confidence_shift_narrative.get("primary_shift_narrative", "No significant shifts detected"),
@@ -3768,7 +3833,7 @@ def _build_live_longitudinal_uncertainty_report(
         decisive_evidence=decisive_evidence,
         evidence_weight_ranking=evidence_ranking,
         highest_value_next_question=next_question.get("question", "What additional context can be provided?"),
-        question_rationale=next_question.get("rationale", "No specific rationale available"),
+        question_rationale=combined_rationale,
         expected_uncertainty_reduction=next_question.get("estimated_uncertainty_reduction", 0.15),
         alternative_questions=[
             {"question": q.get("question", ""), "rationale": q.get("rationale", "")}
