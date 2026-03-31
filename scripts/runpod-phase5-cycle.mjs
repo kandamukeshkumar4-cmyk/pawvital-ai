@@ -8,11 +8,6 @@ const podsPath = path.join(rootDir, "deploy", "runpod", "pods.json");
 const nodeBin = process.execPath;
 const pollIntervalMs = 20_000;
 const timeoutMs = 45 * 60_000;
-const phase5BudgetUsdRaw = process.env.RUNPOD_PHASE5_BUDGET_USD || process.env.RUNPOD_BUDGET_USD || "";
-const phase5BudgetUsd = Number(phase5BudgetUsdRaw);
-const phase5StopAtRemainingPctRaw =
-  process.env.RUNPOD_STOP_AT_REMAINING_PCT || process.env.RUNPOD_PHASE5_STOP_AT_REMAINING_PCT || "1";
-const phase5StopAtRemainingPct = Number(phase5StopAtRemainingPctRaw);
 
 function loadEnvFiles() {
   for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
@@ -104,6 +99,8 @@ async function fetchBillingRecordsForPod(podId, startTimeIso, endTimeIso) {
 }
 
 async function getPhase5SpendSnapshot(cycleStartIso) {
+  const phase5BudgetUsdRaw = process.env.RUNPOD_PHASE5_BUDGET_USD || process.env.RUNPOD_BUDGET_USD || "";
+  const phase5BudgetUsd = Number(phase5BudgetUsdRaw);
   const budgetUsd = Number.isFinite(phase5BudgetUsd) && phase5BudgetUsd > 0 ? phase5BudgetUsd : 0;
   if (budgetUsd <= 0) {
     return { enabled: false, budgetUsd: 0, spentUsd: 0, remainingUsd: 0, remainingPct: 100, breakdown: [] };
@@ -128,6 +125,12 @@ async function getPhase5SpendSnapshot(cycleStartIso) {
 }
 
 async function maybeStopForBudget(stage, cycleStartIso) {
+  const phase5BudgetUsdRaw = process.env.RUNPOD_PHASE5_BUDGET_USD || process.env.RUNPOD_BUDGET_USD || "";
+  const phase5BudgetUsd = Number(phase5BudgetUsdRaw);
+  const phase5StopAtRemainingPctRaw =
+    process.env.RUNPOD_STOP_AT_REMAINING_PCT || process.env.RUNPOD_PHASE5_STOP_AT_REMAINING_PCT || "1";
+  const phase5StopAtRemainingPct = Number(phase5StopAtRemainingPctRaw);
+
   if (!Number.isFinite(phase5BudgetUsd) || phase5BudgetUsd <= 0) {
     if (stage === "preflight") {
       console.log("[phase5] budget guard disabled (set RUNPOD_PHASE5_BUDGET_USD or RUNPOD_BUDGET_USD to enable)");
