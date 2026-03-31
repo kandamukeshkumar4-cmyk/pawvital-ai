@@ -1005,6 +1005,34 @@ describe("symptom-chat mixed text + image routing", () => {
     }
   );
 
+  it("accepts a natural-language normal water-intake reply when extraction misses it", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session.last_question_asked = "water_intake";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Yes, he's drinking normally.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.water_intake).toBe("normal");
+    expect(payload.session.answered_questions).toContain("water_intake");
+    expect(payload.session.last_question_asked).not.toBe("water_intake");
+  });
+
   it("prioritizes breathing follow-up over coughing when both symptoms are reported together", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -1131,6 +1159,35 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.answered_questions).not.toContain("cough_duration");
     expect(payload.session.extracted_answers.cough_duration).toBeUndefined();
     expect(payload.session.red_flags_triggered).toContain("blue_gums");
+  });
+
+  it("records a direct duration-style pending answer instead of repeating the same question", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["coughing"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_duration";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "For about two days."));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.cough_duration).toBe("For about two days.");
+    expect(payload.session.answered_questions).toContain("cough_duration");
+    expect(payload.session.last_question_asked).not.toBe("cough_duration");
   });
 
   it("uses broader keyword fallback for common respiratory and abdomen phrasings", async () => {
