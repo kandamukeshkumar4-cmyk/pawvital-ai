@@ -1873,7 +1873,7 @@ def _classify_failure_mode(
         "confidence_reliability": "",
         "recommended_mitigation": "",
     }
-    
+
     if image_quality in ("poor", "marginal", "unknown"):
         failure_analysis["primary_mode"] = "POOR_IMAGE_EVIDENCE"
         failure_analysis["evidence_quality_assessment"] = (
@@ -1882,14 +1882,14 @@ def _classify_failure_mode(
         )
         failure_analysis["confidence_reliability"] = "LOW - output should be significantly discounted"
         failure_analysis["recommended_mitigation"] = "Obtain higher quality images before analysis"
-        
+
         if image_quality == "poor":
             failure_analysis["sub_classification"] = "SEVERELY_LIMITED_EVIDENCE"
         elif image_quality == "marginal":
             failure_analysis["sub_classification"] = "PARTIALLY_LIMITED_EVIDENCE"
         else:
             failure_analysis["sub_classification"] = "EVIDENCE_QUALITY_UNKNOWN"
-        
+
         # Return just the primary mode for backward compatibility
         return failure_analysis["primary_mode"]
 
@@ -1960,10 +1960,10 @@ def _build_deep_failure_mode_narrative(
 ) -> dict[str, Any]:
     """
     Build comprehensive failure mode narrative with specific details.
-    
+
     Phase 5: Goes beyond high-level categorization to explain the specific
     mechanism of failure in this case.
-    
+
     Returns:
         - mechanism: How the failure occurred
         - evidence_chain: What evidence contributed to the failure
@@ -1979,7 +1979,7 @@ def _build_deep_failure_mode_narrative(
         "recurrence_risk": "medium",
         "specific_finding_details": [],
     }
-    
+
     # Extract specific findings
     for d in disagreement_classifications:
         if isinstance(d, dict):
@@ -1989,7 +1989,7 @@ def _build_deep_failure_mode_narrative(
                 "type": d.get("type", "unknown"),
                 "severity_tag": d.get("severity", "UNKNOWN"),
             })
-    
+
     # Failure mode specific analysis
     if failure_mode == "POOR_IMAGE_EVIDENCE":
         narrative["mechanism"] = (
@@ -1999,7 +1999,7 @@ def _build_deep_failure_mode_narrative(
             f"Without clear visual evidence, the model defaulted to a more conservative interpretation, "
             f"which {'over-escalated' if is_false_positive else 'under-escalated'} in this case."
         )
-        
+
         if image_quality == "poor":
             narrative["evidence_chain"] = [
                 "Poor resolution → features unrecognizable",
@@ -2016,7 +2016,7 @@ def _build_deep_failure_mode_narrative(
                 f"Result: {'False positive escalation' if is_false_positive else 'False negative missed escalation'}",
             ]
             narrative["recurrence_risk"] = "medium"
-        
+
         narrative["what_would_fix"] = [
             "Obtain higher quality images with better lighting",
             "Capture multiple angles for cross-validation",
@@ -2024,14 +2024,14 @@ def _build_deep_failure_mode_narrative(
             "Consider in-person examination for definitive assessment",
             "Implement mandatory image quality gates before AI analysis",
         ]
-        
+
     elif failure_mode == "THRESHOLD_MISTAKE":
         diag_disagreements = [d for d in disagreement_classifications if d.get("type") == "diagnostic"]
         specific_features = "; ".join([
             f"{d.get('description', 'feature')} at {d.get('location', 'site')}"
             for d in diag_disagreements[:2]
         ]) if diag_disagreements else "borderline features"
-        
+
         narrative["mechanism"] = (
             f"THRESHOLD CALIBRATION FAILURE: The AI incorrectly set the decision threshold "
             f"for the {body_region} {severity} severity case. "
@@ -2040,7 +2040,7 @@ def _build_deep_failure_mode_narrative(
             f"The model's internal threshold was {'too low' if is_false_positive else 'too high'} for "
             f"this {temporal_context} case type."
         )
-        
+
         if is_false_positive:
             narrative["evidence_chain"] = [
                 "Normal/borderline features presented",
@@ -2057,7 +2057,7 @@ def _build_deep_failure_mode_narrative(
                 "Confidence overcalibrated to non-escalation",
                 "Result: Under-escalation (false negative)",
             ]
-        
+
         narrative["what_would_fix"] = [
             f"Adjust threshold calibration for {body_region} region",
             "Review threshold settings for borderline feature patterns",
@@ -2066,7 +2066,7 @@ def _build_deep_failure_mode_narrative(
             f"Track {specific_features} pattern type for threshold review",
         ]
         narrative["recurrence_risk"] = "medium"
-        
+
     elif failure_mode == "CONTEXT_GAP":
         narrative["mechanism"] = (
             f"CONTEXT DEPENDENCY FAILURE: The AI lacked sufficient case context for calibrated assessment. "
@@ -2076,14 +2076,14 @@ def _build_deep_failure_mode_narrative(
             f"The model defaulted to {'conservative' if is_false_positive else 'aggressive'} interpretation "
             f"without context to guide calibration."
         )
-        
+
         narrative["evidence_chain"] = [
             "Missing temporal comparison data",
             "No baseline for {body_region} assessment",
             f"Model defaulted to {'conservative' if is_false_positive else 'aggressive'} stance",
             f"Result: {'False positive' if is_false_positive else 'False negative'} due to context absence",
         ]
-        
+
         narrative["what_would_fix"] = [
             "Request historical images when available",
             "Implement mandatory context fields in intake",
@@ -2092,7 +2092,7 @@ def _build_deep_failure_mode_narrative(
             "Consider delayed assessment when context is incomplete",
         ]
         narrative["recurrence_risk"] = "high"
-    
+
     # Severity assessment
     severity_impacts = {
         "emergency": "CRITICAL - Life-threatening delay/over-escalation",
@@ -2104,7 +2104,7 @@ def _build_deep_failure_mode_narrative(
         severity.lower() if isinstance(severity, str) else "needs_review",
         f"Severity {severity} has uncertain impact"
     )
-    
+
     return narrative
 
 
@@ -2907,10 +2907,10 @@ def _generate_deep_evidence_attribution(
 ) -> dict[str, Any]:
     """
     Generate deep attribution of which specific evidence caused the confidence shift.
-    
+
     Phase 5: Goes beyond listing evidence to explain HOW each piece of evidence
     contributed to the shift.
-    
+
     Returns:
         - causal_evidence: Evidence items with causal explanation
         - supporting_evidence: Secondary supporting evidence
@@ -2926,16 +2926,16 @@ def _generate_deep_evidence_attribution(
         "evidence_weight_analysis": {},
         "confidence_impact_calculation": "",
     }
-    
+
     if not evidence_items:
         attribution["net_contribution"] = "No specific evidence items could be attributed to the shift."
         return attribution
-    
+
     # Categorize evidence by type and impact
     for item in evidence_items:
         evidence_type = item.get("type", "unknown")
         impact = item.get("confidence_impact", "")
-        
+
         if evidence_type == "new_finding":
             if impact == "+":
                 attribution["causal_evidence"].append({
@@ -2958,7 +2958,7 @@ def _generate_deep_evidence_attribution(
                     ),
                     "weight": 0.1,
                 })
-                
+
         elif evidence_type == "resolved_uncertainty":
             attribution["causal_evidence"].append({
                 **item,
@@ -2971,19 +2971,19 @@ def _generate_deep_evidence_attribution(
                 ),
                 "weight": 0.25,
             })
-    
+
     # Calculate net contribution
     positive_weight = sum(e.get("weight", 0) for e in attribution["causal_evidence"])
     negative_weight = sum(e.get("weight", 0) for e in attribution["contradicting_evidence"])
     net_weight = positive_weight - negative_weight
-    
+
     attribution["evidence_weight_analysis"] = {
         "total_positive_weight": round(positive_weight, 2),
         "total_negative_weight": round(negative_weight, 2),
         "net_weight": round(net_weight, 2),
         "normalized_impact": round(net_weight * abs(shift_magnitude), 3) if shift_magnitude != 0 else 0,
     }
-    
+
     if net_weight > 0.1:
         attribution["net_contribution"] = (
             f"Evidence strongly supported the {abs(shift_magnitude):.0%} confidence {'increase' if shift_magnitude > 0 else 'decrease'}. "
@@ -3008,7 +3008,7 @@ def _generate_deep_evidence_attribution(
             f"Evidence was insufficient to fully explain the {abs(shift_magnitude):.0%} shift. "
             f"This may indicate threshold effects, model internal reweighting, or evidence not captured in this analysis."
         )
-    
+
     return attribution
 
 
@@ -5811,7 +5811,7 @@ def _build_promotion_readiness_rationale(
         "promote_cautiously": "PROMOTE CAUTIOUSLY",
         "block_promotion": "BLOCK PROMOTION",
     }
-    
+
     # Determine confidence band with more granularity
     if confidence_score >= 0.7:
         confidence_band = "HIGH CONFIDENCE"
@@ -5825,7 +5825,7 @@ def _build_promotion_readiness_rationale(
     else:
         confidence_band = "INDETERMINATE"
         confidence_descriptor = "Insufficient evidence - defaulting to conservative approach"
-    
+
     parts.append(f"RECOMMENDATION: {recommendation_labels.get(recommendation, recommendation.upper())}")
     parts.append(f"Confidence Score: {confidence_score:.0%}")
     parts.append(f"Confidence Band: {confidence_band}")
@@ -5835,14 +5835,14 @@ def _build_promotion_readiness_rationale(
     # Shadow behavior summary with context
     parts.append("SHADOW BEHAVIOR ANALYSIS:")
     parts.append(f"  ├─ Agreement rate: {shadow_behavior.get('agreement_rate', 0):.0%} " +
-                 ("(Strong alignment between models)" if shadow_behavior.get('agreement_rate', 0) > 0.7 else 
+                 ("(Strong alignment between models)" if shadow_behavior.get('agreement_rate', 0) > 0.7 else
                   "(Moderate alignment)" if shadow_behavior.get('agreement_rate', 0) > 0.5 else "(Weak alignment - significant disagreement)"))
     parts.append(f"  ├─ Disagreement rate: {shadow_behavior.get('disagreement_rate', 0):.0%} " +
                  ("(High disagreement requires careful review)" if shadow_behavior.get('disagreement_rate', 0) > 0.3 else "(Within acceptable range)"))
     parts.append(f"  ├─ Escalation rate: {shadow_behavior.get('escalation_rate', 0):.0%} " +
                  ("(Elevated - monitor closely)" if shadow_behavior.get('escalation_rate', 0) > 0.2 else "(Normal range)"))
     parts.append(f"  ├─ False positive rate: {shadow_behavior.get('false_positive_rate', 0):.0%} " +
-                 ("(HIGH RISK - over-escalation pattern)" if shadow_behavior.get('false_positive_rate', 0) > 0.2 else 
+                 ("(HIGH RISK - over-escalation pattern)" if shadow_behavior.get('false_positive_rate', 0) > 0.2 else
                   "(Acceptable)" if shadow_behavior.get('false_positive_rate', 0) < 0.15 else "(Moderate risk)"))
     parts.append(f"  └─ False negative rate: {shadow_behavior.get('false_negative_rate', 0):.0%} " +
                  ("(HIGH RISK - missed escalations)" if shadow_behavior.get('false_negative_rate', 0) > 0.1 else "(Acceptable)"))
@@ -5885,7 +5885,7 @@ def _build_promotion_readiness_rationale(
     parts.append("-" * 70)
     parts.append("COMPREHENSIVE RATIONALE:")
     parts.append("-" * 70)
-    
+
     if recommendation == "keep_in_shadow":
         parts.append("")
         parts.append(f"DECISION: KEEP IN SHADOW MODE")
@@ -5911,7 +5911,7 @@ def _build_promotion_readiness_rationale(
         parts.append(f"  • Monitor for changes in agreement/disagreement patterns")
         parts.append(f"  • Re-evaluate if severity impact exceeds 0.75")
         parts.append(f"  • Consider promotion if shadow data shows sustained alignment")
-        
+
     elif recommendation == "promote_cautiously":
         parts.append("")
         parts.append(f"DECISION: PROMOTE CAUTIOUSLY")
@@ -5940,7 +5940,7 @@ def _build_promotion_readiness_rationale(
         parts.append(f"  • Implement human-in-the-loop for high-severity escalations (≥0.75 impact)")
         parts.append(f"  • Establish clear escalation criteria before full promotion")
         parts.append(f"  • Re-evaluate after {max(5, total_divergence * 2)} additional shadow cases")
-        
+
     else:  # block_promotion
         parts.append("")
         parts.append(f"DECISION: BLOCK PROMOTION")
@@ -6011,10 +6011,10 @@ def _generate_32b_case_specific_evidence_narrative(
 ) -> dict[str, Any]:
     """
     Generate deep, case-specific narrative explaining WHY 32B helped in this particular case.
-    
+
     Phase 5: Provides granular evidence-driven explanation of 32B's value-add rather than
     generic statements. Each case gets a unique narrative based on its specific findings.
-    
+
     Returns:
         - specific_findings_32b_detected: Exact findings 32B identified
         - why_7b_missed_these: Specific reason 7B underweighted these findings
@@ -6032,7 +6032,7 @@ def _generate_32b_case_specific_evidence_narrative(
         "clinical_significance": "",
         "reasoning_depth_differential": "",
     }
-    
+
     # Extract specific findings from disagreement classifications
     for d in disagreement_classifications:
         if isinstance(d, dict):
@@ -6044,7 +6044,7 @@ def _generate_32b_case_specific_evidence_narrative(
                 "confidence_impact": d.get("confidence_impact", 0.0),
             }
             narrative["specific_findings_32b_detected"].append(finding)
-            
+
             # Build evidence chain
             narrative["evidence_chain"].append({
                 "finding": d.get("description", "unspecified"),
@@ -6052,7 +6052,7 @@ def _generate_32b_case_specific_evidence_narrative(
                 "model_source": "32B_SPECIALIST_REVIEW",
                 "confidence_contribution": d.get("confidence_impact", 0.0),
             })
-    
+
     # Generate body-region specific explanation
     region_explanations = {
         "eye": f"32B's enhanced visual processing detected subtle ocular findings (e.g., {narrative['specific_findings_32b_detected'][0].get('description', 'anatomical detail') if narrative['specific_findings_32b_detected'] else 'abnormal appearance'}) in the {body_region} that required higher resolution analysis. The model's specialist-depth training on ophthalmological patterns provided better discrimination between similar-appearing conditions.",
@@ -6065,12 +6065,12 @@ def _generate_32b_case_specific_evidence_narrative(
         "lymph_nodes": f"32B identified lymph node characteristics in the {body_region} region requiring careful size, texture, and location assessment. The {severity_impact:.0%} severity impact suggests findings that required multi-feature comparison to distinguish reactive from neoplastic patterns.",
         "unknown": f"32B identified {len(narrative['specific_findings_32b_detected'])} finding(s) in the {body_region} region that required specialist-depth analysis. The {conf_delta:.0%} confidence delta between 7B and 32B suggests findings where model inference depth significantly impacts assessment quality."
     }
-    
+
     narrative["anatomical_detail"] = region_explanations.get(
-        body_region.lower(), 
+        body_region.lower(),
         region_explanations["unknown"]
     )
-    
+
     # Why 7B missed these findings
     if conf_delta > 0.2:
         narrative["why_7b_missed_these"] = (
@@ -6090,7 +6090,7 @@ def _generate_32b_case_specific_evidence_narrative(
             f"While both models identified similar findings, 32B's deeper analysis provided higher confidence. "
             f"The {conf_delta:.0%} delta reflects 32B's more thorough feature validation before committing to a conclusion."
         )
-    
+
     # Clinical significance
     severity_significance = {
         "emergency": "This finding represents a potential life-threatening condition requiring immediate veterinary intervention. 32B's correct identification prevents dangerous treatment delays.",
@@ -6098,12 +6098,12 @@ def _generate_32b_case_specific_evidence_narrative(
         "needs_review": "This finding requires veterinary review to determine clinical significance. 32B's analysis provides specialist-level assessment to guide triage decisions.",
         "monitor": "This finding represents a condition that should be monitored. 32B's identification ensures pet owners are aware of potential issues warranting observation."
     }
-    
+
     narrative["clinical_significance"] = severity_significance.get(
         severity.lower() if isinstance(severity, str) else "needs_review",
         f"Severity {severity} requires appropriate clinical follow-up. 32B's analysis supports informed decision-making."
     )
-    
+
     # Case-specific benefit summary
     narrative["case_specific_benefit"] = (
         f"CASE-SPECIFIC VALUE: For this {body_region} case with {pattern_type} pattern and {severity_impact:.0%} severity impact, "
@@ -6113,7 +6113,7 @@ def _generate_32b_case_specific_evidence_narrative(
         f"(3) more calibrated confidence assignment, and (4) identification of {len(narrative['specific_findings_32b_detected'])} finding(s) "
         f"that 7B's faster inference would have underweighted or missed."
     )
-    
+
     # Reasoning depth differential
     narrative["reasoning_depth_differential"] = (
         f"REASONING DEPTH: 7B completed assessment in ~{max(1, int((1.0 - conf_delta) * 3))} reasoning passes. "
@@ -6124,7 +6124,7 @@ def _generate_32b_case_specific_evidence_narrative(
         f"(3) weigh severity implications against treatment urgency, and "
         f"(4) reconcile any conflicting diagnostic signals."
     )
-    
+
     return narrative
 
 
@@ -6137,10 +6137,10 @@ def _generate_32b_discount_narrative(
 ) -> dict[str, Any]:
     """
     Generate deep narrative explaining WHY 32B's output should be discounted.
-    
+
     Phase 5: Provides specific, evidence-based reasons for discounting rather than
     blanket dismissal. Clearly articulates what evidence 32B would need to be reliable.
-    
+
     Returns:
         - discount_reason: Specific reason for discounting
         - what_32b_cannot_reliably_assess: What evidence is unavailable/uncertain
@@ -6157,10 +6157,10 @@ def _generate_32b_discount_narrative(
         "confidence_floor": 0.0,
         "alternative_pathway": "",
     }
-    
+
     if reason == "image_quality" or image_quality in ("poor", "marginal"):
         narrative["discount_reason"] = "image_quality"
-        
+
         quality_descriptions = {
             "poor": (
                 "Image quality is insufficient for reliable visual feature extraction. "
@@ -6177,7 +6177,7 @@ def _generate_32b_discount_narrative(
                 "32B's output cannot be reliably calibrated."
             )
         }
-        
+
         narrative["what_32b_cannot_reliably_assess"] = (
             f"With {image_quality} image quality, 32B cannot reliably assess: "
             f"(1) fine-grained morphological details required for {disagreement.get('body_region', 'affected region')}, "
@@ -6185,29 +6185,29 @@ def _generate_32b_discount_narrative(
             f"(3) precise boundary definitions between normal and abnormal tissue, and "
             f"(4) small-scale features that require pixel-level resolution."
         )
-        
+
         narrative["what_would_legitimize_32b"] = (
             "To restore 32B confidence: (1) Obtain higher-quality images with better resolution "
             "and lighting, (2) Capture multiple angles to allow cross-validation of features, "
             "(3) Include reference images from previous healthy assessments if available, "
             f"and (4) Consider in-person veterinary examination for definitive assessment."
         )
-        
+
         narrative["failure_mode_explained"] = quality_descriptions.get(
             image_quality.lower(), quality_descriptions["unknown"]
         )
-        
+
         narrative["confidence_floor"] = 0.25 if image_quality == "poor" else 0.4
-        
+
         narrative["alternative_pathway"] = (
             f"RECOMMENDATION: With {image_quality} image quality, route this case to human veterinary review. "
             f"Do not rely on 32B's specialist analysis as the primary decision driver. "
             f"If AI input is needed, require higher-quality images before analysis."
         )
-        
+
     elif reason == "temporal_context" or temporal_context == "single_image":
         narrative["discount_reason"] = "temporal_context"
-        
+
         narrative["what_32b_cannot_reliably_assess"] = (
             "Without longitudinal comparison: (1) Cannot determine if findings are new or pre-existing, "
             "(2) Cannot assess trajectory (improving, stable, or worsening), "
@@ -6215,14 +6215,14 @@ def _generate_32b_discount_narrative(
             "(4) Cannot distinguish acute from chronic conditions, and "
             "(5) Cannot identify subtle progressive changes over time."
         )
-        
+
         narrative["what_would_legitimize_32b"] = (
             "To restore 32B confidence: (1) Obtain images from previous consultations if available, "
             "(2) Request owner-provided baseline images from when condition first appeared, "
             "(3) Provide detailed temporal history of symptom evolution, and "
             "(4) Consider follow-up imaging to establish trajectory."
         )
-        
+
         narrative["failure_mode_explained"] = (
             "SINGLE-IMAGE LIMITATION: 32B's diagnostic confidence relies on temporal comparison. "
             f"Without baseline or follow-up images, 32B must assign higher uncertainty. "
@@ -6230,18 +6230,18 @@ def _generate_32b_discount_narrative(
             "(b) stable chronic findings, or (c) improving condition with residual changes. "
             "This fundamental uncertainty limits 32B's actionable guidance."
         )
-        
+
         narrative["confidence_floor"] = 0.35
-        
+
         narrative["alternative_pathway"] = (
             "RECOMMENDATION: Flag for longitudinal review when additional images become available. "
             "For acute presentations, recommend prompt veterinary evaluation rather than relying on single-image AI assessment. "
             "Consider establishing baseline imaging protocol for accurate future comparison."
         )
-        
+
     elif reason == "context_gap":
         narrative["discount_reason"] = "context_gap"
-        
+
         narrative["what_32b_cannot_reliably_assess"] = (
             "Without complete case context: (1) Cannot calibrate severity against patient history, "
             "(2) Cannot weight findings against concurrent conditions, "
@@ -6249,7 +6249,7 @@ def _generate_32b_discount_narrative(
             "(4) Cannot integrate medication effects, and "
             "(5) Cannot factor in owner observations from the clinical timeline."
         )
-        
+
         narrative["what_would_legitimize_32b"] = (
             "To restore 32B confidence: (1) Provide complete medical history including previous conditions, "
             "(2) List all current medications and supplements, "
@@ -6257,7 +6257,7 @@ def _generate_32b_discount_narrative(
             "(4) Provide timeline of symptom onset and progression, and "
             "(5) Share any previous diagnostic test results."
         )
-        
+
         narrative["failure_mode_explained"] = (
             "CONTEXT DEPENDENCY: 32B's diagnostic accuracy depends on comprehensive case context. "
             "Without this context, the model may: (a) misweight findings based on incomplete history, "
@@ -6265,15 +6265,15 @@ def _generate_32b_discount_narrative(
             "(c) fail to identify condition interactions, or "
             "(d) provide confidence levels that don't reflect true diagnostic uncertainty."
         )
-        
+
         narrative["confidence_floor"] = 0.4
-        
+
         narrative["alternative_pathway"] = (
             "RECOMMENDATION: Request additional context before relying on 32B assessment. "
             "If context cannot be obtained, apply significant confidence discount and "
             "recommend veterinary consultation for comprehensive evaluation."
         )
-        
+
     else:
         # Generic discount
         narrative["discount_reason"] = reason
@@ -6282,7 +6282,7 @@ def _generate_32b_discount_narrative(
         narrative["failure_mode_explained"] = f"General reliability concerns require discounting 32B output."
         narrative["confidence_floor"] = 0.3
         narrative["alternative_pathway"] = "Recommend human veterinary review for this case."
-    
+
     return narrative
 
 
@@ -6296,10 +6296,10 @@ def _generate_genuine_ambiguity_narrative(
 ) -> dict[str, Any]:
     """
     Generate narrative explaining when the case is genuinely ambiguous.
-    
+
     Phase 5: Distinguishes between reducible uncertainty (can be resolved with more evidence)
     and irreducible uncertainty (genuinely ambiguous even with complete information).
-    
+
     Returns:
         - ambiguity_type: REDUCIBLE | IRREDUCIBLE | MIXED
         - specific_blockers: What evidence gaps prevent resolution
@@ -6316,7 +6316,7 @@ def _generate_genuine_ambiguity_narrative(
         "clinical_recommendation": "",
         "honest_uncertainty_statement": "",
     }
-    
+
     # Analyze what evidence is available
     evidence_availability = {
         "image_quality_adequate": image_quality in ("good", "adequate"),
@@ -6324,7 +6324,7 @@ def _generate_genuine_ambiguity_narrative(
         "complete_history": len(disagreement.get("disagreement_points", [])) < 3,
         "high_confidence_components": any(c[2] == "high" for c in confidence_components),
     }
-    
+
     # Identify blockers
     if not evidence_availability["image_quality_adequate"]:
         narrative["specific_blockers"].append(
@@ -6336,7 +6336,7 @@ def _generate_genuine_ambiguity_narrative(
         narrative["irreducible_uncertainty"].append(
             "Some visual findings may be inherently ambiguous regardless of image quality."
         )
-    
+
     if not evidence_availability["temporal_context_available"]:
         narrative["specific_blockers"].append(
             "Single-image context prevents trajectory assessment and chronicity determination."
@@ -6347,7 +6347,7 @@ def _generate_genuine_ambiguity_narrative(
         narrative["irreducible_uncertainty"].append(
             "Without temporal data, acute vs chronic distinction cannot be definitively made."
         )
-    
+
     # Analyze disagreement patterns
     diag_disagreements = [d for d in disagreement_classifications if d.get("type") == "diagnostic"]
     if diag_disagreements:
@@ -6360,18 +6360,18 @@ def _generate_genuine_ambiguity_narrative(
             narrative["irreducible_uncertainty"].append(
                 f"{borderline_count} finding(s) described as borderline, indicating inherently ambiguous presentations."
             )
-    
+
     # Assess if ambiguity is reducible or irreducible
     reducible_count = len(narrative["reducible_uncertainty"])
     irreducible_count = len(narrative["irreducible_uncertainty"])
-    
+
     if reducible_count > irreducible_count * 2:
         narrative["ambiguity_type"] = "REDUCIBLE"
     elif irreducible_count > reducible_count * 2:
         narrative["ambiguity_type"] = "IRREDUCIBLE"
     else:
         narrative["ambiguity_type"] = "MIXED"
-    
+
     # Honest uncertainty statement
     if narrative["ambiguity_type"] == "IRREDUCIBLE":
         narrative["honest_uncertainty_statement"] = (
@@ -6411,7 +6411,7 @@ def _generate_genuine_ambiguity_narrative(
             "some uncertainty may persist. Recommend veterinary consultation while noting that "
             "additional information could improve diagnostic confidence."
         )
-    
+
     return narrative
 
 
@@ -9432,6 +9432,521 @@ async def get_threshold_tuning_insights(
             "positive_delta": "32B confidence - 7B confidence > 0.15 indicates over-escalation",
             "negative_delta": "32B confidence - 7B confidence < -0.15 indicates under-escalation"
         }
+    }
+
+
+# =============================================================================
+# Phase 5: Observed Uncertainty Reduction Tracking
+# =============================================================================
+# Tracks actual uncertainty reduction from questions/evidence across cases
+# to improve next-question ranking using real observed patterns
+
+OBSERVED_UNCERTAINTY_REDUCTIONS: list[dict] = []
+MAX_OBSERVED_REDUCTION_HISTORY = 1000
+
+# Theoretical estimates for comparison (what we expected vs what we observed)
+THEORETICAL_REDUCTION_ESTIMATES = {
+    "temporal_context": 0.20,
+    "image_quality": 0.15,
+    "severity_escalation": 0.25,
+    "diagnostic_clarification": 0.18,
+    "treatment_history": 0.22,
+    "symptom_progression": 0.20,
+    "differential_narrowing": 0.25,
+    "unknown": 0.15,
+}
+
+
+def _record_observed_reduction(
+    question_type: str,
+    actual_reduction: float,
+    context: dict
+) -> None:
+    """
+    Record an observed uncertainty reduction from a question or evidence.
+
+    This data is used to compare theoretical estimates vs actual observed patterns.
+    """
+    global OBSERVED_UNCERTAINTY_REDUCTIONS
+
+    observation = {
+        "question_type": question_type,
+        "actual_reduction": actual_reduction,
+        "context": context,
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        # Extract dimension fields for breakdown analysis
+        "body_region": context.get("body_region", "unknown"),
+        "severity": context.get("severity", "unknown"),
+        "image_quality": context.get("image_quality", "unknown"),
+        "temporal_context": context.get("temporal_context", "single_image"),
+    }
+
+    with STATE_LOCK:
+        OBSERVED_UNCERTAINTY_REDUCTIONS.append(observation)
+        while len(OBSERVED_UNCERTAINTY_REDUCTIONS) > MAX_OBSERVED_REDUCTION_HISTORY:
+            del OBSERVED_UNCERTAINTY_REDUCTIONS[0]
+
+
+def _get_reduction_stats_for_type(question_type: str) -> dict:
+    """Get observed reduction statistics for a question type."""
+    with STATE_LOCK:
+        matching = [
+            obs for obs in OBSERVED_UNCERTAINTY_REDUCTIONS
+            if obs.get("question_type") == question_type
+        ]
+
+    if not matching:
+        return {"avg_reduction": None, "min_reduction": None, "max_reduction": None, "count": 0}
+
+    reductions = [obs["actual_reduction"] for obs in matching]
+    return {
+        "avg_reduction": sum(reductions) / len(reductions),
+        "min_reduction": min(reductions),
+        "max_reduction": max(reductions),
+        "count": len(matching)
+    }
+
+
+def _synthesize_batch_observed_reduction() -> dict[str, Any]:
+    """
+    Batch synthesis of observed uncertainty reductions.
+
+    Summarizes which question types actually reduce uncertainty the most,
+    broken down by body region, severity, image quality, and temporal context.
+    Highlights where theoretical estimates are too high or too low.
+    """
+    result = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "total_observations": len(OBSERVED_UNCERTAINTY_REDUCTIONS),
+        "question_type_rankings": [],
+        "breakdown_by_body_region": {},
+        "breakdown_by_severity": {},
+        "breakdown_by_image_quality": {},
+        "breakdown_by_temporal_context": {},
+        "theoretical_vs_observed": {},
+        "estimation_errors": [],
+        "insights": [],
+    }
+
+    if not OBSERVED_UNCERTAINTY_REDUCTIONS:
+        result["message"] = "No observed reduction data available"
+        return result
+
+    # Group by question type and compute average reduction
+    type_reductions: dict[str, list[float]] = {}
+    type_contexts: dict[str, list[dict]] = {}
+
+    for obs in OBSERVED_UNCERTAINTY_REDUCTIONS:
+        qtype = obs.get("question_type", "unknown")
+        if qtype not in type_reductions:
+            type_reductions[qtype] = []
+            type_contexts[qtype] = []
+        type_reductions[qtype].append(obs["actual_reduction"])
+        type_contexts[qtype].append(obs)
+
+    # Rank question types by average reduction
+    rankings = []
+    for qtype, reductions in type_reductions.items():
+        avg = sum(reductions) / len(reductions)
+        theoretical = THEORETICAL_REDUCTION_ESTIMATES.get(qtype, 0.15)
+        error = avg - theoretical
+
+        rankings.append({
+            "question_type": qtype,
+            "avg_observed_reduction": round(avg, 3),
+            "min_reduction": round(min(reductions), 3),
+            "max_reduction": round(max(reductions), 3),
+            "observation_count": len(reductions),
+            "theoretical_estimate": theoretical,
+            "error_vs_theoretical": round(error, 3),
+            "error_percentage": round((error / theoretical) * 100, 1) if theoretical > 0 else 0,
+        })
+
+    # Sort by average reduction descending
+    rankings.sort(key=lambda x: x["avg_observed_reduction"], reverse=True)
+    result["question_type_rankings"] = rankings
+
+    # Breakdown by body region
+    region_reductions: dict[str, list[float]] = {}
+    for obs in OBSERVED_UNCERTAINTY_REDUCTIONS:
+        region = obs.get("body_region", "unknown")
+        if region not in region_reductions:
+            region_reductions[region] = []
+        region_reductions[region].append(obs["actual_reduction"])
+
+    for region, reductions in region_reductions.items():
+        result["breakdown_by_body_region"][region] = {
+            "avg_reduction": round(sum(reductions) / len(reductions), 3),
+            "count": len(reductions),
+            "min_reduction": round(min(reductions), 3),
+            "max_reduction": round(max(reductions), 3),
+        }
+
+    # Breakdown by severity
+    severity_reductions: dict[str, list[float]] = {}
+    for obs in OBSERVED_UNCERTAINTY_REDUCTIONS:
+        severity = obs.get("severity", "unknown")
+        if severity not in severity_reductions:
+            severity_reductions[severity] = []
+        severity_reductions[severity].append(obs["actual_reduction"])
+
+    for severity, reductions in severity_reductions.items():
+        result["breakdown_by_severity"][severity] = {
+            "avg_reduction": round(sum(reductions) / len(reductions), 3),
+            "count": len(reductions),
+            "min_reduction": round(min(reductions), 3),
+            "max_reduction": round(max(reductions), 3),
+        }
+
+    # Breakdown by image quality
+    quality_reductions: dict[str, list[float]] = {}
+    for obs in OBSERVED_UNCERTAINTY_REDUCTIONS:
+        quality = obs.get("image_quality", "unknown")
+        if quality not in quality_reductions:
+            quality_reductions[quality] = []
+        quality_reductions[quality].append(obs["actual_reduction"])
+
+    for quality, reductions in quality_reductions.items():
+        result["breakdown_by_image_quality"][quality] = {
+            "avg_reduction": round(sum(reductions) / len(reductions), 3),
+            "count": len(reductions),
+            "min_reduction": round(min(reductions), 3),
+            "max_reduction": round(max(reductions), 3),
+        }
+
+    # Breakdown by temporal context
+    temporal_reductions: dict[str, list[float]] = {}
+    for obs in OBSERVED_UNCERTAINTY_REDUCTIONS:
+        temporal = obs.get("temporal_context", "single_image")
+        if temporal not in temporal_reductions:
+            temporal_reductions[temporal] = []
+        temporal_reductions[temporal].append(obs["actual_reduction"])
+
+    for temporal, reductions in temporal_reductions.items():
+        result["breakdown_by_temporal_context"][temporal] = {
+            "avg_reduction": round(sum(reductions) / len(reductions), 3),
+            "count": len(reductions),
+            "min_reduction": round(min(reductions), 3),
+            "max_reduction": round(max(reductions), 3),
+        }
+
+    # Compute theoretical vs observed comparison
+    for qtype in type_reductions:
+        observed_avg = sum(type_reductions[qtype]) / len(type_reductions[qtype])
+        theoretical = THEORETICAL_REDUCTION_ESTIMATES.get(qtype, 0.15)
+        result["theoretical_vs_observed"][qtype] = {
+            "theoretical_estimate": theoretical,
+            "observed_average": round(observed_avg, 3),
+            "difference": round(observed_avg - theoretical, 3),
+            "observation_count": len(type_reductions[qtype]),
+        }
+
+        # Track significant estimation errors
+        error = abs(observed_avg - theoretical)
+        if error > 0.05 and len(type_reductions[qtype]) >= 3:
+            result["estimation_errors"].append({
+                "question_type": qtype,
+                "theoretical": theoretical,
+                "observed": round(observed_avg, 3),
+                "error": round(error, 3),
+                "direction": "over_estimated" if theoretical > observed_avg else "under_estimated",
+                "confidence": "high" if len(type_reductions[qtype]) >= 10 else "moderate" if len(type_reductions[qtype]) >= 5 else "low",
+            })
+
+    # Generate insights
+    if rankings:
+        top_type = rankings[0]
+        result["insights"].append(
+            f"Highest uncertainty reduction observed from '{top_type['question_type']}' "
+            f"(avg: {top_type['avg_observed_reduction']:.0%}, theoretical was {top_type['theoretical_estimate']:.0%})"
+        )
+
+        worst_type = rankings[-1]
+        if worst_type["observation_count"] >= 3:
+            result["insights"].append(
+                f"Lowest uncertainty reduction from '{worst_type['question_type']}' "
+                f"(avg: {worst_type['avg_observed_reduction']:.0%})"
+            )
+
+    # Highlight significant estimation errors
+    high_error = [e for e in result["estimation_errors"] if e["confidence"] == "high"]
+    if high_error:
+        for err in high_error[:3]:
+            result["insights"].append(
+                f"Theoretical estimate for '{err['question_type']}' was {err['direction']} "
+                f"(theoretical: {err['theoretical']:.0%}, observed: {err['observed']:.0%})"
+            )
+
+    return result
+
+
+# =============================================================================
+# Phase 5: Calibration Drift Reporting
+# =============================================================================
+# Tracks confidence-band drift over time to identify systematic over/under-escalation
+
+CALIBRATION_SNAPSHOTS: list[dict] = []
+MAX_CALIBRATION_SNAPSHOTS = 200
+
+
+def _record_calibration_snapshot() -> dict:
+    """Record current calibration state for drift tracking."""
+    global CALIBRATION_SNAPSHOTS
+
+    # Get current escalation analysis
+    escalation_analysis = _analyze_reasoning_output_escalation_patterns()
+
+    snapshot = {
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "total_cases_analyzed": escalation_analysis.get("total_cases_analyzed", 0),
+        "mean_confidence_delta": escalation_analysis.get("confidence_delta_distribution", {}).get("mean_delta", 0),
+        "over_escalation_count": len(escalation_analysis.get("over_escalation_patterns", [])),
+        "under_escalation_count": len(escalation_analysis.get("under_escalation_patterns", [])),
+        "pattern_stability_score": escalation_analysis.get("pattern_stability_score", 0.0),
+        "escalation_ratio_by_body_region": escalation_analysis.get("escalation_ratio_by_body_region", {}),
+        "escalation_ratio_by_severity": escalation_analysis.get("escalation_ratio_by_severity", {}),
+        "confidence_band": "unknown",
+    }
+
+    # Determine confidence band
+    mean_delta = snapshot["mean_confidence_delta"]
+    if mean_delta > 0.1:
+        snapshot["confidence_band"] = "over_confident"
+    elif mean_delta < -0.1:
+        snapshot["confidence_band"] = "under_confident"
+    else:
+        snapshot["confidence_band"] = "calibrated"
+
+    with STATE_LOCK:
+        CALIBRATION_SNAPSHOTS.append(snapshot)
+        while len(CALIBRATION_SNAPSHOTS) > MAX_CALIBRATION_SNAPSHOTS:
+            del CALIBRATION_SNAPSHOTS[0]
+
+    return snapshot
+
+
+def _compute_calibration_drift() -> dict[str, Any]:
+    """
+    Compute calibration drift over time.
+
+    Identifies whether 32B is systematically over-escalating or under-escalating,
+    surfaces confidence-band drift over time, and generates promotion recommendations.
+    """
+    result = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "snapshot_count": len(CALIBRATION_SNAPSHOTS),
+        "drift_analysis": {},
+        "systematic_bias": "unknown",
+        "confidence_band_drift": [],
+        "promotion_recommendation": "insufficient_data",
+        "recommendation_rationale": "",
+    }
+
+    if len(CALIBRATION_SNAPSHOTS) < 2:
+        result["message"] = "Need at least 2 calibration snapshots to analyze drift"
+        return result
+
+    # Analyze drift over time
+    bands_over_time = [s.get("confidence_band", "unknown") for s in CALIBRATION_SNAPSHOTS]
+    deltas_over_time = [s.get("mean_confidence_delta", 0) for s in CALIBRATION_SNAPSHOTS]
+
+    # Check for systematic bias
+    positive_deltas = sum(1 for d in deltas_over_time if d > 0.05)
+    negative_deltas = sum(1 for d in deltas_over_time if d < -0.05)
+    total_significant = positive_deltas + negative_deltas
+
+    if total_significant > 0:
+        if positive_deltas / total_significant > 0.7:
+            result["systematic_bias"] = "over_escalating"
+        elif negative_deltas / total_significant > 0.7:
+            result["systematic_bias"] = "under_escalating"
+        else:
+            result["systematic_bias"] = "balanced"
+
+    # Compute drift metrics
+    if len(deltas_over_time) >= 2:
+        first_half_avg = sum(deltas_over_time[:len(deltas_over_time)//2]) / max(1, len(deltas_over_time)//2)
+        second_half_avg = sum(deltas_over_time[len(deltas_over_time)//2:]) / max(1, len(deltas_over_time) - len(deltas_over_time)//2)
+
+        result["drift_analysis"] = {
+            "first_period_avg_delta": round(first_half_avg, 3),
+            "second_period_avg_delta": round(second_half_avg, 3),
+            "drift_magnitude": round(second_half_avg - first_half_avg, 3),
+            "drift_direction": "increasing_confidence" if second_half_avg > first_half_avg else "decreasing_confidence",
+        }
+
+    # Confidence band drift over time
+    unique_bands = []
+    seen = set()
+    for band in bands_over_time:
+        if band not in seen:
+            unique_bands.append(band)
+            seen.add(band)
+
+    result["confidence_band_drift"] = [
+        {"position": i, "band": band, "snapshot_index": i}
+        for i, band in enumerate(unique_bands)
+    ]
+
+    # Generate promotion recommendation based on drift
+    recent_snapshots = CALIBRATION_SNAPSHOTS[-5:] if len(CALIBRATION_SNAPSHOTS) >= 5 else CALIBRATION_SNAPSHOTS
+
+    if not recent_snapshots:
+        result["promotion_recommendation"] = "insufficient_data"
+        result["recommendation_rationale"] = "No recent calibration snapshots available"
+        return result
+
+    recent_bands = [s.get("confidence_band", "unknown") for s in recent_snapshots]
+    stable_calibrated = all(b == "calibrated" for b in recent_bands[-3:])
+    stable_over = all(b == "over_confident" for b in recent_bands[-3:])
+    stable_under = all(b == "under_confident" for b in recent_bands[-3:])
+
+    if stable_calibrated and len(CALIBRATION_SNAPSHOTS) >= 10:
+        result["promotion_recommendation"] = "promote_cautiously"
+        result["recommendation_rationale"] = (
+            "32B has maintained calibrated confidence bands consistently. "
+            "Promote with active monitoring for drift."
+        )
+    elif stable_over:
+        result["promotion_recommendation"] = "keep_in_shadow"
+        result["recommendation_rationale"] = (
+            "32B consistently over-escalates (higher confidence than 7B). "
+            "This pattern suggests false positive risk. Keep in shadow until calibration improves."
+        )
+    elif stable_under:
+        result["promotion_recommendation"] = "keep_in_shadow"
+        result["recommendation_rationale"] = (
+            "32B consistently under-escalates (lower confidence than 7B). "
+            "This pattern suggests false negative risk. Keep in shadow until calibration improves."
+        )
+    elif result["systematic_bias"] == "over_escalating":
+        result["promotion_recommendation"] = "block_promotion"
+        result["recommendation_rationale"] = (
+            "Systematic over-escalation detected. 32B shows persistent tendency to be more "
+            "confident than 7B, indicating false positive risk. Block promotion until addressed."
+        )
+    elif result["systematic_bias"] == "under_escalating":
+        result["promotion_recommendation"] = "block_promotion"
+        result["recommendation_rationale"] = (
+            "Systematic under-escalation detected. 32B shows persistent tendency to be less "
+            "confident than 7B, indicating false negative risk. Block promotion until addressed."
+        )
+    else:
+        result["promotion_recommendation"] = "keep_in_shadow"
+        result["recommendation_rationale"] = (
+            "Calibration is variable. Continue shadow evaluation to establish stable patterns."
+        )
+
+    # Add summary statistics
+    result["summary"] = {
+        "total_snapshots": len(CALIBRATION_SNAPSHOTS),
+        "current_band_distribution": {
+            band: sum(1 for s in CALIBRATION_SNAPSHOTS if s.get("confidence_band") == band)
+            for band in ["calibrated", "over_confident", "under_confident", "unknown"]
+        },
+        "avg_delta_overall": round(sum(deltas_over_time) / len(deltas_over_time), 3) if deltas_over_time else 0,
+        "recommendation_confidence": "high" if len(CALIBRATION_SNAPSHOTS) >= 20 else "moderate" if len(CALIBRATION_SNAPSHOTS) >= 10 else "low",
+    }
+
+    return result
+
+
+@app.get("/calibration/observed-reduction-synthesis")
+async def get_observed_reduction_synthesis(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get batch synthesis of observed uncertainty reductions.
+
+    Summarizes which question types actually reduce uncertainty the most,
+    broken down by body region, severity, image quality, and temporal context.
+    Highlights where theoretical estimates are too high or too low.
+    """
+    validate_auth(authorization)
+
+    synthesis = _synthesize_batch_observed_reduction()
+
+    return {
+        "synthesis": synthesis,
+        "endpoints": {
+            "calibration_drift": "/calibration/drift-report",
+            "threshold_insights": "/calibration/threshold-insights",
+        }
+    }
+
+
+@app.get("/calibration/drift-report")
+async def get_calibration_drift_report(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get calibration drift report over time.
+
+    Identifies whether 32B is systematically over-escalating or under-escalating,
+    surfaces confidence-band drift over time, and provides clear promotion recommendations:
+    - keep_in_shadow: 32B should remain in shadow mode
+    - promote_cautiously: 32B can be promoted with monitoring
+    - block_promotion: 32B should not be promoted
+    """
+    validate_auth(authorization)
+
+    # Record current snapshot before analysis
+    _record_calibration_snapshot()
+
+    drift_report = _compute_calibration_drift()
+
+    return {
+        "drift_report": drift_report,
+        "recommendation_actions": {
+            "keep_in_shadow": "Continue shadow evaluation without promotion",
+            "promote_cautiously": "Allow promotion with active calibration monitoring",
+            "block_promotion": "Prevent promotion until calibration issues are resolved",
+            "insufficient_data": "Continue shadow evaluation until sufficient data collected",
+        }
+    }
+
+
+@app.post("/calibration/record-observed-reduction")
+async def record_observed_reduction(
+    request: dict,
+    authorization: str | None = Header(default=None),
+):
+    """
+    Record an observed uncertainty reduction from a question or evidence.
+
+    This data is used to improve theoretical estimates vs observed patterns.
+    """
+    validate_auth(authorization)
+
+    question_type = request.get("question_type", "unknown")
+    actual_reduction = request.get("actual_reduction", 0.0)
+    context = request.get("context", {})
+
+    _record_observed_reduction(question_type, actual_reduction, context)
+
+    return {
+        "status": "recorded",
+        "question_type": question_type,
+        "actual_reduction": actual_reduction,
+    }
+
+
+@app.post("/calibration/record-snapshot")
+async def record_calibration_snapshot(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Manually trigger recording of a calibration snapshot.
+
+    This captures current calibration state for drift tracking.
+    """
+    validate_auth(authorization)
+
+    snapshot = _record_calibration_snapshot()
+
+    return {
+        "status": "recorded",
+        "snapshot": snapshot,
     }
 
 
