@@ -3056,7 +3056,7 @@ function coerceChoiceAnswerFromIntent(
     }
 
     if (
-      /\b(drinking less|hardly drinking|less water|not much water|drinking a bit less|water intake is down|drinking a little less)\b/.test(
+      /\b(drinking less|hardly drinking|less water|not much water|drinking a bit less|water intake is down|drinking a little less|barely drinking|barely water)\b/.test(
         lower
       )
     ) {
