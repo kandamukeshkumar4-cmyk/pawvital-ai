@@ -631,15 +631,13 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join(" ");
 
-      const coercedAnswer = coerceFallbackAnswerForPendingQuestion(
-        pendingQ,
-        combinedUserSignal,
-        mergedAnswers
-      );
+      const coercedAnswer =
+        coerceFallbackAnswerForPendingQuestion(pendingQ, lastUserMessage.content, mergedAnswers) ??
+        coerceFallbackAnswerForPendingQuestion(pendingQ, combinedUserSignal, mergedAnswers);
       if (coercedAnswer !== null) {
         session = recordAnswer(session, pendingQ, coercedAnswer);
         console.log(
-          `[Engine] Force-recorded answer for "${pendingQ}" (text+vision signal: "${combinedUserSignal.substring(0, 80)}")`
+          `[Engine] Force-recorded answer for "${pendingQ}" (signal: "${lastUserMessage.content.substring(0, 80)}")`
         );
       }
     }
@@ -2909,8 +2907,13 @@ function isShortAffirmativeResponse(lower: string): boolean {
 }
 
 function isShortNegativeResponse(lower: string): boolean {
-  return /^(no|nope|nah|not really|not at all|no way|no thanks|no it's not|no isnt it|not)$/.test(
-    lower.trim().replace(/[.!?]+$/g, "")
+  const normalized = lower
+    .trim()
+    .replace(/[.!?]+$/g, "")
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'");
+
+  return /^(no|nope|nah|not really|not at all|no way|no thanks|no it's not|no isnt it|no its not|it's not|its not|not)$/.test(
+    normalized
   );
 }
 
@@ -3044,10 +3047,6 @@ function coerceFallbackAnswerForPendingQuestion(
   const deterministic = deriveDeterministicAnswerForQuestion(questionId, rawMessage);
   if (deterministic !== null) {
     return deterministic;
-  }
-
-  if (Object.keys(turnAnswers).some((answerQuestionId) => answerQuestionId !== questionId)) {
-    return null;
   }
 
   if (questionId === "which_leg" || questionId === "wound_location") {
