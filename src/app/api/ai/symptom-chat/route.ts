@@ -631,13 +631,21 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join(" ");
 
-      const coercedAnswer =
-        coerceFallbackAnswerForPendingQuestion(pendingQ, lastUserMessage.content, mergedAnswers) ??
-        coerceFallbackAnswerForPendingQuestion(pendingQ, combinedUserSignal, mergedAnswers);
-      if (coercedAnswer !== null) {
-        session = recordAnswer(session, pendingQ, coercedAnswer);
+      const pendingAnswer = resolvePendingQuestionAnswer({
+        questionId: pendingQ,
+        rawMessage: lastUserMessage.content,
+        combinedUserSignal,
+        turnAnswers: mergedAnswers,
+        turnSymptoms: turnTextSymptoms,
+      });
+      if (pendingAnswer !== null) {
+        session = recordAnswer(session, pendingQ, pendingAnswer.value);
         console.log(
-          `[Engine] Force-recorded answer for "${pendingQ}" (signal: "${lastUserMessage.content.substring(0, 80)}")`
+          `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
+        );
+      } else {
+        console.log(
+          `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
         );
       }
     }
@@ -970,6 +978,7 @@ Pet: ${pet.name}, ${pet.breed}, ${pet.age_years} years old, ${pet.weight} lbs
 
 Already known symptoms: ${session.known_symptoms.join(", ") || "none yet"}
 Already answered: ${session.answered_questions.join(", ") || "none yet"}
+Pending question: ${session.last_question_asked || "none"}
 
 OWNER'S MESSAGE: "${message}"
 ${compactImageSignals ? `\nIMAGE SIGNALS:\n${compactImageSignals}` : ""}
@@ -995,6 +1004,11 @@ Rules:
 - Do NOT infer or guess. Only extract what was explicitly stated.
 - Do NOT include question IDs that weren't answered in the message.
 
+Examples:
+- If the pending question is "water_intake" and the owner says "Yes, he's drinking normally", return "water_intake": "normal"
+- If the pending question is "water_intake" and the owner says "No, not really", return "water_intake": "less_than_usual"
+- If the pending question is "trauma_history" and the owner says "I don't know", return "trauma_history": "I don't know"
+
 Output ONLY the JSON object. No explanation, no thinking, no markdown.`;
 
   try {
@@ -1019,7 +1033,12 @@ Output ONLY the JSON object. No explanation, no thinking, no markdown.`;
       throw new Error("No extraction model configured");
     }
 
-    return parseExtractionResponse(rawText);
+    const parsed = parseExtractionResponse(rawText);
+    console.log(
+      `[Engine] Extraction parsed ${parsed.symptoms.length} symptoms and ${Object.keys(parsed.answers).length} answers` +
+        (session.last_question_asked ? ` (pending: ${session.last_question_asked})` : "")
+    );
+    return parsed;
   } catch (error) {
     console.error("Primary extraction failed:", error);
 
@@ -1041,6 +1060,7 @@ Output ONLY the JSON object. No explanation, no thinking, no markdown.`;
     }
 
     // Last resort: keyword extraction
+    console.log("[Engine] Extraction fallback: keyword-only recovery");
     return { symptoms: extractSymptomsFromKeywords(message), answers: {} };
   }
 }
@@ -1181,12 +1201,20 @@ function buildDeterministicQuestionFallback(
   hasPhoto: boolean,
   allowPhotoMention: boolean
 ): string {
-  const symptomLead = session.known_symptoms[0];
-  const acknowledgment = hasPhoto && allowPhotoMention
-    ? `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`
-    : symptomLead
-      ? `I'm keeping track of what you've shared so far about ${petName}'s ${symptomLead.replace(/_/g, " ")}.`
-      : `Thanks for sharing that about ${petName}.`;
+  const memory = ensureStructuredCaseMemory(session);
+  const chiefComplaint = memory.chief_complaints[0]?.replace(/_/g, " ") || null;
+  const confirmedFacts = Object.keys(memory.confirmed_facts).length;
+
+  let acknowledgment: string;
+  if (hasPhoto && allowPhotoMention) {
+    acknowledgment = `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`;
+  } else if (chiefComplaint) {
+    acknowledgment = `I'm keeping track of what you've shared so far about ${petName}'s ${chiefComplaint}${confirmedFacts > 2 ? `, plus ${confirmedFacts - 1} more details` : ""}.`;
+  } else if (confirmedFacts > 0) {
+    acknowledgment = `I'm keeping track of the ${confirmedFacts} facts you've shared about ${petName}.`;
+  } else {
+    acknowledgment = `Thanks for sharing that about ${petName}.`;
+  }
   return `${acknowledgment} ${questionText}`;
 }
 
@@ -2875,6 +2903,15 @@ function normalizeChoiceLabel(choice: string): string {
   return String(choice).toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function normalizeIntentText(rawMessage: string): string {
+  return rawMessage
+    .trim()
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[.!?]+$/g, "")
+    .replace(/\s+/g, " ");
+}
+
 function pickChoiceByPriority(
   choices: readonly string[] | undefined,
   keywordGroups: string[][]
@@ -2901,25 +2938,29 @@ function pickChoiceByPriority(
 }
 
 function isShortAffirmativeResponse(lower: string): boolean {
-  return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely)$/.test(
-    lower.trim().replace(/[.!?]+$/g, "")
+  const normalized = normalizeIntentText(lower);
+  return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely)(?:\s+(it|he|she|they|that|there))?(?:\s+(is|are|was|were|does|do|has|have))?$/.test(
+    normalized
   );
 }
 
 function isShortNegativeResponse(lower: string): boolean {
-  const normalized = lower
-    .trim()
-    .replace(/[.!?]+$/g, "")
-    .replace(/[\u2018\u2019\u201A\u201B]/g, "'");
+  const normalized = normalizeIntentText(lower);
+  return /^(no|nope|nah|not really|not at all|no way|no thanks|no it's not|no isnt it|no its not|it's not|its not|not)(?:\s+(it|he|she|they|that|there))?(?:\s+(is|are|was|were|does|do|has|have))?$/.test(
+    normalized
+  );
+}
 
-  return /^(no|nope|nah|not really|not at all|no way|no thanks|no it's not|no isnt it|no its not|it's not|its not|not)$/.test(
+function isShortUnknownResponse(lower: string): boolean {
+  const normalized = normalizeIntentText(lower);
+  return /^(i don't know|i dont know|dont know|do not know|not sure|unsure|unknown|can't tell|cant tell|cannot tell|maybe)$/.test(
     normalized
   );
 }
 
 function isStrongWaterNegativeResponse(lower: string): boolean {
-  return /\b(not drinking|won't drink|wont drink|refusing water|no water|nothing to drink)\b/.test(
-    lower
+  return /\b(not drinking|won't drink|wont drink|refusing water|no water|nothing to drink|won't touch water|wont touch water)\b/.test(
+    normalizeIntentText(lower)
   );
 }
 
@@ -2949,14 +2990,14 @@ function coerceChoiceAnswerFromIntent(
     return null;
   }
 
-  const lower = rawMessage.trim().toLowerCase();
+  const lower = normalizeIntentText(rawMessage);
   if (!lower) {
     return null;
   }
 
   if (questionId === "water_intake") {
     if (
-      /\b(drinking more|drinking a lot|very thirsty|constantly drinking|more water)\b/.test(
+      /\b(drinking more|drinking a lot|very thirsty|constantly drinking|more water|drinking way more|water intake is up)\b/.test(
         lower
       )
     ) {
@@ -2969,7 +3010,7 @@ function coerceChoiceAnswerFromIntent(
     }
 
     if (
-      /\b(drinking less|hardly drinking|less water|not much water|drinking a bit less)\b/.test(
+      /\b(drinking less|hardly drinking|less water|not much water|drinking a bit less|water intake is down|drinking a little less)\b/.test(
         lower
       )
     ) {
@@ -2982,7 +3023,13 @@ function coerceChoiceAnswerFromIntent(
     }
 
     if (
-      /\b(drinking normally|water is normal|normal drinking|yes.*normal)\b/.test(lower)
+      /\b(drinking normally|water is normal|normal drinking|drinking okay|drinking ok|water seems fine|intake is normal)\b/.test(lower) ||
+      /yes[^a-z]*[a-z]*[^a-z]*normal/.test(lower) ||
+      ((lower.includes("normal") ||
+        lower.includes("fine") ||
+        lower.includes("okay") ||
+        lower.includes("ok")) &&
+        (lower.includes("drink") || lower.includes("water") || lower.includes("yes")))
     ) {
       return pickChoiceByPriority(choices, [["normal"], ["usual"]]);
     }
@@ -3037,6 +3084,183 @@ function coerceChoiceAnswerFromIntent(
   }
 
   return null;
+}
+
+const PENDING_QUESTION_STOP_WORDS = new Set([
+  "your",
+  "dog",
+  "cat",
+  "pet",
+  "what",
+  "when",
+  "where",
+  "which",
+  "does",
+  "have",
+  "with",
+  "that",
+  "this",
+  "there",
+  "specific",
+  "status",
+  "about",
+  "going",
+]);
+
+function getPendingQuestionContextTokens(question: {
+  question_text?: string;
+  extraction_hint?: string;
+  choices?: readonly string[];
+}): string[] {
+  const rawTokens = [
+    question.question_text || "",
+    question.extraction_hint || "",
+    ...(Array.isArray(question.choices) ? question.choices : []),
+  ]
+    .join(" ")
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .match(/[a-z']{3,}/g);
+
+  if (!rawTokens) {
+    return [];
+  }
+
+  return [...new Set(rawTokens)].filter(
+    (token) => token.length >= 4 && !PENDING_QUESTION_STOP_WORDS.has(token)
+  );
+}
+
+function messageMentionsQuestionContext(
+  question: {
+    question_text?: string;
+    extraction_hint?: string;
+    choices?: readonly string[];
+  },
+  normalizedMessage: string
+): boolean {
+  return getPendingQuestionContextTokens(question).some((token) =>
+    normalizedMessage.includes(token)
+  );
+}
+
+function questionLooksDurationLike(question: {
+  question_text?: string;
+  extraction_hint?: string;
+}): boolean {
+  const combinedText = `${question.question_text || ""} ${question.extraction_hint || ""}`.toLowerCase();
+  return /\b(duration|how long|when did|when does|onset|started|going on|timing|frequency)\b/.test(
+    combinedText
+  );
+}
+
+function hasDurationLikeSignal(normalizedMessage: string): boolean {
+  return /\b(\d+\s*(hour|day|week|month|year)s?|today|yesterday|tonight|this morning|last night|since|for\s+\w+|sudden|suddenly|gradual|gradually)\b/.test(
+    normalizedMessage
+  );
+}
+
+function shouldPersistRawPendingAnswer(
+  questionId: string,
+  rawMessage: string,
+  turnAnswers: Record<string, string | boolean | number>,
+  turnSymptoms: string[]
+): boolean {
+  const question = FOLLOW_UP_QUESTIONS[questionId];
+  if (!question) {
+    return false;
+  }
+
+  const normalizedMessage = normalizeIntentText(rawMessage);
+  if (!normalizedMessage) {
+    return false;
+  }
+
+  const hasOtherTurnAnswers = Object.keys(turnAnswers).some((key) => key !== questionId);
+  const hasOtherTurnSymptoms = turnSymptoms.length > 0;
+
+  if (question.data_type === "string") {
+    if (isShortUnknownResponse(normalizedMessage)) {
+      return true;
+    }
+
+    if (hasOtherTurnAnswers || hasOtherTurnSymptoms) {
+      return false;
+    }
+
+    if (questionLooksDurationLike(question) && hasDurationLikeSignal(normalizedMessage)) {
+      return true;
+    }
+
+    if (messageMentionsQuestionContext(question, normalizedMessage)) {
+      return true;
+    }
+
+    return normalizedMessage.split(/\s+/).length <= 5;
+  }
+
+  if (
+    question.data_type === "choice" ||
+    question.data_type === "boolean" ||
+    question.data_type === "number"
+  ) {
+    return (
+      isShortAffirmativeResponse(normalizedMessage) ||
+      isShortNegativeResponse(normalizedMessage) ||
+      isShortUnknownResponse(normalizedMessage) ||
+      messageMentionsQuestionContext(question, normalizedMessage)
+    );
+  }
+
+  return false;
+}
+
+function sanitizePendingRawAnswer(rawMessage: string): string | null {
+  const cleaned = rawMessage.trim().replace(/\s+/g, " ");
+  return cleaned ? cleaned.slice(0, 160) : null;
+}
+
+function resolvePendingQuestionAnswer({
+  questionId,
+  rawMessage,
+  combinedUserSignal,
+  turnAnswers,
+  turnSymptoms,
+}: {
+  questionId: string;
+  rawMessage: string;
+  combinedUserSignal: string;
+  turnAnswers: Record<string, string | boolean | number>;
+  turnSymptoms: string[];
+}): { value: string | boolean | number; source: string } | null {
+  const directAnswer = coerceFallbackAnswerForPendingQuestion(
+    questionId,
+    rawMessage,
+    turnAnswers
+  );
+  if (directAnswer !== null) {
+    return { value: directAnswer, source: "direct_coercion" };
+  }
+
+  const combinedAnswer = coerceFallbackAnswerForPendingQuestion(
+    questionId,
+    combinedUserSignal,
+    turnAnswers
+  );
+  if (combinedAnswer !== null) {
+    return { value: combinedAnswer, source: "combined_signal" };
+  }
+
+  if (!shouldPersistRawPendingAnswer(questionId, rawMessage, turnAnswers, turnSymptoms)) {
+    return null;
+  }
+
+  const rawFallback = sanitizePendingRawAnswer(rawMessage);
+  if (!rawFallback) {
+    return null;
+  }
+
+  return { value: rawFallback, source: "raw_fallback" };
 }
 
 function coerceFallbackAnswerForPendingQuestion(

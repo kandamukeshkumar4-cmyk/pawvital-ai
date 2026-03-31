@@ -114,6 +114,52 @@ flowchart TB
 
 ---
 
+## Conversation Reliability Hardening (2026-03-30)
+
+### Confirmed Root Causes Behind Repeat-Question Loops
+
+1. Pending-question answers are still fragile when structured extraction returns no usable answer.
+   The route flow in `src/app/api/ai/symptom-chat/route.ts` records deterministic and model answers first, but a natural-language reply can still fall through if the extractor emits empty or malformed JSON and the pending-question fallback does not confidently coerce the answer.
+
+2. The biggest weakness is not `last_question_asked` timing.
+   `last_question_asked` is already written before phrasing in the current route flow. The real problem is that the pending-question guard is not defensive enough when the user clearly replies but the answer is not converted into a durable `answered_questions` / `extracted_answers` update.
+
+3. Choice-question coercion is still too narrow for natural replies.
+   Cases like "yes, he's drinking normally" or "no, not really" need deterministic handling even when the extractor misses them.
+
+4. String-question handling needs a smarter fallback than either "repeat forever" or "always force-close".
+   Direct replies such as "for about two days" should close the pending question, while unrelated new symptom updates should not.
+
+### Immediate Hardening Priorities
+
+1. Pending-question guard:
+   Record a pending answer when the user clearly replied, using deterministic coercion first and a raw-text fallback only when the reply looks like a direct answer to that question.
+
+2. Extraction prompt:
+   Include pending-question context and a few-shot examples for common follow-up replies so Qwen / Claude are nudged toward valid structured answers instead of null-heavy output.
+
+3. Choice coercion:
+   Expand deterministic matching for normal / less / not-drinking water-intake replies and similar short-answer choice questions.
+
+4. Observability:
+   Log when pending-question recovery was needed, whether extraction returned answers, and when a question remained unresolved after both model and deterministic fallback.
+
+### World-Class Follow-On Upgrades
+
+1. Replace the ad-hoc pending-question flow with an explicit conversation state machine.
+   Questions should move through `asked -> answered_this_turn -> confirmed -> needs_clarification` instead of relying on loose synchronization between `answered_questions`, `extracted_answers`, and `last_question_asked`.
+
+2. Make memory compression lossless for structured clinical state.
+   `answered_questions`, `extracted_answers`, unresolved question IDs, and confidence-bearing evidence should survive compression exactly.
+
+3. Add loop-detection and shadow telemetry.
+   Track extraction success rate, pending-question rescues, repeated-question attempts, and session diffs so we can harden the conversation layer using real production data instead of anecdotes.
+
+4. Expand deterministic conversation tests.
+   Maintain direct tests for replies like "yes, he's drinking normally", "no, not really", "I don't know", and short duration-style answers such as "for about two days".
+
+---
+
 ## Implementation Phases
 
 ### Phase 1: Pre-Vision Pipeline (Ground + Segment) ⚡ PRIORITY 1
@@ -779,3 +825,88 @@ API_NINJAS_KEY=your_ninjas_key
 | Complex (severe/uncertain) | Nemotron | Qwen 32B | 88-93% |
 | Image-text mismatch | Nemotron | Qwen 7B + Kimi | 85-90% |
 | Emergency (red flags) | Nemotron + immediate alert | Qwen 32B async | 95%+ (trigger ER) |
+
+---
+
+## Implemented Bug Fixes (March 2026)
+
+### Bug: Repeating Question After 2nd User Message
+
+**Symptom:** After the 2nd user message (e.g., "yes it's drinking normally" in response to water_intake question), the AI repeatedly asks the same question instead of progressing.
+
+**Root Causes Identified:**
+
+1. **Fragile LLM JSON extraction**: The Qwen/Claude structured extraction often fails to parse answers correctly, falling back to weak keyword extraction
+2. **Pending-question state was not defensive enough**: `last_question_asked` is written before phrasing, but a natural-language reply could still fall through if neither structured extraction nor deterministic coercion turned it into an `answered_questions` update
+3. **Weak choice and fallback coercion**: Natural replies such as "yes, he's drinking normally" or short uncertainty replies like "I don't know" were not consistently turned into durable answers
+4. **Static acknowledgment phrasing**: Acknowledgments were based only on `known_symptoms[0]` instead of dynamic `case_memory`
+
+**Fixes Applied:**
+
+#### Fix 1: Enhanced water_intake Regex Patterns
+**File:** `pawvital-ai/src/app/api/ai/symptom-chat/route.ts` (line ~2984)
+
+```typescript
+/\b(drinking normally|water is normal|normal drinking|drinking okay|drinking ok|water seems fine|intake is normal)\b/.test(lower) ||
+/yes[^a-z]*[a-z]*[^a-z]*normal/.test(lower) ||
+((lower.includes("normal") || lower.includes("fine") || lower.includes("okay") || lower.includes("ok")) &&
+  (lower.includes("drink") || lower.includes("water") || lower.includes("yes")))
+```
+
+The matcher now handles more natural "normal drinking" phrasing instead of relying on a single narrow regex.
+
+#### Fix 2: Robust Pending-Question Guard
+**File:** `pawvital-ai/src/app/api/ai/symptom-chat/route.ts` (line ~637-650)
+
+Added a guarded fallback that only records raw text when the turn still looks like a direct answer to the pending question:
+
+```typescript
+const pendingAnswer = resolvePendingQuestionAnswer({
+  questionId: pendingQ,
+  rawMessage: lastUserMessage.content,
+  combinedUserSignal,
+  turnAnswers: mergedAnswers,
+  turnSymptoms: turnTextSymptoms,
+});
+
+if (pendingAnswer !== null) {
+  session = recordAnswer(session, pendingQ, pendingAnswer.value);
+}
+```
+
+This closes direct replies that extraction missed, while still avoiding force-closing an unrelated pending question when the owner raises a new symptom instead.
+
+#### Fix 3: Dynamic Acknowledgments Based on case_memory
+**File:** `pawvital-ai/src/app/api/ai/symptom-chat/route.ts` (line ~1200-1222)
+
+```typescript
+// BEFORE:
+const symptomLead = session.known_symptoms[0];
+const acknowledgment = symptomLead
+  ? `I'm keeping track of what you've shared so far about ${petName}'s ${symptomLead.replace(/_/g, " ")}.`
+  : `Thanks for sharing that about ${petName}.`;
+
+// AFTER:
+const memory = ensureStructuredCaseMemory(session);
+const chiefComplaint = memory.chief_complaints[0]?.replace(/_/g, " ") || null;
+const confirmedFactsCount = Object.keys(memory.confirmed_facts || {}).length;
+
+let acknowledgment: string;
+if (hasPhoto && allowPhotoMention) {
+  acknowledgment = `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`;
+} else if (chiefComplaint) {
+  acknowledgment = `I'm keeping track of what you've shared so far about ${petName}'s ${chiefComplaint}${confirmedFactsCount > 2 ? `, plus ${confirmedFactsCount - 1} more details` : ""}.`;
+} else if (confirmedFactsCount > 0) {
+  acknowledgment = `I'm keeping track of the ${confirmedFactsCount} facts you've shared about ${petName}.`;
+} else {
+  acknowledgment = `Thanks for sharing that about ${petName}.`;
+}
+```
+
+Now acknowledgments dynamically reflect the actual case memory state, mentioning chief complaints and fact counts.
+
+**Testing Recommendations:**
+1. Test "yes it's drinking normally" → should answer water_intake and progress
+2. Test "no" → should record as answered and progress
+3. Test "I don't know" → should record raw response and not repeat question
+4. Verify acknowledgment reflects actual case state after multiple turns

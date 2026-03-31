@@ -9842,6 +9842,177 @@ def _generate_calibration_followup_summary() -> dict[str, Any]:
     return result
 
 
+def _produce_live_validation_synthesis() -> dict[str, Any]:
+    """
+    Phase 5 Live Validation Window: Compact synthesis layer for next validation run.
+
+    Produces a tight, focused summary using existing observed-reduction, follow-up,
+    and drift data. Designed for rapid decision-making during live validation.
+
+    Outputs:
+    - Which question types ACTUALLY reduce uncertainty most (top 3)
+    - Where observed diverges from theoretical (critical gaps)
+    - 32B calibration status with promotion readiness recommendation
+    - Key dimension-specific insights (body region, severity, image quality)
+    """
+    result = {
+        "synthesis_type": "live_validation_v2",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "ready_for_validation": False,
+        "top_question_types": [],
+        "critical_divergences": [],
+        "calibration_status": "unknown",
+        "promotion_recommendation": "insufficient_data",
+        "promotion_rationale": "",
+        "dimension_insights": {
+            "body_region": {},
+            "severity": {},
+            "image_quality": {},
+            "temporal_context": {},
+        },
+        "quick_decision": "",
+    }
+
+    with STATE_LOCK:
+        has_obs_data = bool(OBSERVED_UNCERTAINTY_REDUCTIONS)
+        has_cal_data = len(CALIBRATION_SNAPSHOTS)
+        obs_data = list(OBSERVED_UNCERTAINTY_REDUCTIONS)
+        cal_data = list(CALIBRATION_SNAPSHOTS)
+
+    if not has_obs_data:
+        result["quick_decision"] = "No data yet - continue shadow mode"
+        return result
+
+    # Compute per-question-type effectiveness
+    type_reductions: dict[str, list[float]] = {}
+    type_contexts: dict[str, list[dict]] = {}
+    for obs in obs_data:
+        qtype = obs.get("question_type", "unknown")
+        if qtype not in type_reductions:
+            type_reductions[qtype] = []
+            type_contexts[qtype] = []
+        type_reductions[qtype].append(obs["actual_reduction"])
+        type_contexts[qtype].append(obs)
+
+    # Rank question types by average reduction
+    rankings = []
+    for qtype, reductions in type_reductions.items():
+        avg = sum(reductions) / len(reductions)
+        theoretical = THEORETICAL_REDUCTION_ESTIMATES.get(qtype, 0.15)
+        error = avg - theoretical
+        error_pct = (error / theoretical) * 100 if theoretical > 0 else 0
+
+        rankings.append({
+            "question_type": qtype,
+            "avg_observed_reduction": round(avg, 3),
+            "theoretical_estimate": theoretical,
+            "error_vs_theory": round(error, 3),
+            "error_percentage": round(error_pct, 1),
+            "observation_count": len(reductions),
+            "is_significant": len(reductions) >= 3 and abs(error) > 0.05,
+        })
+
+    rankings.sort(key=lambda x: x["avg_observed_reduction"], reverse=True)
+
+    # Top 3 question types with sufficient data
+    result["top_question_types"] = [
+        {
+            "type": r["question_type"],
+            "avg_reduction": r["avg_observed_reduction"],
+            "observations": r["observation_count"],
+            "performance_vs_theory": f"+{abs(r['error_percentage']):.0f}%" if r["error_vs_theory"] > 0 else f"{r['error_percentage']:.0f}%",
+        }
+        for r in rankings[:3] if r["observation_count"] >= 3
+    ]
+
+    # Critical divergences (where theory and observed differ significantly)
+    significant_errors = [r for r in rankings if r["is_significant"]]
+    for err in significant_errors[:5]:  # Top 5 most significant
+        direction = "over_performed" if err["error_vs_theory"] > 0 else "under_performed"
+        result["critical_divergences"].append({
+            "question_type": err["question_type"],
+            "theoretical": err["theoretical_estimate"],
+            "observed": err["avg_observed_reduction"],
+            "direction": direction,
+            "gap": f"{abs(err['error_percentage']):.0f}%",
+        })
+
+    # Dimension insights
+    for dim_key, dim_label in [
+        ("body_region", "body_region"),
+        ("severity", "severity"),
+        ("image_quality", "image_quality"),
+        ("temporal_context", "temporal_context"),
+    ]:
+        dim_data: dict[str, list[float]] = {}
+        for obs in obs_data:
+            key = obs.get(dim_key, "unknown")
+            if key not in dim_data:
+                dim_data[key] = []
+            dim_data[key].append(obs["actual_reduction"])
+
+        best_key, best_avg = None, -1.0
+        for key, vals in dim_data.items():
+            if len(vals) >= 3:
+                avg = sum(vals) / len(vals)
+                if avg > best_avg:
+                    best_avg = avg
+                    best_key = key
+
+        if best_key:
+            result["dimension_insights"][dim_label] = {
+                "most_effective": best_key,
+                "avg_reduction": round(best_avg, 3),
+            }
+
+    # Determine calibration status and promotion recommendation
+    if has_cal_data >= 3:
+        recent_bands = [s.get("confidence_band", "unknown") for s in cal_data[-5:]]
+        band_counts = {b: recent_bands.count(b) for b in set(recent_bands)}
+
+        stable_calibrated = recent_bands[-3:].count("calibrated") >= 2
+        stable_over = recent_bands[-3:].count("over_confident") >= 2
+        stable_under = recent_bands[-3:].count("under_confident") >= 2
+
+        if stable_calibrated and has_cal_data >= 10:
+            result["calibration_status"] = "stable_calibrated"
+            result["promotion_recommendation"] = "promote_cautiously"
+            result["promotion_rationale"] = (
+                f"32B has maintained calibrated bands ({band_counts.get('calibrated', 0)}/5 recent). "
+                "Stable enough for cautious promotion with active monitoring."
+            )
+            result["quick_decision"] = "Promote cautiously - stable calibration observed"
+        elif stable_over:
+            result["calibration_status"] = "over_escalating"
+            result["promotion_recommendation"] = "keep_in_shadow"
+            result["promotion_rationale"] = (
+                f"32B over-escalates ({band_counts.get('over_confident', 0)}/5 recent). "
+                "False positive risk too high for promotion."
+            )
+            result["quick_decision"] = "Keep in shadow - over-escalation pattern"
+        elif stable_under:
+            result["calibration_status"] = "under_escalating"
+            result["promotion_recommendation"] = "keep_in_shadow"
+            result["promotion_rationale"] = (
+                f"32B under-escalates ({band_counts.get('under_confident', 0)}/5 recent). "
+                "False negative risk too high for promotion."
+            )
+            result["quick_decision"] = "Keep in shadow - under-escalation pattern"
+        else:
+            result["calibration_status"] = "variable"
+            result["promotion_recommendation"] = "keep_in_shadow"
+            result["promotion_rationale"] = "Calibration too variable - more data needed."
+            result["quick_decision"] = "Keep in shadow - variable calibration"
+    else:
+        result["quick_decision"] = f"Only {has_cal_data} snapshots - need more data"
+
+    # Mark ready if we have sufficient observations
+    total_obs = len(obs_data)
+    result["ready_for_validation"] = total_obs >= 20 and has_cal_data >= 5
+
+    return result
+
+
 # =============================================================================
 # Phase 5: Calibration Drift Reporting
 # =============================================================================
@@ -10155,6 +10326,37 @@ async def get_calibration_phase5_followup(
         "endpoints": {
             "full_synthesis": "/calibration/observed-reduction-synthesis",
             "drift_report": "/calibration/drift-report",
+        }
+    }
+
+
+@app.get("/calibration/live-validation")
+async def get_live_validation_synthesis(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get compact synthesis for next live Phase 5 validation window.
+
+    This tight synthesis layer uses existing observed-reduction, follow-up,
+    and drift data to produce actionable insights for the next validation run.
+
+    Returns:
+    - Top 3 question types that actually reduce uncertainty most
+    - Critical divergences from theoretical expectations
+    - 32B calibration status with keep_in_shadow / promote_cautiously / block_promotion
+    - Quick decision text for rapid decision-making
+    """
+    validate_auth(authorization)
+
+    synthesis = _produce_live_validation_synthesis()
+
+    return {
+        "live_validation_synthesis": synthesis,
+        "recommendation_actions": {
+            "keep_in_shadow": "Continue shadow evaluation without promotion",
+            "promote_cautiously": "Allow promotion with active calibration monitoring",
+            "block_promotion": "Prevent promotion until calibration issues resolved",
+            "insufficient_data": "Continue shadow evaluation until sufficient data collected",
         }
     }
 
