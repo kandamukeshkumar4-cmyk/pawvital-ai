@@ -14,7 +14,9 @@ import io
 import base64
 import json
 import logging
+from threading import RLock
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Header
@@ -80,6 +82,7 @@ DEVICE = "cuda" if (_TORCH_AVAILABLE and torch.cuda.is_available()) else "cpu"
 STUB_MODE = os.environ.get("STUB_MODE", "false").strip().lower() == "true"
 EXPECTED_API_KEY = os.environ.get("SIDECAR_API_KEY", "").strip()
 logger = logging.getLogger("multimodal-consult-service")
+STATE_LOCK = RLock()
 
 
 def validate_auth(authorization: str | None) -> None:
@@ -3241,6 +3244,9 @@ def _identify_decisive_evidence(
     """
     Identify which evidence was most decisive in the assessment.
 
+    Phase 5 enhancement: Incorporates observed patterns from past cases
+    to improve evidence ranking based on actual observed impact.
+
     Returns (decisive_evidence, evidence_ranking).
     """
     decisive_evidence = []
@@ -3250,52 +3256,385 @@ def _identify_decisive_evidence(
     for record in evolution_models:
         if record.position == len(evolution_models) - 1:  # Most recent
             for i, evidence in enumerate(record.evidence_supports):
+                # Base weight from position, adjusted by confidence
+                base_weight = 0.8 - (i * 0.1)
+                # Safely compute confidence boost, handling None and NaN
+                confidence_boost = 0
+                if record.confidence_at_position is not None:
+                    try:
+                        conf = float(record.confidence_at_position)
+                        if not (conf != conf):  # NaN check
+                            confidence_boost = (conf - 0.5) * 0.2
+                    except (ValueError, TypeError):
+                        confidence_boost = 0
+
                 decisive_evidence.append({
                     "evidence": evidence,
                     "position": record.position,
                     "differential": record.leading_differential,
                     "confidence_at_point": record.confidence_at_position,
-                    "decisive_weight": 0.8 - (i * 0.1),  # First evidence is most decisive
-                    "source": "evolution_model"
+                    "decisive_weight": base_weight + confidence_boost,
+                    "source": "evolution_model",
+                    "evidence_type": "diagnostic",
+                    "position_rank": i + 1
                 })
 
     # Evidence from uncertainty metrics
     if uncertainty_metrics.cross_image_agreement_score > 0.7:
+        cross_image_weight = 0.75
+        # Boost weight based on actual agreement score
+        agreement_boost = (uncertainty_metrics.cross_image_agreement_score - 0.7) * 0.5
         decisive_evidence.append({
             "evidence": f"High cross-image agreement ({uncertainty_metrics.cross_image_agreement_score:.0%})",
             "position": "all",
             "differential": "consistent across images",
             "confidence_at_point": uncertainty_metrics.cross_image_agreement_score,
-            "decisive_weight": 0.75,
-            "source": "cross_image_agreement"
+            "decisive_weight": cross_image_weight + agreement_boost,
+            "source": "cross_image_agreement",
+            "evidence_type": "consistency",
+            "observed_confidence_impact": uncertainty_metrics.cross_image_agreement_score
         })
 
     if uncertainty_metrics.chronological_reasoning_quality > 0.7:
+        chrono_weight = 0.7
+        # Boost based on reasoning quality
+        quality_boost = (uncertainty_metrics.chronological_reasoning_quality - 0.7) * 0.4
         decisive_evidence.append({
             "evidence": f"High chronological reasoning quality ({uncertainty_metrics.chronological_reasoning_quality:.0%})",
             "position": "temporal",
             "differential": "temporal patterns established",
             "confidence_at_point": uncertainty_metrics.chronological_reasoning_quality,
-            "decisive_weight": 0.7,
-            "source": "chronological_reasoning"
+            "decisive_weight": chrono_weight + quality_boost,
+            "source": "chronological_reasoning",
+            "evidence_type": "temporal",
+            "reasoning_quality": uncertainty_metrics.chronological_reasoning_quality
         })
 
     # Evidence from case context
     context_evidence = current_case.get("context", {}).get("supporting_evidence", [])
     for i, evidence in enumerate(context_evidence[:3]):  # Top 3
+        base_weight = 0.6 - (i * 0.1)
+        # Check for matching patterns in observed evidence
+        observed_boost = 0.0
+        evidence_lower = evidence.lower() if isinstance(evidence, str) else ""
+
+        # Apply observed pattern boosts based on evidence content
+        with STATE_LOCK:
+            matching_observations = [
+                obs for obs in OBSERVED_UNCERTAINTY_REDUCTIONS
+                if obs.get("evidence_type") == "context" and
+                any(word in evidence_lower for word in obs.get("context_keywords", []))
+            ]
+
+        if matching_observations:
+            avg_impact = sum(o.get("actual_impact", 0) for o in matching_observations) / len(matching_observations)
+            observed_boost = avg_impact * 0.2
+
         decisive_evidence.append({
             "evidence": evidence,
             "position": "context",
             "differential": "case context",
             "confidence_at_point": 0.7 - (i * 0.1),
-            "decisive_weight": 0.6 - (i * 0.1),
-            "source": "case_context"
+            "decisive_weight": base_weight + observed_boost,
+            "source": "case_context",
+            "evidence_type": "context",
+            "observed_based": len(matching_observations) >= 3 if matching_observations else False
         })
 
-    # Sort by decisive weight
-    evidence_ranking = sorted(decisive_evidence, key=lambda x: x.get("decisive_weight", 0), reverse=True)
+    # Sort by decisive weight (create new dicts to avoid mutating caller's state)
+    evidence_ranking = []
+    for item in sorted(decisive_evidence, key=lambda x: x.get("decisive_weight", 0), reverse=True):
+        ranked_item = {**item, "ranking_position": len(evidence_ranking) + 1}
+        evidence_ranking.append(ranked_item)
 
     return decisive_evidence, evidence_ranking
+
+
+# =============================================================================
+# Phase 5 Calibration: Observed Uncertainty Reduction Tracking
+# =============================================================================
+# Tracks actual uncertainty reduction observed from questions/evidence across cases
+# to improve best-next-question recommendation using real patterns
+
+OBSERVED_UNCERTAINTY_REDUCTIONS: list[dict] = []
+MAX_OBSERVED_REDUCTIONS = 1000
+
+
+def _record_observed_uncertainty_reduction(
+    question_type: str,
+    actual_reduction: float,
+    context: dict
+) -> None:
+    """
+    Record an observed uncertainty reduction from a question or evidence.
+
+    This data is used to improve the best-next-question recommendation
+    by learning from actual observed patterns rather than theoretical estimates.
+    """
+    global OBSERVED_UNCERTAINTY_REDUCTIONS
+
+    observation = {
+        "question_type": question_type,
+        "actual_reduction": actual_reduction,
+        "context": context,
+        "recorded_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    with STATE_LOCK:
+        OBSERVED_UNCERTAINTY_REDUCTIONS.append(observation)
+        if len(OBSERVED_UNCERTAINTY_REDUCTIONS) > MAX_OBSERVED_REDUCTIONS:
+            # Truncate in-place to maintain consistency with any external references
+            del OBSERVED_UNCERTAINTY_REDUCTIONS[:-MAX_OBSERVED_REDUCTIONS]
+
+
+def _get_observed_reduction_for_question_type(question_type: str) -> dict:
+    """
+    Get observed uncertainty reduction statistics for a question type.
+
+    Returns average, min, max, and count of observations.
+    """
+    with STATE_LOCK:
+        matching = [
+            obs for obs in OBSERVED_UNCERTAINTY_REDUCTIONS
+            if obs.get("question_type") == question_type
+        ]
+
+    if not matching:
+        return {"avg_reduction": None, "min_reduction": None, "max_reduction": None, "count": 0}
+
+    reductions = [obs["actual_reduction"] for obs in matching]
+    return {
+        "avg_reduction": sum(reductions) / len(reductions),
+        "min_reduction": min(reductions),
+        "max_reduction": max(reductions),
+        "count": len(reductions)
+    }
+
+
+def _compute_expected_reduction_from_observations(
+    question_category: str,
+    uncertainty_drivers: list[str],
+    case_context: dict
+) -> float:
+    """
+    Compute expected uncertainty reduction using actual observed patterns.
+
+    This improves upon theoretical estimates by using real data on which
+    questions actually reduced uncertainty in similar contexts.
+    """
+    # Get base estimate from observations
+    observed = _get_observed_reduction_for_question_type(question_category)
+
+    if observed["count"] >= 5:
+        # Use observed average if we have enough data
+        base_reduction = observed["avg_reduction"]
+    else:
+        # Fall back to theoretical estimate with gradual learning
+        theoretical_estimates = {
+            "confidence_building": 0.20,
+            "uncertainty_resolution": 0.25,
+            "driver_specific_knowledge_gaps": 0.18,
+            "driver_specific_image_quality": 0.22,
+            "driver_specific_temporal_context": 0.20,
+            "driver_specific_sequence_position": 0.15,
+            "driver_specific_follow_up_trajectory": 0.18,
+            "urgency_prioritization": 0.25,
+            "unknown": 0.15
+        }
+        base_reduction = theoretical_estimates.get(question_category, 0.15)
+
+    # Adjust based on uncertainty drivers present
+    if uncertainty_drivers:
+        driver_multiplier = 1.0 + (len(uncertainty_drivers) * 0.02)
+        base_reduction = min(base_reduction * driver_multiplier, 0.4)
+
+    # Adjust based on image quality
+    image_quality = case_context.get("image_quality", "unknown")
+    if image_quality == "poor":
+        base_reduction *= 0.7  # Less effective in poor quality
+    elif image_quality == "good":
+        base_reduction *= 1.1  # More effective in good quality
+
+    return round(base_reduction, 3)
+
+
+def _identify_highest_value_next_question(
+    evolution_models: list,
+    confidence_shift_points: list,
+    uncertainty_drivers: list,
+    current_confidence: float
+) -> dict[str, Any]:
+    """
+    Phase 5: Identify highest value next question using observed uncertainty reduction.
+
+    This function improves upon theoretical estimates by incorporating actual
+    observed patterns of which questions reduced uncertainty in similar contexts.
+
+    Args:
+        evolution_models: List of DifferentialEvolutionRecord from longitudinal analysis
+        confidence_shift_points: Identified confidence shift points from evolution
+        uncertainty_drivers: Primary uncertainty drivers from the case
+        current_confidence: Current confidence level
+
+    Returns:
+        dict with question, rationale, estimated_uncertainty_reduction, alternatives, etc.
+    """
+    result = {
+        "question": "",
+        "rationale": "",
+        "estimated_uncertainty_reduction": 0.0,
+        "tied_to_shift": None,
+        "category": "unknown",
+        "alternatives": [],
+        "observed_based": False,
+        "confidence_adjustment": None
+    }
+
+    if not confidence_shift_points and not uncertainty_drivers:
+        # Default question when no specific drivers identified
+        result["question"] = "What additional clinical context or history can be provided to refine the differential diagnosis?"
+        result["rationale"] = "No specific uncertainty drivers identified. General context clarification recommended."
+        result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
+            "unknown", [], {}
+        )
+        return result
+
+    # Primary shift analysis
+    if confidence_shift_points:
+        primary = confidence_shift_points[0]
+        shift_position = primary.get("position", 0)
+        shift_direction = primary.get("direction", "unknown")
+        differential = primary.get("leading_differential", "")
+
+        if shift_direction == "increased":
+            # Confidence increased - ask to confirm the emerging differential
+            result["category"] = "confidence_building"
+            result["question"] = (
+                f"Can you provide additional context about '{differential}' that would confirm "
+                f"this diagnosis? Specifically, any relevant history or progression details?"
+            )
+            result["rationale"] = (
+                f"Confidence increased when '{differential}' emerged. "
+                f"Confirming evidence would solidify this shift and reduce remaining uncertainty."
+            )
+            result["tied_to_shift"] = f"position_{shift_position}_{differential}"
+
+            # Use observed data if available
+            result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
+                result["category"], uncertainty_drivers, {}
+            )
+            result["observed_based"] = _get_observed_reduction_for_question_type(result["category"])["count"] >= 5
+
+        else:  # decreased or unknown
+            # Confidence decreased - ask what we need to resolve uncertainty
+            result["category"] = "uncertainty_resolution"
+            result["question"] = (
+                f"What additional findings or history would help distinguish between "
+                f"competing differentials at the current timepoint?"
+            )
+            result["rationale"] = (
+                f"Confidence decreased at position {shift_position}, indicating emerging uncertainty. "
+                f"Clarification would help resolve the competing diagnostic possibilities."
+            )
+            result["tied_to_shift"] = f"position_{shift_position}_uncertainty"
+
+            result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
+                result["category"], uncertainty_drivers, {}
+            )
+            result["observed_based"] = _get_observed_reduction_for_question_type(result["category"])["count"] >= 5
+
+    # Tie to specific uncertainty drivers if reduction is still low
+    if uncertainty_drivers and result["estimated_uncertainty_reduction"] < 0.2:
+        top_driver = uncertainty_drivers[0] if uncertainty_drivers else "knowledge_gaps"
+
+        driver_question_map = {
+            "knowledge_gaps": {
+                "question": "Can additional diagnostic testing (biopsy, cytology, bloodwork) be performed to address knowledge gaps?",
+                "category": "driver_specific_knowledge_gaps"
+            },
+            "image_quality": {
+                "question": "Can higher quality or additional imaging angles be obtained?",
+                "category": "driver_specific_image_quality"
+            },
+            "temporal_context": {
+                "question": "What is the timeline of symptom progression? When did changes first appear?",
+                "category": "driver_specific_temporal_context"
+            },
+            "sequence_position": {
+                "question": "Are there additional images from other timepoints for comparison?",
+                "category": "driver_specific_sequence_position"
+            },
+            "follow_up_trajectory": {
+                "question": "Has any treatment been initiated? What has been the response so far?",
+                "category": "driver_specific_follow_up_trajectory"
+            },
+        }
+
+        driver_info = driver_question_map.get(top_driver, driver_question_map["knowledge_gaps"])
+        result["question"] = driver_info["question"]
+        result["category"] = driver_info["category"]
+        result["rationale"] = (
+            f"Primary uncertainty driver is '{top_driver.replace('_', ' ')}'. "
+            f"Addressing this specific gap would have the highest impact on reducing uncertainty."
+        )
+        result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
+            result["category"], uncertainty_drivers, {}
+        )
+        result["observed_based"] = _get_observed_reduction_for_question_type(result["category"])["count"] >= 5
+
+    # Confidence-based adjustment
+    if current_confidence < 0.5 and result["estimated_uncertainty_reduction"] < 0.25:
+        result["category"] = "urgency_prioritization"
+        result["question"] = (
+            "Given low confidence, what is the most urgent clinical concern to address first?"
+        )
+        result["rationale"] = (
+            "Current confidence is low. Prioritizing the most urgent concern would "
+            "provide the clearest path forward."
+        )
+        result["confidence_adjustment"] = {
+            "original_reduction": result["estimated_uncertainty_reduction"],
+            "adjusted_reduction": 0.25,
+            "reason": "Low confidence boost applied"
+        }
+        result["estimated_uncertainty_reduction"] = 0.25
+
+    # Build alternatives using observed patterns
+    alternative_categories = [
+        "driver_specific_temporal_context",
+        "driver_specific_knowledge_gaps",
+        "uncertainty_resolution"
+    ]
+
+    for alt_cat in alternative_categories:
+        if alt_cat != result["category"]:
+            alt_observed = _get_observed_reduction_for_question_type(alt_cat)
+            alt_reduction = alt_observed["avg_reduction"] if alt_observed["count"] >= 3 else 0.15
+
+            alt_driver_map = {
+                "driver_specific_temporal_context": ("timeline of symptom progression", "temporal_context"),
+                "driver_specific_knowledge_gaps": ("diagnostic testing to address knowledge gaps", "knowledge_gaps"),
+                "uncertainty_resolution": ("distinguishing between competing differentials", "uncertainty_resolution")
+            }
+
+            alt_driver_text, alt_driver_key = alt_driver_map.get(alt_cat, ("additional context", "unknown"))
+
+            result["alternatives"].append({
+                "question": f"What additional information about {alt_driver_text} would help clarify the diagnosis?",
+                "rationale": f"Alternative approach targeting {alt_driver_key.replace('_', ' ')}",
+                "estimated_uncertainty_reduction": alt_reduction,
+                "category": alt_cat,
+                "observed_based": alt_observed["count"] >= 5
+            })
+
+    # Sort alternatives by expected reduction
+    result["alternatives"] = sorted(
+        result["alternatives"],
+        key=lambda x: x.get("estimated_uncertainty_reduction", 0),
+        reverse=True
+    )[:3]  # Keep top 3
+
+    return result
 
 
 def _build_live_longitudinal_uncertainty_report(
