@@ -9680,6 +9680,168 @@ def _synthesize_batch_observed_reduction() -> dict[str, Any]:
     return result
 
 
+def _generate_calibration_followup_summary() -> dict[str, Any]:
+    """
+    Generate a concise calibration follow-up summary for post-Phase 5 analysis.
+
+    This compact summary is designed for use after the next live Phase 5 window,
+    providing actionable insights on:
+    - Which question types are most effective in practice
+    - Breakdown by body region, severity, image quality, and temporal context
+    - Where observed reduction differs most from theoretical expectations
+    """
+    result = {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "phase5_followup_ready": True,
+        "question_type_effectiveness": [],
+        "key_differences_from_theory": [],
+        "dimension_breakdown": {
+            "body_region": {},
+            "severity": {},
+            "image_quality": {},
+            "temporal_context": {},
+        },
+        "most_effective_question_types": [],
+        "least_effective_question_types": [],
+        "actionable_insights": [],
+        "recommendation": "continue_shadow",
+    }
+
+    if not OBSERVED_UNCERTAINTY_REDUCTIONS:
+        result["message"] = "No observed reduction data yet - continue shadow evaluation"
+        result["phase5_followup_ready"] = False
+        return result
+
+    # Compute per-question-type effectiveness
+    type_reductions: dict[str, list[float]] = {}
+    type_contexts: dict[str, list[dict]] = {}
+    for obs in OBSERVED_UNCERTAINTY_REDUCTIONS:
+        qtype = obs.get("question_type", "unknown")
+        if qtype not in type_reductions:
+            type_reductions[qtype] = []
+            type_contexts[qtype] = []
+        type_reductions[qtype].append(obs["actual_reduction"])
+        type_contexts[qtype].append(obs)
+
+    # Rank question types
+    rankings = []
+    for qtype, reductions in type_reductions.items():
+        avg = sum(reductions) / len(reductions)
+        theoretical = THEORETICAL_REDUCTION_ESTIMATES.get(qtype, 0.15)
+        error = avg - theoretical
+        error_pct = (error / theoretical) * 100 if theoretical > 0 else 0
+
+        rankings.append({
+            "question_type": qtype,
+            "avg_observed_reduction": round(avg, 3),
+            "theoretical_estimate": theoretical,
+            "error_vs_theory": round(error, 3),
+            "error_percentage": round(error_pct, 1),
+            "observation_count": len(reductions),
+            "is_significant": len(reductions) >= 3 and abs(error) > 0.05,
+        })
+
+    rankings.sort(key=lambda x: x["avg_observed_reduction"], reverse=True)
+    result["question_type_effectiveness"] = rankings
+
+    # Most/least effective
+    result["most_effective_question_types"] = [
+        {"type": r["question_type"], "avg_reduction": r["avg_observed_reduction"]}
+        for r in rankings[:3] if r["observation_count"] >= 3
+    ]
+    result["least_effective_question_types"] = [
+        {"type": r["question_type"], "avg_reduction": r["avg_observed_reduction"]}
+        for r in rankings[-3:] if r["observation_count"] >= 3
+    ]
+
+    # Key differences from theory
+    significant_errors = [r for r in rankings if r["is_significant"]]
+    for err in significant_errors:
+        direction = "over_estimated" if err["error_vs_theory"] < 0 else "under_estimated"
+        result["key_differences_from_theory"].append({
+            "question_type": err["question_type"],
+            "theoretical": err["theoretical_estimate"],
+            "observed": err["avg_observed_reduction"],
+            "direction": direction,
+            "confidence": "high" if err["observation_count"] >= 10 else "moderate" if err["observation_count"] >= 5 else "low",
+        })
+
+    # Dimension breakdown
+    for dim_key, dim_label in [
+        ("body_region", "breakdown_by_body_region"),
+        ("severity", "breakdown_by_severity"),
+        ("image_quality", "breakdown_by_image_quality"),
+        ("temporal_context", "breakdown_by_temporal_context"),
+    ]:
+        dim_data: dict[str, list[float]] = {}
+        for obs in OBSERVED_UNCERTAINTY_REDUCTIONS:
+            key = obs.get(dim_key, "unknown")
+            if key not in dim_data:
+                dim_data[key] = []
+            dim_data[key].append(obs["actual_reduction"])
+
+        for key, vals in dim_data.items():
+            result["dimension_breakdown"][dim_label][key] = {
+                "avg_reduction": round(sum(vals) / len(vals), 3),
+                "count": len(vals),
+                "min": round(min(vals), 3),
+                "max": round(max(vals), 3),
+            }
+
+    # Actionable insights
+    if rankings:
+        top = rankings[0]
+        if top["observation_count"] >= 3:
+            result["actionable_insights"].append(
+                f"PRIORITIZE '{top['question_type']}' questions: "
+                f"Observed {top['avg_observed_reduction']:.0%} reduction vs "
+                f"theoretical {top['theoretical_estimate']:.0%} "
+                f"({'over' if top['error_vs_theory'] > 0 else 'under'}-performed by {abs(top['error_percentage']):.0f}%)"
+            )
+
+        worst = rankings[-1]
+        if worst["observation_count"] >= 3 and worst["avg_observed_reduction"] < 0.10:
+            result["actionable_insights"].append(
+                f"DEPRIORITIZE '{worst['question_type']}' questions: "
+                f"Only {worst['avg_observed_reduction']:.0%} observed reduction "
+                f"(expected {worst['theoretical_estimate']:.0%}). "
+                f"Consider alternative question strategies."
+            )
+
+    # Body region-specific insight
+    if result["dimension_breakdown"]["breakdown_by_body_region"]:
+        region_avgs = [
+            (k, v["avg_reduction"], v["count"])
+            for k, v in result["dimension_breakdown"]["breakdown_by_body_region"].items()
+            if v["count"] >= 3
+        ]
+        if region_avgs:
+            region_avgs.sort(key=lambda x: x[1], reverse=True)
+            best_region = region_avgs[0]
+            result["actionable_insights"].append(
+                f"BODY REGION '{best_region[0]}' shows highest uncertainty reduction "
+                f"({best_region[1]:.0%} avg). Consider focused questioning for similar cases."
+            )
+
+    # Severity-specific insight
+    if result["dimension_breakdown"]["breakdown_by_severity"]:
+        severity_avgs = [
+            (k, v["avg_reduction"], v["count"])
+            for k, v in result["dimension_breakdown"]["breakdown_by_severity"].items()
+            if v["count"] >= 3
+        ]
+        if severity_avgs:
+            severity_avgs.sort(key=lambda x: x[1], reverse=True)
+            best_severity = severity_avgs[0]
+            result["actionable_insights"].append(
+                f"SEVERITY '{best_severity[0]}' cases show highest question effectiveness "
+                f"({best_severity[1]:.0%} avg reduction). "
+                f"Adjust questioning depth based on severity."
+            )
+
+    return result
+
+
 # =============================================================================
 # Phase 5: Calibration Drift Reporting
 # =============================================================================
@@ -9731,15 +9893,20 @@ def _compute_calibration_drift() -> dict[str, Any]:
 
     Identifies whether 32B is systematically over-escalating or under-escalating,
     surfaces confidence-band drift over time, and generates promotion recommendations.
+
+    Reasoning-focused output: each recommendation is backed by explicit rationale
+    connecting observed drift patterns to the promotion decision.
     """
     result = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "snapshot_count": len(CALIBRATION_SNAPSHOTS),
         "drift_analysis": {},
         "systematic_bias": "unknown",
+        "bias_rationale": "",
         "confidence_band_drift": [],
         "promotion_recommendation": "insufficient_data",
         "recommendation_rationale": "",
+        "reasoning_chain": [],
     }
 
     if len(CALIBRATION_SNAPSHOTS) < 2:
@@ -9750,30 +9917,72 @@ def _compute_calibration_drift() -> dict[str, Any]:
     bands_over_time = [s.get("confidence_band", "unknown") for s in CALIBRATION_SNAPSHOTS]
     deltas_over_time = [s.get("mean_confidence_delta", 0) for s in CALIBRATION_SNAPSHOTS]
 
-    # Check for systematic bias
+    # Check for systematic bias with explicit reasoning
     positive_deltas = sum(1 for d in deltas_over_time if d > 0.05)
     negative_deltas = sum(1 for d in deltas_over_time if d < -0.05)
     total_significant = positive_deltas + negative_deltas
 
+    result["reasoning_chain"].append({
+        "step": "bias_detection",
+        "observation": f"{positive_deltas} positive deltas, {negative_deltas} negative deltas out of {total_significant} significant",
+        "inference": "",
+    })
+
     if total_significant > 0:
-        if positive_deltas / total_significant > 0.7:
+        pos_ratio = positive_deltas / total_significant
+        neg_ratio = negative_deltas / total_significant
+        if pos_ratio > 0.7:
             result["systematic_bias"] = "over_escalating"
-        elif negative_deltas / total_significant > 0.7:
+            result["bias_rationale"] = (
+                f"{positive_deltas}/{total_significant} snapshots show 32B confidence exceeds 7B by >0.05. "
+                f"This {pos_ratio:.0%} ratio exceeds the 70% threshold for systematic over-escalation."
+            )
+            result["reasoning_chain"][-1]["inference"] = (
+                f"POSITIVE DELTA DOMINANCE: {pos_ratio:.0%} of significant snapshots show 32B is over-confident "
+                f"relative to 7B baseline. This indicates a tendency to over-escalate severity/escalation calls."
+            )
+        elif neg_ratio > 0.7:
             result["systematic_bias"] = "under_escalating"
+            result["bias_rationale"] = (
+                f"{negative_deltas}/{total_significant} snapshots show 32B confidence below 7B by >0.05. "
+                f"This {neg_ratio:.0%} ratio exceeds the 70% threshold for systematic under-escalation."
+            )
+            result["reasoning_chain"][-1]["inference"] = (
+                f"NEGATIVE DELTA DOMINANCE: {neg_ratio:.0%} of significant snapshots show 32B is under-confident "
+                f"relative to 7B baseline. This indicates a tendency to under-escalate or miss escalation signals."
+            )
         else:
             result["systematic_bias"] = "balanced"
+            result["bias_rationale"] = (
+                f"No single direction dominates ({pos_ratio:.0%} positive vs {neg_ratio:.0%} negative). "
+                f"32B shows variable calibration relative to 7B."
+            )
+            result["reasoning_chain"][-1]["inference"] = (
+                f"BALANCED: 32B calibration varies without systematic drift in either direction."
+            )
 
     # Compute drift metrics
     if len(deltas_over_time) >= 2:
         first_half_avg = sum(deltas_over_time[:len(deltas_over_time)//2]) / max(1, len(deltas_over_time)//2)
         second_half_avg = sum(deltas_over_time[len(deltas_over_time)//2:]) / max(1, len(deltas_over_time) - len(deltas_over_time)//2)
+        drift_magnitude = second_half_avg - first_half_avg
 
         result["drift_analysis"] = {
             "first_period_avg_delta": round(first_half_avg, 3),
             "second_period_avg_delta": round(second_half_avg, 3),
-            "drift_magnitude": round(second_half_avg - first_half_avg, 3),
+            "drift_magnitude": round(drift_magnitude, 3),
             "drift_direction": "increasing_confidence" if second_half_avg > first_half_avg else "decreasing_confidence",
         }
+
+        result["reasoning_chain"].append({
+            "step": "temporal_drift",
+            "observation": f"First half avg delta: {first_half_avg:.3f}, Second half avg delta: {second_half_avg:.3f}",
+            "inference": (
+                f"Drift of {abs(drift_magnitude):.3f} toward "
+                f"{'HIGHER' if drift_magnitude > 0 else 'LOWER'} confidence observed over time."
+                if abs(drift_magnitude) > 0.02 else "No significant temporal drift detected."
+            ),
+        })
 
     # Confidence band drift over time
     unique_bands = []
@@ -9788,7 +9997,7 @@ def _compute_calibration_drift() -> dict[str, Any]:
         for i, band in enumerate(unique_bands)
     ]
 
-    # Generate promotion recommendation based on drift
+    # Generate promotion recommendation based on drift with explicit reasoning
     recent_snapshots = CALIBRATION_SNAPSHOTS[-5:] if len(CALIBRATION_SNAPSHOTS) >= 5 else CALIBRATION_SNAPSHOTS
 
     if not recent_snapshots:
@@ -9797,44 +10006,94 @@ def _compute_calibration_drift() -> dict[str, Any]:
         return result
 
     recent_bands = [s.get("confidence_band", "unknown") for s in recent_snapshots]
+    recent_band_counts = {b: recent_bands.count(b) for b in set(recent_bands)}
     stable_calibrated = all(b == "calibrated" for b in recent_bands[-3:])
     stable_over = all(b == "over_confident" for b in recent_bands[-3:])
     stable_under = all(b == "under_confident" for b in recent_bands[-3:])
 
+    result["reasoning_chain"].append({
+        "step": "band_stability",
+        "observation": f"Recent bands: {recent_band_counts}, Last-3 stable: calibrated={stable_calibrated}, over={stable_over}, under={stable_under}",
+        "inference": "",
+    })
+
+    # Build recommendation with reasoning chain
     if stable_calibrated and len(CALIBRATION_SNAPSHOTS) >= 10:
         result["promotion_recommendation"] = "promote_cautiously"
         result["recommendation_rationale"] = (
-            "32B has maintained calibrated confidence bands consistently. "
-            "Promote with active monitoring for drift."
+            "32B has maintained calibrated confidence bands consistently for the last 3+ snapshots "
+            f"({recent_band_counts.get('calibrated', 0)} calibrated out of {len(recent_bands)} recent). "
+            f"Systematic bias is '{result['systematic_bias']}'. "
+            "Promote with active monitoring for drift - calibration is stable but may shift under different case mixes."
+        )
+        result["reasoning_chain"][-1]["inference"] = (
+            "STABLE CALIBRATION: 32B maintains calibrated bands consistently. "
+            "With 10+ snapshots and stable calibration, promote_cautiously is appropriate. "
+            "However, ongoing monitoring is essential as case mix changes may affect calibration."
         )
     elif stable_over:
         result["promotion_recommendation"] = "keep_in_shadow"
         result["recommendation_rationale"] = (
-            "32B consistently over-escalates (higher confidence than 7B). "
-            "This pattern suggests false positive risk. Keep in shadow until calibration improves."
+            f"32B consistently over-escalates ({recent_band_counts.get('over_confident', 0)} over-confident "
+            f"out of {len(recent_bands)} recent snapshots). "
+            f"Systematic bias: '{result['systematic_bias']}'. "
+            "This pattern suggests false positive risk - 32B may be recommending escalation when 7B would not. "
+            "Keep in shadow until over-escalation pattern is addressed through retraining or prompt refinement."
+        )
+        result["reasoning_chain"][-1]["inference"] = (
+            "OVER-ESCALATION PATTERN: 32B systematically assigns higher confidence than 7B. "
+            "This creates false positive risk - cases escalated that should not be. "
+            "keep_in_shadow is correct until this systematic bias is corrected."
         )
     elif stable_under:
         result["promotion_recommendation"] = "keep_in_shadow"
         result["recommendation_rationale"] = (
-            "32B consistently under-escalates (lower confidence than 7B). "
-            "This pattern suggests false negative risk. Keep in shadow until calibration improves."
+            f"32B consistently under-escalates ({recent_band_counts.get('under_confident', 0)} under-confident "
+            f"out of {len(recent_bands)} recent snapshots). "
+            f"Systematic bias: '{result['systematic_bias']}'. "
+            "This pattern suggests false negative risk - 32B may be missing escalation signals that 7B would catch. "
+            "Keep in shadow until under-escalation pattern is addressed."
+        )
+        result["reasoning_chain"][-1]["inference"] = (
+            "UNDER-ESCALATION PATTERN: 32B systematically assigns lower confidence than 7B. "
+            "This creates false negative risk - cases not escalated that should be. "
+            "keep_in_shadow is correct until this systematic bias is corrected."
         )
     elif result["systematic_bias"] == "over_escalating":
         result["promotion_recommendation"] = "block_promotion"
         result["recommendation_rationale"] = (
-            "Systematic over-escalation detected. 32B shows persistent tendency to be more "
-            "confident than 7B, indicating false positive risk. Block promotion until addressed."
+            f"Systematic over-escalation confirmed: {result['bias_rationale']}. "
+            "32B shows persistent tendency to be more confident than 7B, indicating false positive risk. "
+            "block_promotion is invoked because the bias is systematic rather than random fluctuation. "
+            "Address through model retraining or confidence calibration before reconsidering promotion."
+        )
+        result["reasoning_chain"][-1]["inference"] = (
+            "SYSTEMATIC OVER-ESCALATION: The bias is consistent enough to be considered systematic (>70% of significant snapshots). "
+            "block_promotion is invoked because random variation cannot explain this pattern."
         )
     elif result["systematic_bias"] == "under_escalating":
         result["promotion_recommendation"] = "block_promotion"
         result["recommendation_rationale"] = (
-            "Systematic under-escalation detected. 32B shows persistent tendency to be less "
-            "confident than 7B, indicating false negative risk. Block promotion until addressed."
+            f"Systematic under-escalation confirmed: {result['bias_rationale']}. "
+            "32B shows persistent tendency to be less confident than 7B, indicating false negative risk. "
+            "block_promotion is invoked because the bias is systematic rather than random fluctuation. "
+            "Address through model retraining or confidence calibration before reconsidering promotion."
+        )
+        result["reasoning_chain"][-1]["inference"] = (
+            "SYSTEMATIC UNDER-ESCALATION: The bias is consistent enough to be considered systematic (>70% of significant snapshots). "
+            "block_promotion is invoked because random variation cannot explain this pattern."
         )
     else:
         result["promotion_recommendation"] = "keep_in_shadow"
         result["recommendation_rationale"] = (
-            "Calibration is variable. Continue shadow evaluation to establish stable patterns."
+            "Calibration is variable without stable patterns. "
+            f"Recent band distribution: {recent_band_counts}. "
+            f"Systematic bias: '{result['systematic_bias']}' (not strong enough to warrant block). "
+            "Continue shadow evaluation to establish whether calibration will stabilize or drift further."
+        )
+        result["reasoning_chain"][-1]["inference"] = (
+            "VARIABLE CALIBRATION: No stable pattern in recent snapshots. "
+            "keep_in_shadow is appropriate while more data is collected to determine true calibration state."
         )
 
     # Add summary statistics
@@ -9871,6 +10130,31 @@ async def get_observed_reduction_synthesis(
         "endpoints": {
             "calibration_drift": "/calibration/drift-report",
             "threshold_insights": "/calibration/threshold-insights",
+            "phase5_followup": "/calibration/phase5-followup",
+        }
+    }
+
+
+@app.get("/calibration/phase5-followup")
+async def get_calibration_phase5_followup(
+    authorization: str | None = Header(default=None),
+):
+    """
+    Get concise Phase 5 calibration follow-up summary for post-window analysis.
+
+    This compact summary is designed for use after the next live Phase 5 window,
+    providing actionable insights on question type effectiveness, dimension
+    breakdowns, and where observed reduction differs most from theoretical expectations.
+    """
+    validate_auth(authorization)
+
+    followup = _generate_calibration_followup_summary()
+
+    return {
+        "followup": followup,
+        "endpoints": {
+            "full_synthesis": "/calibration/observed-reduction-synthesis",
+            "drift_report": "/calibration/drift-report",
         }
     }
 

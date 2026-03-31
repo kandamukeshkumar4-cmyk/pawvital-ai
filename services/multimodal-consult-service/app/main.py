@@ -3470,6 +3470,9 @@ def _identify_highest_value_next_question(
     This function improves upon theoretical estimates by incorporating actual
     observed patterns of which questions reduced uncertainty in similar contexts.
 
+    The `why_reduces_fastest` field explicitly cites observed reduction history
+    to justify why the chosen question should reduce uncertainty fastest.
+
     Args:
         evolution_models: List of DifferentialEvolutionRecord from longitudinal analysis
         confidence_shift_points: Identified confidence shift points from evolution
@@ -3477,7 +3480,8 @@ def _identify_highest_value_next_question(
         current_confidence: Current confidence level
 
     Returns:
-        dict with question, rationale, estimated_uncertainty_reduction, alternatives, etc.
+        dict with question, rationale, estimated_uncertainty_reduction, alternatives,
+        observed_reduction_citations, and why_reduces_fastest (with explicit citations).
     """
     result = {
         "question": "",
@@ -3490,18 +3494,32 @@ def _identify_highest_value_next_question(
         "confidence_adjustment": None,
         "why_reduces_fastest": "",
         "reduction_mechanism": "",
+        "observed_reduction_citations": {},
+        "trajectory_contract": "limited",
     }
 
     if not confidence_shift_points and not uncertainty_drivers:
         # Default question when no specific drivers identified
         result["question"] = "What additional clinical context or history can be provided to refine the differential diagnosis?"
         result["rationale"] = "No specific uncertainty drivers identified. General context clarification recommended."
+        result["category"] = "unknown"
         result["estimated_uncertainty_reduction"] = _compute_expected_reduction_from_observations(
             "unknown", [], {}
         )
+        observed_stats = _get_observed_reduction_for_question_type("unknown")
+        result["observed_reduction_citations"]["unknown"] = {
+            "avg_observed": observed_stats["avg_reduction"],
+            "count": observed_stats["count"],
+            "source": "unknown" if observed_stats["count"] < 3 else "observed_history",
+        }
+        result["observed_based"] = observed_stats["count"] >= 5
+        result["trajectory_contract"] = "limited"
         result["why_reduces_fastest"] = (
-            "General context clarification is recommended because no specific uncertainty drivers were identified. "
-            "This approach provides the broadest coverage for unknown gaps in the consultation."
+            "No specific uncertainty drivers identified, so general context clarification is recommended. "
+            f"Observed history for 'unknown' category: avg reduction {observed_stats['avg_reduction'] or 'N/A'} "
+            f"(based on {observed_stats['count']} observations). "
+            "This approach provides the broadest coverage for unknown gaps in the consultation, "
+            "targeting multiple potential uncertainty sources simultaneously."
         )
         result["reduction_mechanism"] = "Provides general diagnostic context that may address multiple uncertainty sources simultaneously."
         return result
@@ -3532,13 +3550,36 @@ def _identify_highest_value_next_question(
                 result["category"], uncertainty_drivers, {}
             )
             result["observed_based"] = observed_stats["count"] >= 5
+            result["trajectory_contract"] = "moderate"
 
-            # Why this reduces uncertainty fastest
+            # Record observed reduction citation
+            result["observed_reduction_citations"][result["category"]] = {
+                "avg_observed": observed_stats["avg_reduction"],
+                "min_observed": observed_stats["min_reduction"],
+                "max_observed": observed_stats["max_reduction"],
+                "observation_count": observed_stats["count"],
+                "source": "observed_history" if observed_stats["count"] >= 3 else "insufficient_data",
+            }
+
+            # Why this reduces uncertainty fastest - with explicit citation
+            citation_note = ""
+            if observed_stats["count"] >= 3:
+                citation_note = (
+                    f" Observed history shows avg reduction of {observed_stats['avg_reduction']:.0%} "
+                    f"(range: {observed_stats['min_reduction']:.0%}-{observed_stats['max_reduction']:.0%}, "
+                    f"n={observed_stats['count']})."
+                )
+            else:
+                citation_note = (
+                    f" Insufficient observed data (n={observed_stats['count']}), using theoretical estimate. "
+                    f"Continue recording reductions to improve future recommendations."
+                )
+
             result["why_reduces_fastest"] = (
                 f"Confidence increased when '{differential}' emerged as the leading differential. "
                 f"Confirming this specific diagnosis directly addresses the emerging diagnostic direction. "
-                f"This question targets the most promising diagnostic pathway, which is why it should "
-                f"reduce uncertainty fastest ({result['estimated_uncertainty_reduction']:.0%} expected reduction)."
+                f"This question targets the most promising diagnostic pathway.{citation_note} "
+                f"Expected uncertainty reduction: {result['estimated_uncertainty_reduction']:.0%}."
             )
             result["reduction_mechanism"] = (
                 f"Addresses the '{differential}' differential directly by providing confirmatory evidence. "
@@ -3563,12 +3604,36 @@ def _identify_highest_value_next_question(
                 result["category"], uncertainty_drivers, {}
             )
             result["observed_based"] = observed_stats["count"] >= 5
+            result["trajectory_contract"] = "moderate"
 
-            # Why this reduces uncertainty fastest
+            # Record observed reduction citation
+            result["observed_reduction_citations"][result["category"]] = {
+                "avg_observed": observed_stats["avg_reduction"],
+                "min_observed": observed_stats["min_reduction"],
+                "max_observed": observed_stats["max_reduction"],
+                "observation_count": observed_stats["count"],
+                "source": "observed_history" if observed_stats["count"] >= 3 else "insufficient_data",
+            }
+
+            # Why this reduces uncertainty fastest - with explicit citation
+            citation_note = ""
+            if observed_stats["count"] >= 3:
+                citation_note = (
+                    f" Observed history shows avg reduction of {observed_stats['avg_reduction']:.0%} "
+                    f"(range: {observed_stats['min_reduction']:.0%}-{observed_stats['max_reduction']:.0%}, "
+                    f"n={observed_stats['count']})."
+                )
+            else:
+                citation_note = (
+                    f" Insufficient observed data (n={observed_stats['count']}), using theoretical estimate. "
+                    f"Continue recording reductions to improve future recommendations."
+                )
+
             result["why_reduces_fastest"] = (
                 f"Confidence decreased at position {shift_position}, indicating competing differentials. "
                 f"Resolving which differential is correct directly addresses the source of uncertainty. "
-                f"This question targets the root cause of the confidence drop ({result['estimated_uncertainty_reduction']:.0%} expected reduction)."
+                f"This question targets the root cause of the confidence drop.{citation_note} "
+                f"Expected uncertainty reduction: {result['estimated_uncertainty_reduction']:.0%}."
             )
             result["reduction_mechanism"] = (
                 "Distinguishes between competing differentials by providing decisive evidence. "
@@ -3620,12 +3685,34 @@ def _identify_highest_value_next_question(
         )
         result["observed_based"] = observed_stats["count"] >= 5
 
-        # Why this reduces uncertainty fastest
+        # Record observed reduction citation
+        result["observed_reduction_citations"][result["category"]] = {
+            "avg_observed": observed_stats["avg_reduction"],
+            "min_observed": observed_stats["min_reduction"],
+            "max_observed": observed_stats["max_reduction"],
+            "observation_count": observed_stats["count"],
+            "source": "observed_history" if observed_stats["count"] >= 3 else "insufficient_data",
+        }
+
+        # Why this reduces uncertainty fastest - with explicit citation
+        citation_note = ""
+        if observed_stats["count"] >= 3:
+            citation_note = (
+                f" Observed history shows avg reduction of {observed_stats['avg_reduction']:.0%} "
+                f"(range: {observed_stats['min_reduction']:.0%}-{observed_stats['max_reduction']:.0%}, "
+                f"n={observed_stats['count']})."
+            )
+        else:
+            citation_note = (
+                f" Insufficient observed data (n={observed_stats['count']}), using theoretical estimate. "
+                f"Continue recording reductions to improve future recommendations."
+            )
+
         result["why_reduces_fastest"] = (
             f"Primary uncertainty driver is '{top_driver.replace('_', ' ')}'. "
             f"This is the single largest source of diagnostic uncertainty in the current case. "
-            f"Addressing it directly eliminates the biggest uncertainty blocker "
-            f"({result['estimated_uncertainty_reduction']:.0%} expected reduction)."
+            f"Addressing it directly eliminates the biggest uncertainty blocker.{citation_note} "
+            f"Expected uncertainty reduction: {result['estimated_uncertainty_reduction']:.0%}."
         )
         result["reduction_mechanism"] = driver_info.get("mechanism", "Directly addresses the identified uncertainty source")
 
@@ -3645,12 +3732,39 @@ def _identify_highest_value_next_question(
             "reason": "Low confidence boost applied"
         }
         result["estimated_uncertainty_reduction"] = 0.25
+        result["trajectory_contract"] = "comprehensive"
 
-        # Why this reduces uncertainty fastest
+        observed_stats = _get_observed_reduction_for_question_type(result["category"])
+
+        # Record observed reduction citation
+        result["observed_reduction_citations"][result["category"]] = {
+            "avg_observed": observed_stats["avg_reduction"],
+            "min_observed": observed_stats["min_reduction"],
+            "max_observed": observed_stats["max_reduction"],
+            "observation_count": observed_stats["count"],
+            "source": "observed_history" if observed_stats["count"] >= 3 else "insufficient_data",
+            "note": "Urgency prioritization applied due to low confidence"
+        }
+
+        # Why this reduces uncertainty fastest - with explicit citation
+        citation_note = ""
+        if observed_stats["count"] >= 3:
+            citation_note = (
+                f" Observed history shows avg reduction of {observed_stats['avg_reduction']:.0%} "
+                f"(range: {observed_stats['min_reduction']:.0%}-{observed_stats['max_reduction']:.0%}, "
+                f"n={observed_stats['count']})."
+            )
+        else:
+            citation_note = (
+                f" Insufficient observed data (n={observed_stats['count']}), using adjusted theoretical estimate. "
+                f"Continue recording reductions to improve future recommendations."
+            )
+
         result["why_reduces_fastest"] = (
             f"Current confidence is low ({current_confidence:.0%}), indicating diagnostic uncertainty. "
             f"When uncertainty is high, prioritizing urgency focuses the diagnostic process on the most "
-            f"critical concern, which reduces uncertainty fastest by establishing a clear action path."
+            f"critical concern, which reduces uncertainty fastest by establishing a clear action path.{citation_note} "
+            f"Adjusted expected uncertainty reduction: {result['estimated_uncertainty_reduction']:.0%}."
         )
         result["reduction_mechanism"] = (
             "Establishes clear clinical priority, which provides direction even when full diagnosis is uncertain. "
