@@ -974,7 +974,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
 
-  it.each(["no", "no it's not"])(
+  it.each(["no", "no not really", "no, not really"])(
     "accepts a bare negative water-intake response (%s) instead of repeating the same question",
     async (message) => {
       mockRunRoboflowSkinWorkflow.mockResolvedValue({
@@ -1022,7 +1022,7 @@ describe("symptom-chat mixed text + image routing", () => {
 
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
     const response = await POST(
-      makeTextOnlyRequest(session, "Yes, he's drinking normally.")
+      makeTextOnlyRequest(session, "yes he's drinking normally")
     );
     const payload = await response.json();
 
@@ -1032,6 +1032,38 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.answered_questions).toContain("water_intake");
     expect(payload.session.last_question_asked).not.toBe("water_intake");
   });
+
+  it.each(["not-json", ""])(
+    "recovers a pending water-intake answer when extraction output is %p",
+    async (extractionPayload) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(extractionPayload);
+
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "water_intake";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          session,
+          "Yes, he's drinking normally overall and still going to the water bowl like usual today."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.water_intake).toBe("normal");
+      expect(payload.session.answered_questions).toContain("water_intake");
+      expect(payload.session.last_question_asked).not.toBe("water_intake");
+    }
+  );
 
   it("prioritizes breathing follow-up over coughing when both symptoms are reported together", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
