@@ -1695,12 +1695,83 @@ describe("symptom-chat mixed text + image routing", () => {
 
     const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
     expect(prompt).toContain("CASE SNAPSHOT:");
+    expect(prompt).toContain("excluded");
+    expect(prompt).toContain("telemetry entries");
     expect(prompt).toContain("Recent transcript:");
     expect(prompt).not.toContain("Open question IDs:");
     expect(prompt).not.toContain("answered_questions");
     expect(prompt).not.toContain("extracted_answers");
     expect(payload.session.answered_questions).toContain("which_leg");
     expect(payload.session.case_memory.compressed_summary).toBe("Narrative summary only.");
+  });
+
+  it("VET-706: telemetry entry is excluded from compression prompt", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Dog is limping on left back leg.",
+      model: "MiniMax-M2.7",
+    });
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.answered_questions = ["which_leg"];
+    session.extracted_answers = { which_leg: "left back leg" };
+    session.case_memory = {
+      ...session.case_memory!,
+      turn_count: 5, // Force compression to trigger
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "The limping seems worse"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+
+    // Telemetry is recorded internally
+    const telemetryEvents = payload.session.case_memory?.service_observations || [];
+    const extractionTelemetry = telemetryEvents.find(
+      (e: any) => e.stage === "extraction"
+    );
+    expect(extractionTelemetry).toBeDefined();
+
+    // But compression telemetry should NOT appear as telemetry input in the prompt
+  });
+
+  it("VET-706: repeat suppression telemetry is recorded when triggered", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.answered_questions = ["which_leg"];
+    session.extracted_answers = { which_leg: "left back leg" };
+    session.last_question_asked = "limping_onset";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "It's been limping for 3 days"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    // User-facing payload should be unchanged
+    expect(payload.type).toBe("question");
+    expect(payload.session).toBeDefined();
+    expect(payload.message).not.toContain("[VET-705]");
+    expect(payload.type).not.toBe("error");
   });
 
   // =============================================================================

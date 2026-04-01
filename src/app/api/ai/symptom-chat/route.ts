@@ -1407,7 +1407,7 @@ Summarize only confirmed or strongly supported facts. Preserve:
 - important negative findings
 - image findings when present
 
-Do NOT include or reference question IDs, answer tracking, or conversation control state.
+Do NOT include or reference question IDs, answer tracking, conversation control state, or telemetry entries. Telemetry data is already excluded from this snapshot.
 
 Keep the summary under 180 words and avoid diagnosis language unless already explicit in the case.
 
