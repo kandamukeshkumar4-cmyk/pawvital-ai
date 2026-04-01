@@ -85,9 +85,15 @@ import {
 import {
   buildCaseMemorySnapshot,
   buildDeterministicCaseSummary,
+  buildNarrativeSnapshot,
   ensureStructuredCaseMemory,
+  getProtectedConversationState,
+  mergeCompressionResult,
+  recordConversationTelemetry,
   shouldCompressCaseMemory,
   syncStructuredCaseMemoryQuestions,
+  type ConversationTelemetryEvent,
+  type RecoverySource,
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
 import {
@@ -563,6 +569,24 @@ export async function POST(request: Request) {
         compactImageSignals
       ));
 
+    // ── VET-705: Record extraction telemetry ──
+    const isExtractionValidJson =
+      typeof extracted === "object" &&
+      extracted !== null &&
+      !Array.isArray(extracted);
+    const usedFastPath = Boolean(fastPathExtraction);
+    session = recordConversationTelemetry(session, {
+      event: "extraction",
+      turn_count: session.case_memory?.turn_count ?? 0,
+      outcome: "success",
+      source: usedFastPath ? "fast_path" : "structured",
+      model: usedFastPath ? undefined : "Qwen-3.5-122B",
+      symptoms_extracted: (extracted.symptoms || []).length,
+      answers_extracted: Object.keys(extracted.answers || {}).length,
+      fallback_used: false,
+      extraction_valid_json: isExtractionValidJson,
+    });
+
     // ═══════════════════════════════════════════════════════════════════
     // STEP 2: Update Internal State (pure code, NO LLM)
     // ═══════════════════════════════════════════════════════════════════
@@ -643,10 +667,32 @@ export async function POST(request: Request) {
         console.log(
           `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
         );
+        // ── VET-705: Record pending recovery telemetry ──
+        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+        session = recordConversationTelemetry(session, {
+          event: "pending_recovery",
+          turn_count: session.case_memory?.turn_count ?? 0,
+          question_id: pendingQ,
+          outcome: "success",
+          source: pendingAnswer.source as RecoverySource,
+          pending_before: hadUnresolved,
+          pending_after: false,
+        });
       } else {
         console.log(
           `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
         );
+        // ── VET-705: Record pending recovery failure telemetry ──
+        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+        session = recordConversationTelemetry(session, {
+          event: "pending_recovery",
+          turn_count: session.case_memory?.turn_count ?? 0,
+          question_id: pendingQ,
+          outcome: "failure",
+          source: "unresolved",
+          pending_before: hadUnresolved,
+          pending_after: true,
+        });
       }
     }
 
@@ -824,6 +870,23 @@ export async function POST(request: Request) {
       session,
       turnFocusSymptoms
     );
+
+    // ── VET-705: Record repeat suppression telemetry ──
+    const wasRepeatSuppressed =
+      nextQuestionId !== null &&
+      nextQuestionId === session.last_question_asked &&
+      session.answered_questions.includes(nextQuestionId);
+    if (wasRepeatSuppressed) {
+      session = recordConversationTelemetry(session, {
+        event: "repeat_suppression",
+        turn_count: session.case_memory?.turn_count ?? 0,
+        question_id: nextQuestionId,
+        outcome: "success",
+        reason: "repeat_of_last_asked_question_suppressed",
+        repeat_prevented: true,
+      });
+    }
+
     const visualEvidenceInfluencedQuestion = didVisualEvidenceInfluenceQuestion(
       nextQuestionId,
       visualEvidence,
@@ -1332,6 +1395,10 @@ async function maybeCompressStructuredCaseMemory(
     };
   }
 
+  // VET-704: Protect conversation control state before sending to MiniMax
+  const protectedState = getProtectedConversationState(session);
+
+  // VET-706: Use narrative-only snapshot (excludes protected control state & telemetry)
   const prompt = `You are compressing an active veterinary triage case into stable memory for downstream reasoning.
 
 Summarize only confirmed or strongly supported facts. Preserve:
@@ -1339,32 +1406,51 @@ Summarize only confirmed or strongly supported facts. Preserve:
 - direct owner answers
 - important negative findings
 - image findings when present
-- current unresolved questions
+
+Do NOT include or reference question IDs, answer tracking, or conversation control state.
 
 Keep the summary under 180 words and avoid diagnosis language unless already explicit in the case.
 
 CASE SNAPSHOT:
-${buildCaseMemorySnapshot(session, messages, latestUserMessage)}
+${buildNarrativeSnapshot(session, messages, latestUserMessage)}
 
 Return ONLY the summary text.`;
 
   try {
     const compressed = await compressCaseMemoryWithMiniMax(prompt);
-    return {
-      ...session,
-      case_memory: {
-        ...caseMemory,
-        compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
-        compression_model: compressed.model,
-        last_compressed_turn: caseMemory.turn_count,
-      },
-    };
+    // VET-704: Merge compression result while preserving protected control state
+    const mergedSession = mergeCompressionResult(session, compressed, protectedState);
+    // Record compression telemetry
+    const telemetrySession = recordConversationTelemetry(mergedSession, {
+      event: "compression",
+      turn_count: mergedSession.case_memory?.turn_count ?? 0,
+      outcome: "success",
+      model: compressed.model,
+      compression_used: true,
+      compression_model: compressed.model,
+      narrative_only: true,
+      control_state_preserved: true,
+    });
+    return telemetrySession;
   } catch (error) {
     console.error("MiniMax memory compression failed:", error);
+    // Record compression fallback telemetry
+    const telemetrySession = recordConversationTelemetry(session, {
+      event: "compression",
+      turn_count: session.case_memory?.turn_count ?? 0,
+      outcome: "fallback",
+      model: "deterministic-summary",
+      compression_used: false,
+      compression_model: "deterministic-summary",
+      reason: error instanceof Error ? error.message : "unknown error",
+      narrative_only: true,
+      control_state_preserved: true,
+      fallback_used: true,
+    });
     return {
-      ...session,
+      ...telemetrySession,
       case_memory: {
-        ...caseMemory,
+        ...ensureStructuredCaseMemory(telemetrySession),
         compressed_summary: fallbackSummary,
         compression_model: "deterministic-summary",
         last_compressed_turn: caseMemory.turn_count,
