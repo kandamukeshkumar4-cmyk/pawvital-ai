@@ -1981,3 +1981,116 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.type).not.toBe("error");
   });
 });
+
+// =============================================================================
+// VET-707: Loop Diagnostics
+// Verify that loop reason codes are recorded for pending recovery outcomes.
+// =============================================================================
+
+describe("VET-707: loop diagnostics", () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("VET-707: pending recovery failure records loop_reason extraction_miss when using raw_fallback", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "limping_severity";
+    session.answered_questions = [];
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "no"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    const telemetryEvents = payload.session.case_memory?.service_observations || [];
+    const pendingTelemetryNote = telemetryEvents
+      .filter((e: any) => e.stage === "pending_recovery")
+      .map((e: any) => e.note)
+      .find((note: unknown) => typeof note === "string" && note.includes("loop_reason=extraction_miss"));
+    expect(pendingTelemetryNote).toContain("pending_before=true");
+    expect(pendingTelemetryNote).toContain("pending_after=true");
+  });
+
+  it("VET-707: pending recovery failure records loop_reason for extraction_miss", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "wound_location";
+    session.answered_questions = [];
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "something random"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session).toBeDefined();
+    expect(payload.message).not.toContain("loop_reason=extraction_miss");
+  });
+
+  it("VET-707: repeat suppression records loop_reason repeat_of_last_asked", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.answered_questions = ["which_leg"];
+    session.extracted_answers = { which_leg: "left back leg" };
+    // Set last_question_asked to something getNextQuestionAvoidingRepeat might return
+    session.last_question_asked = "limping_onset";
+    session.case_memory = {
+      ...session.case_memory!,
+      turn_count: 5,
+      unresolved_question_ids: ["limping_onset"],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "The limping seems worse"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    const telemetryEvents = payload.session.case_memory?.service_observations || [];
+    const repeatTelemetry = telemetryEvents.find(
+      (e: any) => e.stage === "repeat_suppression"
+    );
+    if (repeatTelemetry) {
+      expect(repeatTelemetry.note).toContain("loop_reason=repeat_of_last_asked");
+      expect(repeatTelemetry.note).toContain("repeat_prevented=true");
+    }
+    // User-facing payload should be unchanged
+    expect(payload.type).toBe("question");
+    expect(payload.session).toBeDefined();
+    expect(payload.message).not.toContain("loop_reason");
+  });
+});
