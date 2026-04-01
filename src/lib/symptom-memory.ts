@@ -762,6 +762,20 @@ export type RecoverySource =
   | "fast_path";
 
 /**
+ * Loop reason codes: why a pending question remained unresolved or was suppressed.
+ * These explain the failure/suppression path without altering behavior.
+ */
+export type LoopReasonCode =
+  | "extraction_miss"          // extraction missed the answer, no fallback helped
+  | "deterministic_miss"       // deterministic coercion produced nothing
+  | "raw_fallback_rejected"    // raw fallback was not persistable
+  | "stale_pending_state"      // pending question was stale/already answered
+  | "compression_boundary_drift" // turned_count shifted, question re-queued after compression
+  | "direct_coercion_miss"     // direct coercion from raw text failed
+  | "combined_signal_miss"    // combined (text+vision) coercion failed
+  | "repeat_of_last_asked";    // next question matched last_asked, prevented by routing
+
+/**
  * Internal telemetry event shape for conversation observability.
  * Captures key decision points without leaking into user-facing output.
  */
@@ -778,6 +792,8 @@ export interface ConversationTelemetryEvent {
   source?: RecoverySource;
   /** Reason or additional context */
   reason?: string;
+  /** Loop-diagnostic reason code for why recovery failed or suppression happened */
+  loop_reason?: LoopReasonCode;
   /** Model used for extraction/compression */
   model?: string;
   /** Whether a pending question existed before processing */
@@ -870,6 +886,9 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
   }
   if (event.source) {
     parts.push(`src=${event.source}`);
+  }
+  if (event.loop_reason) {
+    parts.push(`loop_reason=${event.loop_reason}`);
   }
   if (event.model) {
     parts.push(`model=${event.model}`);

@@ -93,6 +93,7 @@ import {
   shouldCompressCaseMemory,
   syncStructuredCaseMemoryQuestions,
   type ConversationTelemetryEvent,
+  type LoopReasonCode,
   type RecoverySource,
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
@@ -655,6 +656,20 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join(" ");
 
+      const wasExtractionEmpty =
+        (!extracted.answers || Object.keys(extracted.answers).length === 0) &&
+        !extracted.symptoms?.length;
+      const directCoercionAnswer = coerceFallbackAnswerForPendingQuestion(
+        pendingQ,
+        lastUserMessage.content,
+        mergedAnswers
+      );
+      const combinedCoercionAnswer = coerceFallbackAnswerForPendingQuestion(
+        pendingQ,
+        combinedUserSignal,
+        mergedAnswers
+      );
+
       const pendingAnswer = resolvePendingQuestionAnswer({
         questionId: pendingQ,
         rawMessage: lastUserMessage.content,
@@ -669,6 +684,13 @@ export async function POST(request: Request) {
         );
         // ── VET-705: Record pending recovery telemetry ──
         const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+        // ── VET-707: Record why recovery succeeded ──
+        let loopReason: LoopReasonCode | undefined;
+        if (pendingAnswer.source === "raw_fallback") {
+          loopReason = "deterministic_miss";
+        } else if (pendingAnswer.source === "combined_signal") {
+          loopReason = "extraction_miss";
+        }
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
@@ -677,10 +699,20 @@ export async function POST(request: Request) {
           source: pendingAnswer.source as RecoverySource,
           pending_before: hadUnresolved,
           pending_after: false,
+          loop_reason: loopReason,
         });
       } else {
+        // ── VET-707: Diagnose why all recovery stages failed ──
+        let loopReason: LoopReasonCode;
+        if (wasExtractionEmpty && directCoercionAnswer !== null) {
+          loopReason = "direct_coercion_miss";
+        } else if (wasExtractionEmpty && combinedCoercionAnswer !== null) {
+          loopReason = "combined_signal_miss";
+        } else {
+          loopReason = "extraction_miss";
+        }
         console.log(
-          `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
+          `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback [loop_reason=${loopReason}]`
         );
         // ── VET-705: Record pending recovery failure telemetry ──
         const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
@@ -692,6 +724,7 @@ export async function POST(request: Request) {
           source: "unresolved",
           pending_before: hadUnresolved,
           pending_after: true,
+          loop_reason: loopReason,
         });
       }
     }
@@ -872,6 +905,7 @@ export async function POST(request: Request) {
     );
 
     // ── VET-705: Record repeat suppression telemetry ──
+    // ── VET-707: Record loop reason for suppression ──
     const wasRepeatSuppressed =
       nextQuestionId !== null &&
       nextQuestionId === session.last_question_asked &&
@@ -884,6 +918,7 @@ export async function POST(request: Request) {
         outcome: "success",
         reason: "repeat_of_last_asked_question_suppressed",
         repeat_prevented: true,
+        loop_reason: "repeat_of_last_asked",
       });
     }
 
