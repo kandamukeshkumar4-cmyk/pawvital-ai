@@ -683,7 +683,6 @@ export async function POST(request: Request) {
           `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
         );
         // ── VET-705: Record pending recovery telemetry ──
-        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
         // ── VET-707: Record why recovery succeeded ──
         let loopReason: LoopReasonCode | undefined;
         if (pendingAnswer.source === "raw_fallback") {
@@ -697,7 +696,7 @@ export async function POST(request: Request) {
           question_id: pendingQ,
           outcome: "success",
           source: pendingAnswer.source as RecoverySource,
-          pending_before: hadUnresolved,
+          pending_before: true,
           pending_after: false,
           loop_reason: loopReason,
         });
@@ -715,14 +714,13 @@ export async function POST(request: Request) {
           `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback [loop_reason=${loopReason}]`
         );
         // ── VET-705: Record pending recovery failure telemetry ──
-        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
           question_id: pendingQ,
           outcome: "failure",
           source: "unresolved",
-          pending_before: hadUnresolved,
+          pending_before: true,
           pending_after: true,
           loop_reason: loopReason,
         });

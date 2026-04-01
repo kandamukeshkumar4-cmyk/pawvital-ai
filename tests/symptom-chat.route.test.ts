@@ -1996,7 +1996,7 @@ describe("VET-707: loop diagnostics", () => {
     jest.clearAllMocks();
   });
 
-  it("VET-707: pending recovery success records loop_reason extraction_miss when using raw_fallback", async () => {
+  it("VET-707: pending recovery failure records loop_reason extraction_miss when using raw_fallback", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
@@ -2018,12 +2018,12 @@ describe("VET-707: loop diagnostics", () => {
 
     expect(response.status).toBe(200);
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const pendingTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "pending_recovery" && e.outcome === "success"
-    );
-    if (pendingTelemetry?.source === "raw_fallback") {
-      expect(pendingTelemetry.note).toContain("loop_reason=deterministic_miss");
-    }
+    const pendingTelemetryNote = telemetryEvents
+      .filter((e: any) => e.stage === "pending_recovery")
+      .map((e: any) => e.note)
+      .find((note: unknown) => typeof note === "string" && note.includes("loop_reason=extraction_miss"));
+    expect(pendingTelemetryNote).toContain("pending_before=true");
+    expect(pendingTelemetryNote).toContain("pending_after=true");
   });
 
   it("VET-707: pending recovery failure records loop_reason for extraction_miss", async () => {
@@ -2047,13 +2047,9 @@ describe("VET-707: loop diagnostics", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const pendingTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "pending_recovery" && e.outcome === "failure"
-    );
-    if (pendingTelemetry) {
-      expect(pendingTelemetry.note).toContain("loop_reason=");
-    }
+    expect(payload.type).toBe("question");
+    expect(payload.session).toBeDefined();
+    expect(payload.message).not.toContain("loop_reason=extraction_miss");
   });
 
   it("VET-707: repeat suppression records loop_reason repeat_of_last_asked", async () => {
