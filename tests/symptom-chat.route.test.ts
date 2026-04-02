@@ -974,6 +974,38 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
 
+  it("accepts a natural negative trauma-history reply instead of repeating the same question", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session = recordAnswer(session, "which_leg", "left back leg");
+    session = recordAnswer(session, "limping_onset", "sudden");
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "No, he didn't fall or jump.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe(
+      "No, he didn't fall or jump."
+    );
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
   it.each(["no", "no not really", "no, not really"])(
     "accepts a bare negative water-intake response (%s) instead of repeating the same question",
     async (message) => {
@@ -1279,6 +1311,121 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.answered_questions).toContain("cough_duration");
     expect(payload.session.last_question_asked).not.toBe("cough_duration");
   });
+
+  it("records a direct duration-style pending answer when the owner says since yesterday", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["coughing"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_duration";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "Since yesterday."));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.cough_duration).toBe("Since yesterday.");
+    expect(payload.session.answered_questions).toContain("cough_duration");
+    expect(payload.session.last_question_asked).not.toBe("cough_duration");
+  });
+
+  it.each(["not-json", ""])(
+    "recovers a duration-style pending answer when extraction output is %p",
+    async (extractionPayload) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(extractionPayload);
+
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session.last_question_asked = "cough_duration";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "Since yesterday."));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.cough_duration).toBe(
+        "Since yesterday."
+      );
+      expect(payload.session.answered_questions).toContain("cough_duration");
+      expect(payload.session.last_question_asked).not.toBe("cough_duration");
+    }
+  );
+
+  it("accepts a natural affirmative pending swelling reply when extraction misses it", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "swelling_present";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Yes, it's swollen around the ankle.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.swelling_present).toBe(true);
+    expect(payload.session.answered_questions).toContain("swelling_present");
+    expect(payload.session.last_question_asked).not.toBe("swelling_present");
+  });
+
+  it.each(["Can't tell.", "Not sure."])(
+    "accepts an unknown-style pending boolean reply (%s) instead of repeating the same question",
+    async (message) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["limping"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "swelling_present";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.swelling_present).toBe(message);
+      expect(payload.session.answered_questions).toContain("swelling_present");
+      expect(payload.session.last_question_asked).not.toBe("swelling_present");
+    }
+  );
 
   it("uses broader keyword fallback for common respiratory and abdomen phrasings", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({

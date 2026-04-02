@@ -3199,6 +3199,89 @@ function coerceChoiceAnswerFromIntent(
     }
   }
 
+  // ── VET-709: Onset-family coercion (breathing_onset, etc.) ──
+  if (questionId === "breathing_onset") {
+    if (/\b(sudden|suddenly|all at once|out of nowhere|came on fast)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["sudden"]]);
+    }
+    if (/\b(gradual|gradually|slow|slowly|over time|getting worse|progressive)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["gradual"]]);
+    }
+  }
+
+  // ── VET-709: Limping progression coercion ──
+  if (questionId === "limping_progression") {
+    if (/\b(better|improving|less|not as bad|easing up)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["better"]]);
+    }
+    if (/\b(worse|worsening|getting worse|more severe|deteriorat)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["worse"]]);
+    }
+    if (/\b(same|unchanged|no change|hasn't changed|about the same|consistent)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["same"]]);
+    }
+  }
+
+  // ── VET-709: Appetite status coercion ──
+  if (questionId === "appetite_status") {
+    if (
+      /\b(not eating|won't eat|wont eat|refusing food|no appetite|nothing at all|hasn't eaten|hasnt eaten|stopped eating)\b/.test(lower)
+    ) {
+      return pickChoiceByPriority(choices, [["none"]]);
+    }
+    if (
+      /\b(eating less|less appetite|not much|picky|barely eating|bit less|little less|reduced appetite)\b/.test(lower)
+    ) {
+      return pickChoiceByPriority(choices, [["decreased"], ["decreas"], ["less"]]);
+    }
+    if (
+      /\b(eating normally|normal appetite|eating fine|eating well|eating okay|eating ok|good appetite)\b/.test(lower) ||
+      ((lower.includes("normal") || lower.includes("fine") || lower.includes("okay") || lower.includes("ok")) &&
+        (lower.includes("eat") || lower.includes("food") || lower.includes("appetite")))
+    ) {
+      return pickChoiceByPriority(choices, [["normal"]]);
+    }
+  }
+
+  // ── VET-709: Lethargy severity coercion ──
+  if (questionId === "lethargy_severity") {
+    if (/\b(barely moving|won't move|wont move|can't get up|cant get up|unresponsive|collapsed)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["severe"]]);
+    }
+    if (/\b(less active|a bit tired|somewhat tired|a little sluggish|slightly less)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["mild"]]);
+    }
+    if (/\b(really tired|very tired|quite lethargic|noticeably less active|much less energy)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["moderate"]]);
+    }
+  }
+
+  // ── VET-709: Trembling timing coercion ──
+  if (questionId === "trembling_timing") {
+    if (/\b(constant|all the time|non stop|nonstop|continuous|never stops)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["constant"]]);
+    }
+    if (/\b(comes and goes|intermittent|on and off|sometimes|occasional|not constant)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["intermittent"]]);
+    }
+  }
+
+  // ── VET-709: Stool consistency coercion ──
+  if (questionId === "stool_consistency") {
+    if (/\b(watery|liquid|water)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["watery"]]);
+    }
+    if (/\b(mucus|mucusy|slimy|jelly)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["mucus"]]);
+    }
+    if (/\b(soft|mushy|loose)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["soft"]]);
+    }
+    if (/\b(formed|solid|normal|firm)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["formed"]]);
+    }
+  }
+
   if (isShortAffirmativeResponse(lower)) {
     const affirmativeChoice = pickChoiceByPriority(choices, [
       ["normal"],
