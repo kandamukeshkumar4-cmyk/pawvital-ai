@@ -974,6 +974,38 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
 
+  it("accepts a natural negative trauma-history reply instead of repeating the same question", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session = recordAnswer(session, "which_leg", "left back leg");
+    session = recordAnswer(session, "limping_onset", "sudden");
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "No, he didn't fall or jump.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe(
+      "No, he didn't fall or jump."
+    );
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
   it.each(["no", "no not really", "no, not really"])(
     "accepts a bare negative water-intake response (%s) instead of repeating the same question",
     async (message) => {
@@ -1280,6 +1312,121 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("cough_duration");
   });
 
+  it("records a direct duration-style pending answer when the owner says since yesterday", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["coughing"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_duration";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "Since yesterday."));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.cough_duration).toBe("Since yesterday.");
+    expect(payload.session.answered_questions).toContain("cough_duration");
+    expect(payload.session.last_question_asked).not.toBe("cough_duration");
+  });
+
+  it.each(["not-json", ""])(
+    "recovers a duration-style pending answer when extraction output is %p",
+    async (extractionPayload) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(extractionPayload);
+
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session.last_question_asked = "cough_duration";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "Since yesterday."));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.cough_duration).toBe(
+        "Since yesterday."
+      );
+      expect(payload.session.answered_questions).toContain("cough_duration");
+      expect(payload.session.last_question_asked).not.toBe("cough_duration");
+    }
+  );
+
+  it("accepts a natural affirmative pending swelling reply when extraction misses it", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "swelling_present";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Yes, it's swollen around the ankle.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.swelling_present).toBe(true);
+    expect(payload.session.answered_questions).toContain("swelling_present");
+    expect(payload.session.last_question_asked).not.toBe("swelling_present");
+  });
+
+  it.each(["Can't tell.", "Not sure."])(
+    "accepts an unknown-style pending boolean reply (%s) instead of repeating the same question",
+    async (message) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["limping"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "swelling_present";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.swelling_present).toBe(message);
+      expect(payload.session.answered_questions).toContain("swelling_present");
+      expect(payload.session.last_question_asked).not.toBe("swelling_present");
+    }
+  );
+
   it("uses broader keyword fallback for common respiratory and abdomen phrasings", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -1317,6 +1464,95 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(bellyPayload.session.known_symptoms).toContain("swollen_abdomen");
     expect(bellyPayload.session.last_question_asked).toBe("abdomen_onset");
   });
+
+  it("does not treat worsening-only language as a breathing onset answer in pending recovery", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["difficulty_breathing"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["difficulty_breathing"]);
+    session.last_question_asked = "breathing_onset";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "It's getting worse."));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.breathing_onset).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("breathing_onset");
+    expect(payload.session.last_question_asked).toBe("breathing_onset");
+  });
+
+  it("does not treat unrelated water-drinking language as watery stool in pending recovery", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["diarrhea"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["diarrhea"]);
+    session.last_question_asked = "stool_consistency";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "He's still drinking water normally.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.stool_consistency).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("stool_consistency");
+    expect(payload.session.last_question_asked).not.toBe("stool_consistency");
+  });
+
+  it.each(["It's mostly water.", "It came out like water."])(
+    "records a real watery-stool pending answer from common owner phrasing (%s)",
+    async (message) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({
+          symptoms: ["diarrhea"],
+          answers: {},
+        })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["diarrhea"]);
+      session.last_question_asked = "stool_consistency";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers.stool_consistency).toBe("watery");
+      expect(payload.session.answered_questions).toContain("stool_consistency");
+      expect(payload.session.last_question_asked).not.toBe("stool_consistency");
+    }
+  );
 
   it("does not run deep image analysis when pre-vision marks a generic photo unsupported", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
