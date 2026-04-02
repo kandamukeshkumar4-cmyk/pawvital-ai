@@ -885,7 +885,6 @@ export async function POST(request: Request) {
         outcome: "success",
         reason: "repeat_of_last_asked_question_suppressed",
         repeat_prevented: true,
-        loop_reason: "repeat_of_last_asked",
       });
     }
 
