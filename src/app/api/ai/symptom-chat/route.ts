@@ -3204,7 +3204,7 @@ function coerceChoiceAnswerFromIntent(
     if (/\b(sudden|suddenly|all at once|out of nowhere|came on fast)\b/.test(lower)) {
       return pickChoiceByPriority(choices, [["sudden"]]);
     }
-    if (/\b(gradual|gradually|slow|slowly|over time|getting worse|progressive)\b/.test(lower)) {
+    if (/\b(gradual|gradually|slow|slowly|over time|progressive)\b/.test(lower)) {
       return pickChoiceByPriority(choices, [["gradual"]]);
     }
   }
@@ -3268,7 +3268,7 @@ function coerceChoiceAnswerFromIntent(
 
   // ── VET-709: Stool consistency coercion ──
   if (questionId === "stool_consistency") {
-    if (/\b(watery|liquid|water)\b/.test(lower)) {
+    if (/\b(watery|liquid|water[-\s]?like|like water|all water)\b/.test(lower)) {
       return pickChoiceByPriority(choices, [["watery"]]);
     }
     if (/\b(mucus|mucusy|slimy|jelly)\b/.test(lower)) {

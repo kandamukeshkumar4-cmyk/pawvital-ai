@@ -1465,6 +1465,64 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(bellyPayload.session.last_question_asked).toBe("abdomen_onset");
   });
 
+  it("does not treat worsening-only language as a breathing onset answer in pending recovery", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["difficulty_breathing"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["difficulty_breathing"]);
+    session.last_question_asked = "breathing_onset";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "It's getting worse."));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.breathing_onset).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("breathing_onset");
+    expect(payload.session.last_question_asked).toBe("breathing_onset");
+  });
+
+  it("does not treat unrelated water-drinking language as watery stool in pending recovery", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: ["diarrhea"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["diarrhea"]);
+    session.last_question_asked = "stool_consistency";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "He's still drinking water normally.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.stool_consistency).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("stool_consistency");
+    expect(payload.session.last_question_asked).not.toBe("stool_consistency");
+  });
+
   it("does not run deep image analysis when pre-vision marks a generic photo unsupported", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
