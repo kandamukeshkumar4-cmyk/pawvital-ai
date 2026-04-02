@@ -93,7 +93,6 @@ import {
   shouldCompressCaseMemory,
   syncStructuredCaseMemoryQuestions,
   type ConversationTelemetryEvent,
-  type LoopReasonCode,
   type RecoverySource,
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
@@ -656,20 +655,6 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join(" ");
 
-      const wasExtractionEmpty =
-        (!extracted.answers || Object.keys(extracted.answers).length === 0) &&
-        !extracted.symptoms?.length;
-      const directCoercionAnswer = coerceFallbackAnswerForPendingQuestion(
-        pendingQ,
-        lastUserMessage.content,
-        mergedAnswers
-      );
-      const combinedCoercionAnswer = coerceFallbackAnswerForPendingQuestion(
-        pendingQ,
-        combinedUserSignal,
-        mergedAnswers
-      );
-
       const pendingAnswer = resolvePendingQuestionAnswer({
         questionId: pendingQ,
         rawMessage: lastUserMessage.content,
@@ -683,46 +668,30 @@ export async function POST(request: Request) {
           `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
         );
         // ── VET-705: Record pending recovery telemetry ──
-        // ── VET-707: Record why recovery succeeded ──
-        let loopReason: LoopReasonCode | undefined;
-        if (pendingAnswer.source === "raw_fallback") {
-          loopReason = "deterministic_miss";
-        } else if (pendingAnswer.source === "combined_signal") {
-          loopReason = "extraction_miss";
-        }
+        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
           question_id: pendingQ,
           outcome: "success",
           source: pendingAnswer.source as RecoverySource,
-          pending_before: true,
+          pending_before: hadUnresolved,
           pending_after: false,
-          loop_reason: loopReason,
         });
       } else {
-        // ── VET-707: Diagnose why all recovery stages failed ──
-        let loopReason: LoopReasonCode;
-        if (wasExtractionEmpty && directCoercionAnswer !== null) {
-          loopReason = "direct_coercion_miss";
-        } else if (wasExtractionEmpty && combinedCoercionAnswer !== null) {
-          loopReason = "combined_signal_miss";
-        } else {
-          loopReason = "extraction_miss";
-        }
         console.log(
-          `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback [loop_reason=${loopReason}]`
+          `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
         );
         // ── VET-705: Record pending recovery failure telemetry ──
+        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
           question_id: pendingQ,
           outcome: "failure",
           source: "unresolved",
-          pending_before: true,
+          pending_before: hadUnresolved,
           pending_after: true,
-          loop_reason: loopReason,
         });
       }
     }
