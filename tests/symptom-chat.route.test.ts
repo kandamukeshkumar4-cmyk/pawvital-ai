@@ -1523,6 +1523,37 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("stool_consistency");
   });
 
+  it.each(["It's mostly water.", "It came out like water."])(
+    "records a real watery-stool pending answer from common owner phrasing (%s)",
+    async (message) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({
+          symptoms: ["diarrhea"],
+          answers: {},
+        })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["diarrhea"]);
+      session.last_question_asked = "stool_consistency";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers.stool_consistency).toBe("watery");
+      expect(payload.session.answered_questions).toContain("stool_consistency");
+      expect(payload.session.last_question_asked).not.toBe("stool_consistency");
+    }
+  );
+
   it("does not run deep image analysis when pre-vision marks a generic photo unsupported", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,

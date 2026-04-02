@@ -3268,7 +3268,11 @@ function coerceChoiceAnswerFromIntent(
 
   // ── VET-709: Stool consistency coercion ──
   if (questionId === "stool_consistency") {
-    if (/\b(watery|liquid|water[-\s]?like|like water|all water)\b/.test(lower)) {
+    if (
+      /\b(watery|liquid|water[-\s]?like|like water|all water|just water|mostly water|came out like water)\b/.test(
+        lower
+      )
+    ) {
       return pickChoiceByPriority(choices, [["watery"]]);
     }
     if (/\b(mucus|mucusy|slimy|jelly)\b/.test(lower)) {
