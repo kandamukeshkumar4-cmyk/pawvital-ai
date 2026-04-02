@@ -45,7 +45,13 @@ next-env.d.ts
 /corpus/
 
 # Scripts (build-time only)
-/scripts/
+/scripts/*
+!/scripts/update-pawvital-memory.mjs
+!/scripts/land-pawvital-ticket.mjs
+!/scripts/finalize-pawvital-ticket.mjs
+!/scripts/codex-review-result.schema.json
+!/scripts/hooks/
+!/scripts/hooks/*.mjs
 
 # IDE / editor
 Roo-Code
