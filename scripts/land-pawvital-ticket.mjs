@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -92,6 +93,97 @@ function ensureCleanRepo(cwd) {
   const status = run("git", ["status", "--porcelain"], cwd);
   if (status.stdout.trim()) {
     fail(`Target repo is not clean: ${cwd}`);
+  }
+}
+
+function getCommitSubject(cwd, ref) {
+  return run("git", ["log", "-1", "--format=%s", ref], cwd).stdout.trim();
+}
+
+function getCommitCount(cwd, range) {
+  return Number(run("git", ["rev-list", "--count", range], cwd).stdout.trim() || "0");
+}
+
+function getLandingPlan(branch, commit, ticket) {
+  const branchRef = String(branch || "").trim();
+  if (!branchRef) {
+    return {
+      mode: "cherry-pick",
+      sourceRef: commit,
+      commitMessage: getCommitSubject(sourceRepo, commit),
+      details: `single commit ${commit}`,
+    };
+  }
+
+  run("git", ["fetch", "origin", "master"], sourceRepo, { capture: false });
+  run("git", ["rev-parse", "--verify", branchRef], sourceRepo);
+
+  const mergeBase = run("git", ["merge-base", "origin/master", branchRef], sourceRepo).stdout.trim();
+  if (!mergeBase) {
+    return {
+      mode: "cherry-pick",
+      sourceRef: commit,
+      commitMessage: getCommitSubject(sourceRepo, commit),
+      details: `single commit ${commit}`,
+    };
+  }
+
+  const range = `${mergeBase}..${commit}`;
+  const commitCount = getCommitCount(sourceRepo, range);
+  if (commitCount <= 0) {
+    fail(`No branch-only commits found to land for ${branchRef} (${ticket}).`);
+  }
+
+  const defaultMessage =
+    commitCount === 1
+      ? getCommitSubject(sourceRepo, commit)
+      : `feat: land ${ticket.toLowerCase()} reviewed branch delta`;
+
+  return {
+    mode: "patch",
+    mergeBase,
+    sourceRef: commit,
+    range,
+    commitCount,
+    commitMessage: defaultMessage,
+    details: `${branchRef} (${commitCount} commit${commitCount === 1 ? "" : "s"}) from ${mergeBase}..${commit}`,
+  };
+}
+
+function applyLandingPlan(plan, cwd) {
+  if (plan.mode === "cherry-pick") {
+    run("git", ["cherry-pick", plan.sourceRef], cwd, { capture: false });
+    return run("git", ["rev-parse", "HEAD"], cwd).stdout.trim();
+  }
+
+  const patchDir = fs.mkdtempSync(path.join(os.tmpdir(), "pawvital-land-"));
+  const patchPath = path.join(patchDir, "landing.patch");
+
+  try {
+    const diff = run("git", ["diff", "--binary", plan.range], sourceRepo).stdout;
+    if (!diff.trim()) {
+      fail(`No diff produced for landing plan ${plan.details}`);
+    }
+
+    fs.writeFileSync(patchPath, diff, "utf8");
+
+    const applyResult = run("git", ["apply", "--3way", "--index", patchPath], cwd, {
+      allowFailure: true,
+    });
+    if (applyResult.status !== 0) {
+      const stderr = (applyResult.stderr || applyResult.stdout || "").trim();
+      fail(`git apply --3way failed for ${plan.details}${stderr ? `\n${stderr}` : ""}`);
+    }
+
+    const stagedDiff = run("git", ["diff", "--cached", "--quiet"], cwd, { allowFailure: true });
+    if (stagedDiff.status === 0) {
+      fail(`Landing plan ${plan.details} produced no staged changes.`);
+    }
+
+    run("git", ["commit", "-m", plan.commitMessage], cwd, { capture: false });
+    return run("git", ["rev-parse", "HEAD"], cwd).stdout.trim();
+  } finally {
+    fs.rmSync(patchDir, { recursive: true, force: true });
   }
 }
 
@@ -257,11 +349,15 @@ async function main() {
   const shouldPush = parsed.push ? true : parsed["no-push"] ? false : !envFlagDisabled("PAWVITAL_AUTO_PUSH_TO_PROD");
   const ticket = getSingle(parsed, "ticket", true);
   const commit = getSingle(parsed, "commit", true);
+  const branchRef = getSingle(parsed, "branch", false);
+  const landingPlan = getLandingPlan(branchRef, commit, ticket);
 
   const dryRunResult = {
     ticket,
     mergeCommit: commit,
     pushed: shouldPush,
+    strategy: landingPlan.mode,
+    landingPlan: landingPlan.details,
     deployment: {
       status: shouldPush ? "would-verify" : "skipped",
       url: "",
@@ -274,7 +370,7 @@ async function main() {
       console.log(JSON.stringify(dryRunResult));
     } else {
       console.log(
-        `Dry run: would cherry-pick ${commit} into ${targetRepo}${shouldPush ? ", push origin/master, wait for Vercel production to become ready," : " (push skipped),"} and mark ${ticket} as landed.`,
+        `Dry run: would land ${landingPlan.details} into ${targetRepo}${shouldPush ? ", push origin/master, wait for Vercel production to become ready," : " (push skipped),"} and mark ${ticket} as landed.`,
       );
     }
     return;
@@ -287,8 +383,8 @@ async function main() {
     fail(`Target repo must be on master before landing. Current branch: ${branch}`);
   }
 
-  run("git", ["cherry-pick", commit], targetRepo, { capture: false });
-  const mergeCommit = run("git", ["rev-parse", "HEAD"], targetRepo).stdout.trim();
+  run("git", ["pull", "--ff-only", "origin", "master"], targetRepo, { capture: false });
+  const mergeCommit = applyLandingPlan(landingPlan, targetRepo);
 
   let deployment = {
     status: shouldPush ? "pending" : "skipped",
@@ -315,6 +411,8 @@ async function main() {
     ticket,
     mergeCommit,
     pushed: shouldPush,
+    strategy: landingPlan.mode,
+    landingPlan: landingPlan.details,
     deployment,
     dryRun: false,
   };
