@@ -117,10 +117,42 @@ function parseCommandJson(result) {
   }
 }
 
+function resolveGitPath(gitPathValue) {
+  const trimmed = gitPathValue.trim().replace(/\\/g, "/");
+  if (/^[A-Za-z]:\//.test(trimmed)) {
+    if (process.platform === "win32") {
+      return trimmed;
+    }
+
+    const drive = trimmed[0].toLowerCase();
+    return `/mnt/${drive}/${trimmed.slice(3)}`;
+  }
+
+  return path.resolve(rootDir, trimmed);
+}
+
+function readHeadRef(headPath) {
+  if (!fs.existsSync(headPath)) return "";
+  const head = fs.readFileSync(headPath, "utf8").trim();
+  const refMatch = head.match(/^ref:\s+refs\/heads\/(.+)$/);
+  if (refMatch) return refMatch[1].trim();
+  return "";
+}
+
 function getCurrentGitBranch() {
-  const result = runCommand("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
-  if (result.status !== 0) return "";
-  return (result.stdout || "").trim();
+  const gitMetaPath = path.join(rootDir, ".git");
+  if (!fs.existsSync(gitMetaPath)) return "";
+
+  const stat = fs.statSync(gitMetaPath);
+  if (stat.isDirectory()) {
+    return readHeadRef(path.join(gitMetaPath, "HEAD"));
+  }
+
+  const gitFile = fs.readFileSync(gitMetaPath, "utf8").trim();
+  const gitDirMatch = gitFile.match(/^gitdir:\s+(.+)$/i);
+  if (!gitDirMatch) return "";
+  const gitDir = resolveGitPath(gitDirMatch[1]);
+  return readHeadRef(path.join(gitDir, "HEAD"));
 }
 
 function wireVercelWithCli(toSet) {
