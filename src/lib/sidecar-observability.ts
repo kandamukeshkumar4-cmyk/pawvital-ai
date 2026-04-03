@@ -29,6 +29,14 @@ const SERVICE_SHADOW_MODE_FLAGS: Record<SidecarServiceName, boolean> = {
   "async-review-service": parseBooleanEnv(process.env.HF_SHADOW_ASYNC_REVIEW),
 };
 
+const INTERNAL_TELEMETRY_STAGES = new Set([
+  "compression",
+  "extraction",
+  "pending_recovery",
+  "repeat_suppression",
+  "state_transition",
+]);
+
 export function isShadowModeEnabledForService(
   service: SidecarServiceName
 ): boolean {
@@ -81,7 +89,13 @@ export function appendShadowComparison(
 
 export function buildObservabilitySnapshot(session: TriageSession) {
   const memory = ensureStructuredCaseMemory(session);
-  const observations = memory.service_observations || [];
+  const observations = (memory.service_observations || []).filter(
+    (item) =>
+      !(
+        item.service === "async-review-service" &&
+        INTERNAL_TELEMETRY_STAGES.has(item.stage)
+      )
+  );
   const timeouts = memory.service_timeouts || [];
   const shadowComparisons = memory.shadow_comparisons || [];
 

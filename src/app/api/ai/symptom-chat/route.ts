@@ -97,6 +97,10 @@ import {
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
 import {
+  getStateSnapshot,
+  observeTransition,
+} from "@/lib/conversation-state";
+import {
   compressCaseMemoryWithMiniMax,
   isMiniMaxConfigured,
 } from "@/lib/minimax";
@@ -636,7 +640,15 @@ export async function POST(request: Request) {
 
     for (const [key, value] of Object.entries(mergedAnswers)) {
       if (value !== null && value !== undefined && value !== "") {
+        const beforeState = getStateSnapshot(session);
         session = recordAnswer(session, key, value);
+        session = observeTransition(session, {
+          before: beforeState,
+          after: getStateSnapshot(session),
+          questionId: key,
+          reason: "turn_answer_recorded",
+          to: "answered_this_turn",
+        });
       }
     }
 
@@ -663,7 +675,15 @@ export async function POST(request: Request) {
         turnSymptoms: turnTextSymptoms,
       });
       if (pendingAnswer !== null) {
+        const beforeState = getStateSnapshot(session);
         session = recordAnswer(session, pendingQ, pendingAnswer.value);
+        session = observeTransition(session, {
+          before: beforeState,
+          after: getStateSnapshot(session),
+          questionId: pendingQ,
+          reason: "pending_question_recovered",
+          to: "answered_this_turn",
+        });
         console.log(
           `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
         );
@@ -956,7 +976,15 @@ export async function POST(request: Request) {
     }
 
     // Track which question we're asking so we can detect unanswered loops
+    const beforeState = getStateSnapshot(session);
     session.last_question_asked = nextQuestionId;
+    session = observeTransition(session, {
+      before: beforeState,
+      after: getStateSnapshot(session),
+      questionId: nextQuestionId,
+      reason: "next_question_selected",
+      to: "asked",
+    });
 
     // ═══════════════════════════════════════════════════════════════════
     // STEP 5: PHRASE question — Llama 3.3 70B + Nemotron verifier
@@ -4257,7 +4285,15 @@ function propagateSharedLocationAnswers(session: TriageSession): TriageSession {
         continue;
       }
 
+      const beforeState = getStateSnapshot(updated);
       updated = recordAnswer(updated, targetQuestionId, sourceValue);
+      updated = observeTransition(updated, {
+        before: beforeState,
+        after: getStateSnapshot(updated),
+        questionId: targetQuestionId,
+        reason: "location_answer_propagated",
+        to: "answered_this_turn",
+      });
     }
   }
 
