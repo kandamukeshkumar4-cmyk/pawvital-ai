@@ -16,7 +16,6 @@ import {
 import {
   createSession,
   addSymptoms,
-  recordAnswer,
   getNextQuestion,
   getMissingQuestions,
   getQuestionText,
@@ -99,6 +98,7 @@ import {
 import {
   getStateSnapshot,
   observeTransition,
+  transitionToAnswered,
 } from "@/lib/conversation-state";
 import {
   compressCaseMemoryWithMiniMax,
@@ -640,14 +640,11 @@ export async function POST(request: Request) {
 
     for (const [key, value] of Object.entries(mergedAnswers)) {
       if (value !== null && value !== undefined && value !== "") {
-        const beforeState = getStateSnapshot(session);
-        session = recordAnswer(session, key, value);
-        session = observeTransition(session, {
-          before: beforeState,
-          after: getStateSnapshot(session),
+        session = transitionToAnswered({
+          session,
           questionId: key,
+          value,
           reason: "turn_answer_recorded",
-          to: "answered_this_turn",
         });
       }
     }
@@ -675,14 +672,11 @@ export async function POST(request: Request) {
         turnSymptoms: turnTextSymptoms,
       });
       if (pendingAnswer !== null) {
-        const beforeState = getStateSnapshot(session);
-        session = recordAnswer(session, pendingQ, pendingAnswer.value);
-        session = observeTransition(session, {
-          before: beforeState,
-          after: getStateSnapshot(session),
+        session = transitionToAnswered({
+          session,
           questionId: pendingQ,
+          value: pendingAnswer.value,
           reason: "pending_question_recovered",
-          to: "answered_this_turn",
         });
         console.log(
           `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
@@ -4285,14 +4279,11 @@ function propagateSharedLocationAnswers(session: TriageSession): TriageSession {
         continue;
       }
 
-      const beforeState = getStateSnapshot(updated);
-      updated = recordAnswer(updated, targetQuestionId, sourceValue);
-      updated = observeTransition(updated, {
-        before: beforeState,
-        after: getStateSnapshot(updated),
+      updated = transitionToAnswered({
+        session: updated,
         questionId: targetQuestionId,
+        value: sourceValue,
         reason: "location_answer_propagated",
-        to: "answered_this_turn",
       });
     }
   }
