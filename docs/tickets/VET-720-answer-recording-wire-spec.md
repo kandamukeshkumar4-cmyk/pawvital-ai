@@ -1,6 +1,6 @@
 # VET-720: Answer Recording State-Machine Wire Spec
 
-**Status:** `ready-for-implementation` — BLOCKED on VET-714 and VET-715 review sign-off
+**Status:** `ready-for-review`
 **Type:** `behavior-change` | Risk: `medium` | Rollback: `safe`
 **Branch:** `qwen/vet-720-first-state-machine-behavior-spec-v1`
 **Implements:** VET-716 sequence, Wave 3 Phase 1
@@ -9,7 +9,7 @@
 
 ## Summary
 
-Replace the direct `recordAnswer()` call pattern at three sites in `route.ts` with a single `transitionToAnswered()` wrapper function. The wrapper delegates to `recordAnswer()` unchanged and adds a telemetry marker. No behavioral change. No session schema additions.
+Replace the direct `recordAnswer()` call pattern at three sites in `route.ts` with a single `transitionToAnswered()` wiring wrapper that lives outside the pure `transitions.ts` helper module. The wrapper delegates to `recordAnswer()` unchanged, reuses the landed observer, and adds a log-only telemetry marker. No behavioral change. No session schema additions.
 
 ---
 
@@ -25,20 +25,21 @@ All must be true before the first line of implementation:
 | VET-714 review sign-off | Edge-case regression tests confirmed passing |
 | VET-715 review sign-off | Schema audit findings reviewed, no blocking gap found |
 
-**Do not begin implementation until the VET-714 and VET-715 sign-offs are recorded in the Obsidian brief.**
+**Implementation may begin only after this revised spec lands.**
 
 ---
 
 ## File Changes
 
-### 1. `src/lib/conversation-state/transitions.ts` — add `transitionToAnswered()`
+### 1. `src/lib/conversation-state/answer-recording.ts` — add `transitionToAnswered()`
 
-Add the following function at the end of the file. Import `recordAnswer` from triage-engine and `getStateSnapshot` + `observeTransition` from `./observer`.
+Create a dedicated wiring module. This wrapper may import runtime/session modules because it is intentionally **not** part of the pure helper layer.
 
 ```typescript
 import { recordAnswer } from "@/lib/triage-engine";
 import type { TriageSession } from "@/lib/triage-engine";
 import { getStateSnapshot, observeTransition } from "./observer";
+import type { QuestionState } from "./types";
 
 export interface TransitionToAnsweredInput {
   session: TriageSession;
@@ -70,8 +71,8 @@ export function transitionToAnswered(input: TransitionToAnsweredInput): TriageSe
 Add to the existing re-export block:
 
 ```typescript
-export { transitionToAnswered } from "./transitions";
-export type { TransitionToAnsweredInput } from "./transitions";
+export { transitionToAnswered } from "./answer-recording";
+export type { TransitionToAnsweredInput } from "./answer-recording";
 ```
 
 ### 3. `src/app/api/ai/symptom-chat/route.ts` — replace three call sites
@@ -155,6 +156,15 @@ updated = transitionToAnswered({
 
 ---
 
+## Module Boundary Rules
+
+- `src/lib/conversation-state/transitions.ts` must remain a **pure helper module**
+- `transitions.ts` must not import `observer.ts`
+- `transitions.ts` must not import `triage-engine.ts`
+- `observer.ts` remains read-only telemetry/observation
+- `answer-recording.ts` is the runtime wiring layer that composes `recordAnswer()` + `getStateSnapshot()` + `observeTransition()`
+- `route.ts` may import `transitionToAnswered()` from the barrel, but the barrel must keep the helper/runtime split explicit
+
 ## What Does NOT Change
 
 - `recordAnswer()` in `triage-engine.ts` — untouched
@@ -218,7 +228,7 @@ grep -n "recordAnswer(" src/app/api/ai/symptom-chat/route.ts
 grep -n "transitionToAnswered" src/app/api/ai/symptom-chat/route.ts
 
 # 4. VET-714 regression tests pass
-npx jest tests/conversation-state/ --passWithNoTests
+npx jest tests/symptom-chat.route.test.ts --silent
 
 # 5. No new fields in session snapshot (diff session object shape before/after)
 #    Run a test conversation and inspect the session JSON returned — no new top-level keys
@@ -254,6 +264,18 @@ Either option fully restores prior behavior. No database changes. No migration r
 | Blast radius if broken? | Answer recording fails; visible conversation degradation; no silent clinical corruption |
 | Rollback cost? | Single `git revert`; no DB involved |
 | Compression boundary risk? | None — no new session fields, telemetry marker is log-only |
+
+## Why This Revision Is Safe
+
+The failed first draft proposed putting `transitionToAnswered()` into `transitions.ts` and importing the observer from there. That would have created an `observer -> transitions -> observer` cycle and broken the pure-helper boundary established by VET-719.
+
+This revised design keeps:
+
+1. `transitions.ts` pure and reusable
+2. `observer.ts` read-only and runtime-safe
+3. `answer-recording.ts` as the only new runtime composition layer
+
+That separation matches the current conversation-state architecture and is the required precondition for implementation.
 
 ---
 
