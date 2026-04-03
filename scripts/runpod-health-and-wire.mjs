@@ -88,7 +88,14 @@ async function fetchJson(url, opts = {}) {
 }
 
 function runCommand(command, args) {
-  return spawnSync(command, args, {
+  let finalCommand = command;
+  let finalArgs = args;
+  if (process.platform === "win32" && command === "npx") {
+    finalCommand = "cmd.exe";
+    finalArgs = ["/d", "/s", "/c", [command, ...args].join(" ")];
+  }
+
+  return spawnSync(finalCommand, finalArgs, {
     cwd: rootDir,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -99,12 +106,19 @@ function commandSummary(result) {
   return (result.stderr || result.stdout || `exit ${result.status ?? "unknown"}`).trim().split("\n")[0];
 }
 
-function getNpxCommand() {
-  return process.platform === "win32" ? "npx.cmd" : "npx";
+function parseCommandJson(result) {
+  const output = `${result.stdout || ""}\n${result.stderr || ""}`;
+  const match = output.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
 }
 
 function wireVercelWithCli(toSet) {
-  const npxCommand = getNpxCommand();
+  const npxCommand = "npx";
   const whoami = runCommand(npxCommand, ["vercel", "whoami"]);
   if (whoami.status !== 0) {
     statusLine("fail", `Vercel CLI auth unavailable: ${commandSummary(whoami)}`);
@@ -114,26 +128,73 @@ function wireVercelWithCli(toSet) {
   statusLine("warn", "VERCEL_TOKEN not set - using Vercel CLI session for env sync");
   let allSucceeded = true;
   for (const { key, value } of toSet) {
-    for (const target of ["production", "preview"]) {
-      const result = runCommand(npxCommand, [
+    const productionResult = runCommand(npxCommand, [
+      "vercel",
+      "env",
+      "update",
+      key,
+      "production",
+      "--value",
+      value,
+      "--yes",
+    ]);
+    if (productionResult.status === 0) {
+      statusLine("ok", `Vercel CLI set ${key} (production)`);
+    } else {
+      statusLine("fail", `Vercel CLI set ${key} (production) failed: ${commandSummary(productionResult)}`);
+      allSucceeded = false;
+    }
+
+    const previewUpdate = runCommand(npxCommand, [
+      "vercel",
+      "env",
+      "update",
+      key,
+      "preview",
+      "--value",
+      value,
+      "--yes",
+    ]);
+
+    if (previewUpdate.status === 0) {
+      statusLine("ok", `Vercel CLI set ${key} (preview)`);
+      continue;
+    }
+
+    const previewUpdateJson = parseCommandJson(previewUpdate);
+    if (previewUpdateJson?.reason === "env_not_found") {
+      const previewAdd = runCommand(npxCommand, [
         "vercel",
         "env",
         "add",
         key,
-        target,
+        "preview",
         "--value",
         value,
         "--yes",
-        "--force",
       ]);
 
-      if (result.status === 0) {
-        statusLine("ok", `Vercel CLI set ${key} (${target})`);
-      } else {
-        statusLine("fail", `Vercel CLI set ${key} (${target}) failed: ${commandSummary(result)}`);
-        allSucceeded = false;
+      if (previewAdd.status === 0) {
+        statusLine("ok", `Vercel CLI set ${key} (preview)`);
+        continue;
       }
+
+      const previewAddJson = parseCommandJson(previewAdd);
+      if (previewAddJson?.reason === "git_branch_required") {
+        statusLine(
+          "warn",
+          `Vercel CLI could not set ${key} for preview without an explicit preview branch; production was updated successfully`
+        );
+        continue;
+      }
+
+      statusLine("fail", `Vercel CLI set ${key} (preview) failed: ${commandSummary(previewAdd)}`);
+      allSucceeded = false;
+      continue;
     }
+
+    statusLine("fail", `Vercel CLI set ${key} (preview) failed: ${commandSummary(previewUpdate)}`);
+    allSucceeded = false;
   }
 
   return allSucceeded;

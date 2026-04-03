@@ -14,14 +14,15 @@
     "note": "Deleted on 2026-03-31 to stop ongoing storage billing. Reprovision before the next validation window."
   },
   "async_review": {
-    "pod_id": "",
+    "pod_id": "x5j0w6bcbwl4n0",
     "name": "pawvital-async-review-v1",
     "gpu": "NVIDIA H200 or A100-80G",
     "services": [
       "async-review-service:8084"
     ],
-    "proxy_base": "",
-    "status": "deleted",
-    "note": "Deleted on 2026-03-31 to stop ongoing storage billing. Reprovision before the next validation window."
+    "proxy_base": "https://x5j0w6bcbwl4n0-{port}.proxy.runpod.net",
+    "status": "healthy",
+    "created": "2026-04-03",
+    "note": "Provisioned on 2026-04-03 for async-review wiring and validation."
   }
 }
