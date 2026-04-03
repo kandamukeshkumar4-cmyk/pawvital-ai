@@ -3253,6 +3253,20 @@ describe("VET-725: asked-state regression pack", () => {
     expect(message).not.toContain("questionStates");
     expect(message).not.toContain("transitionHistory");
     expect(message).not.toContain("conversationState");
+
+    // Issue 2 fix: verify that state-transition telemetry notes do not expose
+    // raw question_state= or conversation_state= markers in the owner-facing
+    // session payload via case_memory.service_observations.
+    // buildTransitionNote() emits these strings inside observation.note —
+    // they must never reach the owner-facing payload in any readable form.
+    const serviceObservations = (
+      caseMemory.service_observations as Array<Record<string, unknown>> | undefined
+    ) ?? [];
+    for (const obs of serviceObservations) {
+      const note = String(obs.note ?? "");
+      expect(note).not.toContain("question_state=");
+      expect(note).not.toContain("conversation_state=");
+    }
   }
 
   beforeEach(() => {
@@ -3345,19 +3359,28 @@ describe("VET-725: asked-state regression pack", () => {
 
     const askedOnTurn1 = payload1.session.last_question_asked;
 
+    // The second-turn message must NOT be caught by the deterministic fast path
+    // (getDeterministicFastPathExtraction). The fast path only fires when
+    // looksShortAnswer is true — which requires no multi-sentence pattern
+    // (/[.!?].+[.!?]/ must not match). Using two complete sentences here forces
+    // looksShortAnswer=false so the fast path returns null and extractWithQwen
+    // runs. The mock returning "not-json" is therefore live, causing extraction
+    // to fail and triggering the pending-recovery raw-text fallback path to
+    // close vomit_duration via shouldPersistRawPendingAnswer/sanitizePendingRawAnswer.
     mockExtractWithQwen.mockResolvedValueOnce("not-json");
 
+    const secondTurnMessage =
+      "He has been vomiting for about two days. It started on Monday night.";
     const response2 = await POST(
-      makeTextOnlyRequest(payload1.session, "For about two days.")
+      makeTextOnlyRequest(payload1.session, secondTurnMessage)
     );
     const payload2 = await response2.json();
 
     expect(response2.status).toBe(200);
     assertVet725AskedStatePayloadSafe(payload2);
     expect(payload2.type).toBe("question");
-    expect(payload2.session.extracted_answers.vomit_duration).toBe(
-      "For about two days."
-    );
+    // The raw-text fallback records the sanitized full message as the answer
+    expect(payload2.session.extracted_answers.vomit_duration).toBe(secondTurnMessage);
     expect(payload2.session.answered_questions).toContain(askedOnTurn1);
     expect(payload2.session.last_question_asked).not.toBe(askedOnTurn1);
     expect(payload2.message).not.toContain("How long has your dog been vomiting");
