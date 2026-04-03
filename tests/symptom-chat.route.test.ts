@@ -737,6 +737,46 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.report.async_review_scheduled).toBe(true);
   });
 
+  it("keeps report generation alive when GLM safety review returns malformed JSON", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      mockVerifyWithGLM.mockResolvedValue("not-json");
+
+      const session = createSession();
+      session.known_symptoms = ["wound_skin_issue"];
+      session.extracted_answers = { wound_location: "left hind leg" };
+      session.vision_analysis = "Superficial moist lesion on the left hind leg.";
+      session.vision_severity = "needs_review";
+      session.latest_image_domain = "skin_wound";
+      session.latest_image_quality = "good";
+      session.case_memory = {
+        ...session.case_memory!,
+        latest_owner_turn: "There is a raw patch on his left hind leg.",
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session, IMAGE));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.severity).toBe("medium");
+      expect(payload.report.recommendation).toBe("vet_48h");
+      expect(errorSpy).toHaveBeenCalledWith(
+        "[Safety] GLM-5 JSON parse failed (non-blocking, skipping safety corrections):",
+        expect.any(SyntaxError)
+      );
+      expect(logSpy).toHaveBeenCalledWith(
+        "[Safety] Continuing with report generation without safety corrections"
+      );
+    } finally {
+      errorSpy.mockRestore();
+      logSpy.mockRestore();
+    }
+  });
+
   it("captures obvious first-turn limping details before asking the next question", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,

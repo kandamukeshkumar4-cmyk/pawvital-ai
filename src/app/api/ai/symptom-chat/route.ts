@@ -2860,10 +2860,18 @@ Output ONLY valid JSON (no thinking, no markdown):
     jsonText = jsonMatch[0];
   }
 
-  const safety = JSON.parse(jsonText);
+  // VET-711: Wrap JSON.parse in try/catch so GLM-5 formatting errors don't kill the report
+  let safety: { safe?: boolean; corrections?: Record<string, unknown>; reasoning?: string } | null = null;
+  try {
+    safety = JSON.parse(jsonText);
+  } catch (parseError) {
+    console.error("[Safety] GLM-5 JSON parse failed (non-blocking, skipping safety corrections):", parseError);
+    console.log("[Safety] Continuing with report generation without safety corrections");
+    return report;
+  }
 
   // Apply corrections if needed
-  if (!safety.safe && safety.corrections) {
+  if (safety && !safety.safe && safety.corrections) {
     const c = safety.corrections;
 
     if (c.severity) {
