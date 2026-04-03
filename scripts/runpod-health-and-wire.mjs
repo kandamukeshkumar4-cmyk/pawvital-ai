@@ -117,6 +117,12 @@ function parseCommandJson(result) {
   }
 }
 
+function getCurrentGitBranch() {
+  const result = runCommand("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
+  if (result.status !== 0) return "";
+  return (result.stdout || "").trim();
+}
+
 function wireVercelWithCli(toSet) {
   const npxCommand = "npx";
   const whoami = runCommand(npxCommand, ["vercel", "whoami"]);
@@ -127,8 +133,9 @@ function wireVercelWithCli(toSet) {
 
   statusLine("warn", "VERCEL_TOKEN not set - using Vercel CLI session for env sync");
   let allSucceeded = true;
+  const currentBranch = getCurrentGitBranch();
   for (const { key, value } of toSet) {
-    const productionResult = runCommand(npxCommand, [
+    let productionResult = runCommand(npxCommand, [
       "vercel",
       "env",
       "update",
@@ -138,6 +145,19 @@ function wireVercelWithCli(toSet) {
       value,
       "--yes",
     ]);
+    const productionUpdateJson = parseCommandJson(productionResult);
+    if (productionUpdateJson?.reason === "env_not_found") {
+      productionResult = runCommand(npxCommand, [
+        "vercel",
+        "env",
+        "add",
+        key,
+        "production",
+        "--value",
+        value,
+        "--yes",
+      ]);
+    }
     if (productionResult.status === 0) {
       statusLine("ok", `Vercel CLI set ${key} (production)`);
     } else {
@@ -181,10 +201,34 @@ function wireVercelWithCli(toSet) {
 
       const previewAddJson = parseCommandJson(previewAdd);
       if (previewAddJson?.reason === "git_branch_required") {
-        statusLine(
-          "warn",
-          `Vercel CLI could not set ${key} for preview without an explicit preview branch; production was updated successfully`
-        );
+        if (!currentBranch) {
+          statusLine(
+            "fail",
+            `Vercel CLI requires an explicit preview branch for ${key}, but the current git branch could not be determined`
+          );
+          allSucceeded = false;
+          continue;
+        }
+
+        const previewBranchAdd = runCommand(npxCommand, [
+          "vercel",
+          "env",
+          "add",
+          key,
+          "preview",
+          currentBranch,
+          "--value",
+          value,
+          "--yes",
+        ]);
+
+        if (previewBranchAdd.status === 0) {
+          statusLine("ok", `Vercel CLI set ${key} (preview:${currentBranch})`);
+          continue;
+        }
+
+        statusLine("fail", `Vercel CLI set ${key} (preview:${currentBranch}) failed: ${commandSummary(previewBranchAdd)}`);
+        allSucceeded = false;
         continue;
       }
 
