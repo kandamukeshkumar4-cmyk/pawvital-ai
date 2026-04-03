@@ -19,6 +19,20 @@ recognize this via heuristic regex rather than a deterministic schema match. Tha
 This document decides, **per question family**, which families are safe to widen with an explicit `unknown` option and
 which must not be widened. It does not change any schema. That is follow-up implementation work.
 
+### Revision Note
+
+A later narrower rewrite of this proposal was reviewed after this ticket landed. It contained a few useful
+matrix-anchor clarifications, but it also changed several SAFE / NEEDS DECISION / UNSAFE classifications without
+enough new clinical justification to replace the canonical decision record.
+
+The canonical recommendations in this document remain unchanged.
+
+The factual anchor corrections retained from that later review are:
+
+- `appetite_status` is currently used by the `vomiting` and `lethargy` families
+- `water_intake` is currently used by the `not_eating` and `weight_loss` families
+- `appetite_change` is currently used by the `drinking_more` and `weight_loss` families
+
 ---
 
 ## Scope
