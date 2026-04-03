@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import https from "node:https";
+import { spawnSync } from "node:child_process";
 
 const rootDir = process.cwd();
 
@@ -84,6 +85,195 @@ async function fetchJson(url, opts = {}) {
     if (opts.body) req.write(typeof opts.body === "string" ? opts.body : JSON.stringify(opts.body));
     req.end();
   });
+}
+
+function runCommand(command, args) {
+  let finalCommand = command;
+  let finalArgs = args;
+  if (process.platform === "win32" && command === "npx") {
+    finalCommand = "cmd.exe";
+    finalArgs = ["/d", "/s", "/c", [command, ...args].join(" ")];
+  }
+
+  return spawnSync(finalCommand, finalArgs, {
+    cwd: rootDir,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function commandSummary(result) {
+  return (result.stderr || result.stdout || `exit ${result.status ?? "unknown"}`).trim().split("\n")[0];
+}
+
+function parseCommandJson(result) {
+  const output = `${result.stdout || ""}\n${result.stderr || ""}`;
+  const match = output.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
+function resolveGitPath(gitPathValue) {
+  const trimmed = gitPathValue.trim().replace(/\\/g, "/");
+  if (/^[A-Za-z]:\//.test(trimmed)) {
+    if (process.platform === "win32") {
+      return trimmed;
+    }
+
+    const drive = trimmed[0].toLowerCase();
+    return `/mnt/${drive}/${trimmed.slice(3)}`;
+  }
+
+  return path.resolve(rootDir, trimmed);
+}
+
+function readHeadRef(headPath) {
+  if (!fs.existsSync(headPath)) return "";
+  const head = fs.readFileSync(headPath, "utf8").trim();
+  const refMatch = head.match(/^ref:\s+refs\/heads\/(.+)$/);
+  if (refMatch) return refMatch[1].trim();
+  return "";
+}
+
+function getCurrentGitBranch() {
+  const gitMetaPath = path.join(rootDir, ".git");
+  if (!fs.existsSync(gitMetaPath)) return "";
+
+  const stat = fs.statSync(gitMetaPath);
+  if (stat.isDirectory()) {
+    return readHeadRef(path.join(gitMetaPath, "HEAD"));
+  }
+
+  const gitFile = fs.readFileSync(gitMetaPath, "utf8").trim();
+  const gitDirMatch = gitFile.match(/^gitdir:\s+(.+)$/i);
+  if (!gitDirMatch) return "";
+  const gitDir = resolveGitPath(gitDirMatch[1]);
+  return readHeadRef(path.join(gitDir, "HEAD"));
+}
+
+function wireVercelWithCli(toSet) {
+  const npxCommand = "npx";
+  const whoami = runCommand(npxCommand, ["vercel", "whoami"]);
+  if (whoami.status !== 0) {
+    statusLine("fail", `Vercel CLI auth unavailable: ${commandSummary(whoami)}`);
+    return false;
+  }
+
+  statusLine("warn", "VERCEL_TOKEN not set - using Vercel CLI session for env sync");
+  let allSucceeded = true;
+  const currentBranch = getCurrentGitBranch();
+  for (const { key, value } of toSet) {
+    let productionResult = runCommand(npxCommand, [
+      "vercel",
+      "env",
+      "update",
+      key,
+      "production",
+      "--value",
+      value,
+      "--yes",
+    ]);
+    const productionUpdateJson = parseCommandJson(productionResult);
+    if (productionUpdateJson?.reason === "env_not_found") {
+      productionResult = runCommand(npxCommand, [
+        "vercel",
+        "env",
+        "add",
+        key,
+        "production",
+        "--value",
+        value,
+        "--yes",
+      ]);
+    }
+    if (productionResult.status === 0) {
+      statusLine("ok", `Vercel CLI set ${key} (production)`);
+    } else {
+      statusLine("fail", `Vercel CLI set ${key} (production) failed: ${commandSummary(productionResult)}`);
+      allSucceeded = false;
+    }
+
+    const previewUpdate = runCommand(npxCommand, [
+      "vercel",
+      "env",
+      "update",
+      key,
+      "preview",
+      "--value",
+      value,
+      "--yes",
+    ]);
+
+    if (previewUpdate.status === 0) {
+      statusLine("ok", `Vercel CLI set ${key} (preview)`);
+      continue;
+    }
+
+    const previewUpdateJson = parseCommandJson(previewUpdate);
+    if (previewUpdateJson?.reason === "env_not_found") {
+      const previewAdd = runCommand(npxCommand, [
+        "vercel",
+        "env",
+        "add",
+        key,
+        "preview",
+        "--value",
+        value,
+        "--yes",
+      ]);
+
+      if (previewAdd.status === 0) {
+        statusLine("ok", `Vercel CLI set ${key} (preview)`);
+        continue;
+      }
+
+      const previewAddJson = parseCommandJson(previewAdd);
+      if (previewAddJson?.reason === "git_branch_required") {
+        if (!currentBranch) {
+          statusLine(
+            "fail",
+            `Vercel CLI requires an explicit preview branch for ${key}, but the current git branch could not be determined`
+          );
+          allSucceeded = false;
+          continue;
+        }
+
+        const previewBranchAdd = runCommand(npxCommand, [
+          "vercel",
+          "env",
+          "add",
+          key,
+          "preview",
+          currentBranch,
+          "--value",
+          value,
+          "--yes",
+        ]);
+
+        if (previewBranchAdd.status === 0) {
+          statusLine("ok", `Vercel CLI set ${key} (preview:${currentBranch})`);
+          continue;
+        }
+
+        statusLine("fail", `Vercel CLI set ${key} (preview:${currentBranch}) failed: ${commandSummary(previewBranchAdd)}`);
+        allSucceeded = false;
+        continue;
+      }
+
+      statusLine("fail", `Vercel CLI set ${key} (preview) failed: ${commandSummary(previewAdd)}`);
+      allSucceeded = false;
+      continue;
+    }
+
+    statusLine("fail", `Vercel CLI set ${key} (preview) failed: ${commandSummary(previewUpdate)}`);
+    allSucceeded = false;
+  }
+
+  return allSucceeded;
 }
 
 async function runpodRequest(pathname, opts = {}) {
@@ -197,11 +387,6 @@ const PORT_TO_PATH = {
 };
 
 async function wireVercel(healthResults) {
-  if (!VERCEL_TOKEN) {
-    statusLine("warn", "VERCEL_TOKEN not set - skipping Vercel env sync");
-    return false;
-  }
-
   const toSet = [];
   for (const role of Object.values(healthResults)) {
     for (const [port, info] of Object.entries(role)) {
@@ -216,6 +401,10 @@ async function wireVercel(healthResults) {
   if (toSet.length === 0) {
     statusLine("warn", "No healthy services to wire yet");
     return false;
+  }
+
+  if (!VERCEL_TOKEN) {
+    return wireVercelWithCli(toSet);
   }
 
   const baseUrl = VERCEL_TEAM_ID
