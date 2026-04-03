@@ -14,6 +14,7 @@ export {
   inferQuestionState,
 } from "./transitions";
 export { transitionToAnswered } from "./answer-recording";
+export { transitionToAsked } from "./question-asking";
 
 export type {
   ConversationAnswerValue,
@@ -27,3 +28,4 @@ export type {
 export type { ObserveTransitionInput } from "./observer";
 export type { TransitionNoteInput } from "./transitions";
 export type { TransitionToAnsweredInput } from "./answer-recording";
+export type { TransitionToAskedInput } from "./question-asking";

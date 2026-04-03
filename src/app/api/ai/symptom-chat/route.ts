@@ -96,9 +96,8 @@ import {
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
 import {
-  getStateSnapshot,
-  observeTransition,
   transitionToAnswered,
+  transitionToAsked,
 } from "@/lib/conversation-state";
 import {
   compressCaseMemoryWithMiniMax,
@@ -970,14 +969,10 @@ export async function POST(request: Request) {
     }
 
     // Track which question we're asking so we can detect unanswered loops
-    const beforeState = getStateSnapshot(session);
-    session.last_question_asked = nextQuestionId;
-    session = observeTransition(session, {
-      before: beforeState,
-      after: getStateSnapshot(session),
+    session = transitionToAsked({
+      session,
       questionId: nextQuestionId,
       reason: "next_question_selected",
-      to: "asked",
     });
 
     // ═══════════════════════════════════════════════════════════════════
