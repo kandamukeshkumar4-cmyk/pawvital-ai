@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import https from "node:https";
+import { spawnSync } from "node:child_process";
 
 const rootDir = process.cwd();
 
@@ -84,6 +85,58 @@ async function fetchJson(url, opts = {}) {
     if (opts.body) req.write(typeof opts.body === "string" ? opts.body : JSON.stringify(opts.body));
     req.end();
   });
+}
+
+function runCommand(command, args) {
+  return spawnSync(command, args, {
+    cwd: rootDir,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
+function commandSummary(result) {
+  return (result.stderr || result.stdout || `exit ${result.status ?? "unknown"}`).trim().split("\n")[0];
+}
+
+function getNpxCommand() {
+  return process.platform === "win32" ? "npx.cmd" : "npx";
+}
+
+function wireVercelWithCli(toSet) {
+  const npxCommand = getNpxCommand();
+  const whoami = runCommand(npxCommand, ["vercel", "whoami"]);
+  if (whoami.status !== 0) {
+    statusLine("fail", `Vercel CLI auth unavailable: ${commandSummary(whoami)}`);
+    return false;
+  }
+
+  statusLine("warn", "VERCEL_TOKEN not set - using Vercel CLI session for env sync");
+  let allSucceeded = true;
+  for (const { key, value } of toSet) {
+    for (const target of ["production", "preview"]) {
+      const result = runCommand(npxCommand, [
+        "vercel",
+        "env",
+        "add",
+        key,
+        target,
+        "--value",
+        value,
+        "--yes",
+        "--force",
+      ]);
+
+      if (result.status === 0) {
+        statusLine("ok", `Vercel CLI set ${key} (${target})`);
+      } else {
+        statusLine("fail", `Vercel CLI set ${key} (${target}) failed: ${commandSummary(result)}`);
+        allSucceeded = false;
+      }
+    }
+  }
+
+  return allSucceeded;
 }
 
 async function runpodRequest(pathname, opts = {}) {
@@ -197,11 +250,6 @@ const PORT_TO_PATH = {
 };
 
 async function wireVercel(healthResults) {
-  if (!VERCEL_TOKEN) {
-    statusLine("warn", "VERCEL_TOKEN not set - skipping Vercel env sync");
-    return false;
-  }
-
   const toSet = [];
   for (const role of Object.values(healthResults)) {
     for (const [port, info] of Object.entries(role)) {
@@ -216,6 +264,10 @@ async function wireVercel(healthResults) {
   if (toSet.length === 0) {
     statusLine("warn", "No healthy services to wire yet");
     return false;
+  }
+
+  if (!VERCEL_TOKEN) {
+    return wireVercelWithCli(toSet);
   }
 
   const baseUrl = VERCEL_TEAM_ID
