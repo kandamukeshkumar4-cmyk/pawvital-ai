@@ -5,9 +5,14 @@ export {
 export {
   STATE_TRANSITION_STAGE,
   getStateSnapshot,
-  inferConversationState,
   observeTransition,
 } from "./observer";
+export {
+  buildTransitionNote,
+  hasControlStateChanged,
+  inferConversationState,
+  inferQuestionState,
+} from "./transitions";
 
 export type {
   ConversationAnswerValue,
@@ -19,3 +24,4 @@ export type {
   StateTransition,
 } from "./types";
 export type { ObserveTransitionInput } from "./observer";
+export type { TransitionNoteInput } from "./transitions";
