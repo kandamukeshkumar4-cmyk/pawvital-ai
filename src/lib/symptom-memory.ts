@@ -264,11 +264,11 @@ export function buildNarrativeSnapshot(
           .map((entry) => `${entry.service}:${entry.stage} (${entry.reason})`)
           .join("\n- ")}`
       : "Service timeouts: none",
-    // VET-706: Filter out VET-705 internal telemetry entries from compression prompt.
-    // Telemetry entries (extraction, pending_recovery, compression, repeat_suppression)
+    // VET-706 / VET-718: Filter out internal telemetry entries from compression prompt.
+    // Telemetry entries (extraction, pending_recovery, compression, repeat_suppression, state_transition)
     // are internal observability data and should not influence the compression prompt.
     (() => {
-      const telemetryEventTypes = ["extraction", "pending_recovery", "compression", "repeat_suppression"];
+      const telemetryEventTypes = ["extraction", "pending_recovery", "compression", "repeat_suppression", "state_transition"];
       const realServiceObservations = memory.service_observations.filter(
         (entry) => !(entry.service === "async-review-service" && telemetryEventTypes.includes(entry.stage))
       );
@@ -672,11 +672,11 @@ export function buildCaseMemorySnapshot(
           .map((entry) => `${entry.service}:${entry.stage} (${entry.reason})`)
           .join("\n- ")}`
       : "Service timeouts: none",
-    // VET-706: Filter out VET-705 internal telemetry entries from compression prompt.
-    // Telemetry entries (extraction, pending_recovery, compression, repeat_suppression)
+    // VET-706 / VET-718: Filter out internal telemetry entries from compression prompt.
+    // Telemetry entries (extraction, pending_recovery, compression, repeat_suppression, state_transition)
     // are internal observability data and should not influence the compression prompt.
     (() => {
-      const telemetryEventTypes = ["extraction", "pending_recovery", "compression", "repeat_suppression"];
+      const telemetryEventTypes = ["extraction", "pending_recovery", "compression", "repeat_suppression", "state_transition"];
       const realServiceObservations = memory.service_observations.filter(
         (entry) => !(entry.service === "async-review-service" && telemetryEventTypes.includes(entry.stage))
       );
