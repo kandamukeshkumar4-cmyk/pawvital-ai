@@ -3,10 +3,14 @@ import type { PetProfile, TriageSession } from "./triage-engine";
 const ASYNC_REVIEW_WEBHOOK_SECRET =
   process.env.ASYNC_REVIEW_WEBHOOK_SECRET?.trim() || "";
 
-// VET-711: Timeout for async review submission (30 seconds)
-// Can be overridden via ASYNC_REVIEW_TIMEOUT_MS environment variable
-const ASYNC_REVIEW_TIMEOUT_MS =
-  Number(process.env.ASYNC_REVIEW_TIMEOUT_MS) || 30000;
+function parseAsyncReviewTimeoutMs(rawValue?: string): number {
+  const parsed = Number(rawValue);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 30000;
+}
+
+const ASYNC_REVIEW_TIMEOUT_MS = parseAsyncReviewTimeoutMs(
+  process.env.ASYNC_REVIEW_TIMEOUT_MS
+);
 
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.replace(/\/+$/, "");
@@ -16,7 +20,10 @@ export function isAsyncReviewQueueConfigured(baseUrl?: string): boolean {
   return Boolean(baseUrl && normalizeBaseUrl(baseUrl));
 }
 
-// VET-711: Added AbortController timeout for production safety
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
 export async function enqueueAsyncReview(input: {
   baseUrl: string;
   image: string;
@@ -53,7 +60,7 @@ export async function enqueueAsyncReview(input: {
 
     return response.ok;
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
+    if (isAbortError(error)) {
       console.error(
         "[Async Review] Submission timeout after",
         ASYNC_REVIEW_TIMEOUT_MS,
