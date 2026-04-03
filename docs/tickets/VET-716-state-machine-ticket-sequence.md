@@ -3,6 +3,11 @@
 ## Status
 - `complete`
 
+## Operational Note
+
+- `VET-722` and `VET-723` were later used for docs/spec tickets outside this original provisional numbering plan.
+- Before implementation reaches confirmation-state or needs-clarification-state work, this sequence must be refreshed so the remaining behavior tickets get new unambiguous IDs.
+
 ## Owner
 - `techlead`
 

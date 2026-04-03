@@ -7,6 +7,8 @@
 **Implements:** VET-716 sequence, Wave 3 Phase 2
 **Depends on:** VET-720 (answer recording wire spec), VET-721 (answer recording implementation)
 
+**Sequencing note:** This spec supersedes the provisional VET-716 numbering for follow-on behavior tickets. The next confirmation and needs-clarification implementation tickets must be renumbered in a later sequence-sync pass before work begins.
+
 ---
 
 ## Summary
@@ -329,10 +331,12 @@ these items should be rejected:
 
 After this spec is implemented and stable:
 
-- **VET-722 (revised)** — Wire confirmation state after acknowledgment phrasing completes
-- **VET-723 (revised)** — Wire needs-clarification state for unresolved ambiguous answers
+- write a sequence-sync update that assigns fresh ticket numbers for:
+  - confirmation-state wiring after acknowledgment phrasing
+  - needs-clarification wiring for unresolved ambiguous answers
+- keep those follow-ons separate from this asked-state ticket
 
-Both of those follow from the stable `asked → answered_this_turn` pipeline that VET-720 + VET-721 + this
+Those follow-ons depend on the stable `asked → answered_this_turn` pipeline that VET-720 + VET-721 + this
 ticket establish.
 
 ---
