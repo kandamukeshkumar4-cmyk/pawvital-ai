@@ -2649,3 +2649,440 @@ describe("VET-707: loop diagnostics", () => {
     expect(payload.message).not.toContain("loop_reason");
   });
 });
+
+// =============================================================================
+// VET-714: Edge-Case Deterministic Reply Regression Pack
+// Hedged negatives, multi-sentence duration replies, and unknown-style replies.
+// =============================================================================
+
+describe("VET-714: edge-case deterministic reply regression pack", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Case summary.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Hedged negatives - replies that are negative but not bare "no"
+  // -------------------------------------------------------------------------
+
+  it("VET-714: hedged negative 'not really' closes pending boolean question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "swelling_present";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not really"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.swelling_present).toBe(false);
+    expect(payload.session.answered_questions).toContain("swelling_present");
+    expect(payload.session.last_question_asked).not.toBe("swelling_present");
+  });
+
+  it("VET-714: hedged negative 'not much' closes pending water-intake question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session.last_question_asked = "water_intake";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not much"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.water_intake).toBe("less_than_usual");
+    expect(payload.session.answered_questions).toContain("water_intake");
+    expect(payload.session.last_question_asked).not.toBe("water_intake");
+  });
+
+  it("VET-714: hedged negative 'not really' on vomiting frequency closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session.last_question_asked = "vomit_frequency";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not really"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.vomit_frequency).toBe("not_much");
+    expect(payload.session.answered_questions).toContain("vomit_frequency");
+    expect(payload.session.last_question_asked).not.toBe("vomit_frequency");
+  });
+
+  it("VET-714: hedged negative 'not too much' on drinking closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session.last_question_asked = "water_intake";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not too much"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.water_intake).toBe("less_than_usual");
+    expect(payload.session.answered_questions).toContain("water_intake");
+    expect(payload.session.last_question_asked).not.toBe("water_intake");
+  });
+
+  it("VET-714: hedged negative 'not at all' on appetite closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session.last_question_asked = "appetite";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not at all"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.appetite).toBe("none");
+    expect(payload.session.answered_questions).toContain("appetite");
+    expect(payload.session.last_question_asked).not.toBe("appetite");
+  });
+
+  it("VET-714: hedged negative 'never really' on trauma history closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "never really"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("never really");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
+  // -------------------------------------------------------------------------
+  // Multi-sentence duration replies - longer responses with duration info
+  // -------------------------------------------------------------------------
+
+  it("VET-714: multi-sentence duration reply with time and observation closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_duration";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "It's been about three days now. He coughs mostly at night.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.cough_duration).toBe(
+      "It's been about three days now. He coughs mostly at night."
+    );
+    expect(payload.session.answered_questions).toContain("cough_duration");
+    expect(payload.session.last_question_asked).not.toBe("cough_duration");
+  });
+
+  it("VET-714: multi-sentence duration reply with since-clause closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "limping_onset";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Since Monday morning. He woke up and couldn't use his leg properly.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.limping_onset).toBe(
+      "Since Monday morning. He woke up and couldn't use his leg properly."
+    );
+    expect(payload.session.answered_questions).toContain("limping_onset");
+    expect(payload.session.last_question_asked).not.toBe("limping_onset");
+  });
+
+  it("VET-714: multi-sentence duration reply with for-clause and progression closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session.last_question_asked = "vomit_duration";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "For the past two days. It started after dinner and he's thrown up four times.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.vomit_duration).toBe(
+      "For the past two days. It started after dinner and he's thrown up four times."
+    );
+    expect(payload.session.answered_questions).toContain("vomit_duration");
+    expect(payload.session.last_question_asked).not.toBe("vomit_duration");
+  });
+
+  it("VET-714: multi-sentence duration reply with vague time reference closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["diarrhea"]);
+    session.last_question_asked = "stool_frequency";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Several times today. Started this morning and keeps happening.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.stool_frequency).toBe(
+      "Several times today. Started this morning and keeps happening."
+    );
+    expect(payload.session.answered_questions).toContain("stool_frequency");
+    expect(payload.session.last_question_asked).not.toBe("stool_frequency");
+  });
+
+  it("VET-714: multi-sentence duration reply with weekend reference closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_duration";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Since the weekend. It's been getting worse each day.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.cough_duration).toBe(
+      "Since the weekend. It's been getting worse each day."
+    );
+    expect(payload.session.answered_questions).toContain("cough_duration");
+    expect(payload.session.last_question_asked).not.toBe("cough_duration");
+  });
+
+  it("VET-714: multi-sentence duration reply with hour reference closes pending question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session.last_question_asked = "vomit_duration";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Just a few hours. He ate breakfast fine but then started vomiting.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.vomit_duration).toBe(
+      "Just a few hours. He ate breakfast fine but then started vomiting."
+    );
+    expect(payload.session.answered_questions).toContain("vomit_duration");
+    expect(payload.session.last_question_asked).not.toBe("vomit_duration");
+  });
+
+  it("VET-714: multi-sentence duration reply survives extraction failure", async () => {
+    mockExtractWithQwen.mockResolvedValue("not-json");
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "limping_onset";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "Started yesterday afternoon. He was fine in the morning but not after lunch.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.limping_onset).toBe(
+      "Started yesterday afternoon. He was fine in the morning but not after lunch."
+    );
+    expect(payload.session.answered_questions).toContain("limping_onset");
+    expect(payload.session.last_question_asked).not.toBe("limping_onset");
+  });
+
+  // -------------------------------------------------------------------------
+  // Unknown-style replies - explicit uncertainty that should close questions
+  // -------------------------------------------------------------------------
+
+  it("VET-714: unknown-style 'I'm not sure' closes pending trauma-history question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "I'm not sure"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("I'm not sure");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
+  it("VET-714: unknown-style 'I have no idea' closes pending trauma-history question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "I have no idea"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("I have no idea");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
+  it("VET-714: unknown-style 'not certain' closes pending onset question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "limping_onset";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not certain"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.limping_onset).toBe("not certain");
+    expect(payload.session.answered_questions).toContain("limping_onset");
+    expect(payload.session.last_question_asked).not.toBe("limping_onset");
+  });
+
+  it("VET-714: unknown-style 'I couldn't say' closes pending trauma-history question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "I couldn't say"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("I couldn't say");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
+  it("VET-714: unknown-style 'hard to tell' closes pending boolean question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "swelling_present";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "hard to tell"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.swelling_present).toBe("hard to tell");
+    expect(payload.session.answered_questions).toContain("swelling_present");
+    expect(payload.session.last_question_asked).not.toBe("swelling_present");
+  });
+
+  it("VET-714: unknown-style 'I wish I knew' closes pending trauma-history question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "I wish I knew"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("I wish I knew");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
+  it("VET-714: unknown-style 'No idea sorry' closes pending trauma-history question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "No idea sorry"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("No idea sorry");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
+  it("VET-714: unknown-style reply survives extraction failure", async () => {
+    mockExtractWithQwen.mockResolvedValue("");
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "I really don't know"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("I really don't know");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+
+  it("VET-714: unknown-style 'Not that I know of' closes pending trauma-history question", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.last_question_asked = "trauma_history";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "Not that I know of"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.trauma_history).toBe("Not that I know of");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+    expect(payload.session.last_question_asked).not.toBe("trauma_history");
+  });
+});
