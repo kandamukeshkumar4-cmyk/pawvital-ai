@@ -48,11 +48,6 @@ const VERCEL_TOKEN = process.env.VERCEL_TOKEN || "";
 const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID || "pawvital-ai";
 const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || "";
 
-if (!RUNPOD_API_KEY) {
-  console.error("[FATAL] RUNPOD_API_KEY not set in .env.local");
-  process.exit(1);
-}
-
 // ---------------------------------------------------------------------------
 // Load pod registry
 // ---------------------------------------------------------------------------
@@ -66,6 +61,11 @@ function statusLine(level, msg) {
   const prefix = level === "ok" ? "[OK]  " : level === "warn" ? "[WARN]" : "[FAIL]";
   console.log(`${prefix} ${msg}`);
 }
+
+const ROLE_PROVISION_COMMAND = {
+  consult_retrieval: "npm run runpod:provision:consult",
+  async_review: "npm run runpod:provision:review",
+};
 
 async function fetchJson(url, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -87,6 +87,9 @@ async function fetchJson(url, opts = {}) {
 }
 
 async function runpodRequest(pathname, opts = {}) {
+  if (!RUNPOD_API_KEY) {
+    throw new Error("RUNPOD_API_KEY not set in .env.local");
+  }
   return fetchJson(`https://rest.runpod.io/v1${pathname}`, {
     method: opts.method || "GET",
     headers: {
@@ -128,10 +131,21 @@ function writePods() {
 // ---------------------------------------------------------------------------
 async function runHealthChecks() {
   const results = {};
+  const summary = {
+    missingPods: [],
+    bootingPods: [],
+  };
 
   for (const [role, pod] of Object.entries(pods)) {
     if (!pod.pod_id) {
-      statusLine("warn", `${role}: no pod provisioned yet`);
+      const status = pod.status || "not provisioned";
+      const note = pod.note ? ` ${pod.note}` : "";
+      statusLine("warn", `${role}: no pod provisioned (${status}).${note}`);
+      summary.missingPods.push({
+        role,
+        status,
+        command: ROLE_PROVISION_COMMAND[role] || "",
+      });
       continue;
     }
 
@@ -148,15 +162,21 @@ async function runHealthChecks() {
         results[role][port] = { url: `https://${pod.pod_id}-${port}.proxy.runpod.net`, healthy: true };
       } else if (status === 502) {
         statusLine("warn", `${name}:${port} 502 - service still starting`);
+        if (!summary.bootingPods.find((entry) => entry.role === role)) {
+          summary.bootingPods.push({ role, podId: pod.pod_id });
+        }
       } else if (status === null) {
         statusLine("warn", `${name}:${port} no response - pod not ready or booting`);
+        if (!summary.bootingPods.find((entry) => entry.role === role)) {
+          summary.bootingPods.push({ role, podId: pod.pod_id });
+        }
       } else {
         statusLine("fail", `${name}:${port} HTTP ${status}`);
       }
     }
   }
 
-  return results;
+  return { results, summary };
 }
 
 // ---------------------------------------------------------------------------
@@ -179,7 +199,7 @@ const PORT_TO_PATH = {
 async function wireVercel(healthResults) {
   if (!VERCEL_TOKEN) {
     statusLine("warn", "VERCEL_TOKEN not set - skipping Vercel env sync");
-    return;
+    return false;
   }
 
   const toSet = [];
@@ -195,7 +215,7 @@ async function wireVercel(healthResults) {
 
   if (toSet.length === 0) {
     statusLine("warn", "No healthy services to wire yet");
-    return;
+    return false;
   }
 
   const baseUrl = VERCEL_TEAM_ID
@@ -205,6 +225,13 @@ async function wireVercel(healthResults) {
     method: "GET",
     headers: { Authorization: `Bearer ${VERCEL_TOKEN}` },
   });
+  if (currentEnvList.status >= 300) {
+    statusLine(
+      "fail",
+      `Vercel env fetch failed: HTTP ${currentEnvList.status} - ${JSON.stringify(currentEnvList.body).slice(0, 120)}`
+    );
+    return false;
+  }
   const existingByKey = new Map(
     Array.isArray(currentEnvList.body?.envs)
       ? currentEnvList.body.envs
@@ -213,6 +240,7 @@ async function wireVercel(healthResults) {
       : []
   );
 
+  let allSucceeded = true;
   for (const { key, value } of toSet) {
     const existing = existingByKey.get(key);
     if (existing?.id) {
@@ -225,6 +253,9 @@ async function wireVercel(healthResults) {
         body: { value, type: "encrypted", target: ["production", "preview"] },
       });
       statusLine(pr.status < 300 ? "ok" : "fail", `Vercel PATCH ${key}: HTTP ${pr.status}`);
+      if (pr.status >= 300) {
+        allSucceeded = false;
+      }
     } else {
       const r = await fetchJson(baseUrl, {
         method: "POST",
@@ -235,8 +266,29 @@ async function wireVercel(healthResults) {
         statusLine("ok", `Vercel: set ${key}=${value}`);
       } else {
         statusLine("fail", `Vercel set ${key}: HTTP ${r.status} - ${JSON.stringify(r.body).slice(0, 120)}`);
+        allSucceeded = false;
       }
     }
+  }
+
+  return allSucceeded;
+}
+
+function printHealthNextSteps(summary) {
+  if (summary.missingPods.length > 0) {
+    console.log("\nNext steps for missing/deleted pods:");
+    for (const missing of summary.missingPods) {
+      const command = missing.command || "provision command not configured";
+      console.log(`  - ${missing.role}: run \`${command}\``);
+    }
+  }
+
+  if (summary.bootingPods.length > 0) {
+    console.log("\nBoot progress tips for existing pods:");
+    for (const pod of summary.bootingPods) {
+      console.log(`  - ${pod.role}: watch logs once SSH is available on pod ${pod.podId}`);
+    }
+    console.log("  - ssh -i ~/.ssh/runpod_id_ed25519 -p <SSH_PORT> root@<PUBLIC_IP> 'tail -100 /workspace/logs/*.log'");
   }
 }
 
@@ -428,25 +480,27 @@ if (doProvisionConsult) {
 } else if (doStopAll) {
   await stopRegistryPods();
 } else {
-  const results = await runHealthChecks();
+  const { results, summary } = await runHealthChecks();
 
   const healthyCount = Object.values(results).flatMap((r) => Object.values(r)).filter((s) => s.healthy).length;
   console.log(`\nHealthy services: ${healthyCount}`);
 
   if (doWire) {
-    await wireVercel(results);
+    const wired = await wireVercel(results);
+    if (!wired) {
+      printHealthNextSteps(summary);
+      process.exit(1);
+    }
   } else if (healthyCount > 0) {
     console.log("\nRun with --wire to push these URLs into Vercel.");
   }
 
   if (healthyCount === 0) {
-    console.log("No services healthy yet. Re-run once the pod finishes booting.");
-    console.log("Check boot progress:");
-    for (const pod of Object.values(pods)) {
-      if (pod.pod_id) {
-        console.log("  ssh -i ~/.ssh/runpod_id_ed25519 -p <SSH_PORT> root@<PUBLIC_IP> 'tail -100 /workspace/logs/*.log'");
-        break;
-      }
+    if (summary.missingPods.length > 0) {
+      console.log("No services healthy because at least one required pod is not provisioned.");
+    } else {
+      console.log("No services healthy yet. Re-run once the pod finishes booting.");
     }
+    printHealthNextSteps(summary);
   }
 }
