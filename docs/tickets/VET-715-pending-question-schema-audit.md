@@ -26,7 +26,7 @@
 
 ## FINDING 2: Duration Questions
 
-All duration questions use `data_type: "string"`:
+All duration questions use `data_type: "string"` (10 questions; `abdomen_onset` is about onset timing, not duration):
 
 | Question ID | Line | Extraction Hint |
 |-------------|------|-----------------|
@@ -38,7 +38,6 @@ All duration questions use `data_type: "string"`:
 | `scratch_duration` | 1762 | "duration of scratching" |
 | `weight_loss_duration` | 1875 | "timeframe of weight loss" |
 | `trembling_duration` | 1904 | "duration of trembling" |
-| `abdomen_onset` | 1934 | "onset of abdominal distension" |
 | `discharge_duration` | 1986 | "duration of eye discharge" |
 | `wound_duration` | 2079 | "duration and progression of the wound" |
 
