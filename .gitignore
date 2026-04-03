@@ -49,6 +49,7 @@ next-env.d.ts
 !/scripts/update-pawvital-memory.mjs
 !/scripts/land-pawvital-ticket.mjs
 !/scripts/finalize-pawvital-ticket.mjs
+!/scripts/kilo-finalize-ticket.mjs
 !/scripts/codex-review-result.schema.json
 !/scripts/hooks/
 !/scripts/hooks/*.mjs
@@ -56,3 +57,11 @@ next-env.d.ts
 # IDE / editor
 Roo-Code
 .runpod_ssh
+
+# Kilo local workspace
+/.kilocode/*
+!/.kilocode/rules/
+!/.kilocode/rules/*.md
+/.kilocode/node_modules
+/.kilocode/package.json
+/.kilocode/bun.lock
