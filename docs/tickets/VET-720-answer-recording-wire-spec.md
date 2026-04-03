@@ -281,8 +281,10 @@ That separation matches the current conversation-state architecture and is the r
 
 ## What Comes Next
 
-After VET-720 lands and is stable:
+The original provisional follow-on numbering in this section was later refreshed by VET-726.
 
-- **VET-721** — Wire state machine for question asking (`transitionToAsked()` replaces `last_question_asked` write)
-- **VET-722** — Add confirmation state after acknowledgment phrasing
-- **VET-723** — Add needs-clarification state for unresolved ambiguous answers
+After the landed asked-state wave (`VET-724` wiring plus `VET-725` regressions), the next follow-on tickets are:
+
+- **VET-727** — Confirmation-state transition wiring after the acknowledgment-plus-next-question turn is prepared
+- **VET-728** — Confirmation-state regression pack
+- **VET-729** — Needs-clarification transition wiring for unresolved ambiguous answers
