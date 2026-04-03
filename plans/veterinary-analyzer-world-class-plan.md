@@ -114,49 +114,105 @@ flowchart TB
 
 ---
 
-## Conversation Reliability Hardening (2026-03-30)
+## Conversation Reliability Hardening (Shipped Through VET-710)
 
-### Confirmed Root Causes Behind Repeat-Question Loops
+### Shipped Architecture Summary
 
-1. Pending-question answers are still fragile when structured extraction returns no usable answer.
-   The route flow in `src/app/api/ai/symptom-chat/route.ts` records deterministic and model answers first, but a natural-language reply can still fall through if the extractor emits empty or malformed JSON and the pending-question fallback does not confidently coerce the answer.
+The following safeguards are now in production as of VET-710:
 
-2. The biggest weakness is not `last_question_asked` timing.
-   `last_question_asked` is already written before phrasing in the current route flow. The real problem is that the pending-question guard is not defensive enough when the user clearly replies but the answer is not converted into a durable `answered_questions` / `extracted_answers` update.
+| Ticket | Safeguard | Status |
+|--------|-----------|--------|
+| VET-705A | Telemetry hot-path wired; compression switched to narrative-only snapshot | Shipped |
+| VET-706 | Telemetry explicitly excluded from compression prompts | Shipped |
+| VET-707 | Loop diagnostics with narrow reason codes | Shipped |
+| VET-707B | Repeating-question root-cause fix (3-part) | Shipped |
+| VET-707C | Chain-of-thought memory improvement with explicit Q&A summaries | Shipped |
+| VET-709 | Expanded pending-recovery families for natural phrasing | Shipped |
+| VET-710 | Multi-turn replay harness with compression-boundary regressions | Shipped |
 
-3. Choice-question coercion is still too narrow for natural replies.
-   Cases like "yes, he's drinking normally" or "no, not really" need deterministic handling even when the extractor misses them.
+### Confirmed Root Causes Behind Repeat-Question Loops (VET-707B)
 
-4. String-question handling needs a smarter fallback than either "repeat forever" or "always force-close".
-   Direct replies such as "for about two days" should close the pending question, while unrelated new symptom updates should not.
+The repeating-question bug had three distinct root causes that were all addressed in VET-707B:
 
-### Immediate Hardening Priorities
+1. **Faulty guard in `coerceFallbackAnswerForPendingQuestion` (line ~3049)**:
+   The pending-question fallback had a logic error where it would skip coercion for certain question types even when a clear answer was present. The guard was too restrictive and allowed natural-language replies to fall through without being recorded.
 
-1. Pending-question guard:
-   Record a pending answer when the user clearly replied, using deterministic coercion first and a raw-text fallback only when the reply looks like a direct answer to that question.
+2. **Smart-quote regex mismatch in `isShortNegativeResponse`**:
+   The regex for detecting negative responses like "no" or "not really" did not normalize curly apostrophes (`'` / `'`) to straight apostrophes (`'`). User inputs like "nope" or "it isn't" with smart quotes were not being recognized as negative answers.
 
-2. Extraction prompt:
-   Include pending-question context and a few-shot examples for common follow-up replies so Qwen / Claude are nudged toward valid structured answers instead of null-heavy output.
+3. **Missing intent text normalization**:
+   There was no centralized normalization function to handle smart quotes, extra punctuation, and whitespace variations. This caused identical semantic replies to be handled differently depending on the user's keyboard or autocorrect behavior.
 
-3. Choice coercion:
-   Expand deterministic matching for normal / less / not-drinking water-intake replies and similar short-answer choice questions.
+**Fix Applied:**
+- Added `normalizeIntentText()` function that normalizes smart quotes, removes trailing punctuation, and collapses whitespace
+- Updated `isShortNegativeResponse()`, `isShortAffirmativeResponse()`, and `isShortUnknownResponse()` to use normalized text
+- Fixed the `coerceFallbackAnswerForPendingQuestion` guard to properly handle all question types
+- Added deterministic coercion for water-intake patterns like "yes, he's drinking normally", "not really", and "no not really"
 
-4. Observability:
-   Log when pending-question recovery was needed, whether extraction returned answers, and when a question remained unresolved after both model and deterministic fallback.
+### Confirmed Root Causes Behind Memory/Compression Issues (VET-705A, VET-706, VET-707C)
 
-### World-Class Follow-On Upgrades
+1. **Compression was receiving too much control state**:
+   MiniMax was being sent `answered_questions`, `extracted_answers`, and `unresolved_question_ids` in the prompt, which could lead to the model inadvertently rewriting or hallucinating about conversation control state.
 
-1. Replace the ad-hoc pending-question flow with an explicit conversation state machine.
-   Questions should move through `asked -> answered_this_turn -> confirmed -> needs_clarification` instead of relying on loose synchronization between `answered_questions`, `extracted_answers`, and `last_question_asked`.
+   **Fix:** `buildNarrativeSnapshot()` now excludes protected control state fields. Only narrative context (facts, symptoms, findings, timeline) is sent for summarization.
 
-2. Make memory compression lossless for structured clinical state.
-   `answered_questions`, `extracted_answers`, unresolved question IDs, and confidence-bearing evidence should survive compression exactly.
+2. **Protected state was not explicitly preserved during merge**:
+   The compression merge function did not explicitly preserve protected fields, relying on the prompt to not include them.
 
-3. Add loop-detection and shadow telemetry.
-   Track extraction success rate, pending-question rescues, repeated-question attempts, and session diffs so we can harden the conversation layer using real production data instead of anecdotes.
+   **Fix:** `mergeCompressionResult()` now explicitly preserves `answered_questions`, `extracted_answers`, `last_question_asked`, and `unresolved_question_ids` from the pre-compression state.
 
-4. Expand deterministic conversation tests.
-   Maintain direct tests for replies like "yes, he's drinking normally", "no, not really", "I don't know", and short duration-style answers such as "for about two days".
+3. **Telemetry was polluting compression prompts**:
+   VET-705 internal telemetry entries (extraction, pending_recovery, compression, repeat_suppression) were being included in the service observations sent to MiniMax.
+
+   **Fix:** VET-706 added filtering to exclude telemetry event types from the compression prompt.
+
+4. **Acknowledgments were not referencing confirmed facts**:
+   Acknowledgments were based only on `known_symptoms[0]` instead of the actual `case_memory` state.
+
+   **Fix:** VET-707C added `buildConfirmedQASummary()` and `humanizeAnswerValue()` to provide explicit Q&A pairs in phrasing prompts and make acknowledgments reference real confirmed facts.
+
+### Confirmed Root Causes Behind Pending-Recovery Gaps (VET-709)
+
+1. **Natural trauma-history and duration replies were not being recovered**:
+   Users responding with phrases like "he's been limping since yesterday" or "he hit his leg on the fence" were not having those answers recorded when extraction failed.
+
+2. **Breathing-onset and stool-consistency coercions had false positives**:
+   Some coercions were too aggressive and would close the wrong pending question for unrelated text (e.g., "drinking water" closing a stool question).
+
+3. **Affirmative swelling and unknown-style replies were not handled**:
+   Phrases like "yes, there's swelling" or "I'm not sure" were not being deterministically coerced.
+
+   **Fix:** VET-709 expanded the `deriveDeterministicAnswerForQuestion` switch cases and tightened the `coerceFallbackAnswerForPendingQuestion` logic to preserve watery-stool recovery for common owner phrasing while preventing unrelated text from closing the wrong question.
+
+### Shipped Safeguards Summary
+
+**Protected Control State (VET-704, VET-705A, VET-706):**
+- `answered_questions`, `extracted_answers`, `unresolved_question_ids`, and `last_question_asked` are now explicitly protected
+- Compression operates only on narrative context
+- Protected state is preserved losslessly across compression boundaries
+
+**Deterministic Answer Coercion (VET-707B, VET-709):**
+- `normalizeIntentText()` handles smart quotes and punctuation variations
+- `isShortAffirmativeResponse()`, `isShortNegativeResponse()`, `isShortUnknownResponse()` use normalized text
+- Water-intake patterns like "drinking normally", "not really", "no not really" are deterministically coerced
+- Trauma-history, duration, swelling, and breathing-onset have expanded recovery patterns
+
+**Observability and Testing (VET-707, VET-710):**
+- Loop-detection telemetry records reason codes (extraction_null, pending_recovery_null, repeat_attempt)
+- Multi-turn replay harness simulates 5+ turns with realistic owner follow-up language
+- Compression-boundary regressions prove protected state survives summarization
+- Payload-safety assertions ensure telemetry markers do not leak into user-facing payloads
+
+### Remaining Follow-On Work
+
+1. **Explicit conversation state machine**:
+   Replace the ad-hoc pending-question flow with an explicit state machine where questions move through `asked -> answered_this_turn -> confirmed -> needs_clarification`.
+
+2. **Expand deterministic test coverage**:
+   Add more direct tests for edge-case replies like "I don't know", "maybe", "for about two days", and multi-sentence responses.
+
+3. **Production telemetry analysis**:
+   Use shadow telemetry to track extraction success rate, pending-question rescues, and repeated-question attempts in production to guide further hardening.
 
 ---
 
