@@ -13,6 +13,7 @@ export {
   inferConversationState,
   inferQuestionState,
 } from "./transitions";
+export { transitionToAnswered } from "./answer-recording";
 
 export type {
   ConversationAnswerValue,
@@ -25,3 +26,4 @@ export type {
 } from "./types";
 export type { ObserveTransitionInput } from "./observer";
 export type { TransitionNoteInput } from "./transitions";
+export type { TransitionToAnsweredInput } from "./answer-recording";
