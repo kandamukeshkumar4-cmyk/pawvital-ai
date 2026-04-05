@@ -31,14 +31,15 @@
 
 ### Final validation
 
-- `npm run lint`: pass. Only remaining output was an existing `ESLintEnvWarning` under `Roo-Code/packages/types/scripts/publish-npm.cjs`.
-- `npm run build`: pass on the reconciled NVIDIA-only branch.
-- `npx jest tests/llm-output.test.ts tests/nvidia-models.test.ts tests/symptom-chat.route.test.ts --runInBand`: pass (`109 passed, 109 total`).
+- `npm run build`: pass on `fix/vet-725-telemetry-leak-remediation`.
+- `npx jest tests/llm-output.test.ts tests/nvidia-models.test.ts tests/symptom-chat.route.test.ts`: pass (`109 passed, 109 total`).
+- `npx eslint tests/symptom-chat.route.test.ts`: pass after replacing `(e: any)` with `SidecarObservation` and tightening compression test casts.
+- Full-repo `npm run lint` still exits non-zero due to thousands of pre-existing issues (including under `Roo-Code/`); scoped lint on touched tests is clean.
 
 ### Remaining concerns
 
-- Repo-wide lint still surfaces the existing `Roo-Code` flat-config warning; it is outside the NVIDIA-only follow-up scope.
-- Until the branch is pushed, `origin/fix/vet-725-telemetry-leak-remediation` still points at `6127ced`.
+- Repo-wide lint noise remains outside this feature scope; use targeted `npx eslint <paths>` for PR checks.
+- `origin/fix/vet-725-telemetry-leak-remediation` tracks `0465965` (includes NVIDIA commits + reconciliation + symptom-chat test alignment + memory docs).
 
 ### Next recommended ticket
 
