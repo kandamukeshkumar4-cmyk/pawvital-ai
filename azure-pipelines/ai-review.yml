@@ -1,0 +1,197 @@
+# PawVital — AI Code Review Pipeline (Gemini 3.1 Pro High)
+# Runs after CI passes on a PR. Sends diff to Gemini, posts review to GitHub PR.
+
+trigger: none  # only triggered by the CI pipeline on success
+
+pr:
+  branches:
+    include:
+      - master
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  - group: pawvital-ai-secrets  # Variable group in Azure DevOps — holds GOOGLE_AI_API_KEY
+  - name: GEMINI_MODEL
+    value: gemini-2.5-pro       # Override via pipeline variable if needed
+
+resources:
+  pipelines:
+    - pipeline: ci
+      source: PawVital-CI
+      trigger:
+        stages:
+          - Gate  # Only run after CI Gate passes
+
+stages:
+  - stage: AIReview
+    displayName: Gemini Code Review
+    jobs:
+      - job: Review
+        displayName: Review with Gemini ${{ variables.GEMINI_MODEL }}
+        timeoutInMinutes: 15
+        steps:
+          - checkout: self
+            fetchDepth: 0
+
+          - script: |
+              # Install gh CLI
+              type -p curl >/dev/null || (apt update && apt install curl -y)
+              curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+              chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+              echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+              apt update && apt install gh -y
+            displayName: Install gh CLI
+
+          - script: |
+              PR_NUMBER=$(System.PullRequest.PullRequestNumber)
+              if [ -z "$PR_NUMBER" ]; then
+                echo "Not a PR build — skipping review"
+                exit 0
+              fi
+
+              # Get the diff
+              gh pr diff "$PR_NUMBER" > /tmp/pr-diff.txt
+
+              DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
+              if [ "$DIFF_SIZE" -gt 100000 ]; then
+                head -c 100000 /tmp/pr-diff.txt > /tmp/truncated.txt
+                printf '\n...\n[DIFF TRUNCATED — original was %s bytes]\n' "$DIFF_SIZE" >> /tmp/truncated.txt
+                mv /tmp/truncated.txt /tmp/pr-diff.txt
+              fi
+
+              # Get changed files
+              gh pr view "$PR_NUMBER" --json files --jq '.files[].path' > /tmp/changed-files.txt
+
+              echo "Diff size: $DIFF_SIZE bytes"
+              echo "Changed files:"
+              cat /tmp/changed-files.txt
+            displayName: Get PR diff and files
+            env:
+              GH_TOKEN: $(GITHUB_PAT)
+
+          - script: |
+              PR_NUMBER=$(System.PullRequest.PullRequestNumber)
+              if [ -z "$PR_NUMBER" ]; then
+                echo "Not a PR build — skipping"
+                exit 0
+              fi
+
+              DIFF=$(cat /tmp/pr-diff.txt)
+              FILES=$(cat /tmp/changed-files.txt)
+              PR_TITLE="$(System.PullRequest.SourceBranch)"
+
+              PROMPT="You are a senior code reviewer for PawVital, a veterinary AI triage system.
+
+              PR branch: ${PR_TITLE}
+              Changed files:
+              ${FILES}
+
+              Diff:
+              \`\`\`
+              ${DIFF}
+              \`\`\`
+
+              Review rules (these are hard rules — violations must be flagged as critical):
+              1. Clinical logic in clinical-matrix.ts and triage-engine.ts is the source of truth. Medical decisions must NOT move into model prompts.
+              2. Protected state (answered_questions, extracted_answers, unresolved_question_ids, last_question_asked) must never be mutated by compression.
+              3. Telemetry must stay internal — never appears in user-facing payloads or session.case_memory.service_observations visible to owners.
+              4. No security vulnerabilities — no XSS, injection, or credential leaks.
+              5. One ticket per branch — reject PRs that mix unrelated concerns.
+              6. Tests must not weaken existing assertions.
+              7. No speculative abstractions — changes must match the stated ticket scope.
+
+              Respond in this exact JSON format only (no markdown wrapper):
+              {
+                \"verdict\": \"APPROVE\" or \"REQUEST_CHANGES\",
+                \"summary\": \"2-3 sentence summary of what changed and whether it is safe\",
+                \"issues\": [
+                  {\"severity\": \"critical|warning|info\", \"file\": \"path/to/file\", \"message\": \"specific description of the issue\"}
+                ],
+                \"safe_to_merge\": true or false
+              }
+
+              Be conservative. Only approve if the change is clearly safe and within scope."
+
+              # Call Gemini API
+              RESPONSE=$(curl -s -X POST \
+                "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GOOGLE_AI_API_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "$(jq -n --arg p "$PROMPT" '{
+                  contents: [{ parts: [{ text: $p }] }],
+                  generationConfig: {
+                    temperature: 0.2,
+                    maxOutputTokens: 4096,
+                    responseMimeType: "application/json"
+                  }
+                }')")
+
+              REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
+
+              if [ -z "$REVIEW_TEXT" ]; then
+                echo "##vso[task.logissue type=warning]Gemini returned no content — skipping review"
+                echo "$RESPONSE" | jq '.error // .promptFeedback // "no detail"'
+                exit 0
+              fi
+
+              echo "$REVIEW_TEXT" > /tmp/review-result.json
+
+              VERDICT=$(echo "$REVIEW_TEXT" | jq -r '.verdict // "UNKNOWN"')
+              SUMMARY=$(echo "$REVIEW_TEXT" | jq -r '.summary // "No summary"')
+
+              echo "##vso[task.setvariable variable=VERDICT]$VERDICT"
+              echo "Verdict: $VERDICT"
+              echo "Summary: $SUMMARY"
+            displayName: Run Gemini review
+            env:
+              GOOGLE_AI_API_KEY: $(GOOGLE_AI_API_KEY)
+
+          - script: |
+              PR_NUMBER=$(System.PullRequest.PullRequestNumber)
+              if [ -z "$PR_NUMBER" ] || [ ! -f /tmp/review-result.json ]; then
+                exit 0
+              fi
+
+              VERDICT=$(VERDICT)
+              REVIEW=$(cat /tmp/review-result.json)
+              SUMMARY=$(echo "$REVIEW" | jq -r '.summary // "No summary"')
+              ISSUES=$(echo "$REVIEW" | jq -r '
+                if .issues and (.issues | length > 0) then
+                  .issues[] | "- **\(.severity)**: `\(.file // "general")` — \(.message)"
+                else "No issues found." end' 2>/dev/null || echo "No structured issues.")
+
+              if [ "$VERDICT" = "APPROVE" ]; then
+                ICON="✅"
+                STATUS="Approved"
+              elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
+                ICON="❌"
+                STATUS="Changes Requested"
+              else
+                ICON="⚠️"
+                STATUS="Review Completed"
+              fi
+
+              BODY="## AI Code Review — ${ICON} ${STATUS}
+
+              **Reviewer:** Gemini \`${GEMINI_MODEL}\`
+              **Pipeline:** [Azure DevOps #$(Build.BuildId)]($(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId))
+              **Summary:** ${SUMMARY}
+
+              ### Issues
+              ${ISSUES}
+
+              ---
+              *Automated review by Gemini via Azure Pipelines. Verdict: \`${VERDICT}\`*"
+
+              gh pr comment "$PR_NUMBER" --body "$BODY"
+
+              # Approve or request changes on the GitHub PR
+              if [ "$VERDICT" = "APPROVE" ]; then
+                gh pr review "$PR_NUMBER" --approve --body "Gemini review passed. Safe to merge."
+              elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
+                gh pr review "$PR_NUMBER" --request-changes --body "Gemini review found issues. See comment above."
+              fi
+            displayName: Post review to GitHub PR
+            env:
+              GH_TOKEN: $(GITHUB_PAT)
