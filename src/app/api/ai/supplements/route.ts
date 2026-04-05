@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
-import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
+import {
+  generateNvidiaJson,
+  isNvidiaGenerationConfigured,
+} from "@/lib/nvidia-generation";
 
 export async function POST(request: Request) {
   try {
     const { pet } = await request.json();
 
-    if (!isAnthropicConfigured) {
+    if (!isNvidiaGenerationConfigured("diagnosis")) {
       return NextResponse.json({
         supplements: [],
         nutrition_grade: "B+",
         monthly_cost: "$90",
-        summary: `Demo mode: Connect an ANTHROPIC_API_KEY for personalized supplement recommendations for ${pet?.name || "your pet"}.`,
+        summary: `Demo mode: Connect an NVIDIA NIM API key for personalized supplement recommendations for ${pet?.name || "your pet"}.`,
       });
     }
 
@@ -46,16 +49,15 @@ Create a supplement plan. Respond in this exact JSON format:
 
 Consider breed-specific needs, age-related requirements, and existing conditions. Include 4-6 supplements. Respond ONLY with valid JSON.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
+    const result = await generateNvidiaJson<Record<string, unknown>>({
+      role: "diagnosis",
+      prompt,
+      maxTokens: 1024,
+      temperature: 0.3,
+      contextLabel: "supplements",
     });
 
-    const content = message.content[0];
-    if (content.type !== "text") throw new Error("Unexpected response type");
-
-    return NextResponse.json(JSON.parse(content.text));
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json({
       supplements: [],

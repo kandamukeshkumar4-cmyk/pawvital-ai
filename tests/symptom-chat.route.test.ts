@@ -36,11 +36,6 @@ jest.mock("@/lib/rate-limit", () => ({
   getRateLimitId: (...args: unknown[]) => mockGetRateLimitId(...args),
 }));
 
-jest.mock("@/lib/anthropic", () => ({
-  anthropic: {},
-  isAnthropicConfigured: false,
-}));
-
 jest.mock("@/lib/nvidia-models", () => ({
   isNvidiaConfigured: () => true,
   extractWithQwen: (...args: unknown[]) => mockExtractWithQwen(...args),

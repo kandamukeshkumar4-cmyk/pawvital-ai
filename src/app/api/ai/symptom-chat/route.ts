@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import { after, NextResponse } from "next/server";
-import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
 import {
   isNvidiaConfigured,
   extractWithQwen,
@@ -14,8 +13,14 @@ import {
   imageGuardrail,
 } from "@/lib/nvidia-models";
 import {
+  safeParseJson,
+  stripMarkdownCodeFences,
+  stripThinkingBlocks,
+} from "@/lib/llm-output";
+import {
   createSession,
   addSymptoms,
+  recordAnswer,
   getNextQuestion,
   getMissingQuestions,
   getQuestionText,
@@ -118,11 +123,10 @@ import { saveSymptomReportToDB } from "@/lib/report-storage";
 // Pipeline:
 //   Qwen 3.5 122B    → Data extraction (structured JSON from user text)
 //   Clinical Matrix   → All medical logic (pure code, deterministic)
-//   Kimi K2.5         → Question phrasing (warm, empathetic)
+//   Llama 3.3 70B     → Question phrasing (warm, empathetic)
 //   Nemotron Ultra    → Diagnosis report (deep clinical reasoning)
 //   GLM-5             → Safety verification (catch missed emergencies)
 //
-// Claude serves as fallback if any NVIDIA model fails.
 // =============================================================================
 
 // Detect which engine to use
@@ -171,7 +175,7 @@ export async function POST(request: Request) {
     } = body;
 
     // Demo mode fallback
-    if (!isAnthropicConfigured && !useNvidia) {
+    if (!useNvidia) {
       return demoResponse(action, pet);
     }
 
@@ -459,10 +463,10 @@ export async function POST(request: Request) {
         // ── Stage 5: Hardcoded Visual Red Flag Guardrails ──
         // Override everything if critical wound signs detected
         try {
-          let tier1Json = visionResult.tier1_fast;
-          const match = tier1Json.match(/\{[\s\S]*\}/);
-          if (match) tier1Json = match[0];
-          const tier1Data = JSON.parse(tier1Json);
+          const tier1Data = safeParseJson<Record<string, unknown>>(
+            visionResult.tier1_fast,
+            "symptom chat vision guardrail"
+          );
           const guardrail = imageGuardrail(tier1Data);
 
           if (guardrail.triggered) {
@@ -543,7 +547,7 @@ export async function POST(request: Request) {
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // STEP 1: EXTRACT structured data — Qwen 3.5 122B (Claude fallback)
+    // STEP 1: EXTRACT structured data — Qwen 3.5 122B
     // ═══════════════════════════════════════════════════════════════════
     const seededExtractionSymptoms = Array.from(
       new Set([
@@ -572,7 +576,6 @@ export async function POST(request: Request) {
         compactImageSignals
       ));
 
-    // ── VET-705: Record extraction telemetry ──
     const isExtractionValidJson =
       typeof extracted === "object" &&
       extracted !== null &&
@@ -631,7 +634,7 @@ export async function POST(request: Request) {
       lastUserMessage.content,
       session
     );
-    let mergedAnswers = mergeTurnAnswers(
+    const mergedAnswers = mergeTurnAnswers(
       session,
       deterministicSupplementalAnswers,
       extracted.answers || {}
@@ -680,8 +683,8 @@ export async function POST(request: Request) {
         console.log(
           `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
         );
-        // ── VET-705: Record pending recovery telemetry ──
-        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+        const hadUnresolved =
+          (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
@@ -695,8 +698,8 @@ export async function POST(request: Request) {
         console.log(
           `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
         );
-        // ── VET-705: Record pending recovery failure telemetry ──
-        const hadUnresolved = (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+        const hadUnresolved =
+          (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
@@ -883,9 +886,6 @@ export async function POST(request: Request) {
       session,
       turnFocusSymptoms
     );
-
-    // ── VET-705: Record repeat suppression telemetry ──
-    // ── VET-707: Record loop reason for suppression ──
     const wasRepeatSuppressed =
       nextQuestionId !== null &&
       nextQuestionId === session.last_question_asked &&
@@ -900,7 +900,6 @@ export async function POST(request: Request) {
         repeat_prevented: true,
       });
     }
-
     const visualEvidenceInfluencedQuestion = didVisualEvidenceInfluenceQuestion(
       nextQuestionId,
       visualEvidence,
@@ -1036,7 +1035,7 @@ export async function POST(request: Request) {
 }
 
 // =============================================================================
-// STEP 1: Data Extraction — Qwen 3.5 122B → Claude fallback
+// STEP 1: Data Extraction — Qwen 3.5 122B
 // =============================================================================
 
 async function extractDataFromMessage(
@@ -1093,26 +1092,8 @@ Examples:
 Output ONLY the JSON object. No explanation, no thinking, no markdown.`;
 
   try {
-    let rawText: string;
-
-    if (useNvidia) {
-      // PRIMARY: Qwen 3.5 122B — fast, accurate structured extraction
-      rawText = await extractWithQwen(prompt);
-      console.log("[Engine] Extraction: Qwen 3.5 122B");
-    } else if (isAnthropicConfigured) {
-      // FALLBACK: Claude Sonnet
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      });
-      const content = response.content[0];
-      if (content.type !== "text") throw new Error("Unexpected response type");
-      rawText = content.text;
-      console.log("[Engine] Extraction: Claude Sonnet (fallback)");
-    } else {
-      throw new Error("No extraction model configured");
-    }
+    const rawText = await extractWithQwen(prompt);
+    console.log("[Engine] Extraction: Qwen 3.5 122B");
 
     const parsed = parseExtractionResponse(rawText);
     console.log(
@@ -1122,23 +1103,6 @@ Output ONLY the JSON object. No explanation, no thinking, no markdown.`;
     return parsed;
   } catch (error) {
     console.error("Primary extraction failed:", error);
-
-    // If Qwen failed, try Claude as fallback
-    if (isAnthropicConfigured) {
-      try {
-        console.log("[Engine] Extraction fallback: Claude Sonnet");
-        const response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1024,
-          messages: [{ role: "user", content: prompt }],
-        });
-        const content = response.content[0];
-        if (content.type !== "text") throw new Error("Unexpected response type");
-        return parseExtractionResponse(content.text);
-      } catch (fallbackError) {
-        console.error("Claude fallback also failed:", fallbackError);
-      }
-    }
 
     // Last resort: keyword extraction
     console.log("[Engine] Extraction fallback: keyword-only recovery");
@@ -1150,25 +1114,10 @@ function parseExtractionResponse(rawText: string): {
   symptoms: string[];
   answers: Record<string, string | boolean | number>;
 } {
-  let jsonText = rawText.trim();
-
-  // Strip thinking tags (Qwen/Kimi wrap reasoning in <think>...</think>)
-  jsonText = jsonText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-
-  // Strip markdown code blocks
-  if (jsonText.startsWith("```")) {
-    jsonText = jsonText
-      .replace(/^```(?:json)?\s*\n?/, "")
-      .replace(/\n?```\s*$/, "");
-  }
-
-  // Find the JSON object if there's extra text
-  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    jsonText = jsonMatch[0];
-  }
-
-  const parsed = JSON.parse(jsonText);
+  const parsed = safeParseJson<{
+    symptoms?: string[];
+    answers?: Record<string, string | boolean | number | null>;
+  }>(rawText, "symptom chat extraction");
 
   const cleanAnswers: Record<string, string | boolean | number> = {};
   for (const [key, val] of Object.entries(parsed.answers || {})) {
@@ -1261,18 +1210,8 @@ function extractSymptomsFromKeywords(message: string): string[] {
   return symptoms;
 }
 
-function stripThinkingArtifacts(text: string): string {
-  return text
-    .replace(/<think>[\s\S]*?<\/think>/g, "")
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-}
-
 function parseLooseJsonRecord(rawText: string): Record<string, unknown> {
-  const cleaned = stripThinkingArtifacts(rawText);
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  return JSON.parse(match ? match[0] : cleaned) as Record<string, unknown>;
+  return safeParseJson<Record<string, unknown>>(rawText, "symptom chat JSON");
 }
 
 function humanizeAnswerValue(value: string | boolean | number): string {
@@ -1347,7 +1286,9 @@ function sanitizeQuestionDraft(
   fallbackMessage: string,
   allowPhotoMention: boolean
 ): string {
-  const cleaned = stripThinkingArtifacts(rawDraft).replace(/\s+/g, " ").trim();
+  const cleaned = stripMarkdownCodeFences(stripThinkingBlocks(rawDraft))
+    .replace(/\s+/g, " ")
+    .trim();
   if (!cleaned) return fallbackMessage;
 
   const mentionsSpeciesConfusion =
@@ -1413,10 +1354,8 @@ async function maybeCompressStructuredCaseMemory(
     };
   }
 
-  // VET-704: Protect conversation control state before sending to MiniMax
   const protectedState = getProtectedConversationState(session);
 
-  // VET-706: Use narrative-only snapshot (excludes protected control state & telemetry)
   const prompt = `You are compressing an active veterinary triage case into stable memory for downstream reasoning.
 
 Summarize only confirmed or strongly supported facts. Preserve:
@@ -1436,10 +1375,12 @@ Return ONLY the summary text.`;
 
   try {
     const compressed = await compressCaseMemoryWithMiniMax(prompt);
-    // VET-704: Merge compression result while preserving protected control state
-    const mergedSession = mergeCompressionResult(session, compressed, protectedState);
-    // Record compression telemetry
-    const telemetrySession = recordConversationTelemetry(mergedSession, {
+    const mergedSession = mergeCompressionResult(
+      session,
+      compressed,
+      protectedState
+    );
+    return recordConversationTelemetry(mergedSession, {
       event: "compression",
       turn_count: mergedSession.case_memory?.turn_count ?? 0,
       outcome: "success",
@@ -1449,10 +1390,8 @@ Return ONLY the summary text.`;
       narrative_only: true,
       control_state_preserved: true,
     });
-    return telemetrySession;
   } catch (error) {
     console.error("MiniMax memory compression failed:", error);
-    // Record compression fallback telemetry
     const telemetrySession = recordConversationTelemetry(session, {
       event: "compression",
       turn_count: session.case_memory?.turn_count ?? 0,
@@ -1613,24 +1552,10 @@ HARD RULES:
 Respond with only the final 2-sentence message.`;
 
   try {
-    let draft: string;
+    const draft = await phraseWithLlama(prompt);
+    console.log("[Engine] Phrasing primary: Llama 3.3 70B Instruct");
 
-    if (useNvidia) {
-      draft = await phraseWithLlama(prompt);
-      console.log("[Engine] Phrasing primary: Llama 3.3 70B Instruct");
-    } else {
-      const claudeRes = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 256,
-        messages: [{ role: "user", content: prompt }],
-      });
-      const content = claudeRes.content[0];
-      if (content.type !== "text") throw new Error("Unexpected response type");
-      draft = content.text;
-      console.log("[Engine] Phrasing primary: Claude");
-    }
-
-    draft = sanitizeQuestionDraft(
+    const sanitizedDraft = sanitizeQuestionDraft(
       draft,
       fallbackMessage,
       allowPhotoMentionInWording
@@ -1651,7 +1576,7 @@ REQUIRED QUESTION:
 - Internal ID: ${questionId}
 
 DRAFT MESSAGE:
-${draft}
+${sanitizedDraft}
 
 Return ONLY valid JSON:
 {
@@ -1682,32 +1607,16 @@ RULES:
       }
     }
 
-    return draft;
+    return sanitizedDraft;
   } catch (error) {
     console.error("Phrasing failed:", error);
-
-    if (useNvidia && isAnthropicConfigured) {
-      try {
-        const claudeRes = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 256,
-          messages: [{ role: "user", content: prompt }],
-        });
-        const content = claudeRes.content[0];
-        if (content.type !== "text")
-          throw new Error("Unexpected response type");
-        return sanitizeQuestionDraft(content.text, fallbackMessage, hasPhoto);
-      } catch {
-        // Final fallback below
-      }
-    }
 
     return fallbackMessage;
   }
 }
 
 // =============================================================================
-// STEP 5: Question Phrasing — Llama 3.3 70B → Claude fallback
+// STEP 5: Question Phrasing — Llama 3.3 70B
 // =============================================================================
 
 async function phraseQuestion(
@@ -1957,24 +1866,8 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
 }`;
 
   try {
-    let rawReport: string;
-
-    if (useNvidia) {
-      // PRIMARY: Nemotron Ultra 253B — NVIDIA's most powerful for clinical reasoning
-      rawReport = await diagnoseWithDeepSeek(reportPrompt);
-      console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
-    } else {
-      // FALLBACK: Claude
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 4096,
-        messages: [{ role: "user", content: reportPrompt }],
-      });
-      const content = response.content[0];
-      if (content.type !== "text") throw new Error("Unexpected response type");
-      rawReport = content.text;
-      console.log("[Engine] Diagnosis: Claude (fallback)");
-    }
+    const rawReport = await diagnoseWithDeepSeek(reportPrompt);
+    console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
 
     const report = parseReportJSON(rawReport);
     report.confidence = capDiagnosticConfidence({
@@ -2097,61 +1990,6 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     return NextResponse.json({ type: "report", report: finalReport });
   } catch (error) {
     console.error("Report generation failed:", error);
-
-    // Try Claude as fallback if DeepSeek failed
-    if (useNvidia && isAnthropicConfigured) {
-      try {
-        console.log("[Engine] Diagnosis fallback: Claude");
-        const response = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
-          messages: [{ role: "user", content: reportPrompt }],
-        });
-        const content = response.content[0];
-        if (content.type !== "text")
-          throw new Error("Unexpected response type");
-        const report = parseReportJSON(content.text);
-        report.confidence = capDiagnosticConfidence({
-          baseConfidence: deriveBaselineReportConfidence(context),
-          hasModelDisagreement: Boolean(
-            session.case_memory?.consult_opinions?.some(
-              (opinion) => opinion.disagreements.length > 0
-            )
-          ),
-          lowQualityImage:
-            session.latest_image_quality === "poor" ||
-            session.latest_image_quality === "borderline",
-          weakRetrievalSupport:
-            retrievalBundle.textChunks.length === 0 &&
-            retrievalBundle.imageMatches.length === 0,
-          ambiguityFlags: session.case_memory?.ambiguity_flags || [],
-        });
-        if (!Array.isArray(report.evidence_chain)) {
-          report.evidence_chain = buildEvidenceChainForResponse(
-            session,
-            retrievalBundle
-          );
-        }
-        report.evidenceChain = buildStructuredEvidenceChain(
-          session,
-          retrievalBundle
-        );
-        report.vet_handoff_summary = buildVetHandoffSummary(session, pet, report);
-        report.system_observability = buildObservabilitySnapshot(session);
-        try {
-          const reportStorageId = await saveSymptomReportToDB(session, pet, report);
-          if (reportStorageId) {
-            report.report_storage_id = reportStorageId;
-            report.outcome_feedback_enabled = true;
-          }
-        } catch (saveError) {
-          console.error("[DB] Failed to save triage session:", saveError);
-        }
-        return NextResponse.json({ type: "report", report });
-      } catch (fallbackError) {
-        console.error("Claude fallback also failed:", fallbackError);
-      }
-    }
 
     throw error;
   }
@@ -2805,25 +2643,7 @@ function runAfterSafely(task: () => Promise<void>): boolean {
 }
 
 function parseReportJSON(rawText: string): Record<string, unknown> {
-  let jsonText = rawText.trim();
-
-  // Strip thinking tags
-  jsonText = jsonText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-
-  // Strip markdown code blocks
-  if (jsonText.startsWith("```")) {
-    jsonText = jsonText
-      .replace(/^```(?:json)?\s*\n?/, "")
-      .replace(/\n?```\s*$/, "");
-  }
-
-  // Find JSON object
-  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    jsonText = jsonMatch[0];
-  }
-
-  return JSON.parse(jsonText);
+  return safeParseJson<Record<string, unknown>>(rawText, "symptom chat report");
 }
 
 // =============================================================================
@@ -2865,30 +2685,47 @@ Output ONLY valid JSON (no thinking, no markdown):
 
   const rawResponse = await verifyWithGLM(safetyPrompt);
 
-  let jsonText = rawResponse.trim();
-  jsonText = jsonText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  if (jsonText.startsWith("```")) {
-    jsonText = jsonText
-      .replace(/^```(?:json)?\s*\n?/, "")
-      .replace(/\n?```\s*$/, "");
-  }
-  const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    jsonText = jsonMatch[0];
-  }
+  let safety: {
+    safe?: boolean;
+    corrections?: {
+      severity?: string | null;
+      recommendation?: string | null;
+      add_warning_signs?: string[];
+      add_to_explanation?: string | null;
+      safety_note?: string | null;
+    };
+    reasoning?: string;
+  };
 
-  // VET-711: Wrap JSON.parse in try/catch so GLM-5 formatting errors don't kill the report
-  let safety: { safe?: boolean; corrections?: Record<string, unknown>; reasoning?: string } | null = null;
   try {
-    safety = JSON.parse(jsonText);
-  } catch (parseError) {
-    console.error("[Safety] GLM-5 JSON parse failed (non-blocking, skipping safety corrections):", parseError);
-    console.log("[Safety] Continuing with report generation without safety corrections");
+    safety = safeParseJson<{
+      safe?: boolean;
+      corrections?: {
+        severity?: string | null;
+        recommendation?: string | null;
+        add_warning_signs?: string[];
+        add_to_explanation?: string | null;
+        safety_note?: string | null;
+      };
+      reasoning?: string;
+    }>(rawResponse, "symptom chat safety review");
+  } catch (error) {
+    const parseError =
+      error instanceof SyntaxError
+        ? error
+        : new SyntaxError(error instanceof Error ? error.message : String(error));
+    console.error(
+      "[Safety] GLM-5 JSON parse failed (non-blocking, skipping safety corrections):",
+      parseError
+    );
+    console.log(
+      "[Safety] Continuing with report generation without safety corrections"
+    );
     return report;
   }
 
   // Apply corrections if needed
-  if (safety && !safety.safe && safety.corrections) {
+  if (!safety.safe && safety.corrections) {
     const c = safety.corrections;
 
     if (c.severity) {
@@ -3153,6 +2990,55 @@ function coerceChoiceAnswerFromIntent(
     return null;
   }
 
+  if (questionId === "appetite_status") {
+    if (
+      /\b(not eating at all|not eating anything|not eating|won't eat|wont eat|refusing food|won't touch food|wont touch food|no appetite|has no appetite|isn't eating|isnt eating)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["none"], ["absent"]]);
+    }
+
+    if (
+      /\b(eating less|less appetite|reduced appetite|not eating much|hardly eating|barely eating|picking at food|eating a little less)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["decreas"], ["less"]]);
+    }
+
+    if (
+      /\b(eating normally|appetite is normal|normal appetite|eating fine|eating okay|eating ok)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["normal"]]);
+    }
+  }
+
+  if (questionId === "stool_consistency") {
+    if (
+      /\bwatery\b/.test(lower) ||
+      /\b(mostly|all|just|pretty much)\s+water\b/.test(lower) ||
+      /\b(came|comes|coming|looked|looks|is|was)\s+out\s+like\s+water\b/.test(lower) ||
+      /\blike\s+water\b/.test(lower)
+    ) {
+      return pickChoiceByPriority(choices, [["watery"]]);
+    }
+
+    if (/\bmucus|mucousy|slimy\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["mucus"]]);
+    }
+
+    if (/\bsoft|loose|mushy\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["soft"]]);
+    }
+
+    if (/\bformed|solid|normal stool\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["formed"]]);
+    }
+  }
+
   if (questionId === "water_intake") {
     if (
       /\b(drinking more|drinking a lot|very thirsty|constantly drinking|more water|drinking way more|water intake is up)\b/.test(
@@ -3222,93 +3108,6 @@ function coerceChoiceAnswerFromIntent(
         ["none"],
         ["absent"],
       ]);
-    }
-  }
-
-  // ── VET-709: Onset-family coercion (breathing_onset, etc.) ──
-  if (questionId === "breathing_onset") {
-    if (/\b(sudden|suddenly|all at once|out of nowhere|came on fast)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["sudden"]]);
-    }
-    if (/\b(gradual|gradually|slow|slowly|over time|progressive)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["gradual"]]);
-    }
-  }
-
-  // ── VET-709: Limping progression coercion ──
-  if (questionId === "limping_progression") {
-    if (/\b(better|improving|less|not as bad|easing up)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["better"]]);
-    }
-    if (/\b(worse|worsening|getting worse|more severe|deteriorat)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["worse"]]);
-    }
-    if (/\b(same|unchanged|no change|hasn't changed|about the same|consistent)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["same"]]);
-    }
-  }
-
-  // ── VET-709: Appetite status coercion ──
-  if (questionId === "appetite_status") {
-    if (
-      /\b(not eating|won't eat|wont eat|refusing food|no appetite|nothing at all|hasn't eaten|hasnt eaten|stopped eating)\b/.test(lower)
-    ) {
-      return pickChoiceByPriority(choices, [["none"]]);
-    }
-    if (
-      /\b(eating less|less appetite|not much|picky|barely eating|bit less|little less|reduced appetite)\b/.test(lower)
-    ) {
-      return pickChoiceByPriority(choices, [["decreased"], ["decreas"], ["less"]]);
-    }
-    if (
-      /\b(eating normally|normal appetite|eating fine|eating well|eating okay|eating ok|good appetite)\b/.test(lower) ||
-      ((lower.includes("normal") || lower.includes("fine") || lower.includes("okay") || lower.includes("ok")) &&
-        (lower.includes("eat") || lower.includes("food") || lower.includes("appetite")))
-    ) {
-      return pickChoiceByPriority(choices, [["normal"]]);
-    }
-  }
-
-  // ── VET-709: Lethargy severity coercion ──
-  if (questionId === "lethargy_severity") {
-    if (/\b(barely moving|won't move|wont move|can't get up|cant get up|unresponsive|collapsed)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["severe"]]);
-    }
-    if (/\b(less active|a bit tired|somewhat tired|a little sluggish|slightly less)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["mild"]]);
-    }
-    if (/\b(really tired|very tired|quite lethargic|noticeably less active|much less energy)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["moderate"]]);
-    }
-  }
-
-  // ── VET-709: Trembling timing coercion ──
-  if (questionId === "trembling_timing") {
-    if (/\b(constant|all the time|non stop|nonstop|continuous|never stops)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["constant"]]);
-    }
-    if (/\b(comes and goes|intermittent|on and off|sometimes|occasional|not constant)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["intermittent"]]);
-    }
-  }
-
-  // ── VET-709: Stool consistency coercion ──
-  if (questionId === "stool_consistency") {
-    if (
-      /\b(watery|liquid|water[-\s]?like|like water|all water|just water|mostly water|came out like water)\b/.test(
-        lower
-      )
-    ) {
-      return pickChoiceByPriority(choices, [["watery"]]);
-    }
-    if (/\b(mucus|mucusy|slimy|jelly)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["mucus"]]);
-    }
-    if (/\b(soft|mushy|loose)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["soft"]]);
-    }
-    if (/\b(formed|solid|normal|firm)\b/.test(lower)) {
-      return pickChoiceByPriority(choices, [["formed"]]);
     }
   }
 
@@ -3598,6 +3397,10 @@ function deriveDeterministicAnswerForQuestion(
       return extractWeightBearingStatus(rawMessage);
     case "trauma_history":
       return extractTraumaHistory(rawMessage);
+    case "appetite_status":
+      return extractAppetiteStatus(rawMessage);
+    case "stool_consistency":
+      return extractStoolConsistency(rawMessage);
     case "gum_color":
       return extractGumColor(rawMessage);
     case "water_intake":
@@ -3694,6 +3497,8 @@ function isRefreshableDeterministicQuestion(questionId: string): boolean {
     "limping_progression",
     "weight_bearing",
     "trauma_history",
+    "appetite_status",
+    "stool_consistency",
     "gum_color",
     "water_intake",
     "consciousness_level",
@@ -3771,6 +3576,8 @@ function shouldPreferDeterministicAnswer(questionId: string): boolean {
     "limping_progression",
     "weight_bearing",
     "trauma_history",
+    "appetite_status",
+    "stool_consistency",
     "gum_color",
     "water_intake",
     "consciousness_level",
@@ -3915,6 +3722,14 @@ function extractGumColor(rawMessage: string): string | null {
 
 function extractWaterIntake(rawMessage: string): string | null {
   return coerceChoiceAnswerFromIntent("water_intake", rawMessage);
+}
+
+function extractAppetiteStatus(rawMessage: string): string | null {
+  return coerceChoiceAnswerFromIntent("appetite_status", rawMessage);
+}
+
+function extractStoolConsistency(rawMessage: string): string | null {
+  return coerceChoiceAnswerFromIntent("stool_consistency", rawMessage);
 }
 
 function extractConsciousnessLevel(rawMessage: string): string | null {
@@ -4274,12 +4089,7 @@ function propagateSharedLocationAnswers(session: TriageSession): TriageSession {
         continue;
       }
 
-      updated = transitionToAnswered({
-        session: updated,
-        questionId: targetQuestionId,
-        value: sourceValue,
-        reason: "location_answer_propagated",
-      });
+      updated = recordAnswer(updated, targetQuestionId, sourceValue);
     }
   }
 
@@ -4524,13 +4334,13 @@ function demoResponse(action: string, pet: PetProfile) {
         severity: "high",
         recommendation: "vet_48h",
         title: "Demo Mode — Configure API Keys",
-        explanation: `This is demo mode. Add your NVIDIA NIM API keys or ANTHROPIC_API_KEY to enable the 4-model clinical diagnosis engine for ${pet.name}.`,
+        explanation: `This is demo mode. Add your NVIDIA NIM API key to enable the 4-model clinical diagnosis engine for ${pet.name}.`,
         differential_diagnoses: [
           {
             condition: "Demo Mode",
             likelihood: "high",
             description:
-              "Configure API keys to unlock: Qwen 3.5 (extraction) → DeepSeek R1 (diagnosis) → GLM-5 (safety verification).",
+              "Configure API keys to unlock: Qwen 3.5 (extraction) → Llama 3.3 (phrasing) → Nemotron Ultra / DeepSeek V3.2 (diagnosis) → GLM-5 (safety verification).",
           },
         ],
         clinical_notes: "Demo mode active.",

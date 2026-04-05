@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
+import {
+  generateNvidiaJson,
+  isNvidiaGenerationConfigured,
+} from "@/lib/nvidia-generation";
 
 export async function POST(request: Request) {
   try {
     const { pet, recentSymptoms, recentActivity, supplements } = await request.json();
 
-    if (!isAnthropicConfigured) {
+    if (!isNvidiaGenerationConfigured("phrasing_verifier")) {
       return NextResponse.json({
         score: 85,
         factors: { activity: 82, nutrition: 88, weight: 80, symptoms: 90, mood: 85 },
-        summary: `${pet?.name || "Your pet"} is in good overall health. Connect an ANTHROPIC_API_KEY for personalized AI analysis.`,
+        summary: `${pet?.name || "Your pet"} is in good overall health. Connect an NVIDIA NIM API key for personalized AI analysis.`,
         tips: ["Maintain current supplement routine", "Increase daily walk by 5 minutes", "Schedule annual checkup"],
       });
     }
@@ -44,16 +47,15 @@ Calculate a health score and breakdown. Respond in this exact JSON format:
 
 Consider breed-specific health benchmarks and age-appropriate expectations. Respond ONLY with valid JSON.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
+    const result = await generateNvidiaJson<Record<string, unknown>>({
+      role: "phrasing_verifier",
+      prompt,
+      maxTokens: 512,
+      temperature: 0.2,
+      contextLabel: "health score",
     });
 
-    const content = message.content[0];
-    if (content.type !== "text") throw new Error("Unexpected response type");
-
-    return NextResponse.json(JSON.parse(content.text));
+    return NextResponse.json(result);
   } catch {
     return NextResponse.json({
       score: 85,
