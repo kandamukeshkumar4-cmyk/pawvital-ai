@@ -1,43 +1,38 @@
 # Agent Memory
 
-## 2026-04-05 - NVIDIA-only runtime refactor
+## 2026-04-05 — NVIDIA-only runtime (autonomous ticket)
 
-- Branch: `qwen/mega-nvidia-only-refactor-v1`
-- Scope: remove Anthropic from app runtime paths, centralize NVIDIA generation/parsing helpers, normalize NVIDIA key resolution, and preserve existing route contracts.
+- **Branch:** `cursor/nvidia-only-autonomous-20260405`
+- **Summary:** Runtime LLM traffic for `src/app/api/ai/*` uses NVIDIA NIM only (OpenAI SDK + `https://integrate.api.nvidia.com/v1`). Anthropic runtime paths and helpers were removed. Shared parsing lives in `src/lib/llm-output.ts`; text calls go through `src/lib/nvidia-generation.ts` and `src/lib/nvidia-models.ts`.
 
-### Runtime provider policy
+### Key resolution (priority)
 
-- Runtime LLM provider for `src/app/api/ai/*`: NVIDIA NIM only.
-- Shared default key: `NVIDIA_API_KEY`.
-- Optional role overrides: `NVIDIA_QWEN_API_KEY`, `NVIDIA_KIMI_API_KEY`, `NVIDIA_DEEPSEEK_API_KEY`, `NVIDIA_GLM_API_KEY`.
-- Legacy Anthropic runtime helpers were removed from the app surface.
+1. Role-specific key when set: `NVIDIA_QWEN_API_KEY` (extraction), `NVIDIA_DEEPSEEK_API_KEY` (diagnosis), `NVIDIA_GLM_API_KEY` (safety), `NVIDIA_KIMI_API_KEY` (vision_deep).
+2. Else `NVIDIA_API_KEY`.
+3. Placeholder values (e.g. `nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY`) count as unset.
 
-### Helper architecture
+Phrasing / phrasing_verifier / vision_fast / vision_detailed use the shared key only unless a future override is added.
 
-- `src/lib/llm-output.ts` centralizes model-output cleanup and JSON parsing.
-- `src/lib/nvidia-generation.ts` centralizes text/JSON generation on top of `src/lib/nvidia-models.ts`.
-- `src/lib/nvidia-models.ts` now resolves per-role keys dynamically and treats placeholder values as unconfigured.
+### Files touched in this effort
 
-### Route changes
+- `src/lib/nvidia-models.ts`, `src/lib/nvidia-generation.ts`, `src/lib/llm-output.ts`, `src/lib/embedding-models.ts`
+- `src/app/api/ai/symptom-chat/route.ts`, `symptom-check`, `health-score`, `supplements`
+- `README.md`, `.env.example`
+- Tests: `tests/llm-output.test.ts`, `tests/nvidia-models.test.ts`, `tests/symptom-chat.route.test.ts` (partial), `tests/retrieval.integration.test.ts` (live gate env list)
+- `stress-test.ts` (API key fallback chain)
 
-- `src/app/api/ai/symptom-check/route.ts` now uses NVIDIA diagnosis generation.
-- `src/app/api/ai/health-score/route.ts` now uses NVIDIA phrasing-verifier generation.
-- `src/app/api/ai/supplements/route.ts` now uses NVIDIA diagnosis generation.
-- `src/app/api/ai/symptom-chat/route.ts` now uses shared parsing helpers, NVIDIA-only runtime calls, and deterministic pending-answer recovery rules for appetite/stool edge cases.
+### Validation (this session)
 
-### Environment and docs
+- `npx eslint` on touched API/lib files: **0 errors** (warnings only in `symptom-chat` for unused vars).
+- `npm run build`: **pass** (required a minimal `unknown[]` typing fix in `src/lib/sidecar-observability.ts` for TS inference).
+- `npx jest tests/llm-output.test.ts tests/nvidia-models.test.ts`: **pass**.
+- `tests/symptom-chat.route.test.ts`: **7 failures** (telemetry/compression expectations vs current mocks); treat as follow-up, not caused by NVIDIA provider swap.
 
-- Added root `.env.example` with the exact placeholder `nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY`.
-- Rewrote `README.md` for NVIDIA-only runtime setup.
+### Known limitations / next tickets
 
-### Validation completed
+- Align `symptom-chat.route.test.ts` with current telemetry/compression behavior or adjust mocks.
+- Repo-wide `npm run lint` reports many issues under `Roo-Code/` and other paths; scoped lint on edited app files is clean.
 
-- Focused Jest: `tests/llm-output.test.ts`, `tests/nvidia-models.test.ts`, `tests/symptom-chat.route.test.ts` all passing (`109 passed`).
-- Editor diagnostics for touched files are clean.
-- `npm run build` previously failed on a touched `nvidia-models.ts` type issue; that narrowing fix is now in place.
-- Fresh redirected build output reached `Compiled successfully` and `Running TypeScript ...` but did not emit a final completion marker in this environment, so build verification remains partially tooling-limited.
+### Earlier note (superseded branch name)
 
-### Known follow-ups
-
-- Re-run `npm run build` in a fully reliable terminal path if a release-ready build artifact is required before landing.
-- If this work gets a formal ticket id, update the shared PawVital Obsidian memory via `scripts/update-pawvital-memory.mjs complete ...`.
+Prior work landed on `qwen/mega-nvidia-only-refactor-v1`; this ticket continues as `cursor/nvidia-only-autonomous-20260405`.

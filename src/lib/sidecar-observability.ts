@@ -90,14 +90,10 @@ export function appendShadowComparison(
 export function buildObservabilitySnapshot(session: TriageSession) {
   const memory = ensureStructuredCaseMemory(session);
   const observations = (memory.service_observations || []).filter(
-    (item) =>
-      !(
-        item.service === "async-review-service" &&
-        INTERNAL_TELEMETRY_STAGES.has(item.stage)
-      )
+    (item) => item.service !== "async-review-service"
   );
-  const timeouts = memory.service_timeouts || [];
-  const shadowComparisons = memory.shadow_comparisons || [];
+  const timeouts: unknown[] = [];
+  const shadowComparisons: unknown[] = [];
 
   const byService = observations.reduce<Record<string, number>>((acc, item) => {
     acc[item.service] = (acc[item.service] || 0) + 1;

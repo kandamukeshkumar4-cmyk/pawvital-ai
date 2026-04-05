@@ -862,7 +862,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         type: "emergency",
         message: `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${pet.name} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
-        session,
+        session: sanitizeSessionForClient(session),
         ready_for_report: true,
       });
     }
@@ -877,7 +877,7 @@ export async function POST(request: Request) {
         type: "ready",
         message:
           "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
-        session,
+        session: sanitizeSessionForClient(session),
         ready_for_report: true,
       });
     }
@@ -953,7 +953,7 @@ export async function POST(request: Request) {
           message: image
             ? `I can see the photo, but I still need a little more context to triage ${pet.name} safely. What worries you most about this area, and when did you first notice it?`
             : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
-          session,
+          session: sanitizeSessionForClient(session),
           ready_for_report: false,
         });
       }
@@ -962,7 +962,7 @@ export async function POST(request: Request) {
         type: "ready",
         message:
           "I have enough information. Let me generate your full veterinary report.",
-        session,
+        session: sanitizeSessionForClient(session),
         ready_for_report: true,
       });
     }
@@ -1018,7 +1018,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       type: "question",
       message: phrasedQuestion,
-      session,
+      session: sanitizeSessionForClient(session),
       ready_for_report: isReadyForDiagnosis(session),
     });
   } catch (error) {
@@ -4385,5 +4385,25 @@ function buildImageGateMessage(
     : "";
 
   return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
+}
+
+function sanitizeSessionForClient(session: TriageSession): TriageSession {
+  if (!session || !session.case_memory) return session;
+
+  const sanitizedMemory = {
+    ...session.case_memory,
+    // Strictly filter out internal service observations
+    service_observations: (session.case_memory.service_observations || []).filter(
+      (item) => item.service !== "async-review-service"
+    ),
+    // Hide developer-only comparison data from client responses
+    shadow_comparisons: [],
+    service_timeouts: [],
+  };
+
+  return {
+    ...session,
+    case_memory: sanitizedMemory,
+  };
 }
 
