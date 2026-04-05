@@ -1,21 +1,32 @@
+import { isLikelyPlaceholderKey } from "./nvidia-models";
+
 const NVIDIA_EMBEDDINGS_URL = "https://integrate.api.nvidia.com/v1/embeddings";
 
 export const KNOWLEDGE_EMBEDDING_MODEL = "nvidia/llama-3.2-nv-embedqa-1b-v2";
 export const IMAGE_EMBEDDING_MODEL = "nvidia/nvclip";
 
 function getEmbeddingApiKey(): string {
-  return (
-    process.env.NVIDIA_API_KEY ||
-    process.env.NVIDIA_VISION_API_KEY ||
-    process.env.NVIDIA_QWEN_API_KEY ||
-    process.env.NVIDIA_DEEPSEEK_API_KEY ||
-    ""
-  );
+  const candidates = [
+    process.env.NVIDIA_API_KEY,
+    process.env.NVIDIA_QWEN_API_KEY,
+    process.env.NVIDIA_DEEPSEEK_API_KEY,
+    process.env.NVIDIA_KIMI_API_KEY,
+    process.env.NVIDIA_GLM_API_KEY,
+  ];
+
+  for (const candidate of candidates) {
+    const key = candidate?.trim();
+    if (key && !isLikelyPlaceholderKey(key)) {
+      return key;
+    }
+  }
+
+  return "";
 }
 
 export function isEmbeddingConfigured(): boolean {
   const apiKey = getEmbeddingApiKey();
-  return Boolean(apiKey && !apiKey.startsWith("your_"));
+  return Boolean(apiKey);
 }
 
 interface EmbeddingResponseRow {

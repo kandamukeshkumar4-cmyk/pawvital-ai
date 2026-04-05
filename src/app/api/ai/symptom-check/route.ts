@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server";
-import { anthropic, isAnthropicConfigured } from "@/lib/anthropic";
+import {
+  generateNvidiaJson,
+  isNvidiaGenerationConfigured,
+} from "@/lib/nvidia-generation";
 
 export async function POST(request: Request) {
   try {
     const { symptoms, pet } = await request.json();
 
-    if (!isAnthropicConfigured) {
+    if (!isNvidiaGenerationConfigured("diagnosis")) {
       return NextResponse.json({
         severity: "high",
         recommendation: "vet_48h",
         title: "AI Assessment (Demo Mode)",
-        explanation: `Based on the symptoms described for ${pet?.name || "your pet"}: "${symptoms}". This is demo mode — add your ANTHROPIC_API_KEY to get real AI-powered, veterinary-specialist-grade symptom analysis powered by Claude.`,
+        explanation: `Based on the symptoms described for ${pet?.name || "your pet"}: "${symptoms}". This is demo mode — add your NVIDIA NIM API key to get full AI-powered veterinary symptom analysis.`,
         differential_diagnoses: [
-          { condition: "Demo Mode — Configure API Key", likelihood: "high", description: "Add your Anthropic API key to unlock full veterinary-grade differential diagnosis with clinical specificity." },
+          { condition: "Demo Mode — Configure API Key", likelihood: "high", description: "Add your NVIDIA NIM API key to unlock full veterinary-grade differential diagnosis with clinical specificity." },
         ],
         clinical_notes: "Demo mode active. Real analysis will include ICD-10-CM veterinary codes, breed-specific epidemiological data, and evidence-based diagnostic pathways.",
         recommended_tests: [
@@ -129,22 +132,14 @@ CRITICAL RULES:
 
 Respond ONLY with valid JSON. No markdown, no code blocks, just the JSON object.`;
 
-    const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      messages: [{ role: "user", content: prompt }],
+    const result = await generateNvidiaJson<Record<string, unknown>>({
+      role: "diagnosis",
+      prompt,
+      maxTokens: 4096,
+      temperature: 0.35,
+      contextLabel: "symptom check",
     });
 
-    const content = message.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type");
-    }
-
-    let jsonText = content.text.trim();
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-    }
-    const result = JSON.parse(jsonText);
     return NextResponse.json(result);
   } catch (error) {
     console.error("Symptom check error:", error);

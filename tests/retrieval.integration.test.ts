@@ -14,9 +14,10 @@ const hasLiveRetrieval =
   ) &&
   Boolean(
     process.env.NVIDIA_API_KEY ||
-      process.env.NVIDIA_VISION_API_KEY ||
       process.env.NVIDIA_QWEN_API_KEY ||
-      process.env.NVIDIA_DEEPSEEK_API_KEY
+      process.env.NVIDIA_KIMI_API_KEY ||
+      process.env.NVIDIA_DEEPSEEK_API_KEY ||
+      process.env.NVIDIA_GLM_API_KEY
   );
 
 const describeIfLive = hasLiveRetrieval ? describe : describe.skip;

@@ -41,7 +41,6 @@
     "embed:corpus:images": "node scripts/embed-corpus.mjs --kind=images"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.80.0",
     "@stripe/stripe-js": "^8.11.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.100.0",

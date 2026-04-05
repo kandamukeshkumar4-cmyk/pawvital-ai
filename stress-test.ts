@@ -85,7 +85,10 @@ async function runHealthChecks() {
   await checkService("Vision 90B Explicit Check", async () => {
     const client = new OpenAI({
       baseURL: "https://integrate.api.nvidia.com/v1",
-      apiKey: process.env.NVIDIA_VISION_DETAILED_API_KEY || process.env.NVIDIA_API_KEY || process.env.NVIDIA_QWEN_API_KEY,
+      apiKey:
+        process.env.NVIDIA_API_KEY ||
+        process.env.NVIDIA_QWEN_API_KEY ||
+        process.env.NVIDIA_DEEPSEEK_API_KEY,
     });
     const res = await client.chat.completions.create({
       model: "meta/llama-3.2-90b-vision-instruct",

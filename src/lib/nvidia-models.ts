@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { VisionPreprocessResult } from "./clinical-evidence";
+import { safeParseJson, stripThinkingBlocks } from "./llm-output";
 
 // =============================================================================
 // NVIDIA NIM Multi-Model Client
@@ -7,23 +8,26 @@ import type { VisionPreprocessResult } from "./clinical-evidence";
 // =============================================================================
 
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
-const SHARED_NVIDIA_API_KEY =
-  process.env.NVIDIA_API_KEY || process.env.NVIDIA_VISION_API_KEY;
-const GENERAL_TEXT_API_KEY =
-  process.env.NVIDIA_TEXT_API_KEY ||
-  process.env.NVIDIA_QWEN_API_KEY ||
-  process.env.NVIDIA_DEEPSEEK_API_KEY ||
-  process.env.NVIDIA_KIMI_API_KEY ||
-  process.env.NVIDIA_GLM_API_KEY ||
-  SHARED_NVIDIA_API_KEY;
-const VISION_FAST_API_KEY =
-  process.env.NVIDIA_VISION_FAST_API_KEY ||
-  SHARED_NVIDIA_API_KEY ||
-  process.env.NVIDIA_DEEPSEEK_API_KEY;
-const VISION_DETAILED_API_KEY =
-  process.env.NVIDIA_VISION_DETAILED_API_KEY ||
-  SHARED_NVIDIA_API_KEY ||
-  process.env.NVIDIA_QWEN_API_KEY;
+
+function readEnvKey(name: string): string | null {
+  const value = process.env[name]?.trim();
+  if (!value || isLikelyPlaceholderKey(value)) {
+    return null;
+  }
+  return value;
+}
+
+/** Per role: optional role-specific key first, then shared NVIDIA_API_KEY. */
+const ROLE_ENV_PRIORITY = {
+  extraction: ["NVIDIA_QWEN_API_KEY", "NVIDIA_API_KEY"],
+  phrasing: ["NVIDIA_API_KEY"],
+  phrasing_verifier: ["NVIDIA_API_KEY"],
+  diagnosis: ["NVIDIA_DEEPSEEK_API_KEY", "NVIDIA_API_KEY"],
+  safety: ["NVIDIA_GLM_API_KEY", "NVIDIA_API_KEY"],
+  vision_fast: ["NVIDIA_API_KEY"],
+  vision_detailed: ["NVIDIA_API_KEY"],
+  vision_deep: ["NVIDIA_KIMI_API_KEY", "NVIDIA_API_KEY"],
+} as const;
 
 // --- Model Definitions ---
 // Each model is assigned a role based on its strengths
@@ -35,20 +39,17 @@ export const MODELS = {
     name: "qwen/qwen3.5-122b-a10b",
     fallback: "qwen/qwen3.5-397b-a17b",
     role: "Data Extraction" as const,
-    apiKey: process.env.NVIDIA_QWEN_API_KEY,
   },
-  // Kimi K2.5 — natural language, empathetic phrasing
+  // Llama 3.3 70B — natural language, empathetic phrasing
   phrasing: {
     name: "meta/llama-3.3-70b-instruct",
     fallback: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
     role: "Question Phrasing" as const,
-    apiKey: GENERAL_TEXT_API_KEY,
   },
   phrasing_verifier: {
     name: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
     fallback: "meta/llama-3.3-70b-instruct",
     role: "Question Verification" as const,
-    apiKey: GENERAL_TEXT_API_KEY,
   },
   // Nemotron Ultra 253B — NVIDIA's most powerful model for clinical diagnosis
   // (DeepSeek V3.2 as fallback; R1/V3.1 have CUDA issues on NIM)
@@ -56,14 +57,12 @@ export const MODELS = {
     name: "nvidia/llama-3.1-nemotron-ultra-253b-v1",
     fallback: "deepseek-ai/deepseek-v3.2",
     role: "Diagnosis Report" as const,
-    apiKey: process.env.NVIDIA_DEEPSEEK_API_KEY,
   },
   // GLM-5 — safety verification layer
   safety: {
     name: "z-ai/glm5",
     fallback: null,
     role: "Safety Verification" as const,
-    apiKey: process.env.NVIDIA_GLM_API_KEY,
   },
   // ── 3-Tier Vision Pipeline ──
   // Tier 1: Llama 3.2 11B Vision — fast triage + wound detection
@@ -71,25 +70,60 @@ export const MODELS = {
     name: "meta/llama-3.2-11b-vision-instruct",
     fallback: "meta/llama-4-maverick-17b-128e-instruct",
     role: "Fast Triage" as const,
-    apiKey: VISION_FAST_API_KEY,
   },
   // Tier 2: Llama 3.2 90B Vision — detailed wound feature extraction
   vision_detailed: {
     name: "meta/llama-3.2-90b-vision-instruct",
     fallback: "meta/llama-4-maverick-17b-128e-instruct",
     role: "Detailed Analysis" as const,
-    apiKey: VISION_DETAILED_API_KEY,
   },
   // Tier 3: Kimi K2.5 — deep clinical reasoning, 256K context, multi-image
   vision_deep: {
     name: "moonshotai/kimi-k2.5",
     fallback: null,
     role: "Deep Reasoning" as const,
-    apiKey: process.env.NVIDIA_KIMI_API_KEY,
   },
 } as const;
 
-type ModelRole = keyof typeof MODELS;
+export type ModelRole = keyof typeof MODELS;
+
+const REQUIRED_CORE_ROLES: ModelRole[] = [
+  "extraction",
+  "phrasing",
+  "diagnosis",
+  "safety",
+  "vision_fast",
+];
+
+export function isLikelyPlaceholderKey(key: string): boolean {
+  const normalized = key.trim();
+  if (!normalized) {
+    return true;
+  }
+
+  return (
+    normalized === "placeholder" ||
+    normalized === "replace-me" ||
+    normalized === "nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY" ||
+    normalized.startsWith("your_") ||
+    /replace[_-]?with/i.test(normalized)
+  );
+}
+
+export function resolveNvidiaApiKey(role: ModelRole): string | null {
+  for (const envName of ROLE_ENV_PRIORITY[role]) {
+    const value = readEnvKey(envName);
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+export function isNvidiaRoleConfigured(role: ModelRole): boolean {
+  return resolveNvidiaApiKey(role) !== null;
+}
 
 const ROLE_CONCURRENCY_LIMITS: Partial<Record<ModelRole, number>> = {
   extraction: 2,
@@ -151,25 +185,17 @@ async function withRoleConcurrency<T>(
 }
 
 function parseLooseJsonObject(input: string): Record<string, unknown> {
-  let json = input.trim().replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  if (json.startsWith("```")) {
-    json = json
-      .replace(/^```(?:json)?\s*\n?/, "")
-      .replace(/\n?```\s*$/, "");
-  }
-  const match = json.match(/\{[\s\S]*\}/);
-  if (match) json = match[0];
-  return JSON.parse(json) as Record<string, unknown>;
+  return safeParseJson<Record<string, unknown>>(input, "NVIDIA model output");
 }
 
 // --- Client Factory ---
 
 function createClient(role: ModelRole): OpenAI | null {
-  const model = MODELS[role];
-  if (!model.apiKey || model.apiKey.startsWith("your_")) return null;
+  const apiKey = resolveNvidiaApiKey(role);
+  if (!apiKey) return null;
   return new OpenAI({
     baseURL: NVIDIA_BASE_URL,
-    apiKey: model.apiKey,
+    apiKey,
   });
 }
 
@@ -186,12 +212,7 @@ function getClient(role: ModelRole): OpenAI | null {
 // --- Check if multi-model stack is configured ---
 
 export function isNvidiaConfigured(): boolean {
-  // Core models needed: extraction, phrasing, diagnosis, safety, and at least one vision
-  const core: (keyof typeof MODELS)[] = ["extraction", "phrasing", "diagnosis", "safety", "vision_fast"];
-  return core.every((role) => {
-    const m = MODELS[role];
-    return m.apiKey && !m.apiKey.startsWith("your_");
-  });
+  return REQUIRED_CORE_ROLES.every((role) => isNvidiaRoleConfigured(role));
 }
 
 // --- Generic completion helper ---
@@ -454,7 +475,7 @@ async function callVisionModel(
       if (!content) { lastError = new Error(`Empty response from ${model}`); continue; }
 
       // Strip thinking tags
-      return content.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      return stripThinkingBlocks(content);
     } catch (err) {
       clearTimeout(timeoutId);
       lastError = err instanceof Error ? err : new Error(String(err));
@@ -802,10 +823,10 @@ Output ONLY valid JSON:
   let finalSeverity: "normal" | "needs_review" | "urgent" = tier1Severity as "normal" | "needs_review" | "urgent";
   if (tier3Raw) {
     try {
-      let json = tier3Raw;
-      const match = json.match(/\{[\s\S]*\}/);
-      if (match) json = match[0];
-      const tier3Data = JSON.parse(json);
+      const tier3Data = safeParseJson<Record<string, unknown>>(
+        tier3Raw,
+        "Tier 3 vision reasoning"
+      );
       if (tier3Data.severity_classification === "urgent" || tier3Data.urgency === "ER_NOW") {
         finalSeverity = "urgent";
       }
@@ -1032,25 +1053,29 @@ export function parseVisionForMatrix(visionResult: string): {
   severityClass: "normal" | "needs_review" | "urgent";
 } {
   try {
-    let jsonText = visionResult.trim();
-    jsonText = jsonText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-    if (jsonText.startsWith("```")) {
-      jsonText = jsonText.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
-    }
-    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) jsonText = jsonMatch[0];
-
-    const parsed = JSON.parse(jsonText);
+    const parsed = safeParseJson<Record<string, unknown>>(
+      visionResult,
+      "Vision matrix parsing"
+    );
 
     // Extract symptoms for the clinical matrix
     const symptoms: string[] = [];
     if (parsed.suggested_symptoms_for_matrix && Array.isArray(parsed.suggested_symptoms_for_matrix)) {
       symptoms.push(...parsed.suggested_symptoms_for_matrix);
     }
+
+    const lesionDetails =
+      typeof parsed.lesion_details === "object" && parsed.lesion_details !== null
+        ? (parsed.lesion_details as { type?: unknown })
+        : null;
+    const lesionType =
+      typeof lesionDetails?.type === "string"
+        ? lesionDetails.type.toLowerCase()
+        : null;
+
     // Also infer from lesion type
-    if (parsed.lesion_details?.type) {
-      const type = parsed.lesion_details.type.toLowerCase();
-      if (["wound", "laceration", "puncture", "hot_spot", "abscess", "rash", "mass", "alopecia", "swelling"].includes(type)) {
+    if (lesionType) {
+      if (["wound", "laceration", "puncture", "hot_spot", "abscess", "rash", "mass", "alopecia", "swelling"].includes(lesionType)) {
         if (!symptoms.includes("wound_skin_issue")) symptoms.push("wound_skin_issue");
       }
     }
