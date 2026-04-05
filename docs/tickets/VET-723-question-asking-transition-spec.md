@@ -7,7 +7,7 @@
 **Implements:** VET-716 sequence, Wave 3 Phase 2
 **Depends on:** VET-720 (answer recording wire spec), VET-721 (answer recording implementation)
 
-**Sequencing note:** This spec supersedes the provisional VET-716 numbering for follow-on behavior tickets. The next confirmation and needs-clarification implementation tickets must be renumbered in a later sequence-sync pass before work begins.
+**Sequencing note:** This spec supersedes the provisional VET-716 numbering for follow-on behavior tickets. VET-726 later refreshed that sequence and assigned `VET-727` through `VET-729` as the post-asked-state follow-on tickets.
 
 ---
 
@@ -301,13 +301,13 @@ Consistency check:
 The following are explicitly out of scope for the implementation of this spec. Any PR that includes
 these items should be rejected:
 
-1. **Confirmation state** — `transitionToConfirmed()` is VET-722, not this ticket.
-2. **Needs-clarification state** — `transitionToNeedsClarification()` is a separate ticket, not this ticket.
+1. **Confirmation state** — `transitionToConfirmed()` is VET-727, not this ticket.
+2. **Needs-clarification state** — `transitionToNeedsClarification()` is VET-729, not this ticket.
 3. **Schema changes** — No changes to `clinical-matrix.ts`.
 4. **New session fields** — No additions to `TriageSession` or `SessionData`.
 5. **Phrasing behavior changes** — The question phrasing logic (STEP 5) is not modified.
 6. **Repeat-question suppression changes** — The repeat-suppression guard is not modified.
-7. **Unknown option handling** — That is VET-722 scope.
+7. **Unknown option handling** — That remains VET-722 scope.
 8. **Pure helper additions** — `transitions.ts` is not modified by this ticket. The pure `transitionToAsked()`
    helper already landed in VET-719.
 9. **Test additions** — Test coverage for `question-asking.ts` is welcome but not required for this ticket.
@@ -331,9 +331,10 @@ these items should be rejected:
 
 After this spec is implemented and stable:
 
-- write a sequence-sync update that assigns fresh ticket numbers for:
-  - confirmation-state wiring after acknowledgment phrasing
-  - needs-clarification wiring for unresolved ambiguous answers
+- VET-726 assigns the follow-on ticket numbers and order:
+  - `VET-727` — confirmation-state wiring after acknowledgment phrasing
+  - `VET-728` — confirmation-state regression pack
+  - `VET-729` — needs-clarification wiring for unresolved ambiguous answers
 - keep those follow-ons separate from this asked-state ticket
 
 Those follow-ons depend on the stable `asked → answered_this_turn` pipeline that VET-720 + VET-721 + this

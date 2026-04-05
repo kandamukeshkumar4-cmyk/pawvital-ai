@@ -7,6 +7,7 @@
 
 - `VET-722` and `VET-723` were later used for docs/spec tickets outside this original provisional numbering plan.
 - Before implementation reaches confirmation-state or needs-clarification-state work, this sequence must be refreshed so the remaining behavior tickets get new unambiguous IDs.
+- `VET-726` (this sequence-sync ticket) corrects that drift and defines VET-727 through VET-729 as the next three unambiguous behavior tickets. See the Revised Execution Sequence section below.
 
 ## Owner
 - `techlead`
@@ -32,325 +33,127 @@ The world-class plan (section: "Remaining Follow-On Work") identifies three area
 
 ---
 
-## Ticket Sequence (Backend Wave)
+## Landed Through Asked-State
 
-### VET-717: Define State Machine Types and Interfaces
-**Type:** `types-only` | **Risk:** `none` | **Rollback:** `trivial`
+The following tickets are already landed and define the baseline this refreshed sequence must respect:
 
-**Goal:** Add TypeScript types for the explicit state machine without changing runtime behavior.
-
-**Scope:**
-- Create `src/lib/conversation-state/types.ts` with:
-  - `ConversationState` enum: `idle | asking | answered_unconfirmed | confirmed | needs_clarification | escalation`
-  - `QuestionState` enum: `pending | asked | answered_this_turn | confirmed | needs_clarification | skipped`
-  - `StateTransition` interface: `{ from: QuestionState; to: QuestionState; reason: string; timestamp: number }`
-  - `ConversationStateMachine` interface: current state + transition history
-- Export types from `src/lib/conversation-state/index.ts`
-- No changes to `route.ts` or runtime logic
-
-**Files:**
-- `src/lib/conversation-state/types.ts` (new)
-- `src/lib/conversation-state/index.ts` (new)
-
-**Review Checkpoint:** Verify types compile, no runtime changes, no imports into route.ts yet.
-
-**Rollback:** Delete two files.
+| Ticket | Status | Notes |
+|--------|--------|-------|
+| VET-717 | landed | Conversation-state type surface is in place. |
+| VET-718 | landed | Read-only observer and snapshot wiring are live. |
+| VET-719 | landed | Pure transition helpers and isolated tests are live. |
+| VET-720 | landed | Answer-recording wire spec defines the runtime-wrapper module boundary. |
+| VET-721 | landed | `transitionToAnswered()` owns answer-recording writes. |
+| VET-722 | landed | Explicit-unknown clinical policy proposal is reserved and must not be renumbered. |
+| VET-723 | landed | Asked-state spec defines the `question-asking.ts` runtime-wrapper pattern. |
+| VET-724 | landed | `transitionToAsked()` owns the asked-state route write. |
+| VET-725 | landed | Replay regressions lock the asked-state behavior before the next behavior layer starts. |
 
 ---
 
-### VET-718: Add State Machine Observer (Read-Only)
-**Type:** `observability` | **Risk:** `none` | **Rollback:** `trivial`
+## Revised Execution Sequence (Post-Asked-State)
 
-**Goal:** Wire up read-only state observation for shadow telemetry.
-
-**Scope:**
-- Create `src/lib/conversation-state/observer.ts`:
-  - `observeTransition()` function that logs state transitions to internal telemetry
-  - `getStateSnapshot()` for debugging
-- Wire observer into `route.ts` but do NOT change state logic yet
-- Observer only reads existing `last_question_asked`, `answered_questions`, etc. and maps to state enum
-- Telemetry stays internal (filtered from compression, user payloads)
-
-**Files:**
-- `src/lib/conversation-state/observer.ts` (new)
-- `src/app/api/ai/symptom-chat/route.ts` (add observer import, call observeTransition() after each answer recording)
-
-**Review Checkpoint:** Verify telemetry logs state transitions, no behavior changes, no state writes.
-
-**Rollback:** Remove observer calls from route.ts, delete observer.ts.
-
----
-
-### VET-719: Extract State Transition Logic (Pure Functions)
-**Type:** `refactor` | **Risk:** `low` | **Rollback:** `safe`
-
-**Goal:** Extract pure functions for state transitions without wiring them.
-
-**Scope:**
-- Create `src/lib/conversation-state/transitions.ts`:
-  - `transitionToAsked(questionId, state)` - marks question as asked
-  - `transitionToAnswered(questionId, answer, state)` - marks as answered_this_turn
-  - `transitionToConfirmed(questionId, state)` - marks as confirmed
-  - `transitionToNeedsClarification(questionId, reason, state)` - flags for follow-up
-  - `transitionToSkipped(questionId, reason, state)` - for non-applicable questions
-  - Each function returns new state (immutable), validates transition rules
-- Add transition validation: cannot go from `confirmed` back to `asked`, etc.
-- Unit tests for each transition function
-
-**Files:**
-- `src/lib/conversation-state/transitions.ts` (new)
-- `tests/conversation-state/transitions.test.ts` (new)
-
-**Review Checkpoint:** Verify pure functions have 100% test coverage, no imports into route.ts yet.
-
-**Rollback:** Delete two files.
-
----
-
-### VET-720: Wire State Machine for Answer Recording (Phase 1)
+### VET-727: Confirmation-State Transition Wiring
 **Type:** `behavior-change` | **Risk:** `medium` | **Rollback:** `safe`
 
-**Goal:** Replace direct `answered_questions` writes with state machine transitions for answer recording.
+**Goal:** Make `confirmed` a durable, explicit state that is written only after the assistant successfully prepares the acknowledgment-plus-next-question turn.
 
-**Scope:**
-- In `route.ts`, when recording an answer:
-  - Call `transitionToAnswered()` instead of directly mutating `answered_questions`
-  - Keep existing `recordAnswer()` function but have it call the transition function
-  - State machine writes to `answered_questions` (backward compatible)
-- Add telemetry marker for `state_transition: answered`
-- Preserve all existing fallback logic (deterministic coercion, pending recovery)
+**Exact Scope:**
+- Add protected confirmation-state storage for question IDs that have moved from `answered_this_turn` to `confirmed`, and thread that field through the current compression-protection path.
+- Add a runtime wiring module such as `src/lib/conversation-state/confirmation-state.ts` with `transitionToConfirmed()` following the same wrapper pattern established by `answer-recording.ts` and `question-asking.ts`.
+- Update the conversation-state snapshot and transition-note logic so `answered_this_turn` and `confirmed` no longer collapse onto the same inferred state once `last_question_asked` advances.
+- In `route.ts`, capture the question IDs answered during the current turn before `transitionToAsked()` overwrites the pending-question anchor.
+- After `phraseQuestion()` succeeds and immediately before the `NextResponse.json({ type: "question", ... })` return, call `transitionToConfirmed()` for the captured question IDs.
+- Keep the current question-selection order, asked-state write timing, and phrasing prompt content intact.
 
-**Files:**
-- `src/app/api/ai/symptom-chat/route.ts` (modify answer recording to use transitions)
-- `src/lib/conversation-state/transitions.ts` (add state write logic)
+**Exact Non-Goals:**
+- Do not change extraction, deterministic coercion, pending recovery, or next-question selection.
+- Do not widen the explicit-unknown behavior proposed in landed VET-722.
+- Do not add needs-clarification reason storage or touch `unresolved_question_ids` semantics.
+- Do not redesign question wording, acknowledgment copy, sidecar dashboards, or debug endpoints.
 
-**Review Checkpoint:** Verify answer recording works identically, telemetry shows transitions, compression boundary tests pass.
+**Rollback Boundary:**
+- Revert the confirmation-state field, wrapper module, snapshot updates, and the single route confirmation block.
+- Leave `transitionToAnswered()` and `transitionToAsked()` in place exactly as landed.
 
-**Rollback:** Revert route.ts to use direct writes, keep transition functions for future use.
-
----
-
-### VET-721: Wire State Machine for Question Asking (Phase 2)
-**Type:** `behavior-change` | **Risk:** `medium` | **Rollback:** `safe`
-
-**Goal:** Replace direct `last_question_asked` writes with state machine transitions.
-
-**Scope:**
-- In `route.ts`, when selecting next question:
-  - Call `transitionToAsked(questionId, state)` before phrasing
-  - Set `last_question_asked` as before (backward compatible)
-  - Add transition telemetry
-- Ensure `asked` state is recorded before phrasing is sent to user
-
-**Files:**
-- `src/app/api/ai/symptom-chat/route.ts` (modify question selection to use transitions)
-
-**Review Checkpoint:** Verify question flow unchanged, telemetry shows `asked` transitions, repeat-suppression tests pass.
-
-**Rollback:** Revert route.ts to direct writes.
+**Sequencing Gate:**
+- VET-728 must land before any needs-clarification implementation starts.
 
 ---
 
-### VET-722: Add Confirmation State (Phase 3)
-**Type:** `behavior-change` | **Risk:** `medium` | **Rollback:** `safe`
-
-**Goal:** Introduce explicit `confirmed` state when acknowledgment is phrased.
-
-**Scope:**
-- After acknowledgment phrasing completes, call `transitionToConfirmed(questionId, state)`
-- Add `confirmed_questions` array to session state (parallel to `answered_questions`)
-- Compression preserves `confirmed_questions` as protected state
-- Acknowledgment phrasing can reference `confirmed_questions` length (already done in VET-707C)
-
-**Files:**
-- `src/app/api/ai/symptom-chat/route.ts` (add confirmation transition)
-- `src/lib/conversation-state/transitions.ts` (add confirmation logic)
-- `src/lib/types.ts` (add `confirmed_questions?: string[]` to SessionData)
-
-**Review Checkpoint:** Verify confirmed state is recorded, compression tests pass, acknowledgment phrasing unchanged.
-
-**Rollback:** Revert route.ts, remove confirmed_questions from session.
-
----
-
-### VET-723: Add Needs Clarification State (Phase 4)
-**Type:** `behavior-change` | **Risk:** `medium` | **Rollback:** `safe`
-
-**Goal:** Flag questions that need follow-up when answers are ambiguous.
-
-**Scope:**
-- When extraction fails AND pending-recovery cannot coerce a deterministic answer:
-  - Call `transitionToNeedsClarification(questionId, reason, state)`
-  - Add `needs_clarification_questions: Record<string, string>` to session (questionId -> reason)
-  - Continue asking follow-up questions as before
-- Add telemetry for `needs_clarification` transitions with reason codes
-
-**Files:**
-- `src/app/api/ai/symptom-chat/route.ts` (add needs-clarification logic)
-- `src/lib/conversation-state/transitions.ts` (add needs-clarification transition)
-- `src/lib/types.ts` (add `needs_clarification_questions?: Record<string, string>`)
-
-**Review Checkpoint:** Verify ambiguous answers are flagged, telemetry shows reason codes, question flow unchanged.
-
-**Rollback:** Revert route.ts, remove needs_clarification state.
-
----
-
-### VET-724: Add State Machine Diagnostics Endpoint
-**Type:** `observability` | **Risk:** `none` | **Rollback:** `trivial`
-
-**Goal:** Add debug endpoint for state machine inspection.
-
-**Scope:**
-- Create `GET /api/debug/conversation-state` (dev-only):
-  - Returns current state machine snapshot
-  - Shows transition history
-  - Shows protected state values
-- Guard with `process.env.NODE_ENV === 'development'`
-
-**Files:**
-- `src/app/api/debug/conversation-state/route.ts` (new)
-
-**Review Checkpoint:** Verify endpoint returns state in dev, 404 in production.
-
-**Rollback:** Delete route file.
-
----
-
-### VET-725: Expand Edge-Case Test Coverage
+### VET-728: Confirmation-State Regression Pack
 **Type:** `test-coverage` | **Risk:** `none` | **Rollback:** `trivial`
 
-**Goal:** Add deterministic tests for edge-case replies identified in world-class plan.
+**Goal:** Lock the confirmation boundary before clarification-state work starts.
 
-**Scope:**
-- Add tests to `tests/conversation-state/edge-cases.test.ts`:
-  - "I don't know" -> unknown coercion
-  - "maybe" -> unknown coercion
-  - "for about two days" -> duration extraction
-  - "he hit his leg on the fence" -> trauma history recovery
-  - "yes, there's swelling" -> affirmative swelling
-  - Multi-sentence: "no not really, but he's been limping" -> partial answer + new symptom
-- Each test asserts:
-  - State transitions correctly
-  - Protected state preserved
-  - No repeat question after answer
+**Exact Scope:**
+- Add route-level replay coverage proving a question is not marked confirmed until the assistant successfully prepares the acknowledgment-plus-next-question response.
+- Add protected-state assertions proving the new confirmation field survives compression and remains internal-only.
+- Add negative coverage proving asked-state writes do not auto-confirm the next unanswered question and error paths do not append confirmation state.
+- Keep the tests anchored to the shipped `transitionToAnswered()` and `transitionToAsked()` wrappers rather than mocking internal state changes.
 
-**Files:**
-- `tests/conversation-state/edge-cases.test.ts` (new)
+**Exact Non-Goals:**
+- Do not change runtime control flow except for any minimal test scaffolding already required by the suite.
+- Do not add needs-clarification assertions yet.
+- Do not broaden the asked-state regression pack beyond confirmation semantics.
+- Do not add telemetry dashboards, deploy work, or schema/policy edits.
 
-**Review Checkpoint:** Verify 100% test pass, no runtime changes.
+**Rollback Boundary:**
+- Delete the new confirmation-state regression coverage only.
 
-**Rollback:** Delete test file.
+**Sequencing Gate:**
+- VET-729 may start only after this pack passes on the landed VET-727 branch tip.
 
 ---
 
-### VET-726: Add Production Telemetry Dashboard Queries
-**Type:** `observability` | **Risk:** `none` | **Rollback:** `trivial`
+### VET-729: Needs-Clarification Transition Wiring
+**Type:** `behavior-change` | **Risk:** `medium` | **Rollback:** `safe`
 
-**Goal:** Define Supabase queries for state machine telemetry analysis.
+**Goal:** Make clarification state explicit when extraction plus deterministic pending recovery fail, while preserving `case_memory.unresolved_question_ids` as the authoritative open-question list.
 
-**Scope:**
-- Create `scripts/telemetry/state-machine-queries.sql`:
-  - Extraction success rate by question type
-  - Pending-question rescue rate
-  - Repeat-question attempt rate
-  - State transition distribution
-  - Needs-clarification reason code breakdown
-- Document how to run queries in development
+**Exact Scope:**
+- Add a runtime wiring module such as `src/lib/conversation-state/needs-clarification.ts` with `transitionToNeedsClarification()`.
+- Record clarification reason metadata keyed by question ID without introducing a second unresolved-question list.
+- Wire the pending-recovery failure branch in `route.ts` (the `resolvePendingQuestionAnswer(...) === null` path) through the new wrapper before pending-recovery telemetry is recorded.
+- Extend the conversation-state snapshot and transition-note generation so clarification transitions reflect both the existing unresolved-question authority and the new reason code.
+- Preserve current question selection and follow-up flow; this ticket records explicit state, not a new clarification strategy.
 
-**Files:**
-- `scripts/telemetry/state-machine-queries.sql` (new)
-- `docs/telemetry/state-machine-metrics.md` (new)
+**Exact Non-Goals:**
+- Do not widen extractor coercions or implement any of the open schema decisions from VET-722.
+- Do not redesign the confirmation boundary or alter confirmation-state storage.
+- Do not let compression own clarification state or rewrite `unresolved_question_ids`.
+- Do not touch asked-state or answer-recording wrappers except for the observer/snapshot threading needed to represent the new state.
 
-**Review Checkpoint:** Verify queries run against dev database, documentation clear.
-
-**Rollback:** Delete two files.
-
----
-
-## Review Checkpoints Summary
-
-| Ticket | Type | Review Focus | Rollback Safety |
-|--------|------|--------------|-----------------|
-| VET-717 | types-only | Types compile, no runtime | Delete 2 files |
-| VET-718 | observability | Telemetry logs, no behavior | Remove observer calls |
-| VET-719 | refactor | Pure functions, 100% test coverage | Delete 2 files |
-| VET-720 | behavior | Answer recording unchanged | Revert route.ts |
-| VET-721 | behavior | Question flow unchanged | Revert route.ts |
-| VET-722 | behavior | Confirmed state recorded | Revert route.ts |
-| VET-723 | behavior | Needs-clarification flagged | Revert route.ts |
-| VET-724 | observability | Debug endpoint works in dev | Delete route |
-| VET-725 | test-coverage | Tests pass, no runtime | Delete test file |
-| VET-726 | observability | Queries run, docs clear | Delete 2 files |
+**Rollback Boundary:**
+- Revert the clarification wrapper, reason metadata field, snapshot updates, and the pending-recovery failure call site.
+- Keep `unresolved_question_ids` driving open-question selection exactly as before.
 
 ---
 
-## Rollback-Safe Boundaries
+## Renumbering Map
 
-Each ticket is rollback-safe because:
-
-1. **Types-only tickets (VET-717)**: No runtime impact, just delete files
-2. **Observability tickets (VET-718, VET-724, VET-726)**: Read-only, no behavior change
-3. **Refactor tickets (VET-719)**: Pure functions with tests, not wired in yet
-4. **Behavior tickets (VET-720, VET-721, VET-722, VET-723)**:
-   - Each modifies `route.ts` in isolated sections
-   - Backward compatible: state machine writes to same fields as before
-   - Revert is just `git checkout` on route.ts + state files
+- The original provisional confirmation-state placeholder is now `VET-727`.
+- `VET-728` is the mandatory confirmation regression gate inserted between confirmation-state and clarification-state work.
+- The original provisional needs-clarification placeholder is now `VET-729`.
+- Landed docs-only tickets `VET-722` and `VET-723` are permanent and must never be reused.
 
 ---
 
 ## Execution Order
 
-**Wave 1: Foundation (Safe to parallelize)**
-- VET-717 (types)
-- VET-719 (pure functions)
-- VET-725 (edge-case tests)
-
-**Wave 2: Observability (Safe to parallelize)**
-- VET-718 (observer)
-- VET-724 (debug endpoint)
-- VET-726 (telemetry queries)
-
-**Wave 3: Behavior Changes (Sequential, one per day)**
-- VET-720 (answer recording)
-- VET-721 (question asking)
-- VET-722 (confirmation)
-- VET-723 (needs clarification)
+1. `VET-727` — confirmation-state transition wiring
+2. `VET-728` — confirmation-state regression pack
+3. `VET-729` — needs-clarification transition wiring
 
 ---
-
-## Files Changed (Summary)
-
-**New Files:**
-- `src/lib/conversation-state/types.ts`
-- `src/lib/conversation-state/index.ts`
-- `src/lib/conversation-state/observer.ts`
-- `src/lib/conversation-state/transitions.ts`
-- `tests/conversation-state/transitions.test.ts`
-- `tests/conversation-state/edge-cases.test.ts`
-- `src/app/api/debug/conversation-state/route.ts`
-- `scripts/telemetry/state-machine-queries.sql`
-- `docs/telemetry/state-machine-metrics.md`
-
-**Modified Files:**
-- `src/app/api/ai/symptom-chat/route.ts` (wiring, ~10-15 targeted changes)
-- `src/lib/types.ts` (add session state fields)
-
----
-
 ## Verification
 
-No runtime changes in this ticket. This is planning/docs only.
-
-Verification for future implementation tickets will be defined in each ticket's brief.
+- Manual consistency check against landed VET-720, VET-723, VET-724, and VET-725: PASS
+- No runtime changes in this ticket. This is planning/docs only.
 
 ---
 
 ## Notes
 
-- This sequence uses the shipped VET-705A through VET-715 context
-- No giant refactor ticket - each ticket is small and reviewable
-- Rollback is always safe - either delete files or revert route.ts
-- Telemetry stays internal (filtered from compression per VET-706)
-- Protected state rules from VET-704/VET-705A are preserved
-- Acknowledgment phrasing from VET-707C is leveraged in VET-722
+- `VET-727` through `VET-729` are now the only valid next sequence numbers after the landed asked-state wave.
+- `VET-722` and `VET-723` remain reserved for the landed docs-only policy/spec tickets and must not be reused.
