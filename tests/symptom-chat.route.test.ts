@@ -3215,3 +3215,173 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
     }
   });
 });
+
+describe("VET-725: asked-state regression pack", () => {
+  function assertVet725AskedStatePayloadSafe(payload: {
+    type?: unknown;
+    message?: unknown;
+    ready_for_report?: unknown;
+    session?: Record<string, unknown>;
+  }) {
+    const message = String(payload.message ?? "");
+    const session = (payload.session ?? {}) as Record<string, unknown>;
+    const caseMemory = ((session.case_memory as Record<string, unknown> | undefined) ?? {});
+
+    expect(payload).toHaveProperty("type");
+    expect(payload).toHaveProperty("message");
+    expect(payload).toHaveProperty("session");
+    expect(payload).toHaveProperty("ready_for_report");
+
+    expect(session).not.toHaveProperty("questionStates");
+    expect(session).not.toHaveProperty("transitionHistory");
+    expect(session).not.toHaveProperty("conversationState");
+    expect(session).not.toHaveProperty("askedState");
+
+    expect(caseMemory).not.toHaveProperty("questionStates");
+    expect(caseMemory).not.toHaveProperty("transitionHistory");
+    expect(caseMemory).not.toHaveProperty("conversationState");
+    expect(caseMemory).not.toHaveProperty("askedState");
+
+    expect(message).not.toContain("[StateMachine]");
+    expect(message).not.toContain("state_transition");
+    expect(message).not.toContain("next_question_selected");
+    expect(message).not.toContain("questionStates");
+    expect(message).not.toContain("transitionHistory");
+    expect(message).not.toContain("conversationState");
+  }
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Case summary.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+  });
+
+  it("VET-725: route-asked limping question advances instead of repeating on the next turn", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+    const response1 = await POST(
+      makeTextOnlyRequest(session, "My dog has been limping on the left back leg")
+    );
+    const payload1 = await response1.json();
+
+    expect(response1.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload1);
+    expect(payload1.type).toBe("question");
+    expect(payload1.session.answered_questions).toContain("which_leg");
+    expect(payload1.session.last_question_asked).toBe("limping_onset");
+
+    const askedOnTurn1 = payload1.session.last_question_asked;
+
+    const response2 = await POST(
+      makeTextOnlyRequest(payload1.session, "It started suddenly yesterday")
+    );
+    const payload2 = await response2.json();
+
+    expect(response2.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload2);
+    expect(payload2.type).toBe("question");
+    expect(payload2.session.extracted_answers.limping_onset).toBe("sudden");
+    expect(payload2.session.answered_questions).toContain(askedOnTurn1);
+    expect(payload2.session.last_question_asked).toBe("limping_progression");
+    expect(payload2.session.last_question_asked).not.toBe(askedOnTurn1);
+    expect(payload2.message).not.toContain("When did the limping start");
+  });
+
+  it("VET-725: pending recovery still resolves a route-asked duration question after extraction failure", async () => {
+    mockExtractWithQwen.mockResolvedValueOnce(
+      JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+    const response1 = await POST(
+      makeTextOnlyRequest(session, "My dog has been vomiting")
+    );
+    const payload1 = await response1.json();
+
+    expect(response1.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload1);
+    expect(payload1.type).toBe("question");
+    expect(payload1.session.last_question_asked).toBe("vomit_duration");
+
+    const askedOnTurn1 = payload1.session.last_question_asked;
+
+    mockExtractWithQwen.mockResolvedValueOnce("not-json");
+
+    const response2 = await POST(
+      makeTextOnlyRequest(payload1.session, "For about two days.")
+    );
+    const payload2 = await response2.json();
+
+    expect(response2.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload2);
+    expect(payload2.type).toBe("question");
+    expect(payload2.session.extracted_answers.vomit_duration).toBe(
+      "For about two days."
+    );
+    expect(payload2.session.answered_questions).toContain(askedOnTurn1);
+    expect(payload2.session.last_question_asked).not.toBe(askedOnTurn1);
+    expect(payload2.message).not.toContain("How long has your dog been vomiting");
+  });
+
+  it("VET-725: asked-state internals stay out of owner-facing question payloads", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+    const response1 = await POST(
+      makeTextOnlyRequest(session, "My dog has been limping on the left back leg")
+    );
+    const payload1 = await response1.json();
+
+    expect(response1.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload1);
+    expect(payload1.type).toBe("question");
+    expect(payload1.session.last_question_asked).toBe("limping_onset");
+
+    const response2 = await POST(
+      makeTextOnlyRequest(payload1.session, "It started suddenly yesterday")
+    );
+    const payload2 = await response2.json();
+
+    expect(response2.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload2);
+    expect(payload2.type).toBe("question");
+    expect(payload2.session.last_question_asked).toBe("limping_progression");
+  });
+});
