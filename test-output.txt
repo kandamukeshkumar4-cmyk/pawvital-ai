@@ -1,0 +1,3749 @@
+  console.log
+    [Engine] Vision Pipeline: tiers=tier1, wound=true, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"finding":"wound"}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=wound_skin_issue, redFlags=, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Vision injected symptoms: wound_skin_issue
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:603:15)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=wound_location | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=wound_size | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Vision Pipeline: tiers=tier1, wound=false, severity=normal
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"finding":"normal"}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=, redFlags=, severity=normal
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Vision Pipeline: tiers=tier1, wound=true, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"finding":"wound"}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=wound_skin_issue, redFlags=, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Vision injected symptoms: wound_skin_issue
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:603:15)
+
+  console.log
+    [StateMachine] state_transition: answered | question=wound_location | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=wound_size | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: which_leg)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Vision Pipeline: tiers=tier1, wound=true, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"finding":"wound"}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=wound_skin_issue, redFlags=, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Vision injected symptoms: wound_skin_issue
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:603:15)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=wound_location | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=wound_size | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Vision Pipeline: tiers=tier1, wound=true, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"finding":"wound"}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=wound_skin_issue, redFlags=, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Vision injected symptoms: wound_skin_issue
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:603:15)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=wound_location | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=wound_size | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Vision Pipeline: tiers=1, wound=false, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"clinical_impression":"mild ocular irritation","confidence":0.82}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=eye_discharge, redFlags=, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Vision injected symptoms: eye_discharge
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:603:15)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=discharge_color | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Vision Pipeline: tiers=1ΓåÆ2, wound=false, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"confidence":0.52}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=eye_discharge, redFlags=, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Vision injected symptoms: eye_discharge
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:603:15)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=discharge_color | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.error
+    [HF Vision Preprocess] failed: Error [AbortError]: aborted
+        at Object.<anonymous> (G:\MY Website\pawvital-ai\tests\symptom-chat.route.test.ts:630:24)
+        at Promise.finally.completed (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+        at _callCircusTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+        at _runTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:947:3)
+        at G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:849:7
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+        at run (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:761:3)
+        at runAndTransformResultsToJestFormat (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+        at jestAdapter (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\runner.js:101:19)
+        at runTestInternal (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:275:16)
+        at runTest (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:343:7)
+
+    [0m [90m 308 |[39m           }
+     [90m 309 |[39m         } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 310 |[39m           console[33m.[39merror([32m"[HF Vision Preprocess] failed:"[39m[33m,[39m error)[33m;[39m
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 311 |[39m           [36mconst[39m timedOut [33m=[39m isSidecarAbortError(error)[33m;[39m
+     [90m 312 |[39m           session [33m=[39m appendSidecarObservation(session[33m,[39m {
+     [90m 313 |[39m             service[33m:[39m [32m"vision-preprocess-service"[39m[33m,[39m[0m
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:310:19)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:639:22)
+
+  console.log
+    [Engine] Vision Pipeline: tiers=tier1, wound=true, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:413:17)
+
+  console.log
+    [Engine] Vision output: {"finding":"wound"}
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:414:17)
+
+  console.log
+    [Engine] Vision ΓåÆ Matrix: symptoms=wound_skin_issue, redFlags=, severity=needs_review
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:448:17)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Vision injected symptoms: wound_skin_issue
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:603:15)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=wound_location | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=wound_size | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Diagnosis: Nemotron Ultra 253B
+
+      at generateReport (src/app/api/ai/symptom-chat/route.ts:1870:13)
+
+  console.log
+    [Safety] GLM-5: Report is clinically sound
+
+      at safetyVerify (src/app/api/ai/symptom-chat/route.ts:2753:13)
+
+  console.log
+    [Engine] Safety: GLM-5 verified
+
+      at generateReport (src/app/api/ai/symptom-chat/route.ts:1909:17)
+
+  console.log
+    [HF Multimodal Consult] queued async review via inline fallback
+
+      at generateReport (src/app/api/ai/symptom-chat/route.ts:1952:21)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 2 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":2}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 1 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Pending question "limping_onset" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":0,"question_id":"limping_onset","outcome":"failure","source":"unresolved","pending_before":false,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:933:22)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 1 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=vomit_blood | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=wound_location | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=warmth_present | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=appetite_status | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.error
+    Primary extraction failed: SyntaxError: symptom chat extraction returned invalid JSON: Unexpected token 'o', "not-json" is not valid JSON
+        at safeParseJson (G:\MY Website\pawvital-ai\src\lib\llm-output.ts:74:11)
+        at parseExtractionResponse (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:1117:31)
+        at extractDataFromMessage (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:1098:20)
+        at POST (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:571:8)
+        at G:\MY Website\pawvital-ai\tests\symptom-chat.route.test.ts:1133:24
+
+    [0m [90m 1103 |[39m     [36mreturn[39m parsed[33m;[39m
+     [90m 1104 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 1105 |[39m     console[33m.[39merror([32m"Primary extraction failed:"[39m[33m,[39m error)[33m;[39m
+     [90m      |[39m             [31m[1m^[22m[39m
+     [90m 1106 |[39m
+     [90m 1107 |[39m     [90m// Last resort: keyword extraction[39m
+     [90m 1108 |[39m     console[33m.[39mlog([32m"[Engine] Extraction fallback: keyword-only recovery"[39m)[33m;[39m[0m
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1105:13)
+      at POST (src/app/api/ai/symptom-chat/route.ts:571:8)
+      at tests/symptom-chat.route.test.ts:1133:24
+
+  console.log
+    [Engine] Extraction fallback: keyword-only recovery
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1108:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.error
+    Primary extraction failed: SyntaxError: symptom chat extraction returned invalid JSON: Unexpected end of JSON input
+        at safeParseJson (G:\MY Website\pawvital-ai\src\lib\llm-output.ts:74:11)
+        at parseExtractionResponse (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:1117:31)
+        at extractDataFromMessage (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:1098:20)
+        at POST (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:571:8)
+        at G:\MY Website\pawvital-ai\tests\symptom-chat.route.test.ts:1133:24
+
+    [0m [90m 1103 |[39m     [36mreturn[39m parsed[33m;[39m
+     [90m 1104 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 1105 |[39m     console[33m.[39merror([32m"Primary extraction failed:"[39m[33m,[39m error)[33m;[39m
+     [90m      |[39m             [31m[1m^[22m[39m
+     [90m 1106 |[39m
+     [90m 1107 |[39m     [90m// Last resort: keyword extraction[39m
+     [90m 1108 |[39m     console[33m.[39mlog([32m"[Engine] Extraction fallback: keyword-only recovery"[39m)[33m;[39m[0m
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1105:13)
+      at POST (src/app/api/ai/symptom-chat/route.ts:571:8)
+      at tests/symptom-chat.route.test.ts:1133:24
+
+  console.log
+    [Engine] Extraction fallback: keyword-only recovery
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1108:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 2 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":2,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=breathing_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 2 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":2}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=breathing_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=gum_color | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=breathing_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=gum_color | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 2 symptoms and 2 answers (pending: cough_duration)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":2,"answers_extracted":2}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=gum_color | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=breathing_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Pending question "cough_duration" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":0,"question_id":"cough_duration","outcome":"failure","source":"unresolved","pending_before":false,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1321:22)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: swelling_present)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=wound_location | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: swelling_present)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "swelling_present" via raw_fallback (signal: "Can't tell.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"swelling_present","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: swelling_present)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "swelling_present" via raw_fallback (signal: "Not sure.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"swelling_present","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=breathing_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=abdomen_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: breathing_onset)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Pending question "breathing_onset" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":0,"question_id":"breathing_onset","outcome":"failure","source":"unresolved","pending_before":false,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1536:22)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=breathing_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: stool_consistency)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Pending question "stool_consistency" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":0,"question_id":"stool_consistency","outcome":"failure","source":"unresolved","pending_before":false,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1564:22)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=stool_blood | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=stool_consistency | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=stool_blood | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=stool_consistency | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=stool_blood | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Image Gate] Skipping image analysis for unsupported image domain
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:546:15)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.error
+    MiniMax memory compression failed: Error: timeout
+        at Object.<anonymous> (G:\MY Website\pawvital-ai\tests\symptom-chat.route.test.ts:1650:61)
+        at Promise.finally.completed (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+        at _callCircusTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+        at _runTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:947:3)
+        at G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:849:7
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+        at run (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:761:3)
+        at runAndTransformResultsToJestFormat (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+        at jestAdapter (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\runner.js:101:19)
+        at runTestInternal (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:275:16)
+        at runTest (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:343:7)
+
+    [0m [90m 1392 |[39m     })[33m;[39m
+     [90m 1393 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 1394 |[39m     console[33m.[39merror([32m"MiniMax memory compression failed:"[39m[33m,[39m error)[33m;[39m
+     [90m      |[39m             [31m[1m^[22m[39m
+     [90m 1395 |[39m     [36mconst[39m telemetrySession [33m=[39m recordConversationTelemetry(session[33m,[39m {
+     [90m 1396 |[39m       event[33m:[39m [32m"compression"[39m[33m,[39m
+     [90m 1397 |[39m       turn_count[33m:[39m session[33m.[39mcase_memory[33m?[39m[33m.[39mturn_count [33m?[39m[33m?[39m [35m0[39m[33m,[39m[0m
+
+      at maybeCompressStructuredCaseMemory (src/app/api/ai/symptom-chat/route.ts:1394:13)
+      at POST (src/app/api/ai/symptom-chat/route.ts:937:15)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1653:22)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"fallback","reason":"timeout","model":"deterministic-summary","compression_used":false,"compression_model":"deterministic-summary","narrative_only":true,"fallback_used":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=weight_bearing | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: limping_onset)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_progression | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Pending question "limping_onset" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":0,"question_id":"limping_onset","outcome":"failure","source":"unresolved","pending_before":false,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1744:22)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "limping_onset" via raw_fallback (signal: "It started three days ago")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"limping_onset","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_progression | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.error
+    MiniMax memory compression failed: Error: timeout
+        at Object.<anonymous> (G:\MY Website\pawvital-ai\tests\symptom-chat.route.test.ts:1827:61)
+        at Promise.finally.completed (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+        at _callCircusTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+        at _runTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:947:3)
+        at G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:849:7
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+        at run (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:761:3)
+        at runAndTransformResultsToJestFormat (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+        at jestAdapter (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\runner.js:101:19)
+        at runTestInternal (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:275:16)
+        at runTest (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:343:7)
+
+    [0m [90m 1392 |[39m     })[33m;[39m
+     [90m 1393 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 1394 |[39m     console[33m.[39merror([32m"MiniMax memory compression failed:"[39m[33m,[39m error)[33m;[39m
+     [90m      |[39m             [31m[1m^[22m[39m
+     [90m 1395 |[39m     [36mconst[39m telemetrySession [33m=[39m recordConversationTelemetry(session[33m,[39m {
+     [90m 1396 |[39m       event[33m:[39m [32m"compression"[39m[33m,[39m
+     [90m 1397 |[39m       turn_count[33m:[39m session[33m.[39mcase_memory[33m?[39m[33m.[39mturn_count [33m?[39m[33m?[39m [35m0[39m[33m,[39m[0m
+
+      at maybeCompressStructuredCaseMemory (src/app/api/ai/symptom-chat/route.ts:1394:13)
+      at POST (src/app/api/ai/symptom-chat/route.ts:937:15)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1840:22)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"fallback","reason":"timeout","model":"deterministic-summary","compression_used":false,"compression_model":"deterministic-summary","narrative_only":true,"fallback_used":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=weight_bearing | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: limping_progression)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":5,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_progression | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":6,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=weight_bearing | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: weight_bearing)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":6,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Pending question "weight_bearing" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":6,"question_id":"weight_bearing","outcome":"failure","source":"unresolved","pending_before":true,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1899:23)
+
+  console.log
+    [StateMachine] state_transition: asked | question=weight_bearing | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.error
+    [VET-704] Compression output attempted to rewrite protected field: answered_questions. This indicates a bug or prompt injection. Rejecting compression result.
+
+    [0m [90m 142 |[39m     [36mif[39m (key [36min[39m result) {
+     [90m 143 |[39m       [90m// Defensive: if MiniMax ever tries to return protected fields, reject the output[39m
+    [31m[1m>[22m[39m[90m 144 |[39m       console[33m.[39merror(
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 145 |[39m         [32m`[VET-704] Compression output attempted to rewrite protected field: ${key}. `[39m [33m+[39m
+     [90m 146 |[39m           [32m`This indicates a bug or prompt injection. Rejecting compression result.`[39m
+     [90m 147 |[39m       )[33m;[39m[0m
+
+      at validateCompressionOutput (src/lib/symptom-memory.ts:144:15)
+      at tests/symptom-chat.route.test.ts:1937:7
+      at Object.<anonymous> (node_modules/expect/build/index.js:1824:9)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:2235:93)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1938:8)
+
+  console.error
+    [VET-704] Compression output attempted to rewrite protected field: answered_questions. This indicates a bug or prompt injection. Rejecting compression result.
+
+    [0m [90m 142 |[39m     [36mif[39m (key [36min[39m result) {
+     [90m 143 |[39m       [90m// Defensive: if MiniMax ever tries to return protected fields, reject the output[39m
+    [31m[1m>[22m[39m[90m 144 |[39m       console[33m.[39merror(
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 145 |[39m         [32m`[VET-704] Compression output attempted to rewrite protected field: ${key}. `[39m [33m+[39m
+     [90m 146 |[39m           [32m`This indicates a bug or prompt injection. Rejecting compression result.`[39m
+     [90m 147 |[39m       )[33m;[39m[0m
+
+      at validateCompressionOutput (src/lib/symptom-memory.ts:144:15)
+      at mergeCompressionResult (src/lib/symptom-memory.ts:171:3)
+      at tests/symptom-chat.route.test.ts:1942:7
+      at Object.<anonymous> (node_modules/expect/build/index.js:1824:9)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:2235:93)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:1943:8)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: limping_progression)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":5,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_progression | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "limping_progression" via raw_fallback (signal: "It started three days ago")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":5,"question_id":"limping_progression","outcome":"success","source":"raw_fallback","pending_before":true,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":6,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Pending question "limping_onset" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":0,"question_id":"limping_onset","outcome":"failure","source":"unresolved","pending_before":false,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:2101:22)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.error
+    MiniMax memory compression failed: Error: timeout
+        at Object.<anonymous> (G:\MY Website\pawvital-ai\tests\symptom-chat.route.test.ts:2237:57)
+        at Promise.finally.completed (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1557:28)
+        at new Promise (<anonymous>)
+        at callAsyncCircusFn (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1497:10)
+        at _callCircusTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1007:40)
+        at _runTest (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:947:3)
+        at G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:849:7
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:862:11)
+        at _runTestsForDescribeBlock (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:857:11)
+        at run (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:761:3)
+        at runAndTransformResultsToJestFormat (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\jestAdapterInit.js:1918:21)
+        at jestAdapter (G:\MY Website\pawvital-ai\node_modules\jest-circus\build\runner.js:101:19)
+        at runTestInternal (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:275:16)
+        at runTest (G:\MY Website\pawvital-ai\node_modules\jest-runner\build\index.js:343:7)
+
+    [0m [90m 1392 |[39m     })[33m;[39m
+     [90m 1393 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 1394 |[39m     console[33m.[39merror([32m"MiniMax memory compression failed:"[39m[33m,[39m error)[33m;[39m
+     [90m      |[39m             [31m[1m^[22m[39m
+     [90m 1395 |[39m     [36mconst[39m telemetrySession [33m=[39m recordConversationTelemetry(session[33m,[39m {
+     [90m 1396 |[39m       event[33m:[39m [32m"compression"[39m[33m,[39m
+     [90m 1397 |[39m       turn_count[33m:[39m session[33m.[39mcase_memory[33m?[39m[33m.[39mturn_count [33m?[39m[33m?[39m [35m0[39m[33m,[39m[0m
+
+      at maybeCompressStructuredCaseMemory (src/app/api/ai/symptom-chat/route.ts:1394:13)
+      at POST (src/app/api/ai/symptom-chat/route.ts:937:15)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:2249:22)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":1,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_progression | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":2,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_progression | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: asked | question=weight_bearing | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: weight_bearing)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":3,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=weight_bearing | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: asked | question=trauma_history | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":4,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=which_leg | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":3,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":4,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":4,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=vomit_duration | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_frequency | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: vomit_frequency)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":5,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=appetite_status | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Pending question "vomit_frequency" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":5,"question_id":"vomit_frequency","outcome":"failure","source":"unresolved","pending_before":true,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:2408:23)
+
+  console.log
+    [VET-705][compression] {"turn":6,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_frequency | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":6,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=vomit_frequency | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_blood | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":6,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=stool_frequency | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":7,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=stool_blood | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":5,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":6,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=appetite_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":5,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_progression | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":6,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=weight_bearing | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":5,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":6,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: limping_severity)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Pending question "limping_severity" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=wound_location | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "wound_location" via raw_fallback (signal: "something random")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"wound_location","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":5,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_progression | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Pending question "limping_onset" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":5,"question_id":"limping_onset","outcome":"failure","source":"unresolved","pending_before":true,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:2695:22)
+
+  console.log
+    [VET-705][compression] {"turn":6,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=limping_onset | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=appetite_status | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [StateMachine] state_transition: answered | question=vomit_frequency | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=water_intake | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: appetite_status)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=appetite_status | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_duration | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: cough_duration)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "cough_duration" via raw_fallback (signal: "It's been about three days now. It's louder when he's lying down at night.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"cough_duration","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: limping_onset)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "limping_onset" via raw_fallback (signal: "Since Monday morning. He woke up and couldn't use his leg properly.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"limping_onset","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: vomit_duration)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=vomit_duration | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "vomit_duration" via raw_fallback (signal: "For the past two days. It started after dinner and he's thrown up four times.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"vomit_duration","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_frequency | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: stool_frequency)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=stool_frequency | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "stool_frequency" via raw_fallback (signal: "Several times today. Started this morning and keeps happening.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"stool_frequency","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=stool_blood | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: cough_duration)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "cough_duration" via raw_fallback (signal: "Since the weekend. It's been getting worse each day.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"cough_duration","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 0 symptoms and 0 answers (pending: vomit_duration)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=vomit_duration | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "vomit_duration" via raw_fallback (signal: "Just a few hours. He ate breakfast fine but then he threw up twice.")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"vomit_duration","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=vomit_frequency | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.error
+    Primary extraction failed: SyntaxError: symptom chat extraction returned invalid JSON: Unexpected token 'o', "not-json" is not valid JSON
+        at safeParseJson (G:\MY Website\pawvital-ai\src\lib\llm-output.ts:74:11)
+        at parseExtractionResponse (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:1117:31)
+        at extractDataFromMessage (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:1098:20)
+        at POST (G:\MY Website\pawvital-ai\src\app\api\ai\symptom-chat\route.ts:571:8)
+        at Object.<anonymous> (G:\MY Website\pawvital-ai\tests\symptom-chat.route.test.ts:3041:22)
+
+    [0m [90m 1103 |[39m     [36mreturn[39m parsed[33m;[39m
+     [90m 1104 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 1105 |[39m     console[33m.[39merror([32m"Primary extraction failed:"[39m[33m,[39m error)[33m;[39m
+     [90m      |[39m             [31m[1m^[22m[39m
+     [90m 1106 |[39m
+     [90m 1107 |[39m     [90m// Last resort: keyword extraction[39m
+     [90m 1108 |[39m     console[33m.[39mlog([32m"[Engine] Extraction fallback: keyword-only recovery"[39m)[33m;[39m[0m
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1105:13)
+      at POST (src/app/api/ai/symptom-chat/route.ts:571:8)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:3041:22)
+
+  console.log
+    [Engine] Extraction fallback: keyword-only recovery
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1108:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=cough_duration | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "cough_duration" via raw_fallback (signal: "Started yesterday afternoon. He was fine in the morning but it sounded rougher a")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"cough_duration","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=limping_onset | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "limping_onset" via raw_fallback (signal: "not certain")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"limping_onset","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: swelling_present)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "swelling_present" via raw_fallback (signal: "maybe")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"swelling_present","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: swelling_present)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "swelling_present" via raw_fallback (signal: "not sure")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"swelling_present","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: swelling_present)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=pending_question_recovered
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [Engine] Resolved pending question "swelling_present" via raw_fallback (signal: "can't tell")
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:683:17)
+
+  console.log
+    [VET-705][pending_recovery] {"turn":0,"question_id":"swelling_present","outcome":"success","source":"raw_fallback","pending_before":false,"pending_after":false}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=swelling_present | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [Engine] Extraction: Qwen 3.5 122B
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1096:13)
+
+  console.log
+    [Engine] Extraction parsed 1 symptoms and 0 answers (pending: cough_duration)
+
+      at extractDataFromMessage (src/app/api/ai/symptom-chat/route.ts:1099:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"structured","model":"Qwen-3.5-122B","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":1,"answers_extracted":0}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [Engine] Pending question "cough_duration" still unresolved after extraction and deterministic fallback
+
+      at POST (src/app/api/ai/symptom-chat/route.ts:698:17)
+
+  console.error
+    [VET-705][pending_recovery] {"turn":0,"question_id":"cough_duration","outcome":"failure","source":"unresolved","pending_before":false,"pending_after":true}
+
+    [0m [90m 947 |[39m
+     [90m 948 |[39m   [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"error"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"failure"[39m) {
+    [31m[1m>[22m[39m[90m 949 |[39m     console[33m.[39merror([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m     |[39m             [31m[1m^[22m[39m
+     [90m 950 |[39m   } [36melse[39m [36mif[39m (event[33m.[39moutcome [33m===[39m [32m"warning"[39m [33m||[39m event[33m.[39moutcome [33m===[39m [32m"partial"[39m) {
+     [90m 951 |[39m     console[33m.[39mwarn([32m`${prefix} ${JSON.stringify(logData)}`[39m)[33m;[39m
+     [90m 952 |[39m   } [36melse[39m {[0m
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:949:13)
+      at recordConversationTelemetry (src/lib/symptom-memory.ts:850:3)
+      at POST (src/app/api/ai/symptom-chat/route.ts:703:46)
+      at Object.<anonymous> (tests/symptom-chat.route.test.ts:3269:24)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=cough_type | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+  console.log
+    [VET-705][extraction] {"turn":0,"outcome":"success","source":"fast_path","extraction_valid_json":true,"fallback_used":false,"symptoms_extracted":0,"answers_extracted":1}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: answered | question=trauma_history | reason=turn_answer_recorded
+
+      at transitionToAnswered (src/lib/conversation-state/answer-recording.ts:32:11)
+
+  console.log
+    [VET-705][compression] {"turn":1,"outcome":"success","model":"MiniMax-M2.7","compression_used":true,"compression_model":"MiniMax-M2.7","narrative_only":true,"control_state_preserved":true}
+
+      at emitTelemetryLog (src/lib/symptom-memory.ts:953:13)
+
+  console.log
+    [StateMachine] state_transition: asked | question=which_leg | reason=next_question_selected
+
+      at transitionToAsked (src/lib/conversation-state/question-asking.ts:35:11)
+
+  console.log
+    [Engine] Phrasing primary: Llama 3.3 70B Instruct
+
+      at phraseQuestionV2 (src/app/api/ai/symptom-chat/route.ts:1556:13)
+
+PASS tests/symptom-chat.route.test.ts (10.94 s)
+  symptom-chat mixed text + image routing
+    ΓêÜ fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up (920 ms)
+    ΓêÜ keeps the limping flow when the image adds no new symptom evidence (87 ms)
+    ΓêÜ still allows wound-photo context when the active flow is already wound-specific (73 ms)
+    ΓêÜ strips visual hallucinations when no photo was sent this turn (103 ms)
+    ΓêÜ keeps fresh image findings available for reasoning even when direct photo wording is blocked (453 ms)
+    ΓêÜ falls back to deterministic phrasing when the preflight gate marks the turn as fragile (163 ms)
+    ΓêÜ supports eye-domain image turns even outside the wound flow (119 ms)
+    ΓêÜ calls the multimodal consult on ambiguous supported image cases (90 ms)
+    ΓêÜ records sidecar timeout observations and falls back to deterministic preprocess (251 ms)
+    ΓêÜ adds evidence-chain data and capped confidence to the final report (240 ms)
+    ΓêÜ keeps report generation alive when GLM safety review returns malformed JSON (135 ms)
+    ΓêÜ captures obvious first-turn limping details before asking the next question (81 ms)
+    ΓêÜ prefers direct owner text over conflicting model extraction for critical first-turn facts (88 ms)
+    ΓêÜ keeps asking which_leg when the owner only gives front-or-back without a side (172 ms)
+    ΓêÜ rejects weak model-only which_leg extraction when the side is still missing (89 ms)
+    ΓêÜ updates a previously answered leg when the owner corrects themselves (211 ms)
+    ΓêÜ returns an emergency response for vomiting blood on the first turn (137 ms)
+    ΓêÜ captures volunteered non-critical limping details on the first turn (78 ms)
+    ΓêÜ accepts an explicit unknown trauma-history answer instead of repeating the same question (72 ms)
+    ΓêÜ accepts a natural negative trauma-history reply instead of repeating the same question (88 ms)
+    ΓêÜ accepts a bare negative water-intake response (no) instead of repeating the same question (90 ms)
+    ΓêÜ accepts a bare negative water-intake response (no not really) instead of repeating the same question (140 ms)
+    ΓêÜ accepts a bare negative water-intake response (no, not really) instead of repeating the same question (147 ms)
+    ΓêÜ accepts a natural-language normal water-intake reply when extraction misses it (110 ms)
+    ΓêÜ recovers a pending water-intake answer when extraction output is "not-json" (402 ms)
+    ΓêÜ recovers a pending water-intake answer when extraction output is "" (198 ms)
+    ΓêÜ accepts comma and non-comma variants of normal water-intake reply (yes he's drinking normally) (61 ms)
+    ΓêÜ accepts comma and non-comma variants of normal water-intake reply (yes, he's drinking normally) (105 ms)
+    ΓêÜ accepts reduced water-intake replies (not much water) instead of repeating the same question (85 ms)
+    ΓêÜ accepts reduced water-intake replies (barely drinking) instead of repeating the same question (82 ms)
+    ΓêÜ prioritizes breathing follow-up over coughing when both symptoms are reported together (79 ms)
+    ΓêÜ preserves non-limping critical choice answers and escalates breathing emergencies (77 ms)
+    ΓêÜ deterministically captures respiratory red flags when the model misses them (63 ms)
+    ΓêÜ does not force-close an unrelated pending string question with a new symptom update (76 ms)
+    ΓêÜ records a direct duration-style pending answer instead of repeating the same question (77 ms)
+    ΓêÜ records a direct duration-style pending answer when the owner says since yesterday (114 ms)
+    ΓêÜ recovers a duration-style pending answer when extraction output is "not-json" (72 ms)
+    ΓêÜ recovers a duration-style pending answer when extraction output is "" (74 ms)
+    ΓêÜ accepts a natural affirmative pending swelling reply when extraction misses it (60 ms)
+    ΓêÜ accepts an unknown-style pending boolean reply (Can't tell.) instead of repeating the same question (70 ms)
+    ΓêÜ accepts an unknown-style pending boolean reply (Not sure.) instead of repeating the same question (82 ms)
+    ΓêÜ uses broader keyword fallback for common respiratory and abdomen phrasings (85 ms)
+    ΓêÜ does not treat worsening-only language as a breathing onset answer in pending recovery (81 ms)
+    ΓêÜ does not treat unrelated water-drinking language as watery stool in pending recovery (91 ms)
+    ΓêÜ records a real watery-stool pending answer from common owner phrasing (It's mostly water.) (68 ms)
+    ΓêÜ records a real watery-stool pending answer from common owner phrasing (It came out like water.) (80 ms)
+    ΓêÜ does not run deep image analysis when pre-vision marks a generic photo unsupported (66 ms)
+    ΓêÜ falls back to deterministic-summary when MiniMax compression throws (84 ms)
+    ΓêÜ treats non-weight-bearing limping as an emergency red-flag path (55 ms)
+    ΓêÜ VET-704: compression does not change answered_questions (66 ms)
+    ΓêÜ VET-704: compression does not change extracted_answers (56 ms)
+    ΓêÜ VET-704: mergeCompressionResult preserves unresolved_question_ids exactly (4 ms)
+    ΓêÜ VET-704: compression does not change last_question_asked (68 ms)
+    ΓêÜ VET-704: compression failure falls back safely without losing state (47 ms)
+    ΓêÜ VET-704: conversation crossing compression boundary does not repeat resolved question (44 ms)
+    ΓêÜ VET-704: compression output that tries to rewrite protected fields is rejected (20 ms)
+    ΓêÜ VET-704: compression prompt excludes protected control state (36 ms)
+    ΓêÜ VET-706: telemetry entry is excluded from compression prompt and client session (36 ms)
+    ΓêÜ VET-705: extraction telemetry is logged internally and excluded from client session (32 ms)
+    ΓêÜ VET-706: repeat suppression telemetry is recorded when triggered (92 ms)
+    ΓêÜ VET-705: pending recovery telemetry is logged internally on success and excluded from client session (65 ms)
+    ΓêÜ VET-705: compression telemetry is logged internally on success and excluded from client session (69 ms)
+    ΓêÜ VET-705: compression fallback telemetry is logged internally and excluded from client session (150 ms)
+    ΓêÜ VET-705: user-facing payload shape is unchanged by telemetry recording (65 ms)
+    ΓêÜ VET-710: realistic multi-turn replay does not repeat answered questions (55 ms)
+    ΓêÜ VET-710: multi-turn replay with compression boundary preserves answered_questions (53 ms)
+    ΓêÜ VET-710: compression boundary preserves last_question_asked across turns (34 ms)
+    ΓêÜ VET-710: compression boundary preserves unresolved_question_ids (2 ms)
+    ΓêÜ VET-710: telemetry markers do not leak into user-facing message (64 ms)
+    ΓêÜ VET-710: compression prompt excludes answered_questions and extracted_answers (58 ms)
+    ΓêÜ VET-710: payload shape remains stable after compression boundary (69 ms)
+  VET-707: loop diagnostics
+    ΓêÜ VET-707: pending recovery failure logs structured telemetry without leaking client payload (66 ms)
+    ΓêÜ VET-707: pending recovery failure records loop_reason for extraction_miss (48 ms)
+    ΓêÜ VET-707: repeat suppression records loop_reason repeat_of_last_asked (59 ms)
+  VET-714: edge-case deterministic reply regression pack
+    ΓêÜ VET-714: hedged negative 'not really' closes pending boolean question (59 ms)
+    ΓêÜ VET-714: hedged negative 'not much' closes pending water-intake question (53 ms)
+    ΓêÜ VET-714: hedged negative 'not really' on vomiting frequency closes pending question (53 ms)
+    ΓêÜ VET-714: hedged negative 'not too much' on drinking closes pending question (39 ms)
+    ΓêÜ VET-714: hedged negative 'not at all' on appetite closes pending question (42 ms)
+    ΓêÜ VET-714: hedged negative 'never really' on trauma history closes pending question (38 ms)
+    ΓêÜ VET-714: multi-sentence duration reply with time and observation closes pending question (32 ms)
+    ΓêÜ VET-714: multi-sentence duration reply with since-clause closes pending question (47 ms)
+    ΓêÜ VET-714: multi-sentence duration reply with for-clause and progression closes pending question (33 ms)
+    ΓêÜ VET-714: multi-sentence duration reply with vague time reference closes pending question (40 ms)
+    ΓêÜ VET-714: multi-sentence duration reply with weekend reference closes pending question (38 ms)
+    ΓêÜ VET-714: multi-sentence duration reply with hour reference closes pending question (35 ms)
+    ΓêÜ VET-714: multi-sentence duration reply survives extraction failure (45 ms)
+    ΓêÜ VET-714: unknown-style 'I'm not sure' closes pending trauma-history question (35 ms)
+    ΓêÜ VET-714: unknown-style 'I have no idea' closes pending trauma-history question (43 ms)
+    ΓêÜ VET-714: unknown-style 'not certain' closes pending onset question (34 ms)
+    ΓêÜ VET-714: unknown-style 'I couldn't say' closes pending trauma-history question (37 ms)
+    ΓêÜ VET-714: unknown-style 'maybe' closes pending boolean question (34 ms)
+    ΓêÜ VET-714: unknown-style 'I wish I knew' closes pending trauma-history question (35 ms)
+    ΓêÜ VET-714: unknown-style 'No idea sorry' closes pending trauma-history question (35 ms)
+    ΓêÜ VET-714: unknown-style reply survives extraction failure (39 ms)
+    ΓêÜ VET-714: unknown-style 'Not that I know of' closes pending trauma-history question (41 ms)
+    ΓêÜ VET-714: unknown-style not sure (casual phrasing) closes pending swelling question (37 ms)
+    ΓêÜ VET-714: unknown-style can't tell (casual phrasing) closes pending swelling question (42 ms)
+    ΓêÜ VET-714: edge-case replies preserve stable question payload shape (55 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       99 passed, 99 total
+Snapshots:   0 total
+Time:        12.451 s
+Ran all test suites matching tests/symptom-chat.route.test.ts.
