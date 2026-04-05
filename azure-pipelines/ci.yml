@@ -1,0 +1,131 @@
+# PawVital — Main CI Pipeline
+# Triggers on every PR to master and every push.
+# Posts status checks back to GitHub via the GitHub service connection.
+
+trigger:
+  branches:
+    exclude:
+      - master  # only run on feature branches, not master itself
+
+pr:
+  branches:
+    include:
+      - master
+  autoCancel: true
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  NODE_VERSION: "22"
+  npm_config_cache: $(Pipeline.Workspace)/.npm
+
+stages:
+  - stage: CI
+    displayName: CI Checks
+    jobs:
+      - job: Install
+        displayName: Install Dependencies
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: Set up Node.js
+
+          - task: Cache@2
+            inputs:
+              key: npm | $(Agent.OS) | $(Build.SourcesDirectory)/package-lock.json
+              restoreKeys: npm | $(Agent.OS)
+              path: $(npm_config_cache)
+            displayName: Cache npm packages
+
+          - script: npm ci
+            displayName: npm ci
+
+          - publish: node_modules
+            artifact: node_modules
+            displayName: Publish node_modules artifact
+
+      - job: Lint
+        displayName: Lint
+        dependsOn: Install
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+          - download: current
+            artifact: node_modules
+          - script: mv $(Pipeline.Workspace)/current/node_modules ./node_modules
+            displayName: Restore node_modules
+          - script: npm run lint
+            displayName: Run ESLint
+            continueOnError: false
+
+      - job: TypeCheck
+        displayName: Type Check
+        dependsOn: Install
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+          - download: current
+            artifact: node_modules
+          - script: mv $(Pipeline.Workspace)/current/node_modules ./node_modules
+            displayName: Restore node_modules
+          - script: npx tsc --noEmit
+            displayName: Run TypeScript check
+
+      - job: Build
+        displayName: Build
+        dependsOn: Install
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+          - download: current
+            artifact: node_modules
+          - script: mv $(Pipeline.Workspace)/current/node_modules ./node_modules
+            displayName: Restore node_modules
+          - script: npm run build
+            displayName: Next.js build
+            env:
+              NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+              NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+              QWEN_API_KEY: placeholder
+              GLM_API_KEY: placeholder
+              MINIMAX_API_KEY: placeholder
+              HF_CONSULT_URL: https://placeholder
+              HF_ASYNC_REVIEW_URL: https://placeholder
+
+      - job: Test
+        displayName: Tests
+        dependsOn: Install
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+          - download: current
+            artifact: node_modules
+          - script: mv $(Pipeline.Workspace)/current/node_modules ./node_modules
+            displayName: Restore node_modules
+          - script: npm test -- --ci --reporters=default --reporters=jest-junit
+            displayName: Run Jest
+            env:
+              JEST_JUNIT_OUTPUT_DIR: $(Build.ArtifactStagingDirectory)/test-results
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: JUnit
+              testResultsFiles: "$(Build.ArtifactStagingDirectory)/test-results/*.xml"
+              testRunTitle: Unit Tests
+
+  - stage: Gate
+    displayName: CI Gate
+    dependsOn: CI
+    condition: succeeded()
+    jobs:
+      - job: Gate
+        displayName: All CI passed
+        steps:
+          - script: echo "All CI checks passed — ready for AI review"
+            displayName: Gate passed
