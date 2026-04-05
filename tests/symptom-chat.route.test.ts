@@ -4,6 +4,7 @@ import {
   recordAnswer,
   type TriageSession,
 } from "@/lib/triage-engine";
+import type { SidecarObservation } from "@/lib/clinical-evidence";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
@@ -1934,12 +1935,19 @@ describe("symptom-chat mixed text + image routing", () => {
 
     // The validateCompressionOutput function should throw
     expect(() => {
-      validateCompressionOutput(maliciousOutput as any, protectedState);
+      validateCompressionOutput(
+        maliciousOutput as Record<string, unknown>,
+        protectedState
+      );
     }).toThrow();
 
     // mergeCompressionResult should also throw because it calls validateCompressionOutput
     expect(() => {
-      mergeCompressionResult(session, maliciousOutput as any, protectedState);
+      mergeCompressionResult(
+        session,
+        maliciousOutput as unknown as { summary: string; model: string },
+        protectedState
+      );
     }).toThrow();
   });
 
@@ -2026,7 +2034,7 @@ describe("symptom-chat mixed text + image routing", () => {
 
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
     expect(
-      telemetryEvents.find((e: any) => e.service === "async-review-service")
+      telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
     ).toBeUndefined();
     expect(prompt).not.toContain("async-review-service");
     expect(prompt).not.toContain('"stage":"extraction"');
@@ -2067,7 +2075,7 @@ describe("symptom-chat mixed text + image routing", () => {
       expect(response.status).toBe(200);
       const telemetryEvents = payload.session.case_memory?.service_observations || [];
       expect(
-        telemetryEvents.find((e: any) => e.service === "async-review-service")
+        telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
       ).toBeUndefined();
 
       const extractionLog = findConsoleLine(logSpy, "[VET-705][extraction]");
@@ -2149,7 +2157,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
     expect(
-      telemetryEvents.find((e: any) => e.service === "async-review-service")
+      telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
     ).toBeUndefined();
 
     const pendingTelemetry = findConsoleLine(
@@ -2201,7 +2209,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
     expect(
-      telemetryEvents.find((e: any) => e.service === "async-review-service")
+      telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
     ).toBeUndefined();
 
     const compressionTelemetry = findConsoleLine(
@@ -2254,7 +2262,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
     expect(
-      telemetryEvents.find((e: any) => e.service === "async-review-service")
+      telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
     ).toBeUndefined();
 
     const compressionTelemetry = findConsoleLine(
@@ -2626,7 +2634,7 @@ describe("VET-707: loop diagnostics", () => {
     expect(response.status).toBe(200);
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
     expect(
-      telemetryEvents.find((e: any) => e.service === "async-review-service")
+      telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
     ).toBeUndefined();
 
     const pendingTelemetryNote = findConsoleLine(
@@ -2698,7 +2706,7 @@ describe("VET-707: loop diagnostics", () => {
     expect(response.status).toBe(200);
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
     const repeatTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "repeat_suppression"
+      (e: SidecarObservation) => e.stage === "repeat_suppression"
     );
     if (repeatTelemetry) {
       expect(repeatTelemetry.note).toContain("loop_reason=repeat_of_last_asked");
