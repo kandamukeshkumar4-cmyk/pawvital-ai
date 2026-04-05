@@ -125,6 +125,18 @@ const PET = {
 
 const IMAGE = "data:image/jpeg;base64,ZmFrZQ==";
 
+function findConsoleLine(
+  spy: { mock: { calls: unknown[][] } },
+  marker: string
+): string | undefined {
+  return spy.mock.calls
+    .flat()
+    .find(
+      (value): value is string =>
+        typeof value === "string" && value.includes(marker)
+    );
+}
+
 function makeRequest(session: TriageSession, message: string) {
   return new Request("http://localhost/api/ai/symptom-chat", {
     method: "POST",
@@ -614,7 +626,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.case_memory.consult_opinions).toHaveLength(1);
   });
 
-  it("records sidecar timeouts and falls back to deterministic preprocess", async () => {
+  it("records sidecar timeout observations and falls back to deterministic preprocess", async () => {
     const abortError = new Error("aborted");
     abortError.name = "AbortError";
     mockPreprocessVeterinaryImage.mockRejectedValue(abortError);
@@ -630,15 +642,17 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
     expect(payload.session.latest_image_domain).toBe("skin_wound");
-    expect(payload.session.case_memory.service_timeouts).toEqual(
+    expect(payload.session.case_memory.service_observations).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           service: "vision-preprocess-service",
           stage: "preprocess",
-          reason: "timeout",
+          outcome: "timeout",
+          fallbackUsed: true,
         }),
       ])
     );
+    expect(payload.session.case_memory.service_timeouts).toEqual([]);
   });
 
   it("adds evidence-chain data and capped confidence to the final report", async () => {
@@ -1976,7 +1990,10 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.case_memory.compressed_summary).toBe("Narrative summary only.");
   });
 
-  it("VET-706: telemetry entry is excluded from compression prompt", async () => {
+  it("VET-706: telemetry entry is excluded from compression prompt and client session", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
@@ -2005,15 +2022,62 @@ describe("symptom-chat mixed text + image routing", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
+    const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
 
-    // Telemetry is recorded internally
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const extractionTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "extraction"
-    );
-    expect(extractionTelemetry).toBeDefined();
+    expect(
+      telemetryEvents.find((e: any) => e.service === "async-review-service")
+    ).toBeUndefined();
+    expect(prompt).not.toContain("async-review-service");
+    expect(prompt).not.toContain('"stage":"extraction"');
 
-    // But compression telemetry should NOT appear as telemetry input in the prompt
+    const extractionLog = findConsoleLine(logSpy, "[VET-705][extraction]");
+    expect(extractionLog).toBeDefined();
+    expect(String(extractionLog)).toContain('"outcome":"success"');
+  } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("VET-705: extraction telemetry is logged internally and excluded from client session", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["limping"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.answered_questions = ["which_leg"];
+      session.extracted_answers = { which_leg: "left back leg" };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "It seems to be getting worse")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      const telemetryEvents = payload.session.case_memory?.service_observations || [];
+      expect(
+        telemetryEvents.find((e: any) => e.service === "async-review-service")
+      ).toBeUndefined();
+
+      const extractionLog = findConsoleLine(logSpy, "[VET-705][extraction]");
+      expect(extractionLog).toBeDefined();
+      expect(String(extractionLog)).toContain('"outcome":"success"');
+      expect(String(extractionLog)).toMatch(/"source":"(fast_path|structured)"/);
+      expect(String(extractionLog)).toMatch(/"symptoms_extracted":\d+/);
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it("VET-706: repeat suppression telemetry is recorded when triggered", async () => {
@@ -2050,44 +2114,10 @@ describe("symptom-chat mixed text + image routing", () => {
   // Tests to verify telemetry is recorded without changing user-facing payload.
   // =============================================================================
 
-  it("VET-705: extraction telemetry is recorded in service_observations", async () => {
-    mockRunRoboflowSkinWorkflow.mockResolvedValue({
-      positive: false,
-      summary: "",
-      labels: [],
-    });
-    mockShouldAnalyzeWoundImage.mockReturnValue(false);
-    mockExtractWithQwen.mockResolvedValue(
-      JSON.stringify({ symptoms: ["limping"], answers: {} })
-    );
+  it("VET-705: pending recovery telemetry is logged internally on success and excluded from client session", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
-    let session = createSession();
-    session = addSymptoms(session, ["limping"]);
-    session.answered_questions = ["which_leg"];
-    session.extracted_answers = { which_leg: "left back leg" };
-
-    const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    const response = await POST(
-      makeTextOnlyRequest(session, "It seems to be getting worse")
-    );
-    const payload = await response.json();
-
-    expect(response.status).toBe(200);
-    // Telemetry should be recorded in service_observations
-    const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const extractionTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "extraction"
-    );
-    expect(extractionTelemetry).toBeDefined();
-    expect(extractionTelemetry.service).toBe("async-review-service");
-    expect(extractionTelemetry.outcome).toBe("success");
-    // Concrete marker: note should contain src=fast_path or src=structured
-    expect(extractionTelemetry.note).toMatch(/src=(fast_path|structured)/);
-    // Concrete marker: note should contain symptoms count
-    expect(extractionTelemetry.note).toMatch(/syms=\d+/);
-  });
-
-  it("VET-705: pending recovery telemetry is recorded on success", async () => {
+    try {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
@@ -2099,34 +2129,46 @@ describe("symptom-chat mixed text + image routing", () => {
     );
 
     let session = createSession();
-    session = addSymptoms(session, ["limping"]);
-    session.last_question_asked = "limping_severity";
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_duration";
     session.answered_questions = [];
     session.case_memory = {
       ...session.case_memory!,
-      unresolved_question_ids: ["limping_severity"],
+      unresolved_question_ids: ["cough_duration"],
     };
 
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    // Simulate a negative answer that will trigger raw_fallback resolution
     const response = await POST(
-      makeTextOnlyRequest(session, "no")
+      makeTextOnlyRequest(
+        session,
+        "It's been about three days now. It's louder when he's lying down at night."
+      )
     );
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    // Telemetry should be recorded
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const pendingTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "pending_recovery"
+    expect(
+      telemetryEvents.find((e: any) => e.service === "async-review-service")
+    ).toBeUndefined();
+
+    const pendingTelemetry = findConsoleLine(
+      logSpy,
+      "[VET-705][pending_recovery]"
     );
     expect(pendingTelemetry).toBeDefined();
-    // Concrete marker: note should contain src= and q= with question ID
-    expect(pendingTelemetry.note).toMatch(/src=/);
-    expect(pendingTelemetry.note).toMatch(/q=limping_severity/);
+    expect(String(pendingTelemetry)).toContain('"question_id":"cough_duration"');
+    expect(String(pendingTelemetry)).toContain('"outcome":"success"');
+    expect(String(pendingTelemetry)).toContain('"source":"raw_fallback"');
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
-  it("VET-705: compression telemetry is recorded on success", async () => {
+  it("VET-705: compression telemetry is logged internally on success and excluded from client session", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
@@ -2157,24 +2199,32 @@ describe("symptom-chat mixed text + image routing", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    // Telemetry should be recorded for compression
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const compressionTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "compression"
+    expect(
+      telemetryEvents.find((e: any) => e.service === "async-review-service")
+    ).toBeUndefined();
+
+    const compressionTelemetry = findConsoleLine(
+      logSpy,
+      "[VET-705][compression]"
     );
     expect(compressionTelemetry).toBeDefined();
-    expect(compressionTelemetry.outcome).toBe("success");
-    // Concrete markers: should contain compression model and isolation flags
-    expect(compressionTelemetry.note).toContain("compress=MiniMax-M2.7");
-    expect(compressionTelemetry.note).toContain("narrative_only=true");
-    expect(compressionTelemetry.note).toContain("ctrl_preserved=true");
-    // User-facing payload should be unchanged
+    expect(String(compressionTelemetry)).toContain('"outcome":"success"');
+    expect(String(compressionTelemetry)).toContain('"compression_model":"MiniMax-M2.7"');
+    expect(String(compressionTelemetry)).toContain('"narrative_only":true');
+    expect(String(compressionTelemetry)).toContain('"control_state_preserved":true');
     expect(payload.type).toBe("question");
     expect(payload.session).toBeDefined();
     expect(payload.session.case_memory.compressed_summary).toBe("Dog is limping on left back leg.");
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
-  it("VET-705: compression fallback telemetry is recorded on failure", async () => {
+  it("VET-705: compression fallback telemetry is logged internally and excluded from client session", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
@@ -2202,21 +2252,25 @@ describe("symptom-chat mixed text + image routing", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    // Telemetry should be recorded for compression fallback
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const compressionTelemetry = telemetryEvents.find(
-      (e: any) => e.stage === "compression"
+    expect(
+      telemetryEvents.find((e: any) => e.service === "async-review-service")
+    ).toBeUndefined();
+
+    const compressionTelemetry = findConsoleLine(
+      logSpy,
+      "[VET-705][compression]"
     );
     expect(compressionTelemetry).toBeDefined();
-    expect(compressionTelemetry.outcome).toBe("fallback");
-    // Fallback marker should be present in note
-    expect(compressionTelemetry.note).toMatch(/fallback=true/);
-    expect(compressionTelemetry.note).toContain("compress=deterministic-summary");
-    // User-facing payload should be unchanged
+    expect(String(compressionTelemetry)).toContain('"outcome":"fallback"');
+    expect(String(compressionTelemetry)).toContain('"fallback_used":true');
+    expect(String(compressionTelemetry)).toContain('"compression_model":"deterministic-summary"');
     expect(payload.type).toBe("question");
     expect(payload.session).toBeDefined();
-    // Should have fallen back to deterministic summary
     expect(payload.session.case_memory.compression_model).toBe("deterministic-summary");
+    } finally {
+      logSpy.mockRestore();
+    }
   });
 
   it("VET-705: user-facing payload shape is unchanged by telemetry recording", async () => {
@@ -2546,7 +2600,10 @@ describe("VET-707: loop diagnostics", () => {
     jest.clearAllMocks();
   });
 
-  it("VET-707: pending recovery failure records structured telemetry when pending cannot be resolved", async () => {
+  it("VET-707: pending recovery failure logs structured telemetry without leaking client payload", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
       summary: "",
@@ -2568,13 +2625,21 @@ describe("VET-707: loop diagnostics", () => {
 
     expect(response.status).toBe(200);
     const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    const pendingTelemetryNote = telemetryEvents
-      .filter((e: any) => e.stage === "pending_recovery")
-      .map((e: any) => e.note)
-      .find((note: unknown) => typeof note === "string" && note.includes("q=limping_severity"));
+    expect(
+      telemetryEvents.find((e: any) => e.service === "async-review-service")
+    ).toBeUndefined();
+
+    const pendingTelemetryNote = findConsoleLine(
+      errorSpy,
+      "[VET-705][pending_recovery]"
+    );
     expect(pendingTelemetryNote).toBeDefined();
-    expect(String(pendingTelemetryNote)).toContain("outcome=failure");
-    expect(String(pendingTelemetryNote)).toContain("pending_after=true");
+    expect(String(pendingTelemetryNote)).toContain('"question_id":"limping_severity"');
+    expect(String(pendingTelemetryNote)).toContain('"outcome":"failure"');
+    expect(String(pendingTelemetryNote)).toContain('"pending_after":true');
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("VET-707: pending recovery failure records loop_reason for extraction_miss", async () => {
