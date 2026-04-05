@@ -1,0 +1,89 @@
+name: Auto-Merge
+
+on:
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Auto-Merge on Approval
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'pull_request_review' &&
+      github.event.review.state == 'approved'
+    steps:
+      - name: Check all CI passed
+        id: ci-check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(echo "${{ github.event.review.pull_request_url }}" | grep -oP '\d+$')
+          echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+          # Get all check runs for the PR head SHA
+          SHA="${{ github.event.review.commit_id }}"
+          CHECKS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs --jq '.check_runs[] | select(.name == "CI Gate") | .conclusion')
+
+          if [ "$CHECKS" = "success" ]; then
+            echo "ci_passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ci_passed=false" >> "$GITHUB_OUTPUT"
+            echo "CI Gate has not passed yet — skipping auto-merge"
+          fi
+
+      - name: Check PR is auto-mergeable
+        if: steps.ci-check.outputs.ci_passed == 'true'
+        id: pr-check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.ci-check.outputs.pr }}"
+
+          # Check PR is not a draft and has no merge conflicts
+          PR_STATE=$(gh pr view "$PR_NUMBER" --json isDraft,mergeable,mergeStateStatus --jq '{draft: .isDraft, mergeable: .mergeable, state: .mergeStateStatus}')
+          IS_DRAFT=$(echo "$PR_STATE" | jq -r '.draft')
+          MERGEABLE=$(echo "$PR_STATE" | jq -r '.mergeable')
+
+          if [ "$IS_DRAFT" = "true" ]; then
+            echo "PR is a draft — skipping"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          elif [ "$MERGEABLE" != "MERGEABLE" ]; then
+            echo "PR has merge conflicts — skipping"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Squash merge
+        if: steps.ci-check.outputs.ci_passed == 'true' && steps.pr-check.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.ci-check.outputs.pr }}"
+
+          echo "All checks passed and PR approved — merging PR #${PR_NUMBER}"
+          gh pr merge "$PR_NUMBER" \
+            --squash \
+            --auto \
+            --delete-branch
+
+      - name: Comment on merge
+        if: steps.ci-check.outputs.ci_passed == 'true' && steps.pr-check.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.ci-check.outputs.pr }}"
+          gh pr comment "$PR_NUMBER" --body "## Auto-Merged :rocket:
+
+          CI passed + AI review approved. Squash-merged to master.
+
+          Vercel will deploy automatically.
+
+          ---
+          *Merged by CI pipeline (automated)*"

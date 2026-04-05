@@ -1,0 +1,164 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  install:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+      - run: npm ci
+      - uses: actions/cache/save@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+  lint:
+    name: Lint
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm run lint
+        id: lint
+      - name: Comment on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: pr,
+              body: `## Lint Failed\n\nThe linter found issues. Run \`npm run lint\` locally to see details.\n\n[View logs](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`
+            });
+
+  typecheck:
+    name: Type Check
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx tsc --noEmit
+        id: typecheck
+      - name: Comment on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: pr,
+              body: `## Type Check Failed\n\nTypeScript found type errors. Run \`npx tsc --noEmit\` locally to see details.\n\n[View logs](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`
+            });
+
+  build:
+    name: Build
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm run build
+        env:
+          # Provide stub env vars so Next.js build doesn't fail on missing secrets
+          NEXT_PUBLIC_SUPABASE_URL: "https://placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "placeholder"
+          QWEN_API_KEY: "placeholder"
+          GLM_API_KEY: "placeholder"
+          MINIMAX_API_KEY: "placeholder"
+          HF_CONSULT_URL: "https://placeholder"
+          HF_ASYNC_REVIEW_URL: "https://placeholder"
+        id: build
+      - name: Comment on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: pr,
+              body: `## Build Failed\n\nNext.js build failed. Run \`npm run build\` locally to debug.\n\n[View logs](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`
+            });
+
+  test:
+    name: Test
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm test
+        id: test
+      - name: Comment on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: pr,
+              body: `## Tests Failed\n\nOne or more tests failed. Run \`npm test\` locally to debug.\n\n[View logs](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`
+            });
+
+  ci-gate:
+    name: CI Gate
+    needs: [lint, typecheck, build, test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.typecheck.result }}" != "success" ] || \
+             [ "${{ needs.build.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ]; then
+            echo "One or more CI checks failed"
+            exit 1
+          fi
+          echo "All CI checks passed"
