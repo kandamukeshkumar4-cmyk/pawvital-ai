@@ -27,7 +27,7 @@ The app runs in **demo mode** when Supabase environment variables are not set (`
 ### External services (all optional for local dev)
 
 - **Supabase** (Postgres + Auth): required for real user data and auth flows
-- **Anthropic / NVIDIA / OpenAI APIs**: required for live AI symptom analysis; falls back to demo responses
+- **NVIDIA NIM API**: required for live AI symptom analysis; falls back to demo responses when not configured
 - **Stripe**: subscription payments
 - **Upstash Redis**: rate limiting (no-op fallback if missing)
 - **HF Sidecars** (5 Python services in `services/`): vision, retrieval, multimodal consult, async review — can run via `docker-compose.sidecars.yml` with stub mode
