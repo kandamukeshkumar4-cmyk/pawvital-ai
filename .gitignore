@@ -50,9 +50,14 @@ next-env.d.ts
 !/scripts/land-pawvital-ticket.mjs
 !/scripts/finalize-pawvital-ticket.mjs
 !/scripts/agent-done.mjs
+!/scripts/agent-watcher.mjs
 !/scripts/codex-review-result.schema.json
 !/scripts/hooks/
 !/scripts/hooks/*.mjs
+
+# Agent watcher state (local-only)
+.agent-watcher/
+.agent-tasks/
 
 # IDE / editor
 Roo-Code
