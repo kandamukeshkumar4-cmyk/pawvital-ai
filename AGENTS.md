@@ -19,6 +19,33 @@ PawVital AI is a single Next.js 16.2.1 app (React 19, Tailwind 4, TypeScript 5) 
 | Lint | `npx eslint .` |
 | Tests | `npm test` (Jest 30, runs `jest --verbose`) |
 | Build | `npm run build` |
+| Finish your task | `node scripts/agent-done.mjs <ticket> "<description>" --agent <name>` |
+
+### When you finish a task
+
+Run this one command from the repo root:
+
+```bash
+node scripts/agent-done.mjs <ticket-slug> "<what you did>" --agent <your-name>
+```
+
+**Agent names to use:**
+- Cursor → `--agent cursor`
+- Codex → `--agent codex`
+- Antigravity → `--agent antigravity`
+- GitHub Copilot → `--agent copilot`
+- Claude Code → `--agent claude` (default, can omit)
+
+**What happens automatically after you push:**
+1. GitHub opens a PR for your branch (~10 seconds)
+2. CI runs: lint → typecheck → build → tests (~2 minutes)
+3. Claude Sonnet reviews the code for correctness and clinical safety
+4. All checks pass → auto-merged to master → Vercel deploys → live in ~30 seconds
+5. CI fails → Claude auto-fixes lint/TS errors, or posts exact fix instructions on the PR
+
+**You do not need to merge anything manually.**
+
+> One-time setup: Add `ANTHROPIC_API_KEY` to GitHub → Settings → Secrets and variables → Actions → New repository secret. Without it, the AI review step is skipped (CI still runs and auto-merges on human approval).
 
 ### Demo mode
 

@@ -1,4 +1,4 @@
-name: AI Code Review
+name: Claude Code Review
 
 on:
   pull_request:
@@ -23,13 +23,13 @@ jobs:
           wait-interval: 30
           allowed-conclusions: success
 
-  ai-review:
-    name: Gemini Code Review
+  claude-review:
+    name: Claude Sonnet Review
     needs: wait-for-ci
     runs-on: ubuntu-latest
     if: "!github.event.pull_request.draft"
     env:
-      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
+      ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,9 +44,9 @@ jobs:
           DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
           echo "size=$DIFF_SIZE" >> "$GITHUB_OUTPUT"
 
-          # Truncate if diff is too large (>100KB) for API
-          if [ "$DIFF_SIZE" -gt 100000 ]; then
-            head -c 100000 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
+          # Truncate if diff is too large (>80KB) for the API
+          if [ "$DIFF_SIZE" -gt 81920 ]; then
+            head -c 81920 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
             printf '\n...\n[DIFF TRUNCATED — original was %s bytes]\n' "$DIFF_SIZE" >> /tmp/pr-diff-truncated.txt
             mv /tmp/pr-diff-truncated.txt /tmp/pr-diff.txt
             echo "truncated=true" >> "$GITHUB_OUTPUT"
@@ -54,7 +54,7 @@ jobs:
             echo "truncated=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Get changed files list
+      - name: Get changed files
         id: files
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,13 +62,15 @@ jobs:
           gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path' > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
 
-      - name: Run Gemini review
+      - name: Run Claude review
         id: review
         env:
-          GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          if [ -z "$GOOGLE_AI_API_KEY" ]; then
-            echo "GOOGLE_AI_API_KEY not set — skipping AI review"
+          # Check key is set
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY not set in GitHub Secrets"
+            echo "Add it at: Settings -> Secrets and variables -> Actions -> New repository secret"
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -78,59 +80,55 @@ jobs:
           PR_TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
           PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
 
-          # Build the review prompt
-          PROMPT="You are a senior code reviewer for a veterinary AI triage system (PawVital). Review this PR.
+          PROMPT="You are a senior code reviewer for PawVital, a veterinary AI triage system. Review this pull request with the following rules.
 
-          PR Title: ${PR_TITLE}
-          PR Description: ${PR_BODY}
+REVIEW RULES:
+1. Clinical logic files (clinical-matrix.ts, triage-engine.ts, symptom-memory.ts) are protected. Medical decisions must NOT be placed in LLM prompts — they must stay in deterministic TypeScript logic.
+2. Protected state must never be guessed or overwritten: answered_questions, extracted_answers, unresolved_question_ids, last_question_asked. Compression must never mutate these fields.
+3. Telemetry must stay internal — never included in user-facing API responses.
+4. No hardcoded API keys, tokens, or secrets anywhere in the diff.
+5. No SQL injection vectors (all DB queries must use parameterized statements or the Supabase SDK).
+6. Tests must not weaken existing assertions — no removing test coverage, no loosening expectations.
+7. One ticket per branch — reject PRs that mix unrelated concerns.
+8. For docs-only or test-only PRs: default to APPROVE unless something is clearly wrong.
 
-          Changed files:
-          ${FILES}
+PR DETAILS:
+Title: ${PR_TITLE}
+Description: ${PR_BODY}
 
-          Diff:
-          \`\`\`
-          ${DIFF}
-          \`\`\`
+Changed files:
+${FILES}
 
-          Review rules:
-          - Clinical logic (clinical-matrix.ts, triage-engine.ts) is the source of truth. Medical decisions must NOT be in prompts.
-          - Protected state (answered_questions, extracted_answers, unresolved_question_ids, last_question_asked) must not be mutated by compression.
-          - Telemetry must stay internal — never in user-facing payloads.
-          - No security vulnerabilities (XSS, injection, etc).
-          - Changes must match the stated ticket scope.
-          - One ticket per branch — reject PRs that mix unrelated concerns.
-          - Tests must not weaken existing assertions.
+Diff:
+\`\`\`
+${DIFF}
+\`\`\`
 
-          Provide your review in this exact JSON format:
-          {
-            \"verdict\": \"APPROVE\" or \"REQUEST_CHANGES\",
-            \"summary\": \"2-3 sentence summary\",
-            \"issues\": [{\"severity\": \"critical|warning|info\", \"file\": \"path\", \"line\": null, \"message\": \"description\"}],
-            \"safe_to_merge\": true or false
-          }
+Respond ONLY with valid JSON matching this exact schema — no markdown fences, no preamble:
+{
+  \"verdict\": \"APPROVE\" or \"REQUEST_CHANGES\",
+  \"summary\": \"2-3 sentence summary of what this PR does and whether it is safe\",
+  \"issues\": [
+    {\"severity\": \"critical|warning|info\", \"file\": \"path/to/file\", \"message\": \"description of the issue\"}
+  ],
+  \"safe_to_merge\": true or false,
+  \"fix_instructions\": \"If REQUEST_CHANGES: exact steps the author must take to fix the issues (omit or empty string if APPROVE)\"
+}"
 
-          Only use REQUEST_CHANGES for real issues. Docs-only and test-only PRs should almost always be APPROVE."
+          RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg model "$ANTHROPIC_MODEL" \
+              --arg content "$PROMPT" \
+              '{model: $model, max_tokens: 4096, messages: [{role: "user", content: $content}]}')")
 
-          # Call Google Gemini API
-          RESPONSE=$(curl -s -X POST \
-            "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GOOGLE_AI_API_KEY}" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n --arg prompt "$PROMPT" '{
-              "contents": [{"parts": [{"text": $prompt}]}],
-              "generationConfig": {
-                "temperature": 0.2,
-                "maxOutputTokens": 4096,
-                "responseMimeType": "application/json"
-              }
-            }')")
-
-          # Extract the text content from Gemini response
-          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
+          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
 
           if [ -z "$REVIEW_TEXT" ]; then
-            echo "AI review failed — API returned no content"
-            # Log error details (blocked, safety, quota, etc)
-            echo "$RESPONSE" | jq '.error // .candidates[0].finishReason // "unknown error"' 2>/dev/null
+            echo "Claude review failed — API returned no content"
+            echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -155,7 +153,6 @@ jobs:
           VERDICT="${{ steps.review.outputs.verdict }}"
           REVIEW=$(cat /tmp/review-result.json)
 
-          # Format the review as markdown
           SUMMARY=$(echo "$REVIEW" | jq -r '.summary // "No summary"' 2>/dev/null || echo "Review completed")
           ISSUES=$(echo "$REVIEW" | jq -r '
             if .issues and (.issues | length > 0) then
@@ -165,42 +162,47 @@ jobs:
               "No issues found."
             end
           ' 2>/dev/null || echo "No structured issues.")
+          FIX_INSTRUCTIONS=$(echo "$REVIEW" | jq -r '.fix_instructions // ""' 2>/dev/null || echo "")
 
           if [ "$VERDICT" = "APPROVE" ]; then
-            ICON="white_check_mark"
+            ICON=":white_check_mark:"
             STATUS="Approved"
           elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
-            ICON="x"
+            ICON=":x:"
             STATUS="Changes Requested"
           else
-            ICON="warning"
+            ICON=":warning:"
             STATUS="Review Completed (manual check recommended)"
           fi
 
-          BODY=$(cat <<EOF
-          ## AI Code Review — :${ICON}: ${STATUS}
+          if [ -n "$FIX_INSTRUCTIONS" ] && [ "$VERDICT" = "REQUEST_CHANGES" ]; then
+            FIX_SECTION="### How to fix
+${FIX_INSTRUCTIONS}
 
-          **Model:** \`${{ env.GEMINI_MODEL }}\`
-          **Summary:** ${SUMMARY}
+"
+          else
+            FIX_SECTION=""
+          fi
 
-          ### Issues
-          ${ISSUES}
+          gh pr comment ${{ github.event.pull_request.number }} --body "## Claude Code Review — ${ICON} ${STATUS}
 
-          ---
-          *Reviewed by Gemini (automated). Verdict: \`${VERDICT}\`*
-          EOF
-          )
+**Model:** \`${{ env.ANTHROPIC_MODEL }}\`
+**Summary:** ${SUMMARY}
 
-          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+### Issues
+${ISSUES}
 
-      - name: Submit PR approval
+${FIX_SECTION}---
+*Reviewed by Claude Sonnet (automated). Verdict: \`${VERDICT}\`*"
+
+      - name: Submit approval
         if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr review ${{ github.event.pull_request.number }} \
             --approve \
-            --body "Gemini review passed. Safe to merge."
+            --body "Claude Sonnet review passed. Safe to merge."
 
       - name: Request changes
         if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'REQUEST_CHANGES'
@@ -209,4 +211,4 @@ jobs:
         run: |
           gh pr review ${{ github.event.pull_request.number }} \
             --request-changes \
-            --body "Gemini review found issues. See comment above for details."
+            --body "Claude Sonnet review found issues. See comment above for details and fix instructions."
