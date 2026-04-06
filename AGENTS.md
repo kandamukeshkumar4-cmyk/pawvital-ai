@@ -39,13 +39,13 @@ node scripts/agent-done.mjs <ticket-slug> "<what you did>" --agent <your-name>
 **What happens automatically after you push:**
 1. GitHub opens a PR for your branch (~10 seconds)
 2. CI runs: lint → typecheck → build → tests (~2 minutes)
-3. Claude Sonnet reviews the code for correctness and clinical safety
+3. AI reviews the code for correctness and clinical safety (MiMo v2 Pro via OpenRouter)
 4. All checks pass → auto-merged to master → Vercel deploys → live in ~30 seconds
-5. CI fails → Claude auto-fixes lint/TS errors, or posts exact fix instructions on the PR
+5. CI fails → auto-fixes lint/TS errors, or AI posts exact fix instructions on the PR
 
 **You do not need to merge anything manually.**
 
-> One-time setup: Add `ANTHROPIC_API_KEY` to GitHub → Settings → Secrets and variables → Actions → New repository secret. Without it, the AI review step is skipped (CI still runs and auto-merges on human approval).
+> One-time setup: Add `OPENROUTER_API_KEY` to GitHub → Settings → Secrets and variables → Actions → New repository secret. Without it, the AI review step is skipped (CI still runs and auto-merges on human approval).
 
 ### Demo mode
 

@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!github.event.pull_request.draft"
     env:
-      ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL || 'claude-sonnet-4-6' }}
+      REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'xiaomi/mimo-v2-pro' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,14 +62,14 @@ jobs:
           gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path' > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
 
-      - name: Run Claude review
+      - name: Run AI review
         id: review
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           # Check key is set
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "ANTHROPIC_API_KEY not set in GitHub Secrets"
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "OPENROUTER_API_KEY not set in GitHub Secrets"
             echo "Add it at: Settings -> Secrets and variables -> Actions -> New repository secret"
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -115,19 +115,21 @@ Respond ONLY with valid JSON matching this exact schema — no markdown fences, 
   \"fix_instructions\": \"If REQUEST_CHANGES: exact steps the author must take to fix the issues (omit or empty string if APPROVE)\"
 }"
 
-          RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
-            -H "x-api-key: $ANTHROPIC_API_KEY" \
-            -H "anthropic-version: 2023-06-01" \
-            -H "content-type: application/json" \
+          # Call OpenRouter API (OpenAI-compatible format)
+          RESPONSE=$(curl -s -X POST https://openrouter.ai/api/v1/chat/completions \
+            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -H "HTTP-Referer: https://github.com/${{ github.repository }}" \
+            -H "X-Title: PawVital CI Review" \
             -d "$(jq -n \
-              --arg model "$ANTHROPIC_MODEL" \
+              --arg model "$REVIEW_MODEL" \
               --arg content "$PROMPT" \
               '{model: $model, max_tokens: 4096, messages: [{role: "user", content: $content}]}')")
 
-          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
+          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
 
           if [ -z "$REVIEW_TEXT" ]; then
-            echo "Claude review failed — API returned no content"
+            echo "AI review failed — API returned no content"
             echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -186,14 +188,14 @@ ${FIX_INSTRUCTIONS}
 
           gh pr comment ${{ github.event.pull_request.number }} --body "## Claude Code Review — ${ICON} ${STATUS}
 
-**Model:** \`${{ env.ANTHROPIC_MODEL }}\`
+**Model:** \`${{ env.REVIEW_MODEL }}\`
 **Summary:** ${SUMMARY}
 
 ### Issues
 ${ISSUES}
 
 ${FIX_SECTION}---
-*Reviewed by Claude Sonnet (automated). Verdict: \`${VERDICT}\`*"
+*Reviewed by \`${{ env.REVIEW_MODEL }}\` via OpenRouter (automated). Verdict: \`${VERDICT}\`*"
 
       - name: Submit approval
         if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
@@ -202,7 +204,7 @@ ${FIX_SECTION}---
         run: |
           gh pr review ${{ github.event.pull_request.number }} \
             --approve \
-            --body "Claude Sonnet review passed. Safe to merge."
+            --body "AI review passed. Safe to merge."
 
       - name: Request changes
         if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'REQUEST_CHANGES'
@@ -211,4 +213,4 @@ ${FIX_SECTION}---
         run: |
           gh pr review ${{ github.event.pull_request.number }} \
             --request-changes \
-            --body "Claude Sonnet review found issues. See comment above for details and fix instructions."
+            --body "AI review found issues. See comment above for details and fix instructions."
