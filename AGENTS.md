@@ -21,6 +21,9 @@ PawVital AI is a single Next.js 16.2.1 app (React 19, Tailwind 4, TypeScript 5) 
 | Tests | `npm test` (Jest 30, runs `jest --verbose`) |
 | Build | `npm run build` |
 | Finish your task | `node scripts/agent-done.mjs <ticket> "<description>" --agent <name>` |
+| Start PR watcher | `node scripts/agent-watcher.mjs --daemon` |
+| Watcher status | `node scripts/agent-watcher.mjs --status` |
+| Stop watcher | `node scripts/agent-watcher.mjs --stop` |
 
 ### When you finish a task
 
