@@ -1,3 +1,4 @@
+<!-- pipeline-test: 2026-04-06 -->
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
