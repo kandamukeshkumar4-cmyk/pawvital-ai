@@ -9,6 +9,15 @@ on:
       - "devops/**"
       - "test/**"
       - "docs/**"
+      - "cursor/**"
+      - "claude/**"
+      - "copilot/**"
+      - "antigravity/**"
+      - "codex/**"
+      - "chore/**"
+      - "perf/**"
+      - "refactor/**"
+      - "rebase/**"
 
 jobs:
   create-pr:

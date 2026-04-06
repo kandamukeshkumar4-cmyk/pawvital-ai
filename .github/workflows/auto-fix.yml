@@ -1,0 +1,186 @@
+name: Auto-Fix CI Failures
+
+on:
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-fix:
+    name: Auto-Fix
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: Get PR number
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          PR_NUMBER=$(gh api repos/${{ github.repository }}/commits/${SHA}/pulls \
+            --jq '.[0].number // empty' 2>/dev/null || echo "")
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No PR found for this workflow run — skipping"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check auto-fix attempt limit
+        if: steps.pr.outputs.found == 'true'
+        id: limit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          # Count commits with [ci-autofix] marker on the remote branch
+          FIX_COUNT=$(git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1 \
+            && git fetch origin "${BRANCH}" --depth=20 2>/dev/null \
+            && git log "origin/${BRANCH}" --oneline 2>/dev/null | grep -c '\[ci-autofix\]' \
+            || echo "0")
+          if [ "$FIX_COUNT" -ge 3 ]; then
+            echo "reached=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "reached=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post limit-reached comment
+        if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ steps.pr.outputs.number }} --body "## Auto-Fix Limit Reached
+
+Claude attempted 3 auto-fixes on this PR but CI is still failing. Manual intervention required.
+
+Please fix the remaining issues and push to this branch."
+
+      - name: Checkout PR branch
+        if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'false'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'false'
+        run: npm ci
+
+      - name: Attempt ESLint auto-fix
+        if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'false'
+        id: lint-fix
+        run: |
+          npx eslint . --fix 2>/dev/null || true
+          if ! git diff --quiet; then
+            echo "fixed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "fixed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit lint fixes
+        if: steps.lint-fix.outputs.fixed == 'true'
+        run: |
+          git config user.name "PawVital CI"
+          git config user.email "ci@pawvital.ai"
+          git add -A
+          git commit -m "fix: auto-fix eslint errors [ci-autofix]"
+          git push origin HEAD
+
+      - name: Analyze failure with Claude
+        if: >
+          steps.pr.outputs.found == 'true' &&
+          steps.limit.outputs.reached == 'false' &&
+          steps.lint-fix.outputs.fixed != 'true'
+        id: analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY not set — skipping Claude analysis"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Get the failed check details
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          FAILED_CHECKS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs \
+            --jq '[.check_runs[] | select(.conclusion == "failure") | {name: .name, details_url: .details_url}]' \
+            2>/dev/null || echo "[]")
+
+          # Get TypeScript errors if typecheck failed
+          TSC_ERRORS=""
+          if echo "$FAILED_CHECKS" | grep -q "Type Check"; then
+            TSC_ERRORS=$(npx tsc --noEmit 2>&1 | head -100 || true)
+          fi
+
+          # Get PR diff (first 30KB)
+          DIFF=$(gh pr diff ${{ steps.pr.outputs.number }} 2>/dev/null | head -c 30000 || echo "")
+
+          PROMPT="CI failed on PR #${{ steps.pr.outputs.number }} in the PawVital AI veterinary triage system.
+
+Failed checks:
+${FAILED_CHECKS}
+
+TypeScript errors (if any):
+${TSC_ERRORS}
+
+PR diff (first 30KB):
+${DIFF}
+
+Analyze what failed and provide:
+1. Root cause of each failure
+2. Exact fix instructions (specific files and specific changes needed)
+3. Any patterns that suggest a deeper architectural issue
+
+Respond ONLY with valid JSON — no markdown fences, no preamble:
+{\"analysis\": \"root cause summary\", \"fixes\": [{\"file\": \"path\", \"instruction\": \"exactly what to change\"}], \"severity\": \"simple|complex\"}"
+
+          RESPONSE=$(curl -s -X POST https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg model "claude-sonnet-4-6" \
+              --arg content "$PROMPT" \
+              '{model: $model, max_tokens: 2048, messages: [{role: "user", content: $content}]}')")
+
+          ANALYSIS=$(echo "$RESPONSE" | jq -r '.content[0].text // "Analysis unavailable"')
+          echo "result<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$ANALYSIS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Post analysis comment
+        if: steps.analysis.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ANALYSIS='${{ steps.analysis.outputs.result }}'
+          SUMMARY=$(echo "$ANALYSIS" | jq -r '.analysis // "See details below"' 2>/dev/null || echo "$ANALYSIS")
+          FIXES=$(echo "$ANALYSIS" | jq -r '.fixes[]? | "- `\(.file)`: \(.instruction)"' 2>/dev/null || echo "")
+
+          gh pr comment ${{ steps.pr.outputs.number }} --body "## CI Failed — Claude Analysis
+
+**Root cause:** ${SUMMARY}
+
+### What to fix
+${FIXES}
+
+---
+*Analyzed by Claude Sonnet. Push the fix to this branch and CI will re-run automatically.*"

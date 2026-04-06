@@ -70,7 +70,6 @@ jobs:
           echo "All checks passed and PR approved — merging PR #${PR_NUMBER}"
           gh pr merge "$PR_NUMBER" \
             --squash \
-            --auto \
             --delete-branch
 
       - name: Comment on merge
@@ -79,11 +78,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.ci-check.outputs.pr }}"
-          gh pr comment "$PR_NUMBER" --body "## Auto-Merged :rocket:
+          gh pr comment "$PR_NUMBER" --body "## Auto-Merged to master
 
-          CI passed + AI review approved. Squash-merged to master.
+CI passed + Claude Sonnet approved. Squash-merged to master.
 
-          Vercel will deploy automatically.
+Vercel is deploying now — your changes will be live in ~30 seconds.
 
-          ---
-          *Merged by CI pipeline (automated)*"
+---
+*Merged by CI pipeline*"
