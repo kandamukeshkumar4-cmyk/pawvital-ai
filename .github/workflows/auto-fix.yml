@@ -40,11 +40,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="${{ github.event.workflow_run.head_branch }}"
-          # Count commits with [ci-autofix] marker on the remote branch
-          FIX_COUNT=$(git ls-remote --exit-code origin "refs/heads/${BRANCH}" > /dev/null 2>&1 \
-            && git fetch origin "${BRANCH}" --depth=20 2>/dev/null \
-            && git log "origin/${BRANCH}" --oneline 2>/dev/null | grep -c '\[ci-autofix\]' \
-            || echo "0")
+          # Use GitHub API to count [ci-autofix] commits — no checkout required
+          FIX_COUNT=$(gh api "repos/${{ github.repository }}/commits?sha=${BRANCH}&per_page=20" \
+            --jq '[.[] | select(.commit.message | contains("[ci-autofix]"))] | length' \
+            2>/dev/null || echo "0")
+          echo "fix_count=$FIX_COUNT" >> "$GITHUB_OUTPUT"
           if [ "$FIX_COUNT" -ge 3 ]; then
             echo "reached=true" >> "$GITHUB_OUTPUT"
           else
@@ -170,10 +170,11 @@ Respond ONLY with valid JSON — no markdown fences, no preamble:
         if: steps.analysis.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use env: to pass Claude output safely — avoids shell breakage on single quotes
+          ANALYSIS_RESULT: ${{ steps.analysis.outputs.result }}
         run: |
-          ANALYSIS='${{ steps.analysis.outputs.result }}'
-          SUMMARY=$(echo "$ANALYSIS" | jq -r '.analysis // "See details below"' 2>/dev/null || echo "$ANALYSIS")
-          FIXES=$(echo "$ANALYSIS" | jq -r '.fixes[]? | "- `\(.file)`: \(.instruction)"' 2>/dev/null || echo "")
+          SUMMARY=$(echo "$ANALYSIS_RESULT" | jq -r '.analysis // "See CI logs for details"' 2>/dev/null || echo "CI failed — check the logs above")
+          FIXES=$(echo "$ANALYSIS_RESULT" | jq -r '.fixes[]? | "- `\(.file)`: \(.instruction)"' 2>/dev/null || echo "")
 
           gh pr comment ${{ steps.pr.outputs.number }} --body "## CI Failed — Claude Analysis
 

@@ -154,30 +154,45 @@ if (isOnDefault && hasUncommitted) {
 
   runVisible('git add -A');
   runVisible(`git commit -m ${JSON.stringify(description)}`);
-  runVisible(`git push origin "${currentBranch}"`);
+  runVisible(`git push -u origin "${currentBranch}"`);
 
 // ---------------------------------------------------------------------------
-// Case 3: On a feature branch, nothing uncommitted, but ahead of origin
-//   → just push
+// Case 3: On a feature branch, nothing uncommitted
+//   → push if branch is ahead of remote, or if remote branch doesn't exist yet
 // ---------------------------------------------------------------------------
 
 } else if (!isOnDefault && !hasUncommitted) {
-  // Check if ahead of origin
-  let aheadCount = '0';
+  // Check whether the remote branch exists at all
+  let remoteBranchExists = false;
   try {
-    aheadCount = run(`git rev-list --count origin/${currentBranch}..HEAD 2>/dev/null || echo 0`);
+    const lsOutput = run(`git ls-remote --heads origin "${currentBranch}"`);
+    remoteBranchExists = lsOutput.trim().length > 0;
   } catch {
-    aheadCount = '0';
+    remoteBranchExists = false;
   }
 
-  if (parseInt(aheadCount, 10) > 0) {
-    console.log(`On feature branch, ${aheadCount} commit(s) ahead of origin → pushing...\n`);
-    runVisible(`git push origin "${currentBranch}"`);
+  if (!remoteBranchExists) {
+    // Branch exists locally but not on remote — push to publish it
+    console.log('Branch has no remote tracking branch — pushing to create it...\n');
+    runVisible(`git push -u origin "${currentBranch}"`);
   } else {
-    die(
-      'Nothing to do — no uncommitted changes and branch is already up to date with origin.\n' +
-      'Make your changes first, then run this script again.'
-    );
+    // Branch exists remotely — check if we're ahead
+    let aheadCount = 0;
+    try {
+      aheadCount = parseInt(run(`git rev-list --count "origin/${currentBranch}..HEAD"`), 10);
+    } catch {
+      aheadCount = 0;
+    }
+
+    if (aheadCount > 0) {
+      console.log(`On feature branch, ${aheadCount} commit(s) ahead of origin → pushing...\n`);
+      runVisible(`git push origin "${currentBranch}"`);
+    } else {
+      die(
+        'Nothing to do — no uncommitted changes and branch is already up to date with origin.\n' +
+        'Make your changes first, then run this script again.'
+      );
+    }
   }
 
 // ---------------------------------------------------------------------------
