@@ -1,0 +1,107 @@
+name: Auto-Create PR
+
+on:
+  push:
+    branches:
+      - "qwen/**"
+      - "feature/**"
+      - "fix/**"
+      - "devops/**"
+      - "test/**"
+      - "docs/**"
+
+jobs:
+  create-pr:
+    name: Create PR if none exists
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for existing PR
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+
+          PR_COUNT=$(gh pr list --head "$BRANCH" --state open --json number --jq 'length')
+          if [ "$PR_COUNT" -gt 0 ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            PR_NUM=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')
+            echo "PR #$PR_NUM already exists for $BRANCH"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract ticket info
+        if: steps.check.outputs.exists == 'false'
+        id: info
+        run: |
+          BRANCH="${{ steps.check.outputs.branch }}"
+
+          # Extract VET-XXX ticket number if present
+          TICKET=$(echo "$BRANCH" | grep -oP 'vet-\d+' | head -1 | tr '[:lower:]' '[:upper:]')
+          if [ -z "$TICKET" ]; then
+            TICKET="no-ticket"
+          fi
+          echo "ticket=$TICKET" >> "$GITHUB_OUTPUT"
+
+          # Extract agent/tool from branch prefix or commit author
+          AGENT=$(echo "$BRANCH" | cut -d'/' -f1)
+          echo "agent=$AGENT" >> "$GITHUB_OUTPUT"
+
+          # Build title from branch name
+          TITLE=$(echo "$BRANCH" | sed 's|.*/||' | sed 's/-/ /g' | sed 's/v[0-9]*$//')
+          if [ "$TICKET" != "no-ticket" ]; then
+            TITLE="$TICKET: $TITLE"
+          fi
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+
+          # Get commit messages for body
+          COMMITS=$(git log origin/master..HEAD --pretty=format:"- %s" 2>/dev/null | head -20)
+          echo "commits<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$COMMITS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Create PR
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ steps.check.outputs.branch }}"
+          TICKET="${{ steps.info.outputs.ticket }}"
+          AGENT="${{ steps.info.outputs.agent }}"
+          TITLE="${{ steps.info.outputs.title }}"
+
+          BODY=$(cat <<'ENDOFBODY'
+          ## Auto-generated PR
+
+          **Branch:** `${{ steps.check.outputs.branch }}`
+          **Ticket:** `${{ steps.info.outputs.ticket }}`
+          **Agent:** `${{ steps.info.outputs.agent }}`
+
+          ### Commits
+          ${{ steps.info.outputs.commits }}
+
+          ---
+          *Auto-created by CI pipeline. Waiting for checks to pass before AI review.*
+          ENDOFBODY
+          )
+
+          gh pr create \
+            --base master \
+            --head "$BRANCH" \
+            --title "$TITLE" \
+            --body "$BODY" \
+            --label "auto-pr" 2>/dev/null || \
+          gh pr create \
+            --base master \
+            --head "$BRANCH" \
+            --title "$TITLE" \
+            --body "$BODY"

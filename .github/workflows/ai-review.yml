@@ -1,0 +1,212 @@
+name: AI Code Review
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  wait-for-ci:
+    name: Wait for CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CI gate
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: "CI Gate"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 30
+          allowed-conclusions: success
+
+  ai-review:
+    name: Gemini Code Review
+    needs: wait-for-ci
+    runs-on: ubuntu-latest
+    if: "!github.event.pull_request.draft"
+    env:
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-pro' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        id: diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr-diff.txt
+          DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
+          echo "size=$DIFF_SIZE" >> "$GITHUB_OUTPUT"
+
+          # Truncate if diff is too large (>100KB) for API
+          if [ "$DIFF_SIZE" -gt 100000 ]; then
+            head -c 100000 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
+            printf '\n...\n[DIFF TRUNCATED — original was %s bytes]\n' "$DIFF_SIZE" >> /tmp/pr-diff-truncated.txt
+            mv /tmp/pr-diff-truncated.txt /tmp/pr-diff.txt
+            echo "truncated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "truncated=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get changed files list
+        id: files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path' > /tmp/changed-files.txt
+          cat /tmp/changed-files.txt
+
+      - name: Run Gemini review
+        id: review
+        env:
+          GOOGLE_AI_API_KEY: ${{ secrets.GOOGLE_AI_API_KEY }}
+        run: |
+          if [ -z "$GOOGLE_AI_API_KEY" ]; then
+            echo "GOOGLE_AI_API_KEY not set — skipping AI review"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          DIFF=$(cat /tmp/pr-diff.txt)
+          FILES=$(cat /tmp/changed-files.txt)
+          PR_TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
+          PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+
+          # Build the review prompt
+          PROMPT="You are a senior code reviewer for a veterinary AI triage system (PawVital). Review this PR.
+
+          PR Title: ${PR_TITLE}
+          PR Description: ${PR_BODY}
+
+          Changed files:
+          ${FILES}
+
+          Diff:
+          \`\`\`
+          ${DIFF}
+          \`\`\`
+
+          Review rules:
+          - Clinical logic (clinical-matrix.ts, triage-engine.ts) is the source of truth. Medical decisions must NOT be in prompts.
+          - Protected state (answered_questions, extracted_answers, unresolved_question_ids, last_question_asked) must not be mutated by compression.
+          - Telemetry must stay internal — never in user-facing payloads.
+          - No security vulnerabilities (XSS, injection, etc).
+          - Changes must match the stated ticket scope.
+          - One ticket per branch — reject PRs that mix unrelated concerns.
+          - Tests must not weaken existing assertions.
+
+          Provide your review in this exact JSON format:
+          {
+            \"verdict\": \"APPROVE\" or \"REQUEST_CHANGES\",
+            \"summary\": \"2-3 sentence summary\",
+            \"issues\": [{\"severity\": \"critical|warning|info\", \"file\": \"path\", \"line\": null, \"message\": \"description\"}],
+            \"safe_to_merge\": true or false
+          }
+
+          Only use REQUEST_CHANGES for real issues. Docs-only and test-only PRs should almost always be APPROVE."
+
+          # Call Google Gemini API
+          RESPONSE=$(curl -s -X POST \
+            "https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GOOGLE_AI_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg prompt "$PROMPT" '{
+              "contents": [{"parts": [{"text": $prompt}]}],
+              "generationConfig": {
+                "temperature": 0.2,
+                "maxOutputTokens": 4096,
+                "responseMimeType": "application/json"
+              }
+            }')")
+
+          # Extract the text content from Gemini response
+          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
+
+          if [ -z "$REVIEW_TEXT" ]; then
+            echo "AI review failed — API returned no content"
+            # Log error details (blocked, safety, quota, etc)
+            echo "$RESPONSE" | jq '.error // .candidates[0].finishReason // "unknown error"' 2>/dev/null
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+          # Parse the JSON review
+          VERDICT=$(echo "$REVIEW_TEXT" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
+          SAFE=$(echo "$REVIEW_TEXT" | jq -r '.safe_to_merge // false' 2>/dev/null || echo "false")
+
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+          echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
+
+          # Save full review for the comment step
+          echo "$REVIEW_TEXT" > /tmp/review-result.json
+
+      - name: Post review comment
+        if: steps.review.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERDICT="${{ steps.review.outputs.verdict }}"
+          REVIEW=$(cat /tmp/review-result.json)
+
+          # Format the review as markdown
+          SUMMARY=$(echo "$REVIEW" | jq -r '.summary // "No summary"' 2>/dev/null || echo "Review completed")
+          ISSUES=$(echo "$REVIEW" | jq -r '
+            if .issues and (.issues | length > 0) then
+              .issues[] |
+              "- **\(.severity)**: `\(.file // "general")` — \(.message)"
+            else
+              "No issues found."
+            end
+          ' 2>/dev/null || echo "No structured issues.")
+
+          if [ "$VERDICT" = "APPROVE" ]; then
+            ICON="white_check_mark"
+            STATUS="Approved"
+          elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
+            ICON="x"
+            STATUS="Changes Requested"
+          else
+            ICON="warning"
+            STATUS="Review Completed (manual check recommended)"
+          fi
+
+          BODY=$(cat <<EOF
+          ## AI Code Review — :${ICON}: ${STATUS}
+
+          **Model:** \`${{ env.GEMINI_MODEL }}\`
+          **Summary:** ${SUMMARY}
+
+          ### Issues
+          ${ISSUES}
+
+          ---
+          *Reviewed by Gemini (automated). Verdict: \`${VERDICT}\`*
+          EOF
+          )
+
+          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
+
+      - name: Submit PR approval
+        if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr review ${{ github.event.pull_request.number }} \
+            --approve \
+            --body "Gemini review passed. Safe to merge."
+
+      - name: Request changes
+        if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'REQUEST_CHANGES'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr review ${{ github.event.pull_request.number }} \
+            --request-changes \
+            --body "Gemini review found issues. See comment above for details."
