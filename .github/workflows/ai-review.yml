@@ -1,4 +1,4 @@
-name: Claude Code Review
+name: AI Code Review
 
 on:
   pull_request:
@@ -10,30 +10,44 @@ permissions:
   pull-requests: write
 
 jobs:
-  wait-for-ci:
-    name: Wait for CI
+  ai-review:
+    name: AI Review
     runs-on: ubuntu-latest
-    steps:
-      - name: Wait for CI gate
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          check-name: "CI Gate"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 30
-          allowed-conclusions: success
-
-  claude-review:
-    name: Claude Sonnet Review
-    needs: wait-for-ci
-    runs-on: ubuntu-latest
-    if: "!github.event.pull_request.draft"
+    if: github.event.pull_request.draft == false
     env:
       REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'xiaomi/mimo-v2-pro' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Wait for CI Gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          MAX_WAIT=600
+          ELAPSED=0
+          INTERVAL=20
+          echo "Waiting for CI Gate on commit ${SHA}..."
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            STATUS=$(gh api "repos/${{ github.repository }}/commits/${SHA}/check-runs" \
+              --jq '[.check_runs[] | select(.name == "CI Gate")] | .[0] | {status: .status, conclusion: .conclusion}' \
+              2>/dev/null || echo '{}')
+            CONCLUSION=$(echo "$STATUS" | jq -r '.conclusion // ""')
+            JOB_STATUS=$(echo "$STATUS" | jq -r '.status // "not_started"')
+            if [ "$CONCLUSION" = "success" ]; then
+              echo "CI Gate passed — proceeding with review"
+              exit 0
+            elif [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ] || [ "$CONCLUSION" = "timed_out" ]; then
+              echo "CI Gate ended with: $CONCLUSION — skipping AI review"
+              exit 0
+            fi
+            echo "CI Gate status: ${JOB_STATUS} (${ELAPSED}s elapsed) — waiting..."
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+          echo "Timed out waiting for CI Gate after ${MAX_WAIT}s — running review anyway"
 
       - name: Get PR diff
         id: diff
@@ -43,8 +57,6 @@ jobs:
           gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr-diff.txt
           DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
           echo "size=$DIFF_SIZE" >> "$GITHUB_OUTPUT"
-
-          # Truncate if diff is too large (>80KB) for the API
           if [ "$DIFF_SIZE" -gt 81920 ]; then
             head -c 81920 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
             printf '\n...\n[DIFF TRUNCATED — original was %s bytes]\n' "$DIFF_SIZE" >> /tmp/pr-diff-truncated.txt
@@ -55,11 +67,11 @@ jobs:
           fi
 
       - name: Get changed files
-        id: files
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path' > /tmp/changed-files.txt
+          gh pr view ${{ github.event.pull_request.number }} --json files \
+            --jq '.files[].path' > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
 
       - name: Run AI review
@@ -67,7 +79,6 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          # Check key is set
           if [ -z "$OPENROUTER_API_KEY" ]; then
             echo "OPENROUTER_API_KEY not set in GitHub Secrets"
             echo "Add it at: Settings -> Secrets and variables -> Actions -> New repository secret"
@@ -115,7 +126,6 @@ Respond ONLY with valid JSON matching this exact schema — no markdown fences, 
   \"fix_instructions\": \"If REQUEST_CHANGES: exact steps the author must take to fix the issues (omit or empty string if APPROVE)\"
 }"
 
-          # Call OpenRouter API (OpenAI-compatible format)
           RESPONSE=$(curl -s -X POST https://openrouter.ai/api/v1/chat/completions \
             -H "Authorization: Bearer $OPENROUTER_API_KEY" \
             -H "Content-Type: application/json" \
@@ -137,14 +147,11 @@ Respond ONLY with valid JSON matching this exact schema — no markdown fences, 
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
-          # Parse the JSON review
           VERDICT=$(echo "$REVIEW_TEXT" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
           SAFE=$(echo "$REVIEW_TEXT" | jq -r '.safe_to_merge // false' 2>/dev/null || echo "false")
 
           echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
           echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
-
-          # Save full review for the comment step
           echo "$REVIEW_TEXT" > /tmp/review-result.json
 
       - name: Post review comment
@@ -186,7 +193,7 @@ ${FIX_INSTRUCTIONS}
             FIX_SECTION=""
           fi
 
-          gh pr comment ${{ github.event.pull_request.number }} --body "## Claude Code Review — ${ICON} ${STATUS}
+          gh pr comment ${{ github.event.pull_request.number }} --body "## AI Code Review — ${ICON} ${STATUS}
 
 **Model:** \`${{ env.REVIEW_MODEL }}\`
 **Summary:** ${SUMMARY}
