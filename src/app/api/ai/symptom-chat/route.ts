@@ -3251,12 +3251,17 @@ function shouldPersistRawPendingAnswer(
       return true;
     }
 
-    if (hasOtherTurnAnswers || hasOtherTurnSymptoms) {
-      return false;
-    }
-
+    // Duration-like signals must be checked before the symptom-noise gate.
+    // A message like "He has been vomiting for about two days" contains a
+    // vomiting symptom token (setting hasOtherTurnSymptoms) but its primary
+    // content is the duration answer. Gating on symptoms first would silently
+    // drop valid duration fallbacks.
     if (questionLooksDurationLike(question) && hasDurationLikeSignal(normalizedMessage)) {
       return true;
+    }
+
+    if (hasOtherTurnAnswers || hasOtherTurnSymptoms) {
+      return false;
     }
 
     if (messageMentionsQuestionContext(question, normalizedMessage)) {
