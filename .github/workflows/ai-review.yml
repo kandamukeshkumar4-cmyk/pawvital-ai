@@ -1,9 +1,9 @@
 name: AI Code Review
 
 on:
-  pull_request:
-    branches: [master]
-    types: [opened, synchronize, ready_for_review]
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -13,7 +13,10 @@ jobs:
   ai-review:
     name: AI Review
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch != 'master'
     env:
       REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'xiaomi/mimo-v2-pro' }}
     steps:
@@ -21,60 +24,62 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Wait for CI Gate
+      - name: Get PR for branch
+        id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          SHA="${{ github.event.pull_request.head.sha }}"
-          MAX_WAIT=600
-          ELAPSED=0
-          INTERVAL=20
-          echo "Waiting for CI Gate on commit ${SHA}..."
-          while [ $ELAPSED -lt $MAX_WAIT ]; do
-            STATUS=$(gh api "repos/${{ github.repository }}/commits/${SHA}/check-runs" \
-              --jq '[.check_runs[] | select(.name == "CI Gate")] | .[0] | {status: .status, conclusion: .conclusion}' \
-              2>/dev/null || echo '{}')
-            CONCLUSION=$(echo "$STATUS" | jq -r '.conclusion // ""')
-            JOB_STATUS=$(echo "$STATUS" | jq -r '.status // "not_started"')
-            if [ "$CONCLUSION" = "success" ]; then
-              echo "CI Gate passed -- proceeding with review"
-              exit 0
-            elif [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ] || [ "$CONCLUSION" = "timed_out" ]; then
-              echo "CI Gate ended with: $CONCLUSION -- skipping AI review"
-              exit 0
-            fi
-            echo "CI Gate status: ${JOB_STATUS} (${ELAPSED}s elapsed) -- waiting..."
-            sleep $INTERVAL
-            ELAPSED=$((ELAPSED + INTERVAL))
-          done
-          echo "Timed out waiting for CI Gate after ${MAX_WAIT}s -- running review anyway"
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base master --state open --json number \
+            --jq '.[0].number // empty' 2>/dev/null || echo "")
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open PR found for branch $BRANCH -- skipping review"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "found=true" >> "$GITHUB_OUTPUT"
+          echo "Reviewing PR #$PR_NUMBER on branch $BRANCH"
 
       - name: Get PR diff
+        if: steps.pr.outputs.found == 'true'
         id: diff
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr-diff.txt
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
+          gh pr diff "$PR_NUMBER" > /tmp/pr-diff.txt
           DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
-          echo "size=$DIFF_SIZE" >> "$GITHUB_OUTPUT"
           if [ "$DIFF_SIZE" -gt 81920 ]; then
             head -c 81920 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
             printf '\n...\n[DIFF TRUNCATED]\n' >> /tmp/pr-diff-truncated.txt
             mv /tmp/pr-diff-truncated.txt /tmp/pr-diff.txt
-            echo "truncated=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "truncated=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get changed files
+        if: steps.pr.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr view ${{ github.event.pull_request.number }} --json files \
-            --jq '.files[].path' > /tmp/changed-files.txt
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
+          gh pr view "$PR_NUMBER" --json files --jq '.files[].path' > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
 
+      - name: Get PR metadata
+        if: steps.pr.outputs.found == 'true'
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+          PR_BODY=$(gh pr view "$PR_NUMBER" --json body --jq '.body // ""')
+          echo "title=$PR_TITLE" >> "$GITHUB_OUTPUT"
+          # Write body to file to avoid multiline output issues
+          echo "$PR_BODY" > /tmp/pr-body.txt
+
       - name: Run AI review
+        if: steps.pr.outputs.found == 'true'
         id: review
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -87,10 +92,9 @@ jobs:
 
           DIFF=$(cat /tmp/pr-diff.txt)
           FILES=$(cat /tmp/changed-files.txt)
-          PR_TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
-          PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+          PR_TITLE="${{ steps.meta.outputs.title }}"
+          PR_BODY=$(cat /tmp/pr-body.txt)
 
-          # Build prompt safely via jq (avoids YAML multi-line string issues)
           RULES="You are a senior code reviewer for PawVital, a veterinary AI triage system. Review this pull request against these rules: (1) Clinical logic files are protected -- medical decisions must not be placed in LLM prompts. (2) Protected state fields must never be guessed or overwritten: answered_questions, extracted_answers, unresolved_question_ids, last_question_asked. (3) Telemetry must stay internal. (4) No hardcoded secrets. (5) No SQL injection vectors. (6) Tests must not weaken existing assertions. (7) One ticket per branch. (8) Docs-only or test-only PRs default to APPROVE. Respond ONLY with valid JSON: {\"verdict\":\"APPROVE or REQUEST_CHANGES\",\"summary\":\"2-3 sentences\",\"issues\":[{\"severity\":\"critical|warning|info\",\"file\":\"path\",\"message\":\"desc\"}],\"safe_to_merge\":true,\"fix_instructions\":\"steps if REQUEST_CHANGES else empty\"}"
 
           PROMPT=$(jq -rn \
@@ -114,8 +118,8 @@ jobs:
           REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
 
           if [ -z "$REVIEW_TEXT" ]; then
-            echo "AI review failed -- API returned no content"
-            echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null
+            echo "AI review API returned no content -- skipping"
+            echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null || true
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -128,10 +132,11 @@ jobs:
           echo "$REVIEW_TEXT" > /tmp/review-result.json
 
       - name: Post review comment
-        if: steps.review.outputs.skip != 'true'
+        if: steps.pr.outputs.found == 'true' && steps.review.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
           VERDICT="${{ steps.review.outputs.verdict }}"
           REVIEW=$(cat /tmp/review-result.json)
           SUMMARY=$(echo "$REVIEW" | jq -r '.summary // "No summary"' 2>/dev/null || echo "Review completed")
@@ -149,7 +154,6 @@ jobs:
             STATUS="Review Completed (manual check recommended)"
           fi
 
-          # Write comment body to file to avoid shell quoting issues
           {
             echo "## AI Code Review -- ${ICON} ${STATUS}"
             echo ""
@@ -164,28 +168,27 @@ jobs:
               echo "${FIX_INSTRUCTIONS}"
               echo ""
             fi
-            echo "---"
-            echo "*Reviewed by \`${{ env.REVIEW_MODEL }}\` via OpenRouter (automated). Verdict: \`${VERDICT}\`*"
+            echo "*(Reviewed by \`${{ env.REVIEW_MODEL }}\` via OpenRouter. Verdict: \`${VERDICT}\`)*"
           } > /tmp/comment.md
 
-          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
 
       - name: Submit approval
-        if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
+        if: steps.pr.outputs.found == 'true' && steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr review ${{ github.event.pull_request.number }} \
+          gh pr review ${{ steps.pr.outputs.number }} \
             --approve \
             --body "AI review passed. Safe to merge."
 
       - name: Request changes
-        if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'REQUEST_CHANGES'
+        if: steps.pr.outputs.found == 'true' && steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'REQUEST_CHANGES'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr review ${{ github.event.pull_request.number }} \
+          gh pr review ${{ steps.pr.outputs.number }} \
             --request-changes \
             --body "AI review found issues. See comment above for details and fix instructions."
