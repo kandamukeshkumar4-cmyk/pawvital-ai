@@ -4,7 +4,23 @@ on:
   pull_request:
     branches: [master]
   push:
-    branches: [master]
+    branches:
+      - master
+      - "claude/**"
+      - "cursor/**"
+      - "codex/**"
+      - "copilot/**"
+      - "antigravity/**"
+      - "qwen/**"
+      - "feature/**"
+      - "fix/**"
+      - "chore/**"
+      - "docs/**"
+      - "test/**"
+      - "perf/**"
+      - "refactor/**"
+      - "rebase/**"
+      - "devops/**"
 
 concurrency:
   group: ci-${{ github.ref }}
