@@ -1,4 +1,4 @@
-<!-- pipeline-test: 2026-04-06 v5-final -->
+<!-- pipeline-test: 2026-04-06 v6-final -->
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
