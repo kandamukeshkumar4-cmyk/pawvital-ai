@@ -35,6 +35,11 @@
     "Roo-Code",
     "stress-test.ts",
     "test-clinical.ts",
-    "test-apis.mjs"
+    "test-apis.mjs",
+    "tests",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
   ]
 }
