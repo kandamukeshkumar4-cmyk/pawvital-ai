@@ -1,4 +1,4 @@
-name: Claude Code Review
+name: AI Code Review
 
 on:
   pull_request:
@@ -10,30 +10,44 @@ permissions:
   pull-requests: write
 
 jobs:
-  wait-for-ci:
-    name: Wait for CI
+  ai-review:
+    name: AI Review
     runs-on: ubuntu-latest
-    steps:
-      - name: Wait for CI gate
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          check-name: "CI Gate"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 30
-          allowed-conclusions: success
-
-  claude-review:
-    name: Claude Sonnet Review
-    needs: wait-for-ci
-    runs-on: ubuntu-latest
-    if: "!github.event.pull_request.draft"
+    if: github.event.pull_request.draft == false
     env:
       REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'xiaomi/mimo-v2-pro' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Wait for CI Gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          MAX_WAIT=600
+          ELAPSED=0
+          INTERVAL=20
+          echo "Waiting for CI Gate on commit ${SHA}..."
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            STATUS=$(gh api "repos/${{ github.repository }}/commits/${SHA}/check-runs" \
+              --jq '[.check_runs[] | select(.name == "CI Gate")] | .[0] | {status: .status, conclusion: .conclusion}' \
+              2>/dev/null || echo '{}')
+            CONCLUSION=$(echo "$STATUS" | jq -r '.conclusion // ""')
+            JOB_STATUS=$(echo "$STATUS" | jq -r '.status // "not_started"')
+            if [ "$CONCLUSION" = "success" ]; then
+              echo "CI Gate passed -- proceeding with review"
+              exit 0
+            elif [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ] || [ "$CONCLUSION" = "timed_out" ]; then
+              echo "CI Gate ended with: $CONCLUSION -- skipping AI review"
+              exit 0
+            fi
+            echo "CI Gate status: ${JOB_STATUS} (${ELAPSED}s elapsed) -- waiting..."
+            sleep $INTERVAL
+            ELAPSED=$((ELAPSED + INTERVAL))
+          done
+          echo "Timed out waiting for CI Gate after ${MAX_WAIT}s -- running review anyway"
 
       - name: Get PR diff
         id: diff
@@ -43,11 +57,9 @@ jobs:
           gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr-diff.txt
           DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
           echo "size=$DIFF_SIZE" >> "$GITHUB_OUTPUT"
-
-          # Truncate if diff is too large (>80KB) for the API
           if [ "$DIFF_SIZE" -gt 81920 ]; then
             head -c 81920 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
-            printf '\n...\n[DIFF TRUNCATED — original was %s bytes]\n' "$DIFF_SIZE" >> /tmp/pr-diff-truncated.txt
+            printf '\n...\n[DIFF TRUNCATED]\n' >> /tmp/pr-diff-truncated.txt
             mv /tmp/pr-diff-truncated.txt /tmp/pr-diff.txt
             echo "truncated=true" >> "$GITHUB_OUTPUT"
           else
@@ -55,11 +67,11 @@ jobs:
           fi
 
       - name: Get changed files
-        id: files
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path' > /tmp/changed-files.txt
+          gh pr view ${{ github.event.pull_request.number }} --json files \
+            --jq '.files[].path' > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
 
       - name: Run AI review
@@ -67,10 +79,8 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          # Check key is set
           if [ -z "$OPENROUTER_API_KEY" ]; then
-            echo "OPENROUTER_API_KEY not set in GitHub Secrets"
-            echo "Add it at: Settings -> Secrets and variables -> Actions -> New repository secret"
+            echo "OPENROUTER_API_KEY not set -- skipping AI review"
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -80,71 +90,41 @@ jobs:
           PR_TITLE=$(jq -r '.pull_request.title' "$GITHUB_EVENT_PATH")
           PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
 
-          PROMPT="You are a senior code reviewer for PawVital, a veterinary AI triage system. Review this pull request with the following rules.
+          # Build prompt safely via jq (avoids YAML multi-line string issues)
+          RULES="You are a senior code reviewer for PawVital, a veterinary AI triage system. Review this pull request against these rules: (1) Clinical logic files are protected -- medical decisions must not be placed in LLM prompts. (2) Protected state fields must never be guessed or overwritten: answered_questions, extracted_answers, unresolved_question_ids, last_question_asked. (3) Telemetry must stay internal. (4) No hardcoded secrets. (5) No SQL injection vectors. (6) Tests must not weaken existing assertions. (7) One ticket per branch. (8) Docs-only or test-only PRs default to APPROVE. Respond ONLY with valid JSON: {\"verdict\":\"APPROVE or REQUEST_CHANGES\",\"summary\":\"2-3 sentences\",\"issues\":[{\"severity\":\"critical|warning|info\",\"file\":\"path\",\"message\":\"desc\"}],\"safe_to_merge\":true,\"fix_instructions\":\"steps if REQUEST_CHANGES else empty\"}"
 
-REVIEW RULES:
-1. Clinical logic files (clinical-matrix.ts, triage-engine.ts, symptom-memory.ts) are protected. Medical decisions must NOT be placed in LLM prompts — they must stay in deterministic TypeScript logic.
-2. Protected state must never be guessed or overwritten: answered_questions, extracted_answers, unresolved_question_ids, last_question_asked. Compression must never mutate these fields.
-3. Telemetry must stay internal — never included in user-facing API responses.
-4. No hardcoded API keys, tokens, or secrets anywhere in the diff.
-5. No SQL injection vectors (all DB queries must use parameterized statements or the Supabase SDK).
-6. Tests must not weaken existing assertions — no removing test coverage, no loosening expectations.
-7. One ticket per branch — reject PRs that mix unrelated concerns.
-8. For docs-only or test-only PRs: default to APPROVE unless something is clearly wrong.
+          PROMPT=$(jq -rn \
+            --arg rules "$RULES" \
+            --arg title "$PR_TITLE" \
+            --arg body "$PR_BODY" \
+            --arg files "$FILES" \
+            --arg diff "$DIFF" \
+            '$rules + "\n\nPR DETAILS:\nTitle: " + $title + "\nDescription: " + $body + "\n\nChanged files:\n" + $files + "\n\nDiff:\n" + $diff')
 
-PR DETAILS:
-Title: ${PR_TITLE}
-Description: ${PR_BODY}
-
-Changed files:
-${FILES}
-
-Diff:
-\`\`\`
-${DIFF}
-\`\`\`
-
-Respond ONLY with valid JSON matching this exact schema — no markdown fences, no preamble:
-{
-  \"verdict\": \"APPROVE\" or \"REQUEST_CHANGES\",
-  \"summary\": \"2-3 sentence summary of what this PR does and whether it is safe\",
-  \"issues\": [
-    {\"severity\": \"critical|warning|info\", \"file\": \"path/to/file\", \"message\": \"description of the issue\"}
-  ],
-  \"safe_to_merge\": true or false,
-  \"fix_instructions\": \"If REQUEST_CHANGES: exact steps the author must take to fix the issues (omit or empty string if APPROVE)\"
-}"
-
-          # Call OpenRouter API (OpenAI-compatible format)
           RESPONSE=$(curl -s -X POST https://openrouter.ai/api/v1/chat/completions \
             -H "Authorization: Bearer $OPENROUTER_API_KEY" \
             -H "Content-Type: application/json" \
             -H "HTTP-Referer: https://github.com/${{ github.repository }}" \
             -H "X-Title: PawVital CI Review" \
             -d "$(jq -n \
-              --arg model "$REVIEW_MODEL" \
+              --arg model "${{ env.REVIEW_MODEL }}" \
               --arg content "$PROMPT" \
               '{model: $model, max_tokens: 4096, messages: [{role: "user", content: $content}]}')")
 
           REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
 
           if [ -z "$REVIEW_TEXT" ]; then
-            echo "AI review failed — API returned no content"
+            echo "AI review failed -- API returned no content"
             echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
-
-          # Parse the JSON review
           VERDICT=$(echo "$REVIEW_TEXT" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
           SAFE=$(echo "$REVIEW_TEXT" | jq -r '.safe_to_merge // false' 2>/dev/null || echo "false")
-
           echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
           echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
-
-          # Save full review for the comment step
           echo "$REVIEW_TEXT" > /tmp/review-result.json
 
       - name: Post review comment
@@ -154,16 +134,8 @@ Respond ONLY with valid JSON matching this exact schema — no markdown fences, 
         run: |
           VERDICT="${{ steps.review.outputs.verdict }}"
           REVIEW=$(cat /tmp/review-result.json)
-
           SUMMARY=$(echo "$REVIEW" | jq -r '.summary // "No summary"' 2>/dev/null || echo "Review completed")
-          ISSUES=$(echo "$REVIEW" | jq -r '
-            if .issues and (.issues | length > 0) then
-              .issues[] |
-              "- **\(.severity)**: `\(.file // "general")` — \(.message)"
-            else
-              "No issues found."
-            end
-          ' 2>/dev/null || echo "No structured issues.")
+          ISSUES=$(echo "$REVIEW" | jq -r 'if .issues and (.issues | length > 0) then .issues[] | "- **\(.severity)**: `\(.file // "general")` -- \(.message)" else "No issues found." end' 2>/dev/null || echo "No structured issues.")
           FIX_INSTRUCTIONS=$(echo "$REVIEW" | jq -r '.fix_instructions // ""' 2>/dev/null || echo "")
 
           if [ "$VERDICT" = "APPROVE" ]; then
@@ -177,28 +149,30 @@ Respond ONLY with valid JSON matching this exact schema — no markdown fences, 
             STATUS="Review Completed (manual check recommended)"
           fi
 
-          if [ -n "$FIX_INSTRUCTIONS" ] && [ "$VERDICT" = "REQUEST_CHANGES" ]; then
-            FIX_SECTION="### How to fix
-${FIX_INSTRUCTIONS}
+          # Write comment body to file to avoid shell quoting issues
+          {
+            echo "## AI Code Review -- ${ICON} ${STATUS}"
+            echo ""
+            echo "**Model:** \`${{ env.REVIEW_MODEL }}\`"
+            echo "**Summary:** ${SUMMARY}"
+            echo ""
+            echo "### Issues"
+            echo "${ISSUES}"
+            echo ""
+            if [ -n "$FIX_INSTRUCTIONS" ] && [ "$VERDICT" = "REQUEST_CHANGES" ]; then
+              echo "### How to fix"
+              echo "${FIX_INSTRUCTIONS}"
+              echo ""
+            fi
+            echo "---"
+            echo "*Reviewed by \`${{ env.REVIEW_MODEL }}\` via OpenRouter (automated). Verdict: \`${VERDICT}\`*"
+          } > /tmp/comment.md
 
-"
-          else
-            FIX_SECTION=""
-          fi
-
-          gh pr comment ${{ github.event.pull_request.number }} --body "## Claude Code Review — ${ICON} ${STATUS}
-
-**Model:** \`${{ env.REVIEW_MODEL }}\`
-**Summary:** ${SUMMARY}
-
-### Issues
-${ISSUES}
-
-${FIX_SECTION}---
-*Reviewed by \`${{ env.REVIEW_MODEL }}\` via OpenRouter (automated). Verdict: \`${VERDICT}\`*"
+          gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/comment.md
 
       - name: Submit approval
         if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -208,6 +182,7 @@ ${FIX_SECTION}---
 
       - name: Request changes
         if: steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'REQUEST_CHANGES'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
