@@ -1,0 +1,12 @@
+# Ensure workflow files always use LF — CRLF breaks GitHub Actions YAML parser
+.github/workflows/*.yml text eol=lf
+.github/workflows/*.yaml text eol=lf
+
+# Standard cross-platform rules
+* text=auto
+*.sh text eol=lf
+*.mjs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
