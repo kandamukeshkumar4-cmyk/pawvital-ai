@@ -14,22 +14,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PawVital AI - Your Pet's AI Wellness Companion",
+  title: "PawVital AI — Veterinary Symptom Checker for Dogs & Cats",
   description:
-    "Stop Googling your dog's symptoms at 2am. PawVital AI gives you a 24/7 pet health companion that tracks wellness, checks symptoms, and tells you exactly what to do. $9.97/month.",
+    "AI-powered pet health triage using 10,000+ clinical cases, Merck Veterinary Manual, and breed-specific analysis. Get evidence-based symptom reports in minutes.",
   keywords: [
     "pet health",
-    "dog wellness",
-    "AI pet care",
-    "symptom checker",
-    "pet supplements",
-    "dog health app",
+    "veterinary AI",
+    "dog symptom checker",
+    "cat symptom checker",
+    "pet triage",
+    "veterinary diagnosis",
+    "dog health",
+    "cat health",
   ],
   openGraph: {
-    title: "PawVital AI - Your Pet's AI Wellness Companion",
+    title: "PawVital AI — Smart Veterinary Symptom Checker",
     description:
-      "24/7 AI-powered pet health dashboard, symptom checker, and personalized wellness plans. Less than $10/month.",
+      "Evidence-based pet health triage powered by AI. Analyze symptoms, get differential diagnoses, and share reports with your vet.",
     type: "website",
+    siteName: "PawVital AI",
+    images: [
+      {
+        url: "/images/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "PawVital AI — Veterinary Symptom Checker",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PawVital AI — Veterinary Symptom Checker",
+    description:
+      "AI-powered pet health triage. Evidence-based. Breed-aware. Vet-ready.",
+    images: ["/images/og-image.svg"],
   },
 };
 

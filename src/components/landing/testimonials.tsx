@@ -1,53 +1,88 @@
+"use client";
+
+import { useRef } from "react";
 import { Star } from "lucide-react";
+import { motion, useInView } from "framer-motion";
 
 const testimonials = [
   {
     name: "Sarah M.",
-    pet: "Cooper, Golden Retriever, 11",
-    text: "PawVital told me exactly which supplements to give Cooper for his joints. Within 3 weeks, he was moving better than he had in years. My vet was genuinely surprised.",
+    pet: "Cooper, Golden Retriever, 11 yrs",
+    text: "The AI asked me questions my regular vet would ask — onset, duration, severity. Within minutes I had a SOAP report showing likely osteoarthritis with 72% confidence. My vet confirmed it the next day.",
     rating: 5,
   },
   {
-    name: "Jessica R.",
-    pet: "Luna, Labrador, 8",
-    text: "I used to panic-Google every little thing at 2am. Now I just open PawVital and get a clear answer. The symptom checker alone has saved me hundreds in unnecessary vet visits.",
+    name: "David K.",
+    pet: "Luna, Siamese Cat, 6 yrs",
+    text: "I uploaded a photo of a skin patch on Luna's ear and PawVital matched it to similar cases in seconds. It flagged it as potentially solar dermatitis — breed-specific to light-coated cats. Spot on.",
     rating: 5,
   },
   {
     name: "Michelle T.",
-    pet: "Buddy, Beagle Mix, 13",
-    text: "The health timeline is incredible. Buddy's entire wellness journey in one place. When I showed my vet, she said she wished all her clients used something like this.",
+    pet: "Buddy, Beagle Mix, 13 yrs",
+    text: "The health timeline let me track Buddy's joint mobility over three months. When I showed my vet the trend data, she said it was more detailed than most owners ever provide. The vet handoff summary is perfect.",
+    rating: 5,
+  },
+  {
+    name: "James R.",
+    pet: "Max, Dachshund, 8 yrs",
+    text: "PawVital flagged Max's back pain as high-risk because of his breed — Dachshunds are 10x more likely to get IVDD. That breed-specific warning got us to the vet faster. Turned out to be early-stage IVDD.",
     rating: 5,
   },
 ];
 
 export default function Testimonials() {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
+
   return (
-    <section className="py-24 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+    <section className="py-24 bg-gradient-to-br from-gray-50 to-emerald-50/30">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" ref={ref}>
+        <motion.div
+          className="text-center mb-14"
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5 }}
+        >
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            Pet Parents Love PawVital
+            Trusted by Pet Parents Who Want Real Answers
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Join thousands of pet parents who finally have peace of mind.
+            See how PawVital is helping pet owners make better decisions.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {testimonials.map((t) => (
-            <div key={t.name} className="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex gap-1 mb-4">
+        {/* Desktop grid / Mobile horizontal scroll */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {testimonials.map((t, idx) => (
+            <motion.div
+              key={t.name}
+              className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg transition-shadow duration-300 flex flex-col"
+              initial={{ opacity: 0, y: 25 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.4, delay: idx * 0.1 }}
+            >
+              {/* Stars */}
+              <div className="flex gap-0.5 mb-4">
                 {Array.from({ length: t.rating }).map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
+                  <Star
+                    key={i}
+                    className="w-4 h-4 fill-amber-400 text-amber-400"
+                  />
                 ))}
               </div>
-              <p className="text-gray-700 leading-relaxed mb-6">&quot;{t.text}&quot;</p>
-              <div>
-                <p className="font-semibold text-gray-900">{t.name}</p>
-                <p className="text-sm text-gray-500">{t.pet}</p>
+
+              {/* Quote */}
+              <p className="text-gray-700 text-sm leading-relaxed flex-1 mb-5">
+                &ldquo;{t.text}&rdquo;
+              </p>
+
+              {/* Author */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{t.pet}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
