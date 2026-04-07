@@ -1,4 +1,4 @@
-<!-- pipeline-test: 2026-04-06 v6-final -->
+<!-- pipeline-test: 2026-04-06 v7-mimo-json-fix -->
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
