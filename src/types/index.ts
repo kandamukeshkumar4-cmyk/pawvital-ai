@@ -22,6 +22,7 @@ export interface Pet {
   photo_url?: string;
   created_at: string;
   updated_at: string;
+  deleted_at?: string;
 }
 
 /** Paid product tier from subscriptions table (live mode). */
@@ -60,7 +61,7 @@ export interface SymptomCheck {
   symptoms: string;
   ai_response: string;
   severity: "low" | "medium" | "high" | "emergency";
-  recommendation: "monitor" | "vet_48h" | "emergency_vet";
+  recommendation: "monitor" | "vet_48h" | "vet_24h" | "emergency_vet";
   created_at: string;
 }
 

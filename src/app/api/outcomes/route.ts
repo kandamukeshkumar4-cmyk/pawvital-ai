@@ -6,6 +6,8 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { emit, EventType } from "@/lib/events/event-bus";
+import "@/lib/events/notification-handler";
 
 const OutcomeSubmissionSchema = z.object({
   check_id: z.string().uuid(),
@@ -119,6 +121,16 @@ export async function POST(request: Request) {
       { error: "Unable to save the outcome" },
       { status: 500 }
     );
+  }
+
+  try {
+    emit(EventType.OUTCOME_REQUESTED, {
+      userId: user.id,
+      checkId: parsedBody.data.check_id,
+      petName: "",
+    });
+  } catch (emitError) {
+    console.error("[EventBus] Failed to emit OUTCOME_REQUESTED:", emitError);
   }
 
   return NextResponse.json({ data: outcome }, { status: 201 });
