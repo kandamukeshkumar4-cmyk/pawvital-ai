@@ -58,11 +58,6 @@ const colorMap: Record<
 export default function HowItWorks() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, amount: 0.2 });
-  const [, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   return (
     <section id="how-it-works" className="py-24 bg-white">
