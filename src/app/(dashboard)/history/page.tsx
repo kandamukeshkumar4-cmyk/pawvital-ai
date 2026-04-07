@@ -400,7 +400,13 @@ export default function HistoryPage() {
                 </div>
                 {expanded && report && (
                   <div className="p-4 bg-white">
-                    <FullReport report={report} />
+                    <FullReport
+                      report={{
+                        ...report,
+                        report_storage_id:
+                          report.report_storage_id ?? row.id,
+                      }}
+                    />
                   </div>
                 )}
                 {expanded && !report && (
