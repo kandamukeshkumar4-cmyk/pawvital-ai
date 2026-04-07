@@ -119,6 +119,7 @@ import {
   isShadowModeEnabledForService,
 } from "@/lib/sidecar-observability";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
+import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -129,6 +130,10 @@ import { saveSymptomReportToDB } from "@/lib/report-storage";
 //   Llama 3.3 70B     → Question phrasing (warm, empathetic)
 //   Nemotron Ultra    → Diagnosis report (deep clinical reasoning)
 //   GLM-5             → Safety verification (catch missed emergencies)
+//
+// Long-form instructions below are narrative / schema shaping only. They do not
+// replace triage rules in clinical-matrix.ts or triage-engine.ts. Shared
+// contract text: CLINICAL_ARCHITECTURE_FOOTER in @/lib/clinical/llm-narrative-contract.
 //
 // =============================================================================
 
@@ -1092,7 +1097,9 @@ Examples:
 - If the pending question is "water_intake" and the owner says "No, not really", return "water_intake": "less_than_usual"
 - If the pending question is "trauma_history" and the owner says "I don't know", return "trauma_history": "I don't know"
 
-Output ONLY the JSON object. No explanation, no thinking, no markdown.`;
+Output ONLY the JSON object. No explanation, no thinking, no markdown.
+
+${CLINICAL_ARCHITECTURE_FOOTER}`;
 
   try {
     const rawText = await extractWithQwen(prompt);
