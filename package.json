@@ -39,7 +39,9 @@
     "embed:corpus": "node scripts/embed-corpus.mjs",
     "embed:corpus:knowledge": "node scripts/embed-corpus.mjs --kind=knowledge",
     "embed:corpus:images": "node scripts/embed-corpus.mjs --kind=images",
-    "ingest:csv": "node scripts/ingest-csv-corpus.mjs"
+    "ingest:csv": "node scripts/ingest-csv-corpus.mjs",
+    "db:apply-audio-schema": "node scripts/apply-schema.mjs supabase-audio-schema.sql",
+    "index:audio-corpus": "node scripts/index-audio-corpus.mjs"
   },
   "dependencies": {
     "@stripe/stripe-js": "^8.11.0",
