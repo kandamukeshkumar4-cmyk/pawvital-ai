@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, Stethoscope, Pill, Bell, TrendingUp, AlertCircle, Plus } from "lucide-react";
+import { Activity, Stethoscope, Pill, Bell, TrendingUp, AlertCircle, Plus, Clock } from "lucide-react";
 import Link from "next/link";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { useAppStore } from "@/store/app-store";
 
 const quickActions = [
   { href: "/symptom-checker", icon: Stethoscope, label: "Check Symptoms", color: "bg-green-50 text-green-600 border-green-200" },
+  { href: "/history", icon: Clock, label: "View History", color: "bg-sky-50 text-sky-600 border-sky-200" },
   { href: "/supplements", icon: Pill, label: "View Supplements", color: "bg-purple-50 text-purple-600 border-purple-200" },
   { href: "/reminders", icon: Bell, label: "Reminders", color: "bg-amber-50 text-amber-600 border-amber-200" },
   { href: "/journal", icon: Plus, label: "Add Journal Entry", color: "bg-pink-50 text-pink-600 border-pink-200" },
