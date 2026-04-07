@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored / nested projects — not part of the PawVital app (breaks flat-config lint).
+    "Roo-Code/**",
   ]),
 ]);
 

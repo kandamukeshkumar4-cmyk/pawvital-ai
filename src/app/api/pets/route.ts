@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
+
 export async function GET() {
   try {
     const supabase = await createServerSupabaseClient();
@@ -19,11 +24,11 @@ export async function GET() {
     if (error) throw error;
     
     return NextResponse.json({ pets });
-  } catch (err: any) {
-    if (err.message === "DEMO_MODE") {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "DEMO_MODE") {
       return NextResponse.json({ pets: [] });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 });
   }
 }
 
@@ -63,10 +68,10 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     return NextResponse.json({ pet });
-  } catch (err: any) {
-    if (err.message === "DEMO_MODE") {
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "DEMO_MODE") {
       return NextResponse.json({ error: "Cannot create in demo mode" }, { status: 400 });
     }
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(err) }, { status: 500 });
   }
 }
