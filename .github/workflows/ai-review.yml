@@ -134,7 +134,17 @@ jobs:
           fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
-          VERDICT=$(echo "$REVIEW_TEXT" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
+          RAW_VERDICT=$(echo "$REVIEW_TEXT" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
+          # Normalize fuzzy verdicts: models sometimes return "APPROVED", "APTESTING", "approve", etc.
+          UPPER_VERDICT=$(echo "$RAW_VERDICT" | tr '[:lower:]' '[:upper:]')
+          if echo "$UPPER_VERDICT" | grep -qE '^AP'; then
+            VERDICT="APPROVE"
+          elif echo "$UPPER_VERDICT" | grep -qE '^REQ|^CHANGE|^REJECT'; then
+            VERDICT="REQUEST_CHANGES"
+          else
+            VERDICT="UNKNOWN"
+          fi
+          echo "Raw verdict: $RAW_VERDICT -> Normalized: $VERDICT"
           SAFE=$(echo "$REVIEW_TEXT" | jq -r '.safe_to_merge // false' 2>/dev/null || echo "false")
           echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
           echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
