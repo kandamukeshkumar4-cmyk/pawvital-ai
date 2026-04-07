@@ -19,6 +19,7 @@ import {
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
+import PlanGate from "@/components/subscription/plan-gate";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 
@@ -515,6 +516,7 @@ export default function SymptomCheckerPage() {
   };
 
   return (
+    <PlanGate requiredPlan="pro">
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -818,5 +820,6 @@ export default function SymptomCheckerPage() {
       {/* Full Report */}
       {report && <FullReport report={report} />}
     </div>
+    </PlanGate>
   );
 }

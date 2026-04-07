@@ -17,15 +17,32 @@ CREATE TABLE profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Stripe-linked subscription (plan gate; synced via webhooks)
+CREATE TABLE subscriptions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  stripe_subscription_id TEXT UNIQUE,
+  stripe_customer_id TEXT,
+  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'clinic')),
+  status TEXT NOT NULL DEFAULT 'inactive',
+  current_period_end TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
+
 -- Pets
 CREATE TABLE pets (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
   breed TEXT NOT NULL,
-  species TEXT DEFAULT 'dog' CHECK (species IN ('dog', 'cat')),
+  species TEXT DEFAULT 'dog' CHECK (species IN ('dog', 'cat', 'other')),
   age_years INTEGER DEFAULT 0,
   age_months INTEGER DEFAULT 0,
+  age_unit TEXT CHECK (age_unit IN ('weeks', 'months', 'years')),
   weight DECIMAL(6,2),
   weight_unit TEXT DEFAULT 'lbs' CHECK (weight_unit IN ('lbs', 'kg')),
   gender TEXT CHECK (gender IN ('male', 'female')),
@@ -128,6 +145,7 @@ CREATE TABLE community_comments (
 
 -- Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE health_scores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE symptom_checks ENABLE ROW LEVEL SECURITY;
@@ -140,6 +158,9 @@ ALTER TABLE community_comments ENABLE ROW LEVEL SECURITY;
 -- Profiles: users can only read/update their own profile
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+-- Subscriptions: users can read their own rows (writes come from service role / webhooks)
+CREATE POLICY "Users can view own subscriptions" ON subscriptions FOR SELECT USING (auth.uid() = user_id);
 
 -- Pets: users can CRUD their own pets
 CREATE POLICY "Users can view own pets" ON pets FOR SELECT USING (auth.uid() = user_id);

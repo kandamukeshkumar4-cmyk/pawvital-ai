@@ -3,8 +3,18 @@
 import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import { DEMO_PETS_STORAGE_KEY } from "@/lib/demo-storage";
 import { useAppStore } from "@/store/app-store";
 import type { Pet, UserProfile } from "@/types";
+
+function persistDemoPets(pets: Pet[]) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(DEMO_PETS_STORAGE_KEY, JSON.stringify(pets));
+  } catch {
+    /* ignore quota */
+  }
+}
 
 // ─── Auth Hook ────────────────────────────────────────────────────────────────
 
@@ -34,10 +44,29 @@ export function useAuth() {
 // ─── User + Pets Loader ───────────────────────────────────────────────────────
 
 export function useLoadUserData() {
-  const { setUser, setPets, setActivePet, activePet } = useAppStore();
+  const { setUser, setPets, setActivePet, activePet, setUserDataLoaded } = useAppStore();
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured) {
+      try {
+        const raw =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem(DEMO_PETS_STORAGE_KEY)
+            : null;
+        if (raw) {
+          const parsed = JSON.parse(raw) as unknown;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const pets = parsed as Pet[];
+            setPets(pets);
+            setActivePet(pets[0]);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      setUserDataLoaded(true);
+      return;
+    }
 
     async function load() {
       try {
@@ -45,7 +74,10 @@ export function useLoadUserData() {
 
         // Get current auth user
         const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (!authUser) return;
+        if (!authUser) {
+          setUserDataLoaded(true);
+          return;
+        }
 
         // Get profile from profiles table
         const { data: profile } = await supabase
@@ -85,16 +117,18 @@ export function useLoadUserData() {
           .order("created_at", { ascending: true });
 
         if (pets && pets.length > 0) {
-          setPets(pets);
+          setPets(pets as Pet[]);
           // Set first pet as active if none selected
-          if (!activePet) setActivePet(pets[0]);
+          if (!activePet) setActivePet(pets[0] as Pet);
         }
       } catch (err) {
         console.error("Failed to load user data:", err);
+      } finally {
+        setUserDataLoaded(true);
       }
     }
 
-    load();
+    void load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
@@ -106,10 +140,11 @@ export function usePets() {
 
   const savePet = useCallback(async (pet: Pet): Promise<Pet> => {
     if (!isSupabaseConfigured) {
-      // Demo mode: just update local state
+      // Demo mode: local state + sessionStorage
       const updated = [...pets.filter((p) => p.id !== pet.id), pet];
       setPets(updated);
       setActivePet(pet);
+      persistDemoPets(updated);
       return pet;
     }
 
@@ -118,7 +153,7 @@ export function usePets() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const petWithUser = { ...pet, user_id: user.id };
+      const petWithUser = { ...pet, user_id: user.id }; // always bind to session user
 
       const { data, error } = await supabase
         .from("pets")
@@ -149,6 +184,7 @@ export function usePets() {
       setPets(updated);
       if (updated.length > 0) setActivePet(updated[0]);
       else setActivePet(null);
+      persistDemoPets(updated);
       return;
     }
 

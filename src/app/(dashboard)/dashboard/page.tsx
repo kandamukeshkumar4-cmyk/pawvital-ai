@@ -32,31 +32,6 @@ const upcomingReminders = [
 export default function DashboardPage() {
   const { activePet } = useAppStore();
   const [healthScore] = useState(87);
-  const showOnboarding = !activePet;
-
-  if (showOnboarding && !activePet) {
-    return (
-      <div className="max-w-2xl mx-auto mt-12">
-        <Card className="p-12 text-center">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">
-            🐕
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">
-            Welcome to PawVital AI!
-          </h1>
-          <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            Let&apos;s get started by adding your pet&apos;s profile. This helps our AI provide personalized health insights.
-          </p>
-          <Link href="/settings">
-            <Button size="lg">
-              <Plus className="w-5 h-5 mr-2" />
-              Add Your Pet
-            </Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
