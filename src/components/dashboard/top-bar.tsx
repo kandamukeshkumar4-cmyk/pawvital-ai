@@ -1,10 +1,23 @@
 "use client";
 
 import { Bell, Search, Menu } from "lucide-react";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { useSubscription } from "@/contexts/subscription-context";
 import { useAppStore } from "@/store/app-store";
 
 export default function TopBar() {
   const { user, toggleSidebar } = useAppStore();
+  const { plan, loading } = useSubscription();
+
+  const badge = !isSupabaseConfigured
+    ? "Demo"
+    : loading
+      ? "…"
+      : plan === "clinic"
+        ? "Clinic"
+        : plan === "pro"
+          ? "Pro"
+          : "Free";
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200">
@@ -33,6 +46,19 @@ export default function TopBar() {
           </button>
 
           <div className="flex items-center gap-3 pl-3 border-l border-gray-200">
+            <span
+              className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-lg border ${
+                badge === "Demo"
+                  ? "bg-violet-50 text-violet-700 border-violet-200"
+                  : badge === "Clinic"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : badge === "Pro"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-gray-50 text-gray-600 border-gray-200"
+              }`}
+            >
+              {badge}
+            </span>
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <span className="text-sm font-semibold text-blue-600">
                 {user?.full_name?.charAt(0) || "U"}

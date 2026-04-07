@@ -61,12 +61,16 @@ export default function Sidebar() {
         <div className="mx-4 mt-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center text-lg">
-              🐕
+              {activePet.species === "cat" ? "🐈" : activePet.species === "dog" ? "🐕" : "🐾"}
             </div>
             <div>
               <p className="font-semibold text-gray-900 text-sm">{activePet.name}</p>
               <p className="text-xs text-gray-500">
-                {activePet.breed} · {activePet.age_years}y
+                {activePet.breed}
+                {" · "}
+                {activePet.age_months > 0
+                  ? `${activePet.age_years}y ${activePet.age_months}m`
+                  : `${activePet.age_years}y`}
               </p>
             </div>
           </div>
