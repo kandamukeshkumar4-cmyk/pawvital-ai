@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Phone, Copy, CheckCheck } from "lucide-react";
 import Card from "@/components/ui/card";
 import Badge from "@/components/ui/badge";
@@ -12,12 +13,15 @@ interface SeverityHeaderProps {
   report: SymptomReport;
   copyState: CopyState;
   onCopyVetSummary: () => void | Promise<void>;
+  /** Extra controls (e.g. PDF / share) shown in the header row */
+  headerActions?: ReactNode;
 }
 
 export function SeverityHeader({
   report,
   copyState,
   onCopyVetSummary,
+  headerActions,
 }: SeverityHeaderProps) {
   const isEmergencyReport =
     report.recommendation === "emergency_vet" || report.severity === "emergency";
@@ -30,20 +34,25 @@ export function SeverityHeader({
           const IconComponent = config.icon;
           return <IconComponent className="w-7 h-7 text-current mt-0.5" />;
         })()}
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-xl font-bold text-gray-900">{report.title}</h3>
-            <Badge variant={severityConfig[report.severity].color}>
-              {severityConfig[report.severity].label}
-            </Badge>
-            {typeof report.confidence === "number" && (
-              <Badge variant="info">
-                Confidence {(report.confidence * 100).toFixed(0)}%
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <h3 className="text-xl font-bold text-gray-900">{report.title}</h3>
+              <Badge variant={severityConfig[report.severity].color}>
+                {severityConfig[report.severity].label}
               </Badge>
-            )}
-            {report.async_review_scheduled && (
-              <Badge variant="info">Specialist review queued</Badge>
-            )}
+              {typeof report.confidence === "number" && (
+                <Badge variant="info">
+                  Confidence {(report.confidence * 100).toFixed(0)}%
+                </Badge>
+              )}
+              {report.async_review_scheduled && (
+                <Badge variant="info">Specialist review queued</Badge>
+              )}
+            </div>
+            {headerActions ? (
+              <div className="flex flex-shrink-0 flex-wrap items-center gap-2">{headerActions}</div>
+            ) : null}
           </div>
           <p className="text-sm text-gray-600 mt-1">
             Recommendation:{" "}

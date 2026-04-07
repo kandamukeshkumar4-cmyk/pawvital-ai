@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Download, Share2, Copy, CheckCheck } from "lucide-react";
 import type { SymptomReport } from "./types";
 import { SeverityHeader } from "./severity-header";
 import { EvidenceSourcesBar } from "./evidence-sources-bar";
@@ -16,6 +17,9 @@ import { ActionStepsSection } from "./action-steps";
 import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
 import { BayesianDifferentials } from "./bayesian-differentials";
+import Button from "@/components/ui/button";
+import Modal from "@/components/ui/modal";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 type CopyState = "idle" | "copied" | "error";
 
@@ -28,10 +32,26 @@ interface FullReportProps {
     vetOutcome: string;
     ownerNotes: string;
   }) => void | Promise<void>;
+  /** Public shared view: hide owner-only UI */
+  readOnlyShared?: boolean;
 }
 
-export function FullReport({ report, onOutcomeFeedback }: FullReportProps) {
+type ExpiryOption = "24h" | "7d" | "30d";
+
+export function FullReport({
+  report,
+  onOutcomeFeedback,
+  readOnlyShared = false,
+}: FullReportProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [expiry, setExpiry] = useState<ExpiryOption>("7d");
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [linkCopyState, setLinkCopyState] = useState<"idle" | "copied">("idle");
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const copyVetSummary = async () => {
     if (!report.vet_handoff_summary) return;
@@ -45,13 +65,213 @@ export function FullReport({ report, onOutcomeFeedback }: FullReportProps) {
     }
   };
 
+  const canExport =
+    !readOnlyShared &&
+    Boolean(report.report_storage_id) &&
+    isSupabaseConfigured;
+
+  const downloadPdf = async () => {
+    if (!canExport || pdfBusy) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch("/api/reports/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          report: shareUrl
+            ? { ...report, share_url: shareUrl }
+            : report,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(
+          typeof err.error === "string" ? err.error : "PDF download failed"
+        );
+      }
+      const blob = await res.blob();
+      const dispo = res.headers.get("Content-Disposition");
+      const match = dispo?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? "pawvital-report.pdf";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert(
+        e instanceof Error
+          ? e.message
+          : "Could not download PDF. Sign in and try again."
+      );
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
+  const createShareLink = async () => {
+    if (!report.report_storage_id || shareBusy) return;
+    setShareBusy(true);
+    setShareError(null);
+    try {
+      const res = await fetch("/api/reports/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          check_id: report.report_storage_id,
+          expires_in: expiry,
+        }),
+      });
+      const data = (await res.json()) as {
+        share_url?: string;
+        expires_at?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error || "Could not create share link");
+      }
+      if (data.share_url && data.expires_at) {
+        setShareUrl(data.share_url);
+        setShareExpiresAt(data.expires_at);
+      }
+    } catch (e) {
+      setShareError(
+        e instanceof Error ? e.message : "Could not create share link"
+      );
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setLinkCopyState("copied");
+      window.setTimeout(() => setLinkCopyState("idle"), 2000);
+    } catch {
+      setShareError("Could not copy to clipboard");
+    }
+  };
+
+  const openShareModal = () => {
+    setShareModalOpen(true);
+    setShareError(null);
+    setShareUrl(null);
+    setShareExpiresAt(null);
+    setLinkCopyState("idle");
+  };
+
+  const headerActions = canExport ? (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+        onClick={() => void downloadPdf()}
+        loading={pdfBusy}
+      >
+        <Download className="w-4 h-4" />
+        <span className="hidden sm:inline">Download PDF</span>
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+        onClick={openShareModal}
+      >
+        <Share2 className="w-4 h-4" />
+        <span className="ml-1.5 hidden sm:inline">Share with Vet</span>
+      </Button>
+    </>
+  ) : null;
+
   return (
     <div className="space-y-4 animate-fade-in">
       <SeverityHeader
         report={report}
         copyState={copyState}
         onCopyVetSummary={copyVetSummary}
+        headerActions={headerActions}
       />
+
+      <Modal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        title="Share with your veterinarian"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Anyone with the link can view this report until it expires. Links are
+            read-only.
+          </p>
+          <label className="block text-sm font-medium text-gray-700">
+            Link expires after
+            <select
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              value={expiry}
+              onChange={(e) => setExpiry(e.target.value as ExpiryOption)}
+              disabled={shareBusy}
+            >
+              <option value="24h">24 hours</option>
+              <option value="7d">7 days</option>
+              <option value="30d">30 days</option>
+            </select>
+          </label>
+          {shareError ? (
+            <p className="text-sm text-red-600">{shareError}</p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() => void createShareLink()}
+              loading={shareBusy}
+              disabled={shareBusy}
+            >
+              Generate link
+            </Button>
+            {shareUrl ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void copyShareLink()}
+              >
+                {linkCopyState === "copied" ? (
+                  <CheckCheck className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+                <span className="ml-1.5">
+                  {linkCopyState === "copied" ? "Copied" : "Copy link"}
+                </span>
+              </Button>
+            ) : null}
+          </div>
+          {shareUrl ? (
+            <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+              <p className="text-xs font-medium text-gray-500 break-all">
+                {shareUrl}
+              </p>
+              {shareExpiresAt ? (
+                <p className="text-xs text-gray-500 mt-2">
+                  Expires:{" "}
+                  {new Date(shareExpiresAt).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </Modal>
 
       <EvidenceSourcesBar report={report} />
 
@@ -102,9 +322,11 @@ export function FullReport({ report, onOutcomeFeedback }: FullReportProps) {
         <VetQuestionsSection questions={report.vet_questions} />
       )}
 
-      <OutcomeFeedbackSection report={report} onSubmit={onOutcomeFeedback} />
+      {!readOnlyShared ? (
+        <OutcomeFeedbackSection report={report} onSubmit={onOutcomeFeedback} />
+      ) : null}
 
-      {report.system_observability && (
+      {!readOnlyShared && report.system_observability && (
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
             System Notes
