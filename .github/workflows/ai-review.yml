@@ -113,15 +113,24 @@ jobs:
             -d "$(jq -n \
               --arg model "${{ env.REVIEW_MODEL }}" \
               --arg content "$PROMPT" \
-              '{model: $model, max_tokens: 4096, messages: [{role: "user", content: $content}]}')")
+              '{model: $model, max_tokens: 4096, response_format: {type: "json_object"}, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')")
 
-          REVIEW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+          RAW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
 
-          if [ -z "$REVIEW_TEXT" ]; then
+          if [ -z "$RAW_TEXT" ]; then
             echo "AI review API returned no content -- skipping"
             echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null || true
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
+          fi
+
+          # Strip markdown fences and extract JSON object
+          REVIEW_TEXT=$(echo "$RAW_TEXT" | sed 's/^```json//;s/^```//;s/```$//' | perl -0777 -ne 'print $1 if /(\{.*\})/s')
+
+          if [ -z "$REVIEW_TEXT" ]; then
+            echo "Could not extract JSON from model response. Raw response:"
+            echo "$RAW_TEXT"
+            REVIEW_TEXT="{\"verdict\":\"UNKNOWN\",\"summary\":\"Model response was not valid JSON.\",\"issues\":[],\"safe_to_merge\":false,\"fix_instructions\":\"\"}"
           fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
