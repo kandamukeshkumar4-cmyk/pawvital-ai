@@ -1,11 +1,18 @@
+export type PetSpecies = "dog" | "cat" | "other";
+
+export type PetAgeUnit = "weeks" | "months" | "years";
+
 export interface Pet {
   id: string;
   user_id: string;
   name: string;
   breed: string;
-  species: "dog" | "cat";
+  species: PetSpecies;
+  /** Canonical age for storage and display (aligned with age_unit). */
   age_years: number;
   age_months: number;
+  /** When set, age_years / age_months represent this unit (onboarding uses a single field). */
+  age_unit?: PetAgeUnit;
   weight: number;
   weight_unit: "lbs" | "kg";
   gender: "male" | "female";
@@ -13,6 +20,21 @@ export interface Pet {
   existing_conditions: string[];
   medications: string[];
   photo_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Paid product tier from subscriptions table (live mode). */
+export type SubscriptionPlanTier = "free" | "pro" | "clinic";
+
+export interface SubscriptionRow {
+  id: string;
+  user_id: string;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  plan: SubscriptionPlanTier;
+  status: string;
+  current_period_end: string | null;
   created_at: string;
   updated_at: string;
 }
