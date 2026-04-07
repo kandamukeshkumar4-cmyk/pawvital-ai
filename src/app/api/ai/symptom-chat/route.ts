@@ -119,6 +119,8 @@ import {
   isShadowModeEnabledForService,
 } from "@/lib/sidecar-observability";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
+import { emit, EventType } from "@/lib/events/event-bus";
+import "@/lib/events/notification-handler";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -2000,8 +2002,9 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       console.error("[Bayesian] Failed to score report differentials:", bayesianError);
     }
 
+    let reportStorageId: string | null = null;
     try {
-      const reportStorageId = await saveSymptomReportToDB(
+      reportStorageId = await saveSymptomReportToDB(
         session,
         pet,
         finalReport
@@ -2012,6 +2015,18 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       }
     } catch (saveError) {
       console.error("[DB] Failed to save triage session:", saveError);
+    }
+
+    try {
+      emit(EventType.REPORT_READY, {
+        userId: (pet as PetProfile & { user_id?: string }).user_id ?? "",
+        sessionId: reportStorageId ?? "",
+        reportStorageId,
+        urgency: context.highest_urgency,
+        petName: pet.name,
+      });
+    } catch (emitError) {
+      console.error("[EventBus] Failed to emit REPORT_READY:", emitError);
     }
 
     return NextResponse.json({ type: "report", report: finalReport });

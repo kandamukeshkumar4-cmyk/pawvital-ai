@@ -15,14 +15,18 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  BarChart3,
+  PawPrint,
 } from "lucide-react";
 import { useAppStore } from "@/store/app-store";
 import { useAuth } from "@/hooks/useSupabase";
 
 const navItems = [
   { href: "/dashboard", icon: Activity, label: "Dashboard" },
+  { href: "/pets", icon: PawPrint, label: "My Pets" },
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
   { href: "/history", icon: Clock, label: "History" },
+  { href: "/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/supplements", icon: Pill, label: "Supplements" },
   { href: "/reminders", icon: Bell, label: "Reminders" },
   { href: "/journal", icon: BookOpen, label: "Journal" },
