@@ -26,11 +26,27 @@ function buildSupabaseMock(options?: {
   symptomCheck?: { id: string } | null;
   insertedOutcome?: Record<string, unknown> | null;
 }) {
+  const symptomCheckData =
+    options && "symptomCheck" in options
+      ? options.symptomCheck
+      : { id: "check-1" };
+  const insertedOutcomeData =
+    options && "insertedOutcome" in options
+      ? options.insertedOutcome
+      : {
+          id: "outcome-1",
+          check_id: "check-1",
+          reported_diagnosis: "gastroenteritis",
+          vet_confirmed: true,
+          outcome_notes: "Improved with fluids",
+          recorded_at: "2026-04-07T12:00:00.000Z",
+        };
+
   const symptomCheckBuilder = {
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
     maybeSingle: jest.fn().mockResolvedValue({
-      data: options?.symptomCheck ?? { id: "check-1" },
+      data: symptomCheckData,
       error: null,
     }),
   };
@@ -39,16 +55,7 @@ function buildSupabaseMock(options?: {
     insert: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     maybeSingle: jest.fn().mockResolvedValue({
-      data:
-        options?.insertedOutcome ??
-        {
-          id: "outcome-1",
-          check_id: "check-1",
-          reported_diagnosis: "gastroenteritis",
-          vet_confirmed: true,
-          outcome_notes: "Improved with fluids",
-          recorded_at: "2026-04-07T12:00:00.000Z",
-        },
+      data: insertedOutcomeData,
       error: null,
     }),
   };
