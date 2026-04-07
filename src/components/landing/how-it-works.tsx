@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { MessageSquare, Activity, FileText, ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 
@@ -58,7 +58,6 @@ const colorMap: Record<
 export default function HowItWorks() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, amount: 0.2 });
-
   return (
     <section id="how-it-works" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" ref={ref}>
