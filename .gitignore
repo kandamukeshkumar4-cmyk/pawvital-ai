@@ -50,6 +50,7 @@ next-env.d.ts
 !/scripts/land-pawvital-ticket.mjs
 !/scripts/finalize-pawvital-ticket.mjs
 !/scripts/agent-done.mjs
+!/scripts/apply-outcomes-schema.mjs
 !/scripts/codex-review-result.schema.json
 !/scripts/hooks/
 !/scripts/hooks/*.mjs

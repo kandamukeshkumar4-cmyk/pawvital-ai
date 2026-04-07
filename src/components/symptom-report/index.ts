@@ -10,6 +10,7 @@ export type {
   OutcomeFeedbackSubmitPayload,
 } from "./types";
 export { FullReport } from "./full-report";
+export { BayesianDifferentials, type ScoredDifferential } from "./bayesian-differentials";
 export { CollapsibleSection } from "./collapsible-section";
 export { SeverityHeader } from "./severity-header";
 export { EvidenceSourcesBar } from "./evidence-sources-bar";
