@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Activity,
   Stethoscope,
+  Clock,
   Pill,
   Bell,
   BookOpen,
@@ -21,6 +22,7 @@ import { useAuth } from "@/hooks/useSupabase";
 const navItems = [
   { href: "/dashboard", icon: Activity, label: "Dashboard" },
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
+  { href: "/history", icon: Clock, label: "History" },
   { href: "/supplements", icon: Pill, label: "Supplements" },
   { href: "/reminders", icon: Bell, label: "Reminders" },
   { href: "/journal", icon: BookOpen, label: "Journal" },
