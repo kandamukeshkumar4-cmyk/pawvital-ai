@@ -90,18 +90,7 @@ export interface Reminder {
   created_at: string;
 }
 
-export interface JournalEntry {
-  id: string;
-  pet_id: string;
-  type: "note" | "milestone" | "health_event" | "photo" | "weight";
-  title: string;
-  content: string;
-  photo_url?: string;
-  weight?: number;
-  mood?: "happy" | "normal" | "low" | "sick";
-  date: string;
-  created_at: string;
-}
+export type { JournalEntry, JournalEntryInput, JournalMood, JournalSummary } from "./journal";
 
 export interface CommunityPost {
   id: string;
