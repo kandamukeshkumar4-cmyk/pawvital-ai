@@ -15,6 +15,7 @@ import { HomeCareSection } from "./home-care";
 import { ActionStepsSection } from "./action-steps";
 import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
+import { BayesianDifferentials } from "./bayesian-differentials";
 
 type CopyState = "idle" | "copied" | "error";
 
@@ -53,6 +54,10 @@ export function FullReport({ report, onOutcomeFeedback }: FullReportProps) {
       />
 
       <EvidenceSourcesBar report={report} />
+
+      {report.bayesian_differentials && report.bayesian_differentials.length > 0 && (
+        <BayesianDifferentials bayesian_differentials={report.bayesian_differentials} />
+      )}
 
       <VetHandoffSection
         summary={report.vet_handoff_summary ?? ""}

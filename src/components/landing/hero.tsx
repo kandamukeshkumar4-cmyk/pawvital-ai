@@ -1,105 +1,190 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Shield, Heart, Clock } from "lucide-react";
+import { useRef } from "react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  Shield,
+  BookOpen,
+  Image as ImageIcon,
+  FlaskConical,
+} from "lucide-react";
+import { motion, useInView } from "framer-motion";
 import Button from "@/components/ui/button";
 
 export default function Hero() {
-  const [email, setEmail] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-amber-50">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 lg:pt-32 lg:pb-36">
-        <div className="text-center max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
-            <Shield className="w-4 h-4" />
-            AI-Powered Pet Wellness
-          </div>
+    <section className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-blue-50">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-100/30 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-100/30 rounded-full blur-3xl" />
+      </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
-            Stop Googling Your Dog&apos;s Symptoms at{" "}
-            <span className="text-blue-600">2am</span>
-          </h1>
-
-          <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            PawVital AI gives you a 24/7 pet health companion that tracks wellness,
-            checks symptoms, and tells you exactly what to do — so you never have to
-            panic-search &quot;is my dog dying&quot; again.
-          </p>
-
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <div className="flex w-full sm:w-auto">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full sm:w-72 px-5 py-3.5 rounded-l-xl border border-r-0 border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
-              />
-              <Button size="lg" className="rounded-l-none whitespace-nowrap">
-                Start Free Trial <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+      <div
+        className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 lg:pt-36 lg:pb-32"
+        ref={ref}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left side: Content */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+              <Shield className="w-4 h-4" />
+              Evidence-Based Veterinary AI
             </div>
-          </div>
 
-          <p className="mt-4 text-sm text-gray-500">
-            7-day free trial. Then just $9.97/month. Cancel anytime.
-          </p>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
+              Your Pet&apos;s Health,{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">
+                Understood by AI
+              </span>
+            </h1>
 
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <Heart className="w-5 h-5 text-red-500" />
-              <span>Trusted by 2,000+ pet parents</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield className="w-5 h-5 text-blue-500" />
-              <span>Vet-informed AI guidance</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-amber-500" />
-              <span>24/7 instant answers</span>
-            </div>
-          </div>
-        </div>
+            <p className="mt-6 text-lg sm:text-xl text-gray-600 max-w-xl leading-relaxed">
+              PawVital uses veterinary knowledge from Merck manuals, 10,000+
+              clinical cases, and 9,700+ reference images to give you real answers
+              about your pet&apos;s symptoms — not generic search results.
+            </p>
 
-        {/* Dashboard Preview */}
-        <div className="mt-16 max-w-5xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-400" />
-              <div className="w-3 h-3 rounded-full bg-amber-400" />
-              <div className="w-3 h-3 rounded-full bg-green-400" />
-              <span className="ml-3 text-sm text-gray-500">PawVital AI Dashboard</span>
+            <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
+              <Link href="/symptom-checker">
+                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500">
+                  Start Free Symptom Check{" "}
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+              <a href="#how-it-works">
+                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 hover:bg-gray-50">
+                  See How It Works
+                </Button>
+              </a>
             </div>
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 text-center">
-                <div className="text-5xl font-bold text-green-600">87</div>
-                <div className="mt-2 text-sm text-green-700 font-medium">Health Score</div>
-                <div className="mt-1 text-xs text-green-600">Excellent</div>
+
+            {/* Trust badges */}
+            <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="w-4 h-4 text-emerald-500" />
+                <span>10,000+ Clinical Cases</span>
               </div>
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
-                <div className="text-sm font-medium text-blue-700 mb-2">Quick Check</div>
-                <div className="bg-white rounded-lg p-3 text-sm text-gray-600">
-                  &quot;Cooper is limping slightly on his back left leg...&quot;
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-blue-500" />
+                <span>200+ Disease Profiles</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-indigo-500" />
+                <span>9,700+ Reference Images</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4 text-amber-500" />
+                <span>Evidence-Based</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Right side: Floating chat mockup */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="hidden lg:block"
+          >
+            <div className="relative">
+              {/* Main chat card */}
+              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden transform rotate-1 hover:rotate-0 transition-transform duration-500">
+                {/* Chat header */}
+                <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-emerald-300" />
+                  <span className="text-white text-sm font-medium">
+                    PawVital AI — Symptom Check
+                  </span>
                 </div>
-                <div className="mt-2 text-xs text-blue-600 font-medium">AI analyzing symptoms...</div>
-              </div>
-              <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6">
-                <div className="text-sm font-medium text-amber-700 mb-2">Today&apos;s Reminders</div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    Joint supplement - 8:00 AM
+
+                {/* Chat messages */}
+                <div className="p-6 space-y-4">
+                  {/* User message */}
+                  <div className="flex justify-end">
+                    <div className="bg-blue-50 rounded-2xl rounded-br-md px-4 py-3 max-w-[240px]">
+                      <p className="text-sm text-gray-800">
+                        My golden retriever Cooper has been limping on his back
+                        left leg for 2 days
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    Evening walk logged
+
+                  {/* AI response */}
+                  <div className="flex justify-start">
+                    <div className="bg-emerald-50 rounded-2xl rounded-bl-md px-4 py-3 max-w-[280px]">
+                      <p className="text-sm text-gray-800">
+                        I&apos;ll help you assess that. Golden Retrievers are prone to
+                        joint issues, especially at older ages.
+                      </p>
+                      <p className="text-sm text-gray-800 mt-2">
+                        A few follow-up questions:
+                      </p>
+                      <ul className="text-sm text-gray-700 mt-1 space-y-1">
+                        <li className="flex items-start gap-1.5">
+                          <span className="text-emerald-500 mt-0.5">•</span>
+                          How old is Cooper?
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <span className="text-emerald-500 mt-0.5">•</span>
+                          Any swelling visible?
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <span className="text-emerald-500 mt-0.5">•</span>
+                          Did it start suddenly?
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Typing indicator */}
+                  <div className="flex items-center gap-1 pl-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating evidence badge */}
+              <div className="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-lg border border-gray-200 px-4 py-3 transform -rotate-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">
+                      Merck Verified
+                    </p>
+                    <p className="text-xs text-gray-500">Evidence-based</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating urgency badge */}
+              <div className="absolute -top-3 -right-3 bg-white rounded-xl shadow-lg border border-gray-200 px-4 py-3 transform rotate-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                    <span className="text-amber-600 text-sm font-bold">⚡</span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-800">
+                      Moderate Urgency
+                    </p>
+                    <p className="text-xs text-gray-500">Schedule vet visit</p>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

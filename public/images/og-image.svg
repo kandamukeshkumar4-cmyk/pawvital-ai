@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#059669" />
+      <stop offset="50%" stop-color="#047857" />
+      <stop offset="100%" stop-color="#065f46" />
+    </linearGradient>
+    <linearGradient id="pawGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.15" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)" />
+
+  <!-- Subtle grid pattern -->
+  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="0.5" opacity="0.05" />
+  </pattern>
+  <rect width="1200" height="630" fill="url(#grid)" />
+
+  <!-- Large decorative paw print (right side) -->
+  <g transform="translate(850, 200) scale(3)" opacity="0.1">
+    <ellipse cx="25" cy="55" rx="18" ry="16" fill="white" />
+    <circle cx="8" cy="30" r="9" fill="white" />
+    <circle cx="25" cy="22" r="9" fill="white" />
+    <circle cx="42" cy="30" r="9" fill="white" />
+  </g>
+
+  <!-- Logo icon -->
+  <rect x="80" y="200" width="64" height="64" rx="16" fill="white" />
+  <g transform="translate(92, 212)">
+    <path d="M20 4 C12 4 4 12 4 20 C4 30 12 36 20 36 C28 36 36 30 36 20 C36 12 28 4 20 4z" fill="#059669" />
+    <path d="M14 22 C14 18 17 15 20 15 C23 15 26 18 26 22 C26 26 23 28 20 28 C17 28 14 26 14 22z" fill="white" />
+  </g>
+
+  <!-- Title text -->
+  <text x="160" y="235" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="800" fill="white">PawVital AI</text>
+
+  <!-- Tagline -->
+  <text x="82" y="325" font-family="system-ui, -apple-system, sans-serif" font-size="28" fill="#a7f3d0" font-weight="500">Your Pet's Health, Understood by AI</text>
+
+  <!-- Sub-tagline -->
+  <text x="82" y="375" font-family="system-ui, -apple-system, sans-serif" font-size="18" fill="#6ee7b7" opacity="0.9">Evidence-based veterinary symptom triage for dogs &amp; cats</text>
+
+  <!-- Stats row -->
+  <g transform="translate(82, 430)">
+    <rect width="200" height="44" rx="22" fill="white" fill-opacity="0.15" />
+    <text x="20" y="28" font-family="system-ui, sans-serif" font-size="14" fill="white" font-weight="600">10,000+ Clinical Cases</text>
+
+    <rect x="220" width="200" height="44" rx="22" fill="white" fill-opacity="0.15" />
+    <text x="240" y="28" font-family="system-ui, sans-serif" font-size="14" fill="white" font-weight="600">9,700+ Reference Images</text>
+
+    <rect x="440" width="180" height="44" rx="22" fill="white" fill-opacity="0.15" />
+    <text x="460" y="28" font-family="system-ui, sans-serif" font-size="14" fill="white" font-weight="600">200+ Disease Profiles</text>
+  </g>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="615" width="1200" height="15" fill="#34d399" opacity="0.5" />
+</svg>

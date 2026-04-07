@@ -69,6 +69,7 @@ export interface SymptomReport {
   };
   similar_cases?: SimilarCase[];
   reference_images?: ReferenceImage[];
+  bayesian_differentials?: Array<{ condition: string; probability: number; evidence_count: number; confidence?: string }>;
   knowledge_sources_used?: string[];
   evidence_summary?: EvidenceSummary;
 }

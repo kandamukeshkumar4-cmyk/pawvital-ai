@@ -88,6 +88,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { computeBayesianScore } from "@/lib/bayesian-scorer";
 import {
   buildCaseMemorySnapshot,
   buildDeterministicCaseSummary,
@@ -1987,6 +1988,17 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       finalReport
     );
     finalReport.system_observability = buildObservabilitySnapshot(session);
+
+    try {
+      finalReport.bayesian_differentials = await computeBayesianScore(
+        session.known_symptoms,
+        pet.breed,
+        pet.age_years,
+        context.top5
+      );
+    } catch (bayesianError) {
+      console.error("[Bayesian] Failed to score report differentials:", bayesianError);
+    }
 
     try {
       const reportStorageId = await saveSymptomReportToDB(
