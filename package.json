@@ -38,7 +38,8 @@
     "index:image-corpus:dry": "node scripts/index-local-image-corpus.mjs --dry-run",
     "embed:corpus": "node scripts/embed-corpus.mjs",
     "embed:corpus:knowledge": "node scripts/embed-corpus.mjs --kind=knowledge",
-    "embed:corpus:images": "node scripts/embed-corpus.mjs --kind=images"
+    "embed:corpus:images": "node scripts/embed-corpus.mjs --kind=images",
+    "ingest:csv": "node scripts/ingest-csv-corpus.mjs"
   },
   "dependencies": {
     "@stripe/stripe-js": "^8.11.0",
