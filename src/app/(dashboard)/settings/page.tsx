@@ -34,7 +34,7 @@ export default function SettingsPage() {
   const [petForm, setPetForm] = useState({
     name: "",
     breed: "",
-    species: "dog" as "dog" | "cat",
+    species: "dog" as "dog" | "cat" | "other",
     age_years: "",
     age_months: "",
     weight: "",
@@ -110,7 +110,7 @@ export default function SettingsPage() {
             <div key={pet.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-xl">
-                  {pet.species === "dog" ? "🐕" : "🐈"}
+                  {pet.species === "cat" ? "🐈" : pet.species === "dog" ? "🐕" : "🐾"}
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">{pet.name}</p>
@@ -151,10 +151,13 @@ export default function SettingsPage() {
               <Select
                 label="Species"
                 value={petForm.species}
-                onChange={(e) => setPetForm({ ...petForm, species: e.target.value as "dog" | "cat" })}
+                onChange={(e) =>
+                  setPetForm({ ...petForm, species: e.target.value as "dog" | "cat" | "other" })
+                }
                 options={[
                   { value: "dog", label: "Dog" },
                   { value: "cat", label: "Cat" },
+                  { value: "other", label: "Other" },
                 ]}
               />
               <Select

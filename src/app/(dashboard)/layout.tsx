@@ -2,6 +2,8 @@
 
 import Sidebar from "@/components/dashboard/sidebar";
 import TopBar from "@/components/dashboard/top-bar";
+import PetOnboardingHost from "@/components/onboarding/pet-onboarding-host";
+import { SubscriptionProvider } from "@/contexts/subscription-context";
 import { useAppStore } from "@/store/app-store";
 import { useLoadUserData } from "@/hooks/useSupabase";
 
@@ -16,16 +18,19 @@ export default function DashboardLayout({
   useLoadUserData();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar />
-      <div
-        className={`transition-all duration-300 ${
-          sidebarOpen ? "ml-64" : "ml-20"
-        }`}
-      >
-        <TopBar />
-        <main className="p-6">{children}</main>
+    <SubscriptionProvider>
+      <div className="min-h-screen bg-gray-50">
+        <PetOnboardingHost />
+        <Sidebar />
+        <div
+          className={`transition-all duration-300 ${
+            sidebarOpen ? "ml-64" : "ml-20"
+          }`}
+        >
+          <TopBar />
+          <main className="p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </SubscriptionProvider>
   );
 }
