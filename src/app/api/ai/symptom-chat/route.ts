@@ -51,6 +51,8 @@ import {
   buildKnowledgeSearchQuery,
   searchReferenceImages,
   searchKnowledgeChunks,
+  searchClinicalCases,
+  formatClinicalCaseContext,
 } from "@/lib/knowledge-retrieval";
 import {
   capDiagnosticConfidence,
@@ -1748,6 +1750,18 @@ async function generateReport(
   const knowledgeContext = formatRetrievalTextContext(retrievalBundle);
   const referenceImageContext = formatRetrievalImageContext(retrievalBundle);
 
+  // Supplementary: search for similar clinical cases from CSV corpus
+  let clinicalCaseContext = '';
+  try {
+    const topSymptoms = session.known_symptoms.slice(0, 6);
+    if (topSymptoms.length > 0) {
+      const clinicalCases = await searchClinicalCases(topSymptoms, pet.breed, 5);
+      clinicalCaseContext = formatClinicalCaseContext(clinicalCases);
+    }
+  } catch {
+    // Non-fatal — clinical case search is supplementary
+  }
+
   const top5Formatted = context.top5
     .map(
       (d, i) =>
@@ -1816,6 +1830,7 @@ ${formatEvidenceChainForReport(session)}
 
 ${session.image_inferred_breed ? `IMAGE-INFERRED BREED SIGNAL: ${session.image_inferred_breed} (${Math.round((session.image_inferred_breed_confidence || 0) * 100)}% confidence)\n` : ""}${session.breed_profile_summary ? `EXTERNAL BREED PROFILE: ${session.breed_profile_summary}\n` : ""}${session.roboflow_skin_summary ? `ROBOFLOW SKIN FLAG: ${session.roboflow_skin_summary}\n` : ""}${knowledgeContext ? `EXTERNAL KNOWLEDGE RETRIEVAL (trusted public corpus; use to support, not replace, the matrix ranking):\n${knowledgeContext}\n` : ""}
 ${referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases; use as supportive visual context, not a diagnosis by itself):\n${referenceImageContext}\n` : ""}
+${clinicalCaseContext ? `SIMILAR CLINICAL CASES (CSV corpus; use as supplementary case-similarity evidence, not a replacement for matrix ranking):\n${clinicalCaseContext}\n` : ""}
 
 ${session.vision_analysis ? `VISUAL ANALYSIS FROM PET PHOTO (analyzed by the NVIDIA 11B/90B vision stack):\n${session.vision_analysis}\n\nIMPORTANT: Incorporate the visual findings above into your differential diagnoses and clinical notes. Reference what was observed in the image (e.g., wound characteristics, skin condition, eye appearance). The visual analysis should heavily influence your report.\n` : ""}
 YOUR TASK: Write the clinical report using the matrix's disease ranking as your primary guide. Do NOT reorder the differentials unless you have strong clinical reasoning to do so. The matrix has already applied breed multipliers, age factors, and symptom-specific modifiers.

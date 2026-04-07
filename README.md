@@ -55,3 +55,47 @@ npm test
 - The deterministic clinical matrix remains the source of truth for medical flow and urgency handling.
 - Shared `NVIDIA_API_KEY` is enough to enable all core text and vision roles unless you intentionally override individual roles.
 - JSON parsing for NVIDIA model output is centralized so routes can safely handle fenced JSON, `<think>` blocks, and loose surrounding text.
+
+## Data Pipeline
+
+### Ingest Clinical CSV Data
+
+```bash
+npm run ingest:csv                                     # Ingest all CSV datasets
+npm run ingest:csv -- --dry-run                        # Preview without inserting
+npm run ingest:csv -- --file veterinary_clinical_data.csv  # Single file
+```
+
+### Index Reference Images
+
+```bash
+npm run index:image-corpus                             # Index all image directories
+npm run index:image-corpus -- --dry-run                # Preview only
+npm run index:image-corpus -- --dir mendeley-dog-skin  # Single directory
+```
+
+### Index Audio Corpus
+
+```bash
+npm run db:apply-audio-schema                          # Create audio tables (first time only)
+npm run index:audio-corpus                             # Index all audio files
+npm run index:audio-corpus -- --dry-run                # Preview only
+```
+
+### Generate Embeddings
+
+```bash
+npm run embed:corpus                                   # Embed all pending chunks and images
+npm run embed:corpus:knowledge                         # Knowledge chunks only
+npm run embed:corpus:images                            # Images only
+```
+
+### Full Pipeline (recommended order)
+
+```bash
+npm run ingest:csv
+npm run index:image-corpus
+npm run db:apply-audio-schema
+npm run index:audio-corpus
+npm run embed:corpus
+```

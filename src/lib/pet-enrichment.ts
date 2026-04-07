@@ -1,4 +1,5 @@
 import type { PetProfile, TriageSession } from "@/lib/triage-engine";
+import { searchReferenceImages, type ReferenceImageMatch } from "@/lib/knowledge-retrieval";
 
 const NYCKEL_TOKEN_URL = "https://www.nyckel.com/connect/token";
 const NYCKEL_DOG_BREED_FUNCTION = "dog-breed-identifier";
@@ -104,6 +105,7 @@ export interface SkinFlagResult {
   labels: string[];
   topConfidence?: number;
   source: "roboflow";
+  reference_images?: ReferenceImageMatch[];
 }
 
 export function isLikelyDogContext(pet: PetProfile): boolean {
@@ -242,6 +244,30 @@ export async function fetchBreedProfile(
   }
 }
 
+/**
+ * Given Roboflow skin detection labels, find matching reference images
+ * from the indexed corpus. Returns up to `limit` reference images.
+ */
+export async function findReferenceImagesForSkinLabels(
+  roboflowLabels: string[],
+  limit: number = 5
+): Promise<ReferenceImageMatch[]> {
+  if (!roboflowLabels.length) return [];
+
+  const conditionFilters = roboflowLabels.map((label) =>
+    label.toLowerCase().replace(/[\s-]+/g, "_")
+  );
+
+  const searchText = roboflowLabels.join(" ");
+  const matches = await searchReferenceImages(
+    searchText,
+    limit,
+    conditionFilters
+  );
+
+  return matches;
+}
+
 export async function runRoboflowSkinWorkflow(
   image: string,
   pet: PetProfile
@@ -290,13 +316,22 @@ export async function runRoboflowSkinWorkflow(
       .slice(0, 3)
       .join(", ")}${typeof topConfidence === "number" ? ` (top confidence ${(topConfidence * 100).toFixed(0)}%)` : ""}.`;
 
-    return {
+    const result: SkinFlagResult = {
       positive: true,
       summary,
       labels: matchedLabels,
       topConfidence,
       source: "roboflow",
     };
+
+    // Cross-reference with reference image corpus (non-fatal)
+    try {
+      result.reference_images = await findReferenceImagesForSkinLabels(matchedLabels, 5);
+    } catch (err) {
+      console.warn('[pet-enrichment] Reference image lookup failed:', err instanceof Error ? err.message : err);
+    }
+
+    return result;
   } catch (error) {
     console.error("[Enrichment] Roboflow workflow failed:", error);
     return null;

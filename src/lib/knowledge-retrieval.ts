@@ -21,6 +21,7 @@ import {
 export interface KnowledgeChunkMatch {
   chunkId: string;
   sourceId: string;
+  sourceSlug: string;
   sourceTitle: string;
   chunkTitle: string;
   sourceUrl: string | null;
@@ -71,6 +72,7 @@ interface FallbackKnowledgeChunkRow {
   keyword_tags: string[] | null;
   source_url: string | null;
   knowledge_sources?: {
+    slug?: string | null;
     title?: string | null;
     active?: boolean;
   } | null;
@@ -311,6 +313,7 @@ async function searchKnowledgeChunksSemantic(
     return (data as SemanticKnowledgeChunkRpcRow[]).map((row) => ({
       chunkId: row.chunk_id,
       sourceId: row.source_id,
+      sourceSlug: '',
       sourceTitle: row.source_title,
       chunkTitle: row.chunk_title,
       sourceUrl: row.source_url,
@@ -339,6 +342,7 @@ async function searchKnowledgeChunksLexical(
     return (rpcData as SearchKnowledgeChunkRpcRow[]).map((row) => ({
       chunkId: row.chunk_id,
       sourceId: row.source_id,
+      sourceSlug: '',
       sourceTitle: row.source_title,
       chunkTitle: row.chunk_title,
       sourceUrl: row.source_url,
@@ -364,7 +368,7 @@ async function searchKnowledgeChunksLexical(
   const { data: fallbackData, error: fallbackError } = await supabase
     .from("knowledge_chunks")
     .select(
-      "id, source_id, title, text_content, citation, keyword_tags, source_url, knowledge_sources!inner(title, active)"
+      "id, source_id, title, text_content, citation, keyword_tags, source_url, knowledge_sources!inner(slug, title, active)"
     )
     .eq("knowledge_sources.active", true)
     .or(orFilter)
@@ -375,6 +379,7 @@ async function searchKnowledgeChunksLexical(
   return (fallbackData as FallbackKnowledgeChunkRow[]).map((row) => ({
     chunkId: row.id,
     sourceId: row.source_id,
+    sourceSlug: row.knowledge_sources?.slug || '',
     sourceTitle:
       row.knowledge_sources?.title || row.title || "Veterinary Reference",
     chunkTitle: row.title || "Veterinary Reference",
@@ -685,4 +690,74 @@ export function formatReferenceImageContext(
       return `${index + 1}. ${match.conditionLabel} (${similarity} visual similarity)\nSource: ${match.sourceTitle}\nPath: ${relativePath}\nCaption: ${match.caption || "No caption"}`;
     })
     .join("\n\n");
+}
+
+// ── Clinical Case Search ────────────────────────────────────────────────────
+
+export interface ClinicalCaseMatch {
+  id: string;
+  heading: string;
+  body: string;
+  keyword_tags: string[];
+  similarity: number;
+  source_slug: string;
+}
+
+const CSV_SOURCE_SLUGS = ["csv-pet-health-symptoms", "csv-veterinary-clinical-data"];
+
+/**
+ * Search knowledge_chunks specifically for clinical case entries
+ * from the CSV-ingested datasets.
+ */
+export async function searchClinicalCases(
+  symptoms: string[],
+  breed?: string,
+  limit: number = 5
+): Promise<ClinicalCaseMatch[]> {
+  if (symptoms.length === 0) return [];
+
+  const searchText = [...symptoms, breed].filter(Boolean).join(" ");
+  const allChunks = await searchKnowledgeChunks(searchText, limit * 3);
+
+  // Filter to clinical case sources
+  const caseChunks = allChunks.filter((c) =>
+    CSV_SOURCE_SLUGS.some(
+      (slug) =>
+        c.sourceSlug.includes(slug) ||
+        c.sourceTitle.toLowerCase().includes("clinical") ||
+        c.sourceTitle.toLowerCase().includes("symptoms dataset")
+    )
+  );
+
+  // Score by symptom keyword overlap
+  const scored = caseChunks.map((chunk) => {
+    const tags = chunk.keywordTags;
+    const overlap = symptoms.filter((s) =>
+      tags.some(
+        (t) =>
+          t.includes(s.toLowerCase()) || s.toLowerCase().includes(t)
+      )
+    ).length;
+    return { chunk, overlap };
+  });
+
+  scored.sort((a, b) => b.overlap - a.overlap || b.chunk.score - a.chunk.score);
+
+  return scored.slice(0, limit).map((s) => ({
+    id: s.chunk.chunkId,
+    heading: s.chunk.chunkTitle,
+    body: s.chunk.textContent,
+    keyword_tags: s.chunk.keywordTags,
+    similarity: s.chunk.score,
+    source_slug: s.chunk.sourceSlug,
+  }));
+}
+
+export function formatClinicalCaseContext(cases: ClinicalCaseMatch[]): string {
+  if (!cases.length) return "";
+  const lines = cases.map(
+    (c, i) =>
+      `Case ${i + 1}: ${c.heading}\n${c.body}\n(Similarity: ${(c.similarity * 100).toFixed(0)}%)`
+  );
+  return `## Similar Clinical Cases\n\n${lines.join("\n\n")}`;
 }
