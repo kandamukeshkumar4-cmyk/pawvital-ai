@@ -1,0 +1,42 @@
+[
+  {
+    "question": "Is PawVital AI a replacement for a veterinarian?",
+    "answer": "No. PawVital AI is a triage and wellness tool — it helps you understand your pet's symptoms, decide whether a vet visit is needed, and prepare useful information for your veterinarian. It is not a substitute for professional veterinary diagnosis or treatment. Always consult your vet for medical decisions."
+  },
+  {
+    "question": "What breeds do you support?",
+    "answer": "PawVital supports all dog and cat breeds, including mixed breeds. Our clinical matrix includes breed-specific disease multipliers for over 200 breeds — for example, Dachshunds are flagged for IVDD risk, while Cavalier King Charles Spaniels are flagged for mitral valve disease. Mixed breeds receive a balanced baseline assessment."
+  },
+  {
+    "question": "How does the AI work?",
+    "answer": "PawVital uses a deterministic clinical matrix combined with AI-powered knowledge retrieval. When you describe a symptom, our system checks it against 200+ disease profiles, matches similar cases from 10,000+ clinical records, cross-references the Merck Veterinary Manual and WAVD guidelines, and generates a structured SOAP-format report with differential diagnoses and urgency ratings."
+  },
+  {
+    "question": "Is my data private?",
+    "answer": "Yes. We do not sell your data or share it with third parties. Your pet's health information is stored securely and is only used to provide you with better health insights. You can delete your data at any time from your account settings."
+  },
+  {
+    "question": "Can I upload photos of my pet's condition?",
+    "answer": "Yes. Our 3-tier vision pipeline can analyze photos of skin conditions, eye issues, wounds, lumps, and other visible symptoms. Images are compared against 9,700+ reference images from our veterinary database to help identify conditions and provide more accurate assessments."
+  },
+  {
+    "question": "How accurate is the diagnosis?",
+    "answer": "Our system uses evidence-based analysis drawing from the Merck Veterinary Manual, 10,000+ clinical case records, and breed-specific disease statistics. Every diagnosis includes confidence scores and is labeled with its evidence sources. However, no AI system replaces a hands-on physical examination by a licensed veterinarian."
+  },
+  {
+    "question": "Is it free to use?",
+    "answer": "PawVital offers a free tier that includes basic symptom checks and limited health tracking. Our premium plan at $9.97/month unlocks unlimited AI consultations, vision analysis, health timeline, vet handoff reports, and breed-specific wellness insights. You can start with a 7-day free trial — no credit card required."
+  },
+  {
+    "question": "What animals do you support?",
+    "answer": "PawVital currently supports dogs and cats. Our clinical matrix, breed profiles, and reference image database are built specifically for these species. We plan to expand to additional companion animals in the future based on user demand."
+  },
+  {
+    "question": "How do I share results with my vet?",
+    "answer": "Every symptom check generates a professional SOAP-format report that you can share with your veterinarian. Simply tap the 'Copy Vet Summary' button to copy a clean, formatted report to your clipboard — including differential diagnoses, symptom timeline, and relevant clinical references."
+  },
+  {
+    "question": "What makes PawVital different from other pet health apps?",
+    "answer": "Most pet health apps rely on simple checklists or web search results. PawVital uses a clinical-grade triage engine powered by the Merck Veterinary Manual, 10,000+ real clinical cases, breed-specific disease multipliers, and a 3-tier vision analysis pipeline. Every recommendation is evidence-based and traceable to its source."
+  }
+]

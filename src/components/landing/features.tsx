@@ -1,81 +1,266 @@
-import { Activity, Stethoscope, Pill, Bell, BookOpen, Users } from "lucide-react";
+"use client";
+
+import { useState, useRef } from "react";
+import { useInView, motion } from "framer-motion";
+import {
+  MessageSquare,
+  BookOpen,
+  Camera,
+  PawPrint,
+  Clock,
+  ClipboardCopy,
+} from "lucide-react";
+import {
+  SymptomChatIllustration,
+  DiagnosisReportIllustration,
+  VisionAnalysisIllustration,
+  HealthTimelineIllustration,
+} from "./illustrations";
 
 const features = [
   {
-    icon: Activity,
-    title: "AI Health Dashboard",
-    description: "Daily health score (1-100) based on your pet's breed, age, weight, activity, and logged symptoms. Know exactly how your pet is doing at a glance.",
+    id: "chat",
+    icon: MessageSquare,
+    title: "Smart Symptom Chat",
+    description:
+      "Our AI asks the right follow-up questions — just like a vet would. No generic questionnaires.",
+    illustration: SymptomChatIllustration,
+    color: "emerald",
+  },
+  {
+    id: "evidence",
+    icon: BookOpen,
+    title: "Evidence-Based Diagnosis",
+    description:
+      "Every diagnosis is backed by Merck Veterinary Manual references, WAVD guidelines, and similar clinical cases.",
+    illustration: DiagnosisReportIllustration,
     color: "blue",
   },
   {
-    icon: Stethoscope,
-    title: "Symptom Checker",
-    description: "Describe what's happening and get instant, breed-specific guidance: monitor at home, schedule a vet visit, or go to emergency. No more panic Googling.",
-    color: "green",
+    id: "vision",
+    icon: Camera,
+    title: "Vision Analysis",
+    description:
+      "Upload a photo of a skin condition, eye issue, or wound. Our 3-tier vision pipeline analyzes it against 9,700+ reference images.",
+    illustration: VisionAnalysisIllustration,
+    color: "indigo",
   },
   {
-    icon: Pill,
-    title: "Supplement Plans",
-    description: "Personalized supplement and nutrition recommendations based on your pet's unique profile. Updated monthly as they age.",
-    color: "purple",
-  },
-  {
-    icon: Bell,
-    title: "Smart Reminders",
-    description: "Never miss a medication, flea treatment, or vet appointment again. Automated reminders for everything your pet needs.",
+    id: "breed",
+    icon: PawPrint,
+    title: "Breed-Aware Intelligence",
+    description:
+      "Dachshunds are 10× more likely to get IVDD. Our breed-specific modifiers catch what generic tools miss.",
+    illustration: null,
     color: "amber",
   },
   {
-    icon: BookOpen,
-    title: "Pet Journal",
-    description: "A beautiful timeline of your pet's life — health events, milestones, weight changes, and photos. Their complete story in one place.",
-    color: "pink",
-  },
-  {
-    icon: Users,
-    title: "Paw Circle Community",
-    description: "Connect with other pet parents dealing with similar issues. Senior dog care, breed-specific health, anxiety support, and more.",
+    id: "timeline",
+    icon: Clock,
+    title: "Health Timeline",
+    description:
+      "Track your pet's health over time. See trends, patterns, and improvement.",
+    illustration: HealthTimelineIllustration,
     color: "teal",
   },
-];
+  {
+    id: "handoff",
+    icon: ClipboardCopy,
+    title: "Vet Handoff Summary",
+    description:
+      "One-click copy of a professional summary to share with your veterinarian.",
+    illustration: null,
+    color: "rose",
+  },
+] as const;
 
-const colorMap: Record<string, { bg: string; icon: string; border: string }> = {
-  blue: { bg: "bg-blue-50", icon: "text-blue-600", border: "border-blue-200" },
-  green: { bg: "bg-green-50", icon: "text-green-600", border: "border-green-200" },
-  purple: { bg: "bg-purple-50", icon: "text-purple-600", border: "border-purple-200" },
-  amber: { bg: "bg-amber-50", icon: "text-amber-600", border: "border-amber-200" },
-  pink: { bg: "bg-pink-50", icon: "text-pink-600", border: "border-pink-200" },
-  teal: { bg: "bg-teal-50", icon: "text-teal-600", border: "border-teal-200" },
+const colorMap: Record<
+  string,
+  { bg: string; iconBg: string; icon: string; tab: string; tabActive: string }
+> = {
+  emerald: {
+    bg: "bg-emerald-50",
+    iconBg: "bg-emerald-100",
+    icon: "text-emerald-600",
+    tab: "text-emerald-600",
+    tabActive: "bg-emerald-50 border-emerald-500",
+  },
+  blue: {
+    bg: "bg-blue-50",
+    iconBg: "bg-blue-100",
+    icon: "text-blue-600",
+    tab: "text-blue-600",
+    tabActive: "bg-blue-50 border-blue-500",
+  },
+  indigo: {
+    bg: "bg-indigo-50",
+    iconBg: "bg-indigo-100",
+    icon: "text-indigo-600",
+    tab: "text-indigo-600",
+    tabActive: "bg-indigo-50 border-indigo-500",
+  },
+  amber: {
+    bg: "bg-amber-50",
+    iconBg: "bg-amber-100",
+    icon: "text-amber-600",
+    tab: "text-amber-600",
+    tabActive: "bg-amber-50 border-amber-500",
+  },
+  teal: {
+    bg: "bg-teal-50",
+    iconBg: "bg-teal-100",
+    icon: "text-teal-600",
+    tab: "text-teal-600",
+    tabActive: "bg-teal-50 border-teal-500",
+  },
+  rose: {
+    bg: "bg-rose-50",
+    iconBg: "bg-rose-100",
+    icon: "text-rose-600",
+    tab: "text-rose-600",
+    tabActive: "bg-rose-50 border-rose-500",
+  },
 };
 
+// Simple placeholder illustration for features that don't have a full SVG
+function PlaceholderIllustration({
+  icon: Icon,
+  color,
+  className = "",
+}: {
+  icon: typeof PawPrint;
+  color: string;
+  className?: string;
+}) {
+  const c = colorMap[color];
+  return (
+    <div
+      className={`flex items-center justify-center rounded-2xl ${c.bg} ${className}`}
+      style={{ minHeight: 200 }}
+    >
+      <div className={`${c.iconBg} rounded-3xl p-8`}>
+        <Icon className={`w-16 h-16 ${c.icon}`} />
+      </div>
+    </div>
+  );
+}
+
 export default function Features() {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, amount: 0.15 });
+  const active = features[activeIdx];
+  const colors = colorMap[active.color];
+
   return (
     <section id="features" className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" ref={ref}>
+        <motion.div
+          className="text-center max-w-3xl mx-auto mb-14"
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5 }}
+        >
+          <span className="inline-block text-sm font-semibold text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-full mb-4">
+            Clinical-Grade Features
+          </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            Everything Your Pet Needs. One App.
+            Everything That Makes PawVital Different
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Like having a vet, nutritionist, and pet health expert in your pocket —
-            available 24/7 for less than a bag of treats.
+            Evidence-based analysis, not generic checklists. See what&apos;s under
+            the hood.
           </p>
+        </motion.div>
+
+        {/* Desktop: Tabbed interface */}
+        <div className="hidden lg:block">
+          {/* Tabs */}
+          <motion.div
+            className="flex gap-2 mb-10 justify-center flex-wrap"
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
+            {features.map((f, idx) => {
+              const c = colorMap[f.color];
+              const isActive = idx === activeIdx;
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => setActiveIdx(idx)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 border-2 ${
+                    isActive
+                      ? `${c.tabActive} ${c.tab}`
+                      : "border-transparent text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <f.icon className="w-4 h-4" />
+                  {f.title}
+                </button>
+              );
+            })}
+          </motion.div>
+
+          {/* Active feature display */}
+          <motion.div
+            key={active.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className={`grid grid-cols-2 gap-12 items-center ${colors.bg} rounded-3xl p-12`}
+          >
+            <div>
+              <div
+                className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl ${colors.iconBg} ${colors.icon} mb-6`}
+              >
+                <active.icon className="w-7 h-7" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                {active.title}
+              </h3>
+              <p className="text-gray-600 text-lg leading-relaxed">
+                {active.description}
+              </p>
+            </div>
+            <div>
+              {active.illustration ? (
+                <active.illustration className="w-full h-auto max-h-60 mx-auto" />
+              ) : (
+                <PlaceholderIllustration
+                  icon={active.icon}
+                  color={active.color}
+                  className="w-full h-60"
+                />
+              )}
+            </div>
+          </motion.div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature) => {
-            const colors = colorMap[feature.color];
+        {/* Mobile: Alternating cards */}
+        <div className="lg:hidden space-y-8">
+          {features.map((f, idx) => {
+            const c = colorMap[f.color];
             return (
-              <div
-                key={feature.title}
-                className={`${colors.bg} border ${colors.border} rounded-2xl p-8 hover:shadow-lg transition-all duration-300`}
+              <motion.div
+                key={f.id}
+                className={`${c.bg} rounded-2xl p-8`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.4, delay: idx * 0.08 }}
               >
-                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${colors.bg} ${colors.icon}`}>
-                  <feature.icon className="w-6 h-6" />
+                <div
+                  className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${c.iconBg} ${c.icon} mb-4`}
+                >
+                  <f.icon className="w-6 h-6" />
                 </div>
-                <h3 className="mt-4 text-xl font-bold text-gray-900">{feature.title}</h3>
-                <p className="mt-2 text-gray-600 leading-relaxed">{feature.description}</p>
-              </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {f.title}
+                </h3>
+                <p className="text-gray-600 leading-relaxed">
+                  {f.description}
+                </p>
+              </motion.div>
             );
           })}
         </div>
