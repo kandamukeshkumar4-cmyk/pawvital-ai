@@ -47,6 +47,10 @@ import {
   shouldUseImageInferredBreed,
 } from "@/lib/pet-enrichment";
 import {
+  formatBreedRiskContext,
+  getBreedRiskProfiles,
+} from "@/lib/breed-risk";
+import {
   buildReferenceImageQuery,
   buildKnowledgeSearchQuery,
   searchReferenceImages,
@@ -1757,6 +1761,16 @@ async function generateReport(
   };
   const knowledgeContext = formatRetrievalTextContext(retrievalBundle);
   const referenceImageContext = formatRetrievalImageContext(retrievalBundle);
+  let breedRiskContext = "";
+
+  if (pet.breed) {
+    try {
+      const breedRiskProfiles = await getBreedRiskProfiles(pet.breed);
+      breedRiskContext = formatBreedRiskContext(breedRiskProfiles);
+    } catch (error) {
+      console.error("[Report] Breed risk lookup failed:", error);
+    }
+  }
 
   // Supplementary: search for similar clinical cases from CSV corpus
   let clinicalCaseContext = '';
@@ -1837,6 +1851,7 @@ EVIDENCE CHAIN:
 ${formatEvidenceChainForReport(session)}
 
 ${session.image_inferred_breed ? `IMAGE-INFERRED BREED SIGNAL: ${session.image_inferred_breed} (${Math.round((session.image_inferred_breed_confidence || 0) * 100)}% confidence)\n` : ""}${session.breed_profile_summary ? `EXTERNAL BREED PROFILE: ${session.breed_profile_summary}\n` : ""}${session.roboflow_skin_summary ? `ROBOFLOW SKIN FLAG: ${session.roboflow_skin_summary}\n` : ""}${knowledgeContext ? `EXTERNAL KNOWLEDGE RETRIEVAL (trusted public corpus; use to support, not replace, the matrix ranking):\n${knowledgeContext}\n` : ""}
+${breedRiskContext ? `${breedRiskContext}\n` : ""}
 ${referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases; use as supportive visual context, not a diagnosis by itself):\n${referenceImageContext}\n` : ""}
 ${clinicalCaseContext ? `SIMILAR CLINICAL CASES (CSV corpus; use as supplementary case-similarity evidence, not a replacement for matrix ranking):\n${clinicalCaseContext}\n` : ""}
 
