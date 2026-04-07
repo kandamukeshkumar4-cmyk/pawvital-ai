@@ -69,7 +69,7 @@ export default function UrgencyDistribution({ entries }: { entries: SymptomCheck
               border: "1px solid #e5e7eb",
               fontSize: 12,
             }}
-            formatter={(value: number | string, name: string) => [`${value}`, name]}
+            formatter={(value, name) => [`${value ?? 0}`, String(name)]}
           />
         </PieChart>
       </ResponsiveContainer>

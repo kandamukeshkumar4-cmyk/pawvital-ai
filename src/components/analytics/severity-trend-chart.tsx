@@ -72,7 +72,7 @@ export default function SeverityTrendChart({ entries }: { entries: SymptomCheckE
               }
               return "";
             }}
-            formatter={(value: number | string) => [TICK_LABELS[Number(value)] ?? value, "Severity"]}
+            formatter={(value) => [TICK_LABELS[Number(value ?? 0)] ?? String(value ?? ""), "Severity"]}
           />
           <Line
             type="monotone"

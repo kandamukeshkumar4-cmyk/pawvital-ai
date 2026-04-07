@@ -52,7 +52,7 @@ export default function SymptomFrequencyChart({ entries }: { entries: SymptomChe
               border: "1px solid #e5e7eb",
               fontSize: 12,
             }}
-            formatter={(value: number | string) => [`${value}`, "Checks"]}
+            formatter={(value) => [`${value ?? 0}`, "Checks"]}
           />
           <Bar dataKey="count" name="Checks" fill="#2563eb" radius={[0, 6, 6, 0]} />
         </BarChart>

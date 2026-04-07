@@ -15,8 +15,9 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
   const [clientNowMs, setClientNowMs] = useState<number | null>(null);
 
   useEffect(() => {
-    setClientNowMs(Date.now());
-    const id = window.setInterval(() => setClientNowMs(Date.now()), 60_000);
+    const tick = () => setClientNowMs(Date.now());
+    queueMicrotask(tick);
+    const id = window.setInterval(tick, 60_000);
     return () => window.clearInterval(id);
   }, []);
 

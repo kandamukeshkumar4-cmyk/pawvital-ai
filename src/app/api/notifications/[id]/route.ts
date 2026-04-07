@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import {
   generalApiLimiter,
@@ -7,8 +7,8 @@ import {
 } from "@/lib/rate-limit";
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
 ) {
   const rateLimitResult = await checkRateLimit(
     generalApiLimiter,
@@ -28,7 +28,7 @@ export async function PATCH(
     );
   }
 
-  const { id } = params;
+  const { id } = await context.params;
   if (!id || typeof id !== "string") {
     return NextResponse.json(
       { error: "Invalid notification id" },

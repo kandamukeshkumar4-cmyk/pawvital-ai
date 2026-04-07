@@ -52,7 +52,9 @@ export function ComparativeHealth({ stats }: ComparativeHealthProps) {
         <select 
           className="mt-3 sm:mt-0 text-sm border-slate-200 rounded-lg bg-slate-50 text-slate-700"
           value={sortParam}
-          onChange={(e) => setSortParam(e.target.value as any)}
+          onChange={(e) =>
+            setSortParam(e.target.value as "date" | "severity" | "name")
+          }
         >
           <option value="severity">Sort by Urgency</option>
           <option value="date">Sort by Last Check</option>
@@ -72,9 +74,21 @@ export function ComparativeHealth({ stats }: ComparativeHealthProps) {
             >
               <div className="flex justify-between items-center mb-2">
                 <h3 className="font-semibold text-slate-800">{pet.name}</h3>
-                {trend === "up" && <ArrowDownRight className="w-4 h-4 text-rose-500" title="Severity trending up" />}
-                {trend === "down" && <ArrowUpRight className="w-4 h-4 text-emerald-500" title="Severity trending down" />}
-                {trend === "stable" && <ArrowRight className="w-4 h-4 text-slate-400" title="Severity stable" />}
+                {trend === "up" && (
+                  <span className="inline-flex" title="Severity trending up">
+                    <ArrowDownRight className="w-4 h-4 text-rose-500" aria-hidden />
+                  </span>
+                )}
+                {trend === "down" && (
+                  <span className="inline-flex" title="Severity trending down">
+                    <ArrowUpRight className="w-4 h-4 text-emerald-500" aria-hidden />
+                  </span>
+                )}
+                {trend === "stable" && (
+                  <span className="inline-flex" title="Severity stable">
+                    <ArrowRight className="w-4 h-4 text-slate-400" aria-hidden />
+                  </span>
+                )}
               </div>
 
               {needsAttention && (
