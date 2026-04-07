@@ -1,152 +1,190 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
+import { Heart, CheckCheck } from "lucide-react";
+import { CollapsibleSection } from "./collapsible-section";
+import type { SymptomReport } from "./types";
 
-interface OutcomeFeedbackFormProps {
-  check_id?: string | null;
+interface OutcomeFeedbackSectionProps {
+  report: SymptomReport;
+  onSubmit?: (payload: {
+    symptomCheckId: string;
+    matchedExpectation: "yes" | "partly" | "no";
+    confirmedDiagnosis: string;
+    vetOutcome: string;
+    ownerNotes: string;
+  }) => void | Promise<void>;
 }
 
-type VetConfirmedValue = "yes" | "no";
-type SubmitState = "idle" | "submitting" | "success" | "error";
+export function OutcomeFeedbackSection({
+  report,
+  onSubmit,
+}: OutcomeFeedbackSectionProps) {
+  const [feedbackState, setFeedbackState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+  const [matchedExpectation, setMatchedExpectation] = useState<
+    "yes" | "partly" | "no"
+  >("partly");
+  const [confirmedDiagnosis, setConfirmedDiagnosis] = useState("");
+  const [vetOutcome, setVetOutcome] = useState("");
+  const [ownerNotes, setOwnerNotes] = useState("");
 
-export function OutcomeFeedbackForm({ check_id }: OutcomeFeedbackFormProps) {
-  const [reportedDiagnosis, setReportedDiagnosis] = useState("");
-  const [vetConfirmed, setVetConfirmed] = useState<VetConfirmedValue>("yes");
-  const [outcomeNotes, setOutcomeNotes] = useState("");
-  const [submitState, setSubmitState] = useState<SubmitState>("idle");
-  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
+  if (!report.outcome_feedback_enabled || !report.report_storage_id) {
+    return null;
+  }
 
-  const storageKey = useMemo(() => {
-    if (!check_id) return null;
-    return `outcome-feedback-submitted:${check_id}`;
-  }, [check_id]);
+  const submitOutcomeFeedback = async () => {
+    if (!report.report_storage_id || feedbackState === "saving") return;
 
-  useEffect(() => {
-    if (!storageKey) return;
-    const submitted = window.localStorage.getItem(storageKey) === "true";
-    if (submitted) {
-      setAlreadySubmitted(true);
-      setSubmitState("success");
+    if (onSubmit) {
+      setFeedbackState("saving");
+      try {
+        await onSubmit({
+          symptomCheckId: report.report_storage_id,
+          matchedExpectation,
+          confirmedDiagnosis,
+          vetOutcome,
+          ownerNotes,
+        });
+        setFeedbackState("saved");
+      } catch {
+        setFeedbackState("error");
+      }
+      return;
     }
-  }, [storageKey]);
 
-  if (!check_id) return null;
-
-  const disabled = alreadySubmitted || submitState === "submitting";
-
-  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (disabled) return;
-
-    setSubmitState("submitting");
+    setFeedbackState("saving");
     try {
-      const response = await fetch("/api/outcomes", {
+      const response = await fetch("/api/ai/outcome-feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          check_id,
-          reported_diagnosis: reportedDiagnosis.trim(),
-          vet_confirmed: vetConfirmed === "yes",
-          outcome_notes: outcomeNotes.trim() || null,
+          symptomCheckId: report.report_storage_id,
+          matchedExpectation,
+          confirmedDiagnosis,
+          vetOutcome,
+          ownerNotes,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Outcome submission failed");
+        throw new Error("Feedback request failed");
       }
 
-      if (storageKey) {
-        window.localStorage.setItem(storageKey, "true");
-      }
-      setAlreadySubmitted(true);
-      setSubmitState("success");
+      setFeedbackState("saved");
     } catch {
-      setSubmitState("error");
+      setFeedbackState("error");
     }
   };
 
   return (
-    <section className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
-      <h3 className="text-sm font-semibold text-gray-900">Outcome Feedback</h3>
-      <p className="mt-1 text-xs text-gray-600">
-        Share your vet visit outcome so we can improve future differential quality.
-      </p>
+    <CollapsibleSection
+      title="After Your Vet Visit"
+      icon={Heart}
+      iconColor="text-emerald-600"
+      defaultOpen={false}
+    >
+      <div className="space-y-4 mt-2">
+        <p className="text-sm text-gray-600">
+          Sharing the confirmed outcome helps PawVital get better at thresholds,
+          retrieval quality, and ambiguity handling over time.
+        </p>
 
-      <form onSubmit={onSubmit} className="mt-4 space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-900" htmlFor="reported_diagnosis">
-            Reported diagnosis
+          <label className="block text-sm font-medium text-gray-900 mb-2">
+            How close was this report to what your vet said?
           </label>
-          <input
-            id="reported_diagnosis"
-            value={reportedDiagnosis}
-            onChange={(e) => setReportedDiagnosis(e.target.value)}
-            disabled={disabled}
-            required
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-            placeholder="Example: otitis externa"
-          />
-        </div>
-
-        <div>
-          <p className="mb-1 text-sm font-medium text-gray-900">Vet confirmed?</p>
-          <div className="flex gap-2">
-            {(["yes", "no"] as const).map((value) => (
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ["yes", "Very close"],
+                ["partly", "Partly right"],
+                ["no", "Not close"],
+              ] as const
+            ).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
-                disabled={disabled}
-                onClick={() => setVetConfirmed(value)}
-                className={`rounded-full border px-3 py-1 text-sm ${
-                  vetConfirmed === value
-                    ? "border-emerald-500 bg-emerald-100 text-emerald-800"
-                    : "border-gray-300 bg-white text-gray-700"
+                onClick={() => setMatchedExpectation(value)}
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                  matchedExpectation === value
+                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                    : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                 }`}
               >
-                {value === "yes" ? "Yes" : "No"}
+                {label}
               </button>
             ))}
           </div>
         </div>
 
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Confirmed diagnosis
+            </label>
+            <input
+              value={confirmedDiagnosis}
+              onChange={(event) => setConfirmedDiagnosis(event.target.value)}
+              placeholder="Example: otitis externa"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">
+              Vet outcome
+            </label>
+            <input
+              value={vetOutcome}
+              onChange={(event) => setVetOutcome(event.target.value)}
+              placeholder="Example: ear cytology + meds prescribed"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        </div>
+
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-900" htmlFor="outcome_notes">
-            Outcome notes (optional)
+          <label className="block text-sm font-medium text-gray-900 mb-1">
+            Notes
           </label>
           <textarea
-            id="outcome_notes"
-            value={outcomeNotes}
-            onChange={(e) => setOutcomeNotes(e.target.value)}
-            disabled={disabled}
+            value={ownerNotes}
+            onChange={(event) => setOwnerNotes(event.target.value)}
             rows={3}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-            placeholder="Any vet findings, ruled-out conditions, or treatment notes."
+            placeholder="Anything useful that the vet found, ruled out, or corrected."
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
-            type="submit"
-            disabled={disabled}
-            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            type="button"
+            onClick={submitOutcomeFeedback}
+            disabled={feedbackState === "saving" || feedbackState === "saved"}
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-60"
           >
-            {submitState === "submitting"
-              ? "Submitting..."
-              : alreadySubmitted
-              ? "Already Submitted"
-              : "Submit Feedback"}
+            {feedbackState === "saved" ? (
+              <CheckCheck className="w-4 h-4" />
+            ) : null}
+            {feedbackState === "saving"
+              ? "Saving..."
+              : feedbackState === "saved"
+                ? "Feedback Saved"
+                : "Save Outcome Feedback"}
           </button>
-
-          {submitState === "success" && (
-            <p className="text-sm text-emerald-700">
-              Thank you — this helps improve future diagnoses
-            </p>
+          {feedbackState === "error" && (
+            <span className="text-sm text-red-600">
+              I couldn&apos;t save that right now. Please try again in a moment.
+            </span>
           )}
-          {submitState === "error" && (
-            <p className="text-sm text-red-600">Could not submit feedback. Please try again.</p>
+          {feedbackState === "saved" && (
+            <span className="text-sm text-emerald-700">
+              Thanks. This case can now be used for future quality review.
+            </span>
           )}
         </div>
-      </form>
-    </section>
+      </div>
+    </CollapsibleSection>
   );
 }
