@@ -120,9 +120,11 @@ import {
   appendSidecarObservation,
   buildObservabilitySnapshot,
   describeShadowComparison,
+  INTERNAL_TELEMETRY_STAGES,
   isShadowModeEnabledForService,
 } from "@/lib/sidecar-observability";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
+import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
 import { emit, EventType } from "@/lib/events/event-bus";
 import "@/lib/events/notification-handler";
@@ -210,13 +212,29 @@ export async function POST(request: Request) {
       effectivePet = getEffectivePetProfile(pet, session);
     }
 
+    // ── Server-side identity (VET-825) ──────────────────────────────────
+    // Resolve the authenticated user server-side so REPORT_READY / URGENCY_HIGH
+    // can be emitted with a trusted userId. Falls back to null in demo mode or
+    // when the session cookie is absent — emissions are skipped in that case.
+    let verifiedUserId: string | null = null;
+    try {
+      const supabase = await createServerSupabaseClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      verifiedUserId = user?.id ?? null;
+    } catch {
+      // Demo mode or misconfigured Supabase — safe to continue without auth
+    }
+
     if (action === "generate_report") {
       return await generateReport(
         session,
         effectivePet,
         messages,
         image,
-        new URL(request.url).origin
+        new URL(request.url).origin,
+        verifiedUserId
       );
     }
 
@@ -1709,7 +1727,8 @@ async function generateReport(
   pet: PetProfile,
   messages: { role: string; content: string }[],
   image?: string,
-  requestOrigin?: string
+  requestOrigin?: string,
+  verifiedUserId?: string | null
 ) {
   if (
     isLikelyDogContext(pet) &&
@@ -2039,12 +2058,31 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       console.error("[DB] Failed to save triage session:", saveError);
     }
 
-    // Only emit REPORT_READY when a verified server-side user ID is available.
-    // pet.user_id comes from the client request body and must not be trusted
-    // as an authoritative identity. Until this route is wired to server auth,
-    // we skip the emission to prevent cross-user notification injection.
-    // TODO(VET-825): obtain userId from createServerSupabaseClient().auth.getUser()
-    //                once server-auth is added to this route.
+    // Emit post-report notifications using the server-verified userId (VET-825).
+    // verifiedUserId comes from auth.getUser() at the top of POST(), never from
+    // the client request body — this prevents cross-user notification injection.
+    if (verifiedUserId && reportStorageId) {
+      emit(EventType.REPORT_READY, {
+        userId: verifiedUserId,
+        sessionId: session.id,
+        reportStorageId,
+        urgency: context.highest_urgency,
+        petName: pet.name ?? "your pet",
+      });
+
+      if (
+        context.highest_urgency === "emergency" ||
+        context.highest_urgency === "high"
+      ) {
+        emit(EventType.URGENCY_HIGH, {
+          userId: verifiedUserId,
+          sessionId: session.id,
+          urgency: context.highest_urgency as "emergency" | "high",
+          petName: pet.name ?? "your pet",
+          topDiagnosis: context.top5[0]?.medical_term ?? "Unknown",
+        });
+      }
+    }
 
     return NextResponse.json({ type: "report", report: finalReport });
   } catch (error) {
@@ -4458,7 +4496,9 @@ function sanitizeSessionForClient(session: TriageSession): TriageSession {
     ...session.case_memory,
     // Strictly filter out internal service observations
     service_observations: (session.case_memory.service_observations || []).filter(
-      (item) => item.service !== "async-review-service"
+      (item) =>
+        item.service !== "async-review-service" &&
+        !INTERNAL_TELEMETRY_STAGES.has(item.stage)
     ),
     // Hide developer-only comparison data from client responses
     shadow_comparisons: [],
@@ -4470,4 +4510,3 @@ function sanitizeSessionForClient(session: TriageSession): TriageSession {
     case_memory: sanitizedMemory,
   };
 }
-

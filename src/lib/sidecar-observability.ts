@@ -29,7 +29,7 @@ const SERVICE_SHADOW_MODE_FLAGS: Record<SidecarServiceName, boolean> = {
   "async-review-service": parseBooleanEnv(process.env.HF_SHADOW_ASYNC_REVIEW),
 };
 
-const INTERNAL_TELEMETRY_STAGES = new Set([
+export const INTERNAL_TELEMETRY_STAGES = new Set([
   "compression",
   "extraction",
   "pending_recovery",

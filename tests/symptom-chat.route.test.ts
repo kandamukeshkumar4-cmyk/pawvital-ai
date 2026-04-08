@@ -22,6 +22,7 @@ const mockDetectBreedWithNyckel = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
 const mockEvaluateImageGate = jest.fn();
 const mockShouldAnalyzeWoundImage = jest.fn();
+const mockComputeBayesianScore = jest.fn();
 const mockCompressCaseMemoryWithMiniMax = jest.fn();
 const mockPreprocessVeterinaryImage = jest.fn();
 const mockConsultWithMultimodalSidecar = jest.fn();
@@ -71,6 +72,10 @@ jest.mock("@/lib/image-gate", () => ({
   evaluateImageGate: (...args: unknown[]) => mockEvaluateImageGate(...args),
   shouldAnalyzeWoundImage: (...args: unknown[]) =>
     mockShouldAnalyzeWoundImage(...args),
+}));
+
+jest.mock("@/lib/bayesian-scorer", () => ({
+  computeBayesianScore: (...args: unknown[]) => mockComputeBayesianScore(...args),
 }));
 
 jest.mock("@/lib/pet-enrichment", () => ({
@@ -285,6 +290,7 @@ describe("symptom-chat mixed text + image routing", () => {
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: [], answers: {} })
     );
+    mockComputeBayesianScore.mockResolvedValue([]);
     mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
       summary:
         "Bruno remains in a limping triage flow with left-sided limb concerns and possible wound evidence from the latest photo.",
@@ -3378,6 +3384,14 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
 });
 
 describe("VET-725: asked-state regression pack", () => {
+  const INTERNAL_STAGES = [
+    "compression",
+    "extraction",
+    "pending_recovery",
+    "repeat_suppression",
+    "state_transition",
+  ];
+
   function assertVet725AskedStatePayloadSafe(payload: {
     type?: unknown;
     message?: unknown;
@@ -3422,6 +3436,8 @@ describe("VET-725: asked-state regression pack", () => {
       const note = String(obs.note ?? "");
       expect(note).not.toContain("question_state=");
       expect(note).not.toContain("conversation_state=");
+      expect(String(obs.service ?? "")).not.toBe("async-review-service");
+      expect(INTERNAL_STAGES).not.toContain(String(obs.stage ?? ""));
     }
   }
 
@@ -3569,7 +3585,93 @@ describe("VET-725: asked-state regression pack", () => {
     expect(payload2.session.last_question_asked).toBe("limping_progression");
   });
 
+  it("VET-828: state_transition observations are stripped from client session payload", async () => {
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+    let session = createSession();
+    session.case_memory = {
+      ...(session.case_memory ?? {}),
+      service_observations: [
+        {
+          service: "async-review-service",
+          stage: "state_transition",
+          latencyMs: 0,
+          outcome: "success",
+          shadowMode: false,
+          fallbackUsed: false,
+          note: "question_state=unanswered→answered for vomit_duration",
+          recordedAt: new Date().toISOString(),
+        },
+        {
+          service: "vision-preprocess-service",
+          stage: "preprocess",
+          latencyMs: 120,
+          outcome: "success",
+          shadowMode: false,
+          fallbackUsed: false,
+          recordedAt: new Date().toISOString(),
+        },
+      ],
+    };
+
+    const response = await POST(
+      makeTextOnlyRequest(session, "He's still vomiting.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload);
+
+    const caseMemory =
+      ((payload.session?.case_memory as Record<string, unknown> | undefined) ??
+        {});
+    const observations =
+      (caseMemory.service_observations as Array<Record<string, unknown>> | undefined) ??
+      [];
+
+    for (const obs of observations) {
+      expect(String(obs.service ?? "")).not.toBe("async-review-service");
+      expect(INTERNAL_STAGES).not.toContain(String(obs.stage ?? ""));
+    }
+
+    const survived = observations.some(
+      (obs) => String(obs.service ?? "") === "vision-preprocess-service"
+    );
+    expect(survived).toBe(true);
+  });
+
   describe("VET-825 - server-auth REPORT_READY / URGENCY_HIGH emission", () => {
+    jest.setTimeout(20_000);
+
+    beforeEach(() => {
+      mockEmit.mockClear();
+      mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
+      mockSaveSymptomReportToDB.mockResolvedValue(null);
+      mockComputeBayesianScore.mockResolvedValue([]);
+      mockDiagnoseWithDeepSeek.mockResolvedValue(
+        JSON.stringify({
+          severity: "medium",
+          recommendation: "vet_48h",
+          title: "Localized skin lesion",
+          explanation: "Explanation",
+          differential_diagnoses: [],
+          clinical_notes: "Notes",
+          recommended_tests: [],
+          home_care: [],
+          actions: [],
+          warning_signs: [],
+          vet_questions: [],
+        })
+      );
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Report is clinically sound",
+        })
+      );
+    });
+
     it("emits REPORT_READY for the authenticated server-side user instead of pet.user_id", async () => {
       mockCreateServerSupabaseClient.mockResolvedValue(
         buildAuthSupabase("user-abc-123")
