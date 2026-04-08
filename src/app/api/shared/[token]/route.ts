@@ -117,8 +117,27 @@ export async function GET(
     );
   }
 
+  // The RPC is the authoritative access-control gate. If it returns empty,
+  // treat that as a hard denial — do not fall back to the direct-select row.
+  // This prevents a scenario where RLS or function drift causes the RPC to
+  // return nothing while the direct select succeeded.
   const rows = Array.isArray(rpcData) ? (rpcData as SharedReportRow[]) : [];
-  const reportRow = rows[0] ?? row;
+  if (rows.length === 0) {
+    return NextResponse.json({ error: "Shared report not found" }, { status: 404 });
+  }
+  const reportRow = rows[0];
+
+  // Re-validate expiry against the RPC row — not just the direct-select row —
+  // so that a divergence between the two (e.g. after a schema migration or
+  // function drift) cannot serve an expired report.
+  const reportExpiresAt = new Date(reportRow.expires_at);
+  if (!Number.isFinite(reportExpiresAt.getTime()) || reportExpiresAt.getTime() <= Date.now()) {
+    return NextResponse.json(
+      { error: "Shared report has expired" },
+      { status: 410 }
+    );
+  }
+
   const report = parseSharedReport(reportRow.ai_response);
 
   if (!report) {
