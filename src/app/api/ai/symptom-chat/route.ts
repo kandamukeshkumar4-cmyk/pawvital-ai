@@ -110,6 +110,7 @@ import {
 import {
   transitionToAnswered,
   transitionToAsked,
+  transitionToConfirmed,
 } from "@/lib/conversation-state";
 import {
   compressCaseMemoryWithMiniMax,
@@ -996,6 +997,18 @@ export async function POST(request: Request) {
           "I have enough information. Let me generate your full veterinary report.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+      });
+    }
+
+    const lastAnsweredQuestionId = session.last_question_asked;
+    if (
+      lastAnsweredQuestionId &&
+      session.answered_questions.includes(lastAnsweredQuestionId)
+    ) {
+      session = transitionToConfirmed({
+        session,
+        questionId: lastAnsweredQuestionId,
+        reason: "answer_acknowledged",
       });
     }
 
