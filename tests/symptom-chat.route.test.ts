@@ -8,6 +8,7 @@ import type { SidecarObservation } from "@/lib/clinical-evidence";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
+const mockCreateServerSupabaseClient = jest.fn();
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
 const mockReviewQuestionPlanWithNemotron = jest.fn();
@@ -30,11 +31,25 @@ const mockIsImageRetrievalConfigured = jest.fn();
 const mockRetrieveVeterinaryTextEvidence = jest.fn();
 const mockRetrieveVeterinaryImageEvidence = jest.fn();
 const mockEnqueueAsyncReview = jest.fn();
+const mockSaveSymptomReportToDB = jest.fn();
+const mockEmit = jest.fn();
+const mockEventType = {
+  REPORT_READY: "REPORT_READY",
+  URGENCY_HIGH: "URGENCY_HIGH",
+  OUTCOME_REQUESTED: "OUTCOME_REQUESTED",
+  SUBSCRIPTION_CHANGED: "SUBSCRIPTION_CHANGED",
+  PET_ADDED: "PET_ADDED",
+} as const;
 
 jest.mock("@/lib/rate-limit", () => ({
   symptomChatLimiter: {},
   checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
   getRateLimitId: (...args: unknown[]) => mockGetRateLimitId(...args),
+}));
+
+jest.mock("@/lib/supabase-server", () => ({
+  createServerSupabaseClient: (...args: unknown[]) =>
+    mockCreateServerSupabaseClient(...args),
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
@@ -116,6 +131,18 @@ jest.mock("@/lib/async-review-client", () => ({
   enqueueAsyncReview: (...args: unknown[]) => mockEnqueueAsyncReview(...args),
 }));
 
+jest.mock("@/lib/report-storage", () => ({
+  saveSymptomReportToDB: (...args: unknown[]) =>
+    mockSaveSymptomReportToDB(...args),
+}));
+
+jest.mock("@/lib/events/event-bus", () => ({
+  EventType: mockEventType,
+  emit: (...args: unknown[]) => mockEmit(...args),
+}));
+
+jest.mock("@/lib/events/notification-handler", () => ({}));
+
 const PET = {
   name: "Bruno",
   breed: "Golden Retriever",
@@ -171,18 +198,77 @@ function makeTextOnlyRequest(session: TriageSession, message: string) {
   });
 }
 
-function makeReportRequest(session: TriageSession, image?: string) {
+function makeReportRequest(
+  session: TriageSession,
+  image?: string,
+  petOverrides: Record<string, unknown> = {}
+) {
   return new Request("http://localhost/api/ai/symptom-chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "generate_report",
-      pet: PET,
+      pet: {
+        ...PET,
+        ...petOverrides,
+      },
       session,
       image,
       messages: [{ role: "user", content: "Please generate the report." }],
     }),
   });
+}
+
+function buildAuthSupabase(userId: string | null) {
+  return {
+    auth: {
+      getUser: jest.fn().mockResolvedValue({
+        data: {
+          user: userId ? { id: userId } : null,
+        },
+      }),
+    },
+  };
+}
+
+function buildModerateReportSession() {
+  let session = createSession();
+  session = addSymptoms(session, ["excessive_scratching"]);
+  session = recordAnswer(session, "scratch_location", "ears");
+  session.case_memory = {
+    ...session.case_memory!,
+    latest_owner_turn: "He keeps scratching around his ears.",
+  };
+
+  return session;
+}
+
+function buildEmergencyReportSession() {
+  let session = createSession();
+  session = addSymptoms(session, ["vomiting"]);
+  session = recordAnswer(session, "vomit_blood", true);
+  session.red_flags_triggered = ["vomit_blood"];
+  session.case_memory = {
+    ...session.case_memory!,
+    latest_owner_turn: "He vomited blood this morning.",
+  };
+
+  return session;
+}
+
+function getEmitCalls(eventType: string) {
+  return mockEmit.mock.calls.filter(([type]) => type === eventType);
+}
+
+function getFirstEmitPayload<T extends Record<string, unknown>>(
+  eventType: string
+) {
+  const firstCall = getEmitCalls(eventType)[0];
+  return (firstCall?.[1] ?? null) as T | null;
+}
+
+function emittedArgsContain(value: string) {
+  return mockEmit.mock.calls.some((call) => JSON.stringify(call).includes(value));
 }
 
 describe("symptom-chat mixed text + image routing", () => {
@@ -195,6 +281,7 @@ describe("symptom-chat mixed text + image routing", () => {
       reset: Date.now() + 60_000,
     });
     mockGetRateLimitId.mockReturnValue("test-user");
+    mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: [], answers: {} })
     );
@@ -239,6 +326,7 @@ describe("symptom-chat mixed text + image routing", () => {
       sourceCitations: [],
     });
     mockEnqueueAsyncReview.mockResolvedValue(true);
+    mockSaveSymptomReportToDB.mockResolvedValue(null);
     mockDiagnoseWithDeepSeek.mockResolvedValue(
       JSON.stringify({
         severity: "medium",
@@ -3479,5 +3567,139 @@ describe("VET-725: asked-state regression pack", () => {
     assertVet725AskedStatePayloadSafe(payload2);
     expect(payload2.type).toBe("question");
     expect(payload2.session.last_question_asked).toBe("limping_progression");
+  });
+
+  describe("VET-825 - server-auth REPORT_READY / URGENCY_HIGH emission", () => {
+    it("emits REPORT_READY for the authenticated server-side user instead of pet.user_id", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-abc-123")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-123");
+
+      const session = buildModerateReportSession();
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(session, undefined, { user_id: "evil-client-id" })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+      expect(getFirstEmitPayload<{ userId: string }>(mockEventType.REPORT_READY))
+        .toEqual(
+          expect.objectContaining({
+            userId: "user-abc-123",
+          })
+        );
+      expect(emittedArgsContain("evil-client-id")).toBe(false);
+    });
+
+    it("does not emit REPORT_READY when the request is unauthenticated", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
+      mockSaveSymptomReportToDB.mockResolvedValue("report-123");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      await POST(makeReportRequest(buildModerateReportSession()));
+
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+
+    it("skips emission in demo mode when server auth throws and still returns the report", async () => {
+      mockCreateServerSupabaseClient.mockRejectedValue(new Error("DEMO_MODE"));
+      mockSaveSymptomReportToDB.mockResolvedValue("report-123");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+
+    it("does not emit when the report is not saved even if the user is authenticated", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-abc-123")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue(null);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      await POST(makeReportRequest(buildModerateReportSession()));
+
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+      expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(0);
+    });
+
+    it("emits REPORT_READY and URGENCY_HIGH for authenticated emergency reports", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-emergency-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-emergency-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+      expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(1);
+      expect(getFirstEmitPayload<{ userId: string }>(mockEventType.REPORT_READY))
+        .toEqual(
+          expect.objectContaining({
+            userId: "user-emergency-1",
+          })
+        );
+      expect(
+        getFirstEmitPayload<{ userId: string; urgency: string }>(
+          mockEventType.URGENCY_HIGH
+        )
+      ).toEqual(
+        expect.objectContaining({
+          userId: "user-emergency-1",
+          urgency: "emergency",
+        })
+      );
+    });
+
+    it("does not emit URGENCY_HIGH for a moderate report", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-moderate-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-moderate-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+      expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(0);
+    });
+
+    it("guards against cross-user notification injection by always using the verified auth user", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("real-user-uuid")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-guard-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      await POST(
+        makeReportRequest(buildModerateReportSession(), undefined, {
+          user_id: "attacker-uuid",
+        })
+      );
+
+      expect(getFirstEmitPayload<{ userId: string }>(mockEventType.REPORT_READY))
+        .toEqual(
+          expect.objectContaining({
+            userId: "real-user-uuid",
+          })
+        );
+      expect(emittedArgsContain("attacker-uuid")).toBe(false);
+    });
   });
 });
