@@ -51,7 +51,8 @@ CREATE TABLE pets (
   medications TEXT[] DEFAULT '{}',
   photo_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ
 );
 
 -- Health scores

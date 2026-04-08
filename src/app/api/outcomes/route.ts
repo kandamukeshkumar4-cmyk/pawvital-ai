@@ -6,6 +6,8 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { emit, EventType } from "@/lib/events/event-bus";
+import "@/lib/events/notification-handler";
 
 const OutcomeSubmissionSchema = z.object({
   check_id: z.string().uuid(),
@@ -120,6 +122,10 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  // Do not emit OUTCOME_REQUESTED here — the outcome has already been recorded.
+  // Emitting a reminder after a successful submission creates a contradictory
+  // notification asking the user for information they just provided.
 
   return NextResponse.json({ data: outcome }, { status: 201 });
 }

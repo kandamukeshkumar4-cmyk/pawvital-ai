@@ -119,6 +119,8 @@ import {
   isShadowModeEnabledForService,
 } from "@/lib/sidecar-observability";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
+import { emit, EventType } from "@/lib/events/event-bus";
+import "@/lib/events/notification-handler";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -2000,8 +2002,9 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       console.error("[Bayesian] Failed to score report differentials:", bayesianError);
     }
 
+    let reportStorageId: string | null = null;
     try {
-      const reportStorageId = await saveSymptomReportToDB(
+      reportStorageId = await saveSymptomReportToDB(
         session,
         pet,
         finalReport
@@ -2013,6 +2016,13 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     } catch (saveError) {
       console.error("[DB] Failed to save triage session:", saveError);
     }
+
+    // Only emit REPORT_READY when a verified server-side user ID is available.
+    // pet.user_id comes from the client request body and must not be trusted
+    // as an authoritative identity. Until this route is wired to server auth,
+    // we skip the emission to prevent cross-user notification injection.
+    // TODO(VET-825): obtain userId from createServerSupabaseClient().auth.getUser()
+    //                once server-auth is added to this route.
 
     return NextResponse.json({ type: "report", report: finalReport });
   } catch (error) {

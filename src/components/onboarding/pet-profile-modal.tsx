@@ -5,6 +5,7 @@ import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Button from "@/components/ui/button";
+import { useEffect, useRef } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { PET_ONBOARDING_DISMISSED_KEY } from "@/lib/demo-storage";
 import { useAppStore } from "@/store/app-store";
@@ -80,6 +81,39 @@ export default function PetProfileModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const [breedSuggestions, setBreedSuggestions] = useState<{id: string; name: string}[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!breed.trim() || species === "other") {
+      setBreedSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/breeds?species=${species}&q=${encodeURIComponent(breed)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setBreedSuggestions(data.breeds || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch breeds", err);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [breed, species]);
+
   const validate = (): boolean => {
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = "Pet name is required";
@@ -151,13 +185,37 @@ export default function PetProfileModal({
             { value: "other", label: "Other" },
           ]}
         />
-        <Input
-          label="Breed"
-          value={breed}
-          onChange={(e) => setBreed(e.target.value)}
-          placeholder="Breed or best description"
-          error={errors.breed}
-        />
+        <div className="relative" ref={suggestionRef}>
+          <Input
+            label="Breed"
+            value={breed}
+            onChange={(e) => {
+              setBreed(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => {
+              if (breed.trim() && species !== "other") setShowSuggestions(true);
+            }}
+            placeholder="Breed or best description"
+            error={errors.breed}
+          />
+          {showSuggestions && breedSuggestions.length > 0 && (
+            <div className="absolute z-10 top-full left-0 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+              {breedSuggestions.map((b) => (
+                <div
+                  key={b.id}
+                  className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm text-gray-700"
+                  onClick={() => {
+                    setBreed(b.name);
+                    setShowSuggestions(false);
+                  }}
+                >
+                  {b.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Age"
