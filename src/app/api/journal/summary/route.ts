@@ -98,20 +98,25 @@ export async function POST(request: Request) {
     return parts.join(" ");
   });
 
-  const prompt = `You are a veterinary health assistant. Summarize this pet owner's journal for the last 7 days (oldest to newest in the list). This is owner-reported wellness journaling, not a diagnosis.
+  // This prompt is strictly wellness/lifestyle summarization — mood trends, energy
+  // patterns, and owner-logged notes. It does NOT perform clinical triage, urgency
+  // scoring, or diagnosis. All medical decisions remain in clinical-matrix.ts.
+  const prompt = `You are a pet wellness journaling assistant. Summarize the owner's observations for their pet over the last 7 days (oldest to newest).
 
-Entries:
+IMPORTANT: This is a wellness journal summary only. Do NOT diagnose diseases, assess urgency, or make clinical recommendations. This output is NOT a substitute for veterinary care.
+
+Entries (owner-reported mood, energy, and notes):
 ${lines.join("\n")}
 
 Respond ONLY with valid JSON (no markdown) in this exact shape:
 {
-  "summary": "2-4 sentences overview for the owner",
+  "summary": "2-4 sentences describing what the owner observed this week (mood and energy trends only)",
   "trend": "one of: improving | stable | declining | mixed",
-  "flags": ["short bullet concerns to discuss with a vet if any, else empty array"],
-  "recommendation": "practical next step for the owner; always suggest vet for urgent signs"
+  "flags": ["notable owner observations worth mentioning at next vet visit, else empty array"],
+  "recommendation": "one practical reminder (e.g. keep logging, schedule routine checkup); never replace vet advice"
 }
 
-Never diagnose specific diseases. Use cautious language. If data is sparse, say so in summary and keep flags minimal.`;
+Never diagnose. Never assess urgency. If data is sparse, say so briefly.`;
 
   try {
     const result = await generateNvidiaJson<Record<string, unknown>>({

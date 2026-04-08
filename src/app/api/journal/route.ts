@@ -80,7 +80,10 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const petId = searchParams.get("pet_id");
+  const rawPetId = searchParams.get("pet_id");
+  // Validate pet_id is a UUID before using it in the query
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const petId = rawPetId && UUID_RE.test(rawPetId) ? rawPetId : null;
 
   let query = supabase
     .from("journal_entries")
