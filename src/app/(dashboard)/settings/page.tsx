@@ -9,6 +9,7 @@ import Select from "@/components/ui/select";
 import { useAppStore } from "@/store/app-store";
 import { usePets } from "@/hooks/useSupabase";
 import type { Pet } from "@/types";
+import { NotificationPreferencesForm } from "@/components/notifications/notification-preferences-form";
 
 const breedOptions = [
   { value: "", label: "Select breed..." },
@@ -268,6 +269,16 @@ export default function SettingsPage() {
           <Button>Save Changes</Button>
         </div>
       </Card>
+
+      <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Notifications</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Control how and when PawVital contacts you about your pet&apos;s health
+          </p>
+        </div>
+        <NotificationPreferencesForm />
+      </section>
 
       {/* Subscription */}
       <Card className="p-6">
