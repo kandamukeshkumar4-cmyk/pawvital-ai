@@ -2064,7 +2064,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     if (verifiedUserId && reportStorageId) {
       emit(EventType.REPORT_READY, {
         userId: verifiedUserId,
-        sessionId: session.id,
+        sessionId: null,
         reportStorageId,
         urgency: context.highest_urgency,
         petName: pet.name ?? "your pet",
@@ -2076,7 +2076,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       ) {
         emit(EventType.URGENCY_HIGH, {
           userId: verifiedUserId,
-          sessionId: session.id,
+          sessionId: null,
           urgency: context.highest_urgency as "emergency" | "high",
           petName: pet.name ?? "your pet",
           topDiagnosis: context.top5[0]?.medical_term ?? "Unknown",
