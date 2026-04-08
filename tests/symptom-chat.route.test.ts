@@ -8,6 +8,7 @@ import type { SidecarObservation } from "@/lib/clinical-evidence";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
+const mockCreateServerSupabaseClient = jest.fn();
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
 const mockReviewQuestionPlanWithNemotron = jest.fn();
@@ -21,6 +22,7 @@ const mockDetectBreedWithNyckel = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
 const mockEvaluateImageGate = jest.fn();
 const mockShouldAnalyzeWoundImage = jest.fn();
+const mockComputeBayesianScore = jest.fn();
 const mockCompressCaseMemoryWithMiniMax = jest.fn();
 const mockPreprocessVeterinaryImage = jest.fn();
 const mockConsultWithMultimodalSidecar = jest.fn();
@@ -30,11 +32,25 @@ const mockIsImageRetrievalConfigured = jest.fn();
 const mockRetrieveVeterinaryTextEvidence = jest.fn();
 const mockRetrieveVeterinaryImageEvidence = jest.fn();
 const mockEnqueueAsyncReview = jest.fn();
+const mockSaveSymptomReportToDB = jest.fn();
+const mockEmit = jest.fn();
+const mockEventType = {
+  REPORT_READY: "REPORT_READY",
+  URGENCY_HIGH: "URGENCY_HIGH",
+  OUTCOME_REQUESTED: "OUTCOME_REQUESTED",
+  SUBSCRIPTION_CHANGED: "SUBSCRIPTION_CHANGED",
+  PET_ADDED: "PET_ADDED",
+} as const;
 
 jest.mock("@/lib/rate-limit", () => ({
   symptomChatLimiter: {},
   checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
   getRateLimitId: (...args: unknown[]) => mockGetRateLimitId(...args),
+}));
+
+jest.mock("@/lib/supabase-server", () => ({
+  createServerSupabaseClient: (...args: unknown[]) =>
+    mockCreateServerSupabaseClient(...args),
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
@@ -56,6 +72,10 @@ jest.mock("@/lib/image-gate", () => ({
   evaluateImageGate: (...args: unknown[]) => mockEvaluateImageGate(...args),
   shouldAnalyzeWoundImage: (...args: unknown[]) =>
     mockShouldAnalyzeWoundImage(...args),
+}));
+
+jest.mock("@/lib/bayesian-scorer", () => ({
+  computeBayesianScore: (...args: unknown[]) => mockComputeBayesianScore(...args),
 }));
 
 jest.mock("@/lib/pet-enrichment", () => ({
@@ -116,6 +136,18 @@ jest.mock("@/lib/async-review-client", () => ({
   enqueueAsyncReview: (...args: unknown[]) => mockEnqueueAsyncReview(...args),
 }));
 
+jest.mock("@/lib/report-storage", () => ({
+  saveSymptomReportToDB: (...args: unknown[]) =>
+    mockSaveSymptomReportToDB(...args),
+}));
+
+jest.mock("@/lib/events/event-bus", () => ({
+  EventType: mockEventType,
+  emit: (...args: unknown[]) => mockEmit(...args),
+}));
+
+jest.mock("@/lib/events/notification-handler", () => ({}));
+
 const PET = {
   name: "Bruno",
   breed: "Golden Retriever",
@@ -171,18 +203,77 @@ function makeTextOnlyRequest(session: TriageSession, message: string) {
   });
 }
 
-function makeReportRequest(session: TriageSession, image?: string) {
+function makeReportRequest(
+  session: TriageSession,
+  image?: string,
+  petOverrides: Record<string, unknown> = {}
+) {
   return new Request("http://localhost/api/ai/symptom-chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "generate_report",
-      pet: PET,
+      pet: {
+        ...PET,
+        ...petOverrides,
+      },
       session,
       image,
       messages: [{ role: "user", content: "Please generate the report." }],
     }),
   });
+}
+
+function buildAuthSupabase(userId: string | null) {
+  return {
+    auth: {
+      getUser: jest.fn().mockResolvedValue({
+        data: {
+          user: userId ? { id: userId } : null,
+        },
+      }),
+    },
+  };
+}
+
+function buildModerateReportSession() {
+  let session = createSession();
+  session = addSymptoms(session, ["excessive_scratching"]);
+  session = recordAnswer(session, "scratch_location", "ears");
+  session.case_memory = {
+    ...session.case_memory!,
+    latest_owner_turn: "He keeps scratching around his ears.",
+  };
+
+  return session;
+}
+
+function buildEmergencyReportSession() {
+  let session = createSession();
+  session = addSymptoms(session, ["vomiting"]);
+  session = recordAnswer(session, "vomit_blood", true);
+  session.red_flags_triggered = ["vomit_blood"];
+  session.case_memory = {
+    ...session.case_memory!,
+    latest_owner_turn: "He vomited blood this morning.",
+  };
+
+  return session;
+}
+
+function getEmitCalls(eventType: string) {
+  return mockEmit.mock.calls.filter(([type]) => type === eventType);
+}
+
+function getFirstEmitPayload<T extends Record<string, unknown>>(
+  eventType: string
+) {
+  const firstCall = getEmitCalls(eventType)[0];
+  return (firstCall?.[1] ?? null) as T | null;
+}
+
+function emittedArgsContain(value: string) {
+  return mockEmit.mock.calls.some((call) => JSON.stringify(call).includes(value));
 }
 
 describe("symptom-chat mixed text + image routing", () => {
@@ -195,9 +286,11 @@ describe("symptom-chat mixed text + image routing", () => {
       reset: Date.now() + 60_000,
     });
     mockGetRateLimitId.mockReturnValue("test-user");
+    mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: [], answers: {} })
     );
+    mockComputeBayesianScore.mockResolvedValue([]);
     mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
       summary:
         "Bruno remains in a limping triage flow with left-sided limb concerns and possible wound evidence from the latest photo.",
@@ -239,6 +332,7 @@ describe("symptom-chat mixed text + image routing", () => {
       sourceCitations: [],
     });
     mockEnqueueAsyncReview.mockResolvedValue(true);
+    mockSaveSymptomReportToDB.mockResolvedValue(null);
     mockDiagnoseWithDeepSeek.mockResolvedValue(
       JSON.stringify({
         severity: "medium",
@@ -3290,6 +3384,14 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
 });
 
 describe("VET-725: asked-state regression pack", () => {
+  const INTERNAL_STAGES = [
+    "compression",
+    "extraction",
+    "pending_recovery",
+    "repeat_suppression",
+    "state_transition",
+  ];
+
   function assertVet725AskedStatePayloadSafe(payload: {
     type?: unknown;
     message?: unknown;
@@ -3334,6 +3436,8 @@ describe("VET-725: asked-state regression pack", () => {
       const note = String(obs.note ?? "");
       expect(note).not.toContain("question_state=");
       expect(note).not.toContain("conversation_state=");
+      expect(String(obs.service ?? "")).not.toBe("async-review-service");
+      expect(INTERNAL_STAGES).not.toContain(String(obs.stage ?? ""));
     }
   }
 
@@ -3479,5 +3583,225 @@ describe("VET-725: asked-state regression pack", () => {
     assertVet725AskedStatePayloadSafe(payload2);
     expect(payload2.type).toBe("question");
     expect(payload2.session.last_question_asked).toBe("limping_progression");
+  });
+
+  it("VET-828: state_transition observations are stripped from client session payload", async () => {
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+    const session = createSession();
+    session.case_memory = {
+      ...(session.case_memory ?? {}),
+      service_observations: [
+        {
+          service: "async-review-service",
+          stage: "state_transition",
+          latencyMs: 0,
+          outcome: "success",
+          shadowMode: false,
+          fallbackUsed: false,
+          note: "question_state=unanswered→answered for vomit_duration",
+          recordedAt: new Date().toISOString(),
+        },
+        {
+          service: "vision-preprocess-service",
+          stage: "preprocess",
+          latencyMs: 120,
+          outcome: "success",
+          shadowMode: false,
+          fallbackUsed: false,
+          recordedAt: new Date().toISOString(),
+        },
+      ],
+    };
+
+    const response = await POST(
+      makeTextOnlyRequest(session, "He's still vomiting.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload);
+
+    const caseMemory =
+      ((payload.session?.case_memory as Record<string, unknown> | undefined) ??
+        {});
+    const observations =
+      (caseMemory.service_observations as Array<Record<string, unknown>> | undefined) ??
+      [];
+
+    for (const obs of observations) {
+      expect(String(obs.service ?? "")).not.toBe("async-review-service");
+      expect(INTERNAL_STAGES).not.toContain(String(obs.stage ?? ""));
+    }
+
+    const survived = observations.some(
+      (obs) => String(obs.service ?? "") === "vision-preprocess-service"
+    );
+    expect(survived).toBe(true);
+  });
+
+  describe("VET-825 - server-auth REPORT_READY / URGENCY_HIGH emission", () => {
+    jest.setTimeout(20_000);
+
+    beforeEach(() => {
+      mockEmit.mockClear();
+      mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
+      mockSaveSymptomReportToDB.mockResolvedValue(null);
+      mockComputeBayesianScore.mockResolvedValue([]);
+      mockDiagnoseWithDeepSeek.mockResolvedValue(
+        JSON.stringify({
+          severity: "medium",
+          recommendation: "vet_48h",
+          title: "Localized skin lesion",
+          explanation: "Explanation",
+          differential_diagnoses: [],
+          clinical_notes: "Notes",
+          recommended_tests: [],
+          home_care: [],
+          actions: [],
+          warning_signs: [],
+          vet_questions: [],
+        })
+      );
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Report is clinically sound",
+        })
+      );
+    });
+
+    it("emits REPORT_READY for the authenticated server-side user instead of pet.user_id", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-abc-123")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-123");
+
+      const session = buildModerateReportSession();
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(session, undefined, { user_id: "evil-client-id" })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+      expect(getFirstEmitPayload<{ userId: string }>(mockEventType.REPORT_READY))
+        .toEqual(
+          expect.objectContaining({
+            userId: "user-abc-123",
+          })
+        );
+      expect(emittedArgsContain("evil-client-id")).toBe(false);
+    });
+
+    it("does not emit REPORT_READY when the request is unauthenticated", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
+      mockSaveSymptomReportToDB.mockResolvedValue("report-123");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      await POST(makeReportRequest(buildModerateReportSession()));
+
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+
+    it("skips emission in demo mode when server auth throws and still returns the report", async () => {
+      mockCreateServerSupabaseClient.mockRejectedValue(new Error("DEMO_MODE"));
+      mockSaveSymptomReportToDB.mockResolvedValue("report-123");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+
+    it("does not emit when the report is not saved even if the user is authenticated", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-abc-123")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue(null);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      await POST(makeReportRequest(buildModerateReportSession()));
+
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+      expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(0);
+    });
+
+    it("emits REPORT_READY and URGENCY_HIGH for authenticated emergency reports", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-emergency-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-emergency-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+      expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(1);
+      expect(getFirstEmitPayload<{ userId: string }>(mockEventType.REPORT_READY))
+        .toEqual(
+          expect.objectContaining({
+            userId: "user-emergency-1",
+          })
+        );
+      expect(
+        getFirstEmitPayload<{ userId: string; urgency: string }>(
+          mockEventType.URGENCY_HIGH
+        )
+      ).toEqual(
+        expect.objectContaining({
+          userId: "user-emergency-1",
+          urgency: "emergency",
+        })
+      );
+    });
+
+    it("does not emit URGENCY_HIGH for a moderate report", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-moderate-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-moderate-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+      expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(0);
+    });
+
+    it("guards against cross-user notification injection by always using the verified auth user", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("real-user-uuid")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-guard-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      await POST(
+        makeReportRequest(buildModerateReportSession(), undefined, {
+          user_id: "attacker-uuid",
+        })
+      );
+
+      expect(getFirstEmitPayload<{ userId: string }>(mockEventType.REPORT_READY))
+        .toEqual(
+          expect.objectContaining({
+            userId: "real-user-uuid",
+          })
+        );
+      expect(emittedArgsContain("attacker-uuid")).toBe(false);
+    });
   });
 });

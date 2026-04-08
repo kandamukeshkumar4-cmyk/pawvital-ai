@@ -26,7 +26,7 @@ export type EventType = (typeof EventType)[keyof typeof EventType];
 
 export interface ReportReadyPayload {
   userId: string;
-  sessionId: string;
+  sessionId: string | null;
   reportStorageId: string | null;
   urgency: string;
   petName: string;
@@ -34,7 +34,7 @@ export interface ReportReadyPayload {
 
 export interface UrgencyHighPayload {
   userId: string;
-  sessionId: string;
+  sessionId: string | null;
   urgency: "emergency" | "high";
   petName: string;
   topDiagnosis: string;
