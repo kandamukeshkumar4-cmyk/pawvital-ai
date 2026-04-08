@@ -3588,7 +3588,7 @@ describe("VET-725: asked-state regression pack", () => {
   it("VET-828: state_transition observations are stripped from client session payload", async () => {
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
 
-    let session = createSession();
+    const session = createSession();
     session.case_memory = {
       ...(session.case_memory ?? {}),
       service_observations: [
