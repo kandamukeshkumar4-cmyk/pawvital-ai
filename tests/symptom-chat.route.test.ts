@@ -3805,3 +3805,260 @@ describe("VET-725: asked-state regression pack", () => {
     });
   });
 });
+
+describe("VET-831: confirmation-state regression pack", () => {
+  function assertVet831ConfirmationPayloadSafe(payload: {
+    type?: unknown;
+    message?: unknown;
+    ready_for_report?: unknown;
+    session?: Record<string, unknown>;
+  }) {
+    const message = String(payload.message ?? "");
+    const session = (payload.session ?? {}) as Record<string, unknown>;
+    const caseMemory =
+      ((session.case_memory as Record<string, unknown> | undefined) ?? {});
+
+    expect(payload).toHaveProperty("type");
+    expect(payload).toHaveProperty("message");
+    expect(payload).toHaveProperty("session");
+    expect(payload).toHaveProperty("ready_for_report");
+
+    expect(session).not.toHaveProperty("confirmationState");
+    expect(session).not.toHaveProperty("confirmed_questions");
+    expect(session).not.toHaveProperty("questionStates");
+    expect(session).not.toHaveProperty("transitionHistory");
+
+    expect(caseMemory).not.toHaveProperty("confirmationState");
+    expect(caseMemory).not.toHaveProperty("confirmed_questions");
+    expect(caseMemory).not.toHaveProperty("questionStates");
+    expect(caseMemory).not.toHaveProperty("transitionHistory");
+
+    expect(message).not.toContain("[StateMachine]");
+    expect(message).not.toContain("state_transition");
+    expect(message).not.toContain("answer_acknowledged");
+
+    const serviceObservations = (
+      caseMemory.service_observations as Array<Record<string, unknown>> | undefined
+    ) ?? [];
+    for (const obs of serviceObservations) {
+      const note = String(obs.note ?? "");
+      expect(note).not.toContain("question_state=");
+      expect(note).not.toContain("conversation_state=");
+    }
+  }
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Case summary.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+  });
+
+  it("VET-831: first-turn ask does not auto-confirm the newly asked question", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "My dog has been limping on the left back leg"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      assertVet831ConfirmationPayloadSafe(payload);
+      expect(payload.type).toBe("question");
+      expect(payload.session.answered_questions).toContain("which_leg");
+      expect(payload.session.last_question_asked).toBe("limping_onset");
+
+      // The newly ASKED question (limping_onset) must NOT have a confirmed log
+      const allLogs = logSpy.mock.calls.map(c => String(c[0]));
+      const confirmedLimpingOnset = allLogs.filter(l =>
+        l.includes("state_transition: confirmed") && l.includes("question=limping_onset")
+      );
+      expect(confirmedLimpingOnset).toHaveLength(0);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("VET-831: second-turn replay emits answered -> confirmed -> asked in order", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+      // Turn 1: establishes last_question_asked=limping_onset
+      const response1 = await POST(
+        makeTextOnlyRequest(session, "My dog has been limping on the left back leg")
+      );
+      const payload1 = await response1.json();
+
+      expect(response1.status).toBe(200);
+      assertVet831ConfirmationPayloadSafe(payload1);
+      expect(payload1.session.last_question_asked).toBe("limping_onset");
+
+      // Re-mock extraction before Turn 2 to answer limping_onset
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["limping"], answers: { limping_onset: "sudden" } })
+      );
+
+      // Turn 2: answers limping_onset
+      const response2 = await POST(
+        makeTextOnlyRequest(payload1.session, "It started suddenly yesterday")
+      );
+      const payload2 = await response2.json();
+
+      expect(response2.status).toBe(200);
+      assertVet831ConfirmationPayloadSafe(payload2);
+      expect(payload2.type).toBe("question");
+      expect(payload2.session.extracted_answers.limping_onset).toBe("sudden");
+      expect(payload2.session.answered_questions).toContain("limping_onset");
+      expect(payload2.session.last_question_asked).toBe("limping_progression");
+
+      const allLogs = logSpy.mock.calls.map(c => String(c[0]));
+      const answeredIdx = allLogs.findIndex(l => l.includes("state_transition: answered | question=limping_onset"));
+      const confirmedIdx = allLogs.findIndex(l => l.includes("state_transition: confirmed | question=limping_onset"));
+      const askedIdx = allLogs.findIndex(l => l.includes("state_transition: asked | question=limping_progression"));
+      expect(answeredIdx).toBeGreaterThanOrEqual(0);
+      expect(confirmedIdx).toBeGreaterThan(answeredIdx);
+      expect(askedIdx).toBeGreaterThan(confirmedIdx);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("VET-831: compression boundary preserves confirmation ordering", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.answered_questions = ["which_leg", "limping_onset"];
+      session.extracted_answers = { which_leg: "left back leg", limping_onset: "sudden" };
+      session.last_question_asked = "limping_progression";
+      session.case_memory = {
+        ...session.case_memory!,
+        turn_count: 5, // Forces compression via turnsSinceCompression >= 4
+        unresolved_question_ids: [],
+      };
+
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["limping"], answers: { limping_progression: "getting worse" } })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "It seems to be getting worse each day")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      assertVet831ConfirmationPayloadSafe(payload);
+
+      // Compression must have run
+      expect(payload.session.case_memory.compression_model).toBe("MiniMax-M2.7");
+
+      // limping_progression must be answered and a new question must have been asked
+      expect(payload.session.answered_questions).toContain("limping_progression");
+      expect(payload.session.last_question_asked).not.toBe("limping_progression");
+
+      // No repeat of the previous question text
+      expect(payload.message).not.toContain("Is the limping getting better");
+
+      // Exactly one confirmed log for limping_progression
+      const allLogs = logSpy.mock.calls.map(c => String(c[0]));
+      const confirmedLogs = allLogs.filter(l =>
+        l.includes("state_transition: confirmed | question=limping_progression")
+      );
+      expect(confirmedLogs).toHaveLength(1);
+
+      // Ordering: answered < confirmed < asked
+      const answeredIdx = allLogs.findIndex(l => l.includes("state_transition: answered | question=limping_progression"));
+      const confirmedIdx = allLogs.findIndex(l => l.includes("state_transition: confirmed | question=limping_progression"));
+      const nextQuestion = payload.session.last_question_asked as string;
+      const askedIdx = allLogs.findIndex(l => l.includes(`state_transition: asked | question=${nextQuestion}`));
+      expect(answeredIdx).toBeGreaterThanOrEqual(0);
+      expect(confirmedIdx).toBeGreaterThan(answeredIdx);
+      expect(askedIdx).toBeGreaterThan(confirmedIdx);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("VET-831: confirmation-state internals stay out of owner-facing payload", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+      // Turn 1
+      const response1 = await POST(
+        makeTextOnlyRequest(session, "My dog has been limping on the left back leg")
+      );
+      const payload1 = await response1.json();
+
+      expect(response1.status).toBe(200);
+      assertVet831ConfirmationPayloadSafe(payload1);
+
+      // Re-mock extraction before Turn 2 to answer limping_onset
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["limping"], answers: { limping_onset: "sudden" } })
+      );
+
+      // Turn 2
+      const response2 = await POST(
+        makeTextOnlyRequest(payload1.session, "It started suddenly yesterday")
+      );
+      const payload2 = await response2.json();
+
+      expect(response2.status).toBe(200);
+      assertVet831ConfirmationPayloadSafe(payload2);
+
+      // Explicit root-level check
+      expect(payload1).not.toHaveProperty("confirmationState");
+      expect(payload2).not.toHaveProperty("confirmationState");
+
+      // Explicit session-level check
+      expect(payload2.session).not.toHaveProperty("confirmationState");
+      expect(payload2.session).not.toHaveProperty("confirmed_questions");
+      expect(payload2.session).not.toHaveProperty("questionStates");
+      expect(payload2.session).not.toHaveProperty("transitionHistory");
+
+      // Explicit case_memory-level check
+      const cm = payload2.session.case_memory ?? {};
+      expect(cm).not.toHaveProperty("confirmationState");
+      expect(cm).not.toHaveProperty("confirmed_questions");
+      expect(cm).not.toHaveProperty("questionStates");
+      expect(cm).not.toHaveProperty("transitionHistory");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});
