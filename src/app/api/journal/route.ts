@@ -21,7 +21,8 @@ const CreateBodySchema = z.object({
   energy_level: z.number().int().min(1).max(10).nullable().optional(),
   notes: z.string().trim().max(8000).nullable().optional(),
   photo_urls: z.array(z.string().min(1).max(1024)).max(12).optional(),
-  ai_summary: z.string().trim().max(4000).nullable().optional(),
+  // ai_summary is intentionally excluded — it is written only by the internal
+  // summary endpoint, never by direct client input.
 });
 
 async function getSupabaseOrResponse() {
@@ -201,7 +202,6 @@ export async function POST(request: Request) {
     energy_level: parsed.data.energy_level ?? null,
     notes: parsed.data.notes ?? null,
     photo_urls: photoPaths,
-    ai_summary: parsed.data.ai_summary ?? null,
   };
 
   const { data: inserted, error: insertError } = await supabase

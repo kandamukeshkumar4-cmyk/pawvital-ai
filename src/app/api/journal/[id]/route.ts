@@ -21,7 +21,8 @@ const UpdateBodySchema = z.object({
   energy_level: z.number().int().min(1).max(10).nullable().optional(),
   notes: z.string().trim().max(8000).nullable().optional(),
   photo_urls: z.array(z.string().min(1).max(1024)).max(12).optional(),
-  ai_summary: z.string().trim().max(4000).nullable().optional(),
+  // ai_summary is intentionally excluded — it is written only by the internal
+  // summary endpoint, never by direct client input.
 });
 
 async function getSupabaseOrResponse() {
@@ -138,7 +139,7 @@ export async function PUT(
     patch.energy_level = parsed.data.energy_level;
   if (parsed.data.notes !== undefined) patch.notes = parsed.data.notes;
   if (parsed.data.photo_urls !== undefined) patch.photo_urls = parsed.data.photo_urls;
-  if (parsed.data.ai_summary !== undefined) patch.ai_summary = parsed.data.ai_summary;
+  // ai_summary is not settable by client — omitted intentionally
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json(
