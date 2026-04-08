@@ -2017,17 +2017,12 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       console.error("[DB] Failed to save triage session:", saveError);
     }
 
-    try {
-      emit(EventType.REPORT_READY, {
-        userId: (pet as PetProfile & { user_id?: string }).user_id ?? "",
-        sessionId: reportStorageId ?? "",
-        reportStorageId,
-        urgency: context.highest_urgency,
-        petName: pet.name,
-      });
-    } catch (emitError) {
-      console.error("[EventBus] Failed to emit REPORT_READY:", emitError);
-    }
+    // Only emit REPORT_READY when a verified server-side user ID is available.
+    // pet.user_id comes from the client request body and must not be trusted
+    // as an authoritative identity. Until this route is wired to server auth,
+    // we skip the emission to prevent cross-user notification injection.
+    // TODO(VET-825): obtain userId from createServerSupabaseClient().auth.getUser()
+    //                once server-auth is added to this route.
 
     return NextResponse.json({ type: "report", report: finalReport });
   } catch (error) {
