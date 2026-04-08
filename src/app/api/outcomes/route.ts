@@ -123,15 +123,9 @@ export async function POST(request: Request) {
     );
   }
 
-  try {
-    emit(EventType.OUTCOME_REQUESTED, {
-      userId: user.id,
-      checkId: parsedBody.data.check_id,
-      petName: "",
-    });
-  } catch (emitError) {
-    console.error("[EventBus] Failed to emit OUTCOME_REQUESTED:", emitError);
-  }
+  // Do not emit OUTCOME_REQUESTED here — the outcome has already been recorded.
+  // Emitting a reminder after a successful submission creates a contradictory
+  // notification asking the user for information they just provided.
 
   return NextResponse.json({ data: outcome }, { status: 201 });
 }
