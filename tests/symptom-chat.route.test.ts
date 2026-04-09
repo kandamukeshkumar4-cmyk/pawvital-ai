@@ -3874,32 +3874,49 @@ describe("VET-725: asked-state regression pack", () => {
     expect(payload2.session.last_question_asked).toBe("limping_progression");
   });
 
-  it("VET-828: state_transition observations are stripped from client session payload", async () => {
+  it("VET-737: client payload strips internal telemetry observations but preserves user-safe observations", async () => {
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
 
+    const recordedAt = new Date().toISOString();
+    const internalTransitionObservation: SidecarObservation = {
+      service: "async-review-service",
+      stage: "state_transition",
+      latencyMs: 0,
+      outcome: "success",
+      shadowMode: false,
+      fallbackUsed: false,
+      note:
+        "question_state=unanswered->answered | conversation_state=asking->confirmed",
+      recordedAt,
+    };
+    const misclassifiedInternalObservation: SidecarObservation = {
+      service: "vision-preprocess-service",
+      stage: "state_transition",
+      latencyMs: 12,
+      outcome: "success",
+      shadowMode: false,
+      fallbackUsed: false,
+      note:
+        "question_state=unanswered->answered | conversation_state=asking->confirmed",
+      recordedAt,
+    };
+    const safeObservation: SidecarObservation = {
+      service: "vision-preprocess-service",
+      stage: "preprocess",
+      latencyMs: 120,
+      outcome: "success",
+      shadowMode: false,
+      fallbackUsed: false,
+      note: "Owner-safe photo preprocessing completed.",
+      recordedAt,
+    };
     const session = createSession();
     session.case_memory = {
       ...(session.case_memory ?? {}),
       service_observations: [
-        {
-          service: "async-review-service",
-          stage: "state_transition",
-          latencyMs: 0,
-          outcome: "success",
-          shadowMode: false,
-          fallbackUsed: false,
-          note: "question_state=unanswered→answered for vomit_duration",
-          recordedAt: new Date().toISOString(),
-        },
-        {
-          service: "vision-preprocess-service",
-          stage: "preprocess",
-          latencyMs: 120,
-          outcome: "success",
-          shadowMode: false,
-          fallbackUsed: false,
-          recordedAt: new Date().toISOString(),
-        },
+        internalTransitionObservation,
+        misclassifiedInternalObservation,
+        safeObservation,
       ],
     };
 
@@ -3918,15 +3935,30 @@ describe("VET-725: asked-state regression pack", () => {
       (caseMemory.service_observations as Array<Record<string, unknown>> | undefined) ??
       [];
 
-    for (const obs of observations) {
-      expect(String(obs.service ?? "")).not.toBe("async-review-service");
-      expect(INTERNAL_STAGES).not.toContain(String(obs.stage ?? ""));
-    }
-
-    const survived = observations.some(
-      (obs) => String(obs.service ?? "") === "vision-preprocess-service"
+    expect(observations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: safeObservation.service,
+          stage: safeObservation.stage,
+          note: safeObservation.note,
+        }),
+      ])
     );
-    expect(survived).toBe(true);
+    expect(observations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: internalTransitionObservation.service,
+        }),
+      ])
+    );
+    expect(observations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          stage: misclassifiedInternalObservation.stage,
+          note: misclassifiedInternalObservation.note,
+        }),
+      ])
+    );
   });
 
   describe("VET-825 - server-auth REPORT_READY / URGENCY_HIGH emission", () => {
