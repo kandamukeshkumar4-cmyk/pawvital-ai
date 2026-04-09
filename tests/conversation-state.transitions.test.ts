@@ -124,4 +124,28 @@ describe("conversation-state transition helpers", () => {
       })
     ).toContain("clarification_reason=pending_recovery_failed");
   });
+
+  it("includes clarification reason metadata in clarification notes", () => {
+    const before = createSnapshot({ lastQuestionAsked: "limping_severity" });
+    const after = createSnapshot({
+      lastQuestionAsked: "limping_severity",
+      unresolvedQuestionIds: ["limping_severity"],
+      clarificationReasons: {
+        limping_severity: "pending_recovery_failed",
+      },
+    });
+
+    expect(
+      buildTransitionNote({
+        before,
+        after,
+        from: "asked",
+        questionId: "limping_severity",
+        reason: "pending_recovery_failed",
+        to: "needs_clarification",
+      })
+    ).toBe(
+      "question=limping_severity | question_state=asked->needs_clarification | conversation_state=asking->asking | reason=pending_recovery_failed | answered=0 | unresolved=1 | clarification_reason=pending_recovery_failed"
+    );
+  });
 });
