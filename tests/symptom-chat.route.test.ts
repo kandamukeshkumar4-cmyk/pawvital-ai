@@ -206,6 +206,22 @@ function makeTextOnlyRequest(session: TriageSession, message: string) {
   });
 }
 
+function makeReplayRequest(
+  session: TriageSession,
+  messages: Array<{ role: "user" | "assistant"; content: string }> = []
+) {
+  return new Request("http://localhost/api/ai/symptom-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "chat",
+      pet: PET,
+      session,
+      messages,
+    }),
+  });
+}
+
 function makeReportRequest(
   session: TriageSession,
   image?: string,
@@ -4260,8 +4276,8 @@ describe("VET-736: transitionToConfirmed", () => {
   });
 });
 
-describe("VET-831: confirmation-state regression pack", () => {
-  function assertVet831ConfirmationPayloadSafe(payload: {
+describe("VET-728: confirmation-state replay and compression regressions", () => {
+  function assertVet728ConfirmationPayloadSafe(payload: {
     type?: unknown;
     message?: unknown;
     ready_for_report?: unknown;
@@ -4298,7 +4314,28 @@ describe("VET-831: confirmation-state regression pack", () => {
       const note = String(obs.note ?? "");
       expect(note).not.toContain("question_state=");
       expect(note).not.toContain("conversation_state=");
+      expect(String(obs.service ?? "")).not.toBe("async-review-service");
+      expect(String(obs.stage ?? "")).not.toBe("state_transition");
     }
+  }
+
+  function buildReadySession(symptom: "limping" | "vomiting" = "vomiting") {
+    let session = createSession();
+    session = addSymptoms(session, [symptom]);
+    let guard = 0;
+
+    while (!isReadyForDiagnosis(session) && guard < 30) {
+      const questionId = getNextQuestion(session);
+      if (!questionId) {
+        break;
+      }
+
+      session = recordAnswer(session, questionId, "test");
+      guard++;
+    }
+
+    expect(isReadyForDiagnosis(session)).toBe(true);
+    return session;
   }
 
   beforeEach(() => {
@@ -4335,7 +4372,71 @@ describe("VET-831: confirmation-state regression pack", () => {
     });
   });
 
-  it("VET-831: first-turn ask does not auto-confirm the newly asked question", async () => {
+  it("VET-728: confirmed state is preserved on replay turns with no new user message", async () => {
+    const session = buildReadySession();
+    const expectedAnswered = [...session.answered_questions];
+    const expectedAnswers = { ...session.extracted_answers };
+    const expectedUnresolved = [
+      ...(session.case_memory?.unresolved_question_ids ?? []),
+    ];
+    const expectedLastQuestion = session.last_question_asked;
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeReplayRequest(session));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    assertVet728ConfirmationPayloadSafe(payload);
+    expect(payload.type).toBe("ready");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.conversationState).toBe("confirmed");
+    expect(payload.message).not.toBe("Tell me what's going on with your pet.");
+    expect(payload.session.answered_questions).toEqual(expectedAnswered);
+    expect(payload.session.extracted_answers).toEqual(expectedAnswers);
+    expect(payload.session.case_memory.unresolved_question_ids).toEqual(
+      expectedUnresolved
+    );
+    expect(payload.session.last_question_asked).toBe(expectedLastQuestion);
+  });
+
+  it("VET-728: ready branch returns a stable confirmed conversation state", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const session = buildReadySession();
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+      );
+      const expectedAnswered = [...session.answered_questions];
+      const expectedAnswers = { ...session.extracted_answers };
+      const expectedLastQuestion = session.last_question_asked;
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "Any more details you need?")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      assertVet728ConfirmationPayloadSafe(payload);
+      expect(payload.type).toBe("ready");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.conversationState).toBe("confirmed");
+      expect(payload.session.answered_questions).toEqual(expectedAnswered);
+      expect(payload.session.extracted_answers).toEqual(expectedAnswers);
+      expect(payload.session.last_question_asked).toBe(expectedLastQuestion);
+
+      const confirmedLog = logSpy.mock.calls.some((call) =>
+        String(call[0]).includes(
+          "state_transition: confirmed | reason=all_questions_answered"
+        )
+      );
+      expect(confirmedLog).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("VET-728: confirmed turn does not auto-confirm the newly asked question", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     try {
       let session = createSession();
@@ -4345,7 +4446,7 @@ describe("VET-831: confirmation-state regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      assertVet831ConfirmationPayloadSafe(payload);
+      assertVet728ConfirmationPayloadSafe(payload);
       expect(payload.type).toBe("question");
       expect(payload.session.answered_questions).toContain("which_leg");
       expect(payload.session.last_question_asked).toBe("limping_onset");
@@ -4361,7 +4462,7 @@ describe("VET-831: confirmation-state regression pack", () => {
     }
   });
 
-  it("VET-831: second-turn replay emits answered -> confirmed -> asked in order", async () => {
+  it("VET-728: second-turn replay emits answered -> confirmed -> asked in order", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     try {
       let session = createSession();
@@ -4375,7 +4476,7 @@ describe("VET-831: confirmation-state regression pack", () => {
       const payload1 = await response1.json();
 
       expect(response1.status).toBe(200);
-      assertVet831ConfirmationPayloadSafe(payload1);
+      assertVet728ConfirmationPayloadSafe(payload1);
       expect(payload1.session.last_question_asked).toBe("limping_onset");
 
       // Re-mock extraction before Turn 2 to answer limping_onset
@@ -4390,7 +4491,7 @@ describe("VET-831: confirmation-state regression pack", () => {
       const payload2 = await response2.json();
 
       expect(response2.status).toBe(200);
-      assertVet831ConfirmationPayloadSafe(payload2);
+      assertVet728ConfirmationPayloadSafe(payload2);
       expect(payload2.type).toBe("question");
       expect(payload2.session.extracted_answers.limping_onset).toBe("sudden");
       expect(payload2.session.answered_questions).toContain("limping_onset");
@@ -4412,7 +4513,51 @@ describe("VET-831: confirmation-state regression pack", () => {
     }
   });
 
-  it("VET-831: compression boundary preserves confirmation ordering", async () => {
+  it("VET-728: a later valid answer still advances after a confirm-adjacent turn", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session.answered_questions = ["which_leg"];
+    session.extracted_answers = { which_leg: "left back leg" };
+    session.last_question_asked = "limping_onset";
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+
+    mockExtractWithQwen.mockResolvedValueOnce(
+      JSON.stringify({ symptoms: ["limping"], answers: { limping_onset: "sudden" } })
+    );
+
+    const response1 = await POST(
+      makeTextOnlyRequest(session, "It started suddenly yesterday")
+    );
+    const payload1 = await response1.json();
+
+    expect(response1.status).toBe(200);
+    assertVet728ConfirmationPayloadSafe(payload1);
+    expect(payload1.session.last_question_asked).toBe("limping_progression");
+
+    mockExtractWithQwen.mockResolvedValueOnce(
+      JSON.stringify({
+        symptoms: ["limping"],
+        answers: { limping_progression: "getting worse" },
+      })
+    );
+
+    const response2 = await POST(
+      makeTextOnlyRequest(payload1.session, "It keeps getting worse each day")
+    );
+    const payload2 = await response2.json();
+
+    expect(response2.status).toBe(200);
+    assertVet728ConfirmationPayloadSafe(payload2);
+    expect(payload2.type).toBe("question");
+    expect(payload2.session.extracted_answers.limping_progression).toBe("worse");
+    expect(payload2.session.answered_questions).toContain("limping_progression");
+    expect(payload2.session.last_question_asked).not.toBe("limping_progression");
+    expect(payload2.message).not.toContain(
+      "better, worse, or staying the same"
+    );
+  });
+
+  it("VET-728: compression boundary preserves confirmation ordering", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     try {
       let session = createSession();
@@ -4437,7 +4582,7 @@ describe("VET-831: confirmation-state regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      assertVet831ConfirmationPayloadSafe(payload);
+      assertVet728ConfirmationPayloadSafe(payload);
 
       // Compression must have run
       expect(payload.session.case_memory.compression_model).toBe("MiniMax-M2.7");
@@ -4475,7 +4620,7 @@ describe("VET-831: confirmation-state regression pack", () => {
     }
   });
 
-  it("VET-831: confirmation-state internals stay out of owner-facing payload", async () => {
+  it("VET-728: owner-facing payload remains free of internal state-transition telemetry", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     try {
       let session = createSession();
@@ -4489,7 +4634,7 @@ describe("VET-831: confirmation-state regression pack", () => {
       const payload1 = await response1.json();
 
       expect(response1.status).toBe(200);
-      assertVet831ConfirmationPayloadSafe(payload1);
+      assertVet728ConfirmationPayloadSafe(payload1);
 
       // Re-mock extraction before Turn 2 to answer limping_onset
       mockExtractWithQwen.mockResolvedValueOnce(
@@ -4503,7 +4648,7 @@ describe("VET-831: confirmation-state regression pack", () => {
       const payload2 = await response2.json();
 
       expect(response2.status).toBe(200);
-      assertVet831ConfirmationPayloadSafe(payload2);
+      assertVet728ConfirmationPayloadSafe(payload2);
 
       // Explicit root-level check
       expect(payload1).not.toHaveProperty("confirmationState");

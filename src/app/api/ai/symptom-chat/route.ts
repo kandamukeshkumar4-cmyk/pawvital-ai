@@ -247,11 +247,28 @@ export async function POST(request: Request) {
 
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
     if (!lastUserMessage) {
+      if (isReadyForDiagnosis(session)) {
+        session = transitionToConfirmed({
+          session,
+          reason: "report_ready",
+        });
+
+        return NextResponse.json({
+          type: "ready",
+          message:
+            "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
+          session: sanitizeSessionForClient(session),
+          ready_for_report: true,
+          conversationState: "confirmed",
+        });
+      }
+
       return NextResponse.json({
         type: "question",
         message: "Tell me what's going on with your pet.",
-        session,
+        session: sanitizeSessionForClient(session),
         ready_for_report: false,
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
@@ -957,7 +974,7 @@ export async function POST(request: Request) {
           "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
-        conversationState: inferConversationState(getStateSnapshot(session)),
+        conversationState: "confirmed",
       });
     }
 
@@ -1068,6 +1085,7 @@ export async function POST(request: Request) {
           "I have enough information. Let me generate your full veterinary report.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        conversationState: "confirmed",
       });
     }
 
