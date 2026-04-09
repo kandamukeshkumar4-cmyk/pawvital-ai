@@ -110,6 +110,9 @@ import {
 import {
   transitionToAnswered,
   transitionToAsked,
+  inferConversationState,
+  isAmbiguousReply,
+  getStateSnapshot,
 } from "@/lib/conversation-state";
 import {
   compressCaseMemoryWithMiniMax,
@@ -194,6 +197,8 @@ export async function POST(request: Request) {
     }
 
     let session = clientSession || createSession();
+    const incomingUnresolvedIds: string[] =
+      session.case_memory?.unresolved_question_ids ?? [];
     let effectivePet = getEffectivePetProfile(pet, session);
     const imageHash = image ? hashImage(image) : null;
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
@@ -227,6 +232,7 @@ export async function POST(request: Request) {
         message: "Tell me what's going on with your pet.",
         session,
         ready_for_report: false,
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
@@ -531,6 +537,7 @@ export async function POST(request: Request) {
                 message: `Based on my analysis of ${pet.name}'s photo, I've detected signs that require IMMEDIATE veterinary attention:\n\n${guardrail.flags.map(f => `• ${f}`).join("\n")}\n\nPlease take ${pet.name} to the nearest emergency veterinary hospital NOW. Do not wait. Call ahead so they can prepare. I can generate a full report for the vet while you're on the way.`,
                 session,
                 ready_for_report: true,
+                conversationState: inferConversationState(getStateSnapshot(session)),
               });
             }
           }
@@ -670,7 +677,30 @@ export async function POST(request: Request) {
     // the answer (e.g. user said "no", "nothing", "I don't know"), force-
     // record the user's raw text so the question is marked answered.
     const pendingQ = session.last_question_asked;
-    if (pendingQ && !session.answered_questions.includes(pendingQ)) {
+    // Tracks an ambiguous reply so we can re-add pendingQ to
+    // unresolved_question_ids AFTER syncStructuredCaseMemoryQuestions()
+    // rebuilds that array, preventing it from being silently discarded.
+    let ambiguousPendingQ: string | null = null;
+    // VET-832: tracks whether pendingQ was cleanly resolved this turn so
+    // needsClarificationQuestionId correctly skips it post-resolution.
+    // Pre-check the mergedAnswers path: if pendingQ was answered by
+    // deterministic extraction or LLM extraction this turn (even when the
+    // pendingQ block below is skipped because the question was already in
+    // answered_questions from a prior turn), it was resolved this turn.
+    const pendingQAnsweredViaMerged =
+      pendingQ !== null &&
+      mergedAnswers[pendingQ] !== null &&
+      mergedAnswers[pendingQ] !== undefined &&
+      mergedAnswers[pendingQ] !== "";
+    let pendingQResolvedThisTurn = pendingQAnsweredViaMerged;
+    // VET-832: Expand the pendingQ block to also run when pendingQ is in
+    // incomingUnresolvedIds (the question was previously answered but is being
+    // re-asked due to ambiguity). This allows a clear follow-up answer to
+    // overwrite the stale value and exit needs_clarification cleanly.
+    if (pendingQ && (
+      !session.answered_questions.includes(pendingQ) ||
+      incomingUnresolvedIds.includes(pendingQ)
+    )) {
       // Build a rich combined answer from text + vision analysis
       // e.g. user sent "left leg" + photo → combined = "left leg [vision: wound on left leg, raw area]"
       const combinedUserSignal = [
@@ -680,13 +710,21 @@ export async function POST(request: Request) {
         .filter(Boolean)
         .join(" ");
 
-      const pendingAnswer = resolvePendingQuestionAnswer({
-        questionId: pendingQ,
-        rawMessage: lastUserMessage.content,
-        combinedUserSignal,
-        turnAnswers: mergedAnswers,
-        turnSymptoms: turnTextSymptoms,
-      });
+      // VET-832: If the pending question was already marked unresolved in the
+      // incoming session AND this reply is ambiguous, skip resolution entirely.
+      // A second ambiguous reply should not silently close the question via
+      // raw_fallback — it should keep the question in needs_clarification.
+      const pendingWasAlreadyUnresolved = incomingUnresolvedIds.includes(pendingQ);
+      const pendingAnswer =
+        pendingWasAlreadyUnresolved && isAmbiguousReply(lastUserMessage.content)
+          ? null
+          : resolvePendingQuestionAnswer({
+              questionId: pendingQ,
+              rawMessage: lastUserMessage.content,
+              combinedUserSignal,
+              turnAnswers: mergedAnswers,
+              turnSymptoms: turnTextSymptoms,
+            });
       if (pendingAnswer !== null) {
         session = transitionToAnswered({
           session,
@@ -694,11 +732,26 @@ export async function POST(request: Request) {
           value: pendingAnswer.value,
           reason: "pending_question_recovered",
         });
+        // VET-832: mark resolved so needsClarificationQuestionId is suppressed.
+        pendingQResolvedThisTurn = true;
         console.log(
-          `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
+          `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`,
         );
         const hadUnresolved =
           (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+        // If this question was in unresolved_question_ids, remove it now that
+        // a clear answer was obtained. This unblocks inferConversationState().
+        if (hadUnresolved) {
+          session = {
+            ...session,
+            case_memory: {
+              ...ensureStructuredCaseMemory(session),
+              unresolved_question_ids: (
+                session.case_memory?.unresolved_question_ids ?? []
+              ).filter((qId) => qId !== pendingQ),
+            },
+          };
+        }
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
@@ -709,6 +762,18 @@ export async function POST(request: Request) {
           pending_after: false,
         });
       } else {
+        // Check if the reply is ambiguous — if so, mark for needs_clarification
+        // and keep last_question_asked so the same question is re-asked.
+        const isAmbiguous = isAmbiguousReply(lastUserMessage.content);
+        if (isAmbiguous) {
+          // Record the question ID; the actual unresolved_question_ids write
+          // is deferred until after syncStructuredCaseMemoryQuestions() so
+          // the sync rebuild cannot silently discard this entry (VET-832).
+          ambiguousPendingQ = pendingQ;
+          console.log(
+            `[StateMachine] needs_clarification: question=${pendingQ} | reason=ambiguous_reply`
+          );
+        }
         console.log(
           `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
         );
@@ -718,7 +783,7 @@ export async function POST(request: Request) {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
           question_id: pendingQ,
-          outcome: "failure",
+          outcome: isAmbiguous ? "needs_clarification" : "failure",
           source: "unresolved",
           pending_before: hadUnresolved,
           pending_after: true,
@@ -878,6 +943,7 @@ export async function POST(request: Request) {
         message: `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${pet.name} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
@@ -893,13 +959,25 @@ export async function POST(request: Request) {
           "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
-    const nextQuestionId = getNextQuestionAvoidingRepeat(
-      session,
-      turnFocusSymptoms
-    );
+    // VET-832: Use incomingUnresolvedIds (captured before updateStructuredCaseMemory
+    // rebuilds the array) so that a question already in unresolved_question_ids
+    // from a prior turn still drives the needs_clarification path this turn.
+    // Guard with !pendingQResolvedThisTurn: if the question was cleanly answered
+    // this turn (via mergedAnswers or the pendingQ block), skip re-asking.
+    const needsClarificationQuestionId =
+      session.last_question_asked &&
+      incomingUnresolvedIds.includes(session.last_question_asked) &&
+      !pendingQResolvedThisTurn
+        ? session.last_question_asked
+        : null;
+
+    const nextQuestionId =
+      needsClarificationQuestionId ??
+      getNextQuestionAvoidingRepeat(session, turnFocusSymptoms);
     const wasRepeatSuppressed =
       nextQuestionId !== null &&
       nextQuestionId === session.last_question_asked &&
@@ -912,6 +990,17 @@ export async function POST(request: Request) {
         outcome: "success",
         reason: "repeat_of_last_asked_question_suppressed",
         repeat_prevented: true,
+      });
+    }
+    if (needsClarificationQuestionId) {
+      session = recordConversationTelemetry(session, {
+        event: "pending_recovery",
+        turn_count: session.case_memory?.turn_count ?? 0,
+        question_id: needsClarificationQuestionId,
+        outcome: "needs_clarification",
+        source: "needs_clarification_re_ask",
+        pending_before: true,
+        pending_after: true,
       });
     }
     const visualEvidenceInfluencedQuestion = didVisualEvidenceInfluenceQuestion(
@@ -948,6 +1037,49 @@ export async function POST(request: Request) {
       nextQuestionId,
       getMissingQuestions(session)
     );
+    // VET-832: After syncStructuredCaseMemoryQuestions rebuilds
+    // unresolved_question_ids, re-apply ambiguous-reply entry (handled below)
+    // and also restore any pre-existing unresolved IDs from prior turns that
+    // the sync rebuild would silently drop (e.g. a question from a different
+    // symptom cluster that was manually placed into unresolved_question_ids).
+    if (ambiguousPendingQ !== null) {
+      const ids = session.case_memory?.unresolved_question_ids ?? [];
+      if (!ids.includes(ambiguousPendingQ)) {
+        session = {
+          ...session,
+          case_memory: {
+            ...ensureStructuredCaseMemory(session),
+            unresolved_question_ids: [...ids, ambiguousPendingQ],
+          },
+        };
+      }
+      console.log(
+        `[StateMachine] needs_clarification: preserved after sync | question=${ambiguousPendingQ}`
+      );
+    }
+    // Restore any pre-existing unresolved IDs from the incoming session that
+    // are not yet answered and were not addressed in this turn.
+    const finalAnswered = session.answered_questions;
+    const idsToRestore = incomingUnresolvedIds.filter(
+      (id) =>
+        !finalAnswered.includes(id) &&
+        !(session.case_memory?.unresolved_question_ids ?? []).includes(id)
+    );
+    if (idsToRestore.length > 0) {
+      session = {
+        ...session,
+        case_memory: {
+          ...ensureStructuredCaseMemory(session),
+          unresolved_question_ids: [
+            ...(session.case_memory?.unresolved_question_ids ?? []),
+            ...idsToRestore,
+          ],
+        },
+      };
+      console.log(
+        `[StateMachine] needs_clarification: restored prior unresolved ids after sync | ids=${idsToRestore.join(",")}`
+      );
+    }
     session = await maybeCompressStructuredCaseMemory(
       session,
       effectivePet,
@@ -969,6 +1101,7 @@ export async function POST(request: Request) {
             : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
           session: sanitizeSessionForClient(session),
           ready_for_report: false,
+          conversationState: inferConversationState(getStateSnapshot(session)),
         });
       }
 
@@ -978,6 +1111,7 @@ export async function POST(request: Request) {
           "I have enough information. Let me generate your full veterinary report.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
@@ -1034,6 +1168,9 @@ export async function POST(request: Request) {
       message: phrasedQuestion,
       session: sanitizeSessionForClient(session),
       ready_for_report: isReadyForDiagnosis(session),
+      conversationState: needsClarificationQuestionId
+        ? "needs_clarification"
+        : inferConversationState(getStateSnapshot(session)),
     });
   } catch (error) {
     console.error("Symptom chat error:", error);

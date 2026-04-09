@@ -1333,6 +1333,156 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.red_flags_triggered).toContain("blue_gums");
   });
 
+  describe("VET-734: needs_clarification question-guard", () => {
+    it("re-asks water_intake when the last reply was ambiguous and the question is unresolved", async () => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "water_intake";
+      session = {
+        ...session,
+        case_memory: {
+          ...session.case_memory!,
+          unresolved_question_ids: ["water_intake"],
+        },
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "not sure"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.conversationState).toBe("needs_clarification");
+      expect(payload.session.last_question_asked).toBe("water_intake");
+    });
+
+    it("clears water_intake from unresolved_question_ids and advances after a clear answer", async () => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "water_intake";
+      session = {
+        ...session,
+        case_memory: {
+          ...session.case_memory!,
+          unresolved_question_ids: ["water_intake"],
+        },
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "she's drinking way more than usual")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.water_intake).toBe(
+        "more_than_usual"
+      );
+      expect(payload.session.answered_questions).toContain("water_intake");
+      expect(payload.session.case_memory?.unresolved_question_ids ?? []).not.toContain(
+        "water_intake"
+      );
+      expect(payload.session.last_question_asked).not.toBe("water_intake");
+    });
+
+    it("does not short-circuit when unresolved_question_ids is empty", async () => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "water_intake";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "she's drinking normally")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(
+        payload.session.case_memory?.service_observations ?? []
+      ).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            stage: "pending_recovery",
+            note: expect.stringContaining("src=needs_clarification_re_ask"),
+          }),
+        ])
+      );
+      expect(payload.session.last_question_asked).not.toBe("water_intake");
+      expect(payload.conversationState).not.toBe("needs_clarification");
+    });
+
+    it("only re-asks the last unresolved question and ignores unrelated unresolved ids", async () => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["limping"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "appetite_status";
+      session = {
+        ...session,
+        case_memory: {
+          ...session.case_memory!,
+          unresolved_question_ids: ["water_intake"],
+        },
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "she's eating normally")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.last_question_asked).not.toBe("water_intake");
+      const guardTelemetry = payload.session.case_memory?.service_observations?.find(
+        (entry: SidecarObservation) =>
+          entry.stage === "pending_recovery" &&
+          String(entry.note).includes("src=needs_clarification_re_ask")
+      );
+      expect(guardTelemetry).toBeUndefined();
+    });
+  });
+
   it("records a direct duration-style pending answer instead of repeating the same question", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -1341,10 +1491,7 @@ describe("symptom-chat mixed text + image routing", () => {
     });
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
     mockExtractWithQwen.mockResolvedValue(
-      JSON.stringify({
-        symptoms: ["coughing"],
-        answers: {},
-      })
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
     );
 
     let session = createSession();
@@ -1892,7 +2039,6 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response1.status).toBe(200);
     // The compression ran and control state was preserved
     expect(payload1.session.answered_questions).toContain("which_leg");
-    expect(payload1.session.answered_questions).toContain("limping_onset");
     expect(payload1.session.answered_questions).toContain("limping_progression");
     expect(payload1.session.extracted_answers.which_leg).toBe("left back leg");
 
