@@ -4062,3 +4062,174 @@ describe("VET-831: confirmation-state regression pack", () => {
     }
   });
 });
+
+// =============================================================================
+// VET-734: needs_clarification question guard
+// Verifies that when last_question_asked is in unresolved_question_ids the
+// route re-asks it instead of advancing to the next clinical question.
+// =============================================================================
+
+describe("VET-734: needs_clarification question guard", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Narrative summary only.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+    mockReviewQuestionPlanWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        include_image_context: false,
+        use_deterministic_fallback: false,
+        reason: "ok",
+      })
+    );
+  });
+
+  it("VET-734: re-asks last question when it is in unresolved_question_ids", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      let session = createSession();
+      session = addSymptoms(session, ["appetite_loss"]);
+      session.last_question_asked = "water_intake";
+      // water_intake is not yet answered — stays in getMissingQuestions
+      session.case_memory = {
+        ...session.case_memory!,
+        unresolved_question_ids: ["water_intake"],
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "Hard to say, she seems okay to me")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      // Guard must re-ask water_intake, not advance to a new question
+      expect(payload.session.last_question_asked).toBe("water_intake");
+      // water_intake remains unresolved — not cleared yet
+      expect(
+        (payload.session.case_memory?.unresolved_question_ids ?? []).includes(
+          "water_intake"
+        )
+      ).toBe(true);
+      // VET-734 telemetry records the re-ask with needs_clarification outcome
+      const reAskLog = findConsoleLine(logSpy, "[VET-705][pending_recovery]");
+      expect(reAskLog).toBeDefined();
+      expect(String(reAskLog)).toContain('"outcome":"needs_clarification"');
+      expect(String(reAskLog)).toContain('"question_id":"water_intake"');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("VET-734: clear answer after ambiguous reply advances to next clinical question", async () => {
+    // Owner gives a definitive answer — extraction resolves water_intake
+    mockExtractWithQwen.mockResolvedValueOnce(
+      JSON.stringify({
+        symptoms: [],
+        answers: { water_intake: "more_than_usual" },
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["appetite_loss"]);
+    session.last_question_asked = "water_intake";
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: ["water_intake"],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "She drank a lot more than usual today")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    // Route advances — water_intake must not be re-asked
+    expect(payload.session.last_question_asked).not.toBe("water_intake");
+    // water_intake cleared from unresolved once definitively answered
+    expect(
+      (payload.session.case_memory?.unresolved_question_ids ?? []).includes(
+        "water_intake"
+      )
+    ).toBe(false);
+  });
+
+  it("VET-734: no re-ask when last question is already answered and unresolved list is empty", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["appetite_loss"]);
+    session.last_question_asked = "water_intake";
+    // water_intake is already answered — guard must not fire
+    session.answered_questions = ["water_intake"];
+    session.extracted_answers = { water_intake: "normal" };
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: [],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "She seems fine today, just checking in")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    // Normal selection runs — must advance past water_intake
+    expect(payload.session.last_question_asked).not.toBe("water_intake");
+  });
+
+  it("VET-734: guard only fires for last_question_asked — not for other questions in unresolved list", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["weight_loss"]);
+    // appetite_change was the last asked question and is already answered
+    session.last_question_asked = "appetite_change";
+    session.answered_questions = ["appetite_change"];
+    session.extracted_answers = { appetite_change: "decreased" };
+    // water_intake is unresolved but is NOT last_question_asked
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: ["water_intake"],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "She has been losing a lot of weight recently")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    // appetite_change is NOT in unresolved_question_ids — normal selection runs
+    expect(payload.session.last_question_asked).not.toBe("appetite_change");
+  });
+});

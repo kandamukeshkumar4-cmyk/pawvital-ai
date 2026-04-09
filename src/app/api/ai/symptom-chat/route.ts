@@ -915,10 +915,20 @@ export async function POST(request: Request) {
       });
     }
 
-    const nextQuestionId = getNextQuestionAvoidingRepeat(
-      session,
-      turnFocusSymptoms
-    );
+    // VET-734: If the last question is currently in needs_clarification,
+    // re-ask it instead of advancing. The owner's previous reply was
+    // ambiguous — we must resolve it before moving forward.
+    const needsClarificationQuestionId =
+      session.last_question_asked &&
+      (session.case_memory?.unresolved_question_ids ?? []).includes(
+        session.last_question_asked
+      )
+        ? session.last_question_asked
+        : null;
+
+    const nextQuestionId =
+      needsClarificationQuestionId ??
+      getNextQuestionAvoidingRepeat(session, turnFocusSymptoms);
     const wasRepeatSuppressed =
       nextQuestionId !== null &&
       nextQuestionId === session.last_question_asked &&
@@ -931,6 +941,17 @@ export async function POST(request: Request) {
         outcome: "success",
         reason: "repeat_of_last_asked_question_suppressed",
         repeat_prevented: true,
+      });
+    }
+    if (needsClarificationQuestionId) {
+      session = recordConversationTelemetry(session, {
+        event: "pending_recovery",
+        turn_count: session.case_memory?.turn_count ?? 0,
+        question_id: needsClarificationQuestionId,
+        outcome: "needs_clarification",
+        source: ("needs_clarification_re_ask" as unknown) as RecoverySource,
+        pending_before: true,
+        pending_after: true,
       });
     }
     const visualEvidenceInfluencedQuestion = didVisualEvidenceInfluenceQuestion(
