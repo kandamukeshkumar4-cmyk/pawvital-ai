@@ -5,6 +5,7 @@ import {
   Stethoscope,
   AlertTriangle,
   AlertCircle,
+  CheckCircle,
   Send,
   Loader2,
   Activity,
@@ -21,12 +22,13 @@ import Badge from "@/components/ui/badge";
 import PlanGate from "@/components/subscription/plan-gate";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
+import type { ConversationState } from "@/lib/conversation-state/types";
 import {
-  getSymptomCheckerConversationUiConfig,
-  parseConversationStateApi,
-  type ConversationStateApi,
-  type GuidanceTone,
-} from "@/app/(dashboard)/symptom-checker/conversation-state-ui";
+  CLARIFICATION_COMPOSER_HINT,
+  getConversationStateUi,
+  resolveConversationStateFromSession,
+  type ConversationStateUi,
+} from "./conversation-state-ui";
 
 // --- Types ---
 
@@ -60,37 +62,18 @@ interface SendMessageOptions {
 }
 
 function guidanceToneToBadgeVariant(
-  tone: GuidanceTone
+  tone: ConversationStateUi["tone"]
 ): "default" | "success" | "warning" | "danger" | "info" {
   switch (tone) {
     case "success":
       return "success";
-    case "neutral":
+    case "info":
       return "info";
     case "warning":
       return "warning";
-    case "attention":
-      return "danger";
-    case "muted":
+    case "neutral":
     default:
       return "default";
-  }
-}
-
-function clinicalProgressRailClass(tone: GuidanceTone): string {
-  switch (tone) {
-    case "muted":
-      return "border-gray-200 bg-gray-50/80 text-gray-600";
-    case "neutral":
-      return "border-blue-200 bg-blue-50/90 text-blue-950";
-    case "warning":
-      return "border-amber-300 bg-amber-50/95 text-amber-950";
-    case "success":
-      return "border-emerald-200 bg-emerald-50/90 text-emerald-950";
-    case "attention":
-      return "border-rose-200 bg-rose-50/90 text-rose-950";
-    default:
-      return "border-gray-200 bg-gray-50";
   }
 }
 
@@ -198,7 +181,7 @@ export default function SymptomCheckerPage() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [conversationState, setConversationState] =
-    useState<ConversationStateApi | null>(null);
+    useState<ConversationState>("idle");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -210,10 +193,17 @@ export default function SymptomCheckerPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const triageSessionRef = useRef<any>(null);
 
-  const conversationUi = useMemo(
-    () => getSymptomCheckerConversationUiConfig(conversationState, readyForReport),
-    [conversationState, readyForReport]
-  );
+  const syncConversationFromApiPayload = (data: {
+    session?: unknown;
+    conversationState?: string | null;
+  }) => {
+    setConversationState(
+      resolveConversationStateFromSession(
+        data.session,
+        data.conversationState ?? null
+      )
+    );
+  };
 
   const pet = activePet || {
     name: "your dog",
@@ -417,8 +407,7 @@ export default function SymptomCheckerPage() {
         setTriageSession(data.session);
         triageSessionRef.current = data.session;
       }
-
-      setConversationState(parseConversationStateApi(data.conversationState));
+      syncConversationFromApiPayload(data);
 
       if (data.type === "emergency") {
         setMessages((prev) => [
@@ -533,9 +522,9 @@ export default function SymptomCheckerPage() {
     setReadyForReport(false);
     setGeneratingReport(false);
     setSessionStarted(false);
-    setConversationState(null);
     setTriageSession(null);
     triageSessionRef.current = null;
+    setConversationState("idle");
     setInput("");
     clearComposerImage();
     clearPendingGateImage();
@@ -564,6 +553,31 @@ export default function SymptomCheckerPage() {
       sendMessage();
     }
   };
+
+  const progressUi = useMemo(() => {
+    const effectiveState: ConversationState = sessionStarted
+      ? conversationState
+      : "idle";
+    return getConversationStateUi(effectiveState, readyForReport);
+  }, [sessionStarted, conversationState, readyForReport]);
+
+  const progressPanelClass =
+    progressUi.tone === "warning"
+      ? "border-amber-200 bg-amber-50/90"
+      : progressUi.tone === "success"
+        ? "border-emerald-200 bg-emerald-50/80"
+        : progressUi.tone === "info"
+          ? "border-blue-100 bg-blue-50/70"
+          : "border-gray-200 bg-gray-50/80";
+
+  const ProgressIcon =
+    progressUi.tone === "warning"
+      ? AlertTriangle
+      : progressUi.tone === "success"
+        ? CheckCircle
+        : progressUi.tone === "info"
+          ? Activity
+          : Stethoscope;
 
   return (
     <PlanGate requiredPlan="pro">
@@ -598,30 +612,39 @@ export default function SymptomCheckerPage() {
         </div>
       </div>
 
-      {/* VET-833: Clinical progress guidance (owner-facing copy from API state) */}
-      <div
-        className={`rounded-xl border px-4 py-3 ${clinicalProgressRailClass(conversationUi.tone)}`}
-        role="status"
-        aria-live="polite"
-      >
-        <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-          Clinical progress
-        </p>
-        {conversationUi.railHeadline ? (
-          <>
-            <p className="text-sm font-semibold text-gray-900 mt-1">
-              {conversationUi.railHeadline}
+      {/* Clinical progress — owner guidance from conversation state */}
+      {!report && (
+        <div
+          className={`rounded-xl border px-4 py-3 flex gap-3 items-start ${progressPanelClass}`}
+          role="status"
+          aria-live="polite"
+        >
+          <div
+            className={`mt-0.5 flex-shrink-0 ${
+              progressUi.tone === "warning"
+                ? "text-amber-700"
+                : progressUi.tone === "success"
+                  ? "text-emerald-700"
+                  : progressUi.tone === "info"
+                    ? "text-blue-700"
+                    : "text-gray-600"
+            }`}
+          >
+            <ProgressIcon className="w-5 h-5" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Clinical progress · {progressUi.label}
             </p>
-            <p className="text-sm text-gray-700 mt-1 leading-relaxed">
-              {conversationUi.railBody}
+            <h2 className="text-sm font-semibold text-gray-900 mt-0.5">
+              {progressUi.title}
+            </h2>
+            <p className="text-sm text-gray-700 mt-1 leading-snug">
+              {progressUi.body}
             </p>
-          </>
-        ) : (
-          <p className="text-sm text-gray-800 mt-1 leading-relaxed">
-            {conversationUi.railBody}
-          </p>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Pre-session: Welcome + Quick Start */}
       {!sessionStarted && (
@@ -698,8 +721,8 @@ export default function SymptomCheckerPage() {
             </div>
             {!report && (
               <div className="ml-auto flex items-center gap-2">
-                <Badge variant={guidanceToneToBadgeVariant(conversationUi.tone)}>
-                  {conversationUi.badgeLabel}
+                <Badge variant={guidanceToneToBadgeVariant(progressUi.tone)}>
+                  {progressUi.label}
                 </Badge>
                 <span className="text-xs text-gray-400">
                   {messages.filter((m) => m.role === "assistant").length}/5
@@ -753,9 +776,9 @@ export default function SymptomCheckerPage() {
           {/* Input area — hide when report is generated */}
           {!report && (
             <div className="border-t border-gray-100 p-3">
-              {conversationUi.showClarificationComposerHelper && (
-                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-                  {conversationUi.clarificationComposerHelperText}
+              {progressUi.showClarificationHelper && (
+                <p className="text-xs text-amber-900/90 bg-amber-50 border border-amber-200/80 rounded-lg px-3 py-2 mb-3 leading-relaxed">
+                  {CLARIFICATION_COMPOSER_HINT}
                 </p>
               )}
               {selectedImage && (
@@ -816,32 +839,49 @@ export default function SymptomCheckerPage() {
               {/* Generate Report button */}
               {readyForReport && !generatingReport && (
                 <div
-                  className={`mt-4 rounded-xl border p-4 ${
-                    conversationUi.elevateReportCta
-                      ? "border-emerald-200 bg-gradient-to-b from-emerald-50/90 to-white shadow-md"
-                      : "border-gray-100 bg-gray-50/50"
-                  }`}
+                  className={
+                    progressUi.elevateReportCta
+                      ? "mt-6 pt-5 border-t border-purple-100"
+                      : "mt-3 flex justify-center"
+                  }
                 >
-                  <div className="text-center space-y-1 mb-3">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {conversationUi.reportCtaHeading}
-                    </p>
-                    <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
-                      {conversationUi.reportCtaSubcopy}
-                    </p>
-                  </div>
-                  <div className="flex justify-center">
-                    <button
-                      onClick={() => generateReport()}
-                      className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-full transition-all ${
-                        conversationUi.elevateReportCta
-                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-200/80"
-                          : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
-                      }`}
+                  <div
+                    className={
+                      progressUi.elevateReportCta
+                        ? "rounded-2xl border border-purple-200/80 bg-gradient-to-b from-purple-50/90 to-white px-5 py-5 text-center shadow-sm w-full max-w-lg mx-auto"
+                        : ""
+                    }
+                  >
+                    {progressUi.elevateReportCta && (
+                      <>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          Ready for your full report
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-2 max-w-md mx-auto leading-relaxed">
+                          We have enough confirmed detail to compile differentials,
+                          next steps, and questions for your veterinarian.
+                        </p>
+                      </>
+                    )}
+                    <div
+                      className={
+                        progressUi.elevateReportCta
+                          ? "mt-5 flex justify-center"
+                          : ""
+                      }
                     >
-                      <Zap className="w-4 h-4" />
-                      Generate full veterinary report
-                    </button>
+                      <button
+                        onClick={() => generateReport()}
+                        className={
+                          progressUi.elevateReportCta
+                            ? "flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold rounded-full hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-300/60"
+                            : "flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold rounded-full hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-200"
+                        }
+                      >
+                        <Zap className="w-4 h-4" />
+                        Generate Full Veterinary Report
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -852,9 +892,9 @@ export default function SymptomCheckerPage() {
 
       {(!sessionStarted && !report) && (
         <div className="p-3 bg-white border border-gray-200 rounded-xl">
-          {conversationUi.showClarificationComposerHelper && (
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-              {conversationUi.clarificationComposerHelperText}
+          {progressUi.showClarificationHelper && (
+            <p className="text-xs text-amber-900/90 bg-amber-50 border border-amber-200/80 rounded-lg px-3 py-2 mb-3 leading-relaxed">
+              {CLARIFICATION_COMPOSER_HINT}
             </p>
           )}
            <div className="flex gap-2">

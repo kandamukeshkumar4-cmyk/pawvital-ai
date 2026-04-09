@@ -1,158 +1,162 @@
-/**
- * VET-833: Pure presentational mapping from API conversationState → owner-facing UI copy.
- * No React imports — safe for unit tests and deterministic rendering.
- */
+import {
+  CONVERSATION_STATE_VALUES,
+  type ConversationState,
+} from "@/lib/conversation-state/types";
+import { inferConversationState } from "@/lib/conversation-state/transitions";
+import type { ConversationControlStateSnapshot } from "@/lib/conversation-state/types";
 
-export type ConversationStateApi =
-  | "idle"
-  | "asking"
-  | "answered_unconfirmed"
-  | "confirmed"
-  | "needs_clarification"
-  | "escalation";
+export type ConversationUiTone = "neutral" | "info" | "warning" | "success";
 
-export type GuidanceTone = "muted" | "neutral" | "warning" | "success" | "attention";
-
-const CLARIFICATION_COMPOSER_HINT =
-  'Try answering the last question directly, even if the answer is "not sure."';
-
-export interface SymptomCheckerConversationUiConfig {
-  /** Short label for compact badges */
-  badgeLabel: string;
-  tone: GuidanceTone;
-  /** Optional second line under the “Clinical progress” label (e.g. clarification headline) */
-  railHeadline: string;
-  /** Clinical progress rail — main owner-facing message */
-  railBody: string;
-  showClarificationComposerHelper: boolean;
-  clarificationComposerHelperText: string;
-  /** Stronger visual treatment for the manual report CTA */
+export interface ConversationStateUi {
+  /** Short status label (e.g. for badges); not raw enum values */
+  label: string;
+  tone: ConversationUiTone;
+  /** Primary heading for the guidance panel */
+  title: string;
+  /** Supporting line; may be empty when a single sentence is enough */
+  body: string;
+  showClarificationHelper: boolean;
   elevateReportCta: boolean;
-  reportCtaHeading: string;
-  reportCtaSubcopy: string;
 }
 
-export function isConversationStateApi(
-  value: unknown
-): value is ConversationStateApi {
-  return (
-    value === "idle" ||
-    value === "asking" ||
-    value === "answered_unconfirmed" ||
-    value === "confirmed" ||
-    value === "needs_clarification" ||
-    value === "escalation"
-  );
-}
-
-export function parseConversationStateApi(
-  value: unknown
-): ConversationStateApi | null {
-  return isConversationStateApi(value) ? value : null;
+function isConversationState(value: string): value is ConversationState {
+  return (CONVERSATION_STATE_VALUES as readonly string[]).includes(value);
 }
 
 /**
- * Maps API `conversationState` and `readyForReport` to UI copy and flags.
- * When `conversationState` is null (e.g. before first server response), treats as idle.
+ * Builds the same control snapshot as server-side getStateSnapshot from a
+ * client-held session object (API JSON). Pure; safe for the browser bundle.
  */
-export function getSymptomCheckerConversationUiConfig(
-  conversationState: ConversationStateApi | null | unknown,
+export function clientSessionToControlSnapshot(
+  session: unknown
+): ConversationControlStateSnapshot | null {
+  if (!session || typeof session !== "object") return null;
+  const s = session as Record<string, unknown>;
+  const memory = s.case_memory as Record<string, unknown> | undefined;
+  const answered = s.answered_questions;
+  const extracted = s.extracted_answers;
+  const unresolved = memory?.unresolved_question_ids;
+  const lastAsked = s.last_question_asked;
+
+  return {
+    answeredQuestionIds: Array.isArray(answered)
+      ? answered.filter((id): id is string => typeof id === "string")
+      : [],
+    extractedAnswers:
+      extracted && typeof extracted === "object" && !Array.isArray(extracted)
+        ? { ...(extracted as Record<string, string | boolean | number>) }
+        : {},
+    unresolvedQuestionIds: Array.isArray(unresolved)
+      ? unresolved.filter((id): id is string => typeof id === "string")
+      : [],
+    lastQuestionAsked:
+      typeof lastAsked === "string" && lastAsked.length > 0
+        ? lastAsked
+        : undefined,
+  };
+}
+
+/**
+ * Prefer API `conversationState` when present; otherwise infer from session
+ * so the UI stays aligned with backend state-machine rules.
+ */
+export function resolveConversationStateFromSession(
+  session: unknown,
+  apiConversationState: string | undefined | null
+): ConversationState {
+  if (
+    apiConversationState != null &&
+    typeof apiConversationState === "string" &&
+    isConversationState(apiConversationState)
+  ) {
+    return apiConversationState;
+  }
+  const snap = clientSessionToControlSnapshot(session);
+  if (!snap) return "idle";
+  return inferConversationState(snap);
+}
+
+/** Shown above the composer when clarification is needed */
+export const CLARIFICATION_COMPOSER_HINT =
+  "Try answering the last question directly, even if the answer is 'not sure.'";
+
+/**
+ * Maps triage conversationState + report readiness to owner-facing UI copy.
+ * Never interpolates raw enum identifiers into user-visible strings.
+ */
+export function getConversationStateUi(
+  conversationState: ConversationState,
   readyForReport: boolean
-): SymptomCheckerConversationUiConfig {
-  const state: ConversationStateApi =
-    parseConversationStateApi(conversationState) ?? "idle";
+): ConversationStateUi {
+  const elevateReportCta =
+    readyForReport && conversationState === "confirmed";
 
-  const elevateReportCta = readyForReport && state === "confirmed";
-
-  const reportCtaHeading = elevateReportCta
-    ? "Ready for your full veterinary report"
-    : "Generate your clinical report";
-
-  const reportCtaSubcopy = elevateReportCta
-    ? "Enough detail is in place to produce differentials, tests, and home-care guidance tailored to this conversation."
-    : "When you’re ready, we’ll compile everything from this chat into a structured summary.";
-
-  switch (state) {
-    case "needs_clarification":
-      return {
-        badgeLabel: "Clarify",
-        tone: "warning",
-        railHeadline: "We need a clearer answer",
-        railBody:
-          "Your last reply may not have been specific enough to use safely. Please answer the latest question as directly as you can.",
-        showClarificationComposerHelper: true,
-        clarificationComposerHelperText: CLARIFICATION_COMPOSER_HINT,
-        elevateReportCta,
-        reportCtaHeading,
-        reportCtaSubcopy,
-      };
-
-    case "confirmed":
-      return {
-        badgeLabel: "Confirmed",
-        tone: "success",
-        railHeadline: "",
-        railBody:
-          "Enough information has been confirmed to move toward a report.",
-        showClarificationComposerHelper: false,
-        clarificationComposerHelperText: "",
-        elevateReportCta,
-        reportCtaHeading,
-        reportCtaSubcopy,
-      };
-
-    case "asking":
-      return {
-        badgeLabel: "In progress",
-        tone: "neutral",
-        railHeadline: "",
-        railBody: "We’re still gathering key clinical details.",
-        showClarificationComposerHelper: false,
-        clarificationComposerHelperText: "",
-        elevateReportCta,
-        reportCtaHeading,
-        reportCtaSubcopy,
-      };
-
-    case "answered_unconfirmed":
-      return {
-        badgeLabel: "In progress",
-        tone: "neutral",
-        railHeadline: "",
-        railBody:
-          "Your latest answer is in. We may ask another short question before wrapping up.",
-        showClarificationComposerHelper: false,
-        clarificationComposerHelperText: "",
-        elevateReportCta,
-        reportCtaHeading,
-        reportCtaSubcopy,
-      };
-
-    case "escalation":
-      return {
-        badgeLabel: "Priority",
-        tone: "attention",
-        railHeadline: "",
-        railBody:
-          "This conversation may need urgent or in-person care. Follow any emergency guidance you’ve been given and contact a veterinarian if you’re unsure.",
-        showClarificationComposerHelper: false,
-        clarificationComposerHelperText: "",
-        elevateReportCta,
-        reportCtaHeading,
-        reportCtaSubcopy,
-      };
-
+  switch (conversationState) {
     case "idle":
       return {
-        badgeLabel: "Not started",
-        tone: "muted",
-        railHeadline: "",
-        railBody: "Waiting to start a triage conversation.",
-        showClarificationComposerHelper: false,
-        clarificationComposerHelperText: "",
+        label: "Not started",
+        tone: "neutral",
+        title: "Clinical progress",
+        body: "Waiting to start a triage conversation.",
+        showClarificationHelper: false,
         elevateReportCta,
-        reportCtaHeading,
-        reportCtaSubcopy,
       };
+    case "asking":
+      return {
+        label: "Gathering details",
+        tone: "info",
+        title: "Clinical progress",
+        body: "We're still gathering key clinical details.",
+        showClarificationHelper: false,
+        elevateReportCta,
+      };
+    case "answered_unconfirmed":
+      return {
+        label: "Reviewing your answer",
+        tone: "info",
+        title: "Clinical progress",
+        body: "We're still gathering key clinical details.",
+        showClarificationHelper: false,
+        elevateReportCta,
+      };
+    case "needs_clarification":
+      return {
+        label: "Needs a clearer answer",
+        tone: "warning",
+        title: "Please be more specific",
+        body: "Your last reply may not have been specific enough to use safely. Please answer the latest question as directly as you can.",
+        showClarificationHelper: true,
+        elevateReportCta,
+      };
+    case "confirmed":
+      return {
+        label: "Ready to continue",
+        tone: "success",
+        title: "Clinical progress",
+        body: "Enough information has been confirmed to move toward a report.",
+        showClarificationHelper: false,
+        elevateReportCta,
+      };
+    case "escalation":
+      return {
+        label: "Clinical review",
+        tone: "warning",
+        title: "Clinical progress",
+        body: "We're still gathering key clinical details.",
+        showClarificationHelper: false,
+        elevateReportCta,
+      };
+    default: {
+      const _exhaustive: never = conversationState;
+      void _exhaustive;
+      return {
+        label: "In progress",
+        tone: "info",
+        title: "Clinical progress",
+        body: "We're still gathering key clinical details.",
+        showClarificationHelper: false,
+        elevateReportCta: false,
+      };
+    }
   }
 }
