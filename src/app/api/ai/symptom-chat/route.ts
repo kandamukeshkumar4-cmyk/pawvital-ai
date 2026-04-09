@@ -62,6 +62,7 @@ import {
   capDiagnosticConfidence,
   inferSupportedImageDomain,
   type ConsultOpinion,
+  type SidecarObservation,
   type RetrievalBundle,
   type ServiceTimeoutRecord,
   type SupportedImageDomain,
@@ -4634,16 +4635,40 @@ function buildImageGateMessage(
   return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
 }
 
+const INTERNAL_TELEMETRY_NOTE_MARKERS = [
+  "question_state=",
+  "conversation_state=",
+];
+
+function isInternalTelemetryObservationForClient(item: SidecarObservation): boolean {
+  if (item.service === "async-review-service") {
+    return true;
+  }
+
+  if (INTERNAL_TELEMETRY_STAGES.has(item.stage)) {
+    return true;
+  }
+
+  const note = typeof item.note === "string" ? item.note : "";
+  return INTERNAL_TELEMETRY_NOTE_MARKERS.some((marker) => note.includes(marker));
+}
+
+function sanitizeServiceObservationsForClient(
+  observations: SidecarObservation[] | undefined
+): SidecarObservation[] {
+  return (observations ?? []).filter(
+    (item) => !isInternalTelemetryObservationForClient(item)
+  );
+}
+
 function sanitizeSessionForClient(session: TriageSession): TriageSession {
   if (!session || !session.case_memory) return session;
 
   const sanitizedMemory = {
     ...session.case_memory,
-    // Strictly filter out internal service observations
-    service_observations: (session.case_memory.service_observations || []).filter(
-      (item) =>
-        item.service !== "async-review-service" &&
-        !INTERNAL_TELEMETRY_STAGES.has(item.stage)
+    // Keep user-safe operational notes while stripping internal telemetry traces.
+    service_observations: sanitizeServiceObservationsForClient(
+      session.case_memory.service_observations
     ),
     // Hide developer-only comparison data from client responses
     shadow_comparisons: [],
