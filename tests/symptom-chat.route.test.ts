@@ -1113,7 +1113,7 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
-    expect(payload.session.extracted_answers.trauma_history).toBe("I don't know.");
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
     expect(payload.session.answered_questions).toContain("trauma_history");
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
@@ -2865,6 +2865,9 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
         prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
       return `QUESTION_ID:${questionId}`;
     });
+    mockReviewQuestionPlanWithNemotron.mockResolvedValue(
+      JSON.stringify({ approved: true })
+    );
     mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
       const questionId =
         prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
@@ -3174,7 +3177,7 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
     expect(response.status).toBe(200);
     assertVet714UserFacingPayloadSafe(payload);
     expect(payload.type).toBe("question");
-    expect(payload.session.extracted_answers.trauma_history).toBe("I'm not sure");
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
     expect(payload.session.answered_questions).toContain("trauma_history");
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
@@ -3191,7 +3194,7 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
     expect(response.status).toBe(200);
     assertVet714UserFacingPayloadSafe(payload);
     expect(payload.type).toBe("question");
-    expect(payload.session.extracted_answers.trauma_history).toBe("I have no idea");
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
     expect(payload.session.answered_questions).toContain("trauma_history");
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
@@ -3208,7 +3211,7 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
     expect(response.status).toBe(200);
     assertVet714UserFacingPayloadSafe(payload);
     expect(payload.type).toBe("question");
-    expect(payload.session.extracted_answers.limping_onset).toBe("not certain");
+    expect(payload.session.extracted_answers.limping_onset).toBe("unknown");
     expect(payload.session.answered_questions).toContain("limping_onset");
     expect(payload.session.last_question_asked).not.toBe("limping_onset");
   });
@@ -3225,7 +3228,7 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
     expect(response.status).toBe(200);
     assertVet714UserFacingPayloadSafe(payload);
     expect(payload.type).toBe("question");
-    expect(payload.session.extracted_answers.trauma_history).toBe("I couldn't say");
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
     expect(payload.session.answered_questions).toContain("trauma_history");
     expect(payload.session.last_question_asked).not.toBe("trauma_history");
   });
@@ -3380,6 +3383,289 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
       expect(payload.session).toHaveProperty("answered_questions");
       expect(payload.session).toHaveProperty("extracted_answers");
     }
+  });
+});
+
+describe("VET-733: ambiguous reply coercion", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Case summary.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+  });
+
+  async function runPendingReply(
+    questionId: string,
+    message: string,
+    symptoms: string[] = ["limping"]
+  ) {
+    mockExtractWithQwen.mockResolvedValue(JSON.stringify({ symptoms, answers: {} }));
+
+    let session = createSession();
+    session = addSymptoms(session, symptoms);
+    session.last_question_asked = questionId;
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, message));
+    const payload = await response.json();
+
+    return { response, payload };
+  }
+
+  it("coerces 'not sure' to unknown", async () => {
+    const { response, payload } = await runPendingReply("trauma_history", "not sure");
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+  });
+
+  it("coerces 'I don't know' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "I don't know"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+  });
+
+  it("coerces 'hard to tell' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "hard to tell"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+  });
+
+  it("coerces 'maybe' to unknown", async () => {
+    const { response, payload } = await runPendingReply("trauma_history", "maybe");
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+  });
+
+  it("coerces 'can't really say' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "can't really say"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+  });
+
+  it("coerces 'I'm not totally sure, it's hard to tell' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "I'm not totally sure, it's hard to tell"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+    expect(payload.session.answered_questions).toContain("trauma_history");
+  });
+
+  it("does NOT coerce 'she ate this morning' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "she ate this morning"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe(
+      "she ate this morning"
+    );
+  });
+
+  it("does NOT coerce 'yes definitely' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "yes definitely"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("yes definitely");
+  });
+
+  it("does NOT coerce 'about two days' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "limping_onset",
+      "about two days"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.limping_onset).toBe("about two days");
+  });
+
+  it("does NOT coerce 'no vomiting' to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "no vomiting"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).not.toBe("unknown");
+  });
+
+  it("does NOT coerce empty string to unknown", async () => {
+    const { response, payload } = await runPendingReply("trauma_history", "");
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("trauma_history");
+  });
+
+  it("handles curly apostrophes: 'I don’t know' coerces to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "I don’t know"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+  });
+
+  it("handles curly apostrophes: 'can’t tell' coerces to unknown", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "can’t tell"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+  });
+
+  it("does not coerce when question schema forbids 'unknown' in allowed_values", async () => {
+    const { response, payload } = await runPendingReply(
+      "swelling_present",
+      "not sure"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.swelling_present).toBe("not sure");
+    expect(payload.session.extracted_answers.swelling_present).not.toBe("unknown");
+  });
+
+  it("coerces when question has no allowed_values restriction", async () => {
+    const { response, payload } = await runPendingReply(
+      "trauma_history",
+      "I don't know really"
+    );
+
+    expect(response.status).toBe(200);
+    expect(payload.session.extracted_answers.trauma_history).toBe("unknown");
+  });
+});
+
+describe("coerceAmbiguousReplyToUnknown — unit", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+  });
+
+  async function loadCoercer() {
+    const { coerceAmbiguousReplyToUnknown } = await import(
+      "@/app/api/ai/symptom-chat/route"
+    );
+    return coerceAmbiguousReplyToUnknown;
+  }
+
+  it.each([
+    "not sure",
+    "unsure",
+    "not certain",
+    "uncertain",
+    "I don't know",
+    "i dont know",
+    "no idea",
+    "I have no idea",
+    "can't tell",
+    "cant tell",
+    "hard to tell",
+    "hard to say",
+    "maybe",
+    "maybe not",
+    "not really sure",
+    "kind of",
+    "sort of",
+    "I'm not sure",
+    "im not sure",
+    "not totally sure",
+    "couldn't say",
+    "couldnt say",
+    "no way to tell",
+    "I don't know really",
+    "not sure, it's hard to tell",
+  ])("returns unknown for %p", async (reply) => {
+    const coerceAmbiguousReplyToUnknown = await loadCoercer();
+    expect(coerceAmbiguousReplyToUnknown(reply)).toBe("unknown");
+  });
+
+  it.each([
+    "she ate this morning",
+    "yes definitely",
+    "about two days",
+    "no vomiting",
+    "",
+  ])("returns null for factual or non-ambiguous reply %p", async (reply) => {
+    const coerceAmbiguousReplyToUnknown = await loadCoercer();
+    expect(coerceAmbiguousReplyToUnknown(reply)).toBeNull();
+  });
+
+  it("handles smart/curly quotes", async () => {
+    const coerceAmbiguousReplyToUnknown = await loadCoercer();
+
+    expect(coerceAmbiguousReplyToUnknown("I don’t know")).toBe("unknown");
+    expect(coerceAmbiguousReplyToUnknown("can’t tell")).toBe("unknown");
+  });
+
+  it("handles trailing punctuation", async () => {
+    const coerceAmbiguousReplyToUnknown = await loadCoercer();
+    expect(coerceAmbiguousReplyToUnknown("not sure.")).toBe("unknown");
+  });
+
+  it("handles mixed case", async () => {
+    const coerceAmbiguousReplyToUnknown = await loadCoercer();
+    expect(coerceAmbiguousReplyToUnknown("Not Sure")).toBe("unknown");
+  });
+
+  it("handles extra whitespace", async () => {
+    const coerceAmbiguousReplyToUnknown = await loadCoercer();
+    expect(coerceAmbiguousReplyToUnknown("  not  sure  ")).toBe("unknown");
   });
 });
 
