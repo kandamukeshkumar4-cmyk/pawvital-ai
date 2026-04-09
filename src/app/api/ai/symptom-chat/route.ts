@@ -110,6 +110,7 @@ import {
 import {
   getStateSnapshot,
   inferConversationState,
+  type ConversationState,
   transitionToAnswered,
   transitionToAsked,
   transitionToConfirmed,
@@ -248,6 +249,7 @@ export async function POST(request: Request) {
         message: "Tell me what's going on with your pet.",
         session,
         ready_for_report: false,
+        conversationState: conversationStateFromSession(session),
       });
     }
 
@@ -407,6 +409,7 @@ export async function POST(request: Request) {
           session,
           gate: gateWarning,
           ready_for_report: false,
+          conversationState: conversationStateFromSession(session),
         });
       }
     }
@@ -552,6 +555,7 @@ export async function POST(request: Request) {
                 message: `Based on my analysis of ${pet.name}'s photo, I've detected signs that require IMMEDIATE veterinary attention:\n\n${guardrail.flags.map(f => `• ${f}`).join("\n")}\n\nPlease take ${pet.name} to the nearest emergency veterinary hospital NOW. Do not wait. Call ahead so they can prepare. I can generate a full report for the vet while you're on the way.`,
                 session,
                 ready_for_report: true,
+                conversationState: conversationStateFromSession(session),
               });
             }
           }
@@ -899,6 +903,7 @@ export async function POST(request: Request) {
         message: `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${pet.name} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        conversationState: conversationStateFromSession(session),
       });
     }
 
@@ -991,15 +996,21 @@ export async function POST(request: Request) {
 
     if (!nextQuestionId) {
       if (session.known_symptoms.length === 0) {
-        return NextResponse.json({
-          type: "question",
-          message: image
-            ? `I can see the photo, but I still need a little more context to triage ${pet.name} safely. What worries you most about this area, and when did you first notice it?`
-            : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
-          session: sanitizeSessionForClient(session),
-          ready_for_report: false,
-        });
+      return NextResponse.json({
+        type: "question",
+        message: image
+          ? `I can see the photo, but I still need a little more context to triage ${pet.name} safely. What worries you most about this area, and when did you first notice it?`
+          : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
+        session: sanitizeSessionForClient(session),
+        ready_for_report: false,
+        conversationState: conversationStateFromSession(session),
+      });
       }
+
+      session = transitionToConfirmed({
+        session,
+        reason: "report_ready",
+      });
 
       return NextResponse.json({
         type: "ready",
@@ -1007,6 +1018,7 @@ export async function POST(request: Request) {
           "I have enough information. Let me generate your full veterinary report.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
@@ -1074,6 +1086,7 @@ export async function POST(request: Request) {
       message: phrasedQuestion,
       session: sanitizeSessionForClient(session),
       ready_for_report: isReadyForDiagnosis(session),
+      conversationState: conversationStateFromSession(session),
     });
   } catch (error) {
     console.error("Symptom chat error:", error);
@@ -1082,6 +1095,7 @@ export async function POST(request: Request) {
         type: "error",
         message:
           "I encountered an issue. Please try again, or contact your veterinarian directly if this is urgent.",
+        conversationState: "idle",
       },
       { status: 200 }
     );
@@ -4607,11 +4621,13 @@ function demoResponse(action: string, pet: PetProfile) {
       },
     });
   }
+  const demoSession = createSession();
   return NextResponse.json({
     type: "question",
     message: `Demo mode. Add API keys for full triage. What's going on with ${pet.name}?`,
-    session: createSession(),
+    session: demoSession,
     ready_for_report: false,
+    conversationState: conversationStateFromSession(demoSession),
   });
 }
 
@@ -4654,4 +4670,9 @@ function sanitizeSessionForClient(session: TriageSession): TriageSession {
     ...session,
     case_memory: sanitizedMemory,
   };
+}
+
+/** VET-832: Root-level conversation phase for UI badge (not stored on session). */
+function conversationStateFromSession(session: TriageSession): ConversationState {
+  return inferConversationState(getStateSnapshot(session));
 }
