@@ -54,6 +54,56 @@ interface SendMessageOptions {
   appendUserMessage?: boolean;
 }
 
+type ConversationPhase =
+  | "idle"
+  | "asking"
+  | "answered_unconfirmed"
+  | "confirmed"
+  | "needs_clarification"
+  | "escalation";
+
+function isConversationPhase(value: unknown): value is ConversationPhase {
+  return (
+    value === "idle" ||
+    value === "asking" ||
+    value === "answered_unconfirmed" ||
+    value === "confirmed" ||
+    value === "needs_clarification" ||
+    value === "escalation"
+  );
+}
+
+function conversationPhaseLabel(phase: ConversationPhase): string {
+  const labels: Record<ConversationPhase, string> = {
+    idle: "Idle",
+    asking: "Asking",
+    answered_unconfirmed: "Answered",
+    confirmed: "Confirmed",
+    needs_clarification: "Clarifying",
+    escalation: "Escalation",
+  };
+  return labels[phase];
+}
+
+function conversationPhaseBadgeVariant(
+  phase: ConversationPhase
+): "default" | "success" | "warning" | "danger" | "info" {
+  switch (phase) {
+    case "confirmed":
+      return "success";
+    case "asking":
+      return "info";
+    case "answered_unconfirmed":
+      return "warning";
+    case "needs_clarification":
+      return "warning";
+    case "escalation":
+    case "idle":
+    default:
+      return "default";
+  }
+}
+
 // --- Config ---
 
 const quickSymptoms = [
@@ -157,6 +207,8 @@ export default function SymptomCheckerPage() {
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [conversationPhase, setConversationPhase] =
+    useState<ConversationPhase | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -371,6 +423,10 @@ export default function SymptomCheckerPage() {
         triageSessionRef.current = data.session;
       }
 
+      if (isConversationPhase(data.conversationState)) {
+        setConversationPhase(data.conversationState);
+      }
+
       if (data.type === "emergency") {
         setMessages((prev) => [
           ...prev,
@@ -484,6 +540,7 @@ export default function SymptomCheckerPage() {
     setReadyForReport(false);
     setGeneratingReport(false);
     setSessionStarted(false);
+    setConversationPhase(null);
     setTriageSession(null);
     triageSessionRef.current = null;
     setInput("");
@@ -622,7 +679,12 @@ export default function SymptomCheckerPage() {
               </p>
             </div>
             {!report && (
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                {conversationPhase && (
+                  <Badge variant={conversationPhaseBadgeVariant(conversationPhase)}>
+                    {conversationPhaseLabel(conversationPhase)}
+                  </Badge>
+                )}
                 <span className="text-xs text-gray-400">
                   {messages.filter((m) => m.role === "assistant").length}/5
                   questions
