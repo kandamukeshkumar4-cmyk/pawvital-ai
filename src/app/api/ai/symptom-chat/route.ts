@@ -62,13 +62,13 @@ import {
   capDiagnosticConfidence,
   inferSupportedImageDomain,
   type ConsultOpinion,
-  type SidecarObservation,
   type RetrievalBundle,
   type ServiceTimeoutRecord,
   type SupportedImageDomain,
   type VisionClinicalEvidence,
   type VisionPreprocessResult,
 } from "@/lib/clinical-evidence";
+import { sanitizeSessionForClient } from "@/lib/client-session-sanitizer";
 import { buildStructuredEvidenceChain } from "@/lib/evidence-chain";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
@@ -112,7 +112,6 @@ import {
   transitionToAnswered,
   transitionToAsked,
   inferConversationState,
-  isAmbiguousReply,
   getStateSnapshot,
 } from "@/lib/conversation-state";
 import {
@@ -3161,6 +3160,10 @@ function isShortUnknownResponse(lower: string): boolean {
   );
 }
 
+function isAmbiguousReply(rawMessage: string): boolean {
+  return isShortUnknownResponse(rawMessage);
+}
+
 function isStrongWaterNegativeResponse(lower: string): boolean {
   return /\b(not drinking|won't drink|wont drink|refusing water|no water|nothing to drink|won't touch water|wont touch water)\b/.test(
     normalizeIntentText(lower)
@@ -4600,61 +4603,4 @@ function buildImageGateMessage(
   return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
 }
 
-const INTERNAL_TELEMETRY_STAGES = new Set([
-  "compression",
-  "extraction",
-  "pending_recovery",
-  "repeat_suppression",
-  "state_transition",
-]);
-
-const INTERNAL_TELEMETRY_NOTE_MARKERS = [
-  "question_state=",
-  "conversation_state=",
-];
-
-function isInternalTelemetryObservationForClient(
-  observation: SidecarObservation
-): boolean {
-  if (observation.service === "async-review-service") {
-    return true;
-  }
-
-  if (INTERNAL_TELEMETRY_STAGES.has(observation.stage)) {
-    return true;
-  }
-
-  const note = typeof observation.note === "string" ? observation.note : "";
-  return INTERNAL_TELEMETRY_NOTE_MARKERS.some((marker) =>
-    note.includes(marker)
-  );
-}
-
-function sanitizeServiceObservationsForClient(
-  observations: SidecarObservation[] | undefined
-): SidecarObservation[] {
-  return (observations ?? []).filter(
-    (observation) => !isInternalTelemetryObservationForClient(observation)
-  );
-}
-
-function sanitizeSessionForClient(session: TriageSession): TriageSession {
-  if (!session || !session.case_memory) return session;
-
-  const sanitizedMemory = {
-    ...session.case_memory,
-    // Keep user-safe operational notes while stripping internal telemetry traces.
-    service_observations: sanitizeServiceObservationsForClient(
-      session.case_memory.service_observations
-    ),
-    // Hide developer-only comparison data from client responses
-    shadow_comparisons: [],
-    service_timeouts: [],
-  };
-
-  return {
-    ...session,
-    case_memory: sanitizedMemory,
-  };
-}
 
