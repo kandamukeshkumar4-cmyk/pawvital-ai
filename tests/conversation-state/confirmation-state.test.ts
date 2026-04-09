@@ -9,7 +9,7 @@ jest.mock("@/lib/conversation-state/observer", () => ({
   observeTransition: (...args: unknown[]) => mockObserveTransition(...args),
 }));
 
-import { transitionToConfirmed } from "@/lib/conversation-state/confirmation-state";
+import { transitionToConfirmed } from "@/lib/conversation-state/confirmation";
 
 function createSnapshot(): ConversationControlStateSnapshot {
   return {
@@ -42,23 +42,22 @@ describe("transitionToConfirmed", () => {
     jest.restoreAllMocks();
   });
 
-  it("calls observeTransition with the confirmed state and question id", () => {
+  it("calls observeTransition with synthetic after snapshot (clears lastQuestionAsked)", () => {
     const session = createConfirmedSession();
     const snapshot = createSnapshot();
 
     transitionToConfirmed({
       session,
-      questionId: "vomit_duration",
-      reason: "answer_acknowledged",
+      reason: "all_questions_answered",
     });
 
     expect(mockObserveTransition).toHaveBeenCalledWith(
       session,
       expect.objectContaining({
         before: snapshot,
-        after: snapshot,
+        after: { ...snapshot, lastQuestionAsked: undefined },
         questionId: "vomit_duration",
-        reason: "answer_acknowledged",
+        reason: "all_questions_answered",
         to: "confirmed",
       })
     );
@@ -76,8 +75,7 @@ describe("transitionToConfirmed", () => {
 
     const updated = transitionToConfirmed({
       session,
-      questionId: "vomit_duration",
-      reason: "answer_acknowledged",
+      reason: "all_questions_answered",
     });
 
     expect(updated.answered_questions).toBe(answeredQuestions);
@@ -88,8 +86,7 @@ describe("transitionToConfirmed", () => {
     const session = createConfirmedSession();
     const updated = transitionToConfirmed({
       session,
-      questionId: "vomit_duration",
-      reason: "answer_acknowledged",
+      reason: "all_questions_answered",
     });
 
     expect(updated).toBe(session);

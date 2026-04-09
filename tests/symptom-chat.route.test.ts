@@ -1,9 +1,12 @@
 import {
   addSymptoms,
   createSession,
+  getNextQuestion,
+  isReadyForDiagnosis,
   recordAnswer,
   type TriageSession,
 } from "@/lib/triage-engine";
+import { transitionToConfirmed } from "@/lib/conversation-state";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
 
 const mockCheckRateLimit = jest.fn();
@@ -3806,6 +3809,138 @@ describe("VET-725: asked-state regression pack", () => {
   });
 });
 
+describe("VET-736: transitionToConfirmed", () => {
+  function buildMinimalSession(overrides?: Partial<TriageSession>): TriageSession {
+    return {
+      ...createSession(),
+      ...overrides,
+    } as TriageSession;
+  }
+
+  describe("transitionToConfirmed — unit", () => {
+    it("returns a TriageSession (does not throw)", () => {
+      const session = buildMinimalSession();
+      const result = transitionToConfirmed({
+        session,
+        reason: "all_questions_answered",
+      });
+      expect(result).toBeDefined();
+    });
+
+    it("does not mutate answered_questions", () => {
+      const session = buildMinimalSession({
+        answered_questions: ["water_intake", "appetite_change"],
+        last_question_asked: "appetite_change",
+      });
+      const result = transitionToConfirmed({
+        session,
+        reason: "all_questions_answered",
+      });
+      expect(result.answered_questions).toEqual([
+        "water_intake",
+        "appetite_change",
+      ]);
+    });
+
+    it("does not mutate extracted_answers", () => {
+      const session = buildMinimalSession({
+        extracted_answers: { water_intake: "increased" },
+        answered_questions: ["water_intake"],
+        last_question_asked: "water_intake",
+      });
+      const result = transitionToConfirmed({
+        session,
+        reason: "report_ready",
+      });
+      expect(result.extracted_answers).toEqual({ water_intake: "increased" });
+    });
+
+    it("accepts all three reason values without throwing", () => {
+      const session = buildMinimalSession({ last_question_asked: "q1" });
+      expect(() =>
+        transitionToConfirmed({ session, reason: "all_questions_answered" })
+      ).not.toThrow();
+      expect(() =>
+        transitionToConfirmed({ session, reason: "report_ready" })
+      ).not.toThrow();
+      expect(() =>
+        transitionToConfirmed({ session, reason: "sufficient_data_reached" })
+      ).not.toThrow();
+    });
+  });
+
+  it("VET-736: ready_for_report response includes confirmed conversationState", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Case summary.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["vomiting"], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    let guard = 0;
+    while (!isReadyForDiagnosis(session) && guard < 30) {
+      const q = getNextQuestion(session);
+      if (!q) break;
+      session = recordAnswer(session, q, "test");
+      guard++;
+    }
+    expect(isReadyForDiagnosis(session)).toBe(true);
+
+    try {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "Any more details you need?")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session).toBeDefined();
+      expect(payload.conversationState).toBeDefined();
+      // Not idle/asking; snapshot may still be needs_clarification if case_memory
+      // has unresolved_question_ids while matrix readiness is satisfied.
+      expect(["asking", "idle"]).not.toContain(payload.conversationState);
+
+      const readyConfirmedLog = logSpy.mock.calls.some((c) =>
+        String(c[0]).includes(
+          "state_transition: confirmed | reason=all_questions_answered"
+        )
+      );
+      expect(readyConfirmedLog).toBe(true);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+});
+
 describe("VET-831: confirmation-state regression pack", () => {
   function assertVet831ConfirmationPayloadSafe(payload: {
     type?: unknown;
@@ -3944,7 +4079,11 @@ describe("VET-831: confirmation-state regression pack", () => {
 
       const allLogs = logSpy.mock.calls.map(c => String(c[0]));
       const answeredIdx = allLogs.findIndex(l => l.includes("state_transition: answered | question=limping_onset"));
-      const confirmedIdx = allLogs.findIndex(l => l.includes("state_transition: confirmed | question=limping_onset"));
+      const confirmedIdx = allLogs.findIndex(
+        l =>
+          l.includes("state_transition: confirmed") &&
+          l.includes("reason=sufficient_data_reached")
+      );
       const askedIdx = allLogs.findIndex(l => l.includes("state_transition: asked | question=limping_progression"));
       expect(answeredIdx).toBeGreaterThanOrEqual(0);
       expect(confirmedIdx).toBeGreaterThan(answeredIdx);
@@ -3993,14 +4132,20 @@ describe("VET-831: confirmation-state regression pack", () => {
 
       // Exactly one confirmed log for limping_progression
       const allLogs = logSpy.mock.calls.map(c => String(c[0]));
-      const confirmedLogs = allLogs.filter(l =>
-        l.includes("state_transition: confirmed | question=limping_progression")
+      const confirmedLogs = allLogs.filter(
+        l =>
+          l.includes("state_transition: confirmed") &&
+          l.includes("reason=sufficient_data_reached")
       );
       expect(confirmedLogs).toHaveLength(1);
 
       // Ordering: answered < confirmed < asked
       const answeredIdx = allLogs.findIndex(l => l.includes("state_transition: answered | question=limping_progression"));
-      const confirmedIdx = allLogs.findIndex(l => l.includes("state_transition: confirmed | question=limping_progression"));
+      const confirmedIdx = allLogs.findIndex(
+        l =>
+          l.includes("state_transition: confirmed") &&
+          l.includes("reason=sufficient_data_reached")
+      );
       const nextQuestion = payload.session.last_question_asked as string;
       const askedIdx = allLogs.findIndex(l => l.includes(`state_transition: asked | question=${nextQuestion}`));
       expect(answeredIdx).toBeGreaterThanOrEqual(0);

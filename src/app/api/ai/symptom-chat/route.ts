@@ -108,6 +108,8 @@ import {
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
 import {
+  getStateSnapshot,
+  inferConversationState,
   transitionToAnswered,
   transitionToAsked,
   transitionToConfirmed,
@@ -906,12 +908,20 @@ export async function POST(request: Request) {
     const ready = isReadyForDiagnosis(session);
 
     if (ready) {
+      // VET-736: Fire confirmed state transition before returning
+      // so the observer records this milestone reliably.
+      session = transitionToConfirmed({
+        session,
+        reason: "all_questions_answered",
+      });
+
       return NextResponse.json({
         type: "ready",
         message:
           "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
@@ -1007,8 +1017,7 @@ export async function POST(request: Request) {
     ) {
       session = transitionToConfirmed({
         session,
-        questionId: lastAnsweredQuestionId,
-        reason: "answer_acknowledged",
+        reason: "sufficient_data_reached",
       });
     }
 

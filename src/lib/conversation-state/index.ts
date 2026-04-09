@@ -15,7 +15,7 @@ export {
 } from "./transitions";
 export { transitionToAnswered } from "./answer-recording";
 export { transitionToAsked } from "./question-asking";
-export { transitionToConfirmed } from "./confirmation-state";
+export { transitionToConfirmed } from "./confirmation";
 
 export type {
   ConversationAnswerValue,
@@ -30,4 +30,4 @@ export type { ObserveTransitionInput } from "./observer";
 export type { TransitionNoteInput } from "./transitions";
 export type { TransitionToAnsweredInput } from "./answer-recording";
 export type { TransitionToAskedInput } from "./question-asking";
-export type { TransitionToConfirmedInput } from "./confirmation-state";
+export type { TransitionToConfirmedInput } from "./confirmation";
