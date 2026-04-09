@@ -75,6 +75,7 @@ export interface StructuredCaseMemory {
   image_findings: string[];
   red_flag_notes: string[];
   unresolved_question_ids: string[];
+  clarification_reasons?: Record<string, string>;
   timeline_notes: string[];
   visual_evidence: VisionClinicalEvidence[];
   retrieval_evidence: Array<RetrievalTextEvidence | RetrievalImageEvidence>;
@@ -132,6 +133,7 @@ export function createSession(): TriageSession {
       image_findings: [],
       red_flag_notes: [],
       unresolved_question_ids: [],
+      clarification_reasons: {},
       timeline_notes: [],
       visual_evidence: [],
       retrieval_evidence: [],

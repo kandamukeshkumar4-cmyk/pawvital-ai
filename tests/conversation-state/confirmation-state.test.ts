@@ -16,6 +16,7 @@ function createSnapshot(): ConversationControlStateSnapshot {
     answeredQuestionIds: ["vomit_duration"],
     extractedAnswers: { vomit_duration: "2 days" },
     unresolvedQuestionIds: [],
+    clarificationReasons: {},
     lastQuestionAsked: "vomit_duration",
   };
 }

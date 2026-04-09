@@ -86,6 +86,11 @@ export const ConsultOpinionSchema = z.object({
   uncertainties: z.array(z.string()),
   confidence: z.number().min(0).max(1),
   mode: z.enum(["sync", "async"]),
+  morphological_indicators: z.record(z.unknown()).optional(),
+  temporal_patterns: z.record(z.unknown()).optional(),
+  risk_stratifiers: z.array(z.string()).optional(),
+  recommended_next_steps: z.array(z.string()).optional(),
+  comparison_to_baseline: z.record(z.unknown()).optional(),
 });
 
 export const AsyncReviewSubmissionSchema = z.object({
@@ -162,6 +167,11 @@ export const RawMultimodalConsultResponseSchema = z.object({
   disagreements: z.array(z.unknown()).optional(),
   uncertainties: z.array(z.unknown()).optional(),
   confidence: z.union([z.number(), z.string(), z.null()]).optional(),
+  morphological_indicators: z.record(z.unknown()).optional(),
+  temporal_patterns: z.record(z.unknown()).optional(),
+  risk_stratifiers: z.array(z.unknown()).optional(),
+  recommended_next_steps: z.array(z.unknown()).optional(),
+  comparison_to_baseline: z.record(z.unknown()).optional(),
 });
 
 export const RawAsyncReviewSubmissionResponseSchema = z.object({

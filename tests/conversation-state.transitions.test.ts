@@ -13,6 +13,7 @@ function createSnapshot(
     answeredQuestionIds: [],
     extractedAnswers: {},
     unresolvedQuestionIds: [],
+    clarificationReasons: {},
     lastQuestionAsked: undefined,
     ...overrides,
   };
@@ -70,6 +71,18 @@ describe("conversation-state transition helpers", () => {
 
     expect(hasControlStateChanged(before, same)).toBe(false);
     expect(hasControlStateChanged(before, after)).toBe(true);
+    expect(
+      hasControlStateChanged(
+        before,
+        createSnapshot({
+          lastQuestionAsked: "water_intake",
+          unresolvedQuestionIds: ["water_intake"],
+          clarificationReasons: {
+            water_intake: "pending_recovery_failed",
+          },
+        })
+      )
+    ).toBe(true);
   });
 
   it("builds readable transition notes from pure inputs", () => {
@@ -92,5 +105,23 @@ describe("conversation-state transition helpers", () => {
     ).toBe(
       "question=water_intake | question_state=asked->answered_this_turn | conversation_state=asking->answered_unconfirmed | reason=turn_answer_recorded | answered=1 | unresolved=0"
     );
+
+    expect(
+      buildTransitionNote({
+        before: createSnapshot({
+          unresolvedQuestionIds: ["water_intake"],
+        }),
+        after: createSnapshot({
+          unresolvedQuestionIds: ["water_intake"],
+          clarificationReasons: {
+            water_intake: "pending_recovery_failed",
+          },
+        }),
+        from: "needs_clarification",
+        questionId: "water_intake",
+        reason: "pending_recovery_failed",
+        to: "needs_clarification",
+      })
+    ).toContain("clarification_reason=pending_recovery_failed");
   });
 });

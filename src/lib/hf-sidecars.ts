@@ -38,7 +38,7 @@ const ASYNC_REVIEW_SERVICE_URL =
 const SIDECAR_API_KEY = process.env.HF_SIDECAR_API_KEY?.trim() || "";
 
 const VISION_PREPROCESS_TIMEOUT_MS =
-  Number(process.env.HF_VISION_PREPROCESS_TIMEOUT_MS) || 4500;
+  Number(process.env.HF_VISION_PREPROCESS_TIMEOUT_MS) || 5500;
 const TEXT_RETRIEVAL_SERVICE_TIMEOUT_MS =
   Number(process.env.HF_TEXT_RETRIEVAL_TIMEOUT_MS) ||
   Number(process.env.HF_RETRIEVAL_SERVICE_TIMEOUT_MS) ||
@@ -560,6 +560,28 @@ export async function consultWithMultimodalSidecar(input: {
       : [],
     confidence: Number(response.confidence ?? 0.6),
     mode: "sync",
+    // Preserve enhanced rubric fields from multimodal consult response
+    ...(response.morphological_indicators &&
+      typeof response.morphological_indicators === "object" &&
+      !Array.isArray(response.morphological_indicators)
+      ? { morphological_indicators: response.morphological_indicators as Record<string, unknown> }
+      : {}),
+    ...(response.temporal_patterns &&
+      typeof response.temporal_patterns === "object" &&
+      !Array.isArray(response.temporal_patterns)
+      ? { temporal_patterns: response.temporal_patterns as Record<string, unknown> }
+      : {}),
+    ...(Array.isArray(response.risk_stratifiers)
+      ? { risk_stratifiers: response.risk_stratifiers.map((v) => String(v)).filter(Boolean) }
+      : {}),
+    ...(Array.isArray(response.recommended_next_steps)
+      ? { recommended_next_steps: response.recommended_next_steps.map((v) => String(v)).filter(Boolean) }
+      : {}),
+    ...(response.comparison_to_baseline &&
+      typeof response.comparison_to_baseline === "object" &&
+      !Array.isArray(response.comparison_to_baseline)
+      ? { comparison_to_baseline: response.comparison_to_baseline as Record<string, unknown> }
+      : {}),
   };
 
   return requireValidated(

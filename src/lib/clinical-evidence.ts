@@ -70,6 +70,11 @@ export interface ConsultOpinion {
   uncertainties: string[];
   confidence: number;
   mode: "sync" | "async";
+  morphological_indicators?: Record<string, unknown>;
+  temporal_patterns?: Record<string, unknown>;
+  risk_stratifiers?: string[];
+  recommended_next_steps?: string[];
+  comparison_to_baseline?: Record<string, unknown>;
 }
 
 export interface AsyncReviewSubmission {

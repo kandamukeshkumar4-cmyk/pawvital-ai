@@ -16,6 +16,8 @@ export {
 export { transitionToAnswered } from "./answer-recording";
 export { transitionToAsked } from "./question-asking";
 export { transitionToConfirmed } from "./confirmation";
+export { transitionToNeedsClarification } from "./needs-clarification";
+export { transitionToEscalation } from "./escalation";
 
 export type {
   ConversationAnswerValue,
@@ -31,3 +33,8 @@ export type { TransitionNoteInput } from "./transitions";
 export type { TransitionToAnsweredInput } from "./answer-recording";
 export type { TransitionToAskedInput } from "./question-asking";
 export type { TransitionToConfirmedInput } from "./confirmation";
+export type {
+  ClarificationReasonCode,
+  TransitionToNeedsClarificationInput,
+} from "./needs-clarification";
+export type { TransitionToEscalationInput } from "./escalation";
