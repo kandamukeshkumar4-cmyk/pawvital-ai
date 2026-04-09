@@ -104,7 +104,6 @@ import {
   recordConversationTelemetry,
   shouldCompressCaseMemory,
   syncStructuredCaseMemoryQuestions,
-  type ConversationTelemetryEvent,
   type RecoverySource,
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
@@ -114,6 +113,8 @@ import {
   transitionToAnswered,
   transitionToAsked,
   transitionToConfirmed,
+  transitionToNeedsClarification,
+  transitionToEscalation,
 } from "@/lib/conversation-state";
 import {
   compressCaseMemoryWithMiniMax,
@@ -200,6 +201,8 @@ export async function POST(request: Request) {
     }
 
     let session = clientSession || createSession();
+    const incomingUnresolvedIds =
+      session.case_memory?.unresolved_question_ids ?? [];
     let effectivePet = getEffectivePetProfile(pet, session);
     const imageHash = image ? hashImage(image) : null;
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
@@ -692,7 +695,19 @@ export async function POST(request: Request) {
     // the answer (e.g. user said "no", "nothing", "I don't know"), force-
     // record the user's raw text so the question is marked answered.
     const pendingQ = session.last_question_asked;
-    if (pendingQ && !session.answered_questions.includes(pendingQ)) {
+    const pendingQWasAnsweredBeforeTurn =
+      pendingQ !== undefined && answerKeysBeforeTurn.has(pendingQ);
+    let pendingQResolvedThisTurn = Boolean(
+      pendingQ &&
+        !pendingQWasAnsweredBeforeTurn &&
+        session.answered_questions.includes(pendingQ)
+    );
+
+    if (
+      pendingQ &&
+      (!session.answered_questions.includes(pendingQ) ||
+        incomingUnresolvedIds.includes(pendingQ))
+    ) {
       // Build a rich combined answer from text + vision analysis
       // e.g. user sent "left leg" + photo → combined = "left leg [vision: wound on left leg, raw area]"
       const combinedUserSignal = [
@@ -709,6 +724,10 @@ export async function POST(request: Request) {
         turnAnswers: mergedAnswers,
         turnSymptoms: turnTextSymptoms,
       });
+      const hadUnresolved =
+        incomingUnresolvedIds.includes(pendingQ) ||
+        (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+
       if (pendingAnswer !== null) {
         session = transitionToAnswered({
           session,
@@ -719,8 +738,7 @@ export async function POST(request: Request) {
         console.log(
           `[Engine] Resolved pending question "${pendingQ}" via ${pendingAnswer.source} (signal: "${lastUserMessage.content.substring(0, 80)}")`
         );
-        const hadUnresolved =
-          (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+        pendingQResolvedThisTurn = true;
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
@@ -731,17 +749,25 @@ export async function POST(request: Request) {
           pending_after: false,
         });
       } else {
+        const isAmbiguousReply =
+          coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
+        session = transitionToNeedsClarification({
+          session,
+          questionId: pendingQ,
+          reason: "pending_recovery_failed",
+        });
         console.log(
           `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
         );
-        const hadUnresolved =
-          (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
         session = recordConversationTelemetry(session, {
           event: "pending_recovery",
           turn_count: session.case_memory?.turn_count ?? 0,
           question_id: pendingQ,
-          outcome: "failure",
+          outcome: isAmbiguousReply ? "needs_clarification" : "failure",
           source: "unresolved",
+          reason: isAmbiguousReply
+            ? "needs_clarification_re_ask"
+            : "pending_recovery_failed",
           pending_before: hadUnresolved,
           pending_after: true,
         });
@@ -895,6 +921,15 @@ export async function POST(request: Request) {
     // ═══════════════════════════════════════════════════════════════════
     if (session.red_flags_triggered.length > 0) {
       const flags = session.red_flags_triggered.join(", ");
+
+      // VET-900: Fire escalation state transition before returning
+      // so sidecar telemetry records the red-flag override.
+      session = transitionToEscalation({
+        session,
+        redFlags: session.red_flags_triggered,
+        reason: "red_flags_detected",
+      });
+
       return NextResponse.json({
         type: "emergency",
         message: `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${pet.name} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
@@ -926,11 +961,23 @@ export async function POST(request: Request) {
       });
     }
 
-    const nextQuestionId = getNextQuestionAvoidingRepeat(
-      session,
-      turnFocusSymptoms
-    );
+    const needsClarificationQuestionId =
+      session.last_question_asked &&
+      !pendingQResolvedThisTurn &&
+      (
+        session.case_memory?.clarification_reasons?.[
+          session.last_question_asked
+        ] ||
+        incomingUnresolvedIds.includes(session.last_question_asked)
+      )
+        ? session.last_question_asked
+        : null;
+
+    const nextQuestionId =
+      needsClarificationQuestionId ??
+      getNextQuestionAvoidingRepeat(session, turnFocusSymptoms);
     const wasRepeatSuppressed =
+      needsClarificationQuestionId === null &&
       nextQuestionId !== null &&
       nextQuestionId === session.last_question_asked &&
       session.answered_questions.includes(nextQuestionId);
@@ -942,6 +989,19 @@ export async function POST(request: Request) {
         outcome: "success",
         reason: "repeat_of_last_asked_question_suppressed",
         repeat_prevented: true,
+      });
+    }
+
+    if (needsClarificationQuestionId) {
+      session = recordConversationTelemetry(session, {
+        event: "pending_recovery",
+        turn_count: session.case_memory?.turn_count ?? 0,
+        question_id: needsClarificationQuestionId,
+        outcome: "needs_clarification",
+        source: "unresolved",
+        reason: "needs_clarification_re_ask",
+        pending_before: true,
+        pending_after: true,
       });
     }
     const visualEvidenceInfluencedQuestion = didVisualEvidenceInfluenceQuestion(
@@ -1011,23 +1071,25 @@ export async function POST(request: Request) {
       });
     }
 
-    const lastAnsweredQuestionId = session.last_question_asked;
-    if (
-      lastAnsweredQuestionId &&
-      session.answered_questions.includes(lastAnsweredQuestionId)
-    ) {
-      session = transitionToConfirmed({
+    if (!needsClarificationQuestionId) {
+      const lastAnsweredQuestionId = session.last_question_asked;
+      if (
+        lastAnsweredQuestionId &&
+        session.answered_questions.includes(lastAnsweredQuestionId)
+      ) {
+        session = transitionToConfirmed({
+          session,
+          reason: "sufficient_data_reached",
+        });
+      }
+
+      // Track which question we're asking so we can detect unanswered loops
+      session = transitionToAsked({
         session,
-        reason: "sufficient_data_reached",
+        questionId: nextQuestionId,
+        reason: "next_question_selected",
       });
     }
-
-    // Track which question we're asking so we can detect unanswered loops
-    session = transitionToAsked({
-      session,
-      questionId: nextQuestionId,
-      reason: "next_question_selected",
-    });
 
     // ═══════════════════════════════════════════════════════════════════
     // STEP 5: PHRASE question — Llama 3.3 70B + Nemotron verifier
@@ -1075,6 +1137,9 @@ export async function POST(request: Request) {
       message: phrasedQuestion,
       session: sanitizeSessionForClient(session),
       ready_for_report: isReadyForDiagnosis(session),
+      conversationState: needsClarificationQuestionId
+        ? "needs_clarification"
+        : inferConversationState(getStateSnapshot(session)),
     });
   } catch (error) {
     console.error("Symptom chat error:", error);
@@ -3499,7 +3564,8 @@ function shouldPersistRawPendingAnswer(
     return (
       isShortAffirmativeResponse(normalizedMessage) ||
       isShortNegativeResponse(normalizedMessage) ||
-      isShortUnknownResponse(normalizedMessage) ||
+      (question.data_type === "boolean" &&
+        isShortUnknownResponse(normalizedMessage)) ||
       messageMentionsQuestionContext(question, normalizedMessage)
     );
   }
@@ -3527,8 +3593,7 @@ function resolvePendingQuestionAnswer({
 }): { value: string | boolean | number; source: string } | null {
   const directAnswer = coerceFallbackAnswerForPendingQuestion(
     questionId,
-    rawMessage,
-    turnAnswers
+    rawMessage
   );
   if (directAnswer !== null) {
     return { value: directAnswer, source: "direct_coercion" };
@@ -3536,8 +3601,7 @@ function resolvePendingQuestionAnswer({
 
   const combinedAnswer = coerceFallbackAnswerForPendingQuestion(
     questionId,
-    combinedUserSignal,
-    turnAnswers
+    combinedUserSignal
   );
   if (combinedAnswer !== null) {
     return { value: combinedAnswer, source: "combined_signal" };
@@ -3557,8 +3621,7 @@ function resolvePendingQuestionAnswer({
 
 function coerceFallbackAnswerForPendingQuestion(
   questionId: string,
-  rawMessage: string,
-  turnAnswers: Record<string, string | boolean | number> = {}
+  rawMessage: string
 ): string | boolean | number | null {
   const question = FOLLOW_UP_QUESTIONS[questionId];
   if (!question) {
@@ -4664,8 +4727,10 @@ function sanitizeServiceObservationsForClient(
 function sanitizeSessionForClient(session: TriageSession): TriageSession {
   if (!session || !session.case_memory) return session;
 
+  const safeMemory = { ...session.case_memory };
+  delete safeMemory.clarification_reasons;
   const sanitizedMemory = {
-    ...session.case_memory,
+    ...safeMemory,
     // Keep user-safe operational notes while stripping internal telemetry traces.
     service_observations: sanitizeServiceObservationsForClient(
       session.case_memory.service_observations

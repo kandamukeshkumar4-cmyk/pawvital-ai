@@ -37,6 +37,7 @@ export const PROTECTED_CONTROL_STATE_KEYS = [
   "answered_questions",
   "extracted_answers",
   "unresolved_question_ids",
+  "clarification_reasons",
   "last_question_asked",
 ] as const;
 
@@ -51,6 +52,7 @@ export interface ProtectedConversationState {
   answered_questions: string[];
   extracted_answers: Record<string, string | boolean | number>;
   unresolved_question_ids: string[];
+  clarification_reasons: Record<string, string>;
   last_question_asked?: string;
 }
 
@@ -66,6 +68,8 @@ export function getProtectedConversationState(
     extracted_answers: session.extracted_answers ?? {},
     unresolved_question_ids:
       session.case_memory?.unresolved_question_ids ?? [],
+    clarification_reasons:
+      session.case_memory?.clarification_reasons ?? {},
     last_question_asked: session.last_question_asked,
   };
 }
@@ -126,6 +130,76 @@ export function extractNarrativeFromCaseMemory(
   };
 }
 
+function sameReasonMap(
+  before: Record<string, string>,
+  after: Record<string, string>
+): boolean {
+  const beforeKeys = Object.keys(before).sort();
+  const afterKeys = Object.keys(after).sort();
+
+  if (
+    beforeKeys.length !== afterKeys.length ||
+    beforeKeys.some((key, index) => key !== afterKeys[index])
+  ) {
+    return false;
+  }
+
+  return beforeKeys.every((key) => before[key] === after[key]);
+}
+
+/**
+ * VET-900: Detect whether protected control state has been mutated.
+ * Compares a pre-operation snapshot against the current session state.
+ * Returns true if ANY protected field has changed.
+ */
+export function hasControlStateChanged(
+  before: ProtectedConversationState,
+  after: ProtectedConversationState
+): boolean {
+  // answered_questions — order-sensitive array comparison
+  if (
+    before.answered_questions.length !== after.answered_questions.length ||
+    before.answered_questions.some((q, i) => q !== after.answered_questions[i])
+  ) {
+    return true;
+  }
+
+  // extracted_answers — deep shallow comparison (values are scalars)
+  const beforeKeys = Object.keys(before.extracted_answers).sort();
+  const afterKeys = Object.keys(after.extracted_answers).sort();
+  if (
+    beforeKeys.length !== afterKeys.length ||
+    beforeKeys.some((k, i) => k !== afterKeys[i]) ||
+    beforeKeys.some((k) => before.extracted_answers[k] !== after.extracted_answers[k])
+  ) {
+    return true;
+  }
+
+  // unresolved_question_ids — order-sensitive
+  if (
+    before.unresolved_question_ids.length !== after.unresolved_question_ids.length ||
+    before.unresolved_question_ids.some((q, i) => q !== after.unresolved_question_ids[i])
+  ) {
+    return true;
+  }
+
+  if (
+    !sameReasonMap(
+      before.clarification_reasons,
+      after.clarification_reasons
+    )
+  ) {
+    return true;
+  }
+
+  // last_question_asked
+  if (before.last_question_asked !== after.last_question_asked) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Validate that a compression result does not attempt to rewrite protected fields.
  * Returns the result unchanged if valid, or throws if it detects control state mutation.
@@ -135,8 +209,7 @@ export function extractNarrativeFromCaseMemory(
  * protected keys, we must reject it.
  */
 export function validateCompressionOutput(
-  result: Record<string, unknown>,
-  protectedState: ProtectedConversationState
+  result: Record<string, unknown>
 ): void {
   for (const key of PROTECTED_CONTROL_STATE_KEYS) {
     if (key in result) {
@@ -168,7 +241,7 @@ export function mergeCompressionResult(
   protectedState: ProtectedConversationState
 ): TriageSession {
   // Defensive validation
-  validateCompressionOutput(compressed as unknown as Record<string, unknown>, protectedState);
+  validateCompressionOutput(compressed as unknown as Record<string, unknown>);
 
   const caseMemory = ensureStructuredCaseMemory(session);
 
@@ -183,6 +256,7 @@ export function mergeCompressionResult(
       ...caseMemory,
       // Protected: never comes from compression output
       unresolved_question_ids: protectedState.unresolved_question_ids,
+      clarification_reasons: protectedState.clarification_reasons,
       // Only these fields come from compression
       compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
       compression_model: compressed.model,
@@ -383,6 +457,7 @@ export function ensureStructuredCaseMemory(
     image_findings: existing?.image_findings || [],
     red_flag_notes: existing?.red_flag_notes || [],
     unresolved_question_ids: existing?.unresolved_question_ids || [],
+    clarification_reasons: existing?.clarification_reasons || {},
     timeline_notes: existing?.timeline_notes || [],
     visual_evidence: existing?.visual_evidence || [],
     retrieval_evidence: existing?.retrieval_evidence || [],
@@ -594,17 +669,31 @@ export function syncStructuredCaseMemoryQuestions(
   missingQuestionIds: string[]
 ): TriageSession {
   const memory = ensureStructuredCaseMemory(session);
+
+  // VET-900: Merge — not overwrite — unresolved_question_ids.
+  // Previous implementation discarded existing unresolved IDs, destroying
+  // needs_clarification tracking across turns.
+  const mergedUnresolved = dedupeStrings(
+    [
+      ...(memory.unresolved_question_ids ?? []),
+      ...(nextQuestionId ? [nextQuestionId] : []),
+      ...missingQuestionIds,
+    ],
+    12
+  );
+
+  // VET-900: Protect ALL control state fields from clobber.
+  // answered_questions, extracted_answers, last_question_asked live on session;
+  // unresolved_question_ids lives inside case_memory.
+  // Guard: if the field already has values on session, preserve them.
   return {
     ...session,
+    answered_questions: session.answered_questions ?? [],
+    extracted_answers: session.extracted_answers ?? {},
+    last_question_asked: session.last_question_asked,
     case_memory: {
       ...memory,
-      unresolved_question_ids: dedupeStrings(
-        [
-          ...(nextQuestionId ? [nextQuestionId] : []),
-          ...missingQuestionIds,
-        ],
-        12
-      ),
+      unresolved_question_ids: mergedUnresolved,
     },
   };
 }
@@ -922,7 +1011,6 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
  * Uses console.log/console.warn/console.error based on severity.
  */
 function emitTelemetryLog(event: ConversationTelemetryEvent): void {
-  const timestamp = event.timestamp || Date.now();
   const prefix = `[VET-705][${event.event}]`;
 
   const logData = {

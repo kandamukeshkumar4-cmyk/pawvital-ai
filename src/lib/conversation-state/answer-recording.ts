@@ -22,6 +22,23 @@ export function transitionToAnswered(
   const { session, questionId, value, reason } = input;
   const beforeState = getStateSnapshot(session);
   let updated = recordAnswer(session, questionId, value);
+  const caseMemory = updated.case_memory;
+
+  if (caseMemory) {
+    const clarificationReasons = { ...(caseMemory.clarification_reasons ?? {}) };
+    delete clarificationReasons[questionId];
+    updated = {
+      ...updated,
+      case_memory: {
+        ...caseMemory,
+        unresolved_question_ids: (
+          caseMemory.unresolved_question_ids ?? []
+        ).filter((id) => id !== questionId),
+        clarification_reasons: clarificationReasons,
+      },
+    };
+  }
+
   updated = observeTransition(updated, {
     before: beforeState,
     after: getStateSnapshot(updated),

@@ -30,6 +30,9 @@ export function getStateSnapshot(
     unresolvedQuestionIds: [
       ...(session.case_memory?.unresolved_question_ids ?? []),
     ],
+    clarificationReasons: {
+      ...(session.case_memory?.clarification_reasons ?? {}),
+    },
     lastQuestionAsked: session.last_question_asked,
   };
 }

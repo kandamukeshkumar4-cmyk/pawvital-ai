@@ -48,6 +48,7 @@ export interface ConversationControlStateSnapshot {
   answeredQuestionIds: string[];
   extractedAnswers: Record<string, ConversationAnswerValue>;
   unresolvedQuestionIds: string[];
+  clarificationReasons: Record<string, string>;
   lastQuestionAsked?: string;
 }
 

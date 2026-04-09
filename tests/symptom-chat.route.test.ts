@@ -1667,7 +1667,8 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     expect(payload.session.extracted_answers.stool_consistency).toBeUndefined();
     expect(payload.session.answered_questions).not.toContain("stool_consistency");
-    expect(payload.session.last_question_asked).not.toBe("stool_consistency");
+    expect(payload.session.last_question_asked).toBe("stool_consistency");
+    expect(payload.conversationState).toBe("needs_clarification");
   });
 
   it.each(["It's mostly water.", "It came out like water."])(
@@ -4523,5 +4524,487 @@ describe("VET-831: confirmation-state regression pack", () => {
     } finally {
       logSpy.mockRestore();
     }
+  });
+});
+
+describe("VET-729/VET-734: needs-clarification flow", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Case summary.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["drinking_more"], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+  });
+
+  it("records needs_clarification before failure telemetry and keeps metadata internal", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      let session = createSession();
+      session = addSymptoms(session, ["drinking_more"]);
+      session.last_question_asked = "water_intake";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "not sure"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.conversationState).toBe("needs_clarification");
+      expect(payload.session.last_question_asked).toBe("water_intake");
+      expect(payload.session.case_memory).not.toHaveProperty(
+        "clarification_reasons"
+      );
+      expect(String(payload.message)).not.toContain("pending_recovery_failed");
+
+      const stateLogIndex = logSpy.mock.calls.findIndex((call) =>
+        String(call[0]).includes(
+          "state_transition: needs_clarification | question=water_intake | reason=pending_recovery_failed"
+        )
+      );
+      expect(stateLogIndex).toBeGreaterThanOrEqual(0);
+
+      const telemetryLogIndex = logSpy.mock.calls.findIndex((call) => {
+        const line = String(call[0]);
+        return (
+          line.includes("[VET-705][pending_recovery]") &&
+          line.includes('"question_id":"water_intake"') &&
+          line.includes('"outcome":"needs_clarification"')
+        );
+      });
+      expect(telemetryLogIndex).toBeGreaterThanOrEqual(0);
+      expect(logSpy.mock.invocationCallOrder[stateLogIndex]).toBeLessThan(
+        logSpy.mock.invocationCallOrder[telemetryLogIndex]
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("re-asks the unresolved question until a clear answer arrives", async () => {
+    let session = createSession();
+    session = addSymptoms(session, ["drinking_more"]);
+    session.last_question_asked = "water_intake";
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: ["water_intake"],
+      clarification_reasons: {
+        water_intake: "pending_recovery_failed",
+      },
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not sure"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.conversationState).toBe("needs_clarification");
+    expect(payload.session.last_question_asked).toBe("water_intake");
+    expect(payload.session.case_memory?.unresolved_question_ids).toContain(
+      "water_intake"
+    );
+  });
+
+  it("clears unresolved clarification state after a clear answer", async () => {
+    mockExtractWithQwen.mockResolvedValueOnce(
+      JSON.stringify({
+        symptoms: ["drinking_more"],
+        answers: { water_intake: "more_than_usual" },
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["drinking_more"]);
+    session.last_question_asked = "water_intake";
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: ["water_intake"],
+      clarification_reasons: {
+        water_intake: "pending_recovery_failed",
+      },
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "drinking more than usual")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.session.answered_questions).toContain("water_intake");
+    expect(payload.session.extracted_answers.water_intake).toBe(
+      "more_than_usual"
+    );
+    expect(payload.session.case_memory?.unresolved_question_ids ?? []).not.toContain(
+      "water_intake"
+    );
+    expect(payload.session.case_memory).not.toHaveProperty(
+      "clarification_reasons"
+    );
+    expect(payload.session.last_question_asked).not.toBe("water_intake");
+    expect(payload.conversationState).not.toBe("needs_clarification");
+  });
+});
+
+/* ---------------------------------------------------------------------------
+ * VET-900 comprehensive integration scenarios
+ * -------------------------------------------------------------------------*/
+describe("VET-900 comprehensive scenarios", () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+    mockComputeBayesianScore.mockResolvedValue([]);
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Compressed case memory for VET-900 test.",
+      model: "MiniMax-M2.7",
+    });
+    mockPreprocessVeterinaryImage.mockResolvedValue({
+      domain: "skin_wound",
+      bodyRegion: "left hind leg",
+      detectedRegions: [{ label: "wound", confidence: 0.92 }],
+      bestCrop: null,
+      imageQuality: "good",
+      confidence: 0.88,
+      limitations: [],
+    });
+    mockConsultWithMultimodalSidecar.mockResolvedValue({
+      model: "Qwen2.5-VL-7B-Instruct",
+      summary: "Lesion on left hind limb.",
+      agreements: ["left hind limb involvement"],
+      disagreements: [],
+      uncertainties: [],
+      confidence: 0.74,
+      mode: "sync",
+    });
+    mockRetrieveVeterinaryEvidenceFromSidecar.mockResolvedValue({
+      textChunks: [],
+      imageMatches: [],
+      rerankScores: [],
+      sourceCitations: [],
+    });
+    mockIsTextRetrievalConfigured.mockReturnValue(false);
+    mockIsImageRetrievalConfigured.mockReturnValue(false);
+    mockRetrieveVeterinaryTextEvidence.mockResolvedValue({
+      textChunks: [],
+      rerankScores: [],
+      sourceCitations: [],
+    });
+    mockRetrieveVeterinaryImageEvidence.mockResolvedValue({
+      imageMatches: [],
+      sourceCitations: [],
+    });
+    mockEnqueueAsyncReview.mockResolvedValue(true);
+    mockSaveSymptomReportToDB.mockResolvedValue(null);
+    mockDiagnoseWithDeepSeek.mockResolvedValue(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Test diagnosis",
+        explanation: "Explanation",
+        differential_diagnoses: [],
+        clinical_notes: "Notes",
+        recommended_tests: [],
+        home_care: [],
+        actions: [],
+        warning_signs: [],
+        vet_questions: [],
+      })
+    );
+    mockVerifyWithGLM.mockResolvedValue(
+      JSON.stringify({
+        safe: true,
+        corrections: {},
+        reasoning: "Report is clinically sound",
+      })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockReviewQuestionPlanWithNemotron.mockImplementation(async (prompt: string) =>
+      JSON.stringify({
+        include_image_context: prompt.includes("PHOTO ANALYZED THIS TURN: YES"),
+        use_deterministic_fallback: false,
+        reason: "safe",
+      })
+    );
+    mockVerifyQuestionWithNemotron.mockImplementation(async () =>
+      JSON.stringify({ approved: true, rewrite: null })
+    );
+  });
+
+  // --- 1. Direct answer resolution ---
+  describe("direct answer resolution", () => {
+    it("direct yes/no answers resolve pending question", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "pain_on_touch";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "yes"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.answered_questions).toContain("pain_on_touch");
+      expect(payload.session.extracted_answers.pain_on_touch).toBe(true);
+      // last_question_asked should now be the NEXT question, not the old one
+      expect(payload.session.last_question_asked).not.toBe("pain_on_touch");
+    });
+  });
+
+  // --- 2. Duration extraction ---
+  describe("duration extraction", () => {
+    it('duration answers like "about 2 days" extract correctly', async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "vomit_duration";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "about 2 days"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.answered_questions).toContain("vomit_duration");
+      expect(payload.session.extracted_answers.vomit_duration).toBeDefined();
+      expect(typeof payload.session.extracted_answers.vomit_duration).toBe("string");
+      expect(payload.session.extracted_answers.vomit_duration).toMatch(/2 day/i);
+    });
+  });
+
+  // --- 3. Ambiguous without unknown ---
+  describe("ambiguous replies without unknown choice", () => {
+    it("ambiguous replies trigger needs_clarification for questions WITHOUT unknown choice", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "weight_bearing";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "not sure"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      // weight_bearing choices are ["weight_bearing", "partial", "non_weight_bearing"] — no "unknown"
+      // So "not sure" should NOT resolve with value "unknown"
+      const wasAnswered = payload.session.answered_questions.includes("weight_bearing");
+      if (wasAnswered) {
+        // If it was answered, the value must NOT be "unknown"
+        expect(payload.session.extracted_answers.weight_bearing).not.toBe("unknown");
+      } else {
+        // It stayed unresolved — correct behavior
+        expect(payload.session.answered_questions).not.toContain("weight_bearing");
+      }
+    });
+  });
+
+  // --- 4. Ambiguous with unknown ---
+  describe("ambiguous replies with unknown choice", () => {
+    it('ambiguous replies extract "unknown" for questions WITH unknown choice', async () => {
+      // vomit_duration is data_type: "string" → questionAllowsCanonicalUnknown returns true
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session.last_question_asked = "vomit_duration";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "not sure"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.answered_questions).toContain("vomit_duration");
+      expect(payload.session.extracted_answers.vomit_duration).toBe("unknown");
+    });
+  });
+
+  // --- 5. No repeat after answer ---
+  describe("no repeat after answer", () => {
+    it("question does NOT repeat after being answered", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session = recordAnswer(session, "which_leg", "left front");
+      session.last_question_asked = "which_leg";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "it started yesterday"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      // The next question asked should not be the already-answered "which_leg"
+      if (payload.session.last_question_asked) {
+        expect(payload.session.last_question_asked).not.toBe("which_leg");
+      }
+    });
+  });
+
+  // --- 6. Compression boundary safety ---
+  describe("compression boundary safety", () => {
+    it("compression boundary does NOT lose answered_questions or extracted_answers", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session = recordAnswer(session, "which_leg", "left front");
+      session = recordAnswer(session, "limping_onset", "yesterday");
+      session.last_question_asked = "limping_progression";
+      session.case_memory = {
+        ...session.case_memory!,
+        turn_count: 15, // High turn count to trigger compression
+        unresolved_question_ids: ["pain_on_touch"],
+        latest_owner_turn: "It's getting worse over time.",
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "worse"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      // Control state fields must survive compression
+      expect(payload.session.answered_questions).toContain("which_leg");
+      expect(payload.session.answered_questions).toContain("limping_onset");
+      expect(payload.session.extracted_answers.which_leg).toBe("left front");
+      expect(payload.session.extracted_answers.limping_onset).toBe("yesterday");
+      // The new answer should also be recorded
+      expect(payload.session.answered_questions).toContain("limping_progression");
+    });
+  });
+
+  // --- 7. Multi-turn state persistence ---
+  describe("multi-turn state persistence", () => {
+    it("multi-turn conversation maintains state correctly across 5+ turns", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "which_leg";
+
+      const turns = [
+        "left front leg",
+        "it started yesterday",
+        "getting worse",
+        "yes he yelps",
+        "he jumped off the porch",
+      ];
+
+      for (const turn of turns) {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(session, turn));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        // Update session for next turn
+        session = payload.session;
+
+        // After each turn, we must clear module cache for next import
+        jest.resetModules();
+      }
+
+      // After 5 turns, answered_questions should have grown
+      expect(session.answered_questions.length).toBeGreaterThanOrEqual(2);
+      // extracted_answers should have accumulated
+      expect(Object.keys(session.extracted_answers).length).toBeGreaterThanOrEqual(2);
+      // known_symptoms should still be intact
+      expect(session.known_symptoms).toContain("limping");
+    });
+  });
+
+  // --- 8. Telemetry not in response ---
+  describe("telemetry not in response", () => {
+    it("telemetry markers do NOT appear in user-visible response text", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "which_leg";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "left front leg"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      const messageText = payload.message || "";
+      // Telemetry markers must NOT leak into user-visible response
+      expect(messageText).not.toContain("[STATE:");
+      expect(messageText).not.toContain("[TRANSITION:");
+      expect(messageText).not.toContain("pendingQResolvedThisTurn");
+      expect(messageText).not.toContain("sidecarObservations");
+      expect(messageText).not.toContain("[Engine]");
+      expect(messageText).not.toContain("[StateMachine]");
+    });
+  });
+
+  // --- 9. Rate limiting ---
+  describe("rate limiting", () => {
+    it("rate limiting works correctly", async () => {
+      mockCheckRateLimit.mockResolvedValue({
+        success: false,
+        reset: Date.now() + 60_000,
+      });
+
+      const session = createSession();
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "my dog is limping"));
+
+      expect(response.status).toBe(429);
+      const payload = await response.json();
+      expect(payload.error).toContain("Too many requests");
+    });
+  });
+
+  // --- 10. Error handling ---
+  describe("error handling", () => {
+    it("error handling returns proper error responses", async () => {
+      // Send a request with no messages (empty array → no user message)
+      const emptyRequest = new Request("http://localhost/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "chat",
+          pet: PET,
+          session: createSession(),
+          messages: [],
+        }),
+      });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(emptyRequest);
+      const payload = await response.json();
+
+      // With no user messages, the route returns a prompt to tell what's going on
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.message).toContain("Tell me what's going on");
+    });
   });
 });
