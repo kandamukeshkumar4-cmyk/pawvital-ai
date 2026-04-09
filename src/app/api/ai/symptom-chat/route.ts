@@ -62,6 +62,7 @@ import {
   capDiagnosticConfidence,
   inferSupportedImageDomain,
   type ConsultOpinion,
+  type SidecarObservation,
   type RetrievalBundle,
   type ServiceTimeoutRecord,
   type SupportedImageDomain,
@@ -687,11 +688,12 @@ export async function POST(request: Request) {
     // deterministic extraction or LLM extraction this turn (even when the
     // pendingQ block below is skipped because the question was already in
     // answered_questions from a prior turn), it was resolved this turn.
+    const pendingQMergedAnswer =
+      typeof pendingQ === "string" ? mergedAnswers[pendingQ] : undefined;
     const pendingQAnsweredViaMerged =
-      pendingQ !== null &&
-      mergedAnswers[pendingQ] !== null &&
-      mergedAnswers[pendingQ] !== undefined &&
-      mergedAnswers[pendingQ] !== "";
+      pendingQMergedAnswer !== null &&
+      pendingQMergedAnswer !== undefined &&
+      pendingQMergedAnswer !== "";
     let pendingQResolvedThisTurn = pendingQAnsweredViaMerged;
     // VET-832: Expand the pendingQ block to also run when pendingQ is in
     // incomingUnresolvedIds (the question was previously answered but is being
@@ -714,9 +716,12 @@ export async function POST(request: Request) {
       // incoming session AND this reply is ambiguous, skip resolution entirely.
       // A second ambiguous reply should not silently close the question via
       // raw_fallback — it should keep the question in needs_clarification.
+      // Also skip when the answer was already cleanly captured via mergedAnswers
+      // this turn — raw_fallback must not overwrite a valid extraction result.
       const pendingWasAlreadyUnresolved = incomingUnresolvedIds.includes(pendingQ);
       const pendingAnswer =
-        pendingWasAlreadyUnresolved && isAmbiguousReply(lastUserMessage.content)
+        (pendingWasAlreadyUnresolved && isAmbiguousReply(lastUserMessage.content)) ||
+        pendingQAnsweredViaMerged
           ? null
           : resolvePendingQuestionAnswer({
               questionId: pendingQ,
@@ -966,11 +971,17 @@ export async function POST(request: Request) {
     // VET-832: Use incomingUnresolvedIds (captured before updateStructuredCaseMemory
     // rebuilds the array) so that a question already in unresolved_question_ids
     // from a prior turn still drives the needs_clarification path this turn.
+    // Also fire immediately when ambiguousPendingQ was just set this turn (first
+    // ambiguous reply — the question is not yet in incomingUnresolvedIds but we
+    // still want to re-ask the same question rather than advancing to the next one).
     // Guard with !pendingQResolvedThisTurn: if the question was cleanly answered
     // this turn (via mergedAnswers or the pendingQ block), skip re-asking.
     const needsClarificationQuestionId =
       session.last_question_asked &&
-      incomingUnresolvedIds.includes(session.last_question_asked) &&
+      (
+        incomingUnresolvedIds.includes(session.last_question_asked) ||
+        ambiguousPendingQ === session.last_question_asked
+      ) &&
       !pendingQResolvedThisTurn
         ? session.last_question_asked
         : null;
@@ -998,7 +1009,8 @@ export async function POST(request: Request) {
         turn_count: session.case_memory?.turn_count ?? 0,
         question_id: needsClarificationQuestionId,
         outcome: "needs_clarification",
-        source: "needs_clarification_re_ask",
+        source: "unresolved",
+        reason: "needs_clarification_re_ask",
         pending_before: true,
         pending_after: true,
       });
@@ -4588,14 +4600,52 @@ function buildImageGateMessage(
   return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
 }
 
+const INTERNAL_TELEMETRY_STAGES = new Set([
+  "compression",
+  "extraction",
+  "pending_recovery",
+  "repeat_suppression",
+  "state_transition",
+]);
+
+const INTERNAL_TELEMETRY_NOTE_MARKERS = [
+  "question_state=",
+  "conversation_state=",
+];
+
+function isInternalTelemetryObservationForClient(
+  observation: SidecarObservation
+): boolean {
+  if (observation.service === "async-review-service") {
+    return true;
+  }
+
+  if (INTERNAL_TELEMETRY_STAGES.has(observation.stage)) {
+    return true;
+  }
+
+  const note = typeof observation.note === "string" ? observation.note : "";
+  return INTERNAL_TELEMETRY_NOTE_MARKERS.some((marker) =>
+    note.includes(marker)
+  );
+}
+
+function sanitizeServiceObservationsForClient(
+  observations: SidecarObservation[] | undefined
+): SidecarObservation[] {
+  return (observations ?? []).filter(
+    (observation) => !isInternalTelemetryObservationForClient(observation)
+  );
+}
+
 function sanitizeSessionForClient(session: TriageSession): TriageSession {
   if (!session || !session.case_memory) return session;
 
   const sanitizedMemory = {
     ...session.case_memory,
-    // Strictly filter out internal service observations
-    service_observations: (session.case_memory.service_observations || []).filter(
-      (item) => item.service !== "async-review-service"
+    // Keep user-safe operational notes while stripping internal telemetry traces.
+    service_observations: sanitizeServiceObservationsForClient(
+      session.case_memory.service_observations
     ),
     // Hide developer-only comparison data from client responses
     shadow_comparisons: [],

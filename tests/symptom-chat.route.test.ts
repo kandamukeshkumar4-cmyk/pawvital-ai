@@ -3436,6 +3436,14 @@ describe("VET-714: edge-case deterministic reply regression pack", () => {
 });
 
 describe("VET-725: asked-state regression pack", () => {
+  const INTERNAL_STAGES = [
+    "compression",
+    "extraction",
+    "pending_recovery",
+    "repeat_suppression",
+    "state_transition",
+  ];
+
   function assertVet725AskedStatePayloadSafe(payload: {
     type?: unknown;
     message?: unknown;
@@ -3480,6 +3488,8 @@ describe("VET-725: asked-state regression pack", () => {
       const note = String(obs.note ?? "");
       expect(note).not.toContain("question_state=");
       expect(note).not.toContain("conversation_state=");
+      expect(String(obs.service ?? "")).not.toBe("async-review-service");
+      expect(INTERNAL_STAGES).not.toContain(String(obs.stage ?? ""));
     }
   }
 
@@ -3625,5 +3635,91 @@ describe("VET-725: asked-state regression pack", () => {
     assertVet725AskedStatePayloadSafe(payload2);
     expect(payload2.type).toBe("question");
     expect(payload2.session.last_question_asked).toBe("limping_progression");
+  });
+
+  it("VET-737: client payload strips internal telemetry observations but preserves user-safe observations", async () => {
+    const recordedAt = new Date().toISOString();
+    const internalTransitionObservation: SidecarObservation = {
+      service: "async-review-service",
+      stage: "state_transition",
+      latencyMs: 0,
+      outcome: "success",
+      shadowMode: false,
+      fallbackUsed: false,
+      note:
+        "question_state=unanswered->answered | conversation_state=asking->confirmed",
+      recordedAt,
+    };
+    const misclassifiedInternalObservation: SidecarObservation = {
+      service: "vision-preprocess-service",
+      stage: "state_transition",
+      latencyMs: 12,
+      outcome: "success",
+      shadowMode: false,
+      fallbackUsed: false,
+      note:
+        "question_state=unanswered->answered | conversation_state=asking->confirmed",
+      recordedAt,
+    };
+    const safeObservation: SidecarObservation = {
+      service: "vision-preprocess-service",
+      stage: "preprocess",
+      latencyMs: 120,
+      outcome: "success",
+      shadowMode: false,
+      fallbackUsed: false,
+      note: "Owner-safe photo preprocessing completed.",
+      recordedAt,
+    };
+
+    const session = createSession();
+    session.case_memory = {
+      ...(session.case_memory ?? {}),
+      service_observations: [
+        internalTransitionObservation,
+        misclassifiedInternalObservation,
+        safeObservation,
+      ],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "My dog has been limping on the left back leg")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    assertVet725AskedStatePayloadSafe(payload);
+
+    const caseMemory =
+      ((payload.session?.case_memory as Record<string, unknown> | undefined) ??
+        {});
+    const observations =
+      (caseMemory.service_observations as Array<Record<string, unknown>> | undefined) ??
+      [];
+
+    expect(observations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: safeObservation.service,
+          stage: safeObservation.stage,
+          note: safeObservation.note,
+        }),
+      ])
+    );
+    expect(observations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: internalTransitionObservation.service,
+        }),
+      ])
+    );
+    expect(observations).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          stage: misclassifiedInternalObservation.stage,
+        }),
+      ])
+    );
   });
 });
