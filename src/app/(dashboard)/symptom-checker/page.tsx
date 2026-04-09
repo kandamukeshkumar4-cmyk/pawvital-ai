@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   Stethoscope,
   AlertTriangle,
   AlertCircle,
-  CheckCircle,
   Send,
   Loader2,
   Activity,
@@ -22,6 +21,12 @@ import Badge from "@/components/ui/badge";
 import PlanGate from "@/components/subscription/plan-gate";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
+import {
+  getSymptomCheckerConversationUiConfig,
+  parseConversationStateApi,
+  type ConversationStateApi,
+  type GuidanceTone,
+} from "@/app/(dashboard)/symptom-checker/conversation-state-ui";
 
 // --- Types ---
 
@@ -52,6 +57,41 @@ interface SendMessageOptions {
   imageMetaOverride?: ImageMeta | null;
   gateOverride?: boolean;
   appendUserMessage?: boolean;
+}
+
+function guidanceToneToBadgeVariant(
+  tone: GuidanceTone
+): "default" | "success" | "warning" | "danger" | "info" {
+  switch (tone) {
+    case "success":
+      return "success";
+    case "neutral":
+      return "info";
+    case "warning":
+      return "warning";
+    case "attention":
+      return "danger";
+    case "muted":
+    default:
+      return "default";
+  }
+}
+
+function clinicalProgressRailClass(tone: GuidanceTone): string {
+  switch (tone) {
+    case "muted":
+      return "border-gray-200 bg-gray-50/80 text-gray-600";
+    case "neutral":
+      return "border-blue-200 bg-blue-50/90 text-blue-950";
+    case "warning":
+      return "border-amber-300 bg-amber-50/95 text-amber-950";
+    case "success":
+      return "border-emerald-200 bg-emerald-50/90 text-emerald-950";
+    case "attention":
+      return "border-rose-200 bg-rose-50/90 text-rose-950";
+    default:
+      return "border-gray-200 bg-gray-50";
+  }
 }
 
 // --- Config ---
@@ -157,6 +197,8 @@ export default function SymptomCheckerPage() {
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [conversationState, setConversationState] =
+    useState<ConversationStateApi | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -167,6 +209,11 @@ export default function SymptomCheckerPage() {
   const [, setTriageSession] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const triageSessionRef = useRef<any>(null);
+
+  const conversationUi = useMemo(
+    () => getSymptomCheckerConversationUiConfig(conversationState, readyForReport),
+    [conversationState, readyForReport]
+  );
 
   const pet = activePet || {
     name: "your dog",
@@ -371,6 +418,8 @@ export default function SymptomCheckerPage() {
         triageSessionRef.current = data.session;
       }
 
+      setConversationState(parseConversationStateApi(data.conversationState));
+
       if (data.type === "emergency") {
         setMessages((prev) => [
           ...prev,
@@ -484,6 +533,7 @@ export default function SymptomCheckerPage() {
     setReadyForReport(false);
     setGeneratingReport(false);
     setSessionStarted(false);
+    setConversationState(null);
     setTriageSession(null);
     triageSessionRef.current = null;
     setInput("");
@@ -546,6 +596,31 @@ export default function SymptomCheckerPage() {
             </Button>
           )}
         </div>
+      </div>
+
+      {/* VET-833: Clinical progress guidance (owner-facing copy from API state) */}
+      <div
+        className={`rounded-xl border px-4 py-3 ${clinicalProgressRailClass(conversationUi.tone)}`}
+        role="status"
+        aria-live="polite"
+      >
+        <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
+          Clinical progress
+        </p>
+        {conversationUi.railHeadline ? (
+          <>
+            <p className="text-sm font-semibold text-gray-900 mt-1">
+              {conversationUi.railHeadline}
+            </p>
+            <p className="text-sm text-gray-700 mt-1 leading-relaxed">
+              {conversationUi.railBody}
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-gray-800 mt-1 leading-relaxed">
+            {conversationUi.railBody}
+          </p>
+        )}
       </div>
 
       {/* Pre-session: Welcome + Quick Start */}
@@ -622,7 +697,10 @@ export default function SymptomCheckerPage() {
               </p>
             </div>
             {!report && (
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <Badge variant={guidanceToneToBadgeVariant(conversationUi.tone)}>
+                  {conversationUi.badgeLabel}
+                </Badge>
                 <span className="text-xs text-gray-400">
                   {messages.filter((m) => m.role === "assistant").length}/5
                   questions
@@ -675,6 +753,11 @@ export default function SymptomCheckerPage() {
           {/* Input area — hide when report is generated */}
           {!report && (
             <div className="border-t border-gray-100 p-3">
+              {conversationUi.showClarificationComposerHelper && (
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                  {conversationUi.clarificationComposerHelperText}
+                </p>
+              )}
               {selectedImage && (
                 <div className="mb-3 relative inline-block">
                   <img
@@ -732,14 +815,34 @@ export default function SymptomCheckerPage() {
 
               {/* Generate Report button */}
               {readyForReport && !generatingReport && (
-                <div className="mt-3 flex justify-center">
-                  <button
-                    onClick={() => generateReport()}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold rounded-full hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-200"
-                  >
-                    <Zap className="w-4 h-4" />
-                    Generate Full Veterinary Report
-                  </button>
+                <div
+                  className={`mt-4 rounded-xl border p-4 ${
+                    conversationUi.elevateReportCta
+                      ? "border-emerald-200 bg-gradient-to-b from-emerald-50/90 to-white shadow-md"
+                      : "border-gray-100 bg-gray-50/50"
+                  }`}
+                >
+                  <div className="text-center space-y-1 mb-3">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {conversationUi.reportCtaHeading}
+                    </p>
+                    <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
+                      {conversationUi.reportCtaSubcopy}
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => generateReport()}
+                      className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-full transition-all ${
+                        conversationUi.elevateReportCta
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-200/80"
+                          : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
+                      }`}
+                    >
+                      <Zap className="w-4 h-4" />
+                      Generate full veterinary report
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -749,6 +852,11 @@ export default function SymptomCheckerPage() {
 
       {(!sessionStarted && !report) && (
         <div className="p-3 bg-white border border-gray-200 rounded-xl">
+          {conversationUi.showClarificationComposerHelper && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+              {conversationUi.clarificationComposerHelperText}
+            </p>
+          )}
            <div className="flex gap-2">
               <Button
                   variant="outline"
