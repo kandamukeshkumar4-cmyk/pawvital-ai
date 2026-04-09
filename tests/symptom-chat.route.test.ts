@@ -4115,7 +4115,7 @@ describe("VET-734: needs_clarification question guard", () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     try {
       let session = createSession();
-      session = addSymptoms(session, ["appetite_loss"]);
+      session = addSymptoms(session, ["not_eating"]);
       session.last_question_asked = "water_intake";
       // water_intake is not yet answered — stays in getMissingQuestions
       session.case_memory = {
@@ -4159,7 +4159,7 @@ describe("VET-734: needs_clarification question guard", () => {
     );
 
     let session = createSession();
-    session = addSymptoms(session, ["appetite_loss"]);
+    session = addSymptoms(session, ["not_eating"]);
     session.last_question_asked = "water_intake";
     session.case_memory = {
       ...session.case_memory!,
@@ -4186,7 +4186,7 @@ describe("VET-734: needs_clarification question guard", () => {
 
   it("VET-734: no re-ask when last question is already answered and unresolved list is empty", async () => {
     let session = createSession();
-    session = addSymptoms(session, ["appetite_loss"]);
+    session = addSymptoms(session, ["not_eating"]);
     session.last_question_asked = "water_intake";
     // water_intake is already answered — guard must not fire
     session.answered_questions = ["water_intake"];
@@ -4205,6 +4205,33 @@ describe("VET-734: needs_clarification question guard", () => {
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
     // Normal selection runs — must advance past water_intake
+    expect(payload.session.last_question_asked).not.toBe("water_intake");
+  });
+
+  it("VET-734: empty incoming unresolved list does not force needs_clarification re-ask", async () => {
+    mockExtractWithQwen.mockResolvedValueOnce(
+      JSON.stringify({
+        symptoms: ["not_eating"],
+        answers: {},
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["not_eating"]);
+    session.last_question_asked = "water_intake";
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: [],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "She seems less interested in food today")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
     expect(payload.session.last_question_asked).not.toBe("water_intake");
   });
 

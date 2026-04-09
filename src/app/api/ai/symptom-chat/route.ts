@@ -199,6 +199,9 @@ export async function POST(request: Request) {
     let session = clientSession || createSession();
     let effectivePet = getEffectivePetProfile(pet, session);
     const imageHash = image ? hashImage(image) : null;
+    const incomingUnresolvedIds = [
+      ...(session.case_memory?.unresolved_question_ids ?? []),
+    ];
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
     const answerKeysBeforeTurn = new Set(Object.keys(session.extracted_answers));
     let imagePreprocess: VisionPreprocessResult | null = null;
@@ -920,9 +923,8 @@ export async function POST(request: Request) {
     // ambiguous — we must resolve it before moving forward.
     const needsClarificationQuestionId =
       session.last_question_asked &&
-      (session.case_memory?.unresolved_question_ids ?? []).includes(
-        session.last_question_asked
-      )
+      incomingUnresolvedIds.includes(session.last_question_asked) &&
+      !session.answered_questions.includes(session.last_question_asked)
         ? session.last_question_asked
         : null;
 
