@@ -55,6 +55,8 @@ next-env.d.ts
 !/scripts/codex-review-result.schema.json
 !/scripts/hooks/
 !/scripts/hooks/*.mjs
+!/scripts/build.js
+!/scripts/fix-readlink.js
 
 # IDE / editor
 Roo-Code

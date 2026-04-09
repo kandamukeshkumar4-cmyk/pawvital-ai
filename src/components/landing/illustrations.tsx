@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element */
+ 
 
 /** Pure SVG illustration components for the landing page.
  *  All use the app palette: emerald, blue, amber, indigo.
