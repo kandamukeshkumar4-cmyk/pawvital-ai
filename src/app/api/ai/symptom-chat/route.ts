@@ -3280,7 +3280,7 @@ const AMBIGUOUS_UNKNOWN_PREFIXES = [
  * When a pet owner uses a phrase that clearly means "I don't know",
  * return "unknown" immediately instead of leaving the pending question unresolved.
  */
-export function coerceAmbiguousReplyToUnknown(reply: string): "unknown" | null {
+function coerceAmbiguousReplyToUnknown(reply: string): "unknown" | null {
   const normalized = normalizeIntentText(reply);
   if (!normalized) {
     return null;
