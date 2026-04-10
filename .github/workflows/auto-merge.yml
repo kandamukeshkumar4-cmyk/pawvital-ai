@@ -78,6 +78,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
+          TARGET_SHA="${{ github.event.workflow_run.head_sha }}"
           PR_STATE=$(gh pr view "$PR_NUMBER" --json reviewDecision --jq '{reviewDecision: .reviewDecision}')
           REVIEW_DECISION=$(echo "$PR_STATE" | jq -r '.reviewDecision')
 
@@ -88,13 +89,13 @@ jobs:
           fi
 
           APPROVED_BY_AI=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/reviews" \
-            --jq '[.[] | select(.user.login == "github-actions[bot]" and .state == "APPROVED")] | length' \
+            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .state == \"APPROVED\" and .commit_id == \"$TARGET_SHA\")] | length" \
             2>/dev/null || echo "0")
 
           if [ "${APPROVED_BY_AI:-0}" -gt 0 ]; then
             echo "approved=true" >> "$GITHUB_OUTPUT"
           else
-            echo "PR lacks an approved review from github-actions[bot] -- skipping merge"
+            echo "PR lacks an approved AI review for ${TARGET_SHA} -- skipping merge"
             echo "approved=false" >> "$GITHUB_OUTPUT"
           fi
 
