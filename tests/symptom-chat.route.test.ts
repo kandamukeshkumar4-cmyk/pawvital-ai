@@ -3743,6 +3743,7 @@ describe("VET-725: asked-state regression pack", () => {
       const note = String(obs.note ?? "");
       expect(note).not.toContain("question_state=");
       expect(note).not.toContain("conversation_state=");
+      expect(note).not.toContain("clarification_reason=");
       expect(String(obs.service ?? "")).not.toBe("async-review-service");
       expect(INTERNAL_STAGES).not.toContain(String(obs.stage ?? ""));
     }
@@ -3904,7 +3905,7 @@ describe("VET-725: asked-state regression pack", () => {
       shadowMode: false,
       fallbackUsed: false,
       note:
-        "question_state=unanswered->answered | conversation_state=asking->confirmed",
+        "question_state=unanswered->answered | conversation_state=asking->confirmed | clarification_reason=needs_specific_detail",
       recordedAt,
     };
     const misclassifiedInternalObservation: SidecarObservation = {
@@ -3915,7 +3916,7 @@ describe("VET-725: asked-state regression pack", () => {
       shadowMode: false,
       fallbackUsed: false,
       note:
-        "question_state=unanswered->answered | conversation_state=asking->confirmed",
+        "question_state=unanswered->answered | conversation_state=asking->confirmed | clarification_reason=needs_specific_detail",
       recordedAt,
     };
     const safeObservation: SidecarObservation = {
@@ -4388,6 +4389,7 @@ describe("VET-728: confirmation-state replay and compression regressions", () =>
       const note = String(obs.note ?? "");
       expect(note).not.toContain("question_state=");
       expect(note).not.toContain("conversation_state=");
+      expect(note).not.toContain("clarification_reason=");
       expect(String(obs.service ?? "")).not.toBe("async-review-service");
       expect(String(obs.stage ?? "")).not.toBe("state_transition");
     }

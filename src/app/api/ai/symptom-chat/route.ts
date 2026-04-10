@@ -4732,6 +4732,7 @@ function buildImageGateMessage(
 const INTERNAL_TELEMETRY_NOTE_MARKERS = [
   "question_state=",
   "conversation_state=",
+  "clarification_reason=",
 ];
 
 function isInternalTelemetryObservationForClient(item: SidecarObservation): boolean {
