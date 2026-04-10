@@ -37,6 +37,23 @@ export const INTERNAL_TELEMETRY_STAGES = new Set([
   "state_transition",
 ]);
 
+export const INTERNAL_TELEMETRY_NOTE_MARKERS = [
+  "question_state=",
+  "conversation_state=",
+  "clarification_reason=",
+];
+
+/**
+ * VET-900: Centralized check for internal-only telemetry observations.
+ * Returns true if the observation should NEVER appear in client-facing payloads.
+ */
+export function isInternalTelemetry(obs: SidecarObservation): boolean {
+  if (obs.service === "async-review-service") return true;
+  if (INTERNAL_TELEMETRY_STAGES.has(obs.stage)) return true;
+  const note = typeof obs.note === "string" ? obs.note : "";
+  return INTERNAL_TELEMETRY_NOTE_MARKERS.some((m) => note.includes(m));
+}
+
 export function isShadowModeEnabledForService(
   service: SidecarServiceName
 ): boolean {

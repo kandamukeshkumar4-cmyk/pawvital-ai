@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Stethoscope,
   AlertTriangle,
@@ -21,14 +21,9 @@ import Badge from "@/components/ui/badge";
 import PlanGate from "@/components/subscription/plan-gate";
 import { ProgressBar, StateBadge } from "@/components/symptom-checker";
 import type { ConversationState } from "@/lib/conversation-state/types";
+import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
-import {
-  clientSessionToControlSnapshot,
-  getSymptomCheckerConversationUiConfig,
-  resolveConversationStateFromSession,
-  type GuidanceTone,
-} from "@/app/(dashboard)/symptom-checker/conversation-state-ui";
 
 // --- Types ---
 
@@ -59,23 +54,6 @@ interface SendMessageOptions {
   imageMetaOverride?: ImageMeta | null;
   gateOverride?: boolean;
   appendUserMessage?: boolean;
-}
-
-function clinicalProgressRailClass(tone: GuidanceTone): string {
-  switch (tone) {
-    case "muted":
-      return "border-gray-200 bg-gray-50/80 text-gray-600";
-    case "neutral":
-      return "border-blue-200 bg-blue-50/90 text-blue-950";
-    case "warning":
-      return "border-amber-300 bg-amber-50/95 text-amber-950";
-    case "success":
-      return "border-emerald-200 bg-emerald-50/90 text-emerald-950";
-    case "attention":
-      return "border-rose-200 bg-rose-50/90 text-rose-950";
-    default:
-      return "border-gray-200 bg-gray-50";
-  }
 }
 
 // --- Config ---
@@ -199,8 +177,7 @@ export default function SymptomCheckerPage() {
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [conversationState, setConversationState] =
-    useState<ConversationState | null>(null);
+  const [conversationState, setConversationState] = useState<ConversationState>("idle");
   const [answeredCount, setAnsweredCount] = useState<number>(0);
   const [totalQuestions, setTotalQuestions] = useState<number>(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -213,30 +190,6 @@ export default function SymptomCheckerPage() {
   const [, setTriageSession] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const triageSessionRef = useRef<any>(null);
-
-  const conversationUi = useMemo(
-    () => getSymptomCheckerConversationUiConfig(conversationState, readyForReport),
-    [conversationState, readyForReport]
-  );
-  const resolvedConversationState: ConversationState = conversationState ?? "idle";
-  const syncConversationState = (data: {
-    session?: unknown;
-    conversationState?: unknown;
-  }) => {
-    setConversationState(
-      resolveConversationStateFromSession(data.session, data.conversationState)
-    );
-
-    const snapshot = clientSessionToControlSnapshot(data.session);
-    if (!snapshot) {
-      return;
-    }
-
-    setAnsweredCount(snapshot.answeredQuestionIds.length);
-    setTotalQuestions(
-      snapshot.answeredQuestionIds.length + snapshot.unresolvedQuestionIds.length
-    );
-  };
 
   const pet = activePet || {
     name: "your dog",
@@ -374,6 +327,26 @@ export default function SymptomCheckerPage() {
     return extraMessages ? [...base, ...extraMessages] : base;
   };
 
+  const syncProgressFromSession = (session: unknown) => {
+    if (!session || typeof session !== "object") {
+      return;
+    }
+
+    const {
+      answered_questions: answeredQuestions,
+      unresolved_question_ids: unresolvedQuestionIds,
+    } = session as {
+      answered_questions?: Record<string, unknown>;
+      unresolved_question_ids?: unknown[];
+    };
+
+    const answered = answeredQuestions ? Object.keys(answeredQuestions).length : 0;
+    const unresolved = Array.isArray(unresolvedQuestionIds) ? unresolvedQuestionIds.length : 0;
+
+    setAnsweredCount(answered);
+    setTotalQuestions(answered + unresolved);
+  };
+
   // --- Send message to hybrid /api/ai/symptom-chat ---
   const sendMessage = async (
     text?: string,
@@ -435,28 +408,30 @@ export default function SymptomCheckerPage() {
 
       const data = await res.json();
 
-      if (data.conversationState) {
-        setConversationState(data.conversationState);
-      }
-
-      if (data.session?.answered_questions) {
-        setAnsweredCount(Object.keys(data.session.answered_questions).length);
-      }
-
-      if (data.session?.unresolved_question_ids) {
-        setTotalQuestions(
-          Object.keys(data.session.answered_questions || {}).length +
-            (data.session.unresolved_question_ids?.length || 0)
-        );
-      }
-
       // Always store returned session state (both state and ref)
       if (data.session) {
         setTriageSession(data.session);
         triageSessionRef.current = data.session;
+        syncProgressFromSession(data.session);
       }
 
-      syncConversationState(data);
+      // Update conversation state from API response
+      if (data.conversationState) {
+        setConversationState(data.conversationState);
+      } else if (data.type === "emergency") {
+        setConversationState("escalation");
+      } else if (data.type === "ready") {
+        setConversationState("confirmed");
+      } else if (data.type === "question") {
+        setConversationState("asking");
+      } else if (data.session) {
+        // Fallback: infer from session data when API doesn't include conversationState
+        const inferred = resolveConversationStateFromSession(
+          data.session,
+          undefined
+        );
+        setConversationState(inferred);
+      }
 
       if (data.type === "emergency") {
         setMessages((prev) => [
@@ -512,6 +487,9 @@ export default function SymptomCheckerPage() {
         }
         if (data.ready_for_report) {
           setReadyForReport(true);
+        } else {
+          // Reset when conversation continues (not in terminal report state)
+          setReadyForReport(false);
         }
       }
     } catch {
@@ -571,7 +549,7 @@ export default function SymptomCheckerPage() {
     setReadyForReport(false);
     setGeneratingReport(false);
     setSessionStarted(false);
-    setConversationState(null);
+    setConversationState("idle");
     setAnsweredCount(0);
     setTotalQuestions(0);
     setTriageSession(null);
@@ -580,6 +558,11 @@ export default function SymptomCheckerPage() {
     clearComposerImage();
     clearPendingGateImage();
   };
+
+  const latestAssistantIndex = [...messages]
+    .map((msg, index) => ({ msg, index }))
+    .reverse()
+    .find(({ msg }) => msg.role === "assistant")?.index;
 
   const handleRetakePhoto = () => {
     clearComposerImage();
@@ -604,14 +587,6 @@ export default function SymptomCheckerPage() {
       sendMessage();
     }
   };
-
-  const latestAssistantIndex = messages.reduce((latestIndex, message, index) => {
-    if (message.role === "assistant") {
-      return index;
-    }
-
-    return latestIndex;
-  }, -1);
 
   return (
     <PlanGate requiredPlan="pro">
@@ -644,31 +619,6 @@ export default function SymptomCheckerPage() {
             </Button>
           )}
         </div>
-      </div>
-
-      {/* VET-833: Clinical progress guidance (owner-facing copy from API state) */}
-      <div
-        className={`rounded-xl border px-4 py-3 ${clinicalProgressRailClass(conversationUi.tone)}`}
-        role="status"
-        aria-live="polite"
-      >
-        <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-          Clinical progress
-        </p>
-        {conversationUi.railHeadline ? (
-          <>
-            <p className="text-sm font-semibold text-gray-900 mt-1">
-              {conversationUi.railHeadline}
-            </p>
-            <p className="text-sm text-gray-700 mt-1 leading-relaxed">
-              {conversationUi.railBody}
-            </p>
-          </>
-        ) : (
-          <p className="text-sm text-gray-800 mt-1 leading-relaxed">
-            {conversationUi.railBody}
-          </p>
-        )}
       </div>
 
       {/* Pre-session: Welcome + Quick Start */}
@@ -732,31 +682,33 @@ export default function SymptomCheckerPage() {
       {sessionStarted && (
         <Card className="p-0 overflow-hidden">
           {/* Chat header */}
-          <div className="border-b border-gray-100 bg-gray-50/50">
-            <div className="flex items-start gap-3 px-4 py-3">
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <Bot className="w-4 h-4 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  Veterinary Triage for {pet.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {pet.breed}, {pet.age_years}y, {pet.weight} lbs
-                </p>
-              </div>
-              <div className="ml-auto flex-shrink-0">
-                <StateBadge state={resolvedConversationState} />
-              </div>
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+              <Bot className="w-4 h-4 text-purple-600" />
             </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">
+                Veterinary Triage for {pet.name}
+              </p>
+              <p className="text-xs text-gray-500">
+                {pet.breed}, {pet.age_years}y, {pet.weight} lbs
+              </p>
+            </div>
+            {!report && (
+              <div className="ml-auto flex-shrink-0">
+                <StateBadge state={conversationState} />
+              </div>
+            )}
+          </div>
+          {!report && (
             <div className="px-4 pb-3">
               <ProgressBar
                 answered={answeredCount}
                 total={totalQuestions}
-                state={resolvedConversationState}
+                state={conversationState}
               />
             </div>
-          </div>
+          )}
 
           {/* Messages area */}
           <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto min-h-[200px]">
@@ -765,12 +717,12 @@ export default function SymptomCheckerPage() {
                 <ChatBubble
                   message={msg}
                   highlightClarification={
-                    resolvedConversationState === "needs_clarification" &&
+                    conversationState === "needs_clarification" &&
                     msg.role === "assistant" &&
                     i === latestAssistantIndex
                   }
                   highlightEscalation={
-                    resolvedConversationState === "escalation" &&
+                    conversationState === "escalation" &&
                     msg.role === "assistant" &&
                     i === latestAssistantIndex
                   }
@@ -814,11 +766,6 @@ export default function SymptomCheckerPage() {
           {/* Input area — hide when report is generated */}
           {!report && (
             <div className="border-t border-gray-100 p-3">
-              {conversationUi.showClarificationComposerHelper && (
-                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-                  {conversationUi.clarificationComposerHelperText}
-                </p>
-              )}
               {selectedImage && (
                 <div className="mb-3 relative inline-block">
                   <img
@@ -876,34 +823,27 @@ export default function SymptomCheckerPage() {
 
               {/* Generate Report button */}
               {readyForReport && !generatingReport && (
-                <div
-                  className={`mt-4 rounded-xl border p-4 ${
-                    conversationUi.elevateReportCta
-                      ? "border-emerald-200 bg-gradient-to-b from-emerald-50/90 to-white shadow-md"
-                      : "border-gray-100 bg-gray-50/50"
-                  }`}
-                >
-                  <div className="text-center space-y-1 mb-3">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {conversationUi.reportCtaHeading}
-                    </p>
-                    <p className="text-xs text-gray-600 max-w-md mx-auto leading-relaxed">
-                      {conversationUi.reportCtaSubcopy}
-                    </p>
-                  </div>
-                  <div className="flex justify-center">
-                    <button
-                      onClick={() => generateReport()}
-                      className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-full transition-all ${
-                        conversationUi.elevateReportCta
-                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-200/80"
-                          : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
-                      }`}
-                    >
-                      <Zap className="w-4 h-4" />
-                      Generate full veterinary report
-                    </button>
-                  </div>
+                <div className="mt-3 flex justify-center">
+                  <button
+                    onClick={() => generateReport()}
+                    className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-full transition-all ${
+                      conversationState === "escalation"
+                        ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 shadow-lg shadow-red-200 animate-pulse"
+                        : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
+                    }`}
+                  >
+                    {conversationState === "escalation" ? (
+                      <>
+                        <AlertCircle className="w-4 h-4" />
+                        Generate Emergency Report
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4" />
+                        Generate Full Veterinary Report
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
@@ -913,11 +853,6 @@ export default function SymptomCheckerPage() {
 
       {(!sessionStarted && !report) && (
         <div className="p-3 bg-white border border-gray-200 rounded-xl">
-          {conversationUi.showClarificationComposerHelper && (
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-              {conversationUi.clarificationComposerHelperText}
-            </p>
-          )}
            <div className="flex gap-2">
               <Button
                   variant="outline"

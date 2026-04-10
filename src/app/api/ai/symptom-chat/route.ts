@@ -110,7 +110,6 @@ import {
 import {
   getStateSnapshot,
   inferConversationState,
-  type ConversationState,
   transitionToAnswered,
   transitionToAsked,
   transitionToConfirmed,
@@ -126,7 +125,8 @@ import {
   appendSidecarObservation,
   buildObservabilitySnapshot,
   describeShadowComparison,
-  INTERNAL_TELEMETRY_STAGES,
+  INTERNAL_TELEMETRY_NOTE_MARKERS,
+  isInternalTelemetry,
   isShadowModeEnabledForService,
 } from "@/lib/sidecar-observability";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
@@ -248,28 +248,11 @@ export async function POST(request: Request) {
 
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
     if (!lastUserMessage) {
-      if (isReadyForDiagnosis(session)) {
-        session = transitionToConfirmed({
-          session,
-          reason: "report_ready",
-        });
-
-        return NextResponse.json({
-          type: "ready",
-          message:
-            "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
-          session: sanitizeSessionForClient(session),
-          ready_for_report: true,
-          conversationState: "confirmed",
-        });
-      }
-
       return NextResponse.json({
         type: "question",
         message: "Tell me what's going on with your pet.",
-        session: sanitizeSessionForClient(session),
+        session,
         ready_for_report: false,
-        conversationState: conversationStateFromSession(session),
       });
     }
 
@@ -429,7 +412,6 @@ export async function POST(request: Request) {
           session,
           gate: gateWarning,
           ready_for_report: false,
-          conversationState: conversationStateFromSession(session),
         });
       }
     }
@@ -573,9 +555,8 @@ export async function POST(request: Request) {
               return NextResponse.json({
                 type: "emergency",
                 message: `Based on my analysis of ${pet.name}'s photo, I've detected signs that require IMMEDIATE veterinary attention:\n\n${guardrail.flags.map(f => `• ${f}`).join("\n")}\n\nPlease take ${pet.name} to the nearest emergency veterinary hospital NOW. Do not wait. Call ahead so they can prepare. I can generate a full report for the vet while you're on the way.`,
-                session,
+                session: sanitizeSessionForClient(session),
                 ready_for_report: true,
-                conversationState: conversationStateFromSession(session),
               });
             }
           }
@@ -771,26 +752,49 @@ export async function POST(request: Request) {
       } else {
         const isAmbiguousReply =
           coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
-        session = transitionToNeedsClarification({
-          session,
-          questionId: pendingQ,
-          reason: "pending_recovery_failed",
-        });
-        console.log(
-          `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
-        );
-        session = recordConversationTelemetry(session, {
-          event: "pending_recovery",
-          turn_count: session.case_memory?.turn_count ?? 0,
-          question_id: pendingQ,
-          outcome: isAmbiguousReply ? "needs_clarification" : "failure",
-          source: "unresolved",
-          reason: isAmbiguousReply
-            ? "needs_clarification_re_ask"
-            : "pending_recovery_failed",
-          pending_before: hadUnresolved,
-          pending_after: true,
-        });
+
+        // VET-900: UNSAFE emergency questions trigger escalation instead of re-ask
+        if (isAmbiguousReply && shouldEscalateForUnknown(pendingQ)) {
+          session = transitionToEscalation({
+            session,
+            redFlags: [`cannot_assess_${pendingQ}`],
+            reason: "owner_cannot_assess_critical_indicator",
+          });
+          console.log(
+            `[Engine] Escalation triggered — owner cannot assess critical indicator "${pendingQ}"`
+          );
+          session = recordConversationTelemetry(session, {
+            event: "pending_recovery",
+            turn_count: session.case_memory?.turn_count ?? 0,
+            question_id: pendingQ,
+            outcome: "escalation",
+            source: "unresolved",
+            reason: "owner_cannot_assess_critical_indicator",
+            pending_before: hadUnresolved,
+            pending_after: true,
+          });
+        } else {
+          session = transitionToNeedsClarification({
+            session,
+            questionId: pendingQ,
+            reason: "pending_recovery_failed",
+          });
+          console.log(
+            `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
+          );
+          session = recordConversationTelemetry(session, {
+            event: "pending_recovery",
+            turn_count: session.case_memory?.turn_count ?? 0,
+            question_id: pendingQ,
+            outcome: isAmbiguousReply ? "needs_clarification" : "failure",
+            source: "unresolved",
+            reason: isAmbiguousReply
+              ? "needs_clarification_re_ask"
+              : "pending_recovery_failed",
+            pending_before: hadUnresolved,
+            pending_after: true,
+          });
+        }
       }
     }
 
@@ -955,7 +959,6 @@ export async function POST(request: Request) {
         message: `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${pet.name} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
-        conversationState: conversationStateFromSession(session),
       });
     }
 
@@ -978,7 +981,7 @@ export async function POST(request: Request) {
           "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
-        conversationState: "confirmed",
+        conversationState: inferConversationState(getStateSnapshot(session)),
       });
     }
 
@@ -1073,21 +1076,15 @@ export async function POST(request: Request) {
 
     if (!nextQuestionId) {
       if (session.known_symptoms.length === 0) {
-      return NextResponse.json({
-        type: "question",
-        message: image
-          ? `I can see the photo, but I still need a little more context to triage ${pet.name} safely. What worries you most about this area, and when did you first notice it?`
-          : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
-        session: sanitizeSessionForClient(session),
-        ready_for_report: false,
-        conversationState: conversationStateFromSession(session),
-      });
+        return NextResponse.json({
+          type: "question",
+          message: image
+            ? `I can see the photo, but I still need a little more context to triage ${pet.name} safely. What worries you most about this area, and when did you first notice it?`
+            : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
+          session: sanitizeSessionForClient(session),
+          ready_for_report: false,
+        });
       }
-
-      session = transitionToConfirmed({
-        session,
-        reason: "report_ready",
-      });
 
       return NextResponse.json({
         type: "ready",
@@ -1095,7 +1092,6 @@ export async function POST(request: Request) {
           "I have enough information. Let me generate your full veterinary report.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
-        conversationState: "confirmed",
       });
     }
 
@@ -1167,7 +1163,7 @@ export async function POST(request: Request) {
       ready_for_report: isReadyForDiagnosis(session),
       conversationState: needsClarificationQuestionId
         ? "needs_clarification"
-        : conversationStateFromSession(session),
+        : inferConversationState(getStateSnapshot(session)),
     });
   } catch (error) {
     console.error("Symptom chat error:", error);
@@ -1176,7 +1172,6 @@ export async function POST(request: Request) {
         type: "error",
         message:
           "I encountered an issue. Please try again, or contact your veterinarian directly if this is urgent.",
-        conversationState: "idle",
       },
       { status: 200 }
     );
@@ -3183,6 +3178,20 @@ const AMBIGUOUS_UNKNOWN_PREFIXES = [
 ];
 
 /**
+ * VET-900: UNSAFE questions that are emergency triage indicators.
+ * When an owner cannot assess these, we escalate rather than re-ask.
+ */
+const UNSAFE_EMERGENCY_QUESTIONS = new Set([
+  "breathing_onset",
+  "gum_color",
+  "consciousness_level",
+]);
+
+function shouldEscalateForUnknown(questionId: string): boolean {
+  return UNSAFE_EMERGENCY_QUESTIONS.has(questionId);
+}
+
+/**
  * VET-733: Deterministic ambiguous-reply coercer.
  *
  * When a pet owner uses a phrase that clearly means "I don't know",
@@ -4162,12 +4171,32 @@ function extractWeightBearingStatus(rawMessage: string): string | null {
 
 function extractTraumaHistory(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
+  // Check for unknown/uncertain responses first
   if (
-    /\b(fall|fell|jump|jumped|rough play|collision|hit|slipped|slid|twisted|injured|injury|landed badly)\b/.test(
+    /\b(don'?t know|not sure|no idea|can'?t tell|hard to tell|wasn'?t home|wasn'?t there|couldn'?t say|unsure|uncertain)\b/.test(lower) ||
+    /wish i knew|not that i know|no clue|have no clue/i.test(lower)
+  ) {
+    return "unknown";
+  }
+  // Check for negative responses (no trauma incident)
+  if (
+    /\b(no(thing|t really|pe|way|thanks| incident| trauma| fall| jump| injury| hitting)?|never|didn'?t happen|did not happen|no injury|no accident)\b/.test(
       lower
     )
   ) {
-    return rawMessage.trim().slice(0, 160);
+    return "no_trauma";
+  }
+  // Check for positive trauma responses
+  if (
+    /\b(fell|jumped|rough play|collision|hit by|hit by car|slipped|slid|twisted|injured|landed badly|fell off|fell from|jumped off|jumped from|attacked|bitten|car accident|struck by|crushed)\b/.test(
+      lower
+    )
+  ) {
+    return "yes_trauma";
+  }
+  // Affirmative yes without context
+  if (/\b(yes|yeah|yea|yup|uh-huh)\b/.test(lower)) {
+    return "yes_trauma";
   }
 
   return null;
@@ -4700,13 +4729,11 @@ function demoResponse(action: string, pet: PetProfile) {
       },
     });
   }
-  const demoSession = createSession();
   return NextResponse.json({
     type: "question",
     message: `Demo mode. Add API keys for full triage. What's going on with ${pet.name}?`,
-    session: demoSession,
+    session: createSession(),
     ready_for_report: false,
-    conversationState: conversationStateFromSession(demoSession),
   });
 }
 
@@ -4729,31 +4756,14 @@ function buildImageGateMessage(
   return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
 }
 
-const INTERNAL_TELEMETRY_NOTE_MARKERS = [
-  "question_state=",
-  "conversation_state=",
-  "clarification_reason=",
-];
-
-function isInternalTelemetryObservationForClient(item: SidecarObservation): boolean {
-  if (item.service === "async-review-service") {
-    return true;
-  }
-
-  if (INTERNAL_TELEMETRY_STAGES.has(item.stage)) {
-    return true;
-  }
-
-  const note = typeof item.note === "string" ? item.note : "";
-  return INTERNAL_TELEMETRY_NOTE_MARKERS.some((marker) => note.includes(marker));
-}
+// INTERNAL_TELEMETRY_NOTE_MARKERS and isInternalTelemetry are centralized
+// in sidecar-observability.ts (VET-900).
+void INTERNAL_TELEMETRY_NOTE_MARKERS;
 
 function sanitizeServiceObservationsForClient(
   observations: SidecarObservation[] | undefined
 ): SidecarObservation[] {
-  return (observations ?? []).filter(
-    (item) => !isInternalTelemetryObservationForClient(item)
-  );
+  return (observations ?? []).filter((item) => !isInternalTelemetry(item));
 }
 
 function sanitizeSessionForClient(session: TriageSession): TriageSession {
@@ -4776,9 +4786,4 @@ function sanitizeSessionForClient(session: TriageSession): TriageSession {
     ...session,
     case_memory: sanitizedMemory,
   };
-}
-
-/** VET-832: Root-level conversation phase for UI badge (not stored on session). */
-function conversationStateFromSession(session: TriageSession): ConversationState {
-  return inferConversationState(getStateSnapshot(session));
 }
