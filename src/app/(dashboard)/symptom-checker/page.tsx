@@ -5,7 +5,6 @@ import {
   Stethoscope,
   AlertTriangle,
   AlertCircle,
-  CheckCircle,
   Send,
   Loader2,
   Activity,
@@ -20,6 +19,8 @@ import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import PlanGate from "@/components/subscription/plan-gate";
+import { ProgressBar, StateBadge } from "@/components/symptom-checker";
+import type { ConversationState } from "@/lib/conversation-state/types";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 
@@ -54,56 +55,6 @@ interface SendMessageOptions {
   appendUserMessage?: boolean;
 }
 
-type ConversationPhase =
-  | "idle"
-  | "asking"
-  | "answered_unconfirmed"
-  | "confirmed"
-  | "needs_clarification"
-  | "escalation";
-
-function isConversationPhase(value: unknown): value is ConversationPhase {
-  return (
-    value === "idle" ||
-    value === "asking" ||
-    value === "answered_unconfirmed" ||
-    value === "confirmed" ||
-    value === "needs_clarification" ||
-    value === "escalation"
-  );
-}
-
-function conversationPhaseLabel(phase: ConversationPhase): string {
-  const labels: Record<ConversationPhase, string> = {
-    idle: "Idle",
-    asking: "Asking",
-    answered_unconfirmed: "Answered",
-    confirmed: "Confirmed",
-    needs_clarification: "Clarifying",
-    escalation: "Escalation",
-  };
-  return labels[phase];
-}
-
-function conversationPhaseBadgeVariant(
-  phase: ConversationPhase
-): "default" | "success" | "warning" | "danger" | "info" {
-  switch (phase) {
-    case "confirmed":
-      return "success";
-    case "asking":
-      return "info";
-    case "answered_unconfirmed":
-      return "warning";
-    case "needs_clarification":
-      return "warning";
-    case "escalation":
-    case "idle":
-    default:
-      return "default";
-  }
-}
-
 // --- Config ---
 
 const quickSymptoms = [
@@ -123,7 +74,15 @@ const quickSymptoms = [
 
 // --- Components ---
 
-function ChatBubble({ message }: { message: ChatMessage }) {
+function ChatBubble({
+  message,
+  highlightClarification = false,
+  highlightEscalation = false,
+}: {
+  message: ChatMessage;
+  highlightClarification?: boolean;
+  highlightEscalation?: boolean;
+}) {
   const isUser = message.role === "user";
   const isEmergency = message.type === "emergency";
   const isImageGate = message.type === "image_gate";
@@ -155,6 +114,10 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         className={`max-w-[80%] rounded-2xl px-4 py-3 ${
           isUser
             ? "bg-blue-600 text-white"
+            : highlightEscalation
+            ? "bg-red-50 border-2 border-red-500 text-red-900 animate-pulse"
+            : highlightClarification
+            ? "bg-orange-50 border border-orange-200 border-l-4 border-l-orange-400 text-orange-950"
             : isEmergency
             ? "bg-red-50 border-2 border-red-300 text-red-900"
             : isImageGate
@@ -168,6 +131,12 @@ function ChatBubble({ message }: { message: ChatMessage }) {
             alt="Uploaded by user"
             className="w-full max-w-sm rounded-lg mb-2 border border-blue-400/30 object-contain"
           />
+        )}
+        {highlightClarification && (
+          <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-orange-700">
+            <span aria-hidden="true">↩</span>
+            <span>Let me clarify...</span>
+          </p>
         )}
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         <p
@@ -207,8 +176,9 @@ export default function SymptomCheckerPage() {
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [conversationPhase, setConversationPhase] =
-    useState<ConversationPhase | null>(null);
+  const [conversationState, setConversationState] = useState<ConversationState>("idle");
+  const [answeredCount, setAnsweredCount] = useState<number>(0);
+  const [totalQuestions, setTotalQuestions] = useState<number>(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -417,14 +387,25 @@ export default function SymptomCheckerPage() {
 
       const data = await res.json();
 
+      if (data.conversationState) {
+        setConversationState(data.conversationState);
+      }
+
+      if (data.session?.answered_questions) {
+        setAnsweredCount(Object.keys(data.session.answered_questions).length);
+      }
+
+      if (data.session?.unresolved_question_ids) {
+        setTotalQuestions(
+          Object.keys(data.session.answered_questions || {}).length +
+            (data.session.unresolved_question_ids?.length || 0)
+        );
+      }
+
       // Always store returned session state (both state and ref)
       if (data.session) {
         setTriageSession(data.session);
         triageSessionRef.current = data.session;
-      }
-
-      if (isConversationPhase(data.conversationState)) {
-        setConversationPhase(data.conversationState);
       }
 
       if (data.type === "emergency") {
@@ -540,7 +521,9 @@ export default function SymptomCheckerPage() {
     setReadyForReport(false);
     setGeneratingReport(false);
     setSessionStarted(false);
-    setConversationPhase(null);
+    setConversationState("idle");
+    setAnsweredCount(0);
+    setTotalQuestions(0);
     setTriageSession(null);
     triageSessionRef.current = null;
     setInput("");
@@ -571,6 +554,14 @@ export default function SymptomCheckerPage() {
       sendMessage();
     }
   };
+
+  const latestAssistantIndex = messages.reduce((latestIndex, message, index) => {
+    if (message.role === "assistant") {
+      return index;
+    }
+
+    return latestIndex;
+  }, -1);
 
   return (
     <PlanGate requiredPlan="pro">
@@ -666,38 +657,49 @@ export default function SymptomCheckerPage() {
       {sessionStarted && (
         <Card className="p-0 overflow-hidden">
           {/* Chat header */}
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-              <Bot className="w-4 h-4 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Veterinary Triage for {pet.name}
-              </p>
-              <p className="text-xs text-gray-500">
-                {pet.breed}, {pet.age_years}y, {pet.weight} lbs
-              </p>
-            </div>
-            {!report && (
-              <div className="ml-auto flex items-center gap-2">
-                {conversationPhase && (
-                  <Badge variant={conversationPhaseBadgeVariant(conversationPhase)}>
-                    {conversationPhaseLabel(conversationPhase)}
-                  </Badge>
-                )}
-                <span className="text-xs text-gray-400">
-                  {messages.filter((m) => m.role === "assistant").length}/5
-                  questions
-                </span>
+          <div className="border-b border-gray-100 bg-gray-50/50">
+            <div className="flex items-start gap-3 px-4 py-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                <Bot className="w-4 h-4 text-purple-600" />
               </div>
-            )}
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  Veterinary Triage for {pet.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {pet.breed}, {pet.age_years}y, {pet.weight} lbs
+                </p>
+              </div>
+              <div className="ml-auto flex-shrink-0">
+                <StateBadge state={conversationState} />
+              </div>
+            </div>
+            <div className="px-4 pb-3">
+              <ProgressBar
+                answered={answeredCount}
+                total={totalQuestions}
+                state={conversationState}
+              />
+            </div>
           </div>
 
           {/* Messages area */}
           <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto min-h-[200px]">
             {messages.map((msg, i) => (
               <div key={i} className="space-y-2">
-                <ChatBubble message={msg} />
+                <ChatBubble
+                  message={msg}
+                  highlightClarification={
+                    conversationState === "needs_clarification" &&
+                    msg.role === "assistant" &&
+                    i === latestAssistantIndex
+                  }
+                  highlightEscalation={
+                    conversationState === "escalation" &&
+                    msg.role === "assistant" &&
+                    i === latestAssistantIndex
+                  }
+                />
                 {msg.type === "image_gate" &&
                   i === messages.length - 1 &&
                   pendingGateImage && (
