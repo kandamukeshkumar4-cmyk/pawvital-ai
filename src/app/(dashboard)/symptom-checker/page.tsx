@@ -5,7 +5,6 @@ import {
   Stethoscope,
   AlertTriangle,
   AlertCircle,
-  CheckCircle,
   Send,
   Loader2,
   Activity,
@@ -20,12 +19,12 @@ import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import PlanGate from "@/components/subscription/plan-gate";
+import { ProgressBar, StateBadge } from "@/components/symptom-checker";
+import type { ConversationState } from "@/lib/conversation-state/types";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 
 // --- Types ---
-
-type ConversationState = "idle" | "asking" | "answered" | "confirmed" | "needs_clarification" | "escalation";
 
 interface ImageMeta {
   width: number;
@@ -75,7 +74,15 @@ const quickSymptoms = [
 
 // --- Components ---
 
-function ChatBubble({ message }: { message: ChatMessage }) {
+function ChatBubble({
+  message,
+  highlightClarification = false,
+  highlightEscalation = false,
+}: {
+  message: ChatMessage;
+  highlightClarification?: boolean;
+  highlightEscalation?: boolean;
+}) {
   const isUser = message.role === "user";
   const isEmergency = message.type === "emergency";
   const isImageGate = message.type === "image_gate";
@@ -107,8 +114,12 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         className={`max-w-[80%] rounded-2xl px-4 py-3 ${
           isUser
             ? "bg-blue-600 text-white"
+            : highlightEscalation
+            ? "bg-red-50 border-2 border-red-500 text-red-900 animate-pulse"
+            : highlightClarification
+            ? "bg-orange-50 border border-orange-200 border-l-4 border-l-orange-400 text-orange-950"
             : isEmergency
-            ? "bg-red-50 border-2 border-red-300 text-red-900 animate-pulse"
+            ? "bg-red-50 border-2 border-red-300 text-red-900"
             : isImageGate
             ? "bg-amber-50 border border-amber-300 text-amber-950"
             : "bg-gray-100 text-gray-800"
@@ -120,6 +131,12 @@ function ChatBubble({ message }: { message: ChatMessage }) {
             alt="Uploaded by user"
             className="w-full max-w-sm rounded-lg mb-2 border border-blue-400/30 object-contain"
           />
+        )}
+        {highlightClarification && (
+          <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-orange-700">
+            <span aria-hidden="true">↩</span>
+            <span>Let me clarify...</span>
+          </p>
         )}
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
         <p
@@ -160,6 +177,8 @@ export default function SymptomCheckerPage() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [conversationState, setConversationState] = useState<ConversationState>("idle");
+  const [answeredCount, setAnsweredCount] = useState<number>(0);
+  const [totalQuestions, setTotalQuestions] = useState<number>(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -307,6 +326,26 @@ export default function SymptomCheckerPage() {
     return extraMessages ? [...base, ...extraMessages] : base;
   };
 
+  const syncProgressFromSession = (session: unknown) => {
+    if (!session || typeof session !== "object") {
+      return;
+    }
+
+    const {
+      answered_questions: answeredQuestions,
+      unresolved_question_ids: unresolvedQuestionIds,
+    } = session as {
+      answered_questions?: Record<string, unknown>;
+      unresolved_question_ids?: unknown[];
+    };
+
+    const answered = answeredQuestions ? Object.keys(answeredQuestions).length : 0;
+    const unresolved = Array.isArray(unresolvedQuestionIds) ? unresolvedQuestionIds.length : 0;
+
+    setAnsweredCount(answered);
+    setTotalQuestions(answered + unresolved);
+  };
+
   // --- Send message to hybrid /api/ai/symptom-chat ---
   const sendMessage = async (
     text?: string,
@@ -372,6 +411,7 @@ export default function SymptomCheckerPage() {
       if (data.session) {
         setTriageSession(data.session);
         triageSessionRef.current = data.session;
+        syncProgressFromSession(data.session);
       }
 
       // Update conversation state from API response
@@ -498,12 +538,20 @@ export default function SymptomCheckerPage() {
     setReadyForReport(false);
     setGeneratingReport(false);
     setSessionStarted(false);
+    setConversationState("idle");
+    setAnsweredCount(0);
+    setTotalQuestions(0);
     setTriageSession(null);
     triageSessionRef.current = null;
     setInput("");
     clearComposerImage();
     clearPendingGateImage();
   };
+
+  const latestAssistantIndex = [...messages]
+    .map((msg, index) => ({ msg, index }))
+    .reverse()
+    .find(({ msg }) => msg.role === "assistant")?.index;
 
   const handleRetakePhoto = () => {
     clearComposerImage();
@@ -636,50 +684,38 @@ export default function SymptomCheckerPage() {
               </p>
             </div>
             {!report && (
-              <div className="ml-auto flex items-center gap-2">
-                {/* Conversation state badge */}
-                {conversationState !== "idle" && (
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                      conversationState === "escalation"
-                        ? "bg-red-100 text-red-700"
-                        : conversationState === "confirmed"
-                        ? "bg-green-100 text-green-700"
-                        : conversationState === "asking"
-                        ? "bg-blue-100 text-blue-700"
-                        : conversationState === "needs_clarification"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    {conversationState === "escalation" && <AlertCircle className="w-3 h-3" />}
-                    {conversationState === "confirmed" && <CheckCircle className="w-3 h-3" />}
-                    {conversationState === "asking" && <Loader2 className="w-3 h-3 animate-spin" />}
-                    {conversationState === "needs_clarification" && <AlertTriangle className="w-3 h-3" />}
-                    {conversationState === "escalation"
-                      ? "Escalation"
-                      : conversationState === "confirmed"
-                      ? "Ready for report"
-                      : conversationState === "asking"
-                      ? "Analyzing..."
-                      : conversationState === "needs_clarification"
-                      ? "Needs more info"
-                      : "Answered"}
-                  </span>
-                )}
-                <span className="text-xs text-gray-400">
-                  {messages.filter((m) => m.role === "assistant").length}/5
-                  questions
-                </span>
+              <div className="ml-auto flex-shrink-0">
+                <StateBadge state={conversationState} />
               </div>
             )}
           </div>
+          {!report && (
+            <div className="px-4 pb-3">
+              <ProgressBar
+                answered={answeredCount}
+                total={totalQuestions}
+                state={conversationState}
+              />
+            </div>
+          )}
 
           {/* Messages area */}
           <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto min-h-[200px]">
             {messages.map((msg, i) => (
               <div key={i} className="space-y-2">
-                <ChatBubble message={msg} />
+                <ChatBubble
+                  message={msg}
+                  highlightClarification={
+                    conversationState === "needs_clarification" &&
+                    msg.role === "assistant" &&
+                    i === latestAssistantIndex
+                  }
+                  highlightEscalation={
+                    conversationState === "escalation" &&
+                    msg.role === "assistant" &&
+                    i === latestAssistantIndex
+                  }
+                />
                 {msg.type === "image_gate" &&
                   i === messages.length - 1 &&
                   pendingGateImage && (
