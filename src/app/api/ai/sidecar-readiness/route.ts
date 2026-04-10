@@ -36,7 +36,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const readiness = await buildSidecarReadinessSnapshot();
+  const snapshot = await buildSidecarReadinessSnapshot();
+  const readiness = snapshot.aggregation;
   return NextResponse.json({ ok: true, readiness });
 }
 
@@ -52,10 +53,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const readiness = await buildSidecarReadinessSnapshot({
+  const snapshot = await buildSidecarReadinessSnapshot({
     session:
       body.session && typeof body.session === "object" ? body.session : null,
   });
+  const readiness = snapshot.aggregation;
 
   return NextResponse.json({ ok: true, readiness });
 }

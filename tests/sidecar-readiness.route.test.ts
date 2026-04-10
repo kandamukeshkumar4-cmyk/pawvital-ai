@@ -43,6 +43,22 @@ describe("sidecar-readiness route", () => {
       unreachableCount: 0,
       configs: [],
       health: [],
+      aggregation: {
+        services: [
+          {
+            name: "vision-preprocess-service",
+            status: "healthy",
+            latencyMs: 18,
+            version: "1.0.0",
+          },
+        ],
+        healthy: ["vision-preprocess-service"],
+        stub: [],
+        down: [],
+        summary: "all_healthy",
+        totalLatencyMs: 18,
+        checkedAt: "2026-03-28T12:00:00.000Z",
+      },
     });
   });
 
@@ -65,6 +81,16 @@ describe("sidecar-readiness route", () => {
 
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
+    expect(payload.readiness).toEqual(
+      expect.objectContaining({
+        services: expect.any(Array),
+        healthy: expect.any(Array),
+        stub: expect.any(Array),
+        down: expect.any(Array),
+        summary: "all_healthy",
+        checkedAt: "2026-03-28T12:00:00.000Z",
+      })
+    );
     expect(mockBuildSidecarReadinessSnapshot).toHaveBeenCalledWith();
   });
 
@@ -82,6 +108,15 @@ describe("sidecar-readiness route", () => {
 
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
+    expect(payload.readiness).toEqual(
+      expect.objectContaining({
+        services: expect.any(Array),
+        healthy: expect.any(Array),
+        stub: expect.any(Array),
+        down: expect.any(Array),
+        summary: "all_healthy",
+      })
+    );
     expect(mockBuildSidecarReadinessSnapshot).toHaveBeenCalledWith({
       session,
     });

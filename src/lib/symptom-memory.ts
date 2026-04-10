@@ -1010,7 +1010,29 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
  * Emit a telemetry event to server logs.
  * Uses console.log/console.warn/console.error based on severity.
  */
-function emitTelemetryLog(event: ConversationTelemetryEvent): void {
+export function emitTelemetryLog(event: ConversationTelemetryEvent): void;
+export function emitTelemetryLog(
+  channel: string,
+  payload: Record<string, unknown>
+): void;
+export function emitTelemetryLog(
+  eventOrChannel: ConversationTelemetryEvent | string,
+  payload?: Record<string, unknown>
+): void {
+  if (typeof eventOrChannel === "string") {
+    const prefix = `[VET-705][${eventOrChannel}]`;
+    const logData = payload ?? {};
+
+    if (logData.ok === false) {
+      console.error(`${prefix} ${JSON.stringify(logData)}`);
+      return;
+    }
+
+    console.log(`${prefix} ${JSON.stringify(logData)}`);
+    return;
+  }
+
+  const event = eventOrChannel;
   const prefix = `[VET-705][${event.event}]`;
 
   const logData = {

@@ -1,7 +1,7 @@
-import sidecarServiceRegistry from "./sidecar-service-registry.json";
+import type { SidecarServiceName } from "./clinical-evidence";
 import { buildObservabilitySnapshot } from "./sidecar-observability";
 import { buildShadowRolloutSummary } from "./shadow-rollout";
-import type { SidecarServiceName } from "./clinical-evidence";
+import sidecarServiceRegistry from "./sidecar-service-registry.json";
 import type { TriageSession } from "./triage-engine";
 
 interface SidecarRegistryEntry {
@@ -33,7 +33,25 @@ export interface SidecarHealthSummary {
   statusCode: number | null;
   mode: string | null;
   model: string | null;
+  version: string | null;
+  latencyMs: number;
+  timedOut: boolean;
   detail: string | null;
+}
+
+export interface ReadinessAggregation {
+  services: Array<{
+    name: string;
+    status: "healthy" | "stub" | "down" | "timeout";
+    latencyMs: number;
+    version?: string;
+  }>;
+  healthy: string[];
+  stub: string[];
+  down: string[];
+  summary: "all_healthy" | "degraded" | "offline";
+  totalLatencyMs: number;
+  checkedAt: string;
 }
 
 export interface SidecarReadinessSnapshot {
@@ -48,6 +66,7 @@ export interface SidecarReadinessSnapshot {
   unreachableCount: number;
   configs: SidecarConfigSummary[];
   health: SidecarHealthSummary[];
+  aggregation: ReadinessAggregation;
   shadow?: ReturnType<typeof buildShadowRolloutSummary>;
   observability?: {
     shadowModeActive: boolean;
@@ -59,11 +78,22 @@ export interface SidecarReadinessSnapshot {
   };
 }
 
+interface FetchHealthResult {
+  ok: boolean;
+  status: number;
+  body: Record<string, unknown> | null;
+  latencyMs: number;
+}
+
 const registry = sidecarServiceRegistry as SidecarRegistryEntry[];
 const HEALTH_TIMEOUT_MS = Number(process.env.HF_SIDECAR_HEALTH_TIMEOUT_MS) || 5000;
 
 function readEnv(name: string): string {
   return (process.env[name] || "").trim();
+}
+
+function isAbortLikeError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }
 
 function validateSidecarUrl(
@@ -111,7 +141,8 @@ function buildHealthUrl(rawUrl: string): string {
   return healthUrl.toString();
 }
 
-async function fetchHealth(rawUrl: string) {
+async function fetchHealth(rawUrl: string): Promise<FetchHealthResult> {
+  const start = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
 
@@ -123,10 +154,72 @@ async function fetchHealth(rawUrl: string) {
     });
     const text = await response.text();
     const body = text ? (JSON.parse(text) as Record<string, unknown>) : null;
-    return { ok: response.ok, status: response.status, body };
+    return {
+      ok: response.ok,
+      status: response.status,
+      body,
+      latencyMs: Date.now() - start,
+    };
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function mapHealthStatus(
+  entry: SidecarHealthSummary
+): "healthy" | "stub" | "down" | "timeout" {
+  if (entry.status === "healthy") {
+    return "healthy";
+  }
+
+  if (entry.status === "stub") {
+    return "stub";
+  }
+
+  if (entry.timedOut) {
+    return "timeout";
+  }
+
+  return "down";
+}
+
+export function aggregateReadiness(
+  health: SidecarHealthSummary[],
+  checkedAt = new Date().toISOString()
+): ReadinessAggregation {
+  const services = health.map((entry) => ({
+    name: entry.service,
+    status: mapHealthStatus(entry),
+    latencyMs: entry.latencyMs,
+    ...(entry.version ? { version: entry.version } : {}),
+  }));
+
+  const healthy = services
+    .filter((entry) => entry.status === "healthy")
+    .map((entry) => entry.name);
+  const stub = services
+    .filter((entry) => entry.status === "stub")
+    .map((entry) => entry.name);
+  const down = services
+    .filter((entry) => entry.status === "down" || entry.status === "timeout")
+    .map((entry) => entry.name);
+
+  let summary: ReadinessAggregation["summary"] = "degraded";
+  if (services.every((entry) => entry.status === "healthy")) {
+    summary = "all_healthy";
+  } else if (healthy.length === 0 && stub.length === 0) {
+    summary = "offline";
+  }
+
+  return {
+    services,
+    healthy,
+    stub,
+    down,
+    summary,
+    totalLatencyMs: services.reduce((sum, entry) => sum + entry.latencyMs, 0),
+    checkedAt,
+  };
 }
 
 export function listSidecarRegistry(): SidecarRegistryEntry[] {
@@ -162,6 +255,9 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
           statusCode: null,
           mode: null,
           model: null,
+          version: null,
+          latencyMs: 0,
+          timedOut: false,
           detail: "Service URL is not configured",
         } satisfies SidecarHealthSummary;
       }
@@ -173,6 +269,9 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
           statusCode: null,
           mode: null,
           model: null,
+          version: null,
+          latencyMs: 0,
+          timedOut: false,
           detail: config.warning,
         } satisfies SidecarHealthSummary;
       }
@@ -181,7 +280,15 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
         const result = await fetchHealth(config.url);
         const mode = String(result.body?.mode || "").trim() || null;
         const model = String(result.body?.model || "").trim() || null;
+        const version =
+          String(
+            result.body?.version ||
+              result.body?.build_version ||
+              result.body?.app_version ||
+              ""
+          ).trim() || null;
         const reportedService = String(result.body?.service || "").trim();
+
         if (!result.ok || result.body?.ok !== true) {
           return {
             service: entry.name,
@@ -189,6 +296,9 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
             statusCode: result.status,
             mode,
             model,
+            version,
+            latencyMs: result.latencyMs,
+            timedOut: false,
             detail: `Health check failed at status ${result.status}`,
           } satisfies SidecarHealthSummary;
         }
@@ -200,6 +310,9 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
             statusCode: result.status,
             mode,
             model,
+            version,
+            latencyMs: result.latencyMs,
+            timedOut: false,
             detail: `Health check reported ${reportedService} instead of ${entry.expectedHealthService}`,
           } satisfies SidecarHealthSummary;
         }
@@ -210,6 +323,9 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
           statusCode: result.status,
           mode,
           model,
+          version,
+          latencyMs: result.latencyMs,
+          timedOut: false,
           detail: null,
         } satisfies SidecarHealthSummary;
       } catch (error) {
@@ -219,6 +335,9 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
           statusCode: null,
           mode: null,
           model: null,
+          version: null,
+          latencyMs: 0,
+          timedOut: isAbortLikeError(error),
           detail: error instanceof Error ? error.message : String(error),
         } satisfies SidecarHealthSummary;
       }
@@ -229,11 +348,12 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
 export async function buildSidecarReadinessSnapshot(options?: {
   session?: TriageSession | null;
 }): Promise<SidecarReadinessSnapshot> {
+  const generatedAt = new Date().toISOString();
   const configs = getSidecarConfigSummaries();
   const health = await getSidecarHealthSummaries();
 
   const snapshot: SidecarReadinessSnapshot = {
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     configuredCount: configs.filter((entry) => entry.configured).length,
     validCount: configs.filter((entry) => entry.valid).length,
     misconfiguredCount: configs.filter(
@@ -246,6 +366,7 @@ export async function buildSidecarReadinessSnapshot(options?: {
     unreachableCount: health.filter((entry) => entry.status === "unreachable").length,
     configs,
     health,
+    aggregation: aggregateReadiness(health, generatedAt),
   };
 
   if (options?.session) {
