@@ -11,6 +11,7 @@ import type { SidecarObservation } from "@/lib/clinical-evidence";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
+const mockIsNvidiaConfigured = jest.fn(() => true);
 const mockCreateServerSupabaseClient = jest.fn();
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
@@ -57,7 +58,7 @@ jest.mock("@/lib/supabase-server", () => ({
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
-  isNvidiaConfigured: () => true,
+  isNvidiaConfigured: () => mockIsNvidiaConfigured(),
   extractWithQwen: (...args: unknown[]) => mockExtractWithQwen(...args),
   phraseWithLlama: (...args: unknown[]) => mockPhraseWithLlama(...args),
   reviewQuestionPlanWithNemotron: (...args: unknown[]) =>
@@ -4276,6 +4277,79 @@ describe("VET-736: transitionToConfirmed", () => {
   });
 });
 
+describe("VET-832: conversationState in chat API", () => {
+  it("demo mode includes root-level conversationState", async () => {
+    jest.resetModules();
+    mockIsNvidiaConfigured.mockReturnValue(false);
+    try {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const res = await POST(
+        new Request("http://localhost/api/ai/symptom-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "chat",
+            pet: PET,
+            messages: [{ role: "user", content: "Hello" }],
+          }),
+        })
+      );
+      const payload = await res.json();
+      expect(res.status).toBe(200);
+      expect(payload.conversationState).toBe("idle");
+    } finally {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+    }
+  });
+
+  it("question response includes root-level conversationState only", async () => {
+    jest.resetModules();
+    jest.clearAllMocks();
+
+    mockCheckRateLimit.mockResolvedValue({
+      success: true,
+      reset: Date.now() + 60_000,
+    });
+    mockGetRateLimitId.mockReturnValue("test-user");
+    mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+      summary: "Case summary.",
+      model: "MiniMax-M2.7",
+    });
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+    mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/\(Internal ID: ([^,)\n]+)/)?.[1] || "unknown";
+      return `QUESTION_ID:${questionId}`;
+    });
+    mockVerifyQuestionWithNemotron.mockImplementation(async (prompt: string) => {
+      const questionId =
+        prompt.match(/Internal ID: ([^\n]+)/)?.[1]?.trim() || "unknown";
+      return JSON.stringify({ message: `Next: ${questionId}?` });
+    });
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "My dog has been limping on the left back leg")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(typeof payload.conversationState).toBe("string");
+    expect(payload.session).toBeDefined();
+    expect(payload.session).not.toHaveProperty("conversationState");
+  });
+});
 describe("VET-728: confirmation-state replay and compression regressions", () => {
   function assertVet728ConfirmationPayloadSafe(payload: {
     type?: unknown;

@@ -80,8 +80,10 @@ describe("symptom-checker conversation state UI", () => {
         message: "How long has this been going on?",
         conversationState: "asking",
         session: {
-          answered_questions: {},
-          unresolved_question_ids: ["duration"],
+          answered_questions: [],
+          case_memory: {
+            unresolved_question_ids: ["duration"],
+          },
         },
       })
     );
@@ -104,11 +106,10 @@ describe("symptom-checker conversation state UI", () => {
         message: "Any vomiting too?",
         conversationState: "asking",
         session: {
-          answered_questions: {
-            appetite: "reduced",
-            energy: "low",
+          answered_questions: ["appetite", "energy"],
+          case_memory: {
+            unresolved_question_ids: ["vomiting", "duration"],
           },
-          unresolved_question_ids: ["vomiting", "duration"],
         },
       })
     );
@@ -129,11 +130,10 @@ describe("symptom-checker conversation state UI", () => {
         message: "Is your dog still eating at all?",
         conversationState: "asking",
         session: {
-          answered_questions: {
-            appetite: "reduced",
-            energy: "low",
+          answered_questions: ["appetite", "energy"],
+          case_memory: {
+            unresolved_question_ids: ["vomiting", "duration"],
           },
-          unresolved_question_ids: ["vomiting", "duration"],
         },
       })
     );
@@ -182,10 +182,10 @@ describe("symptom-checker conversation state UI", () => {
         message: "Which leg is affected?",
         conversationState: "needs_clarification",
         session: {
-          answered_questions: {
-            limping: true,
+          answered_questions: ["limping"],
+          case_memory: {
+            unresolved_question_ids: ["which_leg"],
           },
-          unresolved_question_ids: ["which_leg"],
         },
       })
     );
@@ -213,10 +213,10 @@ describe("symptom-checker conversation state UI", () => {
         message: "Go to the nearest emergency vet now.",
         conversationState: "escalation",
         session: {
-          answered_questions: {
-            breathing: "labored",
+          answered_questions: ["breathing"],
+          case_memory: {
+            unresolved_question_ids: [],
           },
-          unresolved_question_ids: [],
         },
       })
     );
