@@ -10,7 +10,10 @@ interface ConversationStateMeta {
   trackClassName: string;
 }
 
-export const CONVERSATION_STATE_META: Record<ConversationState, ConversationStateMeta> = {
+export const CONVERSATION_STATE_META: Record<
+  ConversationState,
+  ConversationStateMeta
+> = {
   idle: {
     label: "Ready",
     badgeVariant: "default",
@@ -55,8 +58,15 @@ export const CONVERSATION_STATE_META: Record<ConversationState, ConversationStat
   },
 };
 
-export function getConversationStateMeta(state: ConversationState): ConversationStateMeta {
-  return CONVERSATION_STATE_META[state];
+export function getConversationStateMeta(
+  state: ConversationState
+): ConversationStateMeta {
+  const meta = CONVERSATION_STATE_META[state];
+  if (!meta) {
+    console.warn(`[state-styles] Unknown conversation state: ${state}`);
+    return CONVERSATION_STATE_META.idle;
+  }
+  return meta;
 }
 
 export function getConversationProgressPercent(
