@@ -12,6 +12,7 @@ The Phase 2 plan depends on Qoder owning the broad implementation epics. Before 
 
 - `.github/workflows/auto-pr.yml` now listens for pushes to `qoder/**`.
 - `.github/workflows/ci.yml` now runs push-based CI for `qoder/**`, which is required because AI review is chained from successful push CI runs.
+- `.github/workflows/ai-review.yml` now uses a smaller response budget so the review gate does not skip when OpenRouter credits are low.
 - `scripts/agent-watcher.mjs` now treats `qoder` as a known notify-style agent so failed Qoder PRs get task files and watcher cleanup.
 - `AGENTS.md` now lists Qoder's finish command flag as `--agent qoder`.
 

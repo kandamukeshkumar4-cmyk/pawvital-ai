@@ -113,7 +113,7 @@ jobs:
             -d "$(jq -n \
               --arg model "${{ env.REVIEW_MODEL }}" \
               --arg content "$PROMPT" \
-              '{model: $model, max_tokens: 4096, response_format: {type: "json_object"}, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')")
+              '{model: $model, max_tokens: 2048, response_format: {type: "json_object"}, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')")
 
           RAW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
 
