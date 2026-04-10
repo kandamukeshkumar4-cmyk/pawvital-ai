@@ -292,3 +292,68 @@ export function capDiagnosticConfidence(input: {
 
   return Number(Math.max(0.35, Math.min(0.98, confidence)).toFixed(2));
 }
+
+// ===== VET-921: Evidence Provenance =====
+
+export interface EvidenceProvenance {
+  rule_id: string;
+  source_file: string;
+  line_hint: string;
+  confidence: number;
+}
+
+export interface EvidenceChain {
+  red_flags: Array<EvidenceProvenance & { flag: string }>;
+  modifiers: Array<EvidenceProvenance & { modifier: string; value: number }>;
+  must_ask_rules: Array<EvidenceProvenance & { question_id: string }>;
+  urgency_explanation: EvidenceProvenance | null;
+}
+
+export function createProvenance(
+  rule_id: string,
+  source_file: string,
+  line_hint: string,
+  confidence: number = 1.0
+): EvidenceProvenance {
+  return { rule_id, source_file, line_hint, confidence };
+}
+
+export function buildEvidenceChain(): EvidenceChain {
+  return { red_flags: [], modifiers: [], must_ask_rules: [], urgency_explanation: null };
+}
+
+export function attachRedFlagProvenance(
+  chain: EvidenceChain,
+  flag: string,
+  rule_id: string,
+  source_file: string
+): void {
+  chain.red_flags.push({ flag, rule_id, source_file, line_hint: `red_flag:${flag}`, confidence: 1.0 });
+}
+
+export function attachModifierProvenance(
+  chain: EvidenceChain,
+  modifier: string,
+  value: number,
+  rule_id: string,
+  source_file: string
+): void {
+  chain.modifiers.push({ modifier, value, rule_id, source_file, line_hint: `modifier:${modifier}`, confidence: 0.9 });
+}
+
+export function attachMustAskProvenance(
+  chain: EvidenceChain,
+  question_id: string,
+  rule_id: string,
+  source_file: string
+): void {
+  chain.must_ask_rules.push({ question_id, rule_id, source_file, line_hint: `must_ask:${question_id}`, confidence: 1.0 });
+}
+
+export function attachUrgencyExplanationProvenance(
+  chain: EvidenceChain,
+  rule_id: string,
+  source_file: string
+): void {
+  chain.urgency_explanation = { rule_id, source_file, line_hint: "urgency_explanation", confidence: 0.95 };
+}

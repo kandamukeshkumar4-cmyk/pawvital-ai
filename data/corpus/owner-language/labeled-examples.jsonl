@@ -1,0 +1,16 @@
+{"text":"my dog wont eat","category":"clear","symptoms":["not_eating"]}
+{"text":"he's throwing up everything","category":"clear","symptoms":["vomiting"]}
+{"text":"she can't seem to get comfortable","category":"vague","symptoms":["lethargy"]}
+{"text":"his tummy doesn't look right","category":"vague","symptoms":["swollen_abdomen"]}
+{"text":"my dog's acting weird","category":"vague","symptoms":["behavior_change"]}
+{"text":"he's got the runs bad","category":"slang","symptoms":["diarrhea"]}
+{"text":"she keeps heaving but nothing's coming up","category":"slang","symptoms":["vomiting"]}
+{"text":"he's favoring his front leg","category":"slang","symptoms":["limping"]}
+{"text":"she's scratching like crazy","category":"slang","symptoms":["excessive_scratching"]}
+{"text":"i don't know if it's serious","category":"i_dont_know","symptoms":["unknown_concern"]}
+{"text":"i'm not sure what to look for","category":"i_dont_know","symptoms":["unknown_concern"]}
+{"text":"maybe he's sick, i can't tell","category":"contradictory","symptoms":["unknown_concern"]}
+{"text":"she seems fine but also not fine","category":"contradictory","symptoms":["unknown_concern"]}
+{"text":"he's eating normal but also not eating","category":"contradictory","symptoms":["not_eating"]}
+{"text":"dog sick need help","category":"low_literacy","symptoms":["unknown_concern"]}
+{"text":"pet vomit what do","category":"low_literacy","symptoms":["vomiting"]}
