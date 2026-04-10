@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PawVital Dog Triage Benchmark Suite",
+  "type": "object",
+  "required": ["suite_id", "species", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "suite_id": { "type": "string", "minLength": 1 },
+    "version": { "type": "string" },
+    "species": { "const": "dog" },
+    "description": { "type": "string" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/case" }
+    }
+  },
+  "$defs": {
+    "pet": {
+      "type": "object",
+      "required": ["name", "breed", "age_years", "weight", "species"],
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string" },
+        "breed": { "type": "string" },
+        "age_years": { "type": "number", "minimum": 0 },
+        "weight": { "type": "number", "minimum": 0 },
+        "species": { "const": "dog" }
+      }
+    },
+    "message": {
+      "type": "object",
+      "required": ["role", "content"],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "enum": ["user", "assistant"] },
+        "content": { "type": "string", "minLength": 1 }
+      }
+    },
+    "request": {
+      "type": "object",
+      "required": ["action", "pet", "messages"],
+      "additionalProperties": true,
+      "properties": {
+        "action": { "enum": ["chat", "generate_report"] },
+        "pet": { "$ref": "#/$defs/pet" },
+        "session": { "type": "object" },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/message" }
+        },
+        "image": { "type": "string" },
+        "imageMeta": { "type": "object" }
+      }
+    },
+    "expectations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "responseType": {
+          "enum": ["question", "ready", "emergency", "report", "error", "image_gate"]
+        },
+        "readyForReport": { "type": "boolean" },
+        "conversationState": { "type": "string" },
+        "lastQuestionAsked": { "type": "string" },
+        "answeredQuestionsInclude": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "answeredQuestionsExclude": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "knownSymptomsInclude": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "knownSymptomsExclude": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "extractedAnswersMatch": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["string", "number", "boolean", "null"]
+          }
+        },
+        "redFlagsInclude": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "reportRecommendation": { "type": "string" },
+        "reportSeverity": { "type": "string" },
+        "messageIncludes": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": ["id", "description", "request", "expectations"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "weight": { "type": "number", "minimum": 0 },
+        "request": { "$ref": "#/$defs/request" },
+        "expectations": { "$ref": "#/$defs/expectations" }
+      }
+    }
+  }
+}

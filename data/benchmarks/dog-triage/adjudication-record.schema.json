@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PawVital Dog Benchmark Adjudication Worklist",
+  "type": "object",
+  "required": ["suiteId", "generatedAt", "caseCount", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "suiteId": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "caseCount": { "type": "integer", "minimum": 1 },
+    "source": { "type": "string" },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/adjudicationCase" }
+    }
+  },
+  "$defs": {
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reviewer": { "type": "string" },
+        "status": { "enum": ["pending", "approve", "approve_with_note", "needs_edit", "reject_case"] },
+        "presentation_valid": { "type": ["boolean", "null"] },
+        "urgency_valid": { "type": ["boolean", "null"] },
+        "must_not_miss": { "type": ["boolean", "null"] },
+        "questioning_valid": { "type": ["boolean", "null"] },
+        "unknown_policy_valid": { "type": ["boolean", "null"] },
+        "expectation_precision": { "enum": ["unset", "too_weak", "appropriate", "too_brittle"] },
+        "edit_reason": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "adjudicationCase": {
+      "type": "object",
+      "required": [
+        "id",
+        "description",
+        "tags",
+        "weight",
+        "expectedResponseType",
+        "sourceSuiteId",
+        "sourceFile",
+        "requestText",
+        "reviewA",
+        "reviewB",
+        "panelDecision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "weight": { "type": "number", "minimum": 0 },
+        "expectedResponseType": { "type": "string" },
+        "sourceSuiteId": { "type": "string", "minLength": 1 },
+        "sourceFile": { "type": "string", "minLength": 1 },
+        "requestText": { "type": "string", "minLength": 1 },
+        "reviewA": { "$ref": "#/$defs/review" },
+        "reviewB": { "$ref": "#/$defs/review" },
+        "panelDecision": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": { "enum": ["pending", "approved_final", "needs_edit", "rejected"] },
+            "owner": { "type": "string" },
+            "notes": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,263 @@
+{
+  "suite_id": "dog-triage-gold-candidate-complex-followup",
+  "version": "2026-04-10",
+  "species": "dog",
+  "description": "Complex primary presentations plus follow-up unknown-handling cases.",
+  "cases": [
+    {
+      "id": "question-generalized-stiffness",
+      "description": "Stiffness after rest should open mobility flow.",
+      "tags": ["question", "mobility"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Hank", "breed": "Labrador Retriever", "age_years": 11, "weight": 85, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My senior dog is very stiff when he gets up after resting." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["generalized_stiffness"] }
+    },
+    {
+      "id": "question-nasal-discharge",
+      "description": "Nasal discharge should open upper-airway flow.",
+      "tags": ["question", "respiratory", "nasal"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Jasper", "breed": "Collie", "age_years": 9, "weight": 58, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He has discharge coming from one nostril and keeps sneezing." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["nasal_discharge"] }
+    },
+    {
+      "id": "question-vomiting-diarrhea-combined",
+      "description": "Vomiting and diarrhea together without emergency cues should open combined GI flow.",
+      "tags": ["question", "gi", "combined"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Buddy", "breed": "Mixed Breed", "age_years": 4, "weight": 53, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has both vomiting and diarrhea since last night but is still able to drink." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["vomiting_diarrhea_combined"] }
+    },
+    {
+      "id": "question-coughing-breathing-combined",
+      "description": "Cough plus breathing change should open combined respiratory flow.",
+      "tags": ["question", "respiratory", "combined"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Theo", "breed": "Pomeranian", "age_years": 10, "weight": 11, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He has been coughing and his breathing seems noisier than usual." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["coughing_breathing_combined"] }
+    },
+    {
+      "id": "question-postoperative-concern",
+      "description": "Post-op incision concern should open surgery follow-up flow.",
+      "tags": ["question", "postoperative"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Ellie", "breed": "Mixed Breed", "age_years": 6, "weight": 41, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog's incision looks red and puffy three days after surgery." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["postoperative_concern"] }
+    },
+    {
+      "id": "question-senior-decline",
+      "description": "General senior decline should open geriatric flow.",
+      "tags": ["question", "senior"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Tucker", "breed": "Golden Retriever", "age_years": 13, "weight": 68, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My old dog is slowing down a lot, sleeping more, and just not himself lately." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["senior_decline"] }
+    },
+    {
+      "id": "followup-limping-progression-unknown",
+      "description": "Safe unknown handling should record unknown and continue when limping progression is unclear.",
+      "tags": ["followup", "unknown", "orthopedic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Bruno", "breed": "Golden Retriever", "age_years": 5, "weight": 72, "species": "dog" },
+        "session": {
+          "known_symptoms": ["limping"],
+          "answered_questions": ["which_leg", "limping_onset"],
+          "extracted_answers": { "which_leg": "left back leg", "limping_onset": "sudden" },
+          "red_flags_triggered": [],
+          "candidate_diseases": ["ccl_rupture", "soft_tissue_injury", "patellar_luxation"],
+          "body_systems_involved": ["musculoskeletal"],
+          "last_question_asked": "limping_progression",
+          "case_memory": {
+            "turn_count": 3,
+            "chief_complaints": ["limping"],
+            "active_focus_symptoms": ["limping"],
+            "confirmed_facts": { "which_leg": "left back leg", "limping_onset": "sudden" },
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": ["limping_progression"],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [{ "role": "user", "content": "I really can't tell if it's better or worse." }]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": ["limping_progression"],
+        "extractedAnswersMatch": { "limping_progression": "unknown" },
+        "readyForReport": false
+      }
+    },
+    {
+      "id": "followup-trauma-history-unknown",
+      "description": "Safe unknown handling should record trauma-history unknown and continue.",
+      "tags": ["followup", "unknown", "orthopedic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Bruno", "breed": "Golden Retriever", "age_years": 5, "weight": 72, "species": "dog" },
+        "session": {
+          "known_symptoms": ["limping"],
+          "answered_questions": ["which_leg", "limping_onset", "limping_progression", "weight_bearing", "swelling_present"],
+          "extracted_answers": {
+            "which_leg": "left back leg",
+            "limping_onset": "sudden",
+            "limping_progression": "worse",
+            "weight_bearing": "partial",
+            "swelling_present": false
+          },
+          "red_flags_triggered": [],
+          "candidate_diseases": ["ccl_rupture", "soft_tissue_injury"],
+          "body_systems_involved": ["musculoskeletal"],
+          "last_question_asked": "trauma_history",
+          "case_memory": {
+            "turn_count": 6,
+            "chief_complaints": ["limping"],
+            "active_focus_symptoms": ["limping"],
+            "confirmed_facts": {
+              "which_leg": "left back leg",
+              "limping_onset": "sudden",
+              "limping_progression": "worse",
+              "weight_bearing": "partial",
+              "swelling_present": false
+            },
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": ["trauma_history"],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [{ "role": "user", "content": "I wasn't there, so I really don't know." }]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": ["trauma_history"],
+        "extractedAnswersMatch": { "trauma_history": "unknown" },
+        "readyForReport": false
+      }
+    },
+    {
+      "id": "followup-breathing-onset-unknown-escalates",
+      "description": "Unsafe unknown handling should escalate if breathing onset cannot be assessed.",
+      "tags": ["followup", "unknown", "respiratory", "emergency"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Moose", "breed": "Pug", "age_years": 8, "weight": 23, "species": "dog" },
+        "session": {
+          "known_symptoms": ["difficulty_breathing"],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": ["heart_failure", "allergic_reaction", "difficulty_breathing"],
+          "body_systems_involved": ["respiratory"],
+          "last_question_asked": "breathing_onset",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": ["difficulty_breathing"],
+            "active_focus_symptoms": ["difficulty_breathing"],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": ["breathing_onset"],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [{ "role": "user", "content": "I don't know, I just found him like this." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "followup-water-intake-unknown",
+      "description": "Safe unknown handling should record unknown water intake and continue.",
+      "tags": ["followup", "unknown", "systemic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Bailey", "breed": "Mixed Breed", "age_years": 9, "weight": 48, "species": "dog" },
+        "session": {
+          "known_symptoms": ["drinking_more"],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": ["kidney_disease", "diabetes", "hypercalcemia"],
+          "body_systems_involved": ["systemic"],
+          "last_question_asked": "water_intake",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": ["drinking_more"],
+            "active_focus_symptoms": ["drinking_more"],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": ["water_intake"],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [{ "role": "user", "content": "Honestly I am not sure how much she is drinking." }]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": ["water_intake"],
+        "extractedAnswersMatch": { "water_intake": "unknown" },
+        "readyForReport": false
+      }
+    }
+  ]
+}

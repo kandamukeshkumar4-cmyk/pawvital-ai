@@ -26,7 +26,18 @@
     "runpod:provision:consult": "node scripts/runpod-health-and-wire.mjs --provision-consult",
     "runpod:wire": "node scripts/runpod-health-and-wire.mjs --wire",
     "runpod:provision:review": "node scripts/runpod-health-and-wire.mjs --provision-review",
+    "runpod:provision:narrow": "node scripts/runpod-provision-narrow.mjs --provision",
+    "runpod:provision:narrow:force": "node scripts/runpod-provision-narrow.mjs --provision --force",
+    "runpod:narrow:health": "node scripts/runpod-provision-narrow.mjs --health",
+    "runpod:narrow:wire": "node scripts/runpod-provision-narrow.mjs --wire",
     "runpod:stop:all": "node scripts/runpod-health-and-wire.mjs --stop-all",
+    "runpod:stop:narrow": "node scripts/runpod-provision-narrow.mjs --stop",
+    "runpod:benchmark": "node scripts/runpod-benchmark.mjs",
+    "runpod:benchmark:dry": "node scripts/runpod-benchmark.mjs --dry-run",
+    "runpod:benchmark:gold": "node scripts/runpod-benchmark.mjs --input=data/benchmarks/dog-triage/gold-candidate",
+    "runpod:benchmark:gold:dry": "node scripts/runpod-benchmark.mjs --dry-run --input=data/benchmarks/dog-triage/gold-candidate",
+    "runpod:benchmark:adjudication": "node scripts/generate-benchmark-adjudication-pack.mjs",
+    "runpod:hero:jobs": "node scripts/runpod-hero-job-manifests.mjs",
     "phase5:report": "node scripts/report-phase5-shadow.mjs",
     "phase5:cycle": "node scripts/runpod-phase5-cycle.mjs",
     "verify:sidecars:strict": "node scripts/verify-sidecars.mjs all --strict",
@@ -41,7 +52,15 @@
     "embed:corpus:images": "node scripts/embed-corpus.mjs --kind=images",
     "ingest:csv": "node scripts/ingest-csv-corpus.mjs",
     "db:apply-audio-schema": "node scripts/apply-schema.mjs supabase-audio-schema.sql",
-    "index:audio-corpus": "node scripts/index-audio-corpus.mjs"
+    "index:audio-corpus": "node scripts/index-audio-corpus.mjs",
+    "eval:benchmark": "npx ts-node --esm scripts/eval-harness.ts",
+    "eval:benchmark:dangerous": "npx ts-node --esm scripts/eval-harness.ts --category=dangerous",
+    "eval:benchmark:case": "npx ts-node --esm scripts/eval-harness.ts --case=BENCH-0001",
+    "eval:benchmark:generate": "npx ts-node --esm scripts/generate-benchmark-cases.ts",
+    "eval:benchmark:validate": "npx ts-node --esm scripts/validate-benchmark.ts",
+    "eval:silent-trial": "npx ts-node --esm scripts/silent-trial.ts",
+    "eval:silent-trial:7d": "npx ts-node --esm scripts/silent-trial.ts --days=7",
+    "eval:silent-trial:30d": "npx ts-node --esm scripts/silent-trial.ts --days=30"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
@@ -83,6 +102,7 @@
     "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

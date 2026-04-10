@@ -1,0 +1,43 @@
+{
+  "job_id": "vet-916-multimodal-pilot",
+  "purpose": "Coordinate advisory-only multimodal dog-triage pilots on RunPod GPUs",
+  "recommended_gpu": "NVIDIA L40S",
+  "config": {
+    "experiment_pack_id": "vet-916-multimodal-pilot",
+    "version": "2026-04-10",
+    "species": "dog",
+    "pilots": [
+      {
+        "id": "gait-lameness-video",
+        "modality": "video",
+        "recommended_gpu": "NVIDIA L40S",
+        "objective": "Advisory support for limping severity and weight-bearing cues",
+        "safety_rule": "Never override deterministic emergency escalation or answer protected control-state fields."
+      },
+      {
+        "id": "breathing-effort-video",
+        "modality": "video",
+        "recommended_gpu": "NVIDIA L40S",
+        "objective": "Advisory support for respiratory effort and visible distress cues",
+        "safety_rule": "If uncertain, escalate; do not downgrade respiratory emergencies."
+      },
+      {
+        "id": "photo-support-high-yield-domains",
+        "modality": "image",
+        "recommended_gpu": "NVIDIA RTX 4090",
+        "objective": "Advisory support for gums, skin, stool, and vomit review",
+        "safety_rule": "Outputs remain supportive context only; disposition stays deterministic."
+      }
+    ]
+  },
+  "env_required": [
+    "RUNPOD_API_KEY"
+  ],
+  "inputs": [
+    "data/runpod-experiments/multimodal-pilot.json"
+  ],
+  "outputs": [
+    "multimodal-pilot-metrics.json",
+    "multimodal-pilot-summary.md"
+  ]
+}

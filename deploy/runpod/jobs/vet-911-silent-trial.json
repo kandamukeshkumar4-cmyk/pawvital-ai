@@ -1,0 +1,17 @@
+{
+  "job_id": "vet-911-silent-trial",
+  "purpose": "Run the existing Phase 5 shadow cycle and emit a silent-trial readiness report",
+  "recommended_gpu": "Existing sidecar pods",
+  "command": "node scripts/runpod-phase5-cycle.mjs && node scripts/report-phase5-shadow.mjs --output=phase5-shadow-report.md",
+  "env_required": [
+    "APP_BASE_URL",
+    "HF_SIDECAR_API_KEY",
+    "RUNPOD_API_KEY"
+  ],
+  "inputs": [
+    "deploy/runpod/pods.json"
+  ],
+  "outputs": [
+    "phase5-shadow-report.md"
+  ]
+}

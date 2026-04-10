@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+__pycache__/
 
 # debug
 npm-debug.log*
@@ -57,6 +58,20 @@ next-env.d.ts
 !/scripts/hooks/*.mjs
 !/scripts/build.js
 !/scripts/fix-readlink.js
+!/scripts/runpod-benchmark.mjs
+!/scripts/generate-benchmark-adjudication-pack.mjs
+!/scripts/runpod-hero-job-manifests.mjs
+!/scripts/runpod-provision-narrow.mjs
+!/scripts/eval-harness.ts
+!/scripts/generate-benchmark-cases.ts
+!/scripts/validate-benchmark.ts
+!/scripts/silent-trial.ts
+
+# Generated benchmark/deployment run reports
+/data/benchmark/scorecard-*.json
+/data/benchmark/shadow-*.json
+/runpod-benchmark-report.json
+/runpod-benchmark-gold-report.json
 
 # IDE / editor
 Roo-Code

@@ -219,7 +219,11 @@ async function loadPriorFrequencySnapshot(): Promise<PriorFrequencySnapshot> {
         return knowledgeChunkSnapshot;
       }
 
-      return loadPriorFrequenciesFromCsv();
+      const csvSnapshot = await loadPriorFrequenciesFromCsv();
+      if (csvSnapshot.total === 0) {
+        console.warn("[bayesian-scorer] operating with uniform priors — CSV data unavailable");
+      }
+      return csvSnapshot;
     })();
   }
 
@@ -317,7 +321,7 @@ export async function computeBayesianScore(
   }
 
   const priorSnapshot = await loadPriorFrequencySnapshot();
-  const ageCategory = age <= 1 ? "puppy" : age >= 7 ? "senior" : "adult";
+  const ageCategory = age < 1.5 ? "puppy" : age >= 7 ? "senior" : "adult";
   const resolvedSymptoms = symptoms
     .map((symptom) => resolveSymptomKey(symptom))
     .filter((symptomKey): symptomKey is string => Boolean(symptomKey));

@@ -1,0 +1,4320 @@
+{
+  "suiteId": "gold-candidate-merged",
+  "generatedAt": "2026-04-10T19:57:12.699Z",
+  "caseCount": 101,
+  "source": "G:\\MY Website\\pawvital-ai\\data\\benchmarks\\dog-triage\\gold-candidate",
+  "cases": [
+    {
+      "id": "emergency-blue-gums-breathing",
+      "description": "Blue gums with respiratory distress should immediately escalate.",
+      "tags": [
+        "emergency",
+        "respiratory",
+        "cyanosis"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "My dog is struggling to breathe and his gums look blue.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-gdv-retching",
+      "description": "Distended abdomen with unproductive retching should escalate.",
+      "tags": [
+        "emergency",
+        "gdv",
+        "abdomen"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "His belly is huge and tight and he keeps trying to vomit but nothing comes out.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-urinary-blockage",
+      "description": "Male dog straining with no urine should escalate.",
+      "tags": [
+        "emergency",
+        "urinary"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "My male dog keeps squatting and straining but almost no urine is coming out.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-cluster-seizures",
+      "description": "Multiple seizures in one day should escalate.",
+      "tags": [
+        "emergency",
+        "neurologic",
+        "seizure"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "She has had two seizure episodes today and still seems out of it.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-deep-bleeding-wound",
+      "description": "Deep actively bleeding wound should escalate.",
+      "tags": [
+        "emergency",
+        "wound",
+        "bleeding"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "He has a deep cut on his leg and it is bleeding a lot right now.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-heatstroke",
+      "description": "Overheating with collapse signs should escalate.",
+      "tags": [
+        "emergency",
+        "heat"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "After a walk in the heat she is panting hard, weak, and her gums look bright red.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-toxin-xylitol",
+      "description": "Possible xylitol ingestion should escalate.",
+      "tags": [
+        "emergency",
+        "toxin"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "My dog ate sugar-free gum and now she is vomiting and shaky.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-hit-by-car",
+      "description": "Trauma with inability to stand should escalate.",
+      "tags": [
+        "emergency",
+        "trauma"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "He was hit by a car and now he cannot stand up.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-dystocia",
+      "description": "Stuck puppy during labor should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "My dog is in labor and a puppy seems stuck with hard straining.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-postpartum-eclampsia",
+      "description": "Nursing dam with tremors and weakness should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive",
+        "tremors"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-a",
+      "sourceFile": "01-emergency-a.json",
+      "requestText": "She is nursing puppies and now she is trembling badly and seems weak and restless.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-pale-gums-collapse",
+      "description": "Collapse with pale gums should escalate.",
+      "tags": [
+        "emergency",
+        "collapse",
+        "shock"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "He suddenly collapsed and his gums are very pale.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-anaphylaxis",
+      "description": "Facial swelling with breathing trouble should escalate.",
+      "tags": [
+        "emergency",
+        "allergy"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "After a bee sting her face swelled up and now she is breathing hard.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-vomit-blood-collapse",
+      "description": "Vomiting blood with weakness should escalate.",
+      "tags": [
+        "emergency",
+        "gi",
+        "bleeding"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "My dog threw up a lot of blood and now he is weak and wobbly.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-parvo-style-puppy",
+      "description": "Unvaccinated puppy with vomiting and bloody diarrhea should escalate.",
+      "tags": [
+        "emergency",
+        "puppy",
+        "gi"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "My unvaccinated puppy is vomiting and has bloody diarrhea and will not drink.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-open-fracture",
+      "description": "Visible bone with limb trauma should escalate.",
+      "tags": [
+        "emergency",
+        "orthopedic",
+        "fracture"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "He is limping badly and I can actually see bone through the wound on the leg.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-resting-open-mouth-breathing",
+      "description": "Open-mouth breathing at rest with cyanotic concern should escalate.",
+      "tags": [
+        "emergency",
+        "respiratory"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "He is open-mouth breathing while resting and his gums are looking bluish.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-pyometra-style",
+      "description": "Intact female with foul discharge and collapse risk should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "My unspayed dog is lethargic, drinking a lot, and has foul vaginal discharge.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-oral-bleeding-cant-swallow",
+      "description": "Oral bleeding with inability to drink should escalate.",
+      "tags": [
+        "emergency",
+        "oral"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "There is blood coming from his mouth and he cannot really eat or drink.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-rat-poison-bleeding",
+      "description": "Possible anticoagulant rodenticide exposure with bleeding should escalate.",
+      "tags": [
+        "emergency",
+        "toxin",
+        "bleeding"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "My dog may have gotten rat poison and now I see bleeding from his gums.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-unresponsive-after-tremors",
+      "description": "Unresponsive dog after tremors should escalate.",
+      "tags": [
+        "emergency",
+        "neurologic",
+        "collapse"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-emergency-b",
+      "sourceFile": "02-emergency-b.json",
+      "requestText": "She was shaking and now she is barely responsive.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-limping-sudden",
+      "description": "Straightforward limping complaint should open orthopedic question flow.",
+      "tags": [
+        "question",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "My dog is limping today.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-vomiting",
+      "description": "Vomiting should open GI question flow.",
+      "tags": [
+        "question",
+        "gi"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "My dog has been vomiting since this morning.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-diarrhea",
+      "description": "Diarrhea without emergency cues should open GI question flow.",
+      "tags": [
+        "question",
+        "gi"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "He has had loose diarrhea all day but is still acting pretty normal.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-coughing",
+      "description": "Coughing should open respiratory question flow.",
+      "tags": [
+        "question",
+        "respiratory"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "My dog has been coughing for a few days.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-excessive-scratching",
+      "description": "Pruritus should open dermatology question flow.",
+      "tags": [
+        "question",
+        "dermatology"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "She keeps scratching her paws and ears all the time.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-drinking-more",
+      "description": "Increased thirst should open endocrine/urinary question flow.",
+      "tags": [
+        "question",
+        "endocrine",
+        "urinary"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "My dog is drinking way more water and peeing more than usual.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-trembling",
+      "description": "Trembling without collapse should open neurologic/systemic question flow.",
+      "tags": [
+        "question",
+        "neurologic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "He has been trembling off and on since last night.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-gradual-belly-enlargement",
+      "description": "Gradual abdominal enlargement should open abdomen question flow.",
+      "tags": [
+        "question",
+        "abdomen"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "Her belly has been getting more swollen over the past two weeks.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-small-blood-in-stool",
+      "description": "Small amount of blood in stool should open GI clarification flow.",
+      "tags": [
+        "question",
+        "gi",
+        "blood"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "There were a few streaks of blood in my dog's stool today.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-eye-discharge",
+      "description": "Eye discharge should open ophthalmic question flow.",
+      "tags": [
+        "question",
+        "eye"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-a",
+      "sourceFile": "03-common-a.json",
+      "requestText": "My dog's left eye has yellow discharge and she keeps squinting a little.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-ear-scratching",
+      "description": "Ear scratching with odor should open otic question flow.",
+      "tags": [
+        "question",
+        "ear"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "He keeps scratching his ears and they smell bad.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-weight-loss",
+      "description": "Weight loss complaint should open systemic question flow.",
+      "tags": [
+        "question",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "My dog is losing weight even though he is still eating.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-wound-skin-issue",
+      "description": "Localized skin wound should open wound flow.",
+      "tags": [
+        "question",
+        "wound"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "There is a sore on his rear leg and he will not stop licking it.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-urination-problem",
+      "description": "Urinary problem without full obstruction should open urinary flow.",
+      "tags": [
+        "question",
+        "urinary"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "She is having accidents and seems to strain a little when she pees.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-behavior-change",
+      "description": "Behavior change should open neurologic/systemic behavior flow.",
+      "tags": [
+        "question",
+        "behavior"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "My dog seems confused lately and paces around at night.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-swelling-lump",
+      "description": "New lump should open mass characterization flow.",
+      "tags": [
+        "question",
+        "mass"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "I found a new lump under the skin on my dog's side.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-dental-problem",
+      "description": "Bad breath and chewing difficulty should open dental flow.",
+      "tags": [
+        "question",
+        "dental"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "Her breath is awful and she drops food when she tries to chew.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-hair-loss",
+      "description": "Hair loss should open dermatology flow.",
+      "tags": [
+        "question",
+        "dermatology"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "My dog is losing patches of hair on her back and belly.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-regurgitation",
+      "description": "Regurgitation after meals should open regurgitation flow.",
+      "tags": [
+        "question",
+        "gi"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "Food comes back up right after he eats, almost like he never digested it.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-constipation",
+      "description": "Constipation should open GI motility flow.",
+      "tags": [
+        "question",
+        "gi"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-common-b",
+      "sourceFile": "04-common-b.json",
+      "requestText": "He keeps straining to poop and only tiny dry pieces come out.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-generalized-stiffness",
+      "description": "Stiffness after rest should open mobility flow.",
+      "tags": [
+        "question",
+        "mobility"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "My senior dog is very stiff when he gets up after resting.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-nasal-discharge",
+      "description": "Nasal discharge should open upper-airway flow.",
+      "tags": [
+        "question",
+        "respiratory",
+        "nasal"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "He has discharge coming from one nostril and keeps sneezing.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-vomiting-diarrhea-combined",
+      "description": "Vomiting and diarrhea together without emergency cues should open combined GI flow.",
+      "tags": [
+        "question",
+        "gi",
+        "combined"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "My dog has both vomiting and diarrhea since last night but is still able to drink.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-coughing-breathing-combined",
+      "description": "Cough plus breathing change should open combined respiratory flow.",
+      "tags": [
+        "question",
+        "respiratory",
+        "combined"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "He has been coughing and his breathing seems noisier than usual.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-postoperative-concern",
+      "description": "Post-op incision concern should open surgery follow-up flow.",
+      "tags": [
+        "question",
+        "postoperative"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "My dog's incision looks red and puffy three days after surgery.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "question-senior-decline",
+      "description": "General senior decline should open geriatric flow.",
+      "tags": [
+        "question",
+        "senior"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "My old dog is slowing down a lot, sleeping more, and just not himself lately.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-limping-progression-unknown",
+      "description": "Safe unknown handling should record unknown and continue when limping progression is unclear.",
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "I really can't tell if it's better or worse.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-trauma-history-unknown",
+      "description": "Safe unknown handling should record trauma-history unknown and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "I wasn't there, so I really don't know.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-breathing-onset-unknown-escalates",
+      "description": "Unsafe unknown handling should escalate if breathing onset cannot be assessed.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "emergency"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "I don't know, I just found him like this.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-water-intake-unknown",
+      "description": "Safe unknown handling should record unknown water intake and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-complex-followup",
+      "sourceFile": "05-complex-and-followup.json",
+      "requestText": "Honestly I am not sure how much she is drinking.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-gum-color-unknown-escalates",
+      "description": "Unknown gum color on a respiratory emergency follow-up should escalate.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "emergency"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I can't tell what color they are right now.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-consciousness-unknown-escalates",
+      "description": "Unknown consciousness level during neurologic triage should escalate.",
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic",
+        "emergency"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I don't know if he's fully aware right now.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-cough-type-unknown-reasks",
+      "description": "Unknown cough type should stay in clarification flow rather than closing the question.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "clarification"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I'm not sure what kind of cough it is.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-blood-amount-unknown-reasks",
+      "description": "Unknown blood amount should stay in clarification flow for stool blood triage.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi",
+        "clarification"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I really can't tell how much blood there was.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-appetite-change-unknown",
+      "description": "Unknown appetite change should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I don't really know if she's eating more or less.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-stool-consistency-unknown",
+      "description": "Unknown stool consistency should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I have no idea, I didn't get a good look.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-seasonal-pattern-unknown",
+      "description": "Unknown seasonal pattern should be safely recorded for itch workups.",
+      "tags": [
+        "followup",
+        "unknown",
+        "dermatology"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I'm honestly not sure if it's seasonal or not.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-trembling-timing-unknown",
+      "description": "Unknown trembling timing should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "Hard to tell if it's constant or just on and off.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-weight-bearing-unknown",
+      "description": "Unknown weight-bearing status should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "I can't really tell how much weight he's putting on it.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-vomit-duration-raw-text",
+      "description": "Natural duration phrasing should be preserved for vomiting duration extraction.",
+      "tags": [
+        "followup",
+        "duration",
+        "gi"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "For about three days, maybe since Monday night.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-diarrhea-duration-raw-text",
+      "description": "Natural duration phrasing should be preserved for diarrhea duration extraction.",
+      "tags": [
+        "followup",
+        "duration",
+        "gi"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "It started last Monday, so a couple of days now.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "followup-swelling-present-no",
+      "description": "A direct no answer should close swelling-present follow-up cleanly.",
+      "tags": [
+        "followup",
+        "boolean",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "No, I don't see any swelling.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-acute-paralysis",
+      "description": "Acute inability to use the back legs should escalate immediately.",
+      "tags": [
+        "emergency",
+        "neurologic",
+        "mobility"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "My dog suddenly can't use his back legs and is dragging himself.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-hypoglycemia-toy-breed",
+      "description": "Toy-breed puppy with tremors and collapse cues should escalate.",
+      "tags": [
+        "emergency",
+        "metabolic",
+        "puppy"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "My tiny puppy is shaky, weak, and just flopped over after not eating well.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "emergency-repeated-nonproductive-heaving",
+      "description": "Repeated nonproductive heaving with distress should escalate as abdominal emergency.",
+      "tags": [
+        "emergency",
+        "abdomen",
+        "retching"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-high-risk-followup",
+      "sourceFile": "06-high-risk-followup-and-adjudication.json",
+      "requestText": "He keeps heaving like he needs to vomit but nothing is coming up and he looks panicked.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-question-pseudopregnancy",
+      "description": "Nest-making with mammary enlargement in an intact female should open reproductive questioning.",
+      "tags": [
+        "question",
+        "reproductive"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My unspayed dog is carrying toys around, nesting, and her mammary area looks enlarged.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-question-prolonged-heat",
+      "description": "Prolonged heat-style spotting should open reproductive questioning.",
+      "tags": [
+        "question",
+        "reproductive"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog has had spotting from her vulva for a lot longer than usual.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-question-mastitis-postpartum",
+      "description": "Postpartum mammary pain and redness should open reproductive follow-up.",
+      "tags": [
+        "question",
+        "reproductive",
+        "postpartum"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "She had puppies recently and one of her mammary glands is red, hard, and painful.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-question-scrotal-swelling",
+      "description": "Scrotal swelling without collapse should open reproductive questioning.",
+      "tags": [
+        "question",
+        "reproductive",
+        "male"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog has swelling around his testicles and keeps licking there.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-question-vaginal-discharge-bright",
+      "description": "Stable vaginal discharge should open reproductive questioning when no collapse signs are present.",
+      "tags": [
+        "question",
+        "reproductive"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "There is some discharge from my dog's vulva but she is still eating and acting okay.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-emergency-labor-green-discharge",
+      "description": "Green discharge before a puppy is delivered should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive",
+        "labor"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog in labor has green discharge and no puppy has come out yet.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-emergency-heavy-postpartum-bleeding",
+      "description": "Heavy postpartum bleeding should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive",
+        "bleeding"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "She had puppies yesterday and now she is bleeding heavily and seems weak.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-emergency-retained-puppy-collapse",
+      "description": "Suspected retained puppy with shock signs should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive",
+        "collapse"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "She finished having puppies but now seems weak, distressed, and still has strong contractions.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-emergency-foul-discharge-fever",
+      "description": "Foul discharge with systemic illness in an intact female should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive",
+        "infection"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My unspayed dog has smelly discharge, is drinking a lot, and feels feverish and miserable.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "repro-emergency-male-paraphimosis",
+      "description": "Penis stuck out with swelling and distress should escalate.",
+      "tags": [
+        "emergency",
+        "reproductive",
+        "male"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog's penis is stuck out, swollen, and he is very uncomfortable.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-question-chocolate-small-amount",
+      "description": "Small chocolate exposure without symptoms should still open triage questioning.",
+      "tags": [
+        "question",
+        "toxin"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My little dog may have eaten some milk chocolate but seems normal right now.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-question-marijuana-drowsy",
+      "description": "Possible marijuana exposure with mild signs should open toxin triage.",
+      "tags": [
+        "question",
+        "toxin",
+        "neurologic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog got into an edible and now seems sleepy and wobbly.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-question-garlic-onion",
+      "description": "Garlic or onion ingestion should open toxin triage when no collapse signs are present.",
+      "tags": [
+        "question",
+        "toxin"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog ate a bunch of oniony leftovers and now I am worried.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-question-ibuprofen-maybe",
+      "description": "Possible ibuprofen ingestion should open toxin questioning immediately.",
+      "tags": [
+        "question",
+        "toxin"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "I think my dog may have eaten one of my ibuprofen pills.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-emergency-antifreeze",
+      "description": "Possible antifreeze ingestion should escalate immediately.",
+      "tags": [
+        "emergency",
+        "toxin"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog licked green fluid from the garage floor and is now staggering and drooling.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-emergency-sago-palm",
+      "description": "Sago palm ingestion should escalate immediately.",
+      "tags": [
+        "emergency",
+        "toxin",
+        "plant"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog chewed on a sago palm and is vomiting now.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-emergency-grapes-weakness",
+      "description": "Grape ingestion with vomiting or weakness should escalate.",
+      "tags": [
+        "emergency",
+        "toxin"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "He ate a bunch of grapes and now is vomiting and acting weak.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-emergency-lily-chew",
+      "description": "Household toxin exposure with GI signs and weakness should escalate.",
+      "tags": [
+        "emergency",
+        "toxin",
+        "household"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog got into a toxic plant and now is vomiting and seems really weak.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "toxin-emergency-tremorgenic-mycotoxin",
+      "description": "Tremors after eating moldy food should escalate immediately.",
+      "tags": [
+        "emergency",
+        "toxin",
+        "neurologic"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "He got into moldy trash and now he is shaking hard and cannot walk right.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-question-cough-night",
+      "description": "Night cough with stable behavior should open cardiac-respiratory questioning.",
+      "tags": [
+        "question",
+        "cardiac",
+        "respiratory"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My older dog coughs more at night and after resting.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-question-exercise-intolerance",
+      "description": "Exercise intolerance without collapse should open cardiac questioning.",
+      "tags": [
+        "question",
+        "cardiac"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog tires out much faster on walks and wants to stop early.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-question-belly-fluid",
+      "description": "Gradual abdominal fluid suspicion should open questioning when no crisis signs are present.",
+      "tags": [
+        "question",
+        "cardiac",
+        "abdomen"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "His belly seems to be filling out and he gets tired more easily lately.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-question-faint-then-recovers",
+      "description": "Single recovered fainting spell should open urgent cardiac questioning.",
+      "tags": [
+        "question",
+        "cardiac",
+        "collapse"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog briefly fainted on a walk but came back around quickly.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-emergency-collapse-blue-gums",
+      "description": "Collapse with blue or gray gums should escalate immediately.",
+      "tags": [
+        "emergency",
+        "cardiac",
+        "collapse"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog collapsed and his gums looked blue-gray.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-emergency-resting-breathing-distress",
+      "description": "Resting respiratory distress in a heart-disease style presentation should escalate.",
+      "tags": [
+        "emergency",
+        "cardiac",
+        "respiratory"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "He has known heart disease and now is breathing hard even while lying still.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-emergency-collapse-after-excitement",
+      "description": "Collapse after excitement with delayed recovery should escalate.",
+      "tags": [
+        "emergency",
+        "cardiac",
+        "collapse"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog got excited, collapsed, and still seems weak and out of it.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "cardiac-emergency-rapid-breathing-pale",
+      "description": "Rapid breathing with pallor and weakness should escalate.",
+      "tags": [
+        "emergency",
+        "cardiac",
+        "shock"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "She is breathing fast, looks pale, and can barely stand up.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-question-new-lump",
+      "description": "Stable new skin lump should open mass characterization questioning.",
+      "tags": [
+        "question",
+        "oncology",
+        "mass"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "I found a round new lump on my dog's side and it does not seem painful.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-question-weight-loss-lump",
+      "description": "Weight loss plus a new mass should open serious systemic questioning.",
+      "tags": [
+        "question",
+        "oncology",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog has been losing weight and I also found a lump near his ribs.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-question-oral-mass",
+      "description": "Possible oral mass with otherwise stable behavior should open questioning.",
+      "tags": [
+        "question",
+        "oncology",
+        "oral"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "There seems to be a growth in my dog's mouth and his breath is terrible.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-question-bone-pain",
+      "description": "Gradual limb pain and swelling should open orthopedic-oncology questioning.",
+      "tags": [
+        "question",
+        "oncology",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My big dog has a swollen painful leg and a limp that has been getting worse for weeks.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-question-lymph-node-swelling",
+      "description": "Multiple enlarged lymph-node style swellings should open systemic questioning.",
+      "tags": [
+        "question",
+        "oncology",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectedResponseType": "question",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "I can feel several swollen lumps under my dog's jaw and behind his knees.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-emergency-bleeding-splenic-rupture-style",
+      "description": "Acute collapse with abdominal distension in a cancer-risk presentation should escalate.",
+      "tags": [
+        "emergency",
+        "oncology",
+        "bleeding",
+        "abdomen"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My older dog suddenly collapsed, has a swollen belly, and his gums are very pale.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-emergency-mouth-tumor-bleeding",
+      "description": "Heavy bleeding from an oral mass should escalate.",
+      "tags": [
+        "emergency",
+        "oncology",
+        "oral",
+        "bleeding"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "There is a growth in my dog's mouth and now it is bleeding a lot.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-emergency-obstructive-neck-mass",
+      "description": "Neck swelling causing breathing or swallowing trouble should escalate.",
+      "tags": [
+        "emergency",
+        "oncology",
+        "airway"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog has a large throat lump and now he is struggling to swallow and breathe.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    },
+    {
+      "id": "oncology-emergency-nosebleed-collapse",
+      "description": "Severe nosebleed with weakness should escalate.",
+      "tags": [
+        "emergency",
+        "oncology",
+        "bleeding",
+        "nasal"
+      ],
+      "weight": 3,
+      "expectedResponseType": "emergency",
+      "sourceSuiteId": "dog-triage-gold-candidate-domain-expansion",
+      "sourceFile": "07-domain-expansion.json",
+      "requestText": "My dog has a major nosebleed and is now weak and shaky.",
+      "reviewA": {
+        "reviewer": "reviewer_a",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "reviewB": {
+        "reviewer": "reviewer_b",
+        "status": "pending",
+        "presentation_valid": null,
+        "urgency_valid": null,
+        "must_not_miss": null,
+        "questioning_valid": null,
+        "unknown_policy_valid": null,
+        "expectation_precision": "unset",
+        "edit_reason": "",
+        "notes": ""
+      },
+      "panelDecision": {
+        "status": "pending",
+        "owner": "",
+        "notes": ""
+      }
+    }
+  ]
+}
