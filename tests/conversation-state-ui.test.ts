@@ -1,6 +1,8 @@
 import {
+  clientSessionToControlSnapshot,
   getSymptomCheckerConversationUiConfig,
   parseConversationStateApi,
+  resolveConversationStateFromSession,
 } from "@/app/(dashboard)/symptom-checker/conversation-state-ui";
 
 /** API-style snake_case and internal tokens must not appear in owner-facing strings. */
@@ -84,5 +86,49 @@ describe("VET-833: getSymptomCheckerConversationUiConfig", () => {
   it("parseConversationStateApi rejects unknown strings", () => {
     expect(parseConversationStateApi("needs_clarification")).toBe("needs_clarification");
     expect(parseConversationStateApi("bogus")).toBeNull();
+  });
+
+  it("falls back to inferred state when API state is missing", () => {
+    expect(
+      resolveConversationStateFromSession(
+        {
+          last_question_asked: "water_intake",
+          answered_questions: [],
+          extracted_answers: {},
+          case_memory: { unresolved_question_ids: [] },
+        },
+        null
+      )
+    ).toBe("asking");
+  });
+
+  it("prefers valid API state over inferred session state", () => {
+    expect(
+      resolveConversationStateFromSession(
+        {
+          last_question_asked: "water_intake",
+          answered_questions: [],
+          extracted_answers: {},
+          case_memory: { unresolved_question_ids: [] },
+        },
+        "needs_clarification"
+      )
+    ).toBe("needs_clarification");
+  });
+
+  it("maps client session payloads into control snapshots", () => {
+    expect(
+      clientSessionToControlSnapshot({
+        last_question_asked: "q1",
+        answered_questions: ["q0"],
+        extracted_answers: { q0: "yes" },
+        case_memory: { unresolved_question_ids: ["q1"] },
+      })
+    ).toEqual({
+      answeredQuestionIds: ["q0"],
+      extractedAnswers: { q0: "yes" },
+      unresolvedQuestionIds: ["q1"],
+      lastQuestionAsked: "q1",
+    });
   });
 });

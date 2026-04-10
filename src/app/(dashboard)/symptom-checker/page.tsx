@@ -24,8 +24,9 @@ import type { ConversationState } from "@/lib/conversation-state/types";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 import {
+  clientSessionToControlSnapshot,
   getSymptomCheckerConversationUiConfig,
-  parseConversationStateApi,
+  resolveConversationStateFromSession,
   type GuidanceTone,
 } from "@/app/(dashboard)/symptom-checker/conversation-state-ui";
 
@@ -218,6 +219,24 @@ export default function SymptomCheckerPage() {
     [conversationState, readyForReport]
   );
   const resolvedConversationState: ConversationState = conversationState ?? "idle";
+  const syncConversationState = (data: {
+    session?: unknown;
+    conversationState?: unknown;
+  }) => {
+    setConversationState(
+      resolveConversationStateFromSession(data.session, data.conversationState)
+    );
+
+    const snapshot = clientSessionToControlSnapshot(data.session);
+    if (!snapshot) {
+      return;
+    }
+
+    setAnsweredCount(snapshot.answeredQuestionIds.length);
+    setTotalQuestions(
+      snapshot.answeredQuestionIds.length + snapshot.unresolvedQuestionIds.length
+    );
+  };
 
   const pet = activePet || {
     name: "your dog",
@@ -422,17 +441,7 @@ export default function SymptomCheckerPage() {
         triageSessionRef.current = data.session;
       }
 
-      setConversationState(parseConversationStateApi(data.conversationState));
-      if (Array.isArray(data.session?.answered_questions)) {
-        const nextAnsweredCount = data.session.answered_questions.length;
-        const unresolvedQuestionIds =
-          data.session?.case_memory?.unresolved_question_ids;
-        const nextUnresolvedCount = Array.isArray(unresolvedQuestionIds)
-          ? unresolvedQuestionIds.length
-          : 0;
-        setAnsweredCount(nextAnsweredCount);
-        setTotalQuestions(nextAnsweredCount + nextUnresolvedCount);
-      }
+      syncConversationState(data);
 
       if (data.type === "emergency") {
         setMessages((prev) => [

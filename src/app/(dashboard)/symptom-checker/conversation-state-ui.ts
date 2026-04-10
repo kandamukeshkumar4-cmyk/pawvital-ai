@@ -3,17 +3,18 @@
  * No React imports — safe for unit tests and deterministic rendering.
  */
 
-export type ConversationStateApi =
-  | "idle"
-  | "asking"
-  | "answered_unconfirmed"
-  | "confirmed"
-  | "needs_clarification"
-  | "escalation";
+import {
+  CONVERSATION_STATE_VALUES,
+  type ConversationControlStateSnapshot,
+  type ConversationState,
+} from "@/lib/conversation-state/types";
+import { inferConversationState } from "@/lib/conversation-state/transitions";
+
+export type ConversationStateApi = ConversationState;
 
 export type GuidanceTone = "muted" | "neutral" | "warning" | "success" | "attention";
 
-const CLARIFICATION_COMPOSER_HINT =
+export const CLARIFICATION_COMPOSER_HINT =
   'Try answering the last question directly, even if the answer is "not sure."';
 
 export interface SymptomCheckerConversationUiConfig {
@@ -32,16 +33,10 @@ export interface SymptomCheckerConversationUiConfig {
   reportCtaSubcopy: string;
 }
 
-export function isConversationStateApi(
-  value: unknown
-): value is ConversationStateApi {
+export function isConversationStateApi(value: unknown): value is ConversationStateApi {
   return (
-    value === "idle" ||
-    value === "asking" ||
-    value === "answered_unconfirmed" ||
-    value === "confirmed" ||
-    value === "needs_clarification" ||
-    value === "escalation"
+    typeof value === "string" &&
+    (CONVERSATION_STATE_VALUES as readonly string[]).includes(value)
   );
 }
 
@@ -49,6 +44,64 @@ export function parseConversationStateApi(
   value: unknown
 ): ConversationStateApi | null {
   return isConversationStateApi(value) ? value : null;
+}
+
+/**
+ * Builds the same control snapshot shape the backend uses for inference from a
+ * client-held session payload.
+ */
+export function clientSessionToControlSnapshot(
+  session: unknown
+): ConversationControlStateSnapshot | null {
+  if (!session || typeof session !== "object") return null;
+
+  const triageSession = session as Record<string, unknown>;
+  const caseMemory =
+    (triageSession.case_memory as Record<string, unknown> | undefined) ?? {};
+  const answeredQuestions = triageSession.answered_questions;
+  const extractedAnswers = triageSession.extracted_answers;
+  const unresolvedQuestionIds = caseMemory.unresolved_question_ids;
+  const lastQuestionAsked = triageSession.last_question_asked;
+
+  return {
+    answeredQuestionIds: Array.isArray(answeredQuestions)
+      ? answeredQuestions.filter((id): id is string => typeof id === "string")
+      : [],
+    extractedAnswers:
+      extractedAnswers &&
+      typeof extractedAnswers === "object" &&
+      !Array.isArray(extractedAnswers)
+        ? { ...(extractedAnswers as Record<string, string | boolean | number>) }
+        : {},
+    unresolvedQuestionIds: Array.isArray(unresolvedQuestionIds)
+      ? unresolvedQuestionIds.filter((id): id is string => typeof id === "string")
+      : [],
+    lastQuestionAsked:
+      typeof lastQuestionAsked === "string" && lastQuestionAsked.length > 0
+        ? lastQuestionAsked
+        : undefined,
+  };
+}
+
+/**
+ * Prefer the explicit API state when present; otherwise infer from session so
+ * UI state stays aligned with the backend state-machine rules.
+ */
+export function resolveConversationStateFromSession(
+  session: unknown,
+  apiConversationState: unknown
+): ConversationState {
+  const parsedApiState = parseConversationStateApi(apiConversationState);
+  if (parsedApiState) {
+    return parsedApiState;
+  }
+
+  const snapshot = clientSessionToControlSnapshot(session);
+  if (!snapshot) {
+    return "idle";
+  }
+
+  return inferConversationState(snapshot);
 }
 
 /**
