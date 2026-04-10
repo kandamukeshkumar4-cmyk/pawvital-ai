@@ -9,7 +9,8 @@ export interface TransitionToEscalationInput {
   reason:
     | "red_flags_detected"
     | "vision_red_flags_detected"
-    | "clinical_escalation";
+    | "clinical_escalation"
+    | "owner_cannot_assess_critical_indicator";
 }
 
 /**
