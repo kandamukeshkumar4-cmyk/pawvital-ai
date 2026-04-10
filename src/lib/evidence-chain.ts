@@ -4,6 +4,7 @@ import type {
   RetrievalTextEvidence,
 } from "./clinical-evidence";
 import type { TriageSession } from "./triage-engine";
+import { getICD10CodesForDisease } from "./icd-10-mapper";
 
 export interface StructuredEvidenceChainItem {
   source: string;
@@ -11,6 +12,14 @@ export interface StructuredEvidenceChainItem {
   supporting: string[];
   contradicting: string[];
   confidence: number;
+}
+
+interface EvidenceChainOptions {
+  bayesianDifferentials?: Array<{
+    disease_key: string;
+    posteriorProbability: number;
+  }>;
+  topDiseaseKey?: string;
 }
 
 function toSupportingTextEvidence(entry: RetrievalTextEvidence): string[] {
@@ -30,7 +39,8 @@ function toSupportingImageEvidence(entry: RetrievalImageEvidence): string[] {
 
 export function buildStructuredEvidenceChain(
   session: TriageSession,
-  retrievalBundle: RetrievalBundle
+  retrievalBundle: RetrievalBundle,
+  options?: EvidenceChainOptions
 ): StructuredEvidenceChainItem[] {
   const items: StructuredEvidenceChainItem[] = [];
 
@@ -78,6 +88,37 @@ export function buildStructuredEvidenceChain(
       contradicting: [],
       confidence: image.score,
     });
+  }
+
+  // Phase 4: Add Bayesian prior evidence item
+  if (options?.bayesianDifferentials && options.bayesianDifferentials.length > 0) {
+    const top3 = options.bayesianDifferentials.slice(0, 3);
+    items.push({
+      source: "bayesian-prior",
+      finding: `Epidemiological baseline for ${top3.map((d) => d.disease_key).join(", ")}`,
+      supporting: top3.map(
+        (d) => `${d.disease_key}: posterior=${d.posteriorProbability.toFixed(3)}`
+      ),
+      contradicting: [],
+      confidence: 0.5, // Priors are baselines, not direct evidence
+    });
+  }
+
+  // Phase 4: Add ICD-10 mapping evidence item
+  if (options?.topDiseaseKey) {
+    const icd10 = getICD10CodesForDisease(options.topDiseaseKey);
+    if (icd10) {
+      items.push({
+        source: "icd-10-mapping",
+        finding: `${icd10.primary_code.code}: ${icd10.primary_code.description}`,
+        supporting: [
+          `Category: ${icd10.primary_code.category}`,
+          `Urgency: ${icd10.primary_code.urgency}`,
+        ],
+        contradicting: [],
+        confidence: icd10.confidence,
+      });
+    }
   }
 
   return items.slice(0, 8);

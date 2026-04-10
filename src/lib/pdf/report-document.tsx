@@ -212,6 +212,48 @@ export function ReportPdfDocument({
           </>
         ) : null}
 
+        {report.icd10_codes && report.icd10_codes.length > 0 ? (
+          <>
+            <Text style={pdfStyles.sectionTitle}>ICD-10-CM Codes</Text>
+            {report.icd10_codes.map((icd, i) => (
+              <View key={i} style={{ marginBottom: 4 }}>
+                <Text style={{ fontFamily: "Helvetica-Bold", fontSize: 9 }}>
+                  {icd.primary_code.code} — {icd.primary_code.description}
+                </Text>
+                <Text style={pdfStyles.bodySmall}>
+                  {icd.disease} (urgency: {icd.primary_code.urgency}, confidence: {(icd.confidence * 100).toFixed(0)}%)
+                </Text>
+              </View>
+            ))}
+          </>
+        ) : null}
+
+        {report.confidenceCalibration ? (
+          <>
+            <Text style={pdfStyles.sectionTitle}>Confidence calibration</Text>
+            <Text style={pdfStyles.bodySmall}>
+              Final confidence: {(report.confidenceCalibration.final_confidence * 100).toFixed(0)}%
+              {report.confidenceCalibration.confidence_level
+                ? ` (${report.confidenceCalibration.confidence_level})`
+                : ""}
+            </Text>
+            {report.confidenceCalibration.adjustments &&
+            report.confidenceCalibration.adjustments.length > 0 ? (
+              <View style={{ marginTop: 4 }}>
+                {report.confidenceCalibration.adjustments
+                  .filter((a) => Math.abs(a.delta) > 0.01)
+                  .slice(0, 6)
+                  .map((adj, i) => (
+                    <Text key={i} style={pdfStyles.bodySmall}>
+                      {adj.direction === "increase" ? "+" : ""}
+                      {(adj.delta * 100).toFixed(1)}% — {adj.factor}
+                    </Text>
+                  ))}
+              </View>
+            ) : null}
+          </>
+        ) : null}
+
         {report.evidenceChain && report.evidenceChain.length > 0 ? (
           <>
             <Text style={pdfStyles.sectionTitle}>Evidence chain</Text>
