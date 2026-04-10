@@ -274,7 +274,7 @@ export default function SettingsPage() {
         <div>
           <h2 className="text-base font-semibold text-gray-900">Notifications</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Control how and when PawVital contacts you about your pet's health
+            Control how and when PawVital contacts you about your pet&apos;s health
           </p>
         </div>
         <NotificationPreferencesForm />
