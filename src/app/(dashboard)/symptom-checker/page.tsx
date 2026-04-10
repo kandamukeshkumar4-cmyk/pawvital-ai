@@ -25,6 +25,8 @@ import { FullReport, type SymptomReport } from "@/components/symptom-report";
 
 // --- Types ---
 
+type ConversationState = "idle" | "asking" | "answered" | "confirmed" | "needs_clarification" | "escalation";
+
 interface ImageMeta {
   width: number;
   height: number;
@@ -106,7 +108,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
           isUser
             ? "bg-blue-600 text-white"
             : isEmergency
-            ? "bg-red-50 border-2 border-red-300 text-red-900"
+            ? "bg-red-50 border-2 border-red-300 text-red-900 animate-pulse"
             : isImageGate
             ? "bg-amber-50 border border-amber-300 text-amber-950"
             : "bg-gray-100 text-gray-800"
@@ -157,6 +159,7 @@ export default function SymptomCheckerPage() {
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const [conversationState, setConversationState] = useState<ConversationState>("idle");
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -369,6 +372,17 @@ export default function SymptomCheckerPage() {
       if (data.session) {
         setTriageSession(data.session);
         triageSessionRef.current = data.session;
+      }
+
+      // Update conversation state from API response
+      if (data.conversationState) {
+        setConversationState(data.conversationState);
+      } else if (data.type === "emergency") {
+        setConversationState("escalation");
+      } else if (data.type === "ready") {
+        setConversationState("confirmed");
+      } else if (data.type === "question") {
+        setConversationState("asking");
       }
 
       if (data.type === "emergency") {
@@ -622,7 +636,37 @@ export default function SymptomCheckerPage() {
               </p>
             </div>
             {!report && (
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                {/* Conversation state badge */}
+                {conversationState !== "idle" && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      conversationState === "escalation"
+                        ? "bg-red-100 text-red-700"
+                        : conversationState === "confirmed"
+                        ? "bg-green-100 text-green-700"
+                        : conversationState === "asking"
+                        ? "bg-blue-100 text-blue-700"
+                        : conversationState === "needs_clarification"
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {conversationState === "escalation" && <AlertCircle className="w-3 h-3" />}
+                    {conversationState === "confirmed" && <CheckCircle className="w-3 h-3" />}
+                    {conversationState === "asking" && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {conversationState === "needs_clarification" && <AlertTriangle className="w-3 h-3" />}
+                    {conversationState === "escalation"
+                      ? "Escalation"
+                      : conversationState === "confirmed"
+                      ? "Ready for report"
+                      : conversationState === "asking"
+                      ? "Analyzing..."
+                      : conversationState === "needs_clarification"
+                      ? "Needs more info"
+                      : "Answered"}
+                  </span>
+                )}
                 <span className="text-xs text-gray-400">
                   {messages.filter((m) => m.role === "assistant").length}/5
                   questions
@@ -735,10 +779,23 @@ export default function SymptomCheckerPage() {
                 <div className="mt-3 flex justify-center">
                   <button
                     onClick={() => generateReport()}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm font-semibold rounded-full hover:from-purple-700 hover:to-blue-700 transition-all shadow-lg shadow-purple-200"
+                    className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-full transition-all ${
+                      conversationState === "escalation"
+                        ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 shadow-lg shadow-red-200 animate-pulse"
+                        : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
+                    }`}
                   >
-                    <Zap className="w-4 h-4" />
-                    Generate Full Veterinary Report
+                    {conversationState === "escalation" ? (
+                      <>
+                        <AlertCircle className="w-4 h-4" />
+                        Generate Emergency Report
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4" />
+                        Generate Full Veterinary Report
+                      </>
+                    )}
                   </button>
                 </div>
               )}

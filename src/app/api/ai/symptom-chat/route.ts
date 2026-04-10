@@ -70,6 +70,8 @@ import {
   type VisionPreprocessResult,
 } from "@/lib/clinical-evidence";
 import { buildStructuredEvidenceChain } from "@/lib/evidence-chain";
+import { calibrateDiagnosticConfidence } from "@/lib/confidence-calibrator";
+import { getICD10CodesForDisease, generateICD10Summary } from "@/lib/icd-10-mapper";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
   isImageRetrievalConfigured,
@@ -83,6 +85,7 @@ import {
   isMultimodalConsultConfigured,
   isRetrievalSidecarConfigured,
   isVisionPreprocessConfigured,
+  isAsyncReviewServiceConfigured,
   preprocessVeterinaryImageWithResult,
   retrieveVeterinaryImageEvidenceFromSidecarWithResult,
   retrieveVeterinaryTextEvidenceFromSidecarWithResult,
@@ -1834,6 +1837,74 @@ async function generateReport(
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // PHASE 1: Vision Preprocess in Report Generation
+  // Run Grounding DINO→SAM2→Florence-2 caption before any vision analysis
+  // ═══════════════════════════════════════════════════════════════════
+  let reportImagePreprocess: VisionPreprocessResult | null = null;
+  if (image && isVisionPreprocessConfigured()) {
+    const imgHash = hashImage(image);
+    const preprocessStartedAt = Date.now();
+    try {
+      const preprocessResult = await preprocessVeterinaryImageWithResult({
+        image,
+        ownerText: messages.filter((m) => m.role === "user").pop()?.content || "",
+        knownSymptoms: session.known_symptoms,
+        breed: pet.breed,
+        ageYears: pet.age_years,
+        weight: pet.weight,
+      });
+      if (preprocessResult.ok) {
+        const preprocessedImage = preprocessResult.data;
+        session = appendSidecarObservation(session, {
+          service: "vision-preprocess-service",
+          stage: "report-preprocess",
+          latencyMs: preprocessResult.latencyMs,
+          outcome: "success",
+          shadowMode: false,
+          fallbackUsed: false,
+          note: `domain=${preprocessedImage.domain}; quality=${preprocessedImage.imageQuality}`,
+        });
+        reportImagePreprocess = preprocessedImage;
+        session.latest_preprocess = preprocessedImage;
+        session.latest_image_domain = preprocessedImage.domain;
+        session.latest_image_body_region = preprocessedImage.bodyRegion || undefined;
+        session.latest_image_quality = preprocessedImage.imageQuality;
+      } else {
+        throw new Error(preprocessResult.error || "preprocess failed");
+      }
+    } catch (error) {
+      console.error("[Report] Vision preprocess failed (non-blocking):", error);
+      session = appendSidecarObservation(session, {
+        service: "vision-preprocess-service",
+        stage: "report-preprocess",
+        latencyMs: Date.now() - preprocessStartedAt,
+        outcome: isSidecarAbortError(error) ? "timeout" : "error",
+        shadowMode: false,
+        fallbackUsed: true,
+        note: isSidecarAbortError(error) ? "vision preprocess timeout" : "vision preprocess failed",
+      });
+      if (isSidecarAbortError(error)) {
+        session.case_memory = {
+          ...ensureStructuredCaseMemory(session),
+          service_timeouts: [
+            ...ensureStructuredCaseMemory(session).service_timeouts,
+            { service: "vision-preprocess-service", stage: "report-preprocess", reason: "timeout" },
+          ].slice(-10),
+        };
+      }
+    }
+  }
+
+  if (!reportImagePreprocess && image) {
+    const fallbackDomain = inferSupportedImageDomain(
+      messages.filter((m) => m.role === "user").pop()?.content || "",
+      session.known_symptoms
+    );
+    reportImagePreprocess = buildFallbackPreprocessResult(fallbackDomain);
+    session.latest_preprocess = reportImagePreprocess;
+  }
+
   const context = buildDiagnosisContext(session, pet);
   const knowledgeQuery = buildKnowledgeSearchQuery(
     session,
@@ -1963,6 +2034,10 @@ ${session.image_inferred_breed ? `IMAGE-INFERRED BREED SIGNAL: ${session.image_i
 ${breedRiskContext ? `${breedRiskContext}\n` : ""}
 ${referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases; use as supportive visual context, not a diagnosis by itself):\n${referenceImageContext}\n` : ""}
 ${clinicalCaseContext ? `SIMILAR CLINICAL CASES (CSV corpus; use as supplementary case-similarity evidence, not a replacement for matrix ranking):\n${clinicalCaseContext}\n` : ""}
+${context.top5.slice(0, 3).map((d) => {
+  const icd10 = getICD10CodesForDisease(d.disease_key);
+  return icd10 ? `ICD-10: ${d.medical_term} → ${icd10.primary_code.code} (${icd10.primary_code.description}, urgency: ${icd10.primary_code.urgency})\n` : "";
+}).filter(Boolean).join("")}
 
 ${session.vision_analysis ? `VISUAL ANALYSIS FROM PET PHOTO (analyzed by the NVIDIA 11B/90B vision stack):\n${session.vision_analysis}\n\nIMPORTANT: Incorporate the visual findings above into your differential diagnoses and clinical notes. Reference what was observed in the image (e.g., wound characteristics, skin condition, eye appearance). The visual analysis should heavily influence your report.\n` : ""}
 YOUR TASK: Write the clinical report using the matrix's disease ranking as your primary guide. Do NOT reorder the differentials unless you have strong clinical reasoning to do so. The matrix has already applied breed multipliers, age factors, and symptom-specific modifiers.
@@ -2017,24 +2092,55 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
 
     const report = parseReportJSON(rawReport);
-    report.confidence = capDiagnosticConfidence({
-      baseConfidence:
-        typeof report.confidence === "number"
-          ? report.confidence
-          : deriveBaselineReportConfidence(context),
+
+    // ═══════════════════════════════════════════════════════════════════
+    // PHASE 4: Full Confidence Calibration (11-factor calibrator)
+    // ═══════════════════════════════════════════════════════════════════
+    const baseConf =
+      typeof report.confidence === "number"
+        ? report.confidence
+        : deriveBaselineReportConfidence(context);
+
+    const topDiseaseIcd10 = context.top5[0]
+      ? getICD10CodesForDisease(context.top5[0].disease_key)
+      : null;
+
+    const calibrated = calibrateDiagnosticConfidence({
+      baseConfidence: baseConf,
+      numSymptoms: session.known_symptoms.length,
+      numAnswers: Object.keys(session.extracted_answers).length,
+      numRedFlags: session.red_flags_triggered.length,
+      urgencyLevel: context.highest_urgency as "low" | "moderate" | "high" | "emergency",
       hasModelDisagreement: Boolean(
         session.case_memory?.consult_opinions?.some(
           (opinion) => opinion.disagreements.length > 0
         )
       ),
-      lowQualityImage:
+      imageQuality: (
         session.latest_image_quality === "poor" ||
-        session.latest_image_quality === "borderline",
-      weakRetrievalSupport:
-        retrievalBundle.textChunks.length === 0 &&
-        retrievalBundle.imageMatches.length === 0,
+        session.latest_image_quality === "borderline" ||
+        session.latest_image_quality === "good" ||
+        session.latest_image_quality === "excellent"
+      ) ? session.latest_image_quality : null,
+      hasRetrievalSupport:
+        retrievalBundle.textChunks.length > 0 ||
+        retrievalBundle.imageMatches.length > 0,
       ambiguityFlags: session.case_memory?.ambiguity_flags || [],
+      numSidecarServicesAvailable: countAvailableSidecarServices(),
+      sidecarAgreementRate: computeSidecarAgreementRate(session),
+      hasICD10Mapping: Boolean(topDiseaseIcd10),
+      breedKnown: Boolean(pet.breed),
+      ageKnown: Boolean(pet.age_years),
     });
+
+    report.confidence = calibrated.final_confidence;
+    report.confidenceCalibration = {
+      final_confidence: calibrated.final_confidence,
+      base_confidence: calibrated.base_confidence,
+      adjustments: calibrated.adjustments,
+      confidence_level: calibrated.confidence_level,
+      recommendation: calibrated.recommendation,
+    };
     if (!Array.isArray(report.evidence_chain)) {
       report.evidence_chain = buildEvidenceChainForResponse(
         session,
@@ -2043,7 +2149,21 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     }
     report.evidenceChain = buildStructuredEvidenceChain(
       session,
-      retrievalBundle
+      retrievalBundle,
+      {
+        bayesianDifferentials: (report.bayesian_differentials as Array<{ disease_key: string; posteriorProbability: number }>) || context.top5.slice(0, 3).map((d) => ({ disease_key: d.disease_key, posteriorProbability: d.final_score })),
+        topDiseaseKey: context.top5[0]?.disease_key,
+      }
+    );
+
+    // ═══════════════════════════════════════════════════════════════════
+    // PHASE 4: ICD-10 Code Mapping
+    // ═══════════════════════════════════════════════════════════════════
+    report.icd10_codes = generateICD10Summary(
+      context.top5.slice(0, 3).map((d) => ({
+        name: d.disease_key,
+        probability: d.final_score,
+      }))
     );
 
     // ═══════════════════════════════════════════════════════════════════
@@ -2535,9 +2655,9 @@ async function buildReportRetrievalBundle(
     }
 
     sidecarBundle = {
-      textChunks: textResult.ok ? textResult.data.textChunks : [],
-      imageMatches: imageResult.ok ? imageResult.data.imageMatches : [],
-      rerankScores: textResult.ok ? textResult.data.rerankScores : [],
+      textChunks: textResult.ok ? [...textResult.data.textChunks] : [],
+      imageMatches: imageResult.ok ? [...imageResult.data.imageMatches] : [],
+      rerankScores: textResult.ok ? [...textResult.data.rerankScores] : [],
       sourceCitations: [
         ...(textResult.ok ? textResult.data.sourceCitations : []),
         ...(imageResult.ok ? imageResult.data.sourceCitations : []),
@@ -4632,6 +4752,99 @@ function isImageEvidenceQuestion(questionId?: string): boolean {
     "wound_odor",
     "wound_licking",
   ].includes(questionId);
+}
+
+// =============================================================================
+// EXPANDED CONSULT TRIGGERS (Phase 3)
+// =============================================================================
+
+function shouldTriggerConsultExpanded(input: {
+  visualEvidence: VisionClinicalEvidence | null;
+  preprocess: VisionPreprocessResult | null;
+  ownerText: string;
+  session: TriageSession;
+  contradictions: string[];
+  topConditionScore?: number;
+  highestUrgency?: string;
+  topConditionSpread?: number;
+}): boolean {
+  // Original triggers (image-based)
+  if (input.visualEvidence) {
+    const originalTrigger = shouldTriggerSyncConsult({
+      visualEvidence: input.visualEvidence,
+      preprocess: input.preprocess,
+      ownerText: input.ownerText,
+      session: input.session,
+      contradictions: input.contradictions,
+    });
+    if (originalTrigger) return true;
+  }
+
+  // New trigger 1: Low confidence primary diagnosis
+  if (input.topConditionScore !== undefined && input.topConditionScore < 0.60) {
+    return true;
+  }
+
+  // New trigger 2: Emergency/urgent cases benefit from second opinion
+  if (input.highestUrgency === "emergency" || input.highestUrgency === "high") {
+    return true;
+  }
+
+  // New trigger 3: Narrow spread among top conditions (diagnostic uncertainty)
+  if (
+    input.topConditionSpread !== undefined &&
+    input.topConditionSpread < 0.15
+  ) {
+    return true;
+  }
+
+  // New trigger 4: Owner explicitly requests second opinion
+  const lower = input.ownerText.toLowerCase();
+  if (
+    lower.includes("second opinion") ||
+    lower.includes("another opinion") ||
+    lower.includes("double check") ||
+    lower.includes("are you sure") ||
+    lower.includes("could it be something else")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+// =============================================================================
+// SIDECAR SERVICE AVAILABILITY COUNTER (Phase 4)
+// =============================================================================
+
+function countAvailableSidecarServices(): number {
+  let count = 0;
+  if (isVisionPreprocessConfigured()) count++;
+  if (isTextRetrievalConfigured()) count++;
+  if (isImageRetrievalConfigured()) count++;
+  if (isMultimodalConsultConfigured()) count++;
+  if (isAsyncReviewServiceConfigured()) count++;
+  return count;
+}
+
+function computeSidecarAgreementRate(session: TriageSession): number | null {
+  const opinions = session.case_memory?.consult_opinions || [];
+  if (opinions.length < 2) return null;
+
+  const recentOpinions = opinions.slice(-3);
+  let agreements = 0;
+  let totalComparisons = 0;
+
+  for (let i = 1; i < recentOpinions.length; i++) {
+    for (const agreement of recentOpinions[i].agreements) {
+      if (recentOpinions.slice(0, i).some((prev) => prev.agreements.includes(agreement))) {
+        agreements++;
+      }
+      totalComparisons++;
+    }
+  }
+
+  return totalComparisons > 0 ? agreements / totalComparisons : null;
 }
 
 // =============================================================================

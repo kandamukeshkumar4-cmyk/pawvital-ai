@@ -24,6 +24,33 @@ export interface StructuredEvidenceChainItem {
   confidence: number;
 }
 
+export interface ICD10CodeEntry {
+  disease: string;
+  primary_code: {
+    code: string;
+    description: string;
+    category: string;
+    urgency: "low" | "moderate" | "high" | "emergency";
+  };
+  confidence: number;
+  probability: number;
+}
+
+export interface ConfidenceAdjustment {
+  factor: string;
+  delta: number;
+  direction: "increase" | "decrease" | "neutral";
+  reason: string;
+}
+
+export interface ConfidenceCalibration {
+  final_confidence: number;
+  base_confidence: number;
+  adjustments?: ConfidenceAdjustment[];
+  confidence_level?: "very_low" | "low" | "moderate" | "high" | "very_high";
+  recommendation?: string;
+}
+
 export interface SimilarCase {
   heading: string;
   body: string;
@@ -58,6 +85,8 @@ export interface SymptomReport {
   warning_signs: string[];
   vet_questions?: string[];
   confidence?: number;
+  confidenceCalibration?: ConfidenceCalibration;
+  icd10_codes?: ICD10CodeEntry[];
   evidenceChain?: StructuredEvidenceChainItem[];
   vet_handoff_summary?: string;
   async_review_scheduled?: boolean;

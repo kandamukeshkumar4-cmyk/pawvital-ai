@@ -18,6 +18,33 @@ const EvidenceChainItemSchema = z.object({
   confidence: z.number(),
 });
 
+const ICD10CodeSchema = z.object({
+  disease: z.string(),
+  primary_code: z.object({
+    code: z.string(),
+    description: z.string(),
+    category: z.string(),
+    urgency: z.enum(["low", "moderate", "high", "emergency"]),
+  }),
+  confidence: z.number(),
+  probability: z.number(),
+});
+
+const ConfidenceAdjustmentSchema = z.object({
+  factor: z.string(),
+  delta: z.number(),
+  direction: z.enum(["increase", "decrease", "neutral"]),
+  reason: z.string(),
+});
+
+const ConfidenceCalibrationSchema = z.object({
+  final_confidence: z.number(),
+  base_confidence: z.number(),
+  adjustments: z.array(ConfidenceAdjustmentSchema).optional(),
+  confidence_level: z.enum(["very_low", "low", "moderate", "high", "very_high"]).optional(),
+  recommendation: z.string().optional(),
+});
+
 const HomeCareSchema = z.object({
   instruction: z.string(),
   duration: z.string(),
@@ -36,6 +63,8 @@ const SymptomReportSchema = z.object({
   warning_signs: z.array(z.string()),
   vet_questions: z.array(z.string()).optional(),
   confidence: z.number().optional(),
+  confidenceCalibration: ConfidenceCalibrationSchema.optional(),
+  icd10_codes: z.array(ICD10CodeSchema).optional(),
   evidenceChain: z.array(EvidenceChainItemSchema).optional(),
   vet_handoff_summary: z.string().optional(),
   share_url: z.string().url().optional(),

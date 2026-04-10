@@ -235,7 +235,7 @@ async function fetchJsonWithResult<T>(
       if (attempt < retries) {
         const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
         console.warn(
-          `[HF Sidecar:${service}] Request failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError.message}`
+          `[HF Sidecar:${service}] Request failed (attempt ${attempt + 1}/${retries + 1}), retrying in ${delay}ms: ${lastError instanceof Error ? lastError.message : String(lastError)}`
         );
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
