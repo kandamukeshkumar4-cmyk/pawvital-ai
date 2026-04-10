@@ -53,7 +53,7 @@ const CLI_AGENTS = {
   codex: 'codex',
 };
 
-const NOTIFY_AGENTS = ['cursor', 'copilot', 'antigravity', 'qwen', 'minimax'];
+const NOTIFY_AGENTS = ['cursor', 'copilot', 'antigravity', 'qwen', 'qoder', 'minimax'];
 
 // ---------------------------------------------------------------------------
 // Helpers

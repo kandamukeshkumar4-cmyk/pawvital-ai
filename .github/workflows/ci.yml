@@ -11,6 +11,7 @@ on:
       - "codex/**"
       - "copilot/**"
       - "antigravity/**"
+      - "qoder/**"
       - "qwen/**"
       - "feat/**"
       - "feature/**"
