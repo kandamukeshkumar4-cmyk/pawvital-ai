@@ -3,8 +3,9 @@ import type {
   SidecarObservation,
   SidecarServiceName,
 } from "./clinical-evidence";
+import type { SidecarCallResult } from "./sidecar-call-result";
 import type { TriageSession } from "./triage-engine";
-import { ensureStructuredCaseMemory } from "./symptom-memory";
+import { emitTelemetryLog, ensureStructuredCaseMemory } from "./symptom-memory";
 
 function parseBooleanEnv(value: string | undefined): boolean {
   if (!value) return false;
@@ -124,4 +125,15 @@ export function describeShadowComparison(
     summary,
     disagreementCount,
   };
+}
+
+export function recordSidecarCall(result: SidecarCallResult<unknown>): void {
+  emitTelemetryLog("sidecar", {
+    service: result.service,
+    ok: result.ok,
+    category: result.ok ? "success" : result.category,
+    latencyMs: result.latencyMs,
+    error: result.ok ? undefined : result.error,
+    timestamp: new Date().toISOString(),
+  });
 }

@@ -1,9 +1,9 @@
-const mockSubmitAsyncReviewToSidecar = jest.fn();
+const mockSubmitAsyncReviewToSidecarWithResult = jest.fn();
 const mockIsAsyncReviewServiceConfigured = jest.fn();
 
 jest.mock("@/lib/hf-sidecars", () => ({
-  submitAsyncReviewToSidecar: (...args: unknown[]) =>
-    mockSubmitAsyncReviewToSidecar(...args),
+  submitAsyncReviewToSidecarWithResult: (...args: unknown[]) =>
+    mockSubmitAsyncReviewToSidecarWithResult(...args),
   isAsyncReviewServiceConfigured: (...args: unknown[]) =>
     mockIsAsyncReviewServiceConfigured(...args),
 }));
@@ -29,11 +29,16 @@ describe("async-review route", () => {
     jest.resetModules();
     jest.clearAllMocks();
     mockIsAsyncReviewServiceConfigured.mockReturnValue(true);
-    mockSubmitAsyncReviewToSidecar.mockResolvedValue({
+    mockSubmitAsyncReviewToSidecarWithResult.mockResolvedValue({
       ok: true,
-      caseId: "case-123",
-      status: "queued",
-      message: "queued",
+      data: {
+        ok: true,
+        caseId: "case-123",
+        status: "queued",
+        message: "queued",
+      },
+      latencyMs: 15,
+      service: "async-review-service",
     });
   });
 
@@ -75,7 +80,7 @@ describe("async-review route", () => {
 
     expect(response.status).toBe(202);
     expect(payload.queued).toBe(true);
-    expect(mockSubmitAsyncReviewToSidecar).toHaveBeenCalledWith(
+    expect(mockSubmitAsyncReviewToSidecarWithResult).toHaveBeenCalledWith(
       expect.objectContaining({
         ownerText: "Please do a deeper review of this lesion.",
         deterministicFacts: { wound_location: "left hind leg" },

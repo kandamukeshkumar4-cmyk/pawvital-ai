@@ -27,13 +27,13 @@ const mockEvaluateImageGate = jest.fn();
 const mockShouldAnalyzeWoundImage = jest.fn();
 const mockComputeBayesianScore = jest.fn();
 const mockCompressCaseMemoryWithMiniMax = jest.fn();
-const mockPreprocessVeterinaryImage = jest.fn();
-const mockConsultWithMultimodalSidecar = jest.fn();
+const mockPreprocessVeterinaryImageWithResult = jest.fn();
+const mockConsultWithMultimodalSidecarWithResult = jest.fn();
 const mockRetrieveVeterinaryEvidenceFromSidecar = jest.fn();
 const mockIsTextRetrievalConfigured = jest.fn();
 const mockIsImageRetrievalConfigured = jest.fn();
-const mockRetrieveVeterinaryTextEvidence = jest.fn();
-const mockRetrieveVeterinaryImageEvidence = jest.fn();
+const mockRetrieveVeterinaryTextEvidenceWithResult = jest.fn();
+const mockRetrieveVeterinaryImageEvidenceWithResult = jest.fn();
 const mockEnqueueAsyncReview = jest.fn();
 const mockSaveSymptomReportToDB = jest.fn();
 const mockEmit = jest.fn();
@@ -113,10 +113,14 @@ jest.mock("@/lib/hf-sidecars", () => ({
   isMultimodalConsultConfigured: () => true,
   isAbortLikeError: (error: unknown) =>
     error instanceof Error && error.name === "AbortError",
-  preprocessVeterinaryImage: (...args: unknown[]) =>
-    mockPreprocessVeterinaryImage(...args),
-  consultWithMultimodalSidecar: (...args: unknown[]) =>
-    mockConsultWithMultimodalSidecar(...args),
+  preprocessVeterinaryImageWithResult: (...args: unknown[]) =>
+    mockPreprocessVeterinaryImageWithResult(...args),
+  consultWithMultimodalSidecarWithResult: (...args: unknown[]) =>
+    mockConsultWithMultimodalSidecarWithResult(...args),
+  retrieveVeterinaryTextEvidenceFromSidecarWithResult: (...args: unknown[]) =>
+    mockRetrieveVeterinaryTextEvidenceWithResult(...args),
+  retrieveVeterinaryImageEvidenceFromSidecarWithResult: (...args: unknown[]) =>
+    mockRetrieveVeterinaryImageEvidenceWithResult(...args),
   retrieveVeterinaryEvidenceFromSidecar: (...args: unknown[]) =>
     mockRetrieveVeterinaryEvidenceFromSidecar(...args),
 }));
@@ -124,15 +128,11 @@ jest.mock("@/lib/hf-sidecars", () => ({
 jest.mock("@/lib/text-retrieval-service", () => ({
   isTextRetrievalConfigured: (...args: unknown[]) =>
     mockIsTextRetrievalConfigured(...args),
-  retrieveVeterinaryTextEvidence: (...args: unknown[]) =>
-    mockRetrieveVeterinaryTextEvidence(...args),
 }));
 
 jest.mock("@/lib/image-retrieval-service", () => ({
   isImageRetrievalConfigured: (...args: unknown[]) =>
     mockIsImageRetrievalConfigured(...args),
-  retrieveVeterinaryImageEvidence: (...args: unknown[]) =>
-    mockRetrieveVeterinaryImageEvidence(...args),
 }));
 
 jest.mock("@/lib/async-review-client", () => ({
@@ -279,6 +279,19 @@ function emittedArgsContain(value: string) {
   return mockEmit.mock.calls.some((call) => JSON.stringify(call).includes(value));
 }
 
+function buildOkSidecarResult<T>(service: string, data: T, latencyMs = 12) {
+  return { ok: true, data, latencyMs, service };
+}
+
+function buildErrorSidecarResult(
+  service: string,
+  category: "timeout" | "connection_refused" | "http_error" | "parse_error" | "unknown" = "unknown",
+  error = "sidecar failed",
+  latencyMs = 12
+) {
+  return { ok: false, category, error, latencyMs, service };
+}
+
 describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -299,24 +312,29 @@ describe("symptom-chat mixed text + image routing", () => {
         "Bruno remains in a limping triage flow with left-sided limb concerns and possible wound evidence from the latest photo.",
       model: "MiniMax-M2.7",
     });
-    mockPreprocessVeterinaryImage.mockResolvedValue({
-      domain: "skin_wound",
-      bodyRegion: "left hind leg",
-      detectedRegions: [{ label: "wound", confidence: 0.92 }],
-      bestCrop: null,
-      imageQuality: "good",
-      confidence: 0.88,
-      limitations: [],
-    });
-    mockConsultWithMultimodalSidecar.mockResolvedValue({
-      model: "Qwen2.5-VL-7B-Instruct",
-      summary: "The lesion appears localized to the left hind limb and warrants wound-focused follow-up.",
-      agreements: ["left hind limb involvement"],
-      disagreements: [],
-      uncertainties: [],
-      confidence: 0.74,
-      mode: "sync",
-    });
+    mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+      buildOkSidecarResult("vision-preprocess-service", {
+        domain: "skin_wound",
+        bodyRegion: "left hind leg",
+        detectedRegions: [{ label: "wound", confidence: 0.92 }],
+        bestCrop: null,
+        imageQuality: "good",
+        confidence: 0.88,
+        limitations: [],
+      })
+    );
+    mockConsultWithMultimodalSidecarWithResult.mockResolvedValue(
+      buildOkSidecarResult("multimodal-consult-service", {
+        model: "Qwen2.5-VL-7B-Instruct",
+        summary:
+          "The lesion appears localized to the left hind limb and warrants wound-focused follow-up.",
+        agreements: ["left hind limb involvement"],
+        disagreements: [],
+        uncertainties: [],
+        confidence: 0.74,
+        mode: "sync",
+      })
+    );
     mockRetrieveVeterinaryEvidenceFromSidecar.mockResolvedValue({
       textChunks: [],
       imageMatches: [],
@@ -325,15 +343,19 @@ describe("symptom-chat mixed text + image routing", () => {
     });
     mockIsTextRetrievalConfigured.mockReturnValue(false);
     mockIsImageRetrievalConfigured.mockReturnValue(false);
-    mockRetrieveVeterinaryTextEvidence.mockResolvedValue({
-      textChunks: [],
-      rerankScores: [],
-      sourceCitations: [],
-    });
-    mockRetrieveVeterinaryImageEvidence.mockResolvedValue({
-      imageMatches: [],
-      sourceCitations: [],
-    });
+    mockRetrieveVeterinaryTextEvidenceWithResult.mockResolvedValue(
+      buildOkSidecarResult("text-retrieval-service", {
+        textChunks: [],
+        rerankScores: [],
+        sourceCitations: [],
+      })
+    );
+    mockRetrieveVeterinaryImageEvidenceWithResult.mockResolvedValue(
+      buildOkSidecarResult("image-retrieval-service", {
+        imageMatches: [],
+        sourceCitations: [],
+      })
+    );
     mockEnqueueAsyncReview.mockResolvedValue(true);
     mockSaveSymptomReportToDB.mockResolvedValue(null);
     mockDiagnoseWithDeepSeek.mockResolvedValue(
@@ -648,15 +670,17 @@ describe("symptom-chat mixed text + image routing", () => {
   });
 
   it("supports eye-domain image turns even outside the wound flow", async () => {
-    mockPreprocessVeterinaryImage.mockResolvedValue({
-      domain: "eye",
-      bodyRegion: "left eye",
-      detectedRegions: [{ label: "eye", confidence: 0.96 }],
-      bestCrop: null,
-      imageQuality: "good",
-      confidence: 0.91,
-      limitations: [],
-    });
+    mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+      buildOkSidecarResult("vision-preprocess-service", {
+        domain: "eye",
+        bodyRegion: "left eye",
+        detectedRegions: [{ label: "eye", confidence: 0.96 }],
+        bestCrop: null,
+        imageQuality: "good",
+        confidence: 0.91,
+        limitations: [],
+      })
+    );
     mockRunVisionPipeline.mockResolvedValue({
       combined: "photo analysis showing redness and discharge around the left eye",
       severity: "needs_review",
@@ -685,18 +709,20 @@ describe("symptom-chat mixed text + image routing", () => {
   });
 
   it("calls the multimodal consult on ambiguous supported image cases", async () => {
-    mockPreprocessVeterinaryImage.mockResolvedValue({
-      domain: "eye",
-      bodyRegion: "left eye",
-      detectedRegions: [
-        { label: "eye", confidence: 0.65 },
-        { label: "discharge", confidence: 0.61 },
-      ],
-      bestCrop: null,
-      imageQuality: "borderline",
-      confidence: 0.58,
-      limitations: ["partial blur"],
-    });
+    mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+      buildOkSidecarResult("vision-preprocess-service", {
+        domain: "eye",
+        bodyRegion: "left eye",
+        detectedRegions: [
+          { label: "eye", confidence: 0.65 },
+          { label: "discharge", confidence: 0.61 },
+        ],
+        bestCrop: null,
+        imageQuality: "borderline",
+        confidence: 0.58,
+        limitations: ["partial blur"],
+      })
+    );
     mockRunVisionPipeline.mockResolvedValue({
       combined: "{\"confidence\":0.52,\"summary\":\"ocular irritation\"}",
       severity: "needs_review",
@@ -717,7 +743,7 @@ describe("symptom-chat mixed text + image routing", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(200);
-    expect(mockConsultWithMultimodalSidecar).toHaveBeenCalledTimes(1);
+    expect(mockConsultWithMultimodalSidecarWithResult).toHaveBeenCalledTimes(1);
     expect(payload.session.latest_consult_opinion?.model).toBe(
       "Qwen2.5-VL-7B-Instruct"
     );
@@ -727,7 +753,13 @@ describe("symptom-chat mixed text + image routing", () => {
   it("records sidecar timeout observations and falls back to deterministic preprocess", async () => {
     const abortError = new Error("aborted");
     abortError.name = "AbortError";
-    mockPreprocessVeterinaryImage.mockRejectedValue(abortError);
+    mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+      buildErrorSidecarResult(
+        "vision-preprocess-service",
+        "timeout",
+        abortError.message
+      )
+    );
 
     let session = createSession();
     session = addSymptoms(session, ["limping"]);
@@ -756,34 +788,39 @@ describe("symptom-chat mixed text + image routing", () => {
   it("adds evidence-chain data and capped confidence to the final report", async () => {
     mockIsTextRetrievalConfigured.mockReturnValue(true);
     mockIsImageRetrievalConfigured.mockReturnValue(true);
-    mockRetrieveVeterinaryTextEvidence.mockResolvedValue({
-      textChunks: [
-        {
-          title: "Merck Wound Management",
-          citation: "Merck Veterinary Manual",
-          score: 0.92,
-          summary: "Clean wounds should be stabilized and monitored for infection.",
-          sourceUrl: "https://example.com/merck",
-        },
-      ],
-      rerankScores: [0.92],
-      sourceCitations: ["Merck Veterinary Manual"],
-    });
-    mockRetrieveVeterinaryImageEvidence.mockResolvedValue({
-      imageMatches: [
-        {
-          title: "Dog Skin Dataset",
-          citation: "https://example.com/dataset",
-          score: 0.88,
-          summary: "reference hot spot image",
-          assetUrl: null,
-          domain: "skin_wound",
-          conditionLabel: "hot_spot",
-          dogOnly: true,
-        },
-      ],
-      sourceCitations: ["Dog Skin Dataset"],
-    });
+    mockRetrieveVeterinaryTextEvidenceWithResult.mockResolvedValue(
+      buildOkSidecarResult("text-retrieval-service", {
+        textChunks: [
+          {
+            title: "Merck Wound Management",
+            citation: "Merck Veterinary Manual",
+            score: 0.92,
+            summary:
+              "Clean wounds should be stabilized and monitored for infection.",
+            sourceUrl: "https://example.com/merck",
+          },
+        ],
+        rerankScores: [0.92],
+        sourceCitations: ["Merck Veterinary Manual"],
+      })
+    );
+    mockRetrieveVeterinaryImageEvidenceWithResult.mockResolvedValue(
+      buildOkSidecarResult("image-retrieval-service", {
+        imageMatches: [
+          {
+            title: "Dog Skin Dataset",
+            citation: "https://example.com/dataset",
+            score: 0.88,
+            summary: "reference hot spot image",
+            assetUrl: null,
+            domain: "skin_wound",
+            conditionLabel: "hot_spot",
+            dogOnly: true,
+          },
+        ],
+        sourceCitations: ["Dog Skin Dataset"],
+      })
+    );
 
     const session = createSession();
     session.known_symptoms = ["wound_skin_issue"];
@@ -1708,15 +1745,19 @@ describe("symptom-chat mixed text + image routing", () => {
       summary: "",
       labels: [],
     });
-    mockPreprocessVeterinaryImage.mockResolvedValue({
-      domain: "unsupported",
-      bodyRegion: null,
-      detectedRegions: [],
-      bestCrop: null,
-      imageQuality: "borderline",
-      confidence: 0.2,
-      limitations: ["generic photo does not map to a supported veterinary image domain"],
-    });
+    mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+      buildOkSidecarResult("vision-preprocess-service", {
+        domain: "unsupported",
+        bodyRegion: null,
+        detectedRegions: [],
+        bestCrop: null,
+        imageQuality: "borderline",
+        confidence: 0.2,
+        limitations: [
+          "generic photo does not map to a supported veterinary image domain",
+        ],
+      })
+    );
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: ["coughing"], answers: {} })
@@ -4696,24 +4737,28 @@ describe("VET-900 comprehensive scenarios", () => {
       summary: "Compressed case memory for VET-900 test.",
       model: "MiniMax-M2.7",
     });
-    mockPreprocessVeterinaryImage.mockResolvedValue({
-      domain: "skin_wound",
-      bodyRegion: "left hind leg",
-      detectedRegions: [{ label: "wound", confidence: 0.92 }],
-      bestCrop: null,
-      imageQuality: "good",
-      confidence: 0.88,
-      limitations: [],
-    });
-    mockConsultWithMultimodalSidecar.mockResolvedValue({
-      model: "Qwen2.5-VL-7B-Instruct",
-      summary: "Lesion on left hind limb.",
-      agreements: ["left hind limb involvement"],
-      disagreements: [],
-      uncertainties: [],
-      confidence: 0.74,
-      mode: "sync",
-    });
+    mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+      buildOkSidecarResult("vision-preprocess-service", {
+        domain: "skin_wound",
+        bodyRegion: "left hind leg",
+        detectedRegions: [{ label: "wound", confidence: 0.92 }],
+        bestCrop: null,
+        imageQuality: "good",
+        confidence: 0.88,
+        limitations: [],
+      })
+    );
+    mockConsultWithMultimodalSidecarWithResult.mockResolvedValue(
+      buildOkSidecarResult("multimodal-consult-service", {
+        model: "Qwen2.5-VL-7B-Instruct",
+        summary: "Lesion on left hind limb.",
+        agreements: ["left hind limb involvement"],
+        disagreements: [],
+        uncertainties: [],
+        confidence: 0.74,
+        mode: "sync",
+      })
+    );
     mockRetrieveVeterinaryEvidenceFromSidecar.mockResolvedValue({
       textChunks: [],
       imageMatches: [],
@@ -4722,15 +4767,19 @@ describe("VET-900 comprehensive scenarios", () => {
     });
     mockIsTextRetrievalConfigured.mockReturnValue(false);
     mockIsImageRetrievalConfigured.mockReturnValue(false);
-    mockRetrieveVeterinaryTextEvidence.mockResolvedValue({
-      textChunks: [],
-      rerankScores: [],
-      sourceCitations: [],
-    });
-    mockRetrieveVeterinaryImageEvidence.mockResolvedValue({
-      imageMatches: [],
-      sourceCitations: [],
-    });
+    mockRetrieveVeterinaryTextEvidenceWithResult.mockResolvedValue(
+      buildOkSidecarResult("text-retrieval-service", {
+        textChunks: [],
+        rerankScores: [],
+        sourceCitations: [],
+      })
+    );
+    mockRetrieveVeterinaryImageEvidenceWithResult.mockResolvedValue(
+      buildOkSidecarResult("image-retrieval-service", {
+        imageMatches: [],
+        sourceCitations: [],
+      })
+    );
     mockEnqueueAsyncReview.mockResolvedValue(true);
     mockSaveSymptomReportToDB.mockResolvedValue(null);
     mockDiagnoseWithDeepSeek.mockResolvedValue(

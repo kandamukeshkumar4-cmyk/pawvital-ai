@@ -1,7 +1,7 @@
 import { after, NextResponse } from "next/server";
 import {
   isAsyncReviewServiceConfigured,
-  submitAsyncReviewToSidecar,
+  submitAsyncReviewToSidecarWithResult,
 } from "@/lib/hf-sidecars";
 import type { PetProfile, TriageSession } from "@/lib/triage-engine";
 import type { VisionPreprocessResult, VisionSeverityClass } from "@/lib/clinical-evidence";
@@ -88,27 +88,28 @@ export async function POST(request: Request) {
   const report = body.report;
 
   const task = async (): Promise<boolean> => {
-    try {
-      await submitAsyncReviewToSidecar({
-        image,
-        ownerText:
-          session.case_memory?.latest_owner_turn ||
-          "Async specialist review requested for a completed veterinary case.",
-        preprocess: session.latest_preprocess || buildFallbackPreprocess(session),
-        visionSummary:
-          session.vision_analysis ||
-          String(report?.clinical_notes || report?.explanation || "").trim(),
-        severity:
-          (session.vision_severity as VisionSeverityClass | undefined) ||
-          "needs_review",
-        contradictions: session.latest_visual_evidence?.contradictions || [],
-        deterministicFacts: session.extracted_answers || {},
-      });
-      return true;
-    } catch (error) {
-      console.error("[Async Review] background consult failed:", error);
+    const result = await submitAsyncReviewToSidecarWithResult({
+      image,
+      ownerText:
+        session.case_memory?.latest_owner_turn ||
+        "Async specialist review requested for a completed veterinary case.",
+      preprocess: session.latest_preprocess || buildFallbackPreprocess(session),
+      visionSummary:
+        session.vision_analysis ||
+        String(report?.clinical_notes || report?.explanation || "").trim(),
+      severity:
+        (session.vision_severity as VisionSeverityClass | undefined) ||
+        "needs_review",
+      contradictions: session.latest_visual_evidence?.contradictions || [],
+      deterministicFacts: session.extracted_answers || {},
+    });
+
+    if (!result.ok) {
+      console.error("[Async Review] background consult failed:", result.error);
       return false;
     }
+
+    return true;
   };
 
   const scheduled = scheduleAfterSafely(task);
