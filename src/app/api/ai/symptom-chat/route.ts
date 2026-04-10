@@ -2153,6 +2153,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       {
         bayesianDifferentials: (report.bayesian_differentials as Array<{ disease_key: string; posteriorProbability: number }>) || context.top5.slice(0, 3).map((d) => ({ disease_key: d.disease_key, posteriorProbability: d.final_score })),
         topDiseaseKey: context.top5[0]?.disease_key,
+        visionPreprocess: reportImagePreprocess,
       }
     );
 

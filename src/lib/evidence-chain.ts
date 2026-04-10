@@ -2,6 +2,7 @@ import type {
   RetrievalBundle,
   RetrievalImageEvidence,
   RetrievalTextEvidence,
+  VisionPreprocessResult,
 } from "./clinical-evidence";
 import type { TriageSession } from "./triage-engine";
 import { getICD10CodesForDisease } from "./icd-10-mapper";
@@ -20,6 +21,7 @@ interface EvidenceChainOptions {
     posteriorProbability: number;
   }>;
   topDiseaseKey?: string;
+  visionPreprocess?: VisionPreprocessResult | null;
 }
 
 function toSupportingTextEvidence(entry: RetrievalTextEvidence): string[] {
@@ -43,6 +45,21 @@ export function buildStructuredEvidenceChain(
   options?: EvidenceChainOptions
 ): StructuredEvidenceChainItem[] {
   const items: StructuredEvidenceChainItem[] = [];
+
+  // Phase 4: Add vision preprocess evidence as the first source
+  if (options?.visionPreprocess) {
+    const vp = options.visionPreprocess;
+    items.push({
+      source: "vision-preprocess",
+      finding: `${vp.domain} analysis (${vp.imageQuality} quality)`,
+      supporting: [
+        vp.bodyRegion || "unspecified region",
+        ...vp.detectedRegions.slice(0, 3).map((r) => r.label || r.class || "detected region"),
+      ].filter(Boolean),
+      contradicting: vp.limitations.filter((l) => l.toLowerCase().includes("stub")),
+      confidence: vp.confidence,
+    });
+  }
 
   for (const visual of session.case_memory?.visual_evidence?.slice(-3) || []) {
     items.push({

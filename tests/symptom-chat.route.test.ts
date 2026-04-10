@@ -30,6 +30,10 @@ const mockCompressCaseMemoryWithMiniMax = jest.fn();
 const mockPreprocessVeterinaryImageWithResult = jest.fn();
 const mockConsultWithMultimodalSidecarWithResult = jest.fn();
 const mockRetrieveVeterinaryEvidenceFromSidecar = jest.fn();
+const mockIsVisionPreprocessConfigured = jest.fn();
+const mockIsRetrievalSidecarConfigured = jest.fn();
+const mockIsMultimodalConsultConfigured = jest.fn();
+const mockIsAsyncReviewServiceConfigured = jest.fn();
 const mockIsTextRetrievalConfigured = jest.fn();
 const mockIsImageRetrievalConfigured = jest.fn();
 const mockRetrieveVeterinaryTextEvidenceWithResult = jest.fn();
@@ -108,9 +112,14 @@ jest.mock("@/lib/minimax", () => ({
 }));
 
 jest.mock("@/lib/hf-sidecars", () => ({
-  isVisionPreprocessConfigured: () => true,
-  isRetrievalSidecarConfigured: () => true,
-  isMultimodalConsultConfigured: () => true,
+  isVisionPreprocessConfigured: (...args: unknown[]) =>
+    mockIsVisionPreprocessConfigured(...args),
+  isRetrievalSidecarConfigured: (...args: unknown[]) =>
+    mockIsRetrievalSidecarConfigured(...args),
+  isMultimodalConsultConfigured: (...args: unknown[]) =>
+    mockIsMultimodalConsultConfigured(...args),
+  isAsyncReviewServiceConfigured: (...args: unknown[]) =>
+    mockIsAsyncReviewServiceConfigured(...args),
   isAbortLikeError: (error: unknown) =>
     error instanceof Error && error.name === "AbortError",
   preprocessVeterinaryImageWithResult: (...args: unknown[]) =>
@@ -137,6 +146,21 @@ jest.mock("@/lib/image-retrieval-service", () => ({
 
 jest.mock("@/lib/async-review-client", () => ({
   enqueueAsyncReview: (...args: unknown[]) => mockEnqueueAsyncReview(...args),
+}));
+
+jest.mock("@/lib/confidence-calibrator", () => ({
+  calibrateDiagnosticConfidence: ({ baseConfidence }: { baseConfidence: number }) => ({
+    final_confidence: baseConfidence,
+    base_confidence: baseConfidence,
+    adjustments: [],
+    confidence_level: "moderate",
+    recommendation: "No significant adjustments needed",
+  }),
+}));
+
+jest.mock("@/lib/icd-10-mapper", () => ({
+  getICD10CodesForDisease: () => null,
+  generateICD10Summary: () => [],
 }));
 
 jest.mock("@/lib/report-storage", () => ({
@@ -335,6 +359,12 @@ describe("symptom-chat mixed text + image routing", () => {
         mode: "sync",
       })
     );
+    mockIsVisionPreprocessConfigured.mockReturnValue(false);
+    mockIsRetrievalSidecarConfigured.mockReturnValue(false);
+    mockIsMultimodalConsultConfigured.mockReturnValue(false);
+    mockIsAsyncReviewServiceConfigured.mockReturnValue(false);
+    mockIsTextRetrievalConfigured.mockReturnValue(false);
+    mockIsImageRetrievalConfigured.mockReturnValue(false);
     mockRetrieveVeterinaryEvidenceFromSidecar.mockResolvedValue({
       textChunks: [],
       imageMatches: [],
@@ -709,6 +739,7 @@ describe("symptom-chat mixed text + image routing", () => {
   });
 
   it("calls the multimodal consult on ambiguous supported image cases", async () => {
+    mockIsMultimodalConsultConfigured.mockReturnValue(true);
     mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
       buildOkSidecarResult("vision-preprocess-service", {
         domain: "eye",
@@ -751,6 +782,7 @@ describe("symptom-chat mixed text + image routing", () => {
   });
 
   it("records sidecar timeout observations and falls back to deterministic preprocess", async () => {
+    mockIsVisionPreprocessConfigured.mockReturnValue(true);
     const abortError = new Error("aborted");
     abortError.name = "AbortError";
     mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
@@ -786,6 +818,7 @@ describe("symptom-chat mixed text + image routing", () => {
   });
 
   it("adds evidence-chain data and capped confidence to the final report", async () => {
+    mockIsMultimodalConsultConfigured.mockReturnValue(true);
     mockIsTextRetrievalConfigured.mockReturnValue(true);
     mockIsImageRetrievalConfigured.mockReturnValue(true);
     mockRetrieveVeterinaryTextEvidenceWithResult.mockResolvedValue(
