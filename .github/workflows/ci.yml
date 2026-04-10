@@ -12,6 +12,7 @@ on:
       - "copilot/**"
       - "antigravity/**"
       - "qwen/**"
+      - "feat/**"
       - "feature/**"
       - "fix/**"
       - "chore/**"

@@ -6,7 +6,7 @@ on:
     types: [completed]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -211,33 +211,3 @@ jobs:
           gh pr review ${{ steps.pr.outputs.number }} \
             --request-changes \
             --body "AI review found issues. See comment above for details and fix instructions."
-
-      - name: Auto-merge on approval
-        if: steps.pr.outputs.found == 'true' && steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER="${{ steps.pr.outputs.number }}"
-          PR_STATE=$(gh pr view "$PR_NUMBER" --json isDraft,mergeable --jq '{draft: .isDraft, mergeable: .mergeable}')
-          IS_DRAFT=$(echo "$PR_STATE" | jq -r '.draft')
-          MERGEABLE=$(echo "$PR_STATE" | jq -r '.mergeable')
-          if [ "$IS_DRAFT" = "true" ]; then
-            echo "PR is a draft -- skipping merge"
-            exit 0
-          fi
-          if [ "$MERGEABLE" != "MERGEABLE" ]; then
-            echo "PR is not mergeable (state: $MERGEABLE) -- skipping merge"
-            exit 0
-          fi
-          echo "Merging PR #${PR_NUMBER}..."
-          gh pr merge "$PR_NUMBER" --squash --delete-branch
-          {
-            echo "## Auto-Merged to master"
-            echo ""
-            echo "CI passed + AI review approved. Squash-merged to master."
-            echo ""
-            echo "Vercel is deploying now -- your changes will be live in ~30 seconds."
-            echo ""
-            echo "*(Merged by CI pipeline)*"
-          } > /tmp/merge-comment.md
-          gh pr comment "$PR_NUMBER" --body-file /tmp/merge-comment.md
