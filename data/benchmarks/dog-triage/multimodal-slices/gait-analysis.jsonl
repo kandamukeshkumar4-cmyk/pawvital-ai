@@ -1,0 +1,7 @@
+[
+  {"case_id": "MULTI-GAIT-001", "modality": "gait", "image_url": "https://example.com/gait/limping-front-left.jpg", "expected_symptoms": ["limping", "abnormal_gait"], "expected_disposition": "same_day_vet", "notes": "Front left leg favoring, visible weight shift"},
+  {"case_id": "MULTI-GAIT-002", "modality": "gait", "image_url": "https://example.com/gait/wobbly-hindquarters.jpg", "expected_symptoms": ["abnormal_gait", "generalized_stiffness"], "expected_disposition": "vet_within_48h", "notes": "Hindquarter weakness, difficulty rising"},
+  {"case_id": "MULTI-GAIT-003", "modality": "gait", "image_url": "https://example.com/gait/non-weight-bearing.jpg", "expected_symptoms": ["limping"], "expected_disposition": "emergency_vet_now", "notes": "Non-weight bearing, possible fracture"},
+  {"case_id": "MULTI-GAIT-004", "modality": "gait", "image_url": "https://example.com/gait/reluctant-to-move.jpg", "expected_symptoms": ["lethargy", "limping"], "expected_disposition": "vet_within_48h", "notes": "Reluctant to walk, generalized stiffness"},
+  {"case_id": "MULTI-GAIT-005", "modality": "gait", "image_url": "https://example.com/gait/normal-walk.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal gait, no visible abnormalities"}
+]

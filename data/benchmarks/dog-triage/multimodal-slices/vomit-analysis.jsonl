@@ -1,0 +1,8 @@
+[
+  {"case_id": "MULTI-VOMIT-001", "modality": "vomit", "image_url": "https://example.com/vomit/blood-hematemesis.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "emergency_vet_now", "notes": "Blood in vomit (hematemesis)"},
+  {"case_id": "MULTI-VOMIT-002", "modality": "vomit", "image_url": "https://example.com/vomit/bile-yellow.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "vet_within_48h", "notes": "Yellow bile, empty stomach vomiting"},
+  {"case_id": "MULTI-VOMIT-003", "modality": "vomit", "image_url": "https://example.com/vomit/food-partially-digested.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "monitor_and_reassess", "notes": "Partially digested food, possible regurgitation"},
+  {"case_id": "MULTI-VOMIT-004", "modality": "vomit", "image_url": "https://example.com/vomit/foreign-object.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "emergency_vet_now", "notes": "Foreign object visible in vomit"},
+  {"case_id": "MULTI-VOMIT-005", "modality": "vomit", "image_url": "https://example.com/vomit/white-foam.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "vet_within_48h", "notes": "White foam, possible kennel cough or gastritis"},
+  {"case_id": "MULTI-VOMIT-006", "modality": "vomit", "image_url": "https://example.com/vomit/normal-none.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "No vomiting observed"}
+]

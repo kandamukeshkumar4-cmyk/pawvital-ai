@@ -1,0 +1,8 @@
+[
+  {"case_id": "MULTI-GUMS-001", "modality": "gums_color", "image_url": "https://example.com/gums/blue-cyanotic.jpg", "expected_symptoms": ["difficulty_breathing"], "expected_disposition": "emergency_vet_now", "notes": "Blue/purple gums indicating cyanosis"},
+  {"case_id": "MULTI-GUMS-002", "modality": "gums_color", "image_url": "https://example.com/gums/pale-white.jpg", "expected_symptoms": ["lethargy"], "expected_disposition": "emergency_vet_now", "notes": "Pale/white gums indicating anemia or shock"},
+  {"case_id": "MULTI-GUMS-003", "modality": "gums_color", "image_url": "https://example.com/gums/bright-red.jpg", "expected_symptoms": ["heat_intolerance"], "expected_disposition": "emergency_vet_now", "notes": "Brick-red gums, possible heat stroke or toxicity"},
+  {"case_id": "MULTI-GUMS-004", "modality": "gums_color", "image_url": "https://example.com/gums/normal-pink.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal bubblegum pink gums"},
+  {"case_id": "MULTI-GUMS-005", "modality": "gums_color", "image_url": "https://example.com/gums/pigmented-normal.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal pigmented gums (breed-specific)"},
+  {"case_id": "MULTI-GUMS-006", "modality": "gums_color", "image_url": "https://example.com/gums/yellow-jaundice.jpg", "expected_symptoms": ["lethargy", "not_eating"], "expected_disposition": "same_day_vet", "notes": "Yellow gums indicating liver issues"}
+]

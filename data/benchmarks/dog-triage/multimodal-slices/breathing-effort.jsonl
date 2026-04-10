@@ -1,0 +1,7 @@
+[
+  {"case_id": "MULTI-BREATH-001", "modality": "breathing_effort", "image_url": "https://example.com/breathing/labored-abdominal.jpg", "expected_symptoms": ["difficulty_breathing"], "expected_disposition": "emergency_vet_now", "notes": "Visible abdominal effort, open-mouth breathing"},
+  {"case_id": "MULTI-BREATH-002", "modality": "breathing_effort", "image_url": "https://example.com/breathing/rapid-shallow.jpg", "expected_symptoms": ["difficulty_breathing"], "expected_disposition": "same_day_vet", "notes": "Rapid shallow breathing, >40 breaths/min"},
+  {"case_id": "MULTI-BREATH-003", "modality": "breathing_effort", "image_url": "https://example.com/breathing/normal-resting.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal resting breathing pattern"},
+  {"case_id": "MULTI-BREATH-004", "modality": "breathing_effort", "image_url": "https://example.com/breathing/extended-neck.jpg", "expected_symptoms": ["difficulty_breathing", "coughing"], "expected_disposition": "emergency_vet_now", "notes": "Extended neck posture, respiratory distress"},
+  {"case_id": "MULTI-BREATH-005", "modality": "breathing_effort", "image_url": "https://example.com/breathing/post-exercise.jpg", "expected_symptoms": ["difficulty_breathing"], "expected_disposition": "monitor_and_reassess", "notes": "Post-exercise panting, should resolve"}
+]

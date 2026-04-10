@@ -1,0 +1,7 @@
+[
+  {"case_id": "MULTI-STOOL-001", "modality": "stool", "image_url": "https://example.com/stool/bloody-diarrhea.jpg", "expected_symptoms": ["diarrhea", "blood_in_stool"], "expected_disposition": "same_day_vet", "notes": "Bloody diarrhea, hemorrhagic gastroenteritis"},
+  {"case_id": "MULTI-STOOL-002", "modality": "stool", "image_url": "https://example.com/stool/formed-normal.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal formed stool"},
+  {"case_id": "MULTI-STOOL-003", "modality": "stool", "image_url": "https://example.com/stool/soft-unformed.jpg", "expected_symptoms": ["diarrhea"], "expected_disposition": "monitor_and_reassess", "notes": "Soft unformed stool, mild GI upset"},
+  {"case_id": "MULTI-STOOL-004", "modality": "stool", "image_url": "https://example.com/stool/watery-severe.jpg", "expected_symptoms": ["diarrhea"], "expected_disposition": "same_day_vet", "notes": "Watery diarrhea, risk of dehydration"},
+  {"case_id": "MULTI-STOOL-005", "modality": "stool", "image_url": "https://example.com/stool/black-tarry.jpg", "expected_symptoms": ["diarrhea", "blood_in_stool"], "expected_disposition": "emergency_vet_now", "notes": "Melena (digested blood), upper GI bleed"}
+]

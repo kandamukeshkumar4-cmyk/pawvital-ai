@@ -1,0 +1,7 @@
+[
+  {"case_id": "MULTI-SKIN-001", "modality": "skin_lesion", "image_url": "https://example.com/skin/hot-spot-acute.jpg", "expected_symptoms": ["wound_skin_issue", "excessive_scratching"], "expected_disposition": "vet_within_48h", "notes": "Acute moist dermatitis (hot spot)"},
+  {"case_id": "MULTI-SKIN-002", "modality": "skin_lesion", "image_url": "https://example.com/skin/ringworm-circular.jpg", "expected_symptoms": ["wound_skin_issue", "hair_loss"], "expected_disposition": "vet_within_48h", "notes": "Circular lesion with hair loss, possible ringworm"},
+  {"case_id": "MULTI-SKIN-003", "modality": "skin_lesion", "image_url": "https://example.com/skin/mass-lump.jpg", "expected_symptoms": ["swelling_lump"], "expected_disposition": "vet_within_48h", "notes": "Subcutaneous mass, needs cytology"},
+  {"case_id": "MULTI-SKIN-004", "modality": "skin_lesion", "image_url": "https://example.com/skin/normal-coat.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal healthy coat"},
+  {"case_id": "MULTI-SKIN-005", "modality": "skin_lesion", "image_url": "https://example.com/skin/hives-allergic.jpg", "expected_symptoms": ["excessive_scratching", "swelling_lump"], "expected_disposition": "same_day_vet", "notes": "Hives, allergic reaction"}
+]

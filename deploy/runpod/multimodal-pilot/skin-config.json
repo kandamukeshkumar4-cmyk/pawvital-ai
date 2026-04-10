@@ -1,0 +1,16 @@
+{
+  "modality": "skin",
+  "model": "llama-4-maverick",
+  "prompt_template": "Analyze this skin/lesion image. Identify: lesion type (hot_spot, ringworm, mass, hives, normal), severity, and urgency. Return: {{\"symptoms_detected\": [\"symptom_key\"], \"confidence\": 0.0-1.0, \"notes\": \"description\"}}",
+  "max_tokens": 300,
+  "temperature": 0.1,
+  "timeout_ms": 5000,
+  "advisory_only": true,
+  "safety_boundary": "Cannot override deterministic emergency routing",
+  "failure_modes": ["misclassification", "false_positive", "false_negative", "quality_failure"],
+  "rollback_rules": {
+    "timeout_threshold_ms": 5000,
+    "min_confidence": 0.6,
+    "override_deterministic": false
+  }
+}
