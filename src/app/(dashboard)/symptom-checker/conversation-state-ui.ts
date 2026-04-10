@@ -61,6 +61,7 @@ export function clientSessionToControlSnapshot(
   const answeredQuestions = triageSession.answered_questions;
   const extractedAnswers = triageSession.extracted_answers;
   const unresolvedQuestionIds = caseMemory.unresolved_question_ids;
+  const clarificationReasons = caseMemory.clarification_reasons;
   const lastQuestionAsked = triageSession.last_question_asked;
 
   return {
@@ -76,6 +77,17 @@ export function clientSessionToControlSnapshot(
     unresolvedQuestionIds: Array.isArray(unresolvedQuestionIds)
       ? unresolvedQuestionIds.filter((id): id is string => typeof id === "string")
       : [],
+    clarificationReasons:
+      clarificationReasons &&
+      typeof clarificationReasons === "object" &&
+      !Array.isArray(clarificationReasons)
+        ? Object.fromEntries(
+            Object.entries(clarificationReasons).filter(
+              (entry): entry is [string, string] =>
+                typeof entry[0] === "string" && typeof entry[1] === "string"
+            )
+          )
+        : {},
     lastQuestionAsked:
       typeof lastQuestionAsked === "string" && lastQuestionAsked.length > 0
         ? lastQuestionAsked

@@ -128,6 +128,7 @@ describe("VET-833: getSymptomCheckerConversationUiConfig", () => {
       answeredQuestionIds: ["q0"],
       extractedAnswers: { q0: "yes" },
       unresolvedQuestionIds: ["q1"],
+      clarificationReasons: {},
       lastQuestionAsked: "q1",
     });
   });
