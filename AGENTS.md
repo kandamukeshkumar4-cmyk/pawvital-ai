@@ -44,7 +44,7 @@ node scripts/agent-done.mjs <ticket-slug> "<what you did>" --agent <your-name>
 1. GitHub opens a PR for your branch (~10 seconds)
 2. CI runs: lint → typecheck → build → tests (~2 minutes)
 3. AI reviews the code for correctness and clinical safety (MiMo v2 Pro via OpenRouter)
-4. AI review approves + all checks pass → auto-merged to master → Vercel deploys → live in ~30 seconds
+4. The configured AI review approves + all checks pass → auto-merged to master → Vercel deploys → live in ~30 seconds
 5. CI fails → auto-fixes lint/TS errors, or AI posts exact fix instructions on the PR
 
 **You do not need to merge anything manually.**
