@@ -5,7 +5,7 @@
 This pipeline provides end-to-end DevOps automation for multi-agent development:
 
 ```
-Agent pushes branch → Auto-PR → CI (lint/typecheck/build/test) → AI Review (Gemini) → Auto-Merge → Vercel Deploy
+Agent pushes branch → Auto-PR → CI (lint/typecheck/build/test) → AI Review (OpenRouter model) → Auto-Merge → Vercel Deploy
 ```
 
 Works with **any tool**: Claude Code, Cursor, GitHub Copilot, Codex CLI, Antigravity, or manual commits.
@@ -20,7 +20,7 @@ Go to **GitHub repo → Settings → Secrets and variables → Actions**
 
 | Secret | Description | Where to get it |
 |--------|-------------|-----------------|
-| `GOOGLE_AI_API_KEY` | Google AI API key for Gemini code review | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| `OPENROUTER_API_KEY` | OpenRouter API key for AI review and CI analysis | [openrouter.ai/keys](https://openrouter.ai/keys) |
 
 ### Optional Variables
 
@@ -28,7 +28,7 @@ Go to **Settings → Secrets and variables → Actions → Variables tab**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `GEMINI_MODEL` | `gemini-2.5-pro` | Model for AI review (change to latest when available) |
+| `REVIEW_MODEL` | `xiaomi/mimo-v2-pro` | Model used by `ai-review.yml` for PR review |
 
 > `GITHUB_TOKEN` is automatically provided by GitHub Actions — no setup needed.
 
@@ -100,7 +100,7 @@ On failure, a comment is posted on the PR with the failing job and a link to log
 
 ### 3. AI Code Review (`ai-review.yml`)
 
-After CI passes, the diff is sent to **Gemini** for review.
+After CI passes, the diff is sent to the configured **OpenRouter** review model for review.
 
 Review checks:
 - Clinical logic safety (no medical decisions in prompts)
@@ -113,7 +113,7 @@ Verdict is either `APPROVE` (posts approval) or `REQUEST_CHANGES` (blocks merge 
 
 ### 4. Auto-Merge (`auto-merge.yml`)
 
-When both CI Gate passes AND AI review approves:
+When both CI Gate passes AND the AI review approves:
 - Squash-merges the PR to master
 - Deletes the branch
 - Vercel auto-deploys from master
@@ -170,7 +170,7 @@ The PR stays open until all issues are fixed. Push new commits to the same branc
 ## Cost Notes
 
 - **CI runs**: Free on GitHub Actions (2,000 min/month for free tier)
-- **Gemini API**: Check current pricing at [ai.google.dev/pricing](https://ai.google.dev/pricing) — review calls use ~2-10K tokens each
+- **OpenRouter review calls**: Check current pricing for your configured model at [openrouter.ai/models](https://openrouter.ai/models)
 - **Vercel**: Deploys only on merge to master (no extra cost from PRs)
 
 ---
@@ -181,7 +181,7 @@ The PR stays open until all issues are fixed. Push new commits to the same branc
 The `CI Gate` check only exists after the first PR triggers it. Create one PR, let CI run, then go back to branch protection settings and select `CI Gate` from the dropdown.
 
 ### AI review skipped
-Check that `GOOGLE_AI_API_KEY` is set in GitHub Secrets. The workflow logs will show "GOOGLE_AI_API_KEY not set — skipping AI review" if missing.
+Check that `OPENROUTER_API_KEY` is set in GitHub Secrets. The workflow logs will show "OPENROUTER_API_KEY not set -- skipping AI review" if missing.
 
 ### Auto-merge not triggering
 1. Verify "Allow auto-merge" is enabled in repo settings
