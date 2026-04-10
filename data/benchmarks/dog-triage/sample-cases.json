@@ -1,0 +1,91 @@
+{
+  "suite_id": "dog-triage-sample-seed",
+  "version": "2026-04-10",
+  "species": "dog",
+  "description": "Seed cases for the RunPod benchmark harness. These are illustrative cases, not the final vet-adjudicated benchmark.",
+  "cases": [
+    {
+      "id": "emergency-breathing-collapse",
+      "description": "Blue gums and respiratory distress should trigger emergency handling.",
+      "tags": ["emergency", "respiratory", "cyanosis"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog collapsed, his gums look blue, and he's struggling to breathe."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      }
+    },
+    {
+      "id": "limping-follow-up",
+      "description": "Rich limping intake should capture leg + onset and ask the next deterministic question.",
+      "tags": ["orthopedic", "question-flow"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is limping on his left back leg and it started suddenly yesterday."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": ["which_leg", "limping_onset"],
+        "extractedAnswersMatch": {
+          "which_leg": "left back leg",
+          "limping_onset": "sudden"
+        },
+        "lastQuestionAsked": "limping_progression"
+      }
+    },
+    {
+      "id": "swollen-abdomen-retching",
+      "description": "Swollen abdomen with unproductive retching should escalate urgently.",
+      "tags": ["emergency", "abdomen", "gdv"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Milo",
+          "breed": "Great Dane",
+          "age_years": 7,
+          "weight": 118,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His belly is suddenly huge and tight, and he keeps trying to vomit but nothing comes out."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      }
+    }
+  ]
+}

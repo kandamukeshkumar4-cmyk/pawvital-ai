@@ -1,0 +1,128 @@
+{
+  "suite_id": "dog-triage-gold-candidate-common-a",
+  "version": "2026-04-10",
+  "species": "dog",
+  "description": "Common dog complaint benchmark cases, shard A.",
+  "cases": [
+    {
+      "id": "question-limping-sudden",
+      "description": "Straightforward limping complaint should open orthopedic question flow.",
+      "tags": ["question", "orthopedic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Bruno", "breed": "Golden Retriever", "age_years": 5, "weight": 72, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog is limping today." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["limping"] }
+    },
+    {
+      "id": "question-vomiting",
+      "description": "Vomiting should open GI question flow.",
+      "tags": ["question", "gi"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Ruby", "breed": "Mini Schnauzer", "age_years": 6, "weight": 18, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has been vomiting since this morning." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["vomiting"] }
+    },
+    {
+      "id": "question-diarrhea",
+      "description": "Diarrhea without emergency cues should open GI question flow.",
+      "tags": ["question", "gi"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Teddy", "breed": "Cavalier King Charles Spaniel", "age_years": 4, "weight": 19, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He has had loose diarrhea all day but is still acting pretty normal." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["diarrhea"] }
+    },
+    {
+      "id": "question-coughing",
+      "description": "Coughing should open respiratory question flow.",
+      "tags": ["question", "respiratory"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Ollie", "breed": "Pomeranian", "age_years": 8, "weight": 9, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has been coughing for a few days." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["coughing"] }
+    },
+    {
+      "id": "question-excessive-scratching",
+      "description": "Pruritus should open dermatology question flow.",
+      "tags": ["question", "dermatology"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Mochi", "breed": "French Bulldog", "age_years": 3, "weight": 25, "species": "dog" },
+        "messages": [{ "role": "user", "content": "She keeps scratching her paws and ears all the time." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["excessive_scratching"] }
+    },
+    {
+      "id": "question-drinking-more",
+      "description": "Increased thirst should open endocrine/urinary question flow.",
+      "tags": ["question", "endocrine", "urinary"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Bailey", "breed": "Mixed Breed", "age_years": 9, "weight": 48, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog is drinking way more water and peeing more than usual." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["drinking_more"] }
+    },
+    {
+      "id": "question-trembling",
+      "description": "Trembling without collapse should open neurologic/systemic question flow.",
+      "tags": ["question", "neurologic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Loki", "breed": "Chihuahua", "age_years": 7, "weight": 8, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He has been trembling off and on since last night." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["trembling"] }
+    },
+    {
+      "id": "question-gradual-belly-enlargement",
+      "description": "Gradual abdominal enlargement should open abdomen question flow.",
+      "tags": ["question", "abdomen"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Nala", "breed": "Labrador Retriever", "age_years": 10, "weight": 79, "species": "dog" },
+        "messages": [{ "role": "user", "content": "Her belly has been getting more swollen over the past two weeks." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["swollen_abdomen"] }
+    },
+    {
+      "id": "question-small-blood-in-stool",
+      "description": "Small amount of blood in stool should open GI clarification flow.",
+      "tags": ["question", "gi", "blood"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Harley", "breed": "Boston Terrier", "age_years": 5, "weight": 22, "species": "dog" },
+        "messages": [{ "role": "user", "content": "There were a few streaks of blood in my dog's stool today." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["blood_in_stool"] }
+    },
+    {
+      "id": "question-eye-discharge",
+      "description": "Eye discharge should open ophthalmic question flow.",
+      "tags": ["question", "eye"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Zoe", "breed": "Shih Tzu", "age_years": 6, "weight": 14, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog's left eye has yellow discharge and she keeps squinting a little." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["eye_discharge"] }
+    }
+  ]
+}

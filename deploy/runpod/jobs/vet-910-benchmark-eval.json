@@ -1,0 +1,15 @@
+{
+  "job_id": "vet-910-benchmark-eval",
+  "purpose": "Run the dog triage benchmark suite against the deployed app",
+  "recommended_gpu": "CPU or low-cost GPU",
+  "command": "node scripts/runpod-benchmark.mjs --input=data/benchmarks/dog-triage/gold-candidate --base-url=$APP_BASE_URL --output=runpod-benchmark-report.json",
+  "env_required": [
+    "APP_BASE_URL"
+  ],
+  "inputs": [
+    "data/benchmarks/dog-triage/gold-candidate"
+  ],
+  "outputs": [
+    "runpod-benchmark-report.json"
+  ]
+}

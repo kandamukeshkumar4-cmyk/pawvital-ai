@@ -534,6 +534,716 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
     red_flags: ["wound_deep_bleeding", "wound_bone_visible", "wound_spreading_rapidly"],
     body_systems: ["dermatologic", "musculoskeletal"],
   },
+
+  // --- NEW COMPLAINT FAMILIES (VET-902: Dog Complaint Ontology) ---
+
+  seizure_collapse: {
+    linked_diseases: [
+      "seizure_disorder",
+      "epilepsy",
+      "hypoglycemia",
+      "toxin_ingestion",
+      "heart_disease",
+      "imha",
+      "addisons_disease",
+      "heat_stroke",
+      "brain_tumor",
+      "vestibular_disease",
+    ],
+    follow_up_questions: [
+      "seizure_duration",
+      "consciousness_level",
+      "toxin_exposure",
+      "prior_seizures",
+      "trembling_present",
+      "gum_color",
+      "breathing_status",
+    ],
+    red_flags: ["seizure_activity", "collapse", "unresponsive", "toxin_confirmed"],
+    body_systems: ["neurologic", "cardiovascular"],
+  },
+
+  urination_problem: {
+    linked_diseases: [
+      "urinary_stones",
+      "urinary_infection",
+      "prostate_disease",
+      "bladder_cancer",
+      "kidney_disease",
+      "diabetes",
+      "urethral_obstruction",
+    ],
+    follow_up_questions: [
+      "urination_frequency",
+      "straining_present",
+      "blood_in_urine",
+      "urination_accidents",
+      "water_intake",
+      "spay_status",
+    ],
+    red_flags: ["urinary_blockage", "no_urine_24h"],
+    body_systems: ["renal", "reproductive", "endocrine"],
+  },
+
+  behavior_change: {
+    linked_diseases: [
+      "cognitive_dysfunction",
+      "brain_tumor",
+      "liver_shunt",
+      "hypothyroidism",
+      "pain_general",
+      "seizure_disorder",
+      "vision_loss",
+      "hearing_loss",
+    ],
+    follow_up_questions: [
+      "behavior_change_duration",
+      "behavior_change_type",
+      "appetite_status",
+      "vision_changes",
+      "sleep_pattern",
+      "recent_events",
+    ],
+    red_flags: ["sudden_disorientation", "new_aggression", "seizure_activity"],
+    body_systems: ["neurologic", "systemic"],
+  },
+
+  swelling_lump: {
+    linked_diseases: [
+      "skin_mass",
+      "mast_cell_tumor",
+      "abscess",
+      "lymphoma",
+      "histiocytic_sarcoma",
+      "allergic_reaction",
+      "lipoma",
+      "hemangiosarcoma",
+    ],
+    follow_up_questions: [
+      "lump_location",
+      "lump_size",
+      "lump_duration",
+      "lump_growth_rate",
+      "lump_mobility",
+      "pain_on_touch",
+      "other_lumps_present",
+    ],
+    red_flags: ["rapid_growing_mass", "face_swelling", "swelling_with_breathing"],
+    body_systems: ["systemic", "dermatologic", "musculoskeletal"],
+  },
+
+  dental_problem: {
+    linked_diseases: [
+      "dental_disease",
+      "oral_tumor",
+      "tooth_root_abscess",
+      "stomatitis",
+      "foreign_body_mouth",
+      "kidney_disease",
+    ],
+    follow_up_questions: [
+      "breath_odor_severity",
+      "drooling_present",
+      "chewing_difficulty",
+      "gum_appearance",
+      "tooth_mobility",
+      "appetite_status",
+    ],
+    red_flags: ["facial_swelling_under_eye", "inability_to_drink", "blood_from_mouth"],
+    body_systems: ["oral", "systemic"],
+  },
+
+  hair_loss: {
+    linked_diseases: [
+      "allergic_dermatitis",
+      "hypothyroidism",
+      "cushings_disease",
+      "mange",
+      "folliculitis",
+      "alopecia",
+      "zinc_responsive_dermatosis",
+      "food_allergy",
+    ],
+    follow_up_questions: [
+      "hair_loss_pattern",
+      "skin_appearance",
+      "itching_present",
+      "hair_loss_duration",
+      "diet_quality",
+      "flea_prevention",
+    ],
+    red_flags: ["widespread_hair_loss_skin_breakdown", "hair_loss_with_lethargy"],
+    body_systems: ["dermatologic", "endocrine"],
+  },
+
+  regurgitation: {
+    linked_diseases: [
+      "megaesophagus",
+      "vascular_ring_anomaly",
+      "myasthenia_gravis",
+      "esophageal_foreign_body",
+      "hiatal_hernia",
+    ],
+    follow_up_questions: [
+      "regurgitation_timing",
+      "food_appearance",
+      "coughing_present",
+      "water_intake",
+      "weight_change",
+      "appetite_status",
+    ],
+    red_flags: ["coughing_after_regurgitation", "blue_gums", "inability_to_keep_water"],
+    body_systems: ["gastrointestinal", "respiratory"],
+  },
+
+  constipation: {
+    linked_diseases: [
+      "obstipation",
+      "prostate_enlargement",
+      "perineal_hernia",
+      "foreign_body",
+      "pelvic_canal_stenosis",
+      "hypothyroidism",
+    ],
+    follow_up_questions: [
+      "last_normal_stool",
+      "straining_duration",
+      "stool_consistency_when_produced",
+      "appetite_status",
+      "vomiting_present",
+      "water_intake",
+    ],
+    red_flags: ["straining_no_production_vomiting", "bloody_rectal_discharge"],
+    body_systems: ["gastrointestinal"],
+  },
+
+  generalized_stiffness: {
+    linked_diseases: [
+      "impa",
+      "osteoarthritis",
+      "polymyositis",
+      "degenerative_myelopathy",
+      "lumbosacral_disease",
+      "hypothyroidism",
+    ],
+    follow_up_questions: [
+      "stiffness_onset",
+      "affected_areas",
+      "fever_present",
+      "appetite_status",
+      "energy_level",
+      "worse_after_rest_or_exercise",
+    ],
+    red_flags: ["fever_with_stiffness", "inability_to_stand", "crying_when_touched"],
+    body_systems: ["musculoskeletal", "systemic"],
+  },
+
+  nasal_discharge: {
+    linked_diseases: [
+      "nasal_infection",
+      "nasal_tumor",
+      "nasal_foreign_body",
+      "aspergillosis",
+      "dental_disease",
+      "allergic_rhinitis",
+    ],
+    follow_up_questions: [
+      "discharge_color",
+      "discharge_side",
+      "sneezing_frequency",
+      "blood_present",
+      "appetite_status",
+      "nasal_discharge_duration",
+    ],
+    red_flags: ["bloody_nasal_discharge_one_sided", "facial_deformity"],
+    body_systems: ["respiratory"],
+  },
+
+  vaginal_discharge: {
+    linked_diseases: [
+      "pyometra",
+      "vaginal_hyperplasia",
+      "metritis",
+      "vaginal_tumor",
+      "urinary_infection",
+    ],
+    follow_up_questions: [
+      "spay_status",
+      "vaginal_discharge_color",
+      "discharge_odor",
+      "heat_cycle_timing",
+      "appetite_status",
+      "water_intake",
+    ],
+    red_flags: ["intact_female_lethargy_drinking", "foul_smelling_discharge", "collapse"],
+    body_systems: ["reproductive"],
+  },
+
+  testicular_prostate: {
+    linked_diseases: [
+      "prostate_disease",
+      "testicular_tumor",
+      "prostatitis",
+      "perineal_hernia",
+      "benign_prostatic_hyperplasia",
+    ],
+    follow_up_questions: [
+      "neuter_status",
+      "swelling_location",
+      "urination_changes",
+      "prostate_stool_changes",
+      "pain_on_touch",
+      "testicular_prostate_duration",
+    ],
+    red_flags: ["acute_painful_testicular_swelling", "inability_to_urinate"],
+    body_systems: ["reproductive", "renal"],
+  },
+
+  exercise_induced_lameness: {
+    linked_diseases: [
+      "ccl_rupture",
+      "iliopsoas_strain",
+      "heart_disease",
+      "exercise_induced_collapse",
+      "myopathy",
+      "osteoarthritis",
+    ],
+    follow_up_questions: [
+      "exercise_type",
+      "onset_during_exercise",
+      "recovery_time",
+      "breathing_after_exercise",
+      "gum_color",
+      "prior_episodes",
+    ],
+    red_flags: ["collapse_after_exercise", "blue_gums_after_exercise"],
+    body_systems: ["musculoskeletal", "cardiovascular"],
+  },
+
+  skin_odor_greasy: {
+    linked_diseases: [
+      "yeast_infection",
+      "seborrhea",
+      "allergic_dermatitis",
+      "hypothyroidism",
+      "cushings_disease",
+    ],
+    follow_up_questions: [
+      "odor_location",
+      "skin_appearance",
+      "itching_present",
+      "bath_frequency",
+      "ear_involvement",
+      "diet_quality",
+    ],
+    red_flags: ["widespread_skin_breakdown", "fever_with_skin_odor"],
+    body_systems: ["dermatologic"],
+  },
+
+  recurrent_ear: {
+    linked_diseases: [
+      "allergic_dermatitis",
+      "ear_infection_bacterial",
+      "ear_infection_yeast",
+      "food_allergy",
+      "hypothyroidism",
+    ],
+    follow_up_questions: [
+      "infection_frequency",
+      "last_treatment",
+      "underlying_allergy_diagnosis",
+      "food_trial_done",
+      "ear_cleaning_routine",
+    ],
+    red_flags: ["head_tilt_sudden", "balance_loss", "facial_drooping"],
+    body_systems: ["dermatologic", "systemic"],
+  },
+
+  recurrent_skin: {
+    linked_diseases: [
+      "allergic_dermatitis",
+      "superficial_pyoderma",
+      "demodicosis",
+      "hypothyroidism",
+      "cushings_disease",
+      "immune_deficiency",
+    ],
+    follow_up_questions: [
+      "skin_infection_frequency",
+      "antibiotic_history",
+      "allergy_testing_done",
+      "immune_status",
+      "diet_quality",
+    ],
+    red_flags: ["widespread_deep_infections", "fever", "non_responsive_to_antibiotics"],
+    body_systems: ["dermatologic", "systemic", "immune"],
+  },
+
+  inappropriate_urination: {
+    linked_diseases: [
+      "urinary_infection",
+      "urinary_stones",
+      "diabetes",
+      "cushings_disease",
+      "kidney_disease",
+      "prostate_disease",
+      "cognitive_dysfunction",
+    ],
+    follow_up_questions: [
+      "urination_frequency",
+      "straining_present",
+      "blood_in_urine",
+      "water_intake",
+      "neuter_status",
+      "behavioral_changes",
+    ],
+    red_flags: ["straining_no_urine", "blood_in_urine", "male_unable_to_urinate"],
+    body_systems: ["renal", "reproductive", "behavioral"],
+  },
+
+  fecal_incontinence: {
+    linked_diseases: [
+      "ivdd",
+      "lumbosacral_disease",
+      "cauda_equina_syndrome",
+      "anal_sphincter_incompetence",
+      "cognitive_dysfunction",
+    ],
+    follow_up_questions: [
+      "fecal_incontinence_onset",
+      "stool_consistency",
+      "hind_limb_function",
+      "tail_movement",
+      "back_pain",
+      "perineal_reflex",
+    ],
+    red_flags: ["sudden_onset_hind_weakness", "tail_paralysis", "inability_to_stand"],
+    body_systems: ["gastrointestinal", "neurologic"],
+  },
+
+  vomiting_diarrhea_combined: {
+    linked_diseases: [
+      "gastroenteritis",
+      "pancreatitis",
+      "parvovirus",
+      "toxin_ingestion",
+      "foreign_body",
+      "hemorrhagic_gastroenteritis",
+    ],
+    follow_up_questions: [
+      "combined_vomiting_duration",
+      "combined_diarrhea_duration",
+      "blood_in_either",
+      "appetite_status",
+      "water_intake",
+      "toxin_exposure",
+    ],
+    red_flags: ["puppy_vomiting_diarrhea", "blood_in_both", "not_drinking"],
+    body_systems: ["gastrointestinal"],
+  },
+
+  coughing_breathing_combined: {
+    linked_diseases: [
+      "heart_failure",
+      "pneumonia",
+      "pleural_effusion",
+      "laryngeal_paralysis",
+      "allergic_reaction",
+    ],
+    follow_up_questions: [
+      "breathing_rate",
+      "gum_color",
+      "cough_type",
+      "coughing_breathing_onset",
+      "exercise_intolerance",
+      "position_preference",
+    ],
+    red_flags: ["blue_gums", "collapse", "sudden_onset", "inability_to_lie_down"],
+    body_systems: ["respiratory", "cardiovascular"],
+  },
+
+  oral_mass: {
+    linked_diseases: [
+      "oral_tumor",
+      "epulis",
+      "melanoma",
+      "squamous_cell_carcinoma",
+      "foreign_body_mouth",
+      "dental_disease",
+    ],
+    follow_up_questions: [
+      "oral_mass_location",
+      "oral_mass_size",
+      "bleeding_present",
+      "eating_difficulty",
+      "oral_mass_duration",
+      "breath_odor_severity",
+    ],
+    red_flags: ["bleeding_from_mouth", "inability_to_eat_drink", "facial_swelling"],
+    body_systems: ["oral"],
+  },
+
+  vision_loss: {
+    linked_diseases: [
+      "sudden_acquired_retinal_degeneration",
+      "glaucoma",
+      "cataract",
+      "optic_neuritis",
+      "brain_tumor",
+      "hypertension",
+    ],
+    follow_up_questions: [
+      "vision_loss_onset",
+      "one_or_both_eyes",
+      "pain_present",
+      "pupil_appearance",
+      "other_neurologic_signs",
+      "vision_loss_duration",
+    ],
+    red_flags: ["sudden_blindness", "painful_eye", "dilated_non_responsive_pupils"],
+    body_systems: ["ophthalmologic", "neurologic"],
+  },
+
+  hearing_loss: {
+    linked_diseases: [
+      "ear_infection",
+      "vestibular_disease",
+      "age_related_deafness",
+      "ototoxicity",
+      "brain_tumor",
+    ],
+    follow_up_questions: [
+      "hearing_loss_onset",
+      "ear_infection_history",
+      "head_tilt",
+      "balance_issues",
+      "response_to_loud_sounds",
+      "dog_age_years",
+    ],
+    red_flags: ["sudden_deafness_head_tilt", "balance_loss", "facial_drooping"],
+    body_systems: ["neurologic", "dermatologic"],
+  },
+
+  aggression: {
+    linked_diseases: [
+      "pain_general",
+      "ivdd",
+      "dental_disease",
+      "ear_infection",
+      "cognitive_dysfunction",
+      "hypothyroidism",
+      "brain_tumor",
+    ],
+    follow_up_questions: [
+      "aggression_onset",
+      "trigger_situations",
+      "pain_on_touch",
+      "appetite_status",
+      "energy_level",
+      "recent_events",
+    ],
+    red_flags: ["sudden_new_aggression", "aggression_with_trembling", "aggression_with_lethargy"],
+    body_systems: ["systemic", "musculoskeletal", "neurologic"],
+  },
+
+  pacing_restlessness: {
+    linked_diseases: [
+      "gdv",
+      "pain_general",
+      "bloat",
+      "cognitive_dysfunction",
+      "anxiety",
+      "splenic_mass",
+    ],
+    follow_up_questions: [
+      "abdomen_appearance",
+      "retching_present",
+      "gum_color",
+      "pacing_duration",
+      "appetite_status",
+      "water_intake",
+    ],
+    red_flags: ["pacing_with_bloated_abdomen", "pacing_with_retching", "pacing_over_2h"],
+    body_systems: ["systemic", "neurologic", "gastrointestinal"],
+  },
+
+  abnormal_gait: {
+    linked_diseases: [
+      "ivdd",
+      "degenerative_myelopathy",
+      "wobbler_syndrome",
+      "vestibular_disease",
+      "fibrocartilaginous_embolism",
+      "brain_tumor",
+    ],
+    follow_up_questions: [
+      "abnormal_gait_onset",
+      "affected_limbs",
+      "back_pain",
+      "bladder_control",
+      "trauma_history",
+      "abnormal_gait_progression",
+    ],
+    red_flags: ["inability_to_stand", "paralysis", "loss_bladder_bowel_control"],
+    body_systems: ["neurologic", "musculoskeletal"],
+  },
+
+  heat_intolerance: {
+    linked_diseases: [
+      "heat_stroke",
+      "difficulty_breathing",
+      "heart_disease",
+      "obesity_related",
+    ],
+    follow_up_questions: [
+      "temperature_exposure",
+      "heat_exposure_duration",
+      "gum_color",
+      "consciousness_level",
+      "vomiting_present",
+      "water_intake",
+    ],
+    red_flags: ["collapse_in_heat", "brick_red_gums", "vomiting_overheating"],
+    body_systems: ["respiratory", "systemic"],
+  },
+
+  postoperative_concern: {
+    linked_diseases: [
+      "wound_infection",
+      "surgical_complication",
+      "seroma",
+      "dehiscence",
+      "pain_general",
+    ],
+    follow_up_questions: [
+      "surgery_type",
+      "days_post_op",
+      "incision_appearance",
+      "discharge_present",
+      "appetite_status",
+      "activity_level",
+    ],
+    red_flags: ["incision_dehiscence", "active_bleeding_incision", "pus_with_fever"],
+    body_systems: ["systemic", "dermatologic"],
+  },
+
+  medication_reaction: {
+    linked_diseases: [
+      "allergic_reaction",
+      "toxin_ingestion",
+      "gastroenteritis",
+    ],
+    follow_up_questions: [
+      "medication_name",
+      "medication_dose",
+      "medication_timing",
+      "reaction_symptoms",
+      "prior_reactions",
+      "current_medications",
+    ],
+    red_flags: ["face_swelling", "hives_with_breathing", "collapse"],
+    body_systems: ["systemic"],
+  },
+
+  pregnancy_birth: {
+    linked_diseases: [
+      "dystocia",
+      "metritis",
+      "eclampsia",
+      "pregnancy",
+      "pyometra",
+    ],
+    follow_up_questions: [
+      "days_pregnant",
+      "contraction_status",
+      "discharge_color",
+      "puppies_delivered",
+      "time_since_last_puppy",
+      "appetite_status",
+    ],
+    red_flags: ["dystocia_active", "green_discharge_no_puppy", "eclampsia_signs"],
+    body_systems: ["reproductive"],
+  },
+
+  puppy_concern: {
+    linked_diseases: [
+      "hypoglycemia",
+      "parasites",
+      "parvovirus",
+      "fading_puppy_syndrome",
+      "congenital_defect",
+      "liver_shunt",
+    ],
+    follow_up_questions: [
+      "puppy_age_weeks",
+      "nursing_status",
+      "puppy_temperature",
+      "weight_trend",
+      "littermate_status",
+      "vaccination_status",
+    ],
+    red_flags: ["puppy_not_nursing_4h", "puppy_cold_to_touch", "diarrhea_under_12_weeks"],
+    body_systems: ["systemic"],
+  },
+
+  senior_decline: {
+    linked_diseases: [
+      "cognitive_dysfunction",
+      "osteoarthritis",
+      "kidney_disease",
+      "heart_disease",
+      "cancer",
+      "hypothyroidism",
+      "dental_disease",
+    ],
+    follow_up_questions: [
+      "senior_decline_duration",
+      "specific_changes",
+      "appetite_status",
+      "water_intake",
+      "mobility_level",
+      "sleep_pattern",
+    ],
+    red_flags: ["rapid_decline_weeks", "inability_to_stand", "sudden_blindness"],
+    body_systems: ["neurologic", "systemic", "musculoskeletal"],
+  },
+
+  multi_system_decline: {
+    linked_diseases: [
+      "kidney_disease",
+      "liver_disease",
+      "cancer",
+      "addisons_disease",
+      "imha",
+      "heart_failure",
+      "sepsis",
+    ],
+    follow_up_questions: [
+      "each_symptom_duration",
+      "appetite_status",
+      "water_intake",
+      "weight_change",
+      "energy_level",
+      "vomiting_present",
+    ],
+    red_flags: ["lethargy_not_eating_not_drinking", "pale_gums_collapse"],
+    body_systems: ["systemic"],
+  },
+
+  unknown_concern: {
+    linked_diseases: ["pain_general", "infection"],
+    follow_up_questions: [
+      "chief_complaint_guess",
+      "appetite_status",
+      "water_intake",
+      "energy_level",
+      "breathing_status",
+      "gum_color",
+      "last_normal",
+    ],
+    red_flags: ["unable_to_assess_breathing", "dog_non_responsive"],
+    body_systems: ["unknown"],
+  },
 };
 
 // --- DISEASE DATABASE ---
@@ -541,6 +1251,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
 const SUPPLEMENTAL_DISEASES: Record<string, DiseaseEntry> = {
   liver_disease: makeSystemicDisease("Liver Disease", "Canine Hepatopathy", "Hepatic disease can drive appetite loss, lethargy, vomiting, jaundice, or increased thirst.", "high", 0.08),
   dental_disease: makeSystemicDisease("Dental Disease", "Periodontal Disease / Oral Pain", "Oral pain commonly presents as reduced appetite, drooling, halitosis, or chewing reluctance.", "moderate", 0.12),
+  tooth_root_abscess: makeSystemicDisease("Tooth Root Abscess", "Periapical Tooth Root Abscess", "Infected tooth roots can cause oral pain, facial swelling under the eye, bad breath, and chewing difficulty.", "high", 0.05),
   pain_general: makeSystemicDisease("Generalized Pain", "Non-localized Pain Syndrome", "Pain can present as lethargy, trembling, reduced appetite, and behavior change even without an obvious injury.", "high", 0.08),
   parasites: makeSystemicDisease("Parasitism", "Intestinal Parasitic Disease", "Intestinal parasites can cause diarrhea, weight loss, blood in stool, or a poor hair coat.", "moderate", 0.12, { puppy: 2.2, adult: 1.0, senior: 0.9 }),
   colitis: makeSystemicDisease("Colitis", "Large Bowel Colitis", "Colitis often causes frequent small-volume stool, mucus, urgency, and bright red blood.", "moderate", 0.12),
@@ -606,6 +1317,95 @@ const SUPPLEMENTAL_DISEASES: Record<string, DiseaseEntry> = {
   epilepsy: makeNeuroOrOrthoDisease("Epilepsy", "Idiopathic Epilepsy", "Recurrent seizures or episodic tremoring can reflect inherited epilepsy in predisposed breeds.", "high", 0.05, { puppy: 0.8, adult: 1.0, senior: 0.7 }),
   syringomyelia: makeNeuroOrOrthoDisease("Syringomyelia", "Syringomyelia", "Neuropathic pain can cause phantom scratching, neck pain, vocalization, and gait change.", "high", 0.03),
   von_willebrands: makeSystemicDisease("von Willebrand Disease", "von Willebrand Disease", "Inherited clotting disorders can cause bruising, mucosal bleeding, and excessive bleeding with minor trauma.", "high", 0.03),
+
+  // --- VET-902: New diseases for expanded complaint families ---
+
+  urinary_stones: makeSystemicDisease("Urinary Stones", "Urolithiasis / Urinary Calculi", "Mineral stones in the bladder or urethra cause straining, blood in urine, and potential blockage.", "high", 0.08),
+  urinary_infection: makeSystemicDisease("Urinary Tract Infection", "Bacterial Cystitis", "Bacterial infection of the bladder causes frequent urination, accidents, straining, and blood.", "moderate", 0.12),
+  prostate_disease: makeSystemicDisease("Prostate Disease", "Prostatitis / Benign Prostatic Hyperplasia / Prostatic Neoplasia", "Prostate enlargement causes straining to urinate, ribbon-like stool, and hind limb weakness.", "high", 0.06, { puppy: 0.0, adult: 1.0, senior: 2.2 }),
+  bladder_cancer: makeSystemicDisease("Bladder Cancer", "Transitional Cell Carcinoma", "Malignant bladder tumor causes blood in urine, straining, and recurrent infections.", "high", 0.02, { puppy: 0.0, adult: 0.4, senior: 2.0 }),
+  urethral_obstruction: makeSystemicDisease("Urethral Obstruction", "Urethral Blockage", "Complete blockage of urine flow is a life-threatening emergency causing bladder rupture and kidney failure.", "emergency", 0.04),
+
+  cognitive_dysfunction: makeNeuroOrOrthoDisease("Cognitive Dysfunction Syndrome", "Canine Cognitive Dysfunction", "Age-related brain changes cause confusion, disorientation, sleep changes, and housetraining loss.", "moderate", 0.08, { puppy: 0.0, adult: 0.3, senior: 2.5 }),
+  brain_tumor: makeNeuroOrOrthoDisease("Brain Tumor", "Intracranial Neoplasia", "Brain tumors cause seizures, behavior changes, vision loss, circling, and head pressing.", "high", 0.02, { puppy: 0.0, adult: 0.5, senior: 2.0 }),
+  vision_loss: makeSystemicDisease("Vision Loss", "Blindness / Visual Impairment", "Vision loss can be sudden (SARD, glaucoma) or gradual (cataract, retinal degeneration).", "high", 0.05),
+  hearing_loss: makeSystemicDisease("Hearing Loss", "Deafness / Hearing Impairment", "Hearing loss can be age-related, infection-related, or congenital in some breeds.", "moderate", 0.04),
+
+  megaesophagus: makeSystemicDisease("Megaesophagus", "Esophageal Dilatation and Hypomotility", "Enlarged esophagus causes regurgitation of undigested food, weight loss, and aspiration risk.", "high", 0.03),
+  vascular_ring_anomaly: makeSystemicDisease("Vascular Ring Anomaly", "Persistent Right Aortic Arch", "Congenital blood vessel compresses esophagus causing regurgitation in young dogs.", "high", 0.02, { puppy: 2.0, adult: 0.3, senior: 0.1 }),
+  myasthenia_gravis: makeNeuroOrOrthoDisease("Myasthenia Gravis", "Acquired Myasthenia Gravis", "Autoimmune neuromuscular disorder causes weakness, regurgitation, and exercise intolerance.", "high", 0.02),
+  esophageal_foreign_body: makeSystemicDisease("Esophageal Foreign Body", "Esophageal Obstruction", "Object lodged in esophagus causes drooling, retching, and inability to swallow.", "emergency", 0.03),
+  hiatal_hernia: makeSystemicDisease("Hiatal Hernia", "Sliding Hiatal Hernia", "Stomach protrudes through diaphragm causing regurgitation, especially after eating.", "moderate", 0.02),
+
+  obstipation: makeSystemicDisease("Obstipation", "Severe Refractory Constipation", "Severe, unresponsive constipation requiring medical or surgical intervention.", "high", 0.04),
+  prostate_enlargement: makeSystemicDisease("Prostate Enlargement", "Prostatomegaly", "Enlarged prostate compresses colon causing constipation and urination difficulty.", "moderate", 0.06, { puppy: 0.0, adult: 1.0, senior: 2.0 }),
+  perineal_hernia: makeSystemicDisease("Perineal Hernia", "Perineal Herniation", "Pelvic diaphragm weakness allows abdominal contents into perineal region causing straining.", "high", 0.03, { puppy: 0.0, adult: 0.6, senior: 2.0 }),
+  pelvic_canal_stenosis: makeSystemicDisease("Pelvic Canal Stenosis", "Narrowed Pelvic Canal", "Narrowed pelvic canal from prior fracture causes chronic constipation.", "moderate", 0.02),
+
+  polymyositis: makeNeuroOrOrthoDisease("Polymyositis", "Inflammatory Myopathy", "Immune-mediated muscle inflammation causes stiffness, pain, and weakness.", "high", 0.02),
+  exercise_induced_collapse: makeNeuroOrOrthoDisease("Exercise-Induced Collapse", "Exercise-Induced Collapse (EIC)", "Genetic disorder in certain breeds causes collapse after intense exercise.", "moderate", 0.03),
+  myopathy: makeNeuroOrOrthoDisease("Myopathy", "Muscle Disease", "Primary muscle disorders cause weakness, stiffness, and exercise intolerance.", "moderate", 0.03),
+
+  nasal_infection: makeRespiratoryDisease("Nasal Infection", "Rhinitis / Sinusitis", "Nasal cavity infection causes discharge, sneezing, and congestion.", "moderate", 0.06),
+  nasal_tumor: makeRespiratoryDisease("Nasal Tumor", "Nasal Neoplasia", "Nasal cavity tumors cause one-sided bloody discharge, facial deformity, and sneezing.", "high", 0.02, { puppy: 0.0, adult: 0.5, senior: 2.2 }),
+  nasal_foreign_body: makeRespiratoryDisease("Nasal Foreign Body", "Nasal Cavity Foreign Body", "Plant material or object in nasal cavity causes sudden sneezing and discharge.", "moderate", 0.03),
+  aspergillosis: makeRespiratoryDisease("Nasal Aspergillosis", "Fungal Rhinitis", "Fungal infection of nasal cavity causes bloody discharge, pain, and depigmentation.", "high", 0.02),
+  allergic_rhinitis: makeRespiratoryDisease("Allergic Rhinitis", "Nasal Allergy", "Environmental allergy causes clear nasal discharge and sneezing.", "low", 0.04),
+
+  vaginal_hyperplasia: makeSystemicDisease("Vaginal Hyperplasia", "Vaginal Edema / Hyperplasia", "Estrogen-driven swelling of vaginal tissue during heat cycle.", "moderate", 0.03),
+  metritis: makeSystemicDisease("Metritis", "Infected Uterus Post-Partum", "Uterine infection after whelping causes fever, foul discharge, and lethargy.", "emergency", 0.03),
+  vaginal_tumor: makeSystemicDisease("Vaginal Tumor", "Vaginal Neoplasia", "Vaginal mass causes discharge, straining, and visible tissue mass.", "moderate", 0.02),
+
+  testicular_tumor: makeSystemicDisease("Testicular Tumor", "Testicular Neoplasia", "Testicular cancer causes swelling, hormone changes, and metastasis risk.", "moderate", 0.04, { puppy: 0.0, adult: 0.8, senior: 1.8 }),
+  prostatitis: makeSystemicDisease("Prostatitis", "Bacterial Prostate Infection", "Prostate infection causes fever, pain, and urination/defecation difficulty.", "high", 0.04),
+  benign_prostatic_hyperplasia: makeSystemicDisease("Benign Prostatic Hyperplasia", "BPH", "Non-cancerous prostate enlargement common in intact males causes stool and urine changes.", "moderate", 0.08, { puppy: 0.0, adult: 1.0, senior: 1.5 }),
+
+  lymphoma: makeSystemicDisease("Lymphoma", "Multicentric Lymphoma", "Cancer of lymph nodes causing widespread swelling, lethargy, and weight loss.", "high", 0.04),
+  lipoma: makeDermDisease("Lipoma", "Benign Fatty Tumor", "Harmless fatty lump common in middle-aged and older dogs.", "low", 0.1, { puppy: 0.0, adult: 0.8, senior: 2.0 }),
+  hemangiosarcoma: makeSystemicDisease("Hemangiosarcoma", "Malignant Blood Vessel Tumor", "Aggressive cancer of blood vessels, commonly in spleen or heart, causes internal bleeding.", "emergency", 0.02, { puppy: 0.0, adult: 0.6, senior: 2.2 }),
+
+  seborrhea: makeDermDisease("Seborrhea", "Seborrheic Dermatitis", "Greasy, scaly skin condition causing odor, flaking, and secondary infection.", "moderate", 0.05),
+  folliculitis: makeDermDisease("Folliculitis", "Hair Follicle Inflammation / Infection", "Inflamed hair follicles cause bumps, pustules, and hair loss.", "moderate", 0.06),
+  immune_deficiency: makeSystemicDisease("Immune Deficiency", "Immunodeficiency Syndrome", "Weakened immune system causes recurrent infections of skin, ears, and respiratory tract.", "high", 0.02),
+
+  cauda_equina_syndrome: makeNeuroOrOrthoDisease("Cauda Equina Syndrome", "Cauda Equina Compression", "Nerve compression at tail end of spine causes fecal/urinary incontinence and hind limb weakness.", "high", 0.02),
+  anal_sphincter_incompetence: makeSystemicDisease("Anal Sphincter Incompetence", "Fecal Incontinence", "Loss of anal sphincter control causes passive fecal leakage.", "moderate", 0.02),
+
+  parvovirus: makeSystemicDisease("Parvovirus", "Canine Parvovirus Enteritis", "Highly contagious viral disease causing severe bloody diarrhea, vomiting, and rapid dehydration.", "emergency", 0.1, { puppy: 3.0, adult: 0.5, senior: 0.3 }),
+
+  superficial_pyoderma: makeDermDisease("Superficial Pyoderma", "Bacterial Skin Infection", "Surface bacterial infection causes pustules, crusts, and hair loss.", "moderate", 0.08),
+  demodicosis: makeDermDisease("Demodicosis", "Demodectic Mange", "Mite overgrowth causes hair loss, redness, and secondary infection, often in young dogs.", "moderate", 0.05, { puppy: 2.0, adult: 0.8, senior: 0.7 }),
+
+  sudden_acquired_retinal_degeneration: makeOphthalmicDisease("SARD", "Sudden Acquired Retinal Degeneration", "Sudden irreversible blindness with normal-appearing eyes initially.", "high", 0.02, { puppy: 0.0, adult: 0.6, senior: 1.8 }),
+  cataract: makeOphthalmicDisease("Cataract", "Lens Opacity", "Cloudy lens causes progressive vision loss, often bilateral.", "moderate", 0.06, { puppy: 0.2, adult: 0.8, senior: 2.0 }),
+  optic_neuritis: makeOphthalmicDisease("Optic Neuritis", "Optic Nerve Inflammation", "Optic nerve inflammation causes sudden vision loss and painful eye movement.", "high", 0.02),
+  hypertension: makeSystemicDisease("Hypertension", "Systemic Hypertension", "High blood pressure can cause sudden blindness, kidney damage, and neurologic signs.", "high", 0.04, { puppy: 0.0, adult: 0.6, senior: 2.2 }),
+
+  vestibular_disease: makeNeuroOrOrthoDisease("Vestibular Disease", "Idiopathic Vestibular Syndrome", "Inner ear/balance disorder causes head tilt, circling, nystagmus, and falling.", "moderate", 0.06, { puppy: 0.2, adult: 0.8, senior: 2.0 }),
+  age_related_deafness: makeSystemicDisease("Age-Related Deafness", "Presbycusis", "Progressive hearing loss in senior dogs.", "low", 0.06, { puppy: 0.0, adult: 0.4, senior: 2.5 }),
+  ototoxicity: makeSystemicDisease("Ototoxicity", "Drug-Induced Ear Damage", "Certain medications damage inner ear causing deafness and balance problems.", "high", 0.02),
+
+  oral_tumor: makeSystemicDisease("Oral Tumor", "Oral Neoplasia", "Malignant or benign growths in the mouth causing bleeding, odor, and eating difficulty.", "high", 0.04, { puppy: 0.0, adult: 0.6, senior: 2.0 }),
+  epulis: makeSystemicDisease("Epulis", "Gingival Epulis", "Benign gum tumor causing mass effect, bleeding, and eating difficulty.", "moderate", 0.04),
+  melanoma: makeSystemicDisease("Oral Melanoma", "Malignant Melanoma", "Aggressive oral cancer causing bleeding, tooth loss, and metastasis.", "emergency", 0.03, { puppy: 0.0, adult: 0.5, senior: 2.2 }),
+  squamous_cell_carcinoma: makeSystemicDisease("Squamous Cell Carcinoma", "Oral SCC", "Oral cancer causing ulceration, bleeding, and bone destruction.", "high", 0.03),
+  foreign_body_mouth: makeSystemicDisease("Mouth Foreign Body", "Oral Foreign Body", "Stick, bone, or object lodged in mouth or palate causing pain and drooling.", "moderate", 0.04),
+
+  stomatitis: makeSystemicDisease("Stomatitis", "Chronic Gingivostomatitis", "Severe oral inflammation causing pain, drooling, bad breath, and eating difficulty.", "high", 0.03),
+
+  fading_puppy_syndrome: makeSystemicDisease("Fading Puppy Syndrome", "Neonatal Mortality Syndrome", "Puppies that fail to thrive, cry constantly, and decline despite nursing.", "emergency", 0.08, { puppy: 3.0, adult: 0.0, senior: 0.0 }),
+  congenital_defect: makeSystemicDisease("Congenital Defect", "Birth Defect", "Structural abnormality present from birth causes failure to thrive or specific organ dysfunction.", "high", 0.04, { puppy: 2.5, adult: 0.2, senior: 0.0 }),
+
+  dystocia: makeSystemicDisease("Dystocia", "Difficult Birth", "Inability to deliver puppies naturally requires emergency intervention.", "emergency", 0.04),
+  eclampsia: makeSystemicDisease("Eclampsia", "Postpartum Hypocalcemia", "Life-threatening low calcium in nursing dams causes tremors, seizures, and collapse.", "emergency", 0.03),
+
+  seroma: makeSystemicDisease("Seroma", "Post-Surgical Fluid Accumulation", "Fluid pocket at surgery site, usually benign but can become infected.", "moderate", 0.06),
+  dehiscence: makeSystemicDisease("Wound Dehiscence", "Surgical Incision Opening", "Opening of surgical incision exposes internal tissues and risks infection.", "emergency", 0.03),
+  surgical_complication: makeSystemicDisease("Surgical Complication", "Post-Operative Complication", "Unexpected issue after surgery including bleeding, infection, or organ dysfunction.", "high", 0.06),
+
+  sepsis: makeSystemicDisease("Sepsis", "Systemic Inflammatory Response to Infection", "Life-threatening body-wide response to infection causing organ failure and shock.", "emergency", 0.03),
+
+  fibrocartilaginous_embolism: makeNeuroOrOrthoDisease("Fibrocartilaginous Embolism", "FCE / Spinal Stroke", "Spinal cord blood vessel blockage causes sudden one-sided paralysis without pain.", "high", 0.02),
 };
 
 export const DISEASE_DB: Record<string, DiseaseEntry> = {
@@ -2110,6 +2910,1008 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     question_text: "Is your pet constantly licking, biting, or scratching at the area?",
     data_type: "boolean",
     extraction_hint: "self-trauma behavior - licking or chewing at wound",
+    critical: true,
+  },
+
+  // --- VET-902: New questions for expanded complaint families ---
+
+  // Seizure/collapse questions
+  seizure_duration: {
+    id: "seizure_duration",
+    question_text: "How long did the seizure or collapse episode last?",
+    data_type: "string",
+    extraction_hint: "duration of seizure or collapse in seconds or minutes",
+    critical: true,
+  },
+  prior_seizures: {
+    id: "prior_seizures",
+    question_text: "Has your dog ever had a seizure or collapse episode before?",
+    data_type: "boolean",
+    extraction_hint: "history of prior seizure or collapse events",
+    critical: true,
+  },
+  trembling_present: {
+    id: "trembling_present",
+    question_text: "Is your dog trembling or shaking now?",
+    data_type: "boolean",
+    extraction_hint: "current trembling or shaking behavior",
+    critical: false,
+  },
+  breathing_status: {
+    id: "breathing_status",
+    question_text: "How is your dog breathing right now? Normal, fast, labored, or noisy?",
+    data_type: "choice",
+    choices: ["normal", "fast", "labored", "noisy"],
+    extraction_hint: "current breathing status",
+    critical: true,
+  },
+
+  // Urination questions
+  straining_present: {
+    id: "straining_present",
+    question_text: "Is your dog straining to urinate — trying but producing little or nothing?",
+    data_type: "boolean",
+    extraction_hint: "straining or difficulty during urination",
+    critical: true,
+  },
+  blood_in_urine: {
+    id: "blood_in_urine",
+    question_text: "Is there any blood in the urine? Pink, red, or brown color?",
+    data_type: "boolean",
+    extraction_hint: "visible blood in urine",
+    critical: true,
+  },
+
+  // Behavior questions
+  behavior_change_duration: {
+    id: "behavior_change_duration",
+    question_text: "How long have you noticed the behavior change?",
+    data_type: "string",
+    extraction_hint: "duration of behavior change",
+    critical: true,
+  },
+  behavior_change_type: {
+    id: "behavior_change_type",
+    question_text: "What type of behavior change — aggression, confusion, hiding, clinginess, wandering?",
+    data_type: "string",
+    extraction_hint: "specific type of behavior change",
+    critical: true,
+  },
+  sleep_pattern: {
+    id: "sleep_pattern",
+    question_text: "Has your dog's sleep pattern changed — sleeping more, restlessness at night, confused waking?",
+    data_type: "string",
+    extraction_hint: "changes in sleep or rest pattern",
+    critical: false,
+  },
+  recent_events: {
+    id: "recent_events",
+    question_text: "Any recent changes in environment, routine, medication, or family?",
+    data_type: "string",
+    extraction_hint: "recent changes in dog's environment or routine",
+    critical: false,
+  },
+
+  // Lump questions
+  lump_location: {
+    id: "lump_location",
+    question_text: "Where exactly is the lump? Which body area?",
+    data_type: "string",
+    extraction_hint: "body location of lump or swelling",
+    critical: true,
+  },
+  lump_size: {
+    id: "lump_size",
+    question_text: "How big is the lump? Compare it to a pea, grape, golf ball, or larger.",
+    data_type: "string",
+    extraction_hint: "approximate size of lump or swelling",
+    critical: true,
+  },
+  lump_duration: {
+    id: "lump_duration",
+    question_text: "How long has the lump been present?",
+    data_type: "string",
+    extraction_hint: "duration of lump or swelling",
+    critical: true,
+  },
+  lump_growth_rate: {
+    id: "lump_growth_rate",
+    question_text: "Is the lump growing? How fast — days, weeks, months?",
+    data_type: "string",
+    extraction_hint: "growth rate of lump",
+    critical: true,
+  },
+  lump_mobility: {
+    id: "lump_mobility",
+    question_text: "Does the lump move under the skin when you push it, or is it fixed in place?",
+    data_type: "choice",
+    choices: ["freely_movable", "slightly_mobile", "fixed"],
+    extraction_hint: "mobility of lump under skin",
+    critical: true,
+  },
+  other_lumps_present: {
+    id: "other_lumps_present",
+    question_text: "Have you found any other lumps or bumps elsewhere on your dog?",
+    data_type: "boolean",
+    extraction_hint: "presence of additional lumps",
+    critical: false,
+  },
+
+  // Dental questions
+  breath_odor_severity: {
+    id: "breath_odor_severity",
+    question_text: "How bad is your dog's breath? Mild, noticeably bad, or very foul?",
+    data_type: "choice",
+    choices: ["mild", "noticeable", "very_foul"],
+    extraction_hint: "severity of breath odor",
+    critical: false,
+  },
+  drooling_present: {
+    id: "drooling_present",
+    question_text: "Is your dog drooling more than usual?",
+    data_type: "boolean",
+    extraction_hint: "excessive drooling",
+    critical: true,
+  },
+  chewing_difficulty: {
+    id: "chewing_difficulty",
+    question_text: "Is your dog having trouble chewing — dropping food, chewing on one side, or refusing to chew?",
+    data_type: "boolean",
+    extraction_hint: "difficulty or reluctance to chew",
+    critical: true,
+  },
+  gum_appearance: {
+    id: "gum_appearance",
+    question_text: "What do your dog's gums look like? Pink, red, swollen, bleeding, or receding?",
+    data_type: "string",
+    extraction_hint: "appearance of gums",
+    critical: true,
+  },
+  tooth_mobility: {
+    id: "tooth_mobility",
+    question_text: "Are any teeth loose or missing?",
+    data_type: "boolean",
+    extraction_hint: "loose or missing teeth",
+    critical: false,
+  },
+
+  // Hair loss questions
+  hair_loss_pattern: {
+    id: "hair_loss_pattern",
+    question_text: "Where is the hair loss? Symmetrical (both sides) or patchy?",
+    data_type: "string",
+    extraction_hint: "pattern and location of hair loss",
+    critical: true,
+  },
+  skin_appearance: {
+    id: "skin_appearance",
+    question_text: "What does the skin look like where the hair is lost? Normal, red, flaky, thickened?",
+    data_type: "string",
+    extraction_hint: "appearance of skin in hair loss areas",
+    critical: true,
+  },
+  itching_present: {
+    id: "itching_present",
+    question_text: "Is your dog itchy or scratching, licking, or chewing at the area?",
+    data_type: "boolean",
+    extraction_hint: "whether itching, scratching, licking, or chewing is present",
+    critical: false,
+  },
+  hair_loss_duration: {
+    id: "hair_loss_duration",
+    question_text: "How long has the hair loss been going on?",
+    data_type: "string",
+    extraction_hint: "duration of hair loss",
+    critical: true,
+  },
+  diet_quality: {
+    id: "diet_quality",
+    question_text: "What type of food does your dog eat? Brand name, homemade, or mixed?",
+    data_type: "string",
+    extraction_hint: "type and quality of dog's diet",
+    critical: false,
+  },
+
+  // Regurgitation questions
+  regurgitation_timing: {
+    id: "regurgitation_timing",
+    question_text: "How soon after eating does the regurgitation happen? Immediately, within minutes, or hours later?",
+    data_type: "string",
+    extraction_hint: "timing of regurgitation relative to eating",
+    critical: true,
+  },
+  food_appearance: {
+    id: "food_appearance",
+    question_text: "What does the regurgitated material look like? Undigested food, tubular shape, or liquid?",
+    data_type: "string",
+    extraction_hint: "appearance of regurgitated material",
+    critical: true,
+  },
+  coughing_present: {
+    id: "coughing_present",
+    question_text: "Is your dog also coughing?",
+    data_type: "boolean",
+    extraction_hint: "presence of coughing",
+    critical: false,
+  },
+
+  // Constipation questions
+  last_normal_stool: {
+    id: "last_normal_stool",
+    question_text: "When was the last time your dog had a normal bowel movement?",
+    data_type: "string",
+    extraction_hint: "time since last normal bowel movement",
+    critical: true,
+  },
+  straining_duration: {
+    id: "straining_duration",
+    question_text: "How long has your dog been straining?",
+    data_type: "string",
+    extraction_hint: "duration of straining to defecate or urinate",
+    critical: true,
+  },
+  stool_consistency_when_produced: {
+    id: "stool_consistency_when_produced",
+    question_text: "When your dog does manage to poop, what is the stool like? Hard pellets, soft, or normal?",
+    data_type: "choice",
+    choices: ["hard_pellets", "soft", "normal", "nothing_produced"],
+    extraction_hint: "consistency of stool when produced during constipation",
+    critical: true,
+  },
+
+  // Stiffness questions
+  stiffness_onset: {
+    id: "stiffness_onset",
+    question_text: "When did the stiffness start? Sudden or gradual?",
+    data_type: "choice",
+    choices: ["sudden", "gradual"],
+    extraction_hint: "onset pattern of stiffness",
+    critical: true,
+  },
+  affected_areas: {
+    id: "affected_areas",
+    question_text: "Which areas seem stiff or sore? Legs, back, neck, or all over?",
+    data_type: "string",
+    extraction_hint: "body areas affected by stiffness",
+    critical: true,
+  },
+  fever_present: {
+    id: "fever_present",
+    question_text: "Does your dog feel warm? Have you checked temperature?",
+    data_type: "boolean",
+    extraction_hint: "presence of fever or elevated temperature",
+    critical: true,
+  },
+  worse_after_rest_or_exercise: {
+    id: "worse_after_rest_or_exercise",
+    question_text: "Is the stiffness worse after resting, after exercise, or constant?",
+    data_type: "choice",
+    choices: ["after_rest", "after_exercise", "constant"],
+    extraction_hint: "when stiffness is worse",
+    critical: true,
+  },
+
+  // Nasal questions
+  discharge_side: {
+    id: "discharge_side",
+    question_text: "Is the nasal discharge from one nostril or both?",
+    data_type: "choice",
+    choices: ["one_side", "both_sides"],
+    extraction_hint: "whether nasal discharge is unilateral or bilateral",
+    critical: true,
+  },
+  sneezing_frequency: {
+    id: "sneezing_frequency",
+    question_text: "How often is your dog sneezing? Occasional, frequent, or constant?",
+    data_type: "choice",
+    choices: ["occasional", "frequent", "constant"],
+    extraction_hint: "frequency of sneezing",
+    critical: false,
+  },
+  blood_present: {
+    id: "blood_present",
+    question_text: "Is there any blood in the discharge?",
+    data_type: "boolean",
+    extraction_hint: "presence of blood in discharge",
+    critical: true,
+  },
+  nasal_discharge_duration: {
+    id: "nasal_discharge_duration",
+    question_text: "How long has the nasal discharge been present?",
+    data_type: "string",
+    extraction_hint: "duration of nasal discharge",
+    critical: true,
+  },
+
+  // Reproductive questions
+  vaginal_discharge_color: {
+    id: "vaginal_discharge_color",
+    question_text: "What color is the discharge? Clear, bloody, yellow/green, or dark?",
+    data_type: "choice",
+    choices: ["clear", "bloody", "yellow_green", "dark"],
+    extraction_hint: "color of vaginal or other discharge",
+    critical: true,
+  },
+  discharge_odor: {
+    id: "discharge_odor",
+    question_text: "Does the discharge have a smell? Normal, foul, or very bad?",
+    data_type: "choice",
+    choices: ["none", "foul", "very_bad"],
+    extraction_hint: "odor of discharge",
+    critical: false,
+  },
+  heat_cycle_timing: {
+    id: "heat_cycle_timing",
+    question_text: "When was your dog's last heat cycle? Is she currently in heat?",
+    data_type: "string",
+    extraction_hint: "timing of last heat cycle",
+    critical: true,
+  },
+
+  // Testicular/prostate questions
+  neuter_status: {
+    id: "neuter_status",
+    question_text: "Is your dog neutered?",
+    data_type: "boolean",
+    extraction_hint: "neuter status",
+    critical: true,
+  },
+  swelling_location: {
+    id: "swelling_location",
+    question_text: "Where is the swelling — testicle, scrotum, around the anus, or another area?",
+    data_type: "string",
+    extraction_hint: "location of reproductive or prostate-region swelling",
+    critical: true,
+  },
+  urination_changes: {
+    id: "urination_changes",
+    question_text: "Any changes in urination — frequency, difficulty, or accidents?",
+    data_type: "boolean",
+    extraction_hint: "changes in urination pattern",
+    critical: true,
+  },
+  prostate_stool_changes: {
+    id: "prostate_stool_changes",
+    question_text: "Any changes in stool — ribbon-like, difficulty passing, or constipation?",
+    data_type: "boolean",
+    extraction_hint: "changes in stool appearance or passing",
+    critical: false,
+  },
+  testicular_prostate_duration: {
+    id: "testicular_prostate_duration",
+    question_text: "How long have you noticed the swelling or changes?",
+    data_type: "string",
+    extraction_hint: "duration of testicular or prostate changes",
+    critical: true,
+  },
+
+  // Exercise-induced lameness questions
+  exercise_type: {
+    id: "exercise_type",
+    question_text: "What type of exercise triggers the lameness? Walking, running, playing, or all activity?",
+    data_type: "string",
+    extraction_hint: "type of exercise that triggers lameness",
+    critical: true,
+  },
+  onset_during_exercise: {
+    id: "onset_during_exercise",
+    question_text: "Does the lameness start during exercise or after?",
+    data_type: "choice",
+    choices: ["during", "after"],
+    extraction_hint: "when lameness starts relative to exercise",
+    critical: true,
+  },
+  recovery_time: {
+    id: "recovery_time",
+    question_text: "How long does it take your dog to recover after the lameness starts?",
+    data_type: "string",
+    extraction_hint: "recovery time after exercise-induced lameness",
+    critical: true,
+  },
+  breathing_after_exercise: {
+    id: "breathing_after_exercise",
+    question_text: "How is your dog's breathing after exercise? Normal, fast, or labored?",
+    data_type: "choice",
+    choices: ["normal", "fast", "labored"],
+    extraction_hint: "breathing status after exercise",
+    critical: false,
+  },
+  prior_episodes: {
+    id: "prior_episodes",
+    question_text: "Has this happened before?",
+    data_type: "boolean",
+    extraction_hint: "history of prior similar episodes",
+    critical: true,
+  },
+
+  // Skin odor questions
+  odor_location: {
+    id: "odor_location",
+    question_text: "Where is the odor worst? All over, specific area, ears, paws, or skin folds?",
+    data_type: "string",
+    extraction_hint: "location of worst skin odor",
+    critical: true,
+  },
+  bath_frequency: {
+    id: "bath_frequency",
+    question_text: "How often do you bathe your dog?",
+    data_type: "string",
+    extraction_hint: "frequency of bathing",
+    critical: false,
+  },
+  ear_involvement: {
+    id: "ear_involvement",
+    question_text: "Are the ears also affected — smelly, red, or discharging?",
+    data_type: "boolean",
+    extraction_hint: "whether ears are also involved in skin issue",
+    critical: false,
+  },
+
+  // Recurrent ear/skin questions
+  infection_frequency: {
+    id: "infection_frequency",
+    question_text: "How often does your dog get these infections? Monthly, every few months, or rarely?",
+    data_type: "string",
+    extraction_hint: "frequency of recurrent infections",
+    critical: true,
+  },
+  last_treatment: {
+    id: "last_treatment",
+    question_text: "What was the last treatment your dog received for this? How long ago?",
+    data_type: "string",
+    extraction_hint: "most recent treatment and timing",
+    critical: true,
+  },
+  underlying_allergy_diagnosis: {
+    id: "underlying_allergy_diagnosis",
+    question_text: "Has your dog been diagnosed with allergies?",
+    data_type: "boolean",
+    extraction_hint: "whether dog has diagnosed allergies",
+    critical: false,
+  },
+  food_trial_done: {
+    id: "food_trial_done",
+    question_text: "Has your dog ever done a hypoallergenic food trial?",
+    data_type: "boolean",
+    extraction_hint: "whether hypoallergenic food trial has been attempted",
+    critical: false,
+  },
+  ear_cleaning_routine: {
+    id: "ear_cleaning_routine",
+    question_text: "Do you clean your dog's ears regularly? How often and with what product?",
+    data_type: "string",
+    extraction_hint: "ear cleaning routine",
+    critical: false,
+  },
+  skin_infection_frequency: {
+    id: "skin_infection_frequency",
+    question_text: "How often does your dog get skin infections?",
+    data_type: "string",
+    extraction_hint: "frequency of skin infections",
+    critical: true,
+  },
+  antibiotic_history: {
+    id: "antibiotic_history",
+    question_text: "What antibiotics has your dog been on for skin issues? How effective were they?",
+    data_type: "string",
+    extraction_hint: "history of antibiotic treatments for skin",
+    critical: true,
+  },
+  allergy_testing_done: {
+    id: "allergy_testing_done",
+    question_text: "Has your dog had allergy testing?",
+    data_type: "boolean",
+    extraction_hint: "whether allergy testing has been performed",
+    critical: false,
+  },
+  immune_status: {
+    id: "immune_status",
+    question_text: "Does your dog have any known immune system issues or take immune-suppressing medications?",
+    data_type: "boolean",
+    extraction_hint: "known immune system problems or immunosuppressive medications",
+    critical: false,
+  },
+
+  // Inappropriate urination questions
+  behavioral_changes: {
+    id: "behavioral_changes",
+    question_text: "Any other behavior changes — aggression, confusion, anxiety, or clinginess?",
+    data_type: "boolean",
+    extraction_hint: "presence of other behavior changes",
+    critical: false,
+  },
+
+  // Fecal incontinence questions
+  fecal_incontinence_onset: {
+    id: "fecal_incontinence_onset",
+    question_text: "When did the fecal incontinence start? Sudden or gradual?",
+    data_type: "choice",
+    choices: ["sudden", "gradual"],
+    extraction_hint: "onset of fecal incontinence",
+    critical: true,
+  },
+  hind_limb_function: {
+    id: "hind_limb_function",
+    question_text: "Is your dog's hind limb strength normal? Any weakness, dragging, or wobbling?",
+    data_type: "boolean",
+    extraction_hint: "hind limb weakness or dysfunction",
+    critical: true,
+  },
+  tail_movement: {
+    id: "tail_movement",
+    question_text: "Can your dog move their tail normally? Lift it, wag it?",
+    data_type: "boolean",
+    extraction_hint: "tail mobility",
+    critical: false,
+  },
+  back_pain: {
+    id: "back_pain",
+    question_text: "Does your dog seem painful in the back — crying when picked up or reluctant to jump?",
+    data_type: "boolean",
+    extraction_hint: "back pain",
+    critical: true,
+  },
+  perineal_reflex: {
+    id: "perineal_reflex",
+    question_text: "Does your dog's anus squeeze when you gently touch the area? (This is a neurologic reflex.)",
+    data_type: "boolean",
+    extraction_hint: "presence of perineal reflex (veterinary assessment)",
+    critical: false,
+  },
+
+  // Combined vomiting/diarrhea questions
+  combined_vomiting_duration: {
+    id: "combined_vomiting_duration",
+    question_text: "How long has the vomiting been going on?",
+    data_type: "string",
+    extraction_hint: "duration of vomiting in combined GI presentation",
+    critical: true,
+  },
+  combined_diarrhea_duration: {
+    id: "combined_diarrhea_duration",
+    question_text: "How long has the diarrhea been going on?",
+    data_type: "string",
+    extraction_hint: "duration of diarrhea in combined GI presentation",
+    critical: true,
+  },
+  blood_in_either: {
+    id: "blood_in_either",
+    question_text: "Have you seen blood in the vomit or diarrhea?",
+    data_type: "boolean",
+    extraction_hint: "blood present in either vomit or diarrhea",
+    critical: true,
+  },
+
+  // Coughing + breathing combined questions
+  coughing_breathing_onset: {
+    id: "coughing_breathing_onset",
+    question_text: "When did the coughing and breathing difficulty start? Sudden or gradual?",
+    data_type: "choice",
+    choices: ["sudden", "gradual"],
+    extraction_hint: "onset of combined coughing and breathing difficulty",
+    critical: true,
+  },
+
+  // Oral mass questions
+  oral_mass_location: {
+    id: "oral_mass_location",
+    question_text: "Where in the mouth is the mass? Gums, tongue, palate, or throat?",
+    data_type: "string",
+    extraction_hint: "location of oral mass",
+    critical: true,
+  },
+  oral_mass_size: {
+    id: "oral_mass_size",
+    question_text: "How big is the mass? Compare to a pea, marble, or larger.",
+    data_type: "string",
+    extraction_hint: "size of oral mass",
+    critical: true,
+  },
+  bleeding_present: {
+    id: "bleeding_present",
+    question_text: "Is the area bleeding or has there been blood from the mouth?",
+    data_type: "boolean",
+    extraction_hint: "bleeding associated with the oral mass or affected area",
+    critical: true,
+  },
+  eating_difficulty: {
+    id: "eating_difficulty",
+    question_text: "Is your dog having difficulty eating — dropping food, chewing on one side, or refusing?",
+    data_type: "boolean",
+    extraction_hint: "difficulty eating due to oral mass",
+    critical: true,
+  },
+  oral_mass_duration: {
+    id: "oral_mass_duration",
+    question_text: "How long have you noticed the mass?",
+    data_type: "string",
+    extraction_hint: "duration of oral mass",
+    critical: true,
+  },
+
+  // Vision questions
+  vision_loss_onset: {
+    id: "vision_loss_onset",
+    question_text: "Did the vision loss happen suddenly or gradually?",
+    data_type: "choice",
+    choices: ["sudden", "gradual"],
+    extraction_hint: "onset of vision loss",
+    critical: true,
+  },
+  one_or_both_eyes: {
+    id: "one_or_both_eyes",
+    question_text: "Is the vision loss in one eye or both?",
+    data_type: "choice",
+    choices: ["one", "both"],
+    extraction_hint: "whether vision loss is unilateral or bilateral",
+    critical: true,
+  },
+  pain_present: {
+    id: "pain_present",
+    question_text: "Does the eye or affected area seem painful — squinting, pawing, yelping, or avoiding touch?",
+    data_type: "boolean",
+    extraction_hint: "pain signs such as squinting, pawing, yelping, or avoiding touch",
+    critical: true,
+  },
+  pupil_appearance: {
+    id: "pupil_appearance",
+    question_text: "Do the pupils look normal? Are they dilated, unequal, or not reacting to light?",
+    data_type: "string",
+    extraction_hint: "appearance of pupils",
+    critical: true,
+  },
+  other_neurologic_signs: {
+    id: "other_neurologic_signs",
+    question_text: "Any other neurologic signs — head tilt, circling, weakness, or seizures?",
+    data_type: "boolean",
+    extraction_hint: "presence of other neurologic signs",
+    critical: true,
+  },
+  vision_loss_duration: {
+    id: "vision_loss_duration",
+    question_text: "How long have you noticed the vision changes?",
+    data_type: "string",
+    extraction_hint: "duration of vision loss",
+    critical: true,
+  },
+
+  // Hearing questions
+  hearing_loss_onset: {
+    id: "hearing_loss_onset",
+    question_text: "Did the hearing loss happen suddenly or gradually?",
+    data_type: "choice",
+    choices: ["sudden", "gradual"],
+    extraction_hint: "onset of hearing loss",
+    critical: true,
+  },
+  ear_infection_history: {
+    id: "ear_infection_history",
+    question_text: "Has your dog had ear infections before, or any recent ear odor, redness, or discharge?",
+    data_type: "boolean",
+    extraction_hint: "history of ear infection or current ear odor, redness, or discharge",
+    critical: false,
+  },
+  response_to_loud_sounds: {
+    id: "response_to_loud_sounds",
+    question_text: "Does your dog respond to loud noises like clapping or door slams?",
+    data_type: "boolean",
+    extraction_hint: "response to loud sounds",
+    critical: true,
+  },
+  dog_age_years: {
+    id: "dog_age_years",
+    question_text: "How old is your dog in years?",
+    data_type: "number",
+    extraction_hint: "age of dog in years",
+    critical: true,
+  },
+
+  // Aggression questions
+  aggression_onset: {
+    id: "aggression_onset",
+    question_text: "When did the aggressive behavior start? Sudden or gradual?",
+    data_type: "choice",
+    choices: ["sudden", "gradual"],
+    extraction_hint: "onset of aggressive behavior",
+    critical: true,
+  },
+  trigger_situations: {
+    id: "trigger_situations",
+    question_text: "What triggers the aggression? Being touched, eating, guarding, or random?",
+    data_type: "string",
+    extraction_hint: "situations that trigger aggression",
+    critical: true,
+  },
+
+  // Pacing questions
+  abdomen_appearance: {
+    id: "abdomen_appearance",
+    question_text: "Does your dog's belly look swollen, tight, or distended?",
+    data_type: "boolean",
+    extraction_hint: "abdominal distension",
+    critical: true,
+  },
+  retching_present: {
+    id: "retching_present",
+    question_text: "Is your dog trying to vomit but nothing is coming up?",
+    data_type: "boolean",
+    extraction_hint: "unproductive retching",
+    critical: true,
+  },
+  pacing_duration: {
+    id: "pacing_duration",
+    question_text: "How long has your dog been pacing or restless?",
+    data_type: "string",
+    extraction_hint: "duration of pacing or restlessness",
+    critical: true,
+  },
+
+  // Abnormal gait questions
+  abnormal_gait_onset: {
+    id: "abnormal_gait_onset",
+    question_text: "When did the abnormal gait start? Sudden or gradual?",
+    data_type: "choice",
+    choices: ["sudden", "gradual"],
+    extraction_hint: "onset of abnormal gait",
+    critical: true,
+  },
+  affected_limbs: {
+    id: "affected_limbs",
+    question_text: "Which limbs are affected? Front, back, one side, or all four?",
+    data_type: "string",
+    extraction_hint: "which limbs are affected by abnormal gait",
+    critical: true,
+  },
+  bladder_control: {
+    id: "bladder_control",
+    question_text: "Has your dog lost bladder control — leaking urine or unable to urinate?",
+    data_type: "boolean",
+    extraction_hint: "loss of bladder control",
+    critical: true,
+  },
+  abnormal_gait_progression: {
+    id: "abnormal_gait_progression",
+    question_text: "Is the gait getting better, worse, or staying the same?",
+    data_type: "choice",
+    choices: ["better", "worse", "same"],
+    extraction_hint: "progression of abnormal gait",
+    critical: true,
+  },
+
+  // Heat intolerance questions
+  temperature_exposure: {
+    id: "temperature_exposure",
+    question_text: "What was the temperature? Was your dog in a hot car, direct sun, or unventilated area?",
+    data_type: "string",
+    extraction_hint: "temperature and exposure conditions",
+    critical: true,
+  },
+  heat_exposure_duration: {
+    id: "heat_exposure_duration",
+    question_text: "How long was your dog exposed to the heat?",
+    data_type: "string",
+    extraction_hint: "duration of heat exposure",
+    critical: true,
+  },
+
+  // Post-operative questions
+  surgery_type: {
+    id: "surgery_type",
+    question_text: "What type of surgery did your dog have?",
+    data_type: "string",
+    extraction_hint: "type of surgery performed",
+    critical: true,
+  },
+  days_post_op: {
+    id: "days_post_op",
+    question_text: "How many days ago was the surgery?",
+    data_type: "number",
+    extraction_hint: "number of days since surgery",
+    critical: true,
+  },
+  incision_appearance: {
+    id: "incision_appearance",
+    question_text: "What does the incision look like? Clean, red, swollen, open, or oozing?",
+    data_type: "string",
+    extraction_hint: "appearance of surgical incision",
+    critical: true,
+  },
+  discharge_present: {
+    id: "discharge_present",
+    question_text: "Is there any discharge from the incision?",
+    data_type: "boolean",
+    extraction_hint: "discharge from surgical site",
+    critical: true,
+  },
+  activity_level: {
+    id: "activity_level",
+    question_text: "How active has your dog been since surgery? Resting, walking normally, or running/playing?",
+    data_type: "string",
+    extraction_hint: "activity level since surgery",
+    critical: false,
+  },
+
+  // Medication reaction questions
+  medication_name: {
+    id: "medication_name",
+    question_text: "What medication did your dog receive?",
+    data_type: "string",
+    extraction_hint: "name of medication",
+    critical: true,
+  },
+  medication_dose: {
+    id: "medication_dose",
+    question_text: "What dose was given? How many pills or ml?",
+    data_type: "string",
+    extraction_hint: "dose of medication",
+    critical: true,
+  },
+  medication_timing: {
+    id: "medication_timing",
+    question_text: "How long ago was the medication given?",
+    data_type: "string",
+    extraction_hint: "time since medication was given",
+    critical: true,
+  },
+  reaction_symptoms: {
+    id: "reaction_symptoms",
+    question_text: "What symptoms did your dog develop after the medication?",
+    data_type: "string",
+    extraction_hint: "symptoms of medication reaction",
+    critical: true,
+  },
+  prior_reactions: {
+    id: "prior_reactions",
+    question_text: "Has your dog ever had a reaction to medication before?",
+    data_type: "boolean",
+    extraction_hint: "history of prior medication reactions",
+    critical: false,
+  },
+  current_medications: {
+    id: "current_medications",
+    question_text: "What other medications or supplements is your dog currently taking?",
+    data_type: "string",
+    extraction_hint: "list of current medications and supplements",
+    critical: false,
+  },
+
+  // Pregnancy/birth questions
+  days_pregnant: {
+    id: "days_pregnant",
+    question_text: "How many days pregnant is your dog? (Normal is 63 days from ovulation.)",
+    data_type: "number",
+    extraction_hint: "number of days pregnant",
+    critical: true,
+  },
+  contraction_status: {
+    id: "contraction_status",
+    question_text: "Is your dog having contractions? Visible straining?",
+    data_type: "boolean",
+    extraction_hint: "presence of contractions",
+    critical: true,
+  },
+  puppies_delivered: {
+    id: "puppies_delivered",
+    question_text: "How many puppies have been delivered so far?",
+    data_type: "number",
+    extraction_hint: "number of puppies delivered",
+    critical: true,
+  },
+  time_since_last_puppy: {
+    id: "time_since_last_puppy",
+    question_text: "How long since the last puppy was delivered?",
+    data_type: "string",
+    extraction_hint: "time since last puppy delivery",
+    critical: true,
+  },
+
+  // Puppy questions
+  puppy_age_weeks: {
+    id: "puppy_age_weeks",
+    question_text: "How old is the puppy in weeks?",
+    data_type: "number",
+    extraction_hint: "age of puppy in weeks",
+    critical: true,
+  },
+  nursing_status: {
+    id: "nursing_status",
+    question_text: "Is the puppy nursing? When was the last feed?",
+    data_type: "string",
+    extraction_hint: "nursing status of puppy",
+    critical: true,
+  },
+  puppy_temperature: {
+    id: "puppy_temperature",
+    question_text: "Does the puppy feel warm or cold to touch?",
+    data_type: "choice",
+    choices: ["warm", "cool", "cold"],
+    extraction_hint: "body temperature of puppy by touch",
+    critical: true,
+  },
+  weight_trend: {
+    id: "weight_trend",
+    question_text: "Is the puppy gaining, maintaining, or losing weight?",
+    data_type: "choice",
+    choices: ["gaining", "maintaining", "losing"],
+    extraction_hint: "weight trend of puppy",
+    critical: true,
+  },
+  littermate_status: {
+    id: "littermate_status",
+    question_text: "Are the other puppies in the litter doing okay?",
+    data_type: "string",
+    extraction_hint: "health status of littermates",
+    critical: false,
+  },
+  vaccination_status: {
+    id: "vaccination_status",
+    question_text: "Has the puppy started vaccinations? Which ones?",
+    data_type: "string",
+    extraction_hint: "vaccination status of puppy",
+    critical: false,
+  },
+
+  // Senior decline questions
+  senior_decline_duration: {
+    id: "senior_decline_duration",
+    question_text: "Over what time period have you noticed the decline? Weeks, months, or years?",
+    data_type: "string",
+    extraction_hint: "duration of senior decline",
+    critical: true,
+  },
+  specific_changes: {
+    id: "specific_changes",
+    question_text: "What specific changes have you noticed? Sleeping more, slower, confused, not eating?",
+    data_type: "string",
+    extraction_hint: "specific changes noticed in senior dog",
+    critical: true,
+  },
+  mobility_level: {
+    id: "mobility_level",
+    question_text: "How is your dog's mobility? Walking normally, stiff, or struggling to stand?",
+    data_type: "choice",
+    choices: ["normal", "stiff", "struggling"],
+    extraction_hint: "mobility level",
+    critical: true,
+  },
+
+  // Multi-system decline questions
+  each_symptom_duration: {
+    id: "each_symptom_duration",
+    question_text: "How long has each symptom been going on?",
+    data_type: "string",
+    extraction_hint: "duration of each symptom",
+    critical: true,
+  },
+  energy_level: {
+    id: "energy_level",
+    question_text: "How is your dog's energy? Normal, slightly reduced, very low, or barely moving?",
+    data_type: "choice",
+    choices: ["normal", "slightly_reduced", "very_low", "barely_moving"],
+    extraction_hint: "overall energy level",
+    critical: true,
+  },
+  vomiting_present: {
+    id: "vomiting_present",
+    question_text: "Is your dog vomiting?",
+    data_type: "boolean",
+    extraction_hint: "presence of vomiting",
+    critical: false,
+  },
+
+  // Unknown concern questions
+  chief_complaint_guess: {
+    id: "chief_complaint_guess",
+    question_text: "What is your best guess about what's wrong? Even if you're not sure.",
+    data_type: "string",
+    extraction_hint: "owner's best guess about the problem",
+    critical: true,
+  },
+  last_normal: {
+    id: "last_normal",
+    question_text: "When was the last time your dog seemed completely normal?",
+    data_type: "string",
+    extraction_hint: "last time dog seemed normal",
     critical: true,
   },
 };

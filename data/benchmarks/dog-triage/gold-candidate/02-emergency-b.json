@@ -1,0 +1,128 @@
+{
+  "suite_id": "dog-triage-gold-candidate-emergency-b",
+  "version": "2026-04-10",
+  "species": "dog",
+  "description": "Emergency-heavy candidate benchmark cases, shard B.",
+  "cases": [
+    {
+      "id": "emergency-pale-gums-collapse",
+      "description": "Collapse with pale gums should escalate.",
+      "tags": ["emergency", "collapse", "shock"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Cooper", "breed": "Whippet", "age_years": 9, "weight": 32, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He suddenly collapsed and his gums are very pale." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["lethargy"] }
+    },
+    {
+      "id": "emergency-anaphylaxis",
+      "description": "Facial swelling with breathing trouble should escalate.",
+      "tags": ["emergency", "allergy"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Piper", "breed": "Mixed Breed", "age_years": 6, "weight": 41, "species": "dog" },
+        "messages": [{ "role": "user", "content": "After a bee sting her face swelled up and now she is breathing hard." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "emergency-vomit-blood-collapse",
+      "description": "Vomiting blood with weakness should escalate.",
+      "tags": ["emergency", "gi", "bleeding"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Archie", "breed": "Beagle", "age_years": 7, "weight": 28, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog threw up a lot of blood and now he is weak and wobbly." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["vomiting"] }
+    },
+    {
+      "id": "emergency-parvo-style-puppy",
+      "description": "Unvaccinated puppy with vomiting and bloody diarrhea should escalate.",
+      "tags": ["emergency", "puppy", "gi"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Nugget", "breed": "Mixed Breed", "age_years": 0.2, "weight": 7, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My unvaccinated puppy is vomiting and has bloody diarrhea and will not drink." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["vomiting_diarrhea_combined"] }
+    },
+    {
+      "id": "emergency-open-fracture",
+      "description": "Visible bone with limb trauma should escalate.",
+      "tags": ["emergency", "orthopedic", "fracture"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Scout", "breed": "Australian Shepherd", "age_years": 2, "weight": 47, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He is limping badly and I can actually see bone through the wound on the leg." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["limping"] }
+    },
+    {
+      "id": "emergency-resting-open-mouth-breathing",
+      "description": "Open-mouth breathing at rest with cyanotic concern should escalate.",
+      "tags": ["emergency", "respiratory"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Moose", "breed": "Pug", "age_years": 8, "weight": 23, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He is open-mouth breathing while resting and his gums are looking bluish." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["difficulty_breathing"] }
+    },
+    {
+      "id": "emergency-pyometra-style",
+      "description": "Intact female with foul discharge and collapse risk should escalate.",
+      "tags": ["emergency", "reproductive"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Sadie", "breed": "Labrador Retriever", "age_years": 9, "weight": 63, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My unspayed dog is lethargic, drinking a lot, and has foul vaginal discharge." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["vaginal_discharge"] }
+    },
+    {
+      "id": "emergency-oral-bleeding-cant-swallow",
+      "description": "Oral bleeding with inability to drink should escalate.",
+      "tags": ["emergency", "oral"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Finn", "breed": "Cocker Spaniel", "age_years": 10, "weight": 31, "species": "dog" },
+        "messages": [{ "role": "user", "content": "There is blood coming from his mouth and he cannot really eat or drink." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["dental_problem"] }
+    },
+    {
+      "id": "emergency-rat-poison-bleeding",
+      "description": "Possible anticoagulant rodenticide exposure with bleeding should escalate.",
+      "tags": ["emergency", "toxin", "bleeding"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Wally", "breed": "Mixed Breed", "age_years": 6, "weight": 49, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog may have gotten rat poison and now I see bleeding from his gums." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "emergency-unresponsive-after-tremors",
+      "description": "Unresponsive dog after tremors should escalate.",
+      "tags": ["emergency", "neurologic", "collapse"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Minnie", "breed": "Yorkshire Terrier", "age_years": 11, "weight": 9, "species": "dog" },
+        "messages": [{ "role": "user", "content": "She was shaking and now she is barely responsive." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["trembling"] }
+    }
+  ]
+}

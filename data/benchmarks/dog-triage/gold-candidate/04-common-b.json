@@ -1,0 +1,128 @@
+{
+  "suite_id": "dog-triage-gold-candidate-common-b",
+  "version": "2026-04-10",
+  "species": "dog",
+  "description": "Common dog complaint benchmark cases, shard B.",
+  "cases": [
+    {
+      "id": "question-ear-scratching",
+      "description": "Ear scratching with odor should open otic question flow.",
+      "tags": ["question", "ear"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Peanut", "breed": "Cocker Spaniel", "age_years": 4, "weight": 26, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He keeps scratching his ears and they smell bad." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["ear_scratching"] }
+    },
+    {
+      "id": "question-weight-loss",
+      "description": "Weight loss complaint should open systemic question flow.",
+      "tags": ["question", "systemic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Charlie", "breed": "Mixed Breed", "age_years": 11, "weight": 42, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog is losing weight even though he is still eating." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["weight_loss"] }
+    },
+    {
+      "id": "question-wound-skin-issue",
+      "description": "Localized skin wound should open wound flow.",
+      "tags": ["question", "wound"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Koda", "breed": "Husky", "age_years": 3, "weight": 55, "species": "dog" },
+        "messages": [{ "role": "user", "content": "There is a sore on his rear leg and he will not stop licking it." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["wound_skin_issue"] }
+    },
+    {
+      "id": "question-urination-problem",
+      "description": "Urinary problem without full obstruction should open urinary flow.",
+      "tags": ["question", "urinary"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Millie", "breed": "Miniature Schnauzer", "age_years": 7, "weight": 16, "species": "dog" },
+        "messages": [{ "role": "user", "content": "She is having accidents and seems to strain a little when she pees." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["urination_problem"] }
+    },
+    {
+      "id": "question-behavior-change",
+      "description": "Behavior change should open neurologic/systemic behavior flow.",
+      "tags": ["question", "behavior"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Murphy", "breed": "Golden Retriever", "age_years": 10, "weight": 74, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog seems confused lately and paces around at night." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["behavior_change"] }
+    },
+    {
+      "id": "question-swelling-lump",
+      "description": "New lump should open mass characterization flow.",
+      "tags": ["question", "mass"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Winston", "breed": "Boxer", "age_years": 8, "weight": 67, "species": "dog" },
+        "messages": [{ "role": "user", "content": "I found a new lump under the skin on my dog's side." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["swelling_lump"] }
+    },
+    {
+      "id": "question-dental-problem",
+      "description": "Bad breath and chewing difficulty should open dental flow.",
+      "tags": ["question", "dental"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Maggie", "breed": "Yorkshire Terrier", "age_years": 9, "weight": 10, "species": "dog" },
+        "messages": [{ "role": "user", "content": "Her breath is awful and she drops food when she tries to chew." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["dental_problem"] }
+    },
+    {
+      "id": "question-hair-loss",
+      "description": "Hair loss should open dermatology flow.",
+      "tags": ["question", "dermatology"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Penny", "breed": "Pomeranian", "age_years": 6, "weight": 8, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog is losing patches of hair on her back and belly." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["hair_loss"] }
+    },
+    {
+      "id": "question-regurgitation",
+      "description": "Regurgitation after meals should open regurgitation flow.",
+      "tags": ["question", "gi"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "George", "breed": "German Shepherd", "age_years": 5, "weight": 81, "species": "dog" },
+        "messages": [{ "role": "user", "content": "Food comes back up right after he eats, almost like he never digested it." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["regurgitation"] }
+    },
+    {
+      "id": "question-constipation",
+      "description": "Constipation should open GI motility flow.",
+      "tags": ["question", "gi"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Duke", "breed": "Basset Hound", "age_years": 8, "weight": 63, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He keeps straining to poop and only tiny dry pieces come out." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false, "knownSymptomsInclude": ["constipation"] }
+    }
+  ]
+}

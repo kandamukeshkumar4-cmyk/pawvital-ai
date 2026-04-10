@@ -3735,7 +3735,7 @@ describe("coerceAmbiguousReplyToUnknown — unit", () => {
 
   async function loadCoercer() {
     const { coerceAmbiguousReplyToUnknown } = await import(
-      "@/app/api/ai/symptom-chat/route"
+      "@/lib/ambiguous-reply"
     );
     return coerceAmbiguousReplyToUnknown;
   }

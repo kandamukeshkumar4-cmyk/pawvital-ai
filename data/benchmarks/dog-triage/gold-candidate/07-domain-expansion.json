@@ -1,0 +1,440 @@
+{
+  "suite_id": "dog-triage-gold-candidate-domain-expansion",
+  "version": "2026-04-10",
+  "species": "dog",
+  "description": "Additional reproductive, toxicology, cardiac, and oncology coverage for the dog triage benchmark.",
+  "cases": [
+    {
+      "id": "repro-question-pseudopregnancy",
+      "description": "Nest-making with mammary enlargement in an intact female should open reproductive questioning.",
+      "tags": ["question", "reproductive"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Lily", "breed": "Mixed Breed", "age_years": 4, "weight": 39, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My unspayed dog is carrying toys around, nesting, and her mammary area looks enlarged." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "repro-question-prolonged-heat",
+      "description": "Prolonged heat-style spotting should open reproductive questioning.",
+      "tags": ["question", "reproductive"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Dixie", "breed": "Beagle", "age_years": 6, "weight": 26, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has had spotting from her vulva for a lot longer than usual." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "repro-question-mastitis-postpartum",
+      "description": "Postpartum mammary pain and redness should open reproductive follow-up.",
+      "tags": ["question", "reproductive", "postpartum"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Rosie", "breed": "Miniature Poodle", "age_years": 3, "weight": 13, "species": "dog" },
+        "messages": [{ "role": "user", "content": "She had puppies recently and one of her mammary glands is red, hard, and painful." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "repro-question-scrotal-swelling",
+      "description": "Scrotal swelling without collapse should open reproductive questioning.",
+      "tags": ["question", "reproductive", "male"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Rocky", "breed": "Boxer", "age_years": 7, "weight": 71, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has swelling around his testicles and keeps licking there." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "repro-question-vaginal-discharge-bright",
+      "description": "Stable vaginal discharge should open reproductive questioning when no collapse signs are present.",
+      "tags": ["question", "reproductive"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Maya", "breed": "Labrador Retriever", "age_years": 3, "weight": 58, "species": "dog" },
+        "messages": [{ "role": "user", "content": "There is some discharge from my dog's vulva but she is still eating and acting okay." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "repro-emergency-labor-green-discharge",
+      "description": "Green discharge before a puppy is delivered should escalate.",
+      "tags": ["emergency", "reproductive", "labor"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Bella", "breed": "Bulldog", "age_years": 4, "weight": 46, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog in labor has green discharge and no puppy has come out yet." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "repro-emergency-heavy-postpartum-bleeding",
+      "description": "Heavy postpartum bleeding should escalate.",
+      "tags": ["emergency", "reproductive", "bleeding"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Rosie", "breed": "Miniature Poodle", "age_years": 3, "weight": 13, "species": "dog" },
+        "messages": [{ "role": "user", "content": "She had puppies yesterday and now she is bleeding heavily and seems weak." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "repro-emergency-retained-puppy-collapse",
+      "description": "Suspected retained puppy with shock signs should escalate.",
+      "tags": ["emergency", "reproductive", "collapse"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Hazel", "breed": "French Bulldog", "age_years": 5, "weight": 24, "species": "dog" },
+        "messages": [{ "role": "user", "content": "She finished having puppies but now seems weak, distressed, and still has strong contractions." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "repro-emergency-foul-discharge-fever",
+      "description": "Foul discharge with systemic illness in an intact female should escalate.",
+      "tags": ["emergency", "reproductive", "infection"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Sadie", "breed": "Labrador Retriever", "age_years": 9, "weight": 63, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My unspayed dog has smelly discharge, is drinking a lot, and feels feverish and miserable." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "repro-emergency-male-paraphimosis",
+      "description": "Penis stuck out with swelling and distress should escalate.",
+      "tags": ["emergency", "reproductive", "male"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Rocco", "breed": "Bulldog", "age_years": 5, "weight": 52, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog's penis is stuck out, swollen, and he is very uncomfortable." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "toxin-question-chocolate-small-amount",
+      "description": "Small chocolate exposure without symptoms should still open triage questioning.",
+      "tags": ["question", "toxin"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Penny", "breed": "Pomeranian", "age_years": 6, "weight": 8, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My little dog may have eaten some milk chocolate but seems normal right now." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "toxin-question-marijuana-drowsy",
+      "description": "Possible marijuana exposure with mild signs should open toxin triage.",
+      "tags": ["question", "toxin", "neurologic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Jax", "breed": "Mixed Breed", "age_years": 4, "weight": 47, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog got into an edible and now seems sleepy and wobbly." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "toxin-question-garlic-onion",
+      "description": "Garlic or onion ingestion should open toxin triage when no collapse signs are present.",
+      "tags": ["question", "toxin"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Olive", "breed": "Mixed Breed", "age_years": 5, "weight": 44, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog ate a bunch of oniony leftovers and now I am worried." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "toxin-question-ibuprofen-maybe",
+      "description": "Possible ibuprofen ingestion should open toxin questioning immediately.",
+      "tags": ["question", "toxin"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Cooper", "breed": "Whippet", "age_years": 9, "weight": 32, "species": "dog" },
+        "messages": [{ "role": "user", "content": "I think my dog may have eaten one of my ibuprofen pills." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "toxin-emergency-antifreeze",
+      "description": "Possible antifreeze ingestion should escalate immediately.",
+      "tags": ["emergency", "toxin"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Scout", "breed": "Australian Shepherd", "age_years": 2, "weight": 47, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog licked green fluid from the garage floor and is now staggering and drooling." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "toxin-emergency-sago-palm",
+      "description": "Sago palm ingestion should escalate immediately.",
+      "tags": ["emergency", "toxin", "plant"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Theo", "breed": "Pomeranian", "age_years": 10, "weight": 11, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog chewed on a sago palm and is vomiting now." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "toxin-emergency-grapes-weakness",
+      "description": "Grape ingestion with vomiting or weakness should escalate.",
+      "tags": ["emergency", "toxin"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Milo", "breed": "Great Dane", "age_years": 7, "weight": 118, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He ate a bunch of grapes and now is vomiting and acting weak." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "toxin-emergency-lily-chew",
+      "description": "Household toxin exposure with GI signs and weakness should escalate.",
+      "tags": ["emergency", "toxin", "household"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Nala", "breed": "Labrador Retriever", "age_years": 10, "weight": 79, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog got into a toxic plant and now is vomiting and seems really weak." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "toxin-emergency-tremorgenic-mycotoxin",
+      "description": "Tremors after eating moldy food should escalate immediately.",
+      "tags": ["emergency", "toxin", "neurologic"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Loki", "breed": "Chihuahua", "age_years": 7, "weight": 8, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He got into moldy trash and now he is shaking hard and cannot walk right." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "cardiac-question-cough-night",
+      "description": "Night cough with stable behavior should open cardiac-respiratory questioning.",
+      "tags": ["question", "cardiac", "respiratory"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Ollie", "breed": "Cavalier King Charles Spaniel", "age_years": 11, "weight": 21, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My older dog coughs more at night and after resting." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "cardiac-question-exercise-intolerance",
+      "description": "Exercise intolerance without collapse should open cardiac questioning.",
+      "tags": ["question", "cardiac"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Murphy", "breed": "Golden Retriever", "age_years": 10, "weight": 74, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog tires out much faster on walks and wants to stop early." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "cardiac-question-belly-fluid",
+      "description": "Gradual abdominal fluid suspicion should open questioning when no crisis signs are present.",
+      "tags": ["question", "cardiac", "abdomen"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Duke", "breed": "Doberman Pinscher", "age_years": 8, "weight": 89, "species": "dog" },
+        "messages": [{ "role": "user", "content": "His belly seems to be filling out and he gets tired more easily lately." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "cardiac-question-faint-then-recovers",
+      "description": "Single recovered fainting spell should open urgent cardiac questioning.",
+      "tags": ["question", "cardiac", "collapse"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Winston", "breed": "Boxer", "age_years": 8, "weight": 67, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog briefly fainted on a walk but came back around quickly." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "cardiac-emergency-collapse-blue-gums",
+      "description": "Collapse with blue or gray gums should escalate immediately.",
+      "tags": ["emergency", "cardiac", "collapse"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Nova", "breed": "Doberman Pinscher", "age_years": 6, "weight": 78, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog collapsed and his gums looked blue-gray." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "cardiac-emergency-resting-breathing-distress",
+      "description": "Resting respiratory distress in a heart-disease style presentation should escalate.",
+      "tags": ["emergency", "cardiac", "respiratory"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Ollie", "breed": "Cavalier King Charles Spaniel", "age_years": 11, "weight": 21, "species": "dog" },
+        "messages": [{ "role": "user", "content": "He has known heart disease and now is breathing hard even while lying still." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "cardiac-emergency-collapse-after-excitement",
+      "description": "Collapse after excitement with delayed recovery should escalate.",
+      "tags": ["emergency", "cardiac", "collapse"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Rex", "breed": "Boxer", "age_years": 6, "weight": 82, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog got excited, collapsed, and still seems weak and out of it." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "cardiac-emergency-rapid-breathing-pale",
+      "description": "Rapid breathing with pallor and weakness should escalate.",
+      "tags": ["emergency", "cardiac", "shock"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Bailey", "breed": "Mixed Breed", "age_years": 9, "weight": 48, "species": "dog" },
+        "messages": [{ "role": "user", "content": "She is breathing fast, looks pale, and can barely stand up." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "oncology-question-new-lump",
+      "description": "Stable new skin lump should open mass characterization questioning.",
+      "tags": ["question", "oncology", "mass"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Winston", "breed": "Boxer", "age_years": 8, "weight": 67, "species": "dog" },
+        "messages": [{ "role": "user", "content": "I found a round new lump on my dog's side and it does not seem painful." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "oncology-question-weight-loss-lump",
+      "description": "Weight loss plus a new mass should open serious systemic questioning.",
+      "tags": ["question", "oncology", "systemic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Charlie", "breed": "Mixed Breed", "age_years": 11, "weight": 42, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has been losing weight and I also found a lump near his ribs." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "oncology-question-oral-mass",
+      "description": "Possible oral mass with otherwise stable behavior should open questioning.",
+      "tags": ["question", "oncology", "oral"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Finn", "breed": "Cocker Spaniel", "age_years": 10, "weight": 31, "species": "dog" },
+        "messages": [{ "role": "user", "content": "There seems to be a growth in my dog's mouth and his breath is terrible." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "oncology-question-bone-pain",
+      "description": "Gradual limb pain and swelling should open orthopedic-oncology questioning.",
+      "tags": ["question", "oncology", "orthopedic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Max", "breed": "Rottweiler", "age_years": 9, "weight": 96, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My big dog has a swollen painful leg and a limp that has been getting worse for weeks." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "oncology-question-lymph-node-swelling",
+      "description": "Multiple enlarged lymph-node style swellings should open systemic questioning.",
+      "tags": ["question", "oncology", "systemic"],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Tucker", "breed": "Golden Retriever", "age_years": 13, "weight": 68, "species": "dog" },
+        "messages": [{ "role": "user", "content": "I can feel several swollen lumps under my dog's jaw and behind his knees." }]
+      },
+      "expectations": { "responseType": "question", "readyForReport": false }
+    },
+    {
+      "id": "oncology-emergency-bleeding-splenic-rupture-style",
+      "description": "Acute collapse with abdominal distension in a cancer-risk presentation should escalate.",
+      "tags": ["emergency", "oncology", "bleeding", "abdomen"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Cooper", "breed": "German Shepherd", "age_years": 11, "weight": 83, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My older dog suddenly collapsed, has a swollen belly, and his gums are very pale." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "oncology-emergency-mouth-tumor-bleeding",
+      "description": "Heavy bleeding from an oral mass should escalate.",
+      "tags": ["emergency", "oncology", "oral", "bleeding"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Maggie", "breed": "Yorkshire Terrier", "age_years": 9, "weight": 10, "species": "dog" },
+        "messages": [{ "role": "user", "content": "There is a growth in my dog's mouth and now it is bleeding a lot." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "oncology-emergency-obstructive-neck-mass",
+      "description": "Neck swelling causing breathing or swallowing trouble should escalate.",
+      "tags": ["emergency", "oncology", "airway"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "George", "breed": "German Shepherd", "age_years": 5, "weight": 81, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has a large throat lump and now he is struggling to swallow and breathe." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    },
+    {
+      "id": "oncology-emergency-nosebleed-collapse",
+      "description": "Severe nosebleed with weakness should escalate.",
+      "tags": ["emergency", "oncology", "bleeding", "nasal"],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": { "name": "Jasper", "breed": "Collie", "age_years": 9, "weight": 58, "species": "dog" },
+        "messages": [{ "role": "user", "content": "My dog has a major nosebleed and is now weak and shaky." }]
+      },
+      "expectations": { "responseType": "emergency", "readyForReport": true }
+    }
+  ]
+}

@@ -393,7 +393,7 @@ export function calculateProbabilities(
 ): DiseaseProbability[] {
   const breedMods = getBreedModifiers(pet.breed);
   const ageCategory =
-    pet.age_years <= 1 ? "puppy" : pet.age_years >= 7 ? "senior" : "adult";
+    pet.age_years < 1.5 ? "puppy" : pet.age_years >= 7 ? "senior" : "adult";
 
   const results: DiseaseProbability[] = [];
 
@@ -881,6 +881,264 @@ function normalizeSymptom(raw: string): string | null {
     "skin problem": "wound_skin_issue",
     ulcer: "wound_skin_issue",
     blister: "wound_skin_issue",
+
+    // --- VET-902: New complaint family normalization ---
+
+    // Seizure/collapse
+    seizure: "seizure_collapse",
+    fitting: "seizure_collapse",
+    "having a fit": "seizure_collapse",
+    passed_out: "seizure_collapse",
+    collapsed: "seizure_collapse",
+    collapse: "seizure_collapse",
+    "fell over": "seizure_collapse",
+    "went limp": "seizure_collapse",
+    "uncontrolled shaking": "seizure_collapse",
+    "foaming at mouth": "seizure_collapse",
+    "lost consciousness": "seizure_collapse",
+    paddling: "seizure_collapse",
+
+    // Urination
+    "peeing inside": "urination_problem",
+    "can't pee": "urination_problem",
+    "straining to pee": "urination_problem",
+    "peeing blood": "urination_problem",
+    "dripping urine": "urination_problem",
+    "squatting but nothing": "urination_problem",
+    "can't urinate": "urination_problem",
+    "straining to urinate": "urination_problem",
+
+    // Behavior
+    "not acting right": "behavior_change",
+    "different lately": "behavior_change",
+    confused: "behavior_change",
+    "staring at walls": "behavior_change",
+    wandering: "behavior_change",
+    "not recognizing me": "behavior_change",
+    disoriented: "behavior_change",
+
+    // Swelling/lump
+    "found a lump": "swelling_lump",
+    "bump under skin": "swelling_lump",
+    growth: "swelling_lump",
+    "found a mass": "swelling_lump",
+    "enlarged lymph node": "swelling_lump",
+    "swollen leg": "swelling_lump",
+    "swollen face": "swelling_lump",
+
+    // Dental
+    "bad breath": "dental_problem",
+    "stinky breath": "dental_problem",
+    "dropping food": "dental_problem",
+    "pawing at mouth": "dental_problem",
+    "bleeding gums": "dental_problem",
+    "loose teeth": "dental_problem",
+    "tartar buildup": "dental_problem",
+
+    // Hair loss
+    "losing fur": "hair_loss",
+    "bald patches": "hair_loss",
+    "thin coat": "hair_loss",
+    "hair falling out": "hair_loss",
+    "patchy fur": "hair_loss",
+    "dull coat": "hair_loss",
+    "flaky skin": "hair_loss",
+    dandruff: "hair_loss",
+
+    // Regurgitation
+    "food comes right back up": "regurgitation",
+    "undigested food on floor": "regurgitation",
+    "gurgling up food": "regurgitation",
+    "passive vomiting": "regurgitation",
+    "food just drops out": "regurgitation",
+    regurgitating: "regurgitation",
+
+    // Constipation
+    "can't poop": "constipation",
+    "straining on floor": "constipation",
+    "hard little poops": "constipation",
+    "no poop for days": "constipation",
+    "crying when pooping": "constipation",
+    constipated: "constipation",
+
+    // Generalized stiffness
+    "stiff all over": "generalized_stiffness",
+    "can't get comfortable": "generalized_stiffness",
+    "reluctant to move": "generalized_stiffness",
+    "slow to stand": "generalized_stiffness",
+    "stiff in morning": "generalized_stiffness",
+    "sore everywhere": "generalized_stiffness",
+
+    // Nasal
+    "runny nose": "nasal_discharge",
+    sneezing: "nasal_discharge",
+    "snotty nose": "nasal_discharge",
+    "nose bleeding": "nasal_discharge",
+    snorting: "nasal_discharge",
+    "reverse sneezing": "nasal_discharge",
+    "nasal gunk": "nasal_discharge",
+
+    // Vaginal
+    "discharge from privates": "vaginal_discharge",
+    "bloody vulva": "vaginal_discharge",
+    "pus from vagina": "vaginal_discharge",
+    "licking privates constantly": "vaginal_discharge",
+    "smelly discharge": "vaginal_discharge",
+
+    // Testicular/prostate
+    "swollen balls": "testicular_prostate",
+    "one testicle bigger": "testicular_prostate",
+    "dragging back legs": "testicular_prostate",
+
+    // Exercise-induced lameness
+    "fine until we walk": "exercise_induced_lameness",
+    "stops mid-walk": "exercise_induced_lameness",
+    "fine at home but won't walk far": "exercise_induced_lameness",
+    "lies down after running": "exercise_induced_lameness",
+    "sore after play": "exercise_induced_lameness",
+
+    // Skin odor
+    "smells bad": "skin_odor_greasy",
+    "greasy fur": "skin_odor_greasy",
+    "yeasty smell": "skin_odor_greasy",
+    "corn chip feet": "skin_odor_greasy",
+    "oily coat": "skin_odor_greasy",
+    "smells even after bath": "skin_odor_greasy",
+
+    // Recurrent ear
+    "always getting ear infections": "recurrent_ear",
+    "back on ear meds": "recurrent_ear",
+    "ears never clear up": "recurrent_ear",
+    "chronic ear problem": "recurrent_ear",
+
+    // Recurrent skin
+    "always getting skin infections": "recurrent_skin",
+    "pimples keep coming back": "recurrent_skin",
+    "antibiotics work then it returns": "recurrent_skin",
+
+    // Inappropriate urination
+    "peeing in house": "inappropriate_urination",
+    "was housetrained now isn't": "inappropriate_urination",
+    "leaking urine": "inappropriate_urination",
+    "waking up wet": "inappropriate_urination",
+    marking: "inappropriate_urination",
+
+    // Fecal incontinence
+    "pooping without knowing": "fecal_incontinence",
+    "waking up in poop": "fecal_incontinence",
+    "can't hold it": "fecal_incontinence",
+    "leaking stool": "fecal_incontinence",
+    "dropping stool while walking": "fecal_incontinence",
+
+    // Vomiting + diarrhea combined
+    "both ends": "vomiting_diarrhea_combined",
+    "sick top and bottom": "vomiting_diarrhea_combined",
+    "vomiting and diarrhea": "vomiting_diarrhea_combined",
+    "everything is coming out": "vomiting_diarrhea_combined",
+
+    // Coughing + breathing combined
+    "coughing and can't breathe": "coughing_breathing_combined",
+    "wheezing and coughing": "coughing_breathing_combined",
+    "struggling to breathe after coughing": "coughing_breathing_combined",
+
+    // Oral mass
+    "lump in mouth": "oral_mass",
+    "growth on gum": "oral_mass",
+    "won't close mouth": "oral_mass",
+    "something hanging from mouth": "oral_mass",
+    "mouth won't shut": "oral_mass",
+
+    // Vision loss
+    "bumping into things": "vision_loss",
+    "can't see": "vision_loss",
+    "blind suddenly": "vision_loss",
+    "eyes look cloudy": "vision_loss",
+    "won't go in dark": "vision_loss",
+    blind: "vision_loss",
+
+    // Hearing loss
+    "not hearing me": "hearing_loss",
+    "deaf suddenly": "hearing_loss",
+    "doesn't respond to name": "hearing_loss",
+    "startled easily": "hearing_loss",
+    "sleeping through noise": "hearing_loss",
+    deaf: "hearing_loss",
+
+    // Aggression
+    "biting suddenly": "aggression",
+    "growling when touched": "aggression",
+    snapping: "aggression",
+    "doesn't want to be picked up": "aggression",
+    "new aggression": "aggression",
+
+    // Pacing
+    "can't settle": "pacing_restlessness",
+    "walking in circles": "pacing_restlessness",
+    "pacing all night": "pacing_restlessness",
+    "won't lie down": "pacing_restlessness",
+    restless: "pacing_restlessness",
+    anxious: "pacing_restlessness",
+
+    // Abnormal gait
+    "wobbly walking": "abnormal_gait",
+    "drunk walking": "abnormal_gait",
+    "crossing legs": "abnormal_gait",
+    knuckling: "abnormal_gait",
+    "weak in back": "abnormal_gait",
+    stumbling: "abnormal_gait",
+    "walking weird": "abnormal_gait",
+    wobbly: "abnormal_gait",
+
+    // Heat intolerance
+    "overheats fast": "heat_intolerance",
+    "can't handle heat": "heat_intolerance",
+    "panting too much in heat": "heat_intolerance",
+    "collapsed in heat": "heat_intolerance",
+    overheating: "heat_intolerance",
+
+    // Post-operative
+    "incision looks bad": "postoperative_concern",
+    "stitches open": "postoperative_concern",
+    "oozing from surgery site": "postoperative_concern",
+    "not recovering well": "postoperative_concern",
+    "swollen after surgery": "postoperative_concern",
+
+    // Medication reaction
+    "reaction to medicine": "medication_reaction",
+    "got sick after pill": "medication_reaction",
+    "allergic to medication": "medication_reaction",
+    "side effects": "medication_reaction",
+
+    // Pregnancy/birth
+    "having trouble giving birth": "pregnancy_birth",
+    "straining but no puppies": "pregnancy_birth",
+    "green discharge but no puppies": "pregnancy_birth",
+    "pregnant and sick": "pregnancy_birth",
+    dystocia: "pregnancy_birth",
+
+    // Puppy
+    "puppy not right": "puppy_concern",
+    "weak puppy": "puppy_concern",
+    "not nursing": "puppy_concern",
+    "puppy crying": "puppy_concern",
+    "puppy cold": "puppy_concern",
+    "puppy not growing": "puppy_concern",
+
+    // Senior
+    "getting old and slow": "senior_decline",
+    "not like she used to be": "senior_decline",
+    "slowing down": "senior_decline",
+    "confused at night": "senior_decline",
+    "forgetting training": "senior_decline",
+
+    // Multi-system
+    "just not right in multiple ways": "multi_system_decline",
+    "a bit of everything wrong": "multi_system_decline",
+    "going downhill": "multi_system_decline",
+
+    // Unknown
+    "something is wrong but I can't tell what": "unknown_concern",
+    "just seems off": "unknown_concern",
   };
 
   // Direct match

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PawVital Dog Silent Trial Record",
+  "type": "object",
+  "required": ["trial_id", "captured_at", "species", "conversation_id", "request_summary", "observed_output"],
+  "additionalProperties": false,
+  "properties": {
+    "trial_id": { "type": "string", "minLength": 1 },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "species": { "const": "dog" },
+    "conversation_id": { "type": "string", "minLength": 1 },
+    "request_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "chief_complaint": { "type": "string" },
+        "known_symptoms": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "observed_output": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "response_type": { "type": "string" },
+        "conversation_state": { "type": "string" },
+        "last_question_asked": { "type": "string" },
+        "ready_for_report": { "type": "boolean" }
+      }
+    },
+    "shadow_summary": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "overall_status": { "type": "string" },
+        "blocked_services": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "adjudication": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "reviewed_by": { "type": "string" },
+        "urgency": { "type": "string" },
+        "disposition": { "type": "string" },
+        "unsafe_downgrade": { "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

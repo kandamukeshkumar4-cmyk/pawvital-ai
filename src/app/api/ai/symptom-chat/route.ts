@@ -134,6 +134,7 @@ import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
 import { emit, EventType } from "@/lib/events/event-bus";
 import "@/lib/events/notification-handler";
+import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -3116,67 +3117,6 @@ function normalizeIntentText(rawMessage: string): string {
     .replace(/\s+/g, " ");
 }
 
-const AMBIGUOUS_UNKNOWN_EXACT_MATCHES = new Set([
-  "not sure",
-  "unsure",
-  "not certain",
-  "uncertain",
-  "i don't know",
-  "i dont know",
-  "dont know",
-  "do not know",
-  "no idea",
-  "i have no idea",
-  "can't tell",
-  "cant tell",
-  "cannot tell",
-  "hard to tell",
-  "hard to say",
-  "maybe",
-  "maybe not",
-  "not really sure",
-  "kind of",
-  "sort of",
-  "i'm not sure",
-  "im not sure",
-  "not totally sure",
-  "i'm not totally sure",
-  "im not totally sure",
-  "couldn't say",
-  "couldnt say",
-  "can't really say",
-  "cant really say",
-  "i couldn't say",
-  "i couldnt say",
-  "i can't really say",
-  "i cant really say",
-  "no way to tell",
-]);
-
-const AMBIGUOUS_UNKNOWN_PREFIXES = [
-  "not sure",
-  "i don't know",
-  "i dont know",
-  "i'm not sure",
-  "im not sure",
-  "not totally sure",
-  "i'm not totally sure",
-  "im not totally sure",
-  "can't tell",
-  "cant tell",
-  "cannot tell",
-  "hard to tell",
-  "hard to say",
-  "couldn't say",
-  "couldnt say",
-  "can't really say",
-  "cant really say",
-  "i couldn't say",
-  "i couldnt say",
-  "i can't really say",
-  "i cant really say",
-];
-
 /**
  * VET-900: UNSAFE questions that are emergency triage indicators.
  * When an owner cannot assess these, we escalate rather than re-ask.
@@ -3189,28 +3129,6 @@ const UNSAFE_EMERGENCY_QUESTIONS = new Set([
 
 function shouldEscalateForUnknown(questionId: string): boolean {
   return UNSAFE_EMERGENCY_QUESTIONS.has(questionId);
-}
-
-/**
- * VET-733: Deterministic ambiguous-reply coercer.
- *
- * When a pet owner uses a phrase that clearly means "I don't know",
- * return "unknown" immediately instead of leaving the pending question unresolved.
- */
-export function coerceAmbiguousReplyToUnknown(reply: string): "unknown" | null {
-  const normalized = normalizeIntentText(reply);
-  if (!normalized) {
-    return null;
-  }
-
-  if (AMBIGUOUS_UNKNOWN_EXACT_MATCHES.has(normalized)) {
-    return "unknown";
-  }
-
-  const matchedPrefix = AMBIGUOUS_UNKNOWN_PREFIXES.some(
-    (prefix) => normalized === prefix || normalized.startsWith(`${prefix} `)
-  );
-  return matchedPrefix ? "unknown" : null;
 }
 
 function questionAllowsCanonicalUnknown(question: {
