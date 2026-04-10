@@ -60,7 +60,10 @@
     "eval:benchmark:validate": "npx ts-node --esm scripts/validate-benchmark.ts",
     "eval:silent-trial": "npx ts-node --esm scripts/silent-trial.ts",
     "eval:silent-trial:7d": "npx ts-node --esm scripts/silent-trial.ts --days=7",
-    "eval:silent-trial:30d": "npx ts-node --esm scripts/silent-trial.ts --days=30"
+    "eval:silent-trial:30d": "npx ts-node --esm scripts/silent-trial.ts --days=30",
+    "multimodal:demo": "node scripts/multimodal-triage-pilot.mjs --demo",
+    "multimodal:live": "node scripts/multimodal-triage-pilot.mjs --image=",
+    "multimodal:temporal": "node scripts/multimodal-triage-pilot.mjs --images= --track-temporal"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
