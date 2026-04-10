@@ -37,6 +37,7 @@ node scripts/agent-done.mjs <ticket-slug> "<what you did>" --agent <your-name>
 - Cursor → `--agent cursor`
 - Codex → `--agent codex`
 - Antigravity → `--agent antigravity`
+- Qoder → `--agent qoder`
 - GitHub Copilot → `--agent copilot`
 - Claude Code → `--agent claude` (default, can omit)
 
