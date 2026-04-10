@@ -1,7 +1,74 @@
 [
-  {"case_id": "MULTI-SKIN-001", "modality": "skin_lesion", "image_url": "https://example.com/skin/hot-spot-acute.jpg", "expected_symptoms": ["wound_skin_issue", "excessive_scratching"], "expected_disposition": "vet_within_48h", "notes": "Acute moist dermatitis (hot spot)"},
-  {"case_id": "MULTI-SKIN-002", "modality": "skin_lesion", "image_url": "https://example.com/skin/ringworm-circular.jpg", "expected_symptoms": ["wound_skin_issue", "hair_loss"], "expected_disposition": "vet_within_48h", "notes": "Circular lesion with hair loss, possible ringworm"},
-  {"case_id": "MULTI-SKIN-003", "modality": "skin_lesion", "image_url": "https://example.com/skin/mass-lump.jpg", "expected_symptoms": ["swelling_lump"], "expected_disposition": "vet_within_48h", "notes": "Subcutaneous mass, needs cytology"},
-  {"case_id": "MULTI-SKIN-004", "modality": "skin_lesion", "image_url": "https://example.com/skin/normal-coat.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal healthy coat"},
-  {"case_id": "MULTI-SKIN-005", "modality": "skin_lesion", "image_url": "https://example.com/skin/hives-allergic.jpg", "expected_symptoms": ["excessive_scratching", "swelling_lump"], "expected_disposition": "same_day_vet", "notes": "Hives, allergic reaction"}
+  {
+    "case_id": "MULTI-SKIN-001",
+    "modality": "skin_lesion",
+    "description": "Acute moist dermatitis (hot spot) on the neck of a Golden Retriever, red and oozing",
+    "breed_context": "high_hot_spot_risk",
+    "expected_symptoms": ["wound_skin_issue", "excessive_scratching"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_underlying_allergy", "underestimating_infection_risk"],
+    "notes": "Hot spots are 3x more common in Golden Retrievers. Must identify underlying cause (allergy, flea, moisture). Not an emergency but needs treatment to prevent spread."
+  },
+  {
+    "case_id": "MULTI-SKIN-002",
+    "modality": "skin_lesion",
+    "description": "Circular lesion with hair loss on a Pit Bull puppy, scaly center",
+    "breed_context": "high_allergy_risk",
+    "expected_symptoms": ["wound_skin_issue", "hair_loss"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_ringworm_zoonotic_risk", "missing_demodex"],
+    "notes": "Circular alopecia in puppy: rule out ringworm (zoonotic risk to family) and demodectic mange. Pit Bull puppies have elevated demodex susceptibility."
+  },
+  {
+    "case_id": "MULTI-SKIN-003",
+    "modality": "skin_lesion",
+    "description": "Rapidly growing firm mass on the forelimb of a Boxer",
+    "breed_context": "highest_mast_cell_risk",
+    "expected_symptoms": ["skin_mass"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_mast_cell_tumor", "assuming_lipoma_without_cytology", "false_reassurance"],
+    "notes": "Boxers have the HIGHEST breed risk for mast cell tumors. Any new skin mass in a Boxer must be evaluated with FNA/cytology. Never assume benign without pathological confirmation."
+  },
+  {
+    "case_id": "MULTI-SKIN-004",
+    "modality": "skin_lesion",
+    "description": "Normal healthy coat with no visible abnormalities in a Poodle",
+    "breed_context": "normal",
+    "expected_symptoms": [],
+    "expected_disposition": "monitor_at_home",
+    "urgency_tier": 4,
+    "advisory_only": true,
+    "failure_modes": ["false_alarm_over_escalation"],
+    "notes": "Normal coat and skin. Must still ask about scratching, licking, or chewing behaviors that may not be visible in a single image."
+  },
+  {
+    "case_id": "MULTI-SKIN-005",
+    "modality": "skin_lesion",
+    "description": "Raised wheals (hives) across the body of a Bulldog, facial swelling",
+    "breed_context": "brachycephalic",
+    "expected_symptoms": ["hives", "facial_swelling"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_anaphylaxis", "underestimating_airway_risk"],
+    "notes": "Hives + facial swelling = allergic reaction. In brachycephalic breeds, facial swelling can compromise the airway. Must assess breathing quality. Risk of anaphylactic progression."
+  },
+  {
+    "case_id": "MULTI-SKIN-006",
+    "modality": "skin_lesion",
+    "description": "Deep infected wound with green discharge on the hind leg of a German Shepherd",
+    "breed_context": "normal",
+    "expected_symptoms": ["wound_skin_issue", "infection"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_abscess", "underestimating_infection_severity", "missing_foreign_body"],
+    "notes": "Green discharge = active bacterial infection. Must check for foreign body, assess depth, and evaluate for systemic infection signs (fever, lethargy). May need antibiotics and debridement."
+  }
 ]

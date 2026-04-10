@@ -1,8 +1,74 @@
 [
-  {"case_id": "MULTI-VOMIT-001", "modality": "vomit", "image_url": "https://example.com/vomit/blood-hematemesis.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "emergency_vet_now", "notes": "Blood in vomit (hematemesis)"},
-  {"case_id": "MULTI-VOMIT-002", "modality": "vomit", "image_url": "https://example.com/vomit/bile-yellow.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "vet_within_48h", "notes": "Yellow bile, empty stomach vomiting"},
-  {"case_id": "MULTI-VOMIT-003", "modality": "vomit", "image_url": "https://example.com/vomit/food-partially-digested.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "monitor_and_reassess", "notes": "Partially digested food, possible regurgitation"},
-  {"case_id": "MULTI-VOMIT-004", "modality": "vomit", "image_url": "https://example.com/vomit/foreign-object.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "emergency_vet_now", "notes": "Foreign object visible in vomit"},
-  {"case_id": "MULTI-VOMIT-005", "modality": "vomit", "image_url": "https://example.com/vomit/white-foam.jpg", "expected_symptoms": ["vomiting"], "expected_disposition": "vet_within_48h", "notes": "White foam, possible kennel cough or gastritis"},
-  {"case_id": "MULTI-VOMIT-006", "modality": "vomit", "image_url": "https://example.com/vomit/normal-none.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "No vomiting observed"}
+  {
+    "case_id": "MULTI-VOMIT-001",
+    "modality": "vomit_analysis",
+    "description": "Bright red blood in vomit (hematemesis) in a German Shepherd with distended abdomen",
+    "breed_context": "deep_chested",
+    "expected_symptoms": ["vomiting", "bloody_vomit", "swollen_abdomen"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_gdv", "missing_gastric_ulcer", "false_reassurance"],
+    "notes": "Hematemesis + distended abdomen in deep-chested breed = GDV/bloat with gastric necrosis until proven otherwise. Surgical emergency. Never recommend waiting or monitoring."
+  },
+  {
+    "case_id": "MULTI-VOMIT-002",
+    "modality": "vomit_analysis",
+    "description": "Yellow bile vomit on an empty stomach, occurs before breakfast in a Poodle",
+    "breed_context": "normal",
+    "expected_symptoms": ["vomiting", "bilious_vomiting"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_addisons_disease", "over_escalation_of_bilious_syndrome"],
+    "notes": "Bilious vomiting syndrome is common and often managed with a late-night snack. However, in Poodles, must rule out Addison's disease (breed predisposition). Ask about other symptoms."
+  },
+  {
+    "case_id": "MULTI-VOMIT-003",
+    "modality": "vomit_analysis",
+    "description": "Partially digested food shortly after eating in a Labrador",
+    "breed_context": "large_breed",
+    "expected_symptoms": ["vomiting"],
+    "expected_disposition": "monitor_at_home",
+    "urgency_tier": 4,
+    "advisory_only": true,
+    "failure_modes": ["missing_dietary_indiscretion", "missing_foreign_body"],
+    "notes": "Regurgitation vs vomiting distinction is important. If food is undigested and happens immediately, may be regurgitation (esophageal issue). If digested, true vomiting. Monitor for recurrence."
+  },
+  {
+    "case_id": "MULTI-VOMIT-004",
+    "modality": "vomit_analysis",
+    "description": "Foreign object (toy piece) visible in vomit in a Golden Retriever puppy",
+    "breed_context": "puppy",
+    "expected_symptoms": ["vomiting", "foreign_body"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_intestinal_obstruction", "underestimating_foreign_body_risk"],
+    "notes": "Even if foreign object was vomited, pieces may remain in GI tract. Must monitor for continued vomiting, abdominal pain, or lethargy. Puppies are high risk for obstruction."
+  },
+  {
+    "case_id": "MULTI-VOMIT-005",
+    "modality": "vomit_analysis",
+    "description": "White foam vomit, occasional, in a Pug with coughing",
+    "breed_context": "brachycephalic",
+    "expected_symptoms": ["vomiting", "coughing"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_kennel_cough", "missing_brachycephalic_airway_syndrome"],
+    "notes": "White foam + coughing in a brachycephalic breed: could be kennel cough, BAOS, or tracheal collapse. The 'vomiting' may actually be post-tussive gagging. Must assess breathing quality."
+  },
+  {
+    "case_id": "MULTI-VOMIT-006",
+    "modality": "vomit_analysis",
+    "description": "Coffee-ground appearance vomit (digested blood) in a senior Rottweiler",
+    "breed_context": "senior_high_cancer_risk",
+    "expected_symptoms": ["vomiting", "hematemesis"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_gastric_ulcer", "missing_gastric_carcinoma", "false_reassurance"],
+    "notes": "Coffee-ground vomit = digested blood from upper GI tract. In a senior Rottweiler, consider gastric carcinoma, ulcer, or coagulopathy. This is an emergency requiring immediate evaluation."
+  }
 ]

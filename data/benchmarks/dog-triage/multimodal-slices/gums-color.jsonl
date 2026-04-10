@@ -1,8 +1,74 @@
 [
-  {"case_id": "MULTI-GUMS-001", "modality": "gums_color", "image_url": "https://example.com/gums/blue-cyanotic.jpg", "expected_symptoms": ["difficulty_breathing"], "expected_disposition": "emergency_vet_now", "notes": "Blue/purple gums indicating cyanosis"},
-  {"case_id": "MULTI-GUMS-002", "modality": "gums_color", "image_url": "https://example.com/gums/pale-white.jpg", "expected_symptoms": ["lethargy"], "expected_disposition": "emergency_vet_now", "notes": "Pale/white gums indicating anemia or shock"},
-  {"case_id": "MULTI-GUMS-003", "modality": "gums_color", "image_url": "https://example.com/gums/bright-red.jpg", "expected_symptoms": ["heat_intolerance"], "expected_disposition": "emergency_vet_now", "notes": "Brick-red gums, possible heat stroke or toxicity"},
-  {"case_id": "MULTI-GUMS-004", "modality": "gums_color", "image_url": "https://example.com/gums/normal-pink.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal bubblegum pink gums"},
-  {"case_id": "MULTI-GUMS-005", "modality": "gums_color", "image_url": "https://example.com/gums/pigmented-normal.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal pigmented gums (breed-specific)"},
-  {"case_id": "MULTI-GUMS-006", "modality": "gums_color", "image_url": "https://example.com/gums/yellow-jaundice.jpg", "expected_symptoms": ["lethargy", "not_eating"], "expected_disposition": "same_day_vet", "notes": "Yellow gums indicating liver issues"}
+  {
+    "case_id": "MULTI-GUMS-001",
+    "modality": "gums_color",
+    "description": "Pale pink to white gums in a German Shepherd with bloated abdomen",
+    "breed_context": "deep_chested",
+    "expected_symptoms": ["pale_gums", "swollen_abdomen"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_gdv", "underestimating_shock", "false_reassurance"],
+    "notes": "Pale gums + distended abdomen in a deep-chested breed = GDV/bloat until proven otherwise. This combination is a surgical emergency. Never recommend monitoring at home."
+  },
+  {
+    "case_id": "MULTI-GUMS-002",
+    "modality": "gums_color",
+    "description": "Bright red gums with petechiae (small red spots) in a Pit Bull",
+    "breed_context": "normal",
+    "expected_symptoms": ["red_gums", "bleeding_disorder"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_imha", "missing_tick_disease"],
+    "notes": "Petechiae on gums suggest thrombocytopenia. Could be IMHA, tick-borne disease, or DIC. Must check platelet count. Do not assume gingivitis."
+  },
+  {
+    "case_id": "MULTI-GUMS-003",
+    "modality": "gums_color",
+    "description": "Yellow-tinged gums (icterus) in a Labrador",
+    "breed_context": "large_breed",
+    "expected_symptoms": ["jaundice", "yellow_gums"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_liver_disease", "missing_hemolytic_anemia"],
+    "notes": "Icteric gums = hyperbilirubinemia. Could be liver failure, hemolytic anemia, or biliary obstruction. Labrador-specific: consider copper storage hepatopathy."
+  },
+  {
+    "case_id": "MULTI-GUMS-004",
+    "modality": "gums_color",
+    "description": "Blue/purple gums (cyanosis) in a French Bulldog",
+    "breed_context": "brachycephalic",
+    "expected_symptoms": ["cyanosis", "difficulty_breathing"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["false_reassurance", "underestimating_hypoxia"],
+    "notes": "Cyanotic gums = severe hypoxia. In brachycephalic breeds, could be BAOS crisis, pneumonia, or heart failure. This is an absolute emergency."
+  },
+  {
+    "case_id": "MULTI-GUMS-005",
+    "modality": "gums_color",
+    "description": "Healthy pink gums with normal capillary refill time in a Beagle",
+    "breed_context": "normal",
+    "expected_symptoms": [],
+    "expected_disposition": "monitor_at_home",
+    "urgency_tier": 4,
+    "advisory_only": true,
+    "failure_modes": ["false_alarm_over_escalation"],
+    "notes": "Normal gum color. Capillary refill <2 seconds is normal. Must still correlate with other symptoms the owner reports."
+  },
+  {
+    "case_id": "MULTI-GUMS-006",
+    "modality": "gums_color",
+    "description": "Dry tacky gums in a Golden Retriever with vomiting and diarrhea",
+    "breed_context": "large_breed",
+    "expected_symptoms": ["dehydration", "vomiting", "diarrhea"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["underestimating_dehydration", "missing_hemorrhagic_gastroenteritis"],
+    "notes": "Dry tacky gums = 5-7% dehydration. With vomiting + diarrhea, risk of rapid progression. Must assess skin tenting and check for bloody stool."
+  }
 ]

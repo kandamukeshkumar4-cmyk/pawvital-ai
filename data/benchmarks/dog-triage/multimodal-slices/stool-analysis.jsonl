@@ -1,7 +1,74 @@
 [
-  {"case_id": "MULTI-STOOL-001", "modality": "stool", "image_url": "https://example.com/stool/bloody-diarrhea.jpg", "expected_symptoms": ["diarrhea", "blood_in_stool"], "expected_disposition": "same_day_vet", "notes": "Bloody diarrhea, hemorrhagic gastroenteritis"},
-  {"case_id": "MULTI-STOOL-002", "modality": "stool", "image_url": "https://example.com/stool/formed-normal.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal formed stool"},
-  {"case_id": "MULTI-STOOL-003", "modality": "stool", "image_url": "https://example.com/stool/soft-unformed.jpg", "expected_symptoms": ["diarrhea"], "expected_disposition": "monitor_and_reassess", "notes": "Soft unformed stool, mild GI upset"},
-  {"case_id": "MULTI-STOOL-004", "modality": "stool", "image_url": "https://example.com/stool/watery-severe.jpg", "expected_symptoms": ["diarrhea"], "expected_disposition": "same_day_vet", "notes": "Watery diarrhea, risk of dehydration"},
-  {"case_id": "MULTI-STOOL-005", "modality": "stool", "image_url": "https://example.com/stool/black-tarry.jpg", "expected_symptoms": ["diarrhea", "blood_in_stool"], "expected_disposition": "emergency_vet_now", "notes": "Melena (digested blood), upper GI bleed"}
+  {
+    "case_id": "MULTI-STOOL-001",
+    "modality": "stool_analysis",
+    "description": "Bloody diarrhea with red streaks in a 4-month-old unvaccinated Pit Bull puppy",
+    "breed_context": "puppy",
+    "expected_symptoms": ["diarrhea", "bloody_diarrhea"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_parvovirus", "underestimating_dehydration_in_puppy", "false_reassurance"],
+    "notes": "Bloody diarrhea in an unvaccinated puppy = parvovirus until proven otherwise. Puppies dehydrate rapidly. This is an emergency. Must ask about vaccination status and eating/drinking behavior."
+  },
+  {
+    "case_id": "MULTI-STOOL-002",
+    "modality": "stool_analysis",
+    "description": "Normal formed stool, brown color in an adult Beagle",
+    "breed_context": "normal",
+    "expected_symptoms": [],
+    "expected_disposition": "monitor_at_home",
+    "urgency_tier": 4,
+    "advisory_only": true,
+    "failure_modes": ["false_alarm_over_escalation"],
+    "notes": "Normal stool appearance. Must correlate with other symptoms owner reports. Ask about frequency, straining, or changes from normal pattern."
+  },
+  {
+    "case_id": "MULTI-STOOL-003",
+    "modality": "stool_analysis",
+    "description": "Soft unformed stool, no blood, in a senior Labrador",
+    "breed_context": "senior_large_breed",
+    "expected_symptoms": ["diarrhea"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_exocrine_pancreatic_insufficiency", "missing_inflammatory_bowel_disease"],
+    "notes": "Chronic soft stool in a senior Labrador: consider EPI, IBD, or dietary intolerance. Not emergency but needs workup if persistent >48h or accompanied by weight loss."
+  },
+  {
+    "case_id": "MULTI-STOOL-004",
+    "modality": "stool_analysis",
+    "description": "Watery severe diarrhea with mucus in a German Shepherd",
+    "breed_context": "normal",
+    "expected_symptoms": ["diarrhea", "dehydration"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_hemorrhagic_gastroenteritis", "underestimating_dehydration", "missing_epi"],
+    "notes": "Severe watery diarrhea risks rapid dehydration. German Shepherds are prone to EPI and perianal fistulas. Must check hydration status, gum color, and skin tenting."
+  },
+  {
+    "case_id": "MULTI-STOOL-005",
+    "modality": "stool_analysis",
+    "description": "Black tarry stool (melena) in a senior Great Dane",
+    "breed_context": "deep_chested_senior",
+    "expected_symptoms": ["melena", "upper_gi_bleed"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_upper_gi_bleed", "missing_gastric_ulcer", "false_reassurance"],
+    "notes": "Melena = digested blood from upper GI tract. Could be gastric ulcer, GI tumor, or coagulopathy. In a senior Great Dane, consider gastric carcinoma. This is an emergency."
+  },
+  {
+    "case_id": "MULTI-STOOL-006",
+    "modality": "stool_analysis",
+    "description": "Rice-like white segments (tapeworm proglottids) visible in stool of a Husky",
+    "breed_context": "normal",
+    "expected_symptoms": ["intestinal_parasites"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_flea_connection", "underestimating_parasite_burden"],
+    "notes": "Tapeworm segments are visible to owners. Must treat with praziquantel. Also address flea control (tapeworms transmitted via flea ingestion). Not emergency but needs treatment."
+  }
 ]

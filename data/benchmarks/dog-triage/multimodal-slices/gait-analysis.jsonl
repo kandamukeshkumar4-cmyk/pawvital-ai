@@ -1,7 +1,74 @@
 [
-  {"case_id": "MULTI-GAIT-001", "modality": "gait", "image_url": "https://example.com/gait/limping-front-left.jpg", "expected_symptoms": ["limping", "abnormal_gait"], "expected_disposition": "same_day_vet", "notes": "Front left leg favoring, visible weight shift"},
-  {"case_id": "MULTI-GAIT-002", "modality": "gait", "image_url": "https://example.com/gait/wobbly-hindquarters.jpg", "expected_symptoms": ["abnormal_gait", "generalized_stiffness"], "expected_disposition": "vet_within_48h", "notes": "Hindquarter weakness, difficulty rising"},
-  {"case_id": "MULTI-GAIT-003", "modality": "gait", "image_url": "https://example.com/gait/non-weight-bearing.jpg", "expected_symptoms": ["limping"], "expected_disposition": "emergency_vet_now", "notes": "Non-weight bearing, possible fracture"},
-  {"case_id": "MULTI-GAIT-004", "modality": "gait", "image_url": "https://example.com/gait/reluctant-to-move.jpg", "expected_symptoms": ["lethargy", "limping"], "expected_disposition": "vet_within_48h", "notes": "Reluctant to walk, generalized stiffness"},
-  {"case_id": "MULTI-GAIT-005", "modality": "gait", "image_url": "https://example.com/gait/normal-walk.jpg", "expected_symptoms": [], "expected_disposition": "monitor_and_reassess", "notes": "Normal gait, no visible abnormalities"}
+  {
+    "case_id": "MULTI-GAIT-001",
+    "modality": "gait_analysis",
+    "description": "Front left leg favoring, visible weight shift when walking in a Labrador",
+    "breed_context": "large_breed",
+    "expected_symptoms": ["limping", "abnormal_gait"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_cruciate_injury", "underestimating_pain"],
+    "notes": "Forelimb favoring in a Labrador: consider elbow dysplasia, soft tissue injury, or paw foreign body. Must ask about onset (sudden vs gradual) and weight-bearing status."
+  },
+  {
+    "case_id": "MULTI-GAIT-002",
+    "modality": "gait_analysis",
+    "description": "Hindquarter weakness, difficulty rising, dragging rear paws in a Dachshund",
+    "breed_context": "ivdd_high_risk",
+    "expected_symptoms": ["abnormal_gait", "hind_limbs_weakness"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_ivdd", "false_reassurance", "delaying_spinal_care"],
+    "notes": "Dachshund with hind limb weakness = IVDD until proven otherwise. Dragging paws = deep pain possibly compromised. This is a surgical emergency with a narrow window. Never recommend waiting."
+  },
+  {
+    "case_id": "MULTI-GAIT-003",
+    "modality": "gait_analysis",
+    "description": "Non-weight bearing on right hind leg, swelling at stifle in a Rottweiler",
+    "breed_context": "large_breed_high_cancer_risk",
+    "expected_symptoms": ["limping", "swelling"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_osteosarcoma", "assuming_simple_sprain"],
+    "notes": "Rottweiler + stifle swelling + non-weight bearing = high osteosarcoma risk. Must not assume simple sprain. Radiographs needed urgently. Breed-specific cancer risk is critical context."
+  },
+  {
+    "case_id": "MULTI-GAIT-004",
+    "modality": "gait_analysis",
+    "description": "Reluctant to walk, generalized stiffness after rest in a senior Golden Retriever",
+    "breed_context": "senior_large_breed",
+    "expected_symptoms": ["limping", "stiffness"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_lyme_disease", "missing_septic_arthritis"],
+    "notes": "Morning stiffness improving with movement in a senior dog suggests osteoarthritis, but must rule out tick-borne disease (Lyme) and immune-mediated polyarthritis."
+  },
+  {
+    "case_id": "MULTI-GAIT-005",
+    "modality": "gait_analysis",
+    "description": "Mild intermittent head bob while walking in a young French Bulldog",
+    "breed_context": "brachycephalic",
+    "expected_symptoms": ["limping"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["over_escalation_of_minor_limp"],
+    "notes": "Head bob suggests forelimb lameness. In young Frenchie, consider elbow dysplasia or shoulder OCD. Low urgency but should be evaluated to prevent progression."
+  },
+  {
+    "case_id": "MULTI-GAIT-006",
+    "modality": "gait_analysis",
+    "description": "Sudden inability to use hind legs, painful spine in a Corgi",
+    "breed_context": "ivdd_high_risk",
+    "expected_symptoms": ["paralysis", "hind_limbs_weakness", "spinal_pain"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_ivdd_emergency", "false_reassurance", "recommending_rest_instead_of_ER"],
+    "notes": "Corgi with acute paralysis = IVDD emergency. Surgical window is 12-24 hours. Must NOT recommend rest or waiting. Immediate ER for neurological assessment."
+  }
 ]
