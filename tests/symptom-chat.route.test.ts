@@ -4350,7 +4350,6 @@ describe("VET-832: conversationState in chat API", () => {
     expect(payload.session).not.toHaveProperty("conversationState");
   });
 });
-
 describe("VET-728: confirmation-state replay and compression regressions", () => {
   function assertVet728ConfirmationPayloadSafe(payload: {
     type?: unknown;

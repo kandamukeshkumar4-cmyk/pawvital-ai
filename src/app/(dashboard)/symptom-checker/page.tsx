@@ -435,6 +435,21 @@ export default function SymptomCheckerPage() {
 
       const data = await res.json();
 
+      if (data.conversationState) {
+        setConversationState(data.conversationState);
+      }
+
+      if (data.session?.answered_questions) {
+        setAnsweredCount(Object.keys(data.session.answered_questions).length);
+      }
+
+      if (data.session?.unresolved_question_ids) {
+        setTotalQuestions(
+          Object.keys(data.session.answered_questions || {}).length +
+            (data.session.unresolved_question_ids?.length || 0)
+        );
+      }
+
       // Always store returned session state (both state and ref)
       if (data.session) {
         setTriageSession(data.session);
