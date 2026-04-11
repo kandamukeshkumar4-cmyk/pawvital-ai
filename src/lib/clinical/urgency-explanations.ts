@@ -5,7 +5,7 @@
  * Uses provenance from VET-921 to reference specific rules.
  */
 
-import type { EvidenceProvenance } from "./clinical-evidence";
+import type { EvidenceProvenance } from "../clinical-evidence";
 
 export interface UrgencyExplanation {
   urgency_level: string;

@@ -1,5 +1,5 @@
 import React from "react";
-import { getSelfCheckGuide, type SelfCheckGuide } from "@/lib/clinical/self-check-guides";
+import { getSelfCheckGuide, type SelfCheckGuide as SelfCheckGuideType } from "@/lib/clinical/self-check-guides";
 
 interface SelfCheckGuideProps {
   guideKey: string;
@@ -7,7 +7,7 @@ interface SelfCheckGuideProps {
 }
 
 export const SelfCheckGuide: React.FC<SelfCheckGuideProps> = ({ guideKey, onComplete }) => {
-  const guide = getSelfCheckGuide(guideKey);
+  const guide: SelfCheckGuideType | null = getSelfCheckGuide(guideKey) ?? null;
 
   if (!guide) {
     return <div className="text-sm text-gray-500">Guide not available</div>;
@@ -44,7 +44,7 @@ export const SelfCheckGuide: React.FC<SelfCheckGuideProps> = ({ guideKey, onComp
           onClick={onComplete}
           className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
         >
-          I've completed this check
+          I&apos;ve completed this check
         </button>
       )}
     </div>

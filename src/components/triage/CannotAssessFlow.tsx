@@ -15,10 +15,10 @@ export const CannotAssessFlow: React.FC<CannotAssessFlowProps> = ({
 }) => {
   return (
     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
-      <h3 className="font-semibold text-yellow-900">Can't assess {symptom.replace(/_/g, " ")}?</h3>
+      <h3 className="font-semibold text-yellow-900">Can&apos;t assess {symptom.replace(/_/g, " ")}?</h3>
 
       <p className="text-sm text-yellow-800">
-        That's okay - not all signs are easy to check at home. We can proceed safely.
+        That&apos;s okay - not all signs are easy to check at home. We can proceed safely.
       </p>
 
       {alternateQuestion && (
@@ -33,18 +33,18 @@ export const CannotAssessFlow: React.FC<CannotAssessFlowProps> = ({
           onClick={onCannotAssess}
           className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition"
         >
-          I can't assess this
+          I can&apos;t assess this
         </button>
         <button
           onClick={onTryAgain}
           className="flex-1 bg-white border border-yellow-300 text-yellow-800 px-4 py-2 rounded hover:bg-yellow-50 transition"
         >
-          I'll try again
+          I&apos;ll try again
         </button>
       </div>
 
       <p className="text-xs text-gray-600">
-        If you're unsure, it's always safer to consult your veterinarian.
+        If you&apos;re unsure, it&apos;s always safer to consult your veterinarian.
       </p>
     </div>
   );

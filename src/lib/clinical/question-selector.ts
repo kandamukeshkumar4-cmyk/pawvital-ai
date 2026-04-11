@@ -10,7 +10,7 @@ import { getOntologyForComplaint } from "./complaint-ontology";
 
 export interface QuestionSelectorSession {
   answered_questions: string[];
-  extracted_answers: Record<string, any>;
+  extracted_answers: Record<string, unknown>;
   unresolved_question_ids: string[];
   known_symptoms: string[];
   turn_count: number;

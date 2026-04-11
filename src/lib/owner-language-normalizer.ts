@@ -112,7 +112,7 @@ export function normalizeOwnerInput(
   return {
     normalized_text: normalizedText,
     confidence,
-    applied_rules,
+    applied_rules: appliedRules,
     fallback: !hasNormalization,
   };
 }

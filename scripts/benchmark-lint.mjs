@@ -15,7 +15,6 @@ import process from "node:process";
 
 const ROOT_DIR = process.cwd();
 const ENRICHED_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "gold-v1-enriched.jsonl");
-const MATRIX_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "coverage-matrix.json");
 const REPORT_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "benchmark-lint-report.md");
 
 // All 50 complaint families

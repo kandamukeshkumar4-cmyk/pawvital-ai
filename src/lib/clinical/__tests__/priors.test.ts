@@ -6,161 +6,120 @@
  */
 
 import {
-  applyDemographicPrior,
-  applyBreedPrior,
-  applySeasonalPrior,
-  applyReproductivePrior,
-  applyToxinPrior,
   capPriorAdjustment,
-  PriorContext,
-} from '../src/lib/clinical/priors';
+  computeBreedPriors,
+  computeDemographicPriors,
+  computeReproPriors,
+  computeSeasonalPriors,
+  computeToxinPriors,
+  type PetProfile,
+} from "../priors";
 
-describe('Clinical Priors', () => {
-  describe('capPriorAdjustment', () => {
-    it('should prevent red-flag-triggered emergencies from being downgraded', () => {
-      const baseUrgency = 1; // Emergency
-      const priorMultiplier = 0.5; // Would normally downgrade
-      const hasRedFlags = true;
+const baseProfile: PetProfile = {
+  age_years: 5,
+  breed: "mixed breed",
+  sex: "female",
+  neutered: true,
+  weight_kg: 20,
+  species: "dog",
+};
 
-      const result = capPriorAdjustment(baseUrgency, priorMultiplier, hasRedFlags);
-      // Red flags present: should NOT allow downgrade
-      expect(result).toBeLessThanOrEqual(baseUrgency);
+describe("Clinical Priors", () => {
+  describe("capPriorAdjustment", () => {
+    it("should prevent red-flag-triggered emergencies from being downgraded", () => {
+      const result = capPriorAdjustment(2, [0.5], true);
+
+      expect(result).toBe(2);
     });
 
-    it('should allow prior adjustment when no red flags present', () => {
-      const baseUrgency = 3;
-      const priorMultiplier = 0.8;
-      const hasRedFlags = false;
+    it("should apply prior multipliers when no red flags are present", () => {
+      const result = capPriorAdjustment(2, [1.5, 1.2], false);
 
-      const result = capPriorAdjustment(baseUrgency, priorMultiplier, hasRedFlags);
-      expect(result).toBeDefined();
+      expect(result).toBeCloseTo(3.6);
     });
 
-    it('should cap adjustment to prevent extreme changes', () => {
-      const baseUrgency = 2;
-      const priorMultiplier = 0.1; // Extreme multiplier
-      const hasRedFlags = false;
+    it("should cap extreme multipliers", () => {
+      const result = capPriorAdjustment(4, [10], false, 10);
 
-      const result = capPriorAdjustment(baseUrgency, priorMultiplier, hasRedFlags);
-      // Should be capped to reasonable range
-      expect(result).toBeGreaterThanOrEqual(1);
-      expect(result).toBeLessThanOrEqual(4);
-    });
-  });
-
-  describe('Demographic Prior', () => {
-    it('should apply age-based adjustments', () => {
-      const context: PriorContext = {
-        ageYears: 12,
-        species: 'dog',
-      };
-      const result = applyDemographicPrior(context);
-      expect(result).toBeDefined();
-      expect(result.multiplier).toBeDefined();
-    });
-
-    it('should apply juvenile risk adjustments', () => {
-      const context: PriorContext = {
-        ageYears: 0.5,
-        species: 'dog',
-      };
-      const result = applyDemographicPrior(context);
-      expect(result.multiplier).toBeDefined();
+      expect(result).toBe(10);
     });
   });
 
-  describe('Breed Prior', () => {
-    it('should apply breed-specific risk adjustments', () => {
-      const context: PriorContext = {
-        breed: 'German Shepherd',
-        species: 'dog',
-      };
-      const result = applyBreedPrior(context);
-      expect(result).toBeDefined();
+  describe("demographic priors", () => {
+    it("should apply puppy and senior adjustments", () => {
+      expect(computeDemographicPriors({ ...baseProfile, age_years: 0.5 })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ disease: "puppy_concern", reason: "puppy_age" }),
+        ]),
+      );
+
+      expect(computeDemographicPriors({ ...baseProfile, age_years: 12 })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ disease: "senior_decline", reason: "senior_age" }),
+        ]),
+      );
     });
 
-    it('should handle unknown breed gracefully', () => {
-      const context: PriorContext = {
-        breed: 'Unknown',
-        species: 'dog',
-      };
-      const result = applyBreedPrior(context);
-      expect(result.multiplier).toBe(1.0); // Neutral for unknown
-    });
-  });
-
-  describe('Seasonal Prior', () => {
-    it('should apply seasonal adjustments', () => {
-      const context: PriorContext = {
-        month: 7, // July
-        species: 'dog',
-      };
-      const result = applySeasonalPrior(context);
-      expect(result).toBeDefined();
-    });
-
-    it('should handle all months', () => {
-      for (let month = 1; month <= 12; month++) {
-        const context: PriorContext = { month, species: 'dog' };
-        const result = applySeasonalPrior(context);
-        expect(result).toBeDefined();
-      }
+    it("should apply size adjustments", () => {
+      expect(computeDemographicPriors({ ...baseProfile, weight_kg: 45 })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ disease: "joint_issues", reason: "large_breed" }),
+        ]),
+      );
     });
   });
 
-  describe('Reproductive Prior', () => {
-    it('should apply reproductive status adjustments', () => {
-      const context: PriorContext = {
-        neutered: false,
-        sex: 'female',
-        species: 'dog',
-      };
-      const result = applyReproductivePrior(context);
-      expect(result).toBeDefined();
+  describe("breed priors", () => {
+    it("should apply breed-specific risk adjustments", () => {
+      const result = computeBreedPriors("German Shepherd Dog");
+
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ disease: "hip_dysplasia", reason: "breed_german shepherd" }),
+        ]),
+      );
     });
 
-    it('should have neutral effect for neutered pets', () => {
-      const context: PriorContext = {
-        neutered: true,
-        sex: 'female',
-        species: 'dog',
-      };
-      const result = applyReproductivePrior(context);
-      expect(result.multiplier).toBe(1.0);
+    it("should return no adjustments for unknown breeds", () => {
+      expect(computeBreedPriors("Unknown")).toEqual([]);
     });
   });
 
-  describe('Toxin Prior', () => {
-    it('should apply toxin exposure adjustments', () => {
-      const context: PriorContext = {
-        suspectedToxinExposure: true,
-        species: 'dog',
-      };
-      const result = applyToxinPrior(context);
-      expect(result.multiplier).toBeGreaterThan(1.0);
+  describe("seasonal priors", () => {
+    it("should apply seasonal adjustments when month and symptom match", () => {
+      const result = computeSeasonalPriors(7, ["lethargy"]);
+
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ disease: "lethargy", reason: "seasonal_tick_season" }),
+        ]),
+      );
     });
 
-    it('should have neutral effect when no toxin exposure', () => {
-      const context: PriorContext = {
-        suspectedToxinExposure: false,
-        species: 'dog',
-      };
-      const result = applyToxinPrior(context);
-      expect(result.multiplier).toBe(1.0);
+    it("should be neutral when the symptom does not match", () => {
+      expect(computeSeasonalPriors(7, ["vomiting"])).toEqual([]);
     });
   });
 
-  describe('Prior Composition', () => {
-    it('should not allow composed priors to override red flags', () => {
-      const baseUrgency = 1;
-      const demographic = applyDemographicPrior({ ageYears: 5, species: 'dog' });
-      const breed = applyBreedPrior({ breed: 'Labrador', species: 'dog' });
+  describe("reproductive and toxin priors", () => {
+    it("should apply pyometra risk for intact females", () => {
+      const result = computeReproPriors({ ...baseProfile, neutered: false, sex: "female" });
 
-      const composedMultiplier = demographic.multiplier * breed.multiplier;
-      const result = capPriorAdjustment(baseUrgency, composedMultiplier, true);
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ disease: "pyometra", reason: "intact_female" }),
+        ]),
+      );
+    });
 
-      // Red flags must win: emergency stays emergency
-      expect(result).toBe(1);
+    it("should apply toxin exposure adjustments", () => {
+      const result = computeToxinPriors({ exposure_type: "xylitol" });
+
+      expect(result).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ disease: "toxicity", reason: "toxin_xylitol" }),
+        ]),
+      );
     });
   });
 });

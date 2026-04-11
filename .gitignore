@@ -78,6 +78,7 @@ next-env.d.ts
 !/scripts/miss-to-ticket.mjs
 !/scripts/eval-multimodal-shadow.mjs
 !/scripts/multimodal-improvement-report.mjs
+!/scripts/multimodal-triage-pilot.mjs
 
 # Generated benchmark/deployment run reports
 /data/benchmark/scorecard-*.json

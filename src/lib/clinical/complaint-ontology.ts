@@ -124,7 +124,9 @@ export function getAllOntologyContracts(): ComplaintFamilyContract[] {
   return Object.keys(ONTOLOGY_MAP).map((key) => getOntologyForComplaint(key)!);
 }
 
-export function buildComplaintOntologyFromMatrix(symptomMap: any): ComplaintFamilyContract[] {
+export function buildComplaintOntologyFromMatrix(
+  symptomMap: Record<string, { name?: string }>,
+): ComplaintFamilyContract[] {
   /**
    * Derives ontology contracts from SYMPTOM_MAP in clinical-matrix.ts
    * This ensures ontology stays in sync with the source of truth

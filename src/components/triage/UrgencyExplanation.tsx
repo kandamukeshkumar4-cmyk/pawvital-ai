@@ -1,5 +1,5 @@
 import React from "react";
-import { getUrgencyExplanation, type UrgencyExplanation } from "@/lib/clinical/urgency-explanations";
+import { getUrgencyExplanation } from "@/lib/clinical/urgency-explanations";
 
 interface UrgencyExplanationProps {
   urgencyLevel: string;

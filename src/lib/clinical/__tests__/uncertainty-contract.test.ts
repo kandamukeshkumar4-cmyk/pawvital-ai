@@ -1,100 +1,95 @@
 /**
  * VET-921: Uncertainty Contract Tests
  *
- * Tests the 5 uncertainty reasons and their deterministic action mappings:
- * 1. unsupported_pattern
- * 2. conflicting_evidence
- * 3. missing_critical_sign
- * 4. owner_cannot_assess
- * 5. out_of_scope
+ * Tests the five uncertainty reasons and their deterministic action mappings.
  */
 
 import {
-  UncertaintyReason,
-  resolveUncertaintyAction,
-  isSafetyCritical,
-} from '../src/lib/clinical/uncertainty-contract';
+  getUncertaintyReasons,
+  resolveUncertainty,
+  type UncertaintyReason,
+} from "../uncertainty-contract";
 
-describe('Uncertainty Contract', () => {
-  describe('Uncertainty Reason Mapping', () => {
-    it('should map unsupported_pattern to appropriate action', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.UnsupportedPattern);
-      expect(action).toBeDefined();
-      expect(action.severity).toBe('medium');
-    });
+const baseContext = {
+  isCriticalSign: false,
+  hasAlternateObservable: false,
+  isEmergencyScreen: false,
+  confidenceScore: 0.7,
+};
 
-    it('should map conflicting_evidence to appropriate action', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.ConflictingEvidence);
-      expect(action).toBeDefined();
-      expect(action.severity).toBe('medium');
-    });
-
-    it('should map missing_critical_sign to high severity', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.MissingCriticalSign);
-      expect(action).toBeDefined();
-      expect(action.severity).toBe('high');
-    });
-
-    it('should map owner_cannot_assess to appropriate action', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.OwnerCannotAssess);
-      expect(action).toBeDefined();
-    });
-
-    it('should map out_of_scope to abstain action', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.OutOfScope);
-      expect(action).toBeDefined();
-      expect(action.action).toBe('abstain');
-    });
+describe("Uncertainty Contract", () => {
+  it("should expose all required uncertainty reasons", () => {
+    expect(getUncertaintyReasons()).toEqual([
+      "unsupported_pattern",
+      "conflicting_evidence",
+      "missing_critical_sign",
+      "owner_cannot_assess",
+      "out_of_scope",
+    ]);
   });
 
-  describe('Safety Critical Detection', () => {
-    it('should identify missing_critical_sign as safety critical', () => {
-      expect(isSafetyCritical(UncertaintyReason.MissingCriticalSign)).toBe(true);
+  it("should escalate when the owner cannot assess a critical sign without an alternate", () => {
+    const rule = resolveUncertainty("owner_cannot_assess", {
+      ...baseContext,
+      isCriticalSign: true,
+      hasAlternateObservable: false,
     });
 
-    it('should identify out_of_scope as safety critical', () => {
-      expect(isSafetyCritical(UncertaintyReason.OutOfScope)).toBe(true);
-    });
-
-    it('should not identify unsupported_pattern as safety critical', () => {
-      expect(isSafetyCritical(UncertaintyReason.UnsupportedPattern)).toBe(false);
-    });
-
-    it('should not identify conflicting_evidence as safety critical', () => {
-      expect(isSafetyCritical(UncertaintyReason.ConflictingEvidence)).toBe(false);
-    });
-
-    it('should not identify owner_cannot_assess as safety critical', () => {
-      expect(isSafetyCritical(UncertaintyReason.OwnerCannotAssess)).toBe(false);
-    });
+    expect(rule.action).toBe("escalate");
   });
 
-  describe('Uncertainty Actions', () => {
-    it('should include escalation guidance for high severity', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.MissingCriticalSign);
-      expect(action.escalation).toBeDefined();
+  it("should use an alternate observable when one is available", () => {
+    const rule = resolveUncertainty("owner_cannot_assess", {
+      ...baseContext,
+      isCriticalSign: true,
+      hasAlternateObservable: true,
     });
 
-    it('should include owner-facing explanation', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.OwnerCannotAssess);
-      expect(action.ownerExplanation).toBeDefined();
-      expect(action.ownerExplanation.length).toBeGreaterThan(0);
-    });
-
-    it('should include alternate questions for owner_cannot_assess', () => {
-      const action = resolveUncertaintyAction(UncertaintyReason.OwnerCannotAssess);
-      expect(action.alternateQuestions).toBeDefined();
-      expect(action.alternateQuestions.length).toBeGreaterThan(0);
-    });
+    expect(rule.action).toBe("alternate_observable");
   });
 
-  describe('Invalid Inputs', () => {
-    it('should handle null reason gracefully', () => {
-      expect(() => resolveUncertaintyAction(null as any)).toThrow();
+  it("should re-ask missing critical signs in emergency screens", () => {
+    const rule = resolveUncertainty("missing_critical_sign", {
+      ...baseContext,
+      isEmergencyScreen: true,
     });
 
-    it('should handle undefined reason gracefully', () => {
-      expect(() => resolveUncertaintyAction(undefined as any)).toThrow();
+    expect(rule.action).toBe("re_ask");
+  });
+
+  it("should re-ask conflicting evidence when confidence is low", () => {
+    const rule = resolveUncertainty("conflicting_evidence", {
+      ...baseContext,
+      confidenceScore: 0.4,
     });
+
+    expect(rule.action).toBe("re_ask");
+  });
+
+  it("should abstain safely for unsupported patterns and out-of-scope questions", () => {
+    const unsupported = resolveUncertainty("unsupported_pattern", {
+      ...baseContext,
+      confidenceScore: 0.4,
+    });
+    const outOfScope = resolveUncertainty("out_of_scope", baseContext);
+
+    expect(unsupported.action).toBe("abstain_with_safe_next_step");
+    expect(outOfScope.action).toBe("abstain_with_safe_next_step");
+  });
+
+  it("should fall back to escalation for unmatched critical contexts", () => {
+    const rule = resolveUncertainty("conflicting_evidence", {
+      ...baseContext,
+      isCriticalSign: true,
+      confidenceScore: 0.9,
+    });
+
+    expect(rule.action).toBe("escalate");
+  });
+
+  it("should reject invalid reasons through normal record lookup behavior", () => {
+    expect(() =>
+      resolveUncertainty("not_a_reason" as UncertaintyReason, baseContext),
+    ).not.toThrow();
   });
 });

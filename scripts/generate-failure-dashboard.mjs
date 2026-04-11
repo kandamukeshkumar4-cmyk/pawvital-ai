@@ -11,7 +11,6 @@ import path from "node:path";
 import process from "node:process";
 
 const ROOT_DIR = process.cwd();
-const QUEUE_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "review-queue.json");
 const TAXONOMY_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "failure-taxonomy.json");
 const OUTPUT_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "failure-dashboard.md");
 
