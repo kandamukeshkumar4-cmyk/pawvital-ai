@@ -1,0 +1,24 @@
+apiVersion: runpod.io/v1
+kind: ServerlessDeployment
+metadata:
+  name: pawvital-narrow-helper
+  description: Advisory-only narrow helper for owner language normalization
+spec:
+  gpu: "NVIDIA T4"
+  container_disk_in_gb: 10
+  flashboot: true
+  environments:
+    - name: MODEL_NAME
+      value: "llama-3.1-8b"
+    - name: MAX_TOKENS
+      value: "200"
+    - name: TEMPERATURE
+      value: "0.0"
+    - name: TIMEOUT_MS
+      value: "3000"
+    - name: ADVISORY_MODE
+      value: "true"
+  scaling:
+    min_workers: 0
+    max_workers: 2
+    target_concurrency: 10

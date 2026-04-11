@@ -1,0 +1,46 @@
+{
+  "failure_types": [
+    {
+      "type": "emergency_miss",
+      "description": "System failed to escalate when benchmark expected emergency",
+      "severity": "critical",
+      "example": "Blue gums + breathing difficulty -> monitor instead of ER"
+    },
+    {
+      "type": "wrong_complaint_family",
+      "description": "System mapped to different complaint family than expected",
+      "severity": "high",
+      "example": "Vomiting mapped to lethargy instead of vomiting"
+    },
+    {
+      "type": "wrong_next_question",
+      "description": "System asked a question not in must-ask list when critical signs present",
+      "severity": "high",
+      "example": "Asked about diet when emergency screen incomplete"
+    },
+    {
+      "type": "unsafe_unknown_handling",
+      "description": "System gave disposition when owner said 'I don't know' to critical question",
+      "severity": "critical",
+      "example": "Owner can't assess gum color -> gave disposition instead of escalating"
+    },
+    {
+      "type": "unsupported_pattern",
+      "description": "System confidently diagnosed a pattern it shouldn't support",
+      "severity": "medium",
+      "example": "Diagnosed specific disease from vague symptoms"
+    },
+    {
+      "type": "owner_assessment_gap",
+      "description": "System assumed owner could assess something they explicitly couldn't",
+      "severity": "high",
+      "example": "Asked for exact breathing rate when owner said they can't count"
+    },
+    {
+      "type": "explanation_provenance_gap",
+      "description": "System gave recommendation without citing evidence",
+      "severity": "low",
+      "example": "Recommended vet visit without explaining which red flags triggered it"
+    }
+  ]
+}

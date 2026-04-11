@@ -12,6 +12,7 @@ function parseArgs(argv) {
     input: defaultInput,
     jsonOutput: defaultJsonOutput,
     csvOutput: defaultCsvOutput,
+    format: "v1", // v1 = legacy worklist, v2 = separate vet-a/vet-b packets
   };
 
   for (const arg of argv) {
@@ -25,6 +26,10 @@ function parseArgs(argv) {
     }
     if (arg.startsWith("--csv-output=")) {
       options.csvOutput = path.resolve(rootDir, arg.slice("--csv-output=".length));
+      continue;
+    }
+    if (arg.startsWith("--format=")) {
+      options.format = arg.slice("--format=".length);
     }
   }
 
@@ -175,6 +180,31 @@ function buildCsv(rows) {
   return `${lines.join("\n")}\n`;
 }
 
+function buildVetPacket(reviewer, cases) {
+  return {
+    reviewer,
+    generatedAt: new Date().toISOString(),
+    caseCount: cases.length,
+    instructions: {
+      presentation_valid: "Does the case presentation match veterinary expectations?",
+      urgency_valid: "Is the assigned urgency level clinically appropriate?",
+      must_not_miss: "Are all critical red flags and must-not-miss conditions addressed?",
+      questioning_valid: "Is the questioning sequence clinically sound?",
+      unknown_policy_valid: "Are 'cannot assess' responses handled per policy?",
+      expectation_precision: "Rate precision of expected response (excellent|good|acceptable|needs_work)",
+    },
+    cases: cases.map((row) => ({
+      id: row.id,
+      description: row.description,
+      tags: row.tags,
+      weight: row.weight,
+      expectedResponseType: row.expectedResponseType,
+      requestText: row.requestText,
+      review: buildBlankReview(reviewer),
+    })),
+  };
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const suites = loadSuites(options.input);
@@ -182,6 +212,29 @@ function main() {
     suite.cases.map((row) => toRow(fileName, suite, row))
   );
 
+  if (options.format === "v2") {
+    // Generate separate vet-a and vet-b packets
+    const outputDir = path.dirname(options.jsonOutput);
+    const vetAPacket = buildVetPacket("vet_a", rows);
+    const vetBPacket = buildVetPacket("vet_b", rows);
+
+    const vetAPath = path.join(outputDir, "vet-a-packet.json");
+    const vetBPath = path.join(outputDir, "vet-b-packet.json");
+
+    fs.writeFileSync(vetAPath, JSON.stringify(vetAPacket, null, 2) + "\n");
+    fs.writeFileSync(vetBPath, JSON.stringify(vetBPacket, null, 2) + "\n");
+
+    console.log(`Wrote Vet A packet to ${vetAPath}`);
+    console.log(`Wrote Vet B packet to ${vetBPath}`);
+    console.log(`Prepared ${rows.length} case(s) for independent dual-vet review`);
+
+    // Also generate legacy CSV for cross-reference
+    fs.writeFileSync(options.csvOutput, buildCsv(rows));
+    console.log(`Wrote cross-reference CSV to ${options.csvOutput}`);
+    return;
+  }
+
+  // Legacy v1 format
   const jsonPayload = {
     suiteId: "gold-candidate-merged",
     generatedAt: new Date().toISOString(),

@@ -1,0 +1,34 @@
+{
+  "description": "Held-out validation splits for VET-915 narrow model experiments. 20% of each dataset reserved for offline evaluation.",
+  "version": "2026-04-10",
+  "splits": {
+    "owner-language-normalization": {
+      "train_size": 24,
+      "val_size": 6,
+      "val_indices": [3, 7, 12, 18, 22, 29],
+      "metric": "exact_match",
+      "threshold": 0.9
+    },
+    "symptom-entity-extraction": {
+      "train_size": 24,
+      "val_size": 6,
+      "val_indices": [5, 11, 17, 22, 27, 29],
+      "metric": "macro_f1",
+      "threshold": 0.88
+    },
+    "retrieval-reranking": {
+      "train_size": 12,
+      "val_size": 3,
+      "val_indices": [3, 9, 14],
+      "metric": "ndcg_at_10",
+      "threshold": 0.85
+    },
+    "urgency-cue-classification": {
+      "train_size": 28,
+      "val_size": 7,
+      "val_indices": [4, 9, 16, 21, 25, 31, 34],
+      "metric": "emergency_recall",
+      "threshold": 0.97
+    }
+  }
+}

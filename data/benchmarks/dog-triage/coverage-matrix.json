@@ -1,0 +1,56 @@
+{
+  "target_total_cases": 500,
+  "dimensions": {
+    "complaint_family": {
+      "min_per_family": 8,
+      "targets": {
+        "difficulty_breathing": 10,
+        "swollen_abdomen": 10,
+        "seizure_collapse": 10,
+        "coughing_breathing_combined": 10,
+        "heat_intolerance": 10,
+        "vomiting": 10,
+        "diarrhea": 10,
+        "lethargy": 10,
+        "limping": 10,
+        "wound_skin_issue": 10
+      }
+    },
+    "danger_tier": {
+      "targets": {
+        "tier_1_emergency": 15,
+        "tier_2_same_day": 20,
+        "tier_3_48h": 40,
+        "tier_4_monitor": 25
+      }
+    },
+    "uncertainty_pattern": {
+      "targets": {
+        "clean": 40,
+        "ambiguous": 20,
+        "contradictory": 10,
+        "low_info": 15,
+        "cross_family": 15
+      }
+    },
+    "owner_language": {
+      "targets": {
+        "clear": 30,
+        "slang": 15,
+        "vague": 15,
+        "low_literacy": 10,
+        "contradictory": 10,
+        "i_dont_know": 10,
+        "multi_complaint": 10
+      }
+    },
+    "presentation_complexity": {
+      "targets": {
+        "single_symptom": 30,
+        "two_symptom": 30,
+        "three_plus": 20,
+        "chronic_plus_acute": 20
+      }
+    }
+  }
+}

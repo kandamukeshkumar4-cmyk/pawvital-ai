@@ -66,6 +66,19 @@ next-env.d.ts
 !/scripts/generate-benchmark-cases.ts
 !/scripts/validate-benchmark.ts
 !/scripts/silent-trial.ts
+!/scripts/pipeline-smoke-test.mjs
+!/scripts/enrich-benchmark-cases.mjs
+!/scripts/stamp-gold-benchmark.mjs
+!/scripts/benchmark-quota-tracker.mjs
+!/scripts/benchmark-lint.mjs
+!/scripts/build-owner-corpus.mjs
+!/scripts/eval-narrow-helper.mjs
+!/scripts/build-failure-review-queue.mjs
+!/scripts/generate-failure-dashboard.mjs
+!/scripts/miss-to-ticket.mjs
+!/scripts/eval-multimodal-shadow.mjs
+!/scripts/multimodal-improvement-report.mjs
+!/scripts/multimodal-triage-pilot.mjs
 
 # Generated benchmark/deployment run reports
 /data/benchmark/scorecard-*.json

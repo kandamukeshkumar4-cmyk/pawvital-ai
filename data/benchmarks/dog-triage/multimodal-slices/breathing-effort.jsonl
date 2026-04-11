@@ -1,0 +1,86 @@
+[
+  {
+    "case_id": "MULTI-BREATH-001",
+    "modality": "breathing_effort",
+    "description": "Labored abdominal breathing with open-mouth breathing in a Bulldog",
+    "breed_context": "brachycephalic",
+    "expected_symptoms": ["difficulty_breathing", "open_mouth_breathing"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["false_reassurance", "downgrading_brachycephalic_respiratory_distress"],
+    "notes": "Brachycephalic breeds with labored breathing must escalate. Visible abdominal effort + open mouth = emergency even if no coughing. Never downgrade brachycephalic respiratory distress."
+  },
+  {
+    "case_id": "MULTI-BREATH-002",
+    "modality": "breathing_effort",
+    "description": "Rapid shallow breathing at rest, >40 breaths/min in a Labrador",
+    "breed_context": "deep_chested",
+    "expected_symptoms": ["difficulty_breathing", "rapid_breathing"],
+    "expected_disposition": "vet_24h",
+    "urgency_tier": 2,
+    "advisory_only": true,
+    "failure_modes": ["missing_pneumonia", "missing_heart_failure"],
+    "notes": "Tachypnea at rest in a deep-chested breed could indicate early bloat/GDV, pneumonia, or heart failure. Must ask about vomiting and restlessness."
+  },
+  {
+    "case_id": "MULTI-BREATH-003",
+    "modality": "breathing_effort",
+    "description": "Normal resting breathing pattern in a Beagle",
+    "breed_context": "normal",
+    "expected_symptoms": [],
+    "expected_disposition": "monitor_at_home",
+    "urgency_tier": 4,
+    "advisory_only": true,
+    "failure_modes": ["false_alarm_over_escalation"],
+    "notes": "Normal respiratory pattern. Must verify not post-exercise panting and no other symptoms present."
+  },
+  {
+    "case_id": "MULTI-BREATH-004",
+    "modality": "breathing_effort",
+    "description": "Extended neck posture, elbows out, distressed breathing in a German Shepherd",
+    "breed_context": "deep_chested",
+    "expected_symptoms": ["difficulty_breathing", "orthopneic_posture"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["missing_gdv", "missing_cardiac_emergency"],
+    "notes": "Orthopneic posture (extended neck, abducted elbows) is a cardinal sign of severe respiratory compromise. In deep-chested breeds, consider GDV/bloat."
+  },
+  {
+    "case_id": "MULTI-BREATH-005",
+    "modality": "breathing_effort",
+    "description": "Post-exercise panting in a Husky, resolves within 5 minutes",
+    "breed_context": "normal",
+    "expected_symptoms": [],
+    "expected_disposition": "monitor_at_home",
+    "urgency_tier": 4,
+    "advisory_only": true,
+    "failure_modes": ["false_alarm_over_escalation"],
+    "notes": "Post-exercise panting is normal. Must verify resolution time, check gum color, and rule out heat stroke if duration >10 minutes."
+  },
+  {
+    "case_id": "MULTI-BREATH-006",
+    "modality": "breathing_effort",
+    "description": "Coughing followed by gagging, mild exercise intolerance in a Cavalier King Charles",
+    "breed_context": "high_cardiac_risk",
+    "expected_symptoms": ["coughing", "exercise_intolerance"],
+    "expected_disposition": "vet_soon",
+    "urgency_tier": 3,
+    "advisory_only": true,
+    "failure_modes": ["missing_mitral_valve_disease", "underestimating_cardiac_risk"],
+    "notes": "Cavalier KC Spaniels have extremely high mitral valve disease risk. Cough + exercise intolerance in this breed should trigger cardiac evaluation even if mild."
+  },
+  {
+    "case_id": "MULTI-BREATH-007",
+    "modality": "breathing_effort",
+    "description": "Blue-tinged gums and tongue in a Pug, rapid breathing",
+    "breed_context": "brachycephalic",
+    "expected_symptoms": ["difficulty_breathing", "cyanosis"],
+    "expected_disposition": "ER_NOW",
+    "urgency_tier": 1,
+    "advisory_only": true,
+    "failure_modes": ["false_reassurance", "missing_cyanosis", "underestimating_hypoxia"],
+    "notes": "Cyanosis (blue gums/tongue) = severe hypoxia. This is an absolute emergency. Brachycephalic + cyanosis = immediate veterinary care. Never wait and watch."
+  }
+]

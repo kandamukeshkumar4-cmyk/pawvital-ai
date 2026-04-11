@@ -1,0 +1,84 @@
+{
+  "version": "gold-v1",
+  "freeze_date": "2026-04-10",
+  "shard_count": 7,
+  "total_case_count": 101,
+  "case_id_ranges": {
+    "01-emergency-a.json": {
+      "count": 10,
+      "first_id": "emergency-blue-gums-breathing",
+      "last_id": "emergency-postpartum-eclampsia"
+    },
+    "02-emergency-b.json": {
+      "count": 10,
+      "first_id": "emergency-pale-gums-collapse",
+      "last_id": "emergency-unresponsive-after-tremors"
+    },
+    "03-common-a.json": {
+      "count": 10,
+      "first_id": "question-limping-sudden",
+      "last_id": "question-eye-discharge"
+    },
+    "04-common-b.json": {
+      "count": 10,
+      "first_id": "question-ear-scratching",
+      "last_id": "question-constipation"
+    },
+    "05-complex-and-followup.json": {
+      "count": 10,
+      "first_id": "question-generalized-stiffness",
+      "last_id": "followup-water-intake-unknown"
+    },
+    "06-high-risk-followup-and-adjudication.json": {
+      "count": 15,
+      "first_id": "followup-gum-color-unknown-escalates",
+      "last_id": "emergency-repeated-nonproductive-heaving"
+    },
+    "07-domain-expansion.json": {
+      "count": 36,
+      "first_id": "repro-question-pseudopregnancy",
+      "last_id": "oncology-emergency-nosebleed-collapse"
+    }
+  },
+  "complaint_families_covered": [
+    "behavior_change",
+    "blood_in_stool",
+    "constipation",
+    "coughing",
+    "coughing_breathing_combined",
+    "dental_problem",
+    "diarrhea",
+    "difficulty_breathing",
+    "drinking_more",
+    "ear_scratching",
+    "excessive_scratching",
+    "eye_discharge",
+    "generalized_stiffness",
+    "hair_loss",
+    "heat_intolerance",
+    "lethargy",
+    "limping",
+    "nasal_discharge",
+    "postoperative_concern",
+    "pregnancy_birth",
+    "regurgitation",
+    "seizure_collapse",
+    "senior_decline",
+    "swelling_lump",
+    "swollen_abdomen",
+    "trembling",
+    "unknown_concern",
+    "urination_problem",
+    "vaginal_discharge",
+    "vomiting",
+    "vomiting_diarrhea_combined",
+    "weight_loss",
+    "wound_skin_issue"
+  ],
+  "shard_hash": "eae283d10d38ab3e2069dad16c7d3498b3b6610a42a37cf1b29e6cb5b4939d21",
+  "coverage_gaps": [
+    "Not all 50 complaint families represented (expected, will be filled in VET-919)",
+    "Owner language variants not yet expanded",
+    "Chronic-plus-acute cases limited"
+  ]
+}

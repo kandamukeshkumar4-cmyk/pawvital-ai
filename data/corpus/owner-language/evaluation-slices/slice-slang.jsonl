@@ -1,0 +1,5 @@
+{"text":"he's got the runs","expected":"diarrhea"}
+{"text":"won't touch food","expected":"not_eating"}
+{"text":"keeps heaving","expected":"vomiting"}
+{"text":"favoring a leg","expected":"limping"}
+{"text":"scratching nonstop","expected":"excessive_scratching"}

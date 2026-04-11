@@ -1,0 +1,16 @@
+{
+  "modality": "gait",
+  "model": "llama-4-maverick",
+  "prompt_template": "Analyze this image of a dog's gait. Identify any abnormalities in movement, weight-bearing, or posture. Return: {{\"symptoms_detected\": [\"symptom_key\"], \"confidence\": 0.0-1.0, \"notes\": \"description\"}}",
+  "max_tokens": 300,
+  "temperature": 0.1,
+  "timeout_ms": 5000,
+  "advisory_only": true,
+  "safety_boundary": "Cannot override deterministic emergency routing",
+  "failure_modes": ["misclassification", "false_positive", "false_negative", "quality_failure"],
+  "rollback_rules": {
+    "timeout_threshold_ms": 5000,
+    "min_confidence": 0.6,
+    "override_deterministic": false
+  }
+}

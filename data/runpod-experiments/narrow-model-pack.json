@@ -2,42 +2,59 @@
   "experiment_pack_id": "vet-915-narrow-model-pack",
   "version": "2026-04-10",
   "species": "dog",
+  "validation_split": "data/runpod-experiments/validation-split.json",
   "experiments": [
     {
       "id": "owner-language-normalization",
       "task": "normalize-owner-language",
       "recommended_gpu": "NVIDIA RTX 4090",
+      "dataset": "data/runpod-experiments/datasets/owner-language-normalization.json",
       "dataset_contract": "Owner phrasing -> canonical symptom/sign/qualifier labels",
+      "train_size": 24,
+      "val_size": 6,
       "primary_metric": "exact_match",
       "acceptance_threshold": 0.9,
-      "rollback_rule": "Do not promote if emergency or red-flag phrasing recall regresses."
+      "rollback_rule": "Do not promote if emergency or red-flag phrasing recall regresses.",
+      "held_out_indices": [3, 7, 12, 18, 22, 29]
     },
     {
       "id": "symptom-entity-extraction",
       "task": "extract-symptom-entities",
       "recommended_gpu": "NVIDIA RTX 4090",
+      "dataset": "data/runpod-experiments/datasets/symptom-entity-extraction.json",
       "dataset_contract": "Free text -> structured symptom and modifier entities",
+      "train_size": 24,
+      "val_size": 6,
       "primary_metric": "macro_f1",
       "acceptance_threshold": 0.88,
-      "rollback_rule": "Do not promote if protected control-state fields need model output."
+      "rollback_rule": "Do not promote if protected control-state fields need model output.",
+      "held_out_indices": [5, 11, 17, 22, 27, 29]
     },
     {
       "id": "retrieval-reranking",
       "task": "rerank-retrieval-evidence",
       "recommended_gpu": "NVIDIA RTX 4090",
+      "dataset": "data/runpod-experiments/datasets/retrieval-reranking.json",
       "dataset_contract": "Query + candidates -> relevance ranking",
+      "train_size": 12,
+      "val_size": 3,
       "primary_metric": "ndcg_at_10",
       "acceptance_threshold": 0.85,
-      "rollback_rule": "Do not promote if deterministic emergency logic changes behavior."
+      "rollback_rule": "Do not promote if deterministic emergency logic changes behavior.",
+      "held_out_indices": [3, 9, 14]
     },
     {
       "id": "urgency-cue-classification",
       "task": "classify-urgency-cues",
       "recommended_gpu": "NVIDIA RTX 4090",
-      "dataset_contract": "Owner message -> urgency cues only",
+      "dataset": "data/runpod-experiments/datasets/urgency-cue-classification.json",
+      "dataset_contract": "Owner message -> urgency cues and urgency level",
+      "train_size": 28,
+      "val_size": 7,
       "primary_metric": "emergency_recall",
       "acceptance_threshold": 0.97,
-      "rollback_rule": "Do not promote if false reassurance increases."
+      "rollback_rule": "Do not promote if false reassurance increases.",
+      "held_out_indices": [4, 9, 16, 21, 25, 31, 34]
     }
   ]
 }

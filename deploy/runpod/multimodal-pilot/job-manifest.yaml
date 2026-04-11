@@ -1,0 +1,26 @@
+apiVersion: runpod.io/v1
+kind: ServerlessDeployment
+metadata:
+  name: pawvital-multimodal-pilot
+  description: Advisory-only multimodal analysis for veterinary triage
+spec:
+  gpu: "NVIDIA L4"
+  container_disk_in_gb: 20
+  flashboot: true
+  environments:
+    - name: MODEL_NAME
+      value: "llama-4-maverick"
+    - name: MAX_TOKENS
+      value: "500"
+    - name: TEMPERATURE
+      value: "0.1"
+    - name: TIMEOUT_MS
+      value: "5000"
+    - name: ADVISORY_MODE
+      value: "true"
+    - name: NEVER_OVERRIDE_DISPOSITION
+      value: "true"
+  scaling:
+    min_workers: 0
+    max_workers: 3
+    target_concurrency: 5

@@ -1,0 +1,74 @@
+{
+  "patient": {
+    "species": "dog",
+    "breed": "golden retriever",
+    "age_years": 5,
+    "weight_lbs": 70,
+    "sex": "male_neutered"
+  },
+  "triage": {
+    "type": "emergency",
+    "disposition": {
+      "urgency": "vet_24h",
+      "tier": 3,
+      "reasoning": "Wound with moderate discharge detected",
+      "breed_boosted": true,
+      "breed_risk_notes": "Golden Retrievers have 3x higher hot spot risk and elevated skin mass incidence"
+    },
+    "vision_confidence": 0.82,
+    "vision_findings": {
+      "wound_present": true,
+      "wound_type": "laceration",
+      "body_area": "right forelimb",
+      "severity": "needs_review",
+      "discharge": "yellow",
+      "swelling": "moderate",
+      "tissue_visible": false,
+      "red_flags": [
+        "discharge_present"
+      ]
+    },
+    "matrix_diseases": [
+      {
+        "disease_key": "wound_skin_issue",
+        "score": 0.75,
+        "tier": 3
+      },
+      {
+        "disease_key": "allergic_dermatitis",
+        "score": 0.45,
+        "tier": 4
+      }
+    ],
+    "next_question": "Is the wound area warm to the touch? Have you noticed any foul odor?",
+    "breed_risk_context": {
+      "breed": "golden retriever",
+      "infection_risk_multiplier": 1.3,
+      "hot_spot_probability_multiplier": 3,
+      "skin_mass_risk_multiplier": 1.8,
+      "allergy_likelihood_multiplier": 2.5,
+      "clinical_notes": "Golden Retrievers have 3x higher hot spot risk and elevated skin mass incidence"
+    }
+  },
+  "confidence": 1,
+  "temporal": {
+    "can_track": true,
+    "image_count": 3,
+    "timestamps": [
+      "2026-04-08T20:21:09.895Z",
+      "2026-04-09T20:21:09.896Z",
+      "2026-04-10T20:21:09.896Z"
+    ],
+    "trend": "improving",
+    "metrics": {
+      "size_change_percent": -15,
+      "discharge_improvement": true,
+      "color_improvement": true,
+      "swelling_change": "decreased"
+    },
+    "recommendation": "Wound showing signs of improvement. Continue current care plan.",
+    "confidence": 0.72
+  },
+  "pilot_version": "VET-916",
+  "timestamp": "2026-04-10T20:21:09.897Z"
+}
