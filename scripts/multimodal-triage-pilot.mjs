@@ -243,13 +243,15 @@ function applyBreedRiskModifiers(triageResult, breed) {
   if (triageResult.disposition?.urgency && modifiers.urgency_boost !== "none") {
     const urgencyOrder = ["monitor_at_home", "vet_soon", "vet_24h", "ER_NOW"];
     const currentIndex = urgencyOrder.indexOf(triageResult.disposition.urgency);
-    const boostAmount = modifiers.urgency_boost === "high" ? 2 : 1;
-    const newIndex = Math.min(currentIndex + boostAmount, urgencyOrder.length - 1);
+    if (currentIndex >= 0) {
+      const boostAmount = modifiers.urgency_boost === "high" ? 2 : 1;
+      const newIndex = Math.min(currentIndex + boostAmount, urgencyOrder.length - 1);
 
-    if (newIndex > currentIndex) {
-      boostedResult.disposition.urgency = urgencyOrder[newIndex];
-      boostedResult.disposition.breed_boosted = true;
-      boostedResult.disposition.breed_risk_notes = modifiers.notes;
+      if (newIndex > currentIndex) {
+        boostedResult.disposition.urgency = urgencyOrder[newIndex];
+        boostedResult.disposition.breed_boosted = true;
+        boostedResult.disposition.breed_risk_notes = modifiers.notes;
+      }
     }
   }
 
