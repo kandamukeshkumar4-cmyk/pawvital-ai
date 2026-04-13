@@ -109,6 +109,7 @@ import {
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
+import { detectTextContradictions } from "@/lib/clinical/contradiction-detector";
 import {
   buildCannotAssessOutcome,
   buildTerminalOutcomeMessage,
@@ -248,6 +249,7 @@ export async function POST(request: Request) {
     let effectivePet = getEffectivePetProfile(pet, session);
     const imageHash = image ? hashImage(image) : null;
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
+    const answersBeforeTurn = { ...session.extracted_answers };
     const answerKeysBeforeTurn = new Set(Object.keys(session.extracted_answers));
     let imagePreprocess: VisionPreprocessResult | null = null;
     let visualEvidence: VisionClinicalEvidence | null = null;
@@ -865,6 +867,24 @@ export async function POST(request: Request) {
     }
 
     session = propagateSharedLocationAnswers(session);
+    const textContradictions = detectTextContradictions({
+      ownerText: lastUserMessage.content,
+      pet: effectivePet,
+      previousAnswers: answersBeforeTurn,
+      session,
+    });
+    if (textContradictions.length > 0) {
+      ambiguityFlags.push(...textContradictions.map((item) => item.flag));
+      session = recordConversationTelemetry(session, {
+        event: "contradiction_detection",
+        turn_count: session.case_memory?.turn_count ?? 0,
+        outcome: "warning",
+        reason: textContradictions.map((item) => item.id).join(","),
+        contradiction_count: textContradictions.length,
+        contradiction_ids: textContradictions.map((item) => item.id),
+      });
+    }
+
     if (visualEvidence) {
       const contradictions = deriveVisionContradictions(
         lastUserMessage.content,

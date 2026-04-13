@@ -342,7 +342,14 @@ export function buildNarrativeSnapshot(
     // Telemetry entries (extraction, pending_recovery, compression, repeat_suppression, state_transition)
     // are internal observability data and should not influence the compression prompt.
     (() => {
-      const telemetryEventTypes = ["extraction", "pending_recovery", "compression", "repeat_suppression", "state_transition"];
+      const telemetryEventTypes = [
+        "compression",
+        "contradiction_detection",
+        "extraction",
+        "pending_recovery",
+        "repeat_suppression",
+        "state_transition",
+      ];
       const realServiceObservations = memory.service_observations.filter(
         (entry) => !(entry.service === "async-review-service" && telemetryEventTypes.includes(entry.stage))
       );
@@ -837,7 +844,8 @@ export type ConversationTelemetryEventType =
   | "extraction"
   | "pending_recovery"
   | "compression"
-  | "repeat_suppression";
+  | "repeat_suppression"
+  | "contradiction_detection";
 
 /**
  * Recovery source for pending question resolution.
@@ -891,6 +899,10 @@ export interface ConversationTelemetryEvent {
   answers_extracted?: number;
   /** Whether protected control state was preserved */
   control_state_preserved?: boolean;
+  /** Detected contradiction ids for this turn */
+  contradiction_ids?: string[];
+  /** Number of contradictions detected this turn */
+  contradiction_count?: number;
   /** Timestamp for the event */
   timestamp?: number;
 }
@@ -1002,6 +1014,12 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
   if (event.control_state_preserved !== undefined) {
     parts.push(`ctrl_preserved=${event.control_state_preserved}`);
   }
+  if (event.contradiction_count !== undefined) {
+    parts.push(`contradictions=${event.contradiction_count}`);
+  }
+  if (event.contradiction_ids?.length) {
+    parts.push(`contradiction_ids=${event.contradiction_ids.join(",")}`);
+  }
 
   return parts.join(" | ");
 }
@@ -1031,6 +1049,8 @@ function emitTelemetryLog(event: ConversationTelemetryEvent): void {
     symptoms_extracted: event.symptoms_extracted,
     answers_extracted: event.answers_extracted,
     control_state_preserved: event.control_state_preserved,
+    contradiction_count: event.contradiction_count,
+    contradiction_ids: event.contradiction_ids,
   };
 
   if (event.outcome === "error" || event.outcome === "failure") {
