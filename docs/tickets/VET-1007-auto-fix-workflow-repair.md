@@ -2,7 +2,7 @@
 
 Owner: `copilot`
 Branch: `copilot/vet-1007-auto-fix-workflow-repair-v1`
-Status: in progress
+Status: ready for review
 
 ## Goal
 
@@ -28,3 +28,8 @@ Repair the auto-fix GitHub Actions workflow so merge pushes to master do not sur
 - `gh api repos/kandamukeshkumar4-cmyk/pawvital-ai/actions/runs/24366113337/attempts/1/jobs`
 - `gh run list --workflow auto-fix.yml --repo kandamukeshkumar4-cmyk/pawvital-ai --limit 20`
 - `gh workflow list --repo kandamukeshkumar4-cmyk/pawvital-ai`
+
+## Validation Notes
+
+- no local `actionlint` installation was available, so no standalone workflow linter was run
+- GitHub documents that `workflow_run` only triggers when the workflow file exists on the default branch, so branch-push auto-fix runs continue to use the current `master` workflow definition until this PR merges
