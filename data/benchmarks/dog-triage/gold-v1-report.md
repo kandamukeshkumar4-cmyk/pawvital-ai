@@ -12,7 +12,7 @@
 |--------|-------|
 | Total Cases | 219 |
 | Complaint Families | 50 |
-| Must-Not-Miss Cases | 51 |
+| Must-Not-Miss Cases | 42 |
 | Shard Files | 13 |
 
 ## Family Distribution
