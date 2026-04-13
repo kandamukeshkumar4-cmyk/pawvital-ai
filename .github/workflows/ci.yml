@@ -197,9 +197,24 @@ jobs:
       - run: npm run eval:benchmark:validate
       - run: npm run eval:benchmark:lint
 
+  route-sentinel-replay:
+    name: Route Sentinel Replay
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v5
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
+      - run: npm run eval:benchmark:route-sentinels
+
   ci-gate:
     name: CI Gate
-    needs: [lint, typecheck, build, test, benchmark-integrity]
+    needs: [lint, typecheck, build, test, benchmark-integrity, route-sentinel-replay]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -209,7 +224,8 @@ jobs:
              [ "${{ needs.typecheck.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ] || \
-             [ "${{ needs.benchmark-integrity.result }}" != "success" ]; then
+             [ "${{ needs.benchmark-integrity.result }}" != "success" ] || \
+             [ "${{ needs.route-sentinel-replay.result }}" != "success" ]; then
             echo "One or more CI checks failed"
             exit 1
           fi

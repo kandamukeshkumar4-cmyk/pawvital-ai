@@ -1,0 +1,218 @@
+[
+  {
+    "benchmarkId": "emergency-blue-gums-breathing",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["difficulty_breathing"],
+      "answers": { "gum_color": "blue" }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "redFlags": ["blue_gums"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-gdv-retching",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["swollen_abdomen"],
+      "answers": { "unproductive_retching": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["swollen_abdomen"],
+      "redFlags": ["unproductive_retching"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-cluster-seizures",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["seizure_collapse"],
+      "answers": { "collapse": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["seizure_collapse"],
+      "redFlags": ["collapse"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-heatstroke",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["heat_intolerance"],
+      "answers": { "collapse_in_heat": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["heat_intolerance"],
+      "redFlags": ["collapse_in_heat"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-dystocia",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["pregnancy_birth"],
+      "answers": { "dystocia_active": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["pregnancy_birth"],
+      "redFlags": ["dystocia_active"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-postpartum-eclampsia",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["pregnancy_birth", "trembling"],
+      "answers": { "eclampsia_signs": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["pregnancy_birth", "trembling"],
+      "redFlags": ["eclampsia_signs"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-resting-open-mouth-breathing",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["difficulty_breathing"],
+      "answers": { "gum_color": "blue" }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "redFlags": ["blue_gums"]
+    }
+  },
+  {
+    "benchmarkId": "cardiac-emergency-resting-breathing-distress",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["difficulty_breathing"],
+      "answers": { "breathing_onset": "sudden" }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "redFlags": ["breathing_onset_sudden"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-bloat-gasdilation",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["swollen_abdomen"],
+      "answers": { "rapid_onset_distension": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["swollen_abdomen"],
+      "redFlags": ["rapid_onset_distension"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-dog-bite-wound",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["wound_skin_issue"],
+      "answers": { "wound_deep_bleeding": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["wound_skin_issue"],
+      "redFlags": ["wound_deep_bleeding"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-diabetic-crisis",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["lethargy"],
+      "answers": { "collapse": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["lethargy"],
+      "redFlags": ["collapse"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-prolonged-seizure",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["seizure_collapse"],
+      "answers": { "consciousness_level": "unresponsive" }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["seizure_collapse"],
+      "redFlags": ["unresponsive"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-allergic-reaction-hives",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["excessive_scratching"],
+      "answers": { "face_swelling": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["excessive_scratching"],
+      "redFlags": ["face_swelling"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-urinary-female-blockage",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["urination_problem"],
+      "answers": { "urinary_blockage": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["urination_problem"],
+      "redFlags": ["urinary_blockage"]
+    }
+  },
+  {
+    "benchmarkId": "followup-breathing-onset-unknown-escalates",
+    "mode": "followup_unknown",
+    "seedSession": {
+      "knownSymptoms": ["difficulty_breathing"],
+      "lastQuestionAsked": "breathing_onset"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["cannot_assess"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "reasonCode": "owner_cannot_assess_breathing_onset"
+    }
+  },
+  {
+    "benchmarkId": "followup-gum-color-unknown-escalates",
+    "mode": "followup_unknown",
+    "seedSession": {
+      "knownSymptoms": ["difficulty_breathing"],
+      "lastQuestionAsked": "gum_color"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["cannot_assess"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "reasonCode": "owner_cannot_assess_gum_color"
+    }
+  }
+]
