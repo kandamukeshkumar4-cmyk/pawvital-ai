@@ -109,6 +109,12 @@ import {
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
+import {
+  buildCannotAssessOutcome,
+  buildTerminalOutcomeMessage,
+  detectOutOfScopeTurn,
+  type UncertaintyTerminalOutcome,
+} from "@/lib/clinical/uncertainty-routing";
 import { emit, EventType } from "@/lib/events/event-bus";
 import "@/lib/events/notification-handler";
 import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
@@ -248,6 +254,7 @@ export async function POST(request: Request) {
     let consultOpinion: ConsultOpinion | null = null;
     const serviceTimeouts: ServiceTimeoutRecord[] = [];
     const ambiguityFlags: string[] = [];
+    let terminalOutcome: UncertaintyTerminalOutcome | null = null;
 
     if (imageHash && session.last_uploaded_image_hash !== imageHash) {
       resetImageStateForNewUpload(session);
@@ -289,6 +296,17 @@ export async function POST(request: Request) {
         session,
         ready_for_report: false,
       });
+    }
+
+    const outOfScopeOutcome = detectOutOfScopeTurn({
+      pet: effectivePet,
+      session,
+      message: lastUserMessage.content,
+    });
+    if (outOfScopeOutcome) {
+      return NextResponse.json(
+        buildTerminalOutcomeResponse(outOfScopeOutcome, session)
+      );
     }
 
     const fastPathExtraction = getDeterministicFastPathExtraction(
@@ -763,8 +781,34 @@ export async function POST(request: Request) {
       const hadUnresolved =
         incomingUnresolvedIds.includes(pendingQ) ||
         (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+      const isAmbiguousReply =
+        coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
 
-      if (pendingAnswer !== null) {
+      if (isAmbiguousReply && shouldEscalateForUnknown(pendingQ)) {
+        session = transitionToEscalation({
+          session,
+          redFlags: [`cannot_assess_${pendingQ}`],
+          reason: "owner_cannot_assess_critical_indicator",
+        });
+        console.log(
+          `[Engine] Escalation triggered — owner cannot assess critical indicator "${pendingQ}"`
+        );
+        session = recordConversationTelemetry(session, {
+          event: "pending_recovery",
+          turn_count: session.case_memory?.turn_count ?? 0,
+          question_id: pendingQ,
+          outcome: "escalation",
+          source: "unresolved",
+          reason: "owner_cannot_assess_critical_indicator",
+          pending_before: hadUnresolved,
+          pending_after: true,
+        });
+        terminalOutcome = buildCannotAssessOutcome({
+          petName: pet.name || "your dog",
+          questionId: pendingQ,
+          questionText: getQuestionText(pendingQ),
+        });
+      } else if (pendingAnswer !== null) {
         session = transitionToAnswered({
           session,
           questionId: pendingQ,
@@ -785,51 +829,26 @@ export async function POST(request: Request) {
           pending_after: false,
         });
       } else {
-        const isAmbiguousReply =
-          coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
-
-        // VET-900: UNSAFE emergency questions trigger escalation instead of re-ask
-        if (isAmbiguousReply && shouldEscalateForUnknown(pendingQ)) {
-          session = transitionToEscalation({
-            session,
-            redFlags: [`cannot_assess_${pendingQ}`],
-            reason: "owner_cannot_assess_critical_indicator",
-          });
-          console.log(
-            `[Engine] Escalation triggered — owner cannot assess critical indicator "${pendingQ}"`
-          );
-          session = recordConversationTelemetry(session, {
-            event: "pending_recovery",
-            turn_count: session.case_memory?.turn_count ?? 0,
-            question_id: pendingQ,
-            outcome: "escalation",
-            source: "unresolved",
-            reason: "owner_cannot_assess_critical_indicator",
-            pending_before: hadUnresolved,
-            pending_after: true,
-          });
-        } else {
-          session = transitionToNeedsClarification({
-            session,
-            questionId: pendingQ,
-            reason: "pending_recovery_failed",
-          });
-          console.log(
-            `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
-          );
-          session = recordConversationTelemetry(session, {
-            event: "pending_recovery",
-            turn_count: session.case_memory?.turn_count ?? 0,
-            question_id: pendingQ,
-            outcome: isAmbiguousReply ? "needs_clarification" : "failure",
-            source: "unresolved",
-            reason: isAmbiguousReply
-              ? "needs_clarification_re_ask"
-              : "pending_recovery_failed",
-            pending_before: hadUnresolved,
-            pending_after: true,
-          });
-        }
+        session = transitionToNeedsClarification({
+          session,
+          questionId: pendingQ,
+          reason: "pending_recovery_failed",
+        });
+        console.log(
+          `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
+        );
+        session = recordConversationTelemetry(session, {
+          event: "pending_recovery",
+          turn_count: session.case_memory?.turn_count ?? 0,
+          question_id: pendingQ,
+          outcome: isAmbiguousReply ? "needs_clarification" : "failure",
+          source: "unresolved",
+          reason: isAmbiguousReply
+            ? "needs_clarification_re_ask"
+            : "pending_recovery_failed",
+          pending_before: hadUnresolved,
+          pending_after: true,
+        });
       }
     }
 
@@ -995,6 +1014,12 @@ export async function POST(request: Request) {
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
       });
+    }
+
+    if (terminalOutcome) {
+      return NextResponse.json(
+        buildTerminalOutcomeResponse(terminalOutcome, session)
+      );
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -2034,6 +2059,23 @@ function demoResponse(action: string, pet: PetProfile) {
     session: createSession(),
     ready_for_report: false,
   });
+}
+
+function buildTerminalOutcomeResponse(
+  outcome: UncertaintyTerminalOutcome,
+  session: TriageSession
+) {
+  return {
+    type: outcome.type,
+    terminal_state: outcome.terminalState,
+    reason_code: outcome.reasonCode,
+    owner_message: outcome.ownerMessage,
+    recommended_next_step: outcome.recommendedNextStep,
+    message: buildTerminalOutcomeMessage(outcome),
+    session: sanitizeSessionForClient(session),
+    ready_for_report: false,
+    conversationState: outcome.conversationState,
+  };
 }
 
 function buildImageGateMessage(

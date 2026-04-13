@@ -43,7 +43,15 @@ interface ImageGateWarning {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-  type?: "question" | "emergency" | "ready" | "report" | "error" | "image_gate";
+  type?:
+    | "question"
+    | "emergency"
+    | "ready"
+    | "report"
+    | "error"
+    | "image_gate"
+    | "cannot_assess"
+    | "out_of_scope";
   gate?: ImageGateWarning;
   image?: string;
   timestamp: Date;
@@ -87,6 +95,8 @@ function ChatBubble({
   const isUser = message.role === "user";
   const isEmergency = message.type === "emergency";
   const isImageGate = message.type === "image_gate";
+  const isCannotAssess = message.type === "cannot_assess";
+  const isOutOfScope = message.type === "out_of_scope";
 
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
@@ -96,6 +106,10 @@ function ChatBubble({
             ? "bg-blue-100"
             : isEmergency
             ? "bg-red-100"
+            : isCannotAssess
+            ? "bg-amber-100"
+            : isOutOfScope
+            ? "bg-slate-100"
             : isImageGate
             ? "bg-amber-100"
             : "bg-purple-100"
@@ -105,6 +119,10 @@ function ChatBubble({
           <User className="w-4 h-4 text-blue-600" />
         ) : isEmergency ? (
           <AlertCircle className="w-4 h-4 text-red-600" />
+        ) : isCannotAssess ? (
+          <AlertTriangle className="w-4 h-4 text-amber-700" />
+        ) : isOutOfScope ? (
+          <Bot className="w-4 h-4 text-slate-600" />
         ) : isImageGate ? (
           <AlertTriangle className="w-4 h-4 text-amber-600" />
         ) : (
@@ -121,14 +139,28 @@ function ChatBubble({
             ? "bg-orange-50 border border-orange-200 border-l-4 border-l-orange-400 text-orange-950"
             : isEmergency
             ? "bg-red-50 border-2 border-red-300 text-red-900"
+            : isCannotAssess
+            ? "bg-amber-50 border border-amber-400 text-amber-950"
+            : isOutOfScope
+            ? "bg-slate-50 border border-slate-300 text-slate-900"
             : isImageGate
             ? "bg-amber-50 border border-amber-300 text-amber-950"
             : "bg-gray-100 text-gray-800"
         }`}
-      >
-        {message.image && (
-          <img
-            src={message.image}
+        >
+          {isCannotAssess && (
+            <p className="mb-1 text-xs font-semibold text-amber-700">
+              Cannot safely assess at home
+            </p>
+          )}
+          {isOutOfScope && (
+            <p className="mb-1 text-xs font-semibold text-slate-600">
+              Outside symptom-triage scope
+            </p>
+          )}
+          {message.image && (
+            <img
+              src={message.image}
             alt="Uploaded by user"
             className="w-full max-w-sm rounded-lg mb-2 border border-blue-400/30 object-contain"
           />
@@ -146,6 +178,10 @@ function ChatBubble({
               ? "text-blue-200"
               : isEmergency
               ? "text-red-400"
+              : isCannotAssess
+              ? "text-amber-700"
+              : isOutOfScope
+              ? "text-slate-500"
               : isImageGate
               ? "text-amber-600"
               : "text-gray-400"
@@ -420,6 +456,10 @@ export default function SymptomCheckerPage() {
         setConversationState(data.conversationState);
       } else if (data.type === "emergency") {
         setConversationState("escalation");
+      } else if (data.type === "cannot_assess") {
+        setConversationState("escalation");
+      } else if (data.type === "out_of_scope") {
+        setConversationState("idle");
       } else if (data.type === "ready") {
         setConversationState("confirmed");
       } else if (data.type === "question") {
