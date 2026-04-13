@@ -164,6 +164,23 @@ jobs:
               body: `## Tests Failed\n\nOne or more tests failed. Run \`npm test\` locally to debug.\n\n[View logs](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`
             });
 
+  emergency-sentinel-advisory:
+    name: Emergency Sentinel Advisory
+    needs: install
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm run eval:sentinels:advisory
+      - run: npm run eval:benchmark:dangerous
+
   ci-gate:
     name: CI Gate
     needs: [lint, typecheck, build, test]
