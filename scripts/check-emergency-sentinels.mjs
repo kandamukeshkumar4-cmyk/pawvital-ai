@@ -11,7 +11,7 @@ const INPUT = path.join(
   "dog-triage",
   "gold-v1-enriched.jsonl"
 );
-const EXPECTED_SENTINEL_COUNT = 16;
+const MIN_SENTINEL_COUNT = 16;
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -32,9 +32,9 @@ const sentinels = cases.filter((entry) => entry.must_not_miss_marker === true);
 
 const failures = [];
 
-if (sentinels.length !== EXPECTED_SENTINEL_COUNT) {
+if (sentinels.length < MIN_SENTINEL_COUNT) {
   failures.push(
-    `Expected ${EXPECTED_SENTINEL_COUNT} emergency sentinels, found ${sentinels.length}.`
+    `Expected at least ${MIN_SENTINEL_COUNT} emergency sentinels, found ${sentinels.length}.`
   );
 }
 

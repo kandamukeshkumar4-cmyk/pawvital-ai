@@ -203,7 +203,11 @@ function deriveUncertaintyPattern(caseData) {
   return "clean";
 }
 
-function deriveMustNotMissMarker(families) {
+function deriveMustNotMissMarker(families, riskTier) {
+  if (riskTier !== "tier_1_emergency") {
+    return false;
+  }
+
   return families.some((f) => EMERGENCY_FAMILIES.has(f));
 }
 
@@ -244,7 +248,7 @@ function main() {
       const mustNotMiss =
         typeof caseData.must_not_miss_marker === "boolean"
           ? caseData.must_not_miss_marker
-          : deriveMustNotMissMarker(families);
+          : deriveMustNotMissMarker(families, riskTier);
 
       const enriched = {
         ...caseData,
