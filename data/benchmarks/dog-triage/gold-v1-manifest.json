@@ -1,8 +1,8 @@
 {
   "version": "gold-v1",
-  "freeze_date": "2026-04-10",
-  "shard_count": 7,
-  "total_case_count": 101,
+  "freeze_date": "2026-04-13",
+  "shard_count": 13,
+  "total_case_count": 219,
   "case_id_ranges": {
     "01-emergency-a.json": {
       "count": 10,
@@ -38,11 +38,45 @@
       "count": 36,
       "first_id": "repro-question-pseudopregnancy",
       "last_id": "oncology-emergency-nosebleed-collapse"
+    },
+    "08-emergency-expansion.json": {
+      "count": 26,
+      "first_id": "emergency-bloat-gasdilation",
+      "last_id": "followup-breathing-pattern-unknown"
+    },
+    "09-same-day-urgent.json": {
+      "count": 25,
+      "first_id": "sameday-ear-infection",
+      "last_id": "sameday-chronic-limp-sudden-worse"
+    },
+    "10-new-families.json": {
+      "count": 22,
+      "first_id": "question-anxiety-separation",
+      "last_id": "question-chronic-weight-gain"
+    },
+    "11-language-variants.json": {
+      "count": 20,
+      "first_id": "question-vague-sick-dog",
+      "last_id": "question-contradictory-vomiting"
+    },
+    "12-followup-unknowns.json": {
+      "count": 13,
+      "first_id": "followup-diarrhea-onset-unknown",
+      "last_id": "followup-diarrhea-frequency-unknown"
+    },
+    "13-senior-chronic.json": {
+      "count": 12,
+      "first_id": "question-senior-cognitive-dysfunction",
+      "last_id": "question-senior-dental-decay"
     }
   },
   "complaint_families_covered": [
+    "abdominal_pain",
+    "anxiety_stress",
+    "bad_breath",
     "behavior_change",
     "blood_in_stool",
+    "cold_sensitivity",
     "constipation",
     "coughing",
     "coughing_breathing_combined",
@@ -50,25 +84,38 @@
     "diarrhea",
     "difficulty_breathing",
     "drinking_more",
+    "drooling_excessive",
     "ear_scratching",
     "excessive_scratching",
     "eye_discharge",
+    "face_swelling",
+    "flea_tick",
     "generalized_stiffness",
     "hair_loss",
     "heat_intolerance",
     "lethargy",
     "limping",
+    "nail_overgrowth",
     "nasal_discharge",
+    "obesity",
+    "paw_licking",
     "postoperative_concern",
     "pregnancy_birth",
     "regurgitation",
+    "reverse_sneezing",
+    "scooting",
     "seizure_collapse",
     "senior_decline",
+    "skin_growth",
+    "skin_infection",
+    "snoring",
     "swelling_lump",
     "swollen_abdomen",
+    "tail_chasing",
     "trembling",
-    "unknown_concern",
     "urination_problem",
+    "urine_marking",
+    "vaccination_concern",
     "vaginal_discharge",
     "vomiting",
     "vomiting_diarrhea_combined",
@@ -77,8 +124,8 @@
   ],
   "shard_hash": "eae283d10d38ab3e2069dad16c7d3498b3b6610a42a37cf1b29e6cb5b4939d21",
   "coverage_gaps": [
-    "Not all 50 complaint families represented (expected, will be filled in VET-919)",
-    "Owner language variants not yet expanded",
-    "Chronic-plus-acute cases limited"
+    "Not all 50 complaint families represented (reduced gap)",
+    "Owner language variants expanded",
+    "Chronic-plus-acute cases expanded"
   ]
 }

@@ -1,0 +1,755 @@
+{
+  "suite_id": "dog-triage-gold-candidate-new-families",
+  "version": "2026-04-13",
+  "species": "dog",
+  "description": "New complaint family coverage for benchmark expansion.",
+  "cases": [
+    {
+      "id": "question-anxiety-separation",
+      "description": "Separation anxiety with destructive behavior should open behavioral questioning.",
+      "tags": [
+        "question",
+        "behavior",
+        "anxiety"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Nervous Nellie",
+        "breed": "Border Collie",
+        "age": 3,
+        "weight": 40
+      },
+      "messages": [
+        "My dog destroys furniture and barks nonstop whenever I leave the house."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "anxiety_stress"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-anxiety-thunder",
+      "description": "Thunder phobia with panting and pacing should open behavioral questioning.",
+      "tags": [
+        "question",
+        "behavior",
+        "anxiety"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Stormy",
+        "breed": "Labrador Retriever",
+        "age": 6,
+        "weight": 65
+      },
+      "messages": [
+        "During storms my dog pants heavily, hides, and trembles uncontrollably."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "anxiety_stress"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-bad-breath-chronic",
+      "description": "Chronic bad breath should open dental/systemic questioning.",
+      "tags": [
+        "question",
+        "dental",
+        "breath"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Stinky",
+        "breed": "Bulldog",
+        "age": 7,
+        "weight": 50
+      },
+      "messages": [
+        "My dog has extremely bad breath that has been getting worse."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "bad_breath"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-flea-infestation",
+      "description": "Visible fleas with scratching should open parasitology questioning.",
+      "tags": [
+        "question",
+        "parasite",
+        "flea"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Scratchy",
+        "breed": "Mixed Breed",
+        "age": 4,
+        "weight": 30
+      },
+      "messages": [
+        "I can see fleas jumping on my dog and he won't stop scratching."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "flea_tick"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-tick-found",
+      "description": "Tick found attached to skin should open parasitology questioning.",
+      "tags": [
+        "question",
+        "parasite",
+        "tick"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Hunter",
+        "breed": "Beagle",
+        "age": 5,
+        "weight": 28
+      },
+      "messages": [
+        "I found a tick embedded in my dog's skin after a walk in the woods."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "flea_tick"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-obesity-gain",
+      "description": "Significant weight gain should open nutritional/metabolic questioning.",
+      "tags": [
+        "question",
+        "nutrition",
+        "obesity"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Chubby",
+        "breed": "Labrador Retriever",
+        "age": 8,
+        "weight": 95
+      },
+      "messages": [
+        "My dog has gotten much fatter over the past year and struggles on walks."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "obesity"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-paw-licking-chronic",
+      "description": "Chronic paw licking should open dermatology/behavioral questioning.",
+      "tags": [
+        "question",
+        "dermatology",
+        "paw"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Licky",
+        "breed": "Golden Retriever",
+        "age": 5,
+        "weight": 68
+      },
+      "messages": [
+        "My dog constantly licks her front paws and they are turning brown."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "paw_licking"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-scooting",
+      "description": "Scooting on rear end should open anal gland questioning.",
+      "tags": [
+        "question",
+        "anal_gland",
+        "gi"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Scooter",
+        "breed": "Corgi",
+        "age": 4,
+        "weight": 28
+      },
+      "messages": [
+        "My dog keeps dragging his bottom across the carpet."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "scooting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-scooting-foul-odor",
+      "description": "Scooting with foul odor should open anal gland questioning.",
+      "tags": [
+        "question",
+        "anal_gland",
+        "gi"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Biscuit",
+        "breed": "Pomeranian",
+        "age": 6,
+        "weight": 8
+      },
+      "messages": [
+        "My dog is scooting and there is a foul fishy smell."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "scooting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-skin-pustules",
+      "description": "Skin pustules and redness should open dermatology questioning.",
+      "tags": [
+        "question",
+        "dermatology",
+        "infection"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Pimple",
+        "breed": "Boxer",
+        "age": 3,
+        "weight": 60
+      },
+      "messages": [
+        "My dog has bumps and pus-filled spots on his belly."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "skin_infection"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-snoring-loud",
+      "description": "Loud snoring with breathing pauses should open respiratory questioning.",
+      "tags": [
+        "question",
+        "respiratory",
+        "sleep"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Snores",
+        "breed": "English Bulldog",
+        "age": 5,
+        "weight": 52
+      },
+      "messages": [
+        "My dog snores very loudly and sometimes seems to stop breathing while sleeping."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "snoring"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-vaccine-reaction-mild",
+      "description": "Mild lethargy after vaccination should open monitoring questioning.",
+      "tags": [
+        "question",
+        "vaccination",
+        "reaction"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Puppy Love",
+        "breed": "Mixed Breed",
+        "age": 0.5,
+        "weight": 15
+      },
+      "messages": [
+        "My puppy got shots yesterday and seems a bit tired and sore today."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "vaccination_concern"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-urine-marking-indoor",
+      "description": "Indoor urine marking in a previously house-trained dog should open behavioral/urinary questioning.",
+      "tags": [
+        "question",
+        "behavior",
+        "urinary"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Moose",
+        "breed": "Husky",
+        "age": 2,
+        "weight": 50
+      },
+      "messages": [
+        "My dog started peeing on furniture even though he was house-trained."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "urine_marking"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-cold-sensitivity",
+      "description": "Shivering and reluctance to go outside in cold should open systemic questioning.",
+      "tags": [
+        "question",
+        "systemic",
+        "cold"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Frosty",
+        "breed": "Chihuahua",
+        "age": 8,
+        "weight": 5
+      },
+      "messages": [
+        "My dog refuses to go outside in cold weather and shivers even with a sweater."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "cold_sensitivity"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-nail-overgrowth",
+      "description": "Overgrown nails clicking on floor should open grooming questioning.",
+      "tags": [
+        "question",
+        "grooming",
+        "nail"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Clicky",
+        "breed": "Mixed Breed",
+        "age": 7,
+        "weight": 40
+      },
+      "messages": [
+        "My dog's nails are so long they click on the floor and curve under."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "nail_overgrowth"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-drooling-excessive",
+      "description": "Excessive drooling in a non-slobber breed should open oral/systemic questioning.",
+      "tags": [
+        "question",
+        "oral",
+        "drooling"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Drooly",
+        "breed": "Mixed Breed",
+        "age": 6,
+        "weight": 35
+      },
+      "messages": [
+        "My dog is drooling way more than usual even though he is not a slobbery breed."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "drooling_excessive"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-skin-growth-wart",
+      "description": "New wart-like growth on skin should open mass questioning.",
+      "tags": [
+        "question",
+        "dermatology",
+        "mass"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Warty",
+        "breed": "Cocker Spaniel",
+        "age": 9,
+        "weight": 30
+      },
+      "messages": [
+        "My dog has a cauliflower-looking bump on his eyelid."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "skin_growth"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-abdominal-pain",
+      "description": "Dog yelps when belly is touched should open abdominal questioning.",
+      "tags": [
+        "question",
+        "abdomen",
+        "pain"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Ouch",
+        "breed": "Dachshund",
+        "age": 6,
+        "weight": 18
+      },
+      "messages": [
+        "My dog yelps when I try to pick him up or touch his stomach."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "abdominal_pain"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-reverse-sneezing",
+      "description": "Episodes of honking inhalation should open respiratory questioning.",
+      "tags": [
+        "question",
+        "respiratory"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Honker",
+        "breed": "Pug",
+        "age": 4,
+        "weight": 18
+      },
+      "messages": [
+        "My dog makes loud honking noises like he is trying to sneeze but inhaling."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "reverse_sneezing"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-tail-chasing-compulsive",
+      "description": "Compulsive tail chasing with self-injury should open behavioral questioning.",
+      "tags": [
+        "question",
+        "behavior",
+        "compulsive"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Spins",
+        "breed": "Bull Terrier",
+        "age": 3,
+        "weight": 50
+      },
+      "messages": [
+        "My dog spins in circles chasing his tail until he bites it raw."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "tail_chasing"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-face-swelling-mild",
+      "description": "Mild facial swelling without breathing issues should open allergic questioning.",
+      "tags": [
+        "question",
+        "allergy",
+        "face"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Puffy",
+        "breed": "Boxer",
+        "age": 5,
+        "weight": 62
+      },
+      "messages": [
+        "My dog's face looks slightly puffy but he is breathing fine."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "face_swelling"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    },
+    {
+      "id": "question-chronic-weight-gain",
+      "description": "Gradual weight gain should open nutritional questioning.",
+      "tags": [
+        "question",
+        "chronic",
+        "nutrition"
+      ],
+      "weight": 2,
+      "pet": {
+        "name": "Fatty",
+        "breed": "Labrador Retriever",
+        "age": 7,
+        "weight": 90
+      },
+      "messages": [
+        "My dog has been gradually getting heavier over the last year."
+      ],
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "obesity"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "provenance": {
+        "source_shard": "10-new-families.json",
+        "source_suite_id": "dog-triage-gold-candidate-new-families",
+        "freeze_date": "2026-04-13",
+        "version": "gold-v1"
+      }
+    }
+  ]
+}
