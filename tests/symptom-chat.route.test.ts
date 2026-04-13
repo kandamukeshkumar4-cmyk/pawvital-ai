@@ -248,13 +248,20 @@ function makeRequest(session: TriageSession, message: string) {
   });
 }
 
-function makeTextOnlyRequest(session: TriageSession, message: string) {
+function makeTextOnlyRequest(
+  session: TriageSession,
+  message: string,
+  petOverrides: Record<string, unknown> = {}
+) {
   return new Request("http://localhost/api/ai/symptom-chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "chat",
-      pet: PET,
+      pet: {
+        ...PET,
+        ...petOverrides,
+      },
       session,
       messages: [{ role: "user", content: message }],
     }),
@@ -5687,6 +5694,81 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const askedQuestions = payload1.session.answered_questions || [];
       // limping_onset should now be answered
       expect(askedQuestions).toContain("limping_onset");
+    });
+  });
+
+  describe("uncertainty terminal outcomes", () => {
+    it("VET-1002: ambiguous answer on critical sign returns cannot_assess terminal outcome", async () => {
+      const session = createSession();
+      const sessionWithSymptom = addSymptoms(session, ["coughing"]);
+      sessionWithSymptom.last_question_asked = "breathing_onset";
+      sessionWithSymptom.case_memory = {
+        ...sessionWithSymptom.case_memory!,
+        turn_count: 1,
+        unresolved_question_ids: [],
+      };
+
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["coughing"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(sessionWithSymptom, "I can't tell")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.terminal_state).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_breathing_onset");
+      expect(payload.conversationState).toBe("escalation");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.owner_message).toContain("can't safely continue");
+      expect(payload.recommended_next_step).toContain("Seek veterinary assessment");
+    });
+
+    it("VET-1002: medication dosing request returns out_of_scope terminal outcome", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "How much Benadryl can I give my dog for itching?"
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("out_of_scope");
+      expect(payload.terminal_state).toBe("out_of_scope");
+      expect(payload.reason_code).toBe("medication_dosing_request");
+      expect(payload.conversationState).toBe("idle");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.owner_message).toContain("medication dosing");
+    });
+
+    it("VET-1002: non-dog species returns out_of_scope terminal outcome", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My cat is vomiting and hiding under the bed.",
+          {
+            name: "Miso",
+            species: "cat",
+            breed: "Domestic Shorthair",
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("out_of_scope");
+      expect(payload.terminal_state).toBe("out_of_scope");
+      expect(payload.reason_code).toBe("species_not_supported");
+      expect(payload.conversationState).toBe("idle");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.owner_message).toContain("only assess dog symptom cases");
     });
   });
 
