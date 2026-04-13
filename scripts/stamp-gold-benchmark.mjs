@@ -17,6 +17,44 @@ const STAMP_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "gold
 const MANIFEST_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "gold-v1-manifest.json");
 const REPORT_FILE = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "gold-v1-report.md");
 const SHARD_DIR = path.join(ROOT_DIR, "data", "benchmarks", "dog-triage", "gold-candidate");
+const CANONICAL_FAMILIES = [
+  "difficulty_breathing", "swollen_abdomen", "seizure_collapse", "coughing_breathing_combined",
+  "heat_intolerance", "vision_loss", "pregnancy_birth", "coughing", "vomiting", "diarrhea",
+  "not_eating", "lethargy", "limping", "excessive_scratching", "drinking_more", "trembling",
+  "eye_discharge", "ear_scratching", "weight_loss", "wound_skin_issue", "behavior_change",
+  "swelling_lump", "dental_problem", "hair_loss", "regurgitation", "constipation",
+  "generalized_stiffness", "nasal_discharge", "vaginal_discharge", "testicular_prostate",
+  "exercise_induced_lameness", "skin_odor_greasy", "recurrent_ear", "recurrent_skin",
+  "inappropriate_urination", "fecal_incontinence", "vomiting_diarrhea_combined", "oral_mass",
+  "hearing_loss", "aggression", "pacing_restlessness", "abnormal_gait", "postoperative_concern",
+  "medication_reaction", "puppy_concern", "senior_decline", "multi_system_decline", "unknown_concern",
+  "blood_in_stool", "urination_problem",
+];
+
+function buildCoverageGaps(allFamilies, familyCounts) {
+  const missingFamilies = CANONICAL_FAMILIES.filter((family) => !allFamilies.has(family));
+  const lowCoverageFamilies = CANONICAL_FAMILIES.filter((family) => {
+    const count = familyCounts[family] || 0;
+    return count > 0 && count < 3;
+  });
+  const gaps = [];
+
+  if (missingFamilies.length > 0) {
+    gaps.push(
+      `${missingFamilies.length} canonical complaint families still missing: ${missingFamilies.join(", ")}`
+    );
+  } else {
+    gaps.push("All 50 canonical complaint families represented.");
+  }
+
+  if (lowCoverageFamilies.length > 0) {
+    gaps.push(
+      `Thin coverage remains for ${lowCoverageFamilies.length} families with fewer than 3 cases: ${lowCoverageFamilies.join(", ")}`
+    );
+  }
+
+  return gaps;
+}
 
 function computeShardHash(shardDir) {
   const files = fs
@@ -93,15 +131,8 @@ function main() {
     case_id_ranges: caseIdRanges,
     complaint_families_covered: Array.from(allFamilies).sort(),
     shard_hash: shardHash,
-    coverage_gaps: [
-      "Not all 50 complaint families represented (expected, will be filled in VET-919)",
-      "Owner language variants not yet expanded",
-      "Chronic-plus-acute cases limited",
-    ],
+    coverage_gaps: [],
   };
-
-  fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest, null, 2), "utf8");
-  console.log(`Manifest written to: ${MANIFEST_FILE}`);
 
   // Generate report
   const familyCounts = {};
@@ -115,6 +146,11 @@ function main() {
     tierCounts[caseData.risk_tier] = (tierCounts[caseData.risk_tier] || 0) + 1;
     if (caseData.must_not_miss_marker) mustNotMissCount++;
   }
+
+  manifest.coverage_gaps = buildCoverageGaps(allFamilies, familyCounts);
+
+  fs.writeFileSync(MANIFEST_FILE, JSON.stringify(manifest, null, 2), "utf8");
+  console.log(`Manifest written to: ${MANIFEST_FILE}`);
 
   let report = `# Gold V1 Benchmark Report\n\n`;
   report += `**Version**: gold-v1\n`;

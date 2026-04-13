@@ -1,0 +1,1068 @@
+{
+  "suite_id": "dog-triage-gold-candidate-emergency-expansion",
+  "version": "2026-04-13",
+  "species": "dog",
+  "description": "Additional emergency cases for benchmark expansion.",
+  "cases": [
+    {
+      "id": "emergency-bloat-gasdilation",
+      "description": "Acute gastric dilation without retching should escalate.",
+      "tags": [
+        "emergency",
+        "abdomen",
+        "bloat"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "swollen_abdomen"
+        ]
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Zeus",
+          "breed": "Great Dane",
+          "age_years": 6,
+          "weight": 130,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's belly is hugely swollen and he keeps pacing and drooling."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-dog-bite-wound",
+      "description": "Deep bite wound with tissue damage should escalate.",
+      "tags": [
+        "emergency",
+        "trauma",
+        "wound"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "wound_skin_issue"
+        ]
+      },
+      "complaint_family_tags": [
+        "wound_skin_issue"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rex",
+          "breed": "Pit Bull Terrier",
+          "age_years": 5,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog was attacked and has deep puncture wounds on his chest."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-diabetic-crisis",
+      "description": "Known diabetic dog that is disoriented and weak should escalate.",
+      "tags": [
+        "emergency",
+        "endocrine",
+        "metabolic"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "lethargy"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Daisy",
+          "breed": "Miniature Schnauzer",
+          "age_years": 10,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My diabetic dog is stumbling around and seems very confused."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-prolonged-seizure",
+      "description": "Seizure lasting more than five minutes should escalate as status epilepticus.",
+      "tags": [
+        "emergency",
+        "neurologic",
+        "seizure"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "seizure_collapse"
+        ]
+      },
+      "complaint_family_tags": [
+        "seizure_collapse"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bella",
+          "breed": "Labrador Retriever",
+          "age_years": 7,
+          "weight": 68,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been having a seizure for over five minutes and won't stop."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-choking-foreign-body",
+      "description": "Choking with gagging and pawing at mouth should escalate.",
+      "tags": [
+        "emergency",
+        "airway",
+        "choking"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "difficulty_breathing"
+        ]
+      },
+      "complaint_family_tags": [
+        "difficulty_breathing"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Charlie",
+          "breed": "Beagle",
+          "age_years": 3,
+          "weight": 26,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is gagging and pawing at his mouth like something is stuck."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-glaucoma-eye",
+      "description": "Sudden cloudy bulging eye with pain should escalate.",
+      "tags": [
+        "emergency",
+        "eye",
+        "glaucoma"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "eye_discharge"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Max",
+          "breed": "Cocker Spaniel",
+          "age_years": 9,
+          "weight": 28,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-imma-mediated-thrombocytopenia",
+      "description": "Tiny pinpoint bleeding spots on gums with weakness should escalate.",
+      "tags": [
+        "emergency",
+        "blood",
+        "immune"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "lethargy"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Luna",
+          "breed": "Poodle",
+          "age_years": 6,
+          "weight": 42,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "There are tiny red spots all over my dog's gums and she is very weak."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-burn-chemical",
+      "description": "Chemical burn to skin or paws should escalate.",
+      "tags": [
+        "emergency",
+        "chemical",
+        "skin"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "wound_skin_issue"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rocky",
+          "breed": "Boxer",
+          "age_years": 4,
+          "weight": 62,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog stepped in drain cleaner and his paw is red and blistered."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-allergic-reaction-hives",
+      "description": "Widespread hives with facial swelling should escalate.",
+      "tags": [
+        "emergency",
+        "allergy",
+        "anaphylaxis"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "excessive_scratching"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Buddy",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is covered in hives and his face is puffing up after a bug bite."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-urinary-female-blockage",
+      "description": "Female dog with signs of urinary discomfort and frequent squatting should escalate.",
+      "tags": [
+        "emergency",
+        "urinary"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "urination_problem"
+        ]
+      },
+      "complaint_family_tags": [
+        "urination_problem"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Molly",
+          "breed": "Dalmatian",
+          "age_years": 8,
+          "weight": 52,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps trying to pee but nothing comes out and she's crying."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-electrical-shock",
+      "description": "Possible electrocution from chewing a cord should escalate.",
+      "tags": [
+        "emergency",
+        "trauma",
+        "electrical"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "trembling"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Gizmo",
+          "breed": "Jack Russell Terrier",
+          "age_years": 2,
+          "weight": 14,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My puppy chewed an electrical cord and now he is trembling and weak."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-protozoal-acute-babesia",
+      "description": "Acute weakness with pale gums and dark urine should escalate.",
+      "tags": [
+        "emergency",
+        "infectious",
+        "blood"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "lethargy"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Duke",
+          "breed": "Greyhound",
+          "age_years": 5,
+          "weight": 68,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is extremely weak, his gums are pale, and his urine is dark brown."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-snake-bite",
+      "description": "Suspected snake bite with swelling and pain should escalate.",
+      "tags": [
+        "emergency",
+        "bite",
+        "venom"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "wound_skin_issue"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ranger",
+          "breed": "Australian Cattle Dog",
+          "age_years": 4,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog was bitten by a snake and his face is swelling badly."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-addisonian-crisis",
+      "description": "Collapse with history of intermittent GI signs should escalate as Addisonian crisis.",
+      "tags": [
+        "emergency",
+        "endocrine",
+        "collapse"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Sadie",
+          "breed": "Standard Poodle",
+          "age_years": 6,
+          "weight": 52,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been having intermittent vomiting and now she has collapsed."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-hemorrhagic-diarrhea-shock",
+      "description": "Profuse bloody diarrhea with weakness and pale gums should escalate.",
+      "tags": [
+        "emergency",
+        "gi",
+        "bleeding"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "diarrhea"
+        ]
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tucker",
+          "breed": "German Shepherd",
+          "age_years": 3,
+          "weight": 78,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has explosive bloody diarrhea and is weak with pale gums."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-difficulty-breathing-kennel",
+      "description": "Severe breathing difficulty after kennel exposure should escalate.",
+      "tags": [
+        "emergency",
+        "respiratory",
+        "infectious"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "difficulty_breathing"
+        ]
+      },
+      "complaint_family_tags": [
+        "difficulty_breathing"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bingo",
+          "breed": "Pomeranian",
+          "age_years": 9,
+          "weight": 10,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "After boarding, my dog is struggling to breathe and making honking sounds."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-bloat-after-meal",
+      "description": "Restlessness after large meal with swollen belly should escalate.",
+      "tags": [
+        "emergency",
+        "abdomen",
+        "bloat"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "swollen_abdomen"
+        ]
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Feast",
+          "breed": "Standard Poodle",
+          "age_years": 7,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "After eating a big meal my dog is restless and his belly looks tight and swollen."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-seizure-first-time",
+      "description": "First-time seizure in an adult dog should escalate.",
+      "tags": [
+        "emergency",
+        "neurologic",
+        "seizure"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "seizure_collapse"
+        ]
+      },
+      "complaint_family_tags": [
+        "seizure_collapse"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Shake",
+          "breed": "Border Collie",
+          "age_years": 5,
+          "weight": 42,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog just had his first ever seizure and is now confused and disoriented."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-breathing-labored",
+      "description": "Labored breathing with abdominal effort should escalate.",
+      "tags": [
+        "emergency",
+        "respiratory"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "difficulty_breathing"
+        ]
+      },
+      "complaint_family_tags": [
+        "difficulty_breathing"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Wheeze",
+          "breed": "Shih Tzu",
+          "age_years": 11,
+          "weight": 14,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is breathing with great effort using his belly muscles."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-vomiting-green",
+      "description": "Vomiting green bile repeatedly should escalate.",
+      "tags": [
+        "emergency",
+        "gi"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "vomiting"
+        ]
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bile",
+          "breed": "Mixed Breed",
+          "age_years": 6,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps throwing up green bile and won't eat or drink."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-limping-cry-pain",
+      "description": "Limping with crying in pain should escalate.",
+      "tags": [
+        "emergency",
+        "orthopedic"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "limping"
+        ]
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Yelp",
+          "breed": "Dachshund",
+          "age_years": 5,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is limping and crying in pain and won't let me touch his back."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-urinary-blockage-distress",
+      "description": "Urinary blockage with vocalizing distress should escalate.",
+      "tags": [
+        "emergency",
+        "urinary"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "urination_problem"
+        ]
+      },
+      "complaint_family_tags": [
+        "urination_problem"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Block",
+          "breed": "Maltese",
+          "age_years": 9,
+          "weight": 8,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is crying and trying to pee but nothing has come out for hours."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-wound-deep-avulsion",
+      "description": "Skin avulsion wound should escalate.",
+      "tags": [
+        "emergency",
+        "trauma",
+        "wound"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "wound_skin_issue"
+        ]
+      },
+      "complaint_family_tags": [
+        "wound_skin_issue"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tear",
+          "breed": "Labrador Retriever",
+          "age_years": 4,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has a large flap of skin hanging off his shoulder from a fence incident."
+          }
+        ]
+      }
+    },
+    {
+      "id": "emergency-trembling-cold-weak",
+      "description": "Trembling with weakness and cold extremities should escalate.",
+      "tags": [
+        "emergency",
+        "metabolic",
+        "trembling"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "trembling"
+        ]
+      },
+      "complaint_family_tags": [
+        "trembling"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Chilly",
+          "breed": "Italian Greyhound",
+          "age_years": 8,
+          "weight": 10,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is trembling, weak, and his ears and paws feel cold."
+          }
+        ]
+      }
+    },
+    {
+      "id": "followup-seizure-duration-unknown",
+      "description": "Unknown seizure duration should escalate as unsafe unknown.",
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic",
+        "emergency"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "seizure_collapse"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Poppy",
+          "breed": "Border Collie",
+          "age_years": 4,
+          "weight": 39,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't know how long it lasted, it felt like forever."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "seizure_collapse"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "seizure_disorder",
+            "toxin_exposure",
+            "brain_tumor"
+          ],
+          "body_systems_involved": [
+            "neurologic"
+          ],
+          "last_question_asked": "seizure_duration",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "seizure_collapse"
+            ],
+            "active_focus_symptoms": [
+              "seizure_collapse"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "seizure_duration"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      }
+    },
+    {
+      "id": "followup-breathing-pattern-unknown",
+      "description": "Unknown breathing pattern should escalate as unsafe unknown.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "emergency"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "difficulty_breathing"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Moose",
+          "breed": "Pug",
+          "age_years": 8,
+          "weight": 23,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't describe how he's breathing, he just seems off."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "difficulty_breathing"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "heart_failure",
+            "allergic_reaction",
+            "difficulty_breathing"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "breathing_pattern",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "difficulty_breathing"
+            ],
+            "active_focus_symptoms": [
+              "difficulty_breathing"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "breathing_pattern"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      }
+    }
+  ]
+}

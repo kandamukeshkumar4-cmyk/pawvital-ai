@@ -1,0 +1,441 @@
+{
+  "suite_id": "dog-triage-gold-candidate-senior-chronic",
+  "version": "2026-04-13",
+  "species": "dog",
+  "description": "Senior and chronic condition cases.",
+  "cases": [
+    {
+      "id": "question-senior-cognitive-dysfunction",
+      "description": "Senior dog with confusion and disorientation should open geriatric questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "cognitive"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "behavior_change"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Old Timer",
+          "breed": "Golden Retriever",
+          "age_years": 14,
+          "weight": 60,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog gets stuck in corners and stares at walls."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-senior-arthritis-worsening",
+      "description": "Worsening arthritis symptoms should open mobility questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "mobility"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "generalized_stiffness"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Stiff",
+          "breed": "Labrador Retriever",
+          "age_years": 12,
+          "weight": 75,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has arthritis but it seems much worse lately. He can barely stand."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-chronic-ear-infections",
+      "description": "Recurrent ear infections should open chronic management questioning.",
+      "tags": [
+        "question",
+        "chronic",
+        "ear"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "ear_scratching",
+        "recurrent_ear"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Recurrent",
+          "breed": "Cocker Spaniel",
+          "age_years": 7,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog gets ear infections every few months and I'm tired of it."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-chronic-skin-allergies",
+      "description": "Chronic itchy flares with greasy odor should open recurrent dermatology questioning.",
+      "tags": [
+        "question",
+        "chronic",
+        "allergy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "excessive_scratching",
+        "recurrent_skin",
+        "skin_odor_greasy"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Seasonal",
+          "breed": "French Bulldog",
+          "age_years": 5,
+          "weight": 25,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog gets itchy every spring and his coat gets greasy and yeasty-smelling."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-senior-vision-loss",
+      "description": "Vision loss in senior dog should open geriatric/neurologic questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "eye"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "senior_decline",
+        "vision_loss"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Blind",
+          "breed": "Poodle",
+          "age_years": 13,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog bumps into furniture and seems to have trouble seeing."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-senior-hearing-loss",
+      "description": "Hearing loss in senior dog should open geriatric questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "hearing"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "senior_decline",
+        "hearing_loss"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Deaf",
+          "breed": "Dalmatian",
+          "age_years": 12,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog doesn't respond when I call his name anymore."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-chronic-intermittent-vomiting",
+      "description": "Intermittent vomiting over months should open chronic GI questioning.",
+      "tags": [
+        "question",
+        "chronic",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Puke",
+          "breed": "Labrador Retriever",
+          "age_years": 8,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog throws up once every week or so for the past few months."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-senior-incontinence",
+      "description": "Urinary incontinence in senior dog should open urinary questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "urinary"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "inappropriate_urination",
+        "senior_decline"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Drip",
+          "breed": "Mixed Breed",
+          "age_years": 14,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog leaks urine while sleeping."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-chronic-chronic-diarrhea",
+      "description": "Chronic intermittent diarrhea should open GI questioning.",
+      "tags": [
+        "question",
+        "chronic",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Loose",
+          "breed": "Mixed Breed",
+          "age_years": 6,
+          "weight": 35,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has soft stool on and off for months."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-senior-chronic-cough",
+      "description": "Chronic cough in senior should open cardiac/respiratory questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "respiratory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "coughing"
+        ]
+      },
+      "complaint_family_tags": [
+        "coughing"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Chronic Cough",
+          "breed": "Cavalier King Charles Spaniel",
+          "age_years": 12,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog has been coughing on and off for months."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-multi-senior-decline-combo",
+      "description": "Multiple senior decline signs should open comprehensive geriatric questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "senior_decline",
+        "multi_system_decline",
+        "lethargy",
+        "behavior_change",
+        "not_eating"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "All Decline",
+          "breed": "Golden Retriever",
+          "age_years": 14,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is sleeping all day, not eating well, and seems confused."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-senior-dental-decay",
+      "description": "Severe dental decay in senior should open dental questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "dental"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "dental_problem"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rotten",
+          "breed": "Yorkshire Terrier",
+          "age_years": 12,
+          "weight": 8,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog has terrible teeth, some are falling out."
+          }
+        ]
+      }
+    }
+  ]
+}

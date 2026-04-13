@@ -1,8 +1,8 @@
 {
   "version": "gold-v1",
-  "freeze_date": "2026-04-10",
-  "shard_count": 7,
-  "total_case_count": 101,
+  "freeze_date": "2026-04-13",
+  "shard_count": 13,
+  "total_case_count": 219,
   "case_id_ranges": {
     "01-emergency-a.json": {
       "count": 10,
@@ -38,9 +38,41 @@
       "count": 36,
       "first_id": "repro-question-pseudopregnancy",
       "last_id": "oncology-emergency-nosebleed-collapse"
+    },
+    "08-emergency-expansion.json": {
+      "count": 26,
+      "first_id": "emergency-bloat-gasdilation",
+      "last_id": "followup-breathing-pattern-unknown"
+    },
+    "09-same-day-urgent.json": {
+      "count": 25,
+      "first_id": "sameday-ear-infection",
+      "last_id": "sameday-chronic-limp-sudden-worse"
+    },
+    "10-new-families.json": {
+      "count": 22,
+      "first_id": "question-anxiety-separation",
+      "last_id": "question-chronic-weight-gain"
+    },
+    "11-language-variants.json": {
+      "count": 20,
+      "first_id": "question-vague-sick-dog",
+      "last_id": "question-contradictory-vomiting"
+    },
+    "12-followup-unknowns.json": {
+      "count": 13,
+      "first_id": "followup-diarrhea-onset-unknown",
+      "last_id": "followup-diarrhea-frequency-unknown"
+    },
+    "13-senior-chronic.json": {
+      "count": 12,
+      "first_id": "question-senior-cognitive-dysfunction",
+      "last_id": "question-senior-dental-decay"
     }
   },
   "complaint_families_covered": [
+    "abnormal_gait",
+    "aggression",
     "behavior_change",
     "blood_in_stool",
     "constipation",
@@ -52,33 +84,47 @@
     "drinking_more",
     "ear_scratching",
     "excessive_scratching",
+    "exercise_induced_lameness",
     "eye_discharge",
+    "fecal_incontinence",
     "generalized_stiffness",
     "hair_loss",
+    "hearing_loss",
     "heat_intolerance",
+    "inappropriate_urination",
     "lethargy",
     "limping",
+    "medication_reaction",
+    "multi_system_decline",
     "nasal_discharge",
+    "not_eating",
+    "oral_mass",
+    "pacing_restlessness",
     "postoperative_concern",
     "pregnancy_birth",
+    "puppy_concern",
+    "recurrent_ear",
+    "recurrent_skin",
     "regurgitation",
     "seizure_collapse",
     "senior_decline",
+    "skin_odor_greasy",
     "swelling_lump",
     "swollen_abdomen",
+    "testicular_prostate",
     "trembling",
     "unknown_concern",
     "urination_problem",
     "vaginal_discharge",
+    "vision_loss",
     "vomiting",
     "vomiting_diarrhea_combined",
     "weight_loss",
     "wound_skin_issue"
   ],
-  "shard_hash": "eae283d10d38ab3e2069dad16c7d3498b3b6610a42a37cf1b29e6cb5b4939d21",
+  "shard_hash": "a551f4cbff90f29212cb7735e06b17f77f9e94f4f7ae94a7405f79a223c7963d",
   "coverage_gaps": [
-    "Not all 50 complaint families represented (expected, will be filled in VET-919)",
-    "Owner language variants not yet expanded",
-    "Chronic-plus-acute cases limited"
+    "All 50 canonical complaint families represented.",
+    "Thin coverage remains for 24 families with fewer than 3 cases: heat_intolerance, vision_loss, pregnancy_birth, not_eating, regurgitation, constipation, generalized_stiffness, nasal_discharge, vaginal_discharge, testicular_prostate, exercise_induced_lameness, recurrent_ear, inappropriate_urination, vomiting_diarrhea_combined, oral_mass, hearing_loss, aggression, pacing_restlessness, abnormal_gait, postoperative_concern, medication_reaction, puppy_concern, multi_system_decline, blood_in_stool"
   ]
 }

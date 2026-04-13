@@ -1,0 +1,921 @@
+{
+  "suite_id": "dog-triage-gold-candidate-same-day-urgent",
+  "version": "2026-04-13",
+  "species": "dog",
+  "description": "Same-day and urgent cases for benchmark expansion.",
+  "cases": [
+    {
+      "id": "sameday-ear-infection",
+      "description": "Head shaking with ear odor and discharge should be same-day.",
+      "tags": [
+        "same-day",
+        "ear",
+        "infection"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "ear_scratching"
+        ]
+      },
+      "complaint_family_tags": [
+        "ear_scratching"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Coco",
+          "breed": "Cocker Spaniel",
+          "age_years": 5,
+          "weight": 28,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps shaking his head and his ear smells bad with dark discharge."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-vomiting-multiple-times",
+      "description": "Multiple vomiting episodes in 24 hours without blood should be same-day.",
+      "tags": [
+        "same-day",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "vomiting"
+        ]
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bentley",
+          "breed": "Labrador Retriever",
+          "age_years": 6,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has thrown up four times today but is still trying to drink."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-limping-non-weight-bearing",
+      "description": "Non-weight-bearing lameness should be same-day.",
+      "tags": [
+        "same-day",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "limping"
+        ]
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Diesel",
+          "breed": "Rottweiler",
+          "age_years": 4,
+          "weight": 100,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog won't put any weight on his front leg after playing fetch."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-urinary-blood",
+      "description": "Blood visible in urine without obstruction signs should be same-day.",
+      "tags": [
+        "same-day",
+        "urinary",
+        "blood"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "urination_problem"
+        ]
+      },
+      "complaint_family_tags": [
+        "urination_problem"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Stella",
+          "breed": "Shih Tzu",
+          "age_years": 7,
+          "weight": 12,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I noticed blood in my dog's urine this morning but she is still peeing normally."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-skin-hot-spot-rapid",
+      "description": "Rapidly growing hot spot should be same-day.",
+      "tags": [
+        "same-day",
+        "skin",
+        "infection"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "wound_skin_issue"
+        ]
+      },
+      "complaint_family_tags": [
+        "wound_skin_issue"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rosie",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 60,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog developed a big red wet sore on her side overnight."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-coughing-worsening",
+      "description": "Worsening cough over several days with normal energy should be same-day.",
+      "tags": [
+        "same-day",
+        "respiratory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "coughing"
+        ]
+      },
+      "complaint_family_tags": [
+        "coughing"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Fido",
+          "breed": "Pomeranian",
+          "age_years": 8,
+          "weight": 9,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been coughing for five days and it is getting worse but she still eats."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-diarrhea-persistent",
+      "description": "Diarrhea persisting for three days should be same-day.",
+      "tags": [
+        "same-day",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "diarrhea"
+        ]
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rusty",
+          "breed": "Mixed Breed",
+          "age_years": 4,
+          "weight": 35,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has had diarrhea for three days straight but is still acting normal."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-eye-squinting-red",
+      "description": "Red squinting eye without discharge should be same-day.",
+      "tags": [
+        "same-day",
+        "eye"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "eye_discharge"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Duke",
+          "breed": "Pug",
+          "age_years": 6,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is squinting one eye and it looks red."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-trembling-persistent",
+      "description": "Persistent trembling for hours should be same-day.",
+      "tags": [
+        "same-day",
+        "neurologic"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "trembling"
+        ]
+      },
+      "complaint_family_tags": [
+        "trembling"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Peanut",
+          "breed": "Chihuahua",
+          "age_years": 9,
+          "weight": 6,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been trembling for hours even after being warmed up."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-swollen-abdomen-mild",
+      "description": "Mild abdominal swelling without distress should be same-day.",
+      "tags": [
+        "same-day",
+        "abdomen"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "swollen_abdomen"
+        ]
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bear",
+          "breed": "Labrador Retriever",
+          "age_years": 7,
+          "weight": 75,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's belly looks more swollen than usual but he is still eating."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-itching-intense",
+      "description": "Intense scratching with skin damage should be same-day.",
+      "tags": [
+        "same-day",
+        "dermatology"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "excessive_scratching"
+        ]
+      },
+      "complaint_family_tags": [
+        "excessive_scratching"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Maggie",
+          "breed": "West Highland White Terrier",
+          "age_years": 4,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is scratching so hard she has raw patches on her skin."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-weight-loss-rapid",
+      "description": "Noticeable weight loss over two weeks should be same-day.",
+      "tags": [
+        "same-day",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "weight_loss"
+        ]
+      },
+      "complaint_family_tags": [
+        "weight_loss"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Oliver",
+          "breed": "Mixed Breed",
+          "age_years": 12,
+          "weight": 38,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has lost a noticeable amount of weight in the last two weeks."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-dental-bleeding-gum",
+      "description": "Bleeding from gums with dental pain should be same-day.",
+      "tags": [
+        "same-day",
+        "dental"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "dental_problem"
+        ]
+      },
+      "complaint_family_tags": [
+        "dental_problem"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Biscuit",
+          "breed": "Miniature Poodle",
+          "age_years": 10,
+          "weight": 12,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's gums are bleeding and she cries when I try to check her teeth."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-hair-loss-spreading",
+      "description": "Spreading hair loss patches should be same-day.",
+      "tags": [
+        "same-day",
+        "dermatology"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "hair_loss"
+        ]
+      },
+      "complaint_family_tags": [
+        "hair_loss"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Sasha",
+          "breed": "Pomeranian",
+          "age_years": 5,
+          "weight": 7,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "The bald patches on my dog are spreading to new areas."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-vaginal-discharge-mild",
+      "description": "Vaginal discharge without systemic illness should be same-day.",
+      "tags": [
+        "same-day",
+        "reproductive"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "vaginal_discharge"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Duchess",
+          "breed": "Cavalier King Charles Spaniel",
+          "age_years": 5,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has a discharge from her vulva but is otherwise acting normal."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-drinking-excessive",
+      "description": "Excessive water consumption over several days should be same-day.",
+      "tags": [
+        "same-day",
+        "endocrine"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "drinking_more"
+        ]
+      },
+      "complaint_family_tags": [
+        "drinking_more"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Barney",
+          "breed": "Beagle",
+          "age_years": 10,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is drinking entire bowls of water and refilling them multiple times a day."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-behavior-hiding",
+      "description": "New hiding behavior with appetite changes should be same-day.",
+      "tags": [
+        "same-day",
+        "behavior"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "behavior_change"
+        ]
+      },
+      "complaint_family_tags": [
+        "behavior_change"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Shadow",
+          "breed": "Mixed Breed",
+          "age_years": 8,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is hiding under the bed and not eating like usual."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-regurgitation-frequent",
+      "description": "Frequent regurgitation after meals should be same-day.",
+      "tags": [
+        "same-day",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "regurgitation"
+        ]
+      },
+      "complaint_family_tags": [
+        "regurgitation"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Thor",
+          "breed": "German Shepherd",
+          "age_years": 4,
+          "weight": 75,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog regurgitates after almost every meal now."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-abdominal-pain-tense",
+      "description": "Tense painful abdomen should be same-day.",
+      "tags": [
+        "same-day",
+        "abdomen",
+        "pain"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Hurt",
+          "breed": "Beagle",
+          "age_years": 7,
+          "weight": 25,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's belly feels tight and hard and he cries when I press it."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-face-swelling-worsening",
+      "description": "Worsening facial swelling should be same-day.",
+      "tags": [
+        "same-day",
+        "allergy",
+        "face"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "wound_skin_issue"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Swell",
+          "breed": "Bulldog",
+          "age_years": 4,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's face has been getting more swollen over the past few hours."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-scooting-blood",
+      "description": "Scooting with visible blood should be same-day.",
+      "tags": [
+        "same-day",
+        "anal_gland",
+        "blood"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "blood_in_stool",
+        "fecal_incontinence"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bloody",
+          "breed": "French Bulldog",
+          "age_years": 5,
+          "weight": 22,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is scooting and I see bloody stool spots where he was sitting."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-skin-infection-spread",
+      "description": "Rapidly spreading skin infection should be same-day.",
+      "tags": [
+        "same-day",
+        "skin",
+        "infection"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "recurrent_skin",
+        "skin_odor_greasy"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Spreader",
+          "breed": "Golden Retriever",
+          "age_years": 6,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "The greasy red skin infection on my dog has doubled in size since yesterday."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-drooling-cant-swallow",
+      "description": "Excessive drooling with swallowing difficulty should be same-day.",
+      "tags": [
+        "same-day",
+        "oral",
+        "drooling"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "oral_mass"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Drops",
+          "breed": "Cocker Spaniel",
+          "age_years": 8,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is drooling constantly and seems to have trouble swallowing."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-senior-not-eating-days",
+      "description": "Senior not eating for multiple days should be same-day.",
+      "tags": [
+        "same-day",
+        "senior",
+        "appetite"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "behavior_change"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Refuser",
+          "breed": "Mixed Breed",
+          "age_years": 13,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My senior dog hasn't eaten in three days."
+          }
+        ]
+      }
+    },
+    {
+      "id": "sameday-chronic-limp-sudden-worse",
+      "description": "Chronic limp that suddenly worsens should be same-day.",
+      "tags": [
+        "same-day",
+        "chronic",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "limping"
+        ]
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Old Limp",
+          "breed": "German Shepherd",
+          "age_years": 10,
+          "weight": 80,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has had a bad hip for years but today he can barely walk."
+          }
+        ]
+      }
+    }
+  ]
+}

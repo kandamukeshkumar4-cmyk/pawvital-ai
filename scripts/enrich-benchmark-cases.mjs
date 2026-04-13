@@ -86,6 +86,39 @@ const EMERGENCY_FAMILIES = new Set([
   "pregnancy_birth",
 ]);
 
+function normalizePet(pet = {}) {
+  return {
+    name: pet.name,
+    breed: pet.breed,
+    age_years: pet.age_years ?? pet.age,
+    weight: pet.weight,
+    species: pet.species ?? "dog",
+  };
+}
+
+function normalizeMessages(messages = []) {
+  return messages.map((message) =>
+    typeof message === "string" ? { role: "user", content: message } : message
+  );
+}
+
+function normalizeRequest(caseData) {
+  if (caseData.request) {
+    return {
+      ...caseData.request,
+      pet: normalizePet(caseData.request.pet),
+      messages: normalizeMessages(caseData.request.messages),
+    };
+  }
+
+  return {
+    action: "chat",
+    pet: normalizePet(caseData.pet),
+    ...(caseData.session ? { session: caseData.session } : {}),
+    messages: normalizeMessages(caseData.messages),
+  };
+}
+
 function extractSymptomsFromCase(caseData) {
   const symptoms = new Set();
   const expectations = caseData.expectations || {};
@@ -108,6 +141,10 @@ function extractSymptomsFromCase(caseData) {
 }
 
 function deriveComplaintFamilies(caseData) {
+  if (Array.isArray(caseData.complaint_family_tags) && caseData.complaint_family_tags.length > 0) {
+    return Array.from(new Set(caseData.complaint_family_tags));
+  }
+
   const symptoms = extractSymptomsFromCase(caseData);
   const families = new Set();
 
@@ -195,13 +232,23 @@ function main() {
     console.log(`\nProcessing ${fileName} (${suite.cases.length} cases)...`);
 
     for (const caseData of suite.cases) {
-      const families = deriveComplaintFamilies(caseData);
-      const riskTier = deriveRiskTier(families);
-      const uncertaintyPattern = deriveUncertaintyPattern(caseData);
-      const mustNotMiss = deriveMustNotMissMarker(families);
+      const normalizedRequest = normalizeRequest(caseData);
+      const normalizedCase = {
+        ...caseData,
+        request: normalizedRequest,
+      };
+
+      const families = deriveComplaintFamilies(normalizedCase);
+      const riskTier = caseData.risk_tier || deriveRiskTier(families);
+      const uncertaintyPattern = caseData.uncertainty_pattern || deriveUncertaintyPattern(normalizedCase);
+      const mustNotMiss =
+        typeof caseData.must_not_miss_marker === "boolean"
+          ? caseData.must_not_miss_marker
+          : deriveMustNotMissMarker(families);
 
       const enriched = {
         ...caseData,
+        request: normalizedRequest,
         complaint_family_tags: families,
         risk_tier: riskTier,
         uncertainty_pattern: uncertaintyPattern,
@@ -213,6 +260,10 @@ function main() {
           version: "gold-v1",
         },
       };
+
+      delete enriched.pet;
+      delete enriched.messages;
+      delete enriched.session;
 
       enrichedCases.push(enriched);
       totalCases++;

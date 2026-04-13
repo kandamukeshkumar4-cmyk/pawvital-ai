@@ -1,0 +1,741 @@
+{
+  "suite_id": "dog-triage-gold-candidate-language-variants",
+  "version": "2026-04-13",
+  "species": "dog",
+  "description": "Owner language variants: slang, vague, contradictory, multi-complaint.",
+  "cases": [
+    {
+      "id": "question-vague-sick-dog",
+      "description": "Vague \"dog is sick\" presentation should open general questioning.",
+      "tags": [
+        "question",
+        "vague",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "behavior_change"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Max",
+          "breed": "Mixed Breed",
+          "age_years": 5,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog just doesn't seem right."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-slang-throwing-up-bricks",
+      "description": "Slang description of vomiting should still open GI flow.",
+      "tags": [
+        "question",
+        "gi",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "vomiting"
+        ]
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tank",
+          "breed": "Pit Bull Terrier",
+          "age_years": 4,
+          "weight": 60,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps hurling his food back up."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-contradictory-energy",
+      "description": "Contradictory report of energy level should open clarifying questions.",
+      "tags": [
+        "question",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "lethargy"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Jumpy",
+          "breed": "Beagle",
+          "age_years": 3,
+          "weight": 25,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is acting fine but also not himself. He runs around but then just lays there."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-multi-cough-vomit-itch",
+      "description": "Multiple complaints in one message should open prioritized questioning.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "coughing",
+        "vomiting",
+        "excessive_scratching"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Everything",
+          "breed": "Mixed Breed",
+          "age_years": 8,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is coughing, threw up once, and is scratching like crazy."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-low-literacy-belly-big",
+      "description": "Low-literacy description of abdominal distension should open abdominal questioning.",
+      "tags": [
+        "question",
+        "abdomen",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "swollen_abdomen"
+        ]
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Big Boy",
+          "breed": "Labrador Retriever",
+          "age_years": 9,
+          "weight": 85,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His belly be real big like a balloon."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-vague-not-eating",
+      "description": "Vague \"not eating\" should open appetite/dental/systemic questioning.",
+      "tags": [
+        "question",
+        "appetite",
+        "vague"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "not_eating"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Picky",
+          "breed": "Pomeranian",
+          "age_years": 7,
+          "weight": 7,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "He just won't eat his food anymore."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-slang-the-runs",
+      "description": "Slang for diarrhea should open GI flow.",
+      "tags": [
+        "question",
+        "gi",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "diarrhea"
+        ]
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Speedy",
+          "breed": "Mixed Breed",
+          "age_years": 3,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has the runs really bad."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-contradictory-limping",
+      "description": "Conflicting weight-bearing details should force a clarifying orthopedic question before limping triage proceeds.",
+      "tags": [
+        "question",
+        "orthopedic",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "limping"
+        ]
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Maybe",
+          "breed": "Golden Retriever",
+          "age_years": 6,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Sometimes he limps and sometimes he runs fine. It comes and goes."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-multi-lethargy-vomit-drink",
+      "description": "Multiple systemic complaints should open prioritized questioning.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "lethargy",
+        "vomiting",
+        "drinking_more"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Slow",
+          "breed": "Mixed Breed",
+          "age_years": 10,
+          "weight": 50,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is tired all the time, vomited yesterday, and drinking a lot."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-low-literacy-eye-bad",
+      "description": "A plain-language eye complaint should still route into the ophthalmic questioning path.",
+      "tags": [
+        "question",
+        "eye",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "eye_discharge"
+        ]
+      },
+      "complaint_family_tags": [
+        "vision_loss"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "One Eye",
+          "breed": "Shih Tzu",
+          "age_years": 8,
+          "weight": 12,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His eye all goopy and squinty."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-vague-lump-found",
+      "description": "Vague lump discovery should open mass characterization.",
+      "tags": [
+        "question",
+        "mass",
+        "vague"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "swelling_lump"
+        ]
+      },
+      "complaint_family_tags": [
+        "swelling_lump"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Lumpy",
+          "breed": "Boxer",
+          "age_years": 9,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Found something under his skin. Not sure what it is."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-slang-his-stomach-upset",
+      "description": "Slang for GI upset should open GI questioning.",
+      "tags": [
+        "question",
+        "gi",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tummy",
+          "breed": "Bulldog",
+          "age_years": 5,
+          "weight": 50,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His stomach is all messed up. He keeps retching."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-multi-skin-ear-lick",
+      "description": "Skin, ear, and licking combo should open dermatology flow.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "ear_scratching",
+        "excessive_scratching",
+        "recurrent_skin"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Allergy",
+          "breed": "French Bulldog",
+          "age_years": 4,
+          "weight": 24,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "She's scratching her ears, her skin is red, and she licks her paws."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-contradictory-drinking-peeing",
+      "description": "Mismatched thirst-versus-urination details should reopen clarification before urinary triage advances.",
+      "tags": [
+        "question",
+        "endocrine",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "drinking_more"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Maybe Drinker",
+          "breed": "Mixed Breed",
+          "age_years": 11,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I think she drinks more but I also filled her bowl twice yesterday."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-low-literacy-leg-hurt",
+      "description": "A simple 'leg hurt' owner phrase should still open the lameness pathway without losing nuance.",
+      "tags": [
+        "question",
+        "orthopedic",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "limping"
+        ]
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Hurty",
+          "breed": "Dachshund",
+          "age_years": 7,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His leg be hurting him bad."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-vague-coughing-sometimes",
+      "description": "Intermittent vague coughing should open respiratory questioning.",
+      "tags": [
+        "question",
+        "respiratory",
+        "vague"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "coughing"
+        ]
+      },
+      "complaint_family_tags": [
+        "coughing"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Coughy",
+          "breed": "Pomeranian",
+          "age_years": 10,
+          "weight": 9,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "He does this coughing thing sometimes."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-multi-weight-hair-tired",
+      "description": "Weight loss, hair loss, and tiredness should open systemic questioning.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "weight_loss",
+        "hair_loss",
+        "lethargy"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Decline",
+          "breed": "Mixed Breed",
+          "age_years": 13,
+          "weight": 35,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is getting thinner, losing hair, and always sleeping."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-slang-the-shakes",
+      "description": "Slang for trembling should open neurologic questioning.",
+      "tags": [
+        "question",
+        "neurologic",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "trembling"
+        ]
+      },
+      "complaint_family_tags": [
+        "trembling"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Shaky",
+          "breed": "Chihuahua",
+          "age_years": 9,
+          "weight": 6,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has got the shakes."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-low-literacy-belly-hurt",
+      "description": "Low-literacy abdominal pain should open abdominal questioning.",
+      "tags": [
+        "question",
+        "abdomen",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ouchie",
+          "breed": "Basset Hound",
+          "age_years": 6,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Her belly hurt. She cries when she moves."
+          }
+        ]
+      }
+    },
+    {
+      "id": "question-contradictory-vomiting",
+      "description": "Contradictory vomiting timeline should open clarifying questions.",
+      "tags": [
+        "question",
+        "gi",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "vomiting"
+        ]
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Confused",
+          "breed": "Labrador Retriever",
+          "age_years": 4,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "She threw up this morning but also maybe it was yesterday. I'm not sure."
+          }
+        ]
+      }
+    }
+  ]
+}
