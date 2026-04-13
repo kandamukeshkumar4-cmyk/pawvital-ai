@@ -1,326 +1,205 @@
-# PawVital Veterinary Analyzer Development Roadmap
+# PawVital Safety Rollout Roadmap
 
-This document is the single source of truth for the architecture path, phase order, and current delivery status. It should be updated after each meaningful task so the project stays anchored to a visible roadmap instead of drifting through ad hoc changes.
+This document is the single source of truth for the dog-only deterministic safety program adopted on April 13, 2026. It replaces the older sidecar-first roadmap as the primary delivery plan for the symptom-chat safety rollout.
 
-## Final Target Architecture
+## Current Snapshot
 
-### Real-time diagnostic spine
-- `route.ts` remains the live orchestrator
-- `clinical-matrix.ts` remains the sole controller for urgency, next-question selection, and differential ordering
-- NVIDIA path stays primary for live production traffic:
-  - `Qwen 3.5 122B` for extraction
-  - `Llama 3.3 70B` for phrasing
-  - `Nemotron Super 49B v1.5` for verifier gating
-  - `Llama 3.2 11B / 90B / Kimi` for current vision tiers
-  - `Nemotron Ultra 253B` for final diagnosis
-  - `GLM-5` for safety
-  - `MiniMax` for memory compression
+As of April 13, 2026:
 
-### Hugging Face sidecar layer
-- `vision-preprocess-service`
-  - Grounding DINO
-  - SAM2.1
-  - Florence-2
-- `text-retrieval-service`
-  - BGE-M3
-  - BGE-Reranker-v2-M3
-- `image-retrieval-service`
-  - BiomedCLIP
-- `multimodal-consult-service`
-  - Qwen2.5-VL-7B-Instruct
-- `async-review-service`
-  - Qwen2.5-VL-32B-Instruct
+- `src/app/api/ai/symptom-chat/route.ts` is still a 4,720-line monolith on this branch.
+- The curated dog gold benchmark is still undersized: 101 total cases, 16 must-not-miss emergency cases, 3 same-day cases, and 33 of 50 complaint families covered.
+- The synthetic evaluation harness still reports perfect scores because it is simulation-based, not a live route gate.
+- Only `vision-preprocess-service` is configured and healthy in the live app boundary; the heavier sidecars remain advisory/offline for production.
+- The review queue in shared project memory drifted away from actual GitHub/master state and needed explicit reconciliation before any new safety wave could be trusted.
 
-### Persistent evidence and feedback layer
-- structured case memory
-- evidence chain
-- service telemetry
-- shadow comparisons
-- outcome feedback capture
+## Foundation Work On `codex/vet-1000-safety-rollout-foundation-v1`
 
-### Product and safety layer
-- emergency escalation UX
-- vet handoff summary
-- retrieval-backed reporting
-- confidence calibration
-- graceful fallback when sidecars fail or time out
+This branch establishes the Phase 0 and Phase 1 foundation needed before route decomposition and uncertainty wiring:
 
-## Phase Plan
+- Recorded an April 13 baseline for:
+  - the curated gold-v1 dataset and emergency sentinel subset
+  - the synthetic eval harness run `EVAL-2026-04-13-225`
+- Added an advisory emergency sentinel CI job without making it blocking.
+- Extended guarded unknown handling so these structured fields can resolve explicit canonical `unknown` values:
+  - `appetite_status`
+  - `blood_color`
+  - `blood_amount`
+  - `wound_discharge`
+- Added regression coverage for those guarded unknown paths.
+- Replaced the stale roadmap with this safety-first program and documented queue reconciliation evidence.
+
+## Delivery Phases
 
 | Phase | Goal | Status |
 | --- | --- | --- |
-| 0 | Architecture decisions, docs, service scaffolding, review-agent setup | Complete |
-| 1 | App-side sidecar contracts, async review queue, evidence architecture | Complete |
-| 2 | Curated live corpus rules, observability, shadow mode hooks, emergency/report UX, outcome feedback capture | Complete |
-| 3 | Replace stub HF sidecars with real model-serving implementations | In progress |
-| 4 | Deploy sidecars and wire production environment variables | Partially started |
-| 5 | Run shadow mode with telemetry and compare sidecars against current production path | Not started |
-| 6 | Reindex curated dog-only/domain-tagged corpus and verify live retrieval behavior | Not started |
-| 7 | Expand emergency UX and vet workflow polish | In progress |
-| 8 | Use real outcome feedback to improve thresholds, retrieval quality, and ambiguity handling | Partially started |
+| 0 | Clear the deck: baseline reality, reconcile stale review queue, sync docs | In progress on `VET-1000` |
+| 1 | Unknown handling, payload safety invariants, advisory emergency-sentinel gate | In progress on `VET-1000` |
+| 2 | Route decomposition with no behavior change | Next |
+| 3 | Wire uncertainty contract, add `out_of_scope` and `cannot_assess` | Planned |
+| 4 | Contradiction detection and logging only | Planned |
+| 5 | Expand curated benchmark and promote it to blocking CI | Planned |
+| 6 | Breed priors and evidence-driven sidecar promotion | Planned |
 
-## What Is Completed
+## Phase Detail
 
-### Phase 0 complete
-- world-class architecture planning docs created
-- HF sidecar services scaffolded with Docker and FastAPI contracts
-- review-agent configs added under `.codex/agents`
-- app-side evidence architecture established
+### Phase 0 — Clear the Deck
 
-### Phase 1 complete
-- symptom checker route wired to sidecar contracts
-- async review endpoint added
-- evidence chain generation added
-- retrieval split into text and image service paths
-- sidecar response validation and retry logic added
+Scope:
 
-### Phase 2 complete
-- curated live retrieval policy added
-  - dog-only filtering
-  - live domain filtering
-  - mixed/noisy sources kept out of live retrieval
-- sidecar observability added
-  - latency
-  - outcome
-  - timeout/fallback notes
-  - shadow comparison capture
-- vet handoff summary added to reports
-- emergency CTA and emergency handoff UI added
-- outcome feedback API and UI added
-- report storage IDs and feedback linkage added
+- Reconcile every stale in-review item in shared memory against actual GitHub/master state.
+- Capture the April 13 baseline for the curated benchmark and synthetic harness.
+- Sync roadmap, ticket board, and current-context notes to the safety rollout.
 
-## Current Position
+Ship criteria:
 
-The codebase is now in late `Phase 3`, with `Phase 4` partially started.
+- Shared-memory review queue is zeroed for stale items.
+- Baseline evidence is recorded in repo docs.
+- The roadmap reflects the safety rollout instead of the old sidecar-first sequence.
 
-That means:
-- the Next.js application is now architecturally ready for the world-class path
-- the route, memory model, retrieval, evidence, and UI layers are already prepared for sidecar-backed operation
-- working first-pass implementations now exist for all five HF sidecars
-- shared app contracts now distinguish sync consults from async review queue submission
-- async review now has dead-letter persistence, review state tracking, richer shadow disagreement analysis, and stronger feedback synthesis on `master`
-- the reasoning-heavy MiniMax service lane is now merged locally on `master`, including cross-case review intelligence, explicit promotion-policy bands, and deeper consult longitudinal uncertainty coverage
-- the main unfinished work is deepening real model runtime coverage, deployment wiring, and shadow-mode validation
-- Vercel production now has the shared sidecar auth secret aligned, and guarded readiness / shadow routes respond correctly on the live app
-- Vercel production now also has `HF_VISION_PREPROCESS_URL` configured, and the live app reports `configured=1, healthy=1` on `/api/ai/sidecar-readiness`
-- the current Phase 4 blocker is now explicit: only `vision-preprocess-service` is Vercel-deployable as-is; the other four sidecars exceed Vercel's Python/Lambda storage ceiling and need a different hosting target or slimmer runtimes before their `HF_*_URL` vars can be wired
-- the repo now includes a Docker-native alternative-host bundle under `deploy/sidecars-gpu-host` so the heavy sidecars can move onto a single GPU/VM-style host without changing the app-side contract
+### Phase 1 — Unknown Handling And Payload Safety
 
-## What Is Live In The Repo Right Now
+Scope:
 
-### Production app path
-- sidecar-aware routing
-- evidence-chain-aware reporting
-- curated live corpus filtering
-- shadow-mode plumbing
-- emergency report UX
-- outcome feedback capture
+- Canonical `unknown` values for the guarded structured fields.
+- Payload safety locked with focused route assertions.
+- Advisory emergency sentinel CI coverage.
 
-### Not yet truly live
-- real Grounding DINO, SAM2.1, Florence-2 inference beyond the current heuristic/stub-backed vision deployment
-- production-deployed BGE-M3 retrieval service
-- production-deployed BiomedCLIP image retrieval service
-- production-deployed Qwen2.5-VL synchronous consult service
-- production-deployed Qwen2.5-VL async review worker
-- alternative-host deployment path for the four heavy sidecars
+Ship criteria:
 
-### Phase 3 in progress
-- `vision-preprocess-service`
-  - bearer auth validation
-  - base64/URL image decoding
-  - heuristic domain/body-region inference
-  - image quality scoring
-  - lesion-focused crop generation for obvious inflamed skin regions
-- `text-retrieval-service`
-  - bearer auth validation
-  - live Supabase-backed candidate retrieval via knowledge corpus
-  - deterministic lexical reranking
-  - optional BGE-M3 semantic rerank
-  - optional BGE reranker cross-encoder scoring
-  - dog-only and requested-domain filtering
-- `image-retrieval-service`
-  - bearer auth validation
-  - live Supabase-backed asset lookup against curated corpus metadata
-  - domain-aware source filtering
-  - deterministic condition-label and caption scoring
-  - optional BiomedCLIP reranking over candidate assets
-- `multimodal-consult-service`
-  - real Qwen2.5-VL-7B service implementation merged from MiniMax branch
-  - strict bearer auth and stub/production mode hardening
-  - stricter response schema recovery and output-discipline validation
-  - expanded consult rubric with comparison, risk stratification, and recommended next-step fields wired through the live response shape
-- `async-review-service`
-  - real Qwen2.5-VL-32B service implementation merged from MiniMax branch
-  - deterministic review IDs and explicit queue submission contract
-  - dead-letter persistence, guarded retry endpoints, state-transition tracking, and richer feedback synthesis
-  - cross-case disagreement clustering, severity synthesis, outcome-learning records, and reviewer-calibration summary surfaces
+- Guarded unknowns normalize deterministically.
+- Payload telemetry remains stripped from owner-facing `service_observations`.
+- Advisory sentinel job runs in CI without blocking merge.
 
-## Immediate Next Tasks
+### Phase 2 — Route Decomposition
 
-### Phase 3: Replace stubs with real sidecars
-1. Implement `vision-preprocess-service` with real model loaders and inference flow.
-2. Implement `text-retrieval-service` with embeddings + reranking over the local corpus.
-3. Implement `image-retrieval-service` with BiomedCLIP over curated dog-only assets.
-4. Implement `multimodal-consult-service` with Qwen2.5-VL-7B.
-5. Implement `async-review-service` with Qwen2.5-VL-32B batch-style review.
+Scope:
 
-### Phase 4: Deployment and production wiring
-1. Keep `vision-preprocess-service` wired and verified on Vercel.
-2. Deploy the four heavy sidecars to infrastructure that can handle their model/runtime footprint.
-3. Set the remaining production `HF_*_URL` vars.
-4. Verify service health and contract compatibility.
+- Extract `route.ts` into callable modules with no behavior change:
+  - intake/request parsing
+  - answer extraction and normalization
+  - question-flow orchestration
+  - sidecar/evidence integration
+  - report/response serialization
 
-### Phase 5: Shadow mode rollout
-1. Run sidecars in shadow mode first.
-2. Track disagreement, latency, timeout, and fallback rates.
-3. Promote only when quality and latency clear thresholds.
+Ship criteria:
 
-### Phase 6: Corpus activation
-1. Reindex the live corpus with dog-only/domain metadata.
-2. Validate that only live-safe assets are returned to the production route.
-3. Compare retrieval quality before and after reindex.
+- `route.ts` drops below 2,000 lines.
+- Existing route/program tests pass without changed expectations.
+- New deterministic safety logic lands in modules, not inline route branches.
 
-### Phase 7: Emergency workflow polish
-1. Make ER escalation even more obvious in UI.
-2. Improve one-tap handoff flow.
-3. Refine vet handoff formatting for real clinic usage.
+### Phase 3 — OOD And Abstention
 
-### Phase 8: Learning loop
-1. Collect real outcome feedback volume.
-2. Analyze which thresholds should change.
-3. Feed findings back into retrieval and ambiguity handling.
+Scope:
 
-## Parallel Execution Split
+- Wire `src/lib/clinical/uncertainty-contract.ts` into live route call sites.
+- Add deterministic OOD detection and explicit `out_of_scope` terminal responses.
+- Add missing-critical-info gating and explicit `cannot_assess` terminal responses.
+- Add owner-visible copy for each terminal outcome.
 
-To move faster without breaking `master`, parallel work should follow explicit file ownership.
+Ship criteria:
 
-### Current checkpoint
+- The route calls `resolveUncertainty()` after extraction, before question advancement, and before report generation.
+- `terminal_state`, `reason_code`, `owner_message`, and `recommended_next_step` serialize cleanly.
+- Route tests cover both terminal outcomes end-to-end.
 
-- We are in active `Phase 3`.
-- `master` currently includes the merged async-review persistence/synthesis lane at commit `62c96e7`.
-- `master` now also includes the merged reasoning-heavy sidecar intelligence lane on top of `57e036c`.
-- MiniMax M2.7 does not have a newer remote push beyond the already merged branches `origin/minimax/phase3-multimodal-async-services` and `origin/minimax/service-quality`.
-- The shared integration layer has started moving from scaffolding into validated contracts:
-  - sync consult stays on `multimodal-consult-service`
-  - async review now has an explicit queue submission contract
-  - retrieval sidecars now support optional model-backed reranking with deterministic fallback
-- App-level smoke coverage now exercises all five sidecar contracts through `hf-sidecars.ts` and the async review route.
-- Phase 4 prep now has an executable deployment-readiness script for sidecar env and `/healthz` verification.
-- Phase 4 prep now has an executable Vercel production env audit so missing `HF_*` sidecar URLs are reported directly instead of being discovered manually.
-- Phase 4 now has a Vercel env sync script so once real sidecar endpoint URLs exist they can be pushed into production in one step instead of being entered manually.
-- Phase 4 now also has a heavy-sidecar host bundle with subdomain routing plus a URL-render helper so generated `HF_*_URL` values stay aligned with the service registry.
-- Phase 4 verification now also has a dedicated shadow-route probe command for checking the guarded app-side rollout summary path.
-- Phase 4 now also has a deployment runbook covering env ownership, rollout order, shadow-mode promotion, and rollback.
-- Shadow-mode verification now has a session-level rollout summary helper that turns sidecar observations into per-service promotion status (`ready`, `watch`, `blocked`, `insufficient_data`).
-- Shadow rollout readiness is now exposed through a guarded debug API route so promotion status can be inspected without exposing raw case payloads.
-- Sidecar env + health readiness is now exposed through a guarded app route so deployment wiring can be verified from the app boundary, not just from shell scripts.
-- Curated corpus activation prep now has a shared registry plus a live-corpus verification script that flags mapped-but-empty dataset sources before activation.
-- Four previously misclassified Roboflow image sources have now been moved out of `live` status into `pending_assets` until real files are populated on disk.
-- Vercel production now has `HF_SIDECAR_API_KEY` configured, and live probes against `https://pawvital-ai.vercel.app/api/ai/sidecar-readiness` and `/api/ai/shadow-rollout` are passing again.
-- Production verification now shows one real sidecar URL env (`HF_VISION_PREPROCESS_URL`) present and healthy in the live app.
-- The remaining Phase 4 blocker is the heavy-sidecar deployment gap: the app can call the vision preprocess sidecar, but the other four sidecars do not yet have deployable production endpoints.
-- The next fastest path is to finish Phase 4 wiring, then shadow the deployed sidecars instead of expanding architecture again.
+### Phase 4 — Contradiction Awareness
 
-### Strength-aligned ownership
+Scope:
 
-#### Codex ownership
-- `src/lib/vision-preprocess.ts`
-- `src/lib/text-retrieval-service.ts`
-- `src/lib/image-retrieval-service.ts`
-- `src/lib/live-corpus.ts`
-- `src/lib/knowledge-retrieval.ts`
-- sidecar contract integration in the app
-- retrieval verification, curated-corpus reindex, shadow-mode retrieval comparisons
-- deployment wiring, integration testing, and production verification
+- Detect and log contradictions only.
+- Do not ship a resolution ladder yet.
 
-#### MiniMax M2.7 ownership
-- `src/lib/multimodal-consult.ts`
-- `src/lib/async-review-client.ts`
-- review prompts, disagreement-analysis logic, and long-context case comparison behavior
-- outcome-feedback mining and shadow-review summarization
-- any service-layer reasoning policies for multimodal consult and async review
-- large reasoning-heavy service work in:
-  - `services/multimodal-consult-service/app/main.py`
-  - `services/async-review-service/app/main.py`
+Ship criteria:
 
-#### Shared-but-sequenced ownership
-- `src/lib/hf-sidecars.ts`
-- `src/app/api/ai/symptom-chat/route.ts`
-- `plans/DEVELOPMENT_ROADMAP.md`
-- production env wiring and deployment config
+- Contradiction telemetry emits with source pair and case context.
+- No owner-facing behavior changes.
 
-Shared files should only be changed by one agent at a time after pulling latest `master`.
+### Phase 5 — Benchmark Gate
 
-### Push protocol
+Scope:
 
-Use this order every time:
+- Expand curated benchmark coverage to 200+ cases.
+- Reach at least 30 emergency cases and 15 same-day cases.
+- Fill at least 45 of 50 complaint families.
+- Reduce `unknown_concern` concentration below 25 percent.
 
-1. `git pull --rebase origin master` before starting work
-2. avoid editing files owned by the other agent
-3. MiniMax M2.7 works on `minimax/*` branches only, not directly on `master`
-4. Codex reviews MiniMax branch work before merging into `master`
-5. `git pull --rebase origin master` again right before push
-6. push only after local tests/build for the touched area pass
-7. update this roadmap if the phase status or ownership changed
+Ship criteria:
 
-### Lead coordination protocol
+- Expanded curated benchmark is committed.
+- Curated baseline is locked.
+- Blocking CI gate enforces zero misses on designated emergency sentinel cases and no regression against the locked curated baseline.
 
-After every completed task, Codex should act as the lead coordinator and do all of the following before moving to the next task:
+### Phase 6 — Breed Priors And Sidecar Promotion
 
-1. verify the completed work locally with the smallest relevant test/build checks
-2. sync with `master` and confirm the working tree is clean
-3. check GitHub for any new MiniMax M2.7 branch, push, or PR activity
-4. review any MiniMax-delivered changes before touching shared files
-5. update `Current checkpoint`, `Current Position`, and phase notes in this roadmap if status changed
-6. publish the next task split:
-   - what Codex handles next
-   - what MiniMax M2.7 handles next
-   - which files remain shared/blocked
-7. only then start the next implementation task
+Scope:
 
-### Default reporting format after each task
+- Add missing breed priors and explicit mixed-breed fallback.
+- Promote sidecars one lane at a time through shadow mode only after Phase 5 gates are green.
+- Design contradiction resolution only if Phase 4 telemetry shows it is necessary.
 
-Every post-task status update should answer these questions clearly:
+Ship criteria:
 
-- what was just completed
-- what phase we are in now
-- whether MiniMax M2.7 has pushed anything new
-- what Codex will do next
-- what MiniMax M2.7 should do next
-- whether any shared file is temporarily locked
+- No speculative safety logic.
+- Every sidecar promotion is backed by shadow evidence and benchmark-neutral-or-better results.
 
-### Recommended next split
+## Baseline Reality
 
-To accelerate Phase 3 right now:
+### Curated dog gold-v1
 
-1. Codex picks up:
-   - Phase 4 app/env wiring and deployment verification
-   - sidecar health + shadow rollout integration at the app boundary
-   - curated-corpus activation prep and retrieval validation
-   - deployment/runbook enforcement and production verification
-2. MiniMax M2.7 picks up:
-   - build the highest-value reasoning layer, not just small prompt tweaks:
-     - stronger multimodal consult rubric and long-context case comparison in `services/multimodal-consult-service/app/main.py`
-     - shadow disagreement clustering, severity synthesis, and outcome-learning heuristics in `services/async-review-service/app/main.py`
-     - cross-case narrative summarization for what the 32B reviewer is seeing repeatedly
-     - review-quality calibration guidance that can later drive promotion thresholds
-   - keep all new work on `minimax/*` branches and hand it back for review/merge
-3. After both land:
-   - Codex handles deployment verification, shadow-mode checks, promotion gating, and roadmap status updates
+- Version: `gold-v1`
+- Freeze date: `2026-04-10`
+- Total cases: `101`
+- Must-not-miss emergency sentinel cases: `16`
+- Same-day cases: `3`
+- Complaint families covered: `33 / 50`
+- `unknown_concern` share: `54 / 101`
 
-## Definition Of Done For The World-Class Path
+The curated set is the real safety baseline. It is currently too small to justify percentage-style blocking thresholds beyond the emergency sentinel subset.
 
-The architecture is considered complete only when all of the following are true:
-- real HF sidecars replace the stubs
-- production env wiring is complete
-- shadow mode has been run and evaluated
-- live retrieval uses the curated dog-only/domain-safe corpus
-- urgent image cases route correctly with evidence and fallback behavior
-- outcome feedback is not just captured, but actively used for improvement
+### Synthetic eval harness
+
+- Latest recorded run on this branch: `data/benchmark/scorecard-EVAL-2026-04-13-225.json`
+- Result: `PASS`
+- Important caveat: `scripts/eval-harness.ts` is still simulation-based and cannot be treated as the final merge gate for clinical safety.
+
+## Ownership And Branch Rules
+
+- Codex is principal engineer and review gate.
+- Qoder is a bounded worker lane and may not choose architecture or widen scope.
+- Every task gets its own branch:
+  - `codex/vet-<id>-<slug>-v1`
+  - `qoder/vet-<id>-<slug>-v1`
+- Qoder may not add inline route logic after Phase 2 begins.
+- Rollback remains revert of the isolated PR; no feature-flag system is assumed.
+
+## Next Ticket Split
+
+### Codex
+
+- `VET-1001` — route decomposition
+  - Branch: `codex/vet-1001-route-decomposition-v1`
+  - Ownership: route orchestration extraction, no behavior change
+- `VET-1002` — uncertainty integration and terminal outcomes
+  - Branch: `codex/vet-1002-uncertainty-terminal-outcomes-v1`
+  - Ownership: `resolveUncertainty()` call sites, terminal response serialization, owner-safe outcome wiring
+
+### Qoder
+
+- `VET-1003` — contradiction detection pack
+  - Branch: `qoder/vet-1003-contradiction-detection-pack-v1`
+  - Ownership: contradiction detection helper tests, route regressions, no owner-facing behavior change
+- `VET-1004` — curated benchmark expansion
+  - Branch: `qoder/vet-1004-curated-benchmark-expansion-v1`
+  - Ownership: new curated cases, complaint-family coverage, adjudication artifacts
+- `VET-1005` — breed prior closure
+  - Branch: `qoder/vet-1005-breed-prior-closure-v1`
+  - Ownership: new breed priors plus mixed-breed fallback after Phase 5 readiness
 
 ## Update Rule
 
 After every meaningful implementation task:
-- update the current phase status
-- move completed items from "Immediate Next Tasks" into "What Is Completed"
-- keep the current position line accurate
+
+- update this roadmap if phase status changed
+- keep the baseline section current
+- keep the next ticket split current
+- keep Qoder ticket boundaries explicit and reviewable

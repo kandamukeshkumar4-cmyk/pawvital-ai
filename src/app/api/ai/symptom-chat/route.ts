@@ -3231,6 +3231,13 @@ function coerceChoiceAnswerFromIntent(
     return null;
   }
 
+  if (questionAllowsCanonicalUnknown(question)) {
+    const unknownCoercion = coerceAmbiguousReplyToUnknown(rawMessage);
+    if (unknownCoercion !== null) {
+      return unknownCoercion;
+    }
+  }
+
   if (questionId === "appetite_status") {
     if (
       /\b(not eating at all|not eating anything|not eating|won't eat|wont eat|refusing food|won't touch food|wont touch food|no appetite|has no appetite|isn't eating|isnt eating)\b/.test(
@@ -4004,6 +4011,9 @@ function extractConsciousnessLevel(rawMessage: string): string | null {
 }
 
 function extractBloodColor(rawMessage: string): string | null {
+  const unknownCoercion = coerceChoiceAnswerFromIntent("blood_color", rawMessage);
+  if (unknownCoercion === "unknown") return unknownCoercion;
+
   const lower = rawMessage.toLowerCase();
 
   if (/\b(bright red|fresh red)\b/.test(lower)) return "bright_red";
@@ -4013,6 +4023,9 @@ function extractBloodColor(rawMessage: string): string | null {
 }
 
 function extractBloodAmount(rawMessage: string): string | null {
+  const unknownCoercion = coerceChoiceAnswerFromIntent("blood_amount", rawMessage);
+  if (unknownCoercion === "unknown") return unknownCoercion;
+
   const lower = rawMessage.toLowerCase();
 
   if (/\b(mostly blood|all blood|pool of blood|a lot of blood|heavy bleeding)\b/.test(lower)) {

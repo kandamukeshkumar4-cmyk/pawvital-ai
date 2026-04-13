@@ -3636,6 +3636,26 @@ describe("VET-733: ambiguous reply coercion", () => {
     expect(payload.session.answered_questions).toContain("trauma_history");
   });
 
+  it.each([
+    ["appetite_status", "not sure", ["vomiting"]],
+    ["blood_color", "I don't know", ["blood_in_stool"]],
+    ["blood_amount", "can't tell", ["blood_in_stool"]],
+    ["wound_discharge", "hard to say", ["wound_skin_issue"]],
+  ])(
+    "normalizes ambiguous %s replies to canonical unknown",
+    async (questionId, message, symptoms) => {
+      const { response, payload } = await runPendingReply(
+        questionId,
+        message,
+        symptoms
+      );
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers[questionId]).toBe("unknown");
+      expect(payload.session.answered_questions).toContain(questionId);
+    }
+  );
+
   it("does NOT coerce 'she ate this morning' to unknown", async () => {
     const { response, payload } = await runPendingReply(
       "trauma_history",
