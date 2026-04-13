@@ -181,9 +181,25 @@ jobs:
       - run: npm run eval:sentinels:advisory
       - run: npm run eval:benchmark:dangerous
 
+  benchmark-integrity:
+    name: Benchmark Integrity
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v5
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
+      - run: npm run eval:benchmark:validate
+      - run: npm run eval:benchmark:lint
+
   ci-gate:
     name: CI Gate
-    needs: [lint, typecheck, build, test]
+    needs: [lint, typecheck, build, test, benchmark-integrity]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -192,7 +208,8 @@ jobs:
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.typecheck.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
-             [ "${{ needs.test.result }}" != "success" ]; then
+             [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.benchmark-integrity.result }}" != "success" ]; then
             echo "One or more CI checks failed"
             exit 1
           fi

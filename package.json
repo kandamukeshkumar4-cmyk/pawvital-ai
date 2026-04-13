@@ -57,6 +57,7 @@
     "eval:benchmark:dangerous": "npx ts-node --esm scripts/eval-harness.ts --category=dangerous",
     "eval:benchmark:case": "npx ts-node --esm scripts/eval-harness.ts --case=BENCH-0001",
     "eval:benchmark:generate": "npx ts-node --esm scripts/generate-benchmark-cases.ts",
+    "eval:benchmark:lint": "node scripts/benchmark-lint.mjs",
     "eval:benchmark:validate": "npx ts-node --esm scripts/validate-benchmark.ts",
     "eval:sentinels:advisory": "node scripts/check-emergency-sentinels.mjs",
     "eval:silent-trial": "npx ts-node --esm scripts/silent-trial.ts",
