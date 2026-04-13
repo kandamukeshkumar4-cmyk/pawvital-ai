@@ -2519,6 +2519,56 @@ describe("symptom-chat mixed text + image routing", () => {
     }
   });
 
+  it("VET-1008: text contradictions add ambiguity flags and internal telemetry without changing the response shape", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: [], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["vomiting"]);
+      session = recordAnswer(session, "appetite_status", "normal");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "He isn't eating anything today.")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.case_memory.ambiguity_flags).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("appetite_conflict"),
+        ])
+      );
+      expect(payload.session.case_memory.service_observations ?? []).toEqual(
+        expect.not.arrayContaining([
+          expect.objectContaining({ service: "async-review-service" }),
+        ])
+      );
+
+      const contradictionTelemetry = findConsoleLine(
+        warnSpy,
+        "[VET-705][contradiction_detection]"
+      );
+      expect(contradictionTelemetry).toBeDefined();
+      expect(String(contradictionTelemetry)).toContain('"outcome":"warning"');
+      expect(String(contradictionTelemetry)).toContain('"contradiction_count":1');
+      expect(String(contradictionTelemetry)).toContain("appetite_conflict");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
   it("VET-705: user-facing payload shape is unchanged by telemetry recording", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -6132,6 +6182,16 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         recordedAt: new Date().toISOString(),
       },
       {
+        service: "async-review-service" as const,
+        stage: "contradiction_detection",
+        latencyMs: 0,
+        outcome: "success",
+        shadowMode: false,
+        fallbackUsed: false,
+        note: "contradictions=1 | contradiction_ids=appetite_conflict",
+        recordedAt: new Date().toISOString(),
+      },
+      {
         service: "some-safe-service" as const,
         stage: "vision",
         latencyMs: 200,
@@ -6157,7 +6217,14 @@ describe("VET-900: world-class symptom checker regression pack", () => {
     const observations = payload?.session?.case_memory?.service_observations ?? [];
     for (const obs of observations) {
       expect(obs.service).not.toBe("async-review-service");
-      expect(["state_transition", "extraction", "compression", "pending_recovery", "repeat_suppression"])
+      expect([
+        "state_transition",
+        "extraction",
+        "compression",
+        "contradiction_detection",
+        "pending_recovery",
+        "repeat_suppression",
+      ])
         .not.toContain(obs.stage);
       expect(String(obs.note ?? "")).not.toMatch(/question_state=/);
       expect(String(obs.note ?? "")).not.toMatch(/conversation_state=/);

@@ -31,6 +31,7 @@ const SERVICE_SHADOW_MODE_FLAGS: Record<SidecarServiceName, boolean> = {
 
 export const INTERNAL_TELEMETRY_STAGES = new Set([
   "compression",
+  "contradiction_detection",
   "extraction",
   "pending_recovery",
   "repeat_suppression",
