@@ -73,11 +73,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr comment ${{ steps.pr.outputs.number }} --body "## Auto-Fix Limit Reached
+          BODY=$(cat <<'EOF'
+          ## Auto-Fix Limit Reached
 
-Claude attempted 3 auto-fixes on this PR but CI is still failing. Manual intervention required.
+          Claude attempted 3 auto-fixes on this PR but CI is still failing. Manual intervention required.
 
-Please fix the remaining issues and push to this branch."
+          Please fix the remaining issues and push to this branch.
+          EOF
+          )
+          gh pr comment ${{ steps.pr.outputs.number }} --body "$BODY"
 
       - name: Checkout PR branch
         if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'false'
@@ -149,24 +153,27 @@ Please fix the remaining issues and push to this branch."
           # Get PR diff (first 30KB)
           DIFF=$(gh pr diff ${{ steps.pr.outputs.number }} 2>/dev/null | head -c 30000 || echo "")
 
-          PROMPT="CI failed on PR #${{ steps.pr.outputs.number }} in the PawVital AI veterinary triage system.
+          PROMPT=$(cat <<EOF
+          CI failed on PR #${{ steps.pr.outputs.number }} in the PawVital AI veterinary triage system.
 
-Failed checks:
-${FAILED_CHECKS}
+          Failed checks:
+          ${FAILED_CHECKS}
 
-TypeScript errors (if any):
-${TSC_ERRORS}
+          TypeScript errors (if any):
+          ${TSC_ERRORS}
 
-PR diff (first 30KB):
-${DIFF}
+          PR diff (first 30KB):
+          ${DIFF}
 
-Analyze what failed and provide:
-1. Root cause of each failure
-2. Exact fix instructions (specific files and specific changes needed)
-3. Any patterns that suggest a deeper architectural issue
+          Analyze what failed and provide:
+          1. Root cause of each failure
+          2. Exact fix instructions (specific files and specific changes needed)
+          3. Any patterns that suggest a deeper architectural issue
 
-Respond ONLY with valid JSON — no markdown fences, no preamble:
-{\"analysis\": \"root cause summary\", \"fixes\": [{\"file\": \"path\", \"instruction\": \"exactly what to change\"}], \"severity\": \"simple|complex\"}"
+          Respond ONLY with valid JSON — no markdown fences, no preamble:
+          {"analysis": "root cause summary", "fixes": [{"file": "path", "instruction": "exactly what to change"}], "severity": "simple|complex"}
+          EOF
+          )
 
           # Call OpenRouter API (OpenAI-compatible format)
           RESPONSE=$(curl -s -X POST https://openrouter.ai/api/v1/chat/completions \
@@ -194,13 +201,16 @@ Respond ONLY with valid JSON — no markdown fences, no preamble:
         run: |
           SUMMARY=$(echo "$ANALYSIS_RESULT" | jq -r '.analysis // "See CI logs for details"' 2>/dev/null || echo "CI failed — check the logs above")
           FIXES=$(echo "$ANALYSIS_RESULT" | jq -r '.fixes[]? | "- `\(.file)`: \(.instruction)"' 2>/dev/null || echo "")
+          BODY=$(cat <<EOF
+          ## CI Failed — AI Analysis
 
-          gh pr comment ${{ steps.pr.outputs.number }} --body "## CI Failed — AI Analysis
+          **Root cause:** ${SUMMARY}
 
-**Root cause:** ${SUMMARY}
+          ### What to fix
+          ${FIXES}
 
-### What to fix
-${FIXES}
-
----
-*Analyzed by MiMo v2 Pro via OpenRouter. Push the fix to this branch and CI will re-run automatically.*"
+          ---
+          *Analyzed by MiMo v2 Pro via OpenRouter. Push the fix to this branch and CI will re-run automatically.*
+          EOF
+          )
+          gh pr comment ${{ steps.pr.outputs.number }} --body "$BODY"
