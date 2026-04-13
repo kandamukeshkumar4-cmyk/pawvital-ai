@@ -85,7 +85,7 @@ jobs:
 
       - name: Checkout PR branch
         if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'false'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -93,7 +93,7 @@ jobs:
 
       - name: Setup Node
         if: steps.pr.outputs.found == 'true' && steps.limit.outputs.reached == 'false'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: "npm"
