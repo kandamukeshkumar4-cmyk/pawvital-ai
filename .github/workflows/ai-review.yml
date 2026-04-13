@@ -20,7 +20,7 @@ jobs:
     env:
       REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'xiaomi/mimo-v2-pro' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 

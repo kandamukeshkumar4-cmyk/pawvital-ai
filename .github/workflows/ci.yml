@@ -36,30 +36,30 @@ jobs:
     name: Install Dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - run: npm ci
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v5
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
 
   lint:
     name: Lint
     needs: install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
       - run: npm run lint
         id: lint
       - name: Comment on failure
@@ -79,14 +79,14 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
       - run: npx tsc --noEmit
         id: typecheck
       - name: Comment on failure
@@ -106,14 +106,14 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
       - run: npm run build
         env:
           # Provide stub env vars so Next.js build doesn't fail on missing secrets
@@ -142,14 +142,14 @@ jobs:
     needs: install
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
       - run: npm test
         id: test
       - name: Comment on failure
@@ -170,14 +170,14 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v5
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
       - run: npm run eval:sentinels:advisory
       - run: npm run eval:benchmark:dangerous
 
