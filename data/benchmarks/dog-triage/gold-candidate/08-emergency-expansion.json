@@ -13,15 +13,6 @@
         "bloat"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Zeus",
-        "breed": "Great Dane",
-        "age": 6,
-        "weight": 130
-      },
-      "messages": [
-        "My dog's belly is hugely swollen and he keeps pacing and drooling."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -35,11 +26,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Zeus",
+          "breed": "Great Dane",
+          "age_years": 6,
+          "weight": 130,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's belly is hugely swollen and he keeps pacing and drooling."
+          }
+        ]
       }
     },
     {
@@ -51,15 +52,6 @@
         "wound"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Rex",
-        "breed": "Pit Bull Terrier",
-        "age": 5,
-        "weight": 65
-      },
-      "messages": [
-        "My dog was attacked and has deep puncture wounds on his chest."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -73,11 +65,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rex",
+          "breed": "Pit Bull Terrier",
+          "age_years": 5,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog was attacked and has deep puncture wounds on his chest."
+          }
+        ]
       }
     },
     {
@@ -89,15 +91,6 @@
         "metabolic"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Daisy",
-        "breed": "Miniature Schnauzer",
-        "age": 10,
-        "weight": 18
-      },
-      "messages": [
-        "My diabetic dog is stumbling around and seems very confused."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -108,11 +101,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Daisy",
+          "breed": "Miniature Schnauzer",
+          "age_years": 10,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My diabetic dog is stumbling around and seems very confused."
+          }
+        ]
       }
     },
     {
@@ -124,15 +127,6 @@
         "seizure"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Bella",
-        "breed": "Labrador Retriever",
-        "age": 7,
-        "weight": 68
-      },
-      "messages": [
-        "My dog has been having a seizure for over five minutes and won't stop."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -146,11 +140,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bella",
+          "breed": "Labrador Retriever",
+          "age_years": 7,
+          "weight": 68,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been having a seizure for over five minutes and won't stop."
+          }
+        ]
       }
     },
     {
@@ -162,15 +166,6 @@
         "choking"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Charlie",
-        "breed": "Beagle",
-        "age": 3,
-        "weight": 26
-      },
-      "messages": [
-        "My dog is gagging and pawing at his mouth like something is stuck."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -184,11 +179,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Charlie",
+          "breed": "Beagle",
+          "age_years": 3,
+          "weight": 26,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is gagging and pawing at his mouth like something is stuck."
+          }
+        ]
       }
     },
     {
@@ -200,15 +205,6 @@
         "glaucoma"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Max",
-        "breed": "Cocker Spaniel",
-        "age": 9,
-        "weight": 28
-      },
-      "messages": [
-        "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -219,11 +215,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Max",
+          "breed": "Cocker Spaniel",
+          "age_years": 9,
+          "weight": 28,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain."
+          }
+        ]
       }
     },
     {
@@ -235,15 +241,6 @@
         "immune"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Luna",
-        "breed": "Poodle",
-        "age": 6,
-        "weight": 42
-      },
-      "messages": [
-        "There are tiny red spots all over my dog's gums and she is very weak."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -254,11 +251,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Luna",
+          "breed": "Poodle",
+          "age_years": 6,
+          "weight": 42,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "There are tiny red spots all over my dog's gums and she is very weak."
+          }
+        ]
       }
     },
     {
@@ -270,15 +277,6 @@
         "skin"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Rocky",
-        "breed": "Boxer",
-        "age": 4,
-        "weight": 62
-      },
-      "messages": [
-        "My dog stepped in drain cleaner and his paw is red and blistered."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -289,11 +287,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rocky",
+          "breed": "Boxer",
+          "age_years": 4,
+          "weight": 62,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog stepped in drain cleaner and his paw is red and blistered."
+          }
+        ]
       }
     },
     {
@@ -305,15 +313,6 @@
         "anaphylaxis"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Buddy",
-        "breed": "Golden Retriever",
-        "age": 5,
-        "weight": 72
-      },
-      "messages": [
-        "My dog is covered in hives and his face is puffing up after a bug bite."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -324,11 +323,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Buddy",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is covered in hives and his face is puffing up after a bug bite."
+          }
+        ]
       }
     },
     {
@@ -339,15 +348,6 @@
         "urinary"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Molly",
-        "breed": "Dalmatian",
-        "age": 8,
-        "weight": 52
-      },
-      "messages": [
-        "My dog keeps trying to pee but nothing comes out and she's crying."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -361,11 +361,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Molly",
+          "breed": "Dalmatian",
+          "age_years": 8,
+          "weight": 52,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps trying to pee but nothing comes out and she's crying."
+          }
+        ]
       }
     },
     {
@@ -377,15 +387,6 @@
         "electrical"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Gizmo",
-        "breed": "Jack Russell Terrier",
-        "age": 2,
-        "weight": 14
-      },
-      "messages": [
-        "My puppy chewed an electrical cord and now he is trembling and weak."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -396,11 +397,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Gizmo",
+          "breed": "Jack Russell Terrier",
+          "age_years": 2,
+          "weight": 14,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My puppy chewed an electrical cord and now he is trembling and weak."
+          }
+        ]
       }
     },
     {
@@ -412,15 +423,6 @@
         "blood"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Duke",
-        "breed": "Greyhound",
-        "age": 5,
-        "weight": 68
-      },
-      "messages": [
-        "My dog is extremely weak, his gums are pale, and his urine is dark brown."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -431,11 +433,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Duke",
+          "breed": "Greyhound",
+          "age_years": 5,
+          "weight": 68,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is extremely weak, his gums are pale, and his urine is dark brown."
+          }
+        ]
       }
     },
     {
@@ -447,15 +459,6 @@
         "venom"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Ranger",
-        "breed": "Australian Cattle Dog",
-        "age": 4,
-        "weight": 45
-      },
-      "messages": [
-        "My dog was bitten by a snake and his face is swelling badly."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -466,11 +469,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ranger",
+          "breed": "Australian Cattle Dog",
+          "age_years": 4,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog was bitten by a snake and his face is swelling badly."
+          }
+        ]
       }
     },
     {
@@ -482,15 +495,6 @@
         "collapse"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Sadie",
-        "breed": "Standard Poodle",
-        "age": 6,
-        "weight": 52
-      },
-      "messages": [
-        "My dog has been having intermittent vomiting and now she has collapsed."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -501,11 +505,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Sadie",
+          "breed": "Standard Poodle",
+          "age_years": 6,
+          "weight": 52,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been having intermittent vomiting and now she has collapsed."
+          }
+        ]
       }
     },
     {
@@ -517,15 +531,6 @@
         "bleeding"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Tucker",
-        "breed": "German Shepherd",
-        "age": 3,
-        "weight": 78
-      },
-      "messages": [
-        "My dog has explosive bloody diarrhea and is weak with pale gums."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -539,11 +544,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tucker",
+          "breed": "German Shepherd",
+          "age_years": 3,
+          "weight": 78,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has explosive bloody diarrhea and is weak with pale gums."
+          }
+        ]
       }
     },
     {
@@ -555,15 +570,6 @@
         "infectious"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Bingo",
-        "breed": "Pomeranian",
-        "age": 9,
-        "weight": 10
-      },
-      "messages": [
-        "After boarding, my dog is struggling to breathe and making honking sounds."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -577,11 +583,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bingo",
+          "breed": "Pomeranian",
+          "age_years": 9,
+          "weight": 10,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "After boarding, my dog is struggling to breathe and making honking sounds."
+          }
+        ]
       }
     },
     {
@@ -593,15 +609,6 @@
         "bloat"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Feast",
-        "breed": "Standard Poodle",
-        "age": 7,
-        "weight": 55
-      },
-      "messages": [
-        "After eating a big meal my dog is restless and his belly looks tight and swollen."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -615,11 +622,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Feast",
+          "breed": "Standard Poodle",
+          "age_years": 7,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "After eating a big meal my dog is restless and his belly looks tight and swollen."
+          }
+        ]
       }
     },
     {
@@ -631,15 +648,6 @@
         "seizure"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Shake",
-        "breed": "Border Collie",
-        "age": 5,
-        "weight": 42
-      },
-      "messages": [
-        "My dog just had his first ever seizure and is now confused and disoriented."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -653,11 +661,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Shake",
+          "breed": "Border Collie",
+          "age_years": 5,
+          "weight": 42,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog just had his first ever seizure and is now confused and disoriented."
+          }
+        ]
       }
     },
     {
@@ -668,15 +686,6 @@
         "respiratory"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Wheeze",
-        "breed": "Shih Tzu",
-        "age": 11,
-        "weight": 14
-      },
-      "messages": [
-        "My dog is breathing with great effort using his belly muscles."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -690,11 +699,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Wheeze",
+          "breed": "Shih Tzu",
+          "age_years": 11,
+          "weight": 14,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is breathing with great effort using his belly muscles."
+          }
+        ]
       }
     },
     {
@@ -705,15 +724,6 @@
         "gi"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Bile",
-        "breed": "Mixed Breed",
-        "age": 6,
-        "weight": 40
-      },
-      "messages": [
-        "My dog keeps throwing up green bile and won't eat or drink."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -727,11 +737,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bile",
+          "breed": "Mixed Breed",
+          "age_years": 6,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps throwing up green bile and won't eat or drink."
+          }
+        ]
       }
     },
     {
@@ -742,15 +762,6 @@
         "orthopedic"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Yelp",
-        "breed": "Dachshund",
-        "age": 5,
-        "weight": 20
-      },
-      "messages": [
-        "My dog is limping and crying in pain and won't let me touch his back."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -764,11 +775,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Yelp",
+          "breed": "Dachshund",
+          "age_years": 5,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is limping and crying in pain and won't let me touch his back."
+          }
+        ]
       }
     },
     {
@@ -779,15 +800,6 @@
         "urinary"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Block",
-        "breed": "Maltese",
-        "age": 9,
-        "weight": 8
-      },
-      "messages": [
-        "My dog is crying and trying to pee but nothing has come out for hours."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -801,11 +813,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Block",
+          "breed": "Maltese",
+          "age_years": 9,
+          "weight": 8,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is crying and trying to pee but nothing has come out for hours."
+          }
+        ]
       }
     },
     {
@@ -817,15 +839,6 @@
         "wound"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Tear",
-        "breed": "Labrador Retriever",
-        "age": 4,
-        "weight": 70
-      },
-      "messages": [
-        "My dog has a large flap of skin hanging off his shoulder from a fence incident."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -839,11 +852,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tear",
+          "breed": "Labrador Retriever",
+          "age_years": 4,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has a large flap of skin hanging off his shoulder from a fence incident."
+          }
+        ]
       }
     },
     {
@@ -855,15 +878,6 @@
         "trembling"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Chilly",
-        "breed": "Italian Greyhound",
-        "age": 8,
-        "weight": 10
-      },
-      "messages": [
-        "My dog is trembling, weak, and his ears and paws feel cold."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true,
@@ -877,11 +891,21 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "clean",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Chilly",
+          "breed": "Italian Greyhound",
+          "age_years": 8,
+          "weight": 10,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is trembling, weak, and his ears and paws feel cold."
+          }
+        ]
       }
     },
     {
@@ -894,56 +918,6 @@
         "emergency"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Poppy",
-        "breed": "Border Collie",
-        "age": 4,
-        "weight": 39
-      },
-      "session": {
-        "known_symptoms": [
-          "seizure_collapse"
-        ],
-        "answered_questions": [],
-        "extracted_answers": {},
-        "red_flags_triggered": [],
-        "candidate_diseases": [
-          "seizure_disorder",
-          "toxin_exposure",
-          "brain_tumor"
-        ],
-        "body_systems_involved": [
-          "neurologic"
-        ],
-        "last_question_asked": "seizure_duration",
-        "case_memory": {
-          "turn_count": 2,
-          "chief_complaints": [
-            "seizure_collapse"
-          ],
-          "active_focus_symptoms": [
-            "seizure_collapse"
-          ],
-          "confirmed_facts": {},
-          "image_findings": [],
-          "red_flag_notes": [],
-          "unresolved_question_ids": [
-            "seizure_duration"
-          ],
-          "timeline_notes": [],
-          "visual_evidence": [],
-          "retrieval_evidence": [],
-          "consult_opinions": [],
-          "evidence_chain": [],
-          "service_timeouts": [],
-          "service_observations": [],
-          "shadow_comparisons": [],
-          "ambiguity_flags": []
-        }
-      },
-      "messages": [
-        "I don't know how long it lasted, it felt like forever."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -954,11 +928,62 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "owner_cannot_assess",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Poppy",
+          "breed": "Border Collie",
+          "age_years": 4,
+          "weight": 39,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't know how long it lasted, it felt like forever."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "seizure_collapse"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "seizure_disorder",
+            "toxin_exposure",
+            "brain_tumor"
+          ],
+          "body_systems_involved": [
+            "neurologic"
+          ],
+          "last_question_asked": "seizure_duration",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "seizure_collapse"
+            ],
+            "active_focus_symptoms": [
+              "seizure_collapse"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "seizure_duration"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
       }
     },
     {
@@ -971,56 +996,6 @@
         "emergency"
       ],
       "weight": 3,
-      "pet": {
-        "name": "Moose",
-        "breed": "Pug",
-        "age": 8,
-        "weight": 23
-      },
-      "session": {
-        "known_symptoms": [
-          "difficulty_breathing"
-        ],
-        "answered_questions": [],
-        "extracted_answers": {},
-        "red_flags_triggered": [],
-        "candidate_diseases": [
-          "heart_failure",
-          "allergic_reaction",
-          "difficulty_breathing"
-        ],
-        "body_systems_involved": [
-          "respiratory"
-        ],
-        "last_question_asked": "breathing_pattern",
-        "case_memory": {
-          "turn_count": 2,
-          "chief_complaints": [
-            "difficulty_breathing"
-          ],
-          "active_focus_symptoms": [
-            "difficulty_breathing"
-          ],
-          "confirmed_facts": {},
-          "image_findings": [],
-          "red_flag_notes": [],
-          "unresolved_question_ids": [
-            "breathing_pattern"
-          ],
-          "timeline_notes": [],
-          "visual_evidence": [],
-          "retrieval_evidence": [],
-          "consult_opinions": [],
-          "evidence_chain": [],
-          "service_timeouts": [],
-          "service_observations": [],
-          "shadow_comparisons": [],
-          "ambiguity_flags": []
-        }
-      },
-      "messages": [
-        "I can't describe how he's breathing, he just seems off."
-      ],
       "expectations": {
         "responseType": "emergency",
         "readyForReport": true
@@ -1031,11 +1006,62 @@
       "risk_tier": "tier_1_emergency",
       "uncertainty_pattern": "owner_cannot_assess",
       "must_not_miss_marker": true,
-      "provenance": {
-        "source_shard": "08-emergency-expansion.json",
-        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Moose",
+          "breed": "Pug",
+          "age_years": 8,
+          "weight": 23,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't describe how he's breathing, he just seems off."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "difficulty_breathing"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "heart_failure",
+            "allergic_reaction",
+            "difficulty_breathing"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "breathing_pattern",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "difficulty_breathing"
+            ],
+            "active_focus_symptoms": [
+              "difficulty_breathing"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "breathing_pattern"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
       }
     }
   ]

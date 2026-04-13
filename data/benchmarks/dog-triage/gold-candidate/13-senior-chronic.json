@@ -13,15 +13,6 @@
         "cognitive"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Old Timer",
-        "breed": "Golden Retriever",
-        "age": 14,
-        "weight": 60
-      },
-      "messages": [
-        "My old dog gets stuck in corners and stares at walls."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -31,11 +22,21 @@
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Old Timer",
+          "breed": "Golden Retriever",
+          "age_years": 14,
+          "weight": 60,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog gets stuck in corners and stares at walls."
+          }
+        ]
       }
     },
     {
@@ -47,15 +48,6 @@
         "mobility"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Stiff",
-        "breed": "Labrador Retriever",
-        "age": 12,
-        "weight": 75
-      },
-      "messages": [
-        "My dog has arthritis but it seems much worse lately. He can barely stand."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -65,11 +57,21 @@
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Stiff",
+          "breed": "Labrador Retriever",
+          "age_years": 12,
+          "weight": 75,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has arthritis but it seems much worse lately. He can barely stand."
+          }
+        ]
       }
     },
     {
@@ -81,63 +83,68 @@
         "ear"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Recurrent",
-        "breed": "Cocker Spaniel",
-        "age": 7,
-        "weight": 30
-      },
-      "messages": [
-        "My dog gets ear infections every few months and I'm tired of it."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "ear_scratching"
+        "ear_scratching",
+        "recurrent_ear"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Recurrent",
+          "breed": "Cocker Spaniel",
+          "age_years": 7,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog gets ear infections every few months and I'm tired of it."
+          }
+        ]
       }
     },
     {
       "id": "question-chronic-skin-allergies",
-      "description": "Chronic skin allergies with seasonal patterns should open dermatology questioning.",
+      "description": "Chronic itchy flares with greasy odor should open recurrent dermatology questioning.",
       "tags": [
         "question",
         "chronic",
         "allergy"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Seasonal",
-        "breed": "French Bulldog",
-        "age": 5,
-        "weight": 25
-      },
-      "messages": [
-        "My dog gets itchy every spring and we've tried everything."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "excessive_scratching"
+        "excessive_scratching",
+        "recurrent_skin",
+        "skin_odor_greasy"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Seasonal",
+          "breed": "French Bulldog",
+          "age_years": 5,
+          "weight": 25,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog gets itchy every spring and his coat gets greasy and yeasty-smelling."
+          }
+        ]
       }
     },
     {
@@ -149,29 +156,31 @@
         "eye"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Blind",
-        "breed": "Poodle",
-        "age": 13,
-        "weight": 18
-      },
-      "messages": [
-        "My old dog bumps into furniture and seems to have trouble seeing."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "senior_decline"
+        "senior_decline",
+        "vision_loss"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Blind",
+          "breed": "Poodle",
+          "age_years": 13,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog bumps into furniture and seems to have trouble seeing."
+          }
+        ]
       }
     },
     {
@@ -183,29 +192,31 @@
         "hearing"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Deaf",
-        "breed": "Dalmatian",
-        "age": 12,
-        "weight": 55
-      },
-      "messages": [
-        "My dog doesn't respond when I call his name anymore."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "senior_decline"
+        "senior_decline",
+        "hearing_loss"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Deaf",
+          "breed": "Dalmatian",
+          "age_years": 12,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog doesn't respond when I call his name anymore."
+          }
+        ]
       }
     },
     {
@@ -217,15 +228,6 @@
         "gi"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Puke",
-        "breed": "Labrador Retriever",
-        "age": 8,
-        "weight": 70
-      },
-      "messages": [
-        "My dog throws up once every week or so for the past few months."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -235,11 +237,21 @@
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Puke",
+          "breed": "Labrador Retriever",
+          "age_years": 8,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog throws up once every week or so for the past few months."
+          }
+        ]
       }
     },
     {
@@ -251,29 +263,31 @@
         "urinary"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Drip",
-        "breed": "Mixed Breed",
-        "age": 14,
-        "weight": 45
-      },
-      "messages": [
-        "My old dog leaks urine while sleeping."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "urination_problem"
+        "inappropriate_urination",
+        "senior_decline"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Drip",
+          "breed": "Mixed Breed",
+          "age_years": 14,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog leaks urine while sleeping."
+          }
+        ]
       }
     },
     {
@@ -285,15 +299,6 @@
         "gi"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Loose",
-        "breed": "Mixed Breed",
-        "age": 6,
-        "weight": 35
-      },
-      "messages": [
-        "My dog has soft stool on and off for months."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -303,11 +308,21 @@
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Loose",
+          "breed": "Mixed Breed",
+          "age_years": 6,
+          "weight": 35,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has soft stool on and off for months."
+          }
+        ]
       }
     },
     {
@@ -319,15 +334,6 @@
         "respiratory"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Chronic Cough",
-        "breed": "Cavalier King Charles Spaniel",
-        "age": 12,
-        "weight": 20
-      },
-      "messages": [
-        "My old dog has been coughing on and off for months."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -340,11 +346,21 @@
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Chronic Cough",
+          "breed": "Cavalier King Charles Spaniel",
+          "age_years": 12,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog has been coughing on and off for months."
+          }
+        ]
       }
     },
     {
@@ -356,31 +372,34 @@
         "multi_complaint"
       ],
       "weight": 2,
-      "pet": {
-        "name": "All Decline",
-        "breed": "Golden Retriever",
-        "age": 14,
-        "weight": 55
-      },
-      "messages": [
-        "My dog is sleeping all day, not eating well, and seems confused."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
         "senior_decline",
+        "multi_system_decline",
         "lethargy",
-        "behavior_change"
+        "behavior_change",
+        "not_eating"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "multi_complaint",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "All Decline",
+          "breed": "Golden Retriever",
+          "age_years": 14,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is sleeping all day, not eating well, and seems confused."
+          }
+        ]
       }
     },
     {
@@ -392,15 +411,6 @@
         "dental"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Rotten",
-        "breed": "Yorkshire Terrier",
-        "age": 12,
-        "weight": 8
-      },
-      "messages": [
-        "My old dog has terrible teeth, some are falling out."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -410,11 +420,21 @@
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "13-senior-chronic.json",
-        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rotten",
+          "breed": "Yorkshire Terrier",
+          "age_years": 12,
+          "weight": 8,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My old dog has terrible teeth, some are falling out."
+          }
+        ]
       }
     }
   ]

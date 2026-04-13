@@ -13,15 +13,6 @@
         "infection"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Coco",
-        "breed": "Cocker Spaniel",
-        "age": 5,
-        "weight": 28
-      },
-      "messages": [
-        "My dog keeps shaking his head and his ear smells bad with dark discharge."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -34,11 +25,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Coco",
+          "breed": "Cocker Spaniel",
+          "age_years": 5,
+          "weight": 28,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps shaking his head and his ear smells bad with dark discharge."
+          }
+        ]
       }
     },
     {
@@ -49,15 +50,6 @@
         "gi"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Bentley",
-        "breed": "Labrador Retriever",
-        "age": 6,
-        "weight": 70
-      },
-      "messages": [
-        "My dog has thrown up four times today but is still trying to drink."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -70,11 +62,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bentley",
+          "breed": "Labrador Retriever",
+          "age_years": 6,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has thrown up four times today but is still trying to drink."
+          }
+        ]
       }
     },
     {
@@ -85,15 +87,6 @@
         "orthopedic"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Diesel",
-        "breed": "Rottweiler",
-        "age": 4,
-        "weight": 100
-      },
-      "messages": [
-        "My dog won't put any weight on his front leg after playing fetch."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -106,11 +99,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Diesel",
+          "breed": "Rottweiler",
+          "age_years": 4,
+          "weight": 100,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog won't put any weight on his front leg after playing fetch."
+          }
+        ]
       }
     },
     {
@@ -122,15 +125,6 @@
         "blood"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Stella",
-        "breed": "Shih Tzu",
-        "age": 7,
-        "weight": 12
-      },
-      "messages": [
-        "I noticed blood in my dog's urine this morning but she is still peeing normally."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -143,11 +137,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Stella",
+          "breed": "Shih Tzu",
+          "age_years": 7,
+          "weight": 12,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I noticed blood in my dog's urine this morning but she is still peeing normally."
+          }
+        ]
       }
     },
     {
@@ -159,15 +163,6 @@
         "infection"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Rosie",
-        "breed": "Golden Retriever",
-        "age": 5,
-        "weight": 60
-      },
-      "messages": [
-        "My dog developed a big red wet sore on her side overnight."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -180,11 +175,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rosie",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 60,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog developed a big red wet sore on her side overnight."
+          }
+        ]
       }
     },
     {
@@ -195,15 +200,6 @@
         "respiratory"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Fido",
-        "breed": "Pomeranian",
-        "age": 8,
-        "weight": 9
-      },
-      "messages": [
-        "My dog has been coughing for five days and it is getting worse but she still eats."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -216,11 +212,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Fido",
+          "breed": "Pomeranian",
+          "age_years": 8,
+          "weight": 9,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been coughing for five days and it is getting worse but she still eats."
+          }
+        ]
       }
     },
     {
@@ -231,15 +237,6 @@
         "gi"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Rusty",
-        "breed": "Mixed Breed",
-        "age": 4,
-        "weight": 35
-      },
-      "messages": [
-        "My dog has had diarrhea for three days straight but is still acting normal."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -252,11 +249,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Rusty",
+          "breed": "Mixed Breed",
+          "age_years": 4,
+          "weight": 35,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has had diarrhea for three days straight but is still acting normal."
+          }
+        ]
       }
     },
     {
@@ -267,15 +274,6 @@
         "eye"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Duke",
-        "breed": "Pug",
-        "age": 6,
-        "weight": 20
-      },
-      "messages": [
-        "My dog is squinting one eye and it looks red."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -285,11 +283,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Duke",
+          "breed": "Pug",
+          "age_years": 6,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is squinting one eye and it looks red."
+          }
+        ]
       }
     },
     {
@@ -300,15 +308,6 @@
         "neurologic"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Peanut",
-        "breed": "Chihuahua",
-        "age": 9,
-        "weight": 6
-      },
-      "messages": [
-        "My dog has been trembling for hours even after being warmed up."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -321,11 +320,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Peanut",
+          "breed": "Chihuahua",
+          "age_years": 9,
+          "weight": 6,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been trembling for hours even after being warmed up."
+          }
+        ]
       }
     },
     {
@@ -336,15 +345,6 @@
         "abdomen"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Bear",
-        "breed": "Labrador Retriever",
-        "age": 7,
-        "weight": 75
-      },
-      "messages": [
-        "My dog's belly looks more swollen than usual but he is still eating."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -357,11 +357,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bear",
+          "breed": "Labrador Retriever",
+          "age_years": 7,
+          "weight": 75,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's belly looks more swollen than usual but he is still eating."
+          }
+        ]
       }
     },
     {
@@ -372,15 +382,6 @@
         "dermatology"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Maggie",
-        "breed": "West Highland White Terrier",
-        "age": 4,
-        "weight": 18
-      },
-      "messages": [
-        "My dog is scratching so hard she has raw patches on her skin."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -393,11 +394,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Maggie",
+          "breed": "West Highland White Terrier",
+          "age_years": 4,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is scratching so hard she has raw patches on her skin."
+          }
+        ]
       }
     },
     {
@@ -408,15 +419,6 @@
         "systemic"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Oliver",
-        "breed": "Mixed Breed",
-        "age": 12,
-        "weight": 38
-      },
-      "messages": [
-        "My dog has lost a noticeable amount of weight in the last two weeks."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -429,11 +431,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Oliver",
+          "breed": "Mixed Breed",
+          "age_years": 12,
+          "weight": 38,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has lost a noticeable amount of weight in the last two weeks."
+          }
+        ]
       }
     },
     {
@@ -444,15 +456,6 @@
         "dental"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Biscuit",
-        "breed": "Miniature Poodle",
-        "age": 10,
-        "weight": 12
-      },
-      "messages": [
-        "My dog's gums are bleeding and she cries when I try to check her teeth."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -465,11 +468,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Biscuit",
+          "breed": "Miniature Poodle",
+          "age_years": 10,
+          "weight": 12,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's gums are bleeding and she cries when I try to check her teeth."
+          }
+        ]
       }
     },
     {
@@ -480,15 +493,6 @@
         "dermatology"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Sasha",
-        "breed": "Pomeranian",
-        "age": 5,
-        "weight": 7
-      },
-      "messages": [
-        "The bald patches on my dog are spreading to new areas."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -501,11 +505,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Sasha",
+          "breed": "Pomeranian",
+          "age_years": 5,
+          "weight": 7,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "The bald patches on my dog are spreading to new areas."
+          }
+        ]
       }
     },
     {
@@ -516,15 +530,6 @@
         "reproductive"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Duchess",
-        "breed": "Cavalier King Charles Spaniel",
-        "age": 5,
-        "weight": 18
-      },
-      "messages": [
-        "My dog has a discharge from her vulva but is otherwise acting normal."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -534,11 +539,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Duchess",
+          "breed": "Cavalier King Charles Spaniel",
+          "age_years": 5,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has a discharge from her vulva but is otherwise acting normal."
+          }
+        ]
       }
     },
     {
@@ -549,15 +564,6 @@
         "endocrine"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Barney",
-        "breed": "Beagle",
-        "age": 10,
-        "weight": 30
-      },
-      "messages": [
-        "My dog is drinking entire bowls of water and refilling them multiple times a day."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -570,11 +576,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Barney",
+          "breed": "Beagle",
+          "age_years": 10,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is drinking entire bowls of water and refilling them multiple times a day."
+          }
+        ]
       }
     },
     {
@@ -585,15 +601,6 @@
         "behavior"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Shadow",
-        "breed": "Mixed Breed",
-        "age": 8,
-        "weight": 45
-      },
-      "messages": [
-        "My dog is hiding under the bed and not eating like usual."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -606,11 +613,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Shadow",
+          "breed": "Mixed Breed",
+          "age_years": 8,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is hiding under the bed and not eating like usual."
+          }
+        ]
       }
     },
     {
@@ -621,15 +638,6 @@
         "gi"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Thor",
-        "breed": "German Shepherd",
-        "age": 4,
-        "weight": 75
-      },
-      "messages": [
-        "My dog regurgitates after almost every meal now."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -642,11 +650,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Thor",
+          "breed": "German Shepherd",
+          "age_years": 4,
+          "weight": 75,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog regurgitates after almost every meal now."
+          }
+        ]
       }
     },
     {
@@ -658,29 +676,30 @@
         "pain"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Hurt",
-        "breed": "Beagle",
-        "age": 7,
-        "weight": 25
-      },
-      "messages": [
-        "My dog's belly feels tight and hard and he cries when I press it."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "abdominal_pain"
+        "swollen_abdomen"
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Hurt",
+          "breed": "Beagle",
+          "age_years": 7,
+          "weight": 25,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's belly feels tight and hard and he cries when I press it."
+          }
+        ]
       }
     },
     {
@@ -692,29 +711,30 @@
         "face"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Swell",
-        "breed": "Bulldog",
-        "age": 4,
-        "weight": 55
-      },
-      "messages": [
-        "My dog's face has been getting more swollen over the past few hours."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "face_swelling"
+        "wound_skin_issue"
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Swell",
+          "breed": "Bulldog",
+          "age_years": 4,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's face has been getting more swollen over the past few hours."
+          }
+        ]
       }
     },
     {
@@ -726,29 +746,31 @@
         "blood"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Bloody",
-        "breed": "French Bulldog",
-        "age": 5,
-        "weight": 22
-      },
-      "messages": [
-        "My dog is scooting and I see blood spots where he was sitting."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "scooting"
+        "blood_in_stool",
+        "fecal_incontinence"
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bloody",
+          "breed": "French Bulldog",
+          "age_years": 5,
+          "weight": 22,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is scooting and I see bloody stool spots where he was sitting."
+          }
+        ]
       }
     },
     {
@@ -760,29 +782,31 @@
         "infection"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Spreader",
-        "breed": "Golden Retriever",
-        "age": 6,
-        "weight": 65
-      },
-      "messages": [
-        "The red infected area on my dog has doubled in size since yesterday."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "skin_infection"
+        "recurrent_skin",
+        "skin_odor_greasy"
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Spreader",
+          "breed": "Golden Retriever",
+          "age_years": 6,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "The greasy red skin infection on my dog has doubled in size since yesterday."
+          }
+        ]
       }
     },
     {
@@ -794,29 +818,30 @@
         "drooling"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Drops",
-        "breed": "Cocker Spaniel",
-        "age": 8,
-        "weight": 30
-      },
-      "messages": [
-        "My dog is drooling constantly and seems to have trouble swallowing."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "drooling_excessive"
+        "oral_mass"
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Drops",
+          "breed": "Cocker Spaniel",
+          "age_years": 8,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is drooling constantly and seems to have trouble swallowing."
+          }
+        ]
       }
     },
     {
@@ -828,15 +853,6 @@
         "appetite"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Refuser",
-        "breed": "Mixed Breed",
-        "age": 13,
-        "weight": 40
-      },
-      "messages": [
-        "My senior dog hasn't eaten in three days."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
@@ -846,11 +862,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Refuser",
+          "breed": "Mixed Breed",
+          "age_years": 13,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My senior dog hasn't eaten in three days."
+          }
+        ]
       }
     },
     {
@@ -862,15 +888,6 @@
         "orthopedic"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Old Limp",
-        "breed": "German Shepherd",
-        "age": 10,
-        "weight": 80
-      },
-      "messages": [
-        "My dog has had a bad hip for years but today he can barely walk."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false,
@@ -883,11 +900,21 @@
       ],
       "risk_tier": "tier_2_same_day",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "09-same-day-urgent.json",
-        "source_suite_id": "dog-triage-gold-candidate-same-day-urgent",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Old Limp",
+          "breed": "German Shepherd",
+          "age_years": 10,
+          "weight": 80,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has had a bad hip for years but today he can barely walk."
+          }
+        ]
       }
     }
   ]

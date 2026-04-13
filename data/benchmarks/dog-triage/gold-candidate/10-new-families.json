@@ -13,29 +13,30 @@
         "anxiety"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Nervous Nellie",
-        "breed": "Border Collie",
-        "age": 3,
-        "weight": 40
-      },
-      "messages": [
-        "My dog destroys furniture and barks nonstop whenever I leave the house."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "anxiety_stress"
+        "behavior_change"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Nervous Nellie",
+          "breed": "Border Collie",
+          "age_years": 3,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog destroys furniture and barks nonstop whenever I leave the house."
+          }
+        ]
       }
     },
     {
@@ -47,29 +48,31 @@
         "anxiety"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Stormy",
-        "breed": "Labrador Retriever",
-        "age": 6,
-        "weight": 65
-      },
-      "messages": [
-        "During storms my dog pants heavily, hides, and trembles uncontrollably."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "anxiety_stress"
+        "behavior_change",
+        "pacing_restlessness"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Stormy",
+          "breed": "Labrador Retriever",
+          "age_years": 6,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "During storms my dog pants heavily, hides, and trembles uncontrollably."
+          }
+        ]
       }
     },
     {
@@ -81,29 +84,30 @@
         "breath"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Stinky",
-        "breed": "Bulldog",
-        "age": 7,
-        "weight": 50
-      },
-      "messages": [
-        "My dog has extremely bad breath that has been getting worse."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "bad_breath"
+        "dental_problem"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Stinky",
+          "breed": "Bulldog",
+          "age_years": 7,
+          "weight": 50,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has extremely bad breath that has been getting worse."
+          }
+        ]
       }
     },
     {
@@ -115,29 +119,31 @@
         "flea"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Scratchy",
-        "breed": "Mixed Breed",
-        "age": 4,
-        "weight": 30
-      },
-      "messages": [
-        "I can see fleas jumping on my dog and he won't stop scratching."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "flea_tick"
+        "excessive_scratching",
+        "recurrent_skin"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Scratchy",
+          "breed": "Mixed Breed",
+          "age_years": 4,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can see fleas jumping on my dog and he won't stop scratching."
+          }
+        ]
       }
     },
     {
@@ -149,29 +155,30 @@
         "tick"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Hunter",
-        "breed": "Beagle",
-        "age": 5,
-        "weight": 28
-      },
-      "messages": [
-        "I found a tick embedded in my dog's skin after a walk in the woods."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "flea_tick"
+        "wound_skin_issue"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Hunter",
+          "breed": "Beagle",
+          "age_years": 5,
+          "weight": 28,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I found a tick embedded in my dog's skin after a walk in the woods."
+          }
+        ]
       }
     },
     {
@@ -183,29 +190,30 @@
         "obesity"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Chubby",
-        "breed": "Labrador Retriever",
-        "age": 8,
-        "weight": 95
-      },
-      "messages": [
-        "My dog has gotten much fatter over the past year and struggles on walks."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "obesity"
+        "exercise_induced_lameness"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Chubby",
+          "breed": "Labrador Retriever",
+          "age_years": 8,
+          "weight": 95,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has gotten much fatter over the past year and struggles on walks."
+          }
+        ]
       }
     },
     {
@@ -217,29 +225,31 @@
         "paw"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Licky",
-        "breed": "Golden Retriever",
-        "age": 5,
-        "weight": 68
-      },
-      "messages": [
-        "My dog constantly licks her front paws and they are turning brown."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "paw_licking"
+        "excessive_scratching",
+        "recurrent_skin"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Licky",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 68,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog constantly licks her front paws and they are turning brown."
+          }
+        ]
       }
     },
     {
@@ -251,29 +261,30 @@
         "gi"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Scooter",
-        "breed": "Corgi",
-        "age": 4,
-        "weight": 28
-      },
-      "messages": [
-        "My dog keeps dragging his bottom across the carpet."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "scooting"
+        "fecal_incontinence"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Scooter",
+          "breed": "Corgi",
+          "age_years": 4,
+          "weight": 28,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps dragging his bottom across the carpet and leaves stool smears behind."
+          }
+        ]
       }
     },
     {
@@ -285,29 +296,30 @@
         "gi"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Biscuit",
-        "breed": "Pomeranian",
-        "age": 6,
-        "weight": 8
-      },
-      "messages": [
-        "My dog is scooting and there is a foul fishy smell."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "scooting"
+        "fecal_incontinence"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Biscuit",
+          "breed": "Pomeranian",
+          "age_years": 6,
+          "weight": 8,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is scooting and there is a foul fishy leakage on the blankets afterward."
+          }
+        ]
       }
     },
     {
@@ -319,29 +331,31 @@
         "infection"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Pimple",
-        "breed": "Boxer",
-        "age": 3,
-        "weight": 60
-      },
-      "messages": [
-        "My dog has bumps and pus-filled spots on his belly."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "skin_infection"
+        "recurrent_skin",
+        "skin_odor_greasy"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Pimple",
+          "breed": "Boxer",
+          "age_years": 3,
+          "weight": 60,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has red, greasy skin with pus-filled bumps on his belly."
+          }
+        ]
       }
     },
     {
@@ -353,29 +367,30 @@
         "sleep"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Snores",
-        "breed": "English Bulldog",
-        "age": 5,
-        "weight": 52
-      },
-      "messages": [
-        "My dog snores very loudly and sometimes seems to stop breathing while sleeping."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "snoring"
+        "coughing_breathing_combined"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Snores",
+          "breed": "English Bulldog",
+          "age_years": 5,
+          "weight": 52,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog snores very loudly and sometimes seems to stop breathing while sleeping."
+          }
+        ]
       }
     },
     {
@@ -387,29 +402,31 @@
         "reaction"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Puppy Love",
-        "breed": "Mixed Breed",
-        "age": 0.5,
-        "weight": 15
-      },
-      "messages": [
-        "My puppy got shots yesterday and seems a bit tired and sore today."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "vaccination_concern"
+        "medication_reaction",
+        "puppy_concern"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Puppy Love",
+          "breed": "Mixed Breed",
+          "age_years": 0.5,
+          "weight": 15,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My puppy got shots yesterday and seems a bit tired and sore today."
+          }
+        ]
       }
     },
     {
@@ -421,29 +438,32 @@
         "urinary"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Moose",
-        "breed": "Husky",
-        "age": 2,
-        "weight": 50
-      },
-      "messages": [
-        "My dog started peeing on furniture even though he was house-trained."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "urine_marking"
+        "inappropriate_urination",
+        "behavior_change",
+        "testicular_prostate"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Moose",
+          "breed": "Husky",
+          "age_years": 2,
+          "weight": 50,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog started peeing on furniture even though he was house-trained."
+          }
+        ]
       }
     },
     {
@@ -455,29 +475,30 @@
         "cold"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Frosty",
-        "breed": "Chihuahua",
-        "age": 8,
-        "weight": 5
-      },
-      "messages": [
-        "My dog refuses to go outside in cold weather and shivers even with a sweater."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "cold_sensitivity"
+        "senior_decline"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Frosty",
+          "breed": "Chihuahua",
+          "age_years": 8,
+          "weight": 5,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog refuses to go outside in cold weather and shivers even with a sweater."
+          }
+        ]
       }
     },
     {
@@ -489,29 +510,30 @@
         "nail"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Clicky",
-        "breed": "Mixed Breed",
-        "age": 7,
-        "weight": 40
-      },
-      "messages": [
-        "My dog's nails are so long they click on the floor and curve under."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "nail_overgrowth"
+        "abnormal_gait"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Clicky",
+          "breed": "Mixed Breed",
+          "age_years": 7,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's nails are so long they click on the floor and curve under."
+          }
+        ]
       }
     },
     {
@@ -523,29 +545,31 @@
         "drooling"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Drooly",
-        "breed": "Mixed Breed",
-        "age": 6,
-        "weight": 35
-      },
-      "messages": [
-        "My dog is drooling way more than usual even though he is not a slobbery breed."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "drooling_excessive"
+        "dental_problem",
+        "oral_mass"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Drooly",
+          "breed": "Mixed Breed",
+          "age_years": 6,
+          "weight": 35,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is drooling way more than usual and keeps pawing at his mouth."
+          }
+        ]
       }
     },
     {
@@ -557,29 +581,30 @@
         "mass"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Warty",
-        "breed": "Cocker Spaniel",
-        "age": 9,
-        "weight": 30
-      },
-      "messages": [
-        "My dog has a cauliflower-looking bump on his eyelid."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "skin_growth"
+        "swelling_lump"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Warty",
+          "breed": "Cocker Spaniel",
+          "age_years": 9,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has a cauliflower-looking bump on his eyelid."
+          }
+        ]
       }
     },
     {
@@ -591,29 +616,30 @@
         "pain"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Ouch",
-        "breed": "Dachshund",
-        "age": 6,
-        "weight": 18
-      },
-      "messages": [
-        "My dog yelps when I try to pick him up or touch his stomach."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "abdominal_pain"
+        "swollen_abdomen"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ouch",
+          "breed": "Dachshund",
+          "age_years": 6,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog yelps when I try to pick him up or touch his stomach."
+          }
+        ]
       }
     },
     {
@@ -624,29 +650,30 @@
         "respiratory"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Honker",
-        "breed": "Pug",
-        "age": 4,
-        "weight": 18
-      },
-      "messages": [
-        "My dog makes loud honking noises like he is trying to sneeze but inhaling."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "reverse_sneezing"
+        "coughing_breathing_combined"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Honker",
+          "breed": "Pug",
+          "age_years": 4,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog makes loud honking noises like he is trying to sneeze but inhaling."
+          }
+        ]
       }
     },
     {
@@ -658,29 +685,31 @@
         "compulsive"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Spins",
-        "breed": "Bull Terrier",
-        "age": 3,
-        "weight": 50
-      },
-      "messages": [
-        "My dog spins in circles chasing his tail until he bites it raw."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "tail_chasing"
+        "behavior_change",
+        "aggression"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Spins",
+          "breed": "Bull Terrier",
+          "age_years": 3,
+          "weight": 50,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog spins in circles chasing his tail, bites it raw, and snaps if we try to stop him."
+          }
+        ]
       }
     },
     {
@@ -692,29 +721,30 @@
         "face"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Puffy",
-        "breed": "Boxer",
-        "age": 5,
-        "weight": 62
-      },
-      "messages": [
-        "My dog's face looks slightly puffy but he is breathing fine."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "face_swelling"
+        "wound_skin_issue"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Puffy",
+          "breed": "Boxer",
+          "age_years": 5,
+          "weight": 62,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog's face looks slightly puffy but he is breathing fine."
+          }
+        ]
       }
     },
     {
@@ -726,29 +756,30 @@
         "nutrition"
       ],
       "weight": 2,
-      "pet": {
-        "name": "Fatty",
-        "breed": "Labrador Retriever",
-        "age": 7,
-        "weight": 90
-      },
-      "messages": [
-        "My dog has been gradually getting heavier over the last year."
-      ],
       "expectations": {
         "responseType": "question",
         "readyForReport": false
       },
       "complaint_family_tags": [
-        "obesity"
+        "exercise_induced_lameness"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",
-      "provenance": {
-        "source_shard": "10-new-families.json",
-        "source_suite_id": "dog-triage-gold-candidate-new-families",
-        "freeze_date": "2026-04-13",
-        "version": "gold-v1"
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Fatty",
+          "breed": "Labrador Retriever",
+          "age_years": 7,
+          "weight": 90,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has been gradually getting heavier over the last year."
+          }
+        ]
       }
     }
   ]

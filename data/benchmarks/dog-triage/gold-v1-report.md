@@ -4,6 +4,7 @@
 **Freeze Date**: 2026-04-13
 **Total Cases**: 219
 **Shard Count**: 13
+**Shard Hash**: `a551f4cbff90f292...`
 
 ## Coverage Summary
 
@@ -11,63 +12,63 @@
 |--------|-------|
 | Total Cases | 219 |
 | Complaint Families | 50 |
-| Must-Not-Miss Cases | 42 |
+| Must-Not-Miss Cases | 51 |
 | Shard Files | 13 |
 
 ## Family Distribution
 
 | Family | Cases |
 |--------|-------|
-| vomiting | 22 |
-| difficulty_breathing | 17 |
-| limping | 14 |
-| pregnancy_birth | 12 |
-| trembling | 11 |
-| lethargy | 11 |
-| seizure_collapse | 10 |
+| unknown_concern | 54 |
+| difficulty_breathing | 14 |
+| vomiting | 13 |
+| wound_skin_issue | 11 |
+| behavior_change | 10 |
 | swollen_abdomen | 9 |
-| wound_skin_issue | 9 |
-| diarrhea | 9 |
-| excessive_scratching | 8 |
-| urination_problem | 7 |
+| lethargy | 9 |
+| excessive_scratching | 9 |
+| limping | 8 |
+| trembling | 7 |
+| diarrhea | 7 |
+| urination_problem | 6 |
 | dental_problem | 6 |
 | coughing | 6 |
-| drinking_more | 6 |
-| weight_loss | 6 |
-| swelling_lump | 6 |
-| behavior_change | 5 |
-| eye_discharge | 4 |
+| senior_decline | 6 |
+| recurrent_skin | 6 |
+| drinking_more | 5 |
+| seizure_collapse | 4 |
 | ear_scratching | 4 |
-| senior_decline | 4 |
+| swelling_lump | 4 |
+| eye_discharge | 3 |
+| weight_loss | 3 |
 | hair_loss | 3 |
-| scooting | 3 |
-| abdominal_pain | 3 |
+| coughing_breathing_combined | 3 |
+| fecal_incontinence | 3 |
+| skin_odor_greasy | 3 |
+| pregnancy_birth | 2 |
 | vomiting_diarrhea_combined | 2 |
 | vaginal_discharge | 2 |
 | blood_in_stool | 2 |
 | regurgitation | 2 |
 | generalized_stiffness | 2 |
 | nasal_discharge | 2 |
-| anxiety_stress | 2 |
-| flea_tick | 2 |
-| obesity | 2 |
-| paw_licking | 2 |
-| skin_infection | 2 |
-| drooling_excessive | 2 |
-| face_swelling | 2 |
+| oral_mass | 2 |
+| exercise_induced_lameness | 2 |
+| inappropriate_urination | 2 |
+| not_eating | 2 |
+| vision_loss | 2 |
 | heat_intolerance | 1 |
 | constipation | 1 |
-| coughing_breathing_combined | 1 |
 | postoperative_concern | 1 |
-| bad_breath | 1 |
-| snoring | 1 |
-| vaccination_concern | 1 |
-| urine_marking | 1 |
-| cold_sensitivity | 1 |
-| nail_overgrowth | 1 |
-| skin_growth | 1 |
-| reverse_sneezing | 1 |
-| tail_chasing | 1 |
+| pacing_restlessness | 1 |
+| medication_reaction | 1 |
+| puppy_concern | 1 |
+| testicular_prostate | 1 |
+| abnormal_gait | 1 |
+| aggression | 1 |
+| recurrent_ear | 1 |
+| hearing_loss | 1 |
+| multi_system_decline | 1 |
 
 ## Urgency Tier Distribution
 
@@ -79,6 +80,5 @@
 
 ## Coverage Gaps
 
-- Not all 50 complaint families represented (reduced gap — 50/50)
-- Owner language variants expanded
-- Chronic-plus-acute cases expanded
+- All 50 canonical complaint families represented.
+- Thin coverage remains for 24 families with fewer than 3 cases: heat_intolerance, vision_loss, pregnancy_birth, not_eating, regurgitation, constipation, generalized_stiffness, nasal_discharge, vaginal_discharge, testicular_prostate, exercise_induced_lameness, recurrent_ear, inappropriate_urination, vomiting_diarrhea_combined, oral_mass, hearing_loss, aggression, pacing_restlessness, abnormal_gait, postoperative_concern, medication_reaction, puppy_concern, multi_system_decline, blood_in_stool

@@ -7,27 +7,52 @@
     {
       "id": "followup-gum-color-unknown-escalates",
       "description": "Unknown gum color on a respiratory emergency follow-up should escalate.",
-      "tags": ["followup", "unknown", "respiratory", "emergency"],
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "emergency"
+      ],
       "weight": 3,
       "request": {
         "action": "chat",
-        "pet": { "name": "Pepper", "breed": "Pug", "age_years": 9, "weight": 19, "species": "dog" },
+        "pet": {
+          "name": "Pepper",
+          "breed": "Pug",
+          "age_years": 9,
+          "weight": 19,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["difficulty_breathing"],
+          "known_symptoms": [
+            "difficulty_breathing"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["heart_failure", "allergic_reaction", "difficulty_breathing"],
-          "body_systems_involved": ["respiratory"],
+          "candidate_diseases": [
+            "heart_failure",
+            "allergic_reaction",
+            "difficulty_breathing"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
           "last_question_asked": "gum_color",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["difficulty_breathing"],
-            "active_focus_symptoms": ["difficulty_breathing"],
+            "chief_complaints": [
+              "difficulty_breathing"
+            ],
+            "active_focus_symptoms": [
+              "difficulty_breathing"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["gum_color"],
+            "unresolved_question_ids": [
+              "gum_color"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -39,34 +64,68 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I can't tell what color they are right now." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't tell what color they are right now."
+          }
+        ]
       },
-      "expectations": { "responseType": "emergency", "readyForReport": true }
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-consciousness-unknown-escalates",
       "description": "Unknown consciousness level during neurologic triage should escalate.",
-      "tags": ["followup", "unknown", "neurologic", "emergency"],
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic",
+        "emergency"
+      ],
       "weight": 3,
       "request": {
         "action": "chat",
-        "pet": { "name": "Kona", "breed": "Australian Shepherd", "age_years": 6, "weight": 44, "species": "dog" },
+        "pet": {
+          "name": "Kona",
+          "breed": "Australian Shepherd",
+          "age_years": 6,
+          "weight": 44,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["seizure_collapse"],
+          "known_symptoms": [
+            "seizure_collapse"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["seizure_disorder", "toxin_exposure", "heatstroke"],
-          "body_systems_involved": ["neurologic"],
+          "candidate_diseases": [
+            "seizure_disorder",
+            "toxin_exposure",
+            "heatstroke"
+          ],
+          "body_systems_involved": [
+            "neurologic"
+          ],
           "last_question_asked": "consciousness_level",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["seizure_collapse"],
-            "active_focus_symptoms": ["seizure_collapse"],
+            "chief_complaints": [
+              "seizure_collapse"
+            ],
+            "active_focus_symptoms": [
+              "seizure_collapse"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["consciousness_level"],
+            "unresolved_question_ids": [
+              "consciousness_level"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -78,34 +137,68 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I don't know if he's fully aware right now." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't know if he's fully aware right now."
+          }
+        ]
       },
-      "expectations": { "responseType": "emergency", "readyForReport": true }
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-cough-type-unknown-reasks",
       "description": "Unknown cough type should stay in clarification flow rather than closing the question.",
-      "tags": ["followup", "unknown", "respiratory", "clarification"],
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "clarification"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Finn", "breed": "Pomeranian", "age_years": 8, "weight": 10, "species": "dog" },
+        "pet": {
+          "name": "Finn",
+          "breed": "Pomeranian",
+          "age_years": 8,
+          "weight": 10,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["coughing"],
+          "known_symptoms": [
+            "coughing"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["kennel_cough", "tracheal_collapse", "heart_disease"],
-          "body_systems_involved": ["respiratory"],
+          "candidate_diseases": [
+            "kennel_cough",
+            "tracheal_collapse",
+            "heart_disease"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
           "last_question_asked": "cough_type",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["coughing"],
-            "active_focus_symptoms": ["coughing"],
+            "chief_complaints": [
+              "coughing"
+            ],
+            "active_focus_symptoms": [
+              "coughing"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["cough_type"],
+            "unresolved_question_ids": [
+              "cough_type"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -117,39 +210,72 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I'm not sure what kind of cough it is." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm not sure what kind of cough it is."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsExclude": ["cough_type"],
+        "answeredQuestionsExclude": [
+          "cough_type"
+        ],
         "lastQuestionAsked": "cough_type",
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-blood-amount-unknown-reasks",
       "description": "Unknown blood amount should stay in clarification flow for stool blood triage.",
-      "tags": ["followup", "unknown", "gi", "clarification"],
+      "tags": [
+        "followup",
+        "unknown",
+        "gi",
+        "clarification"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Harley", "breed": "Boston Terrier", "age_years": 5, "weight": 22, "species": "dog" },
+        "pet": {
+          "name": "Harley",
+          "breed": "Boston Terrier",
+          "age_years": 5,
+          "weight": 22,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["blood_in_stool"],
+          "known_symptoms": [
+            "blood_in_stool"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["colitis", "hemorrhagic_gastroenteritis", "anal_gland_issue"],
-          "body_systems_involved": ["gi"],
+          "candidate_diseases": [
+            "colitis",
+            "hemorrhagic_gastroenteritis",
+            "anal_gland_issue"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
           "last_question_asked": "blood_amount",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["blood_in_stool"],
-            "active_focus_symptoms": ["blood_in_stool"],
+            "chief_complaints": [
+              "blood_in_stool"
+            ],
+            "active_focus_symptoms": [
+              "blood_in_stool"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["blood_amount"],
+            "unresolved_question_ids": [
+              "blood_amount"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -161,39 +287,71 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I really can't tell how much blood there was." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I really can't tell how much blood there was."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsExclude": ["blood_amount"],
+        "answeredQuestionsExclude": [
+          "blood_amount"
+        ],
         "lastQuestionAsked": "blood_amount",
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-appetite-change-unknown",
       "description": "Unknown appetite change should be safely recorded and continue.",
-      "tags": ["followup", "unknown", "systemic"],
+      "tags": [
+        "followup",
+        "unknown",
+        "systemic"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Maggie", "breed": "Mixed Breed", "age_years": 10, "weight": 51, "species": "dog" },
+        "pet": {
+          "name": "Maggie",
+          "breed": "Mixed Breed",
+          "age_years": 10,
+          "weight": 51,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["weight_loss"],
+          "known_symptoms": [
+            "weight_loss"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["cancer", "kidney_disease", "diabetes"],
-          "body_systems_involved": ["systemic"],
+          "candidate_diseases": [
+            "cancer",
+            "kidney_disease",
+            "diabetes"
+          ],
+          "body_systems_involved": [
+            "systemic"
+          ],
           "last_question_asked": "appetite_change",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["weight_loss"],
-            "active_focus_symptoms": ["weight_loss"],
+            "chief_complaints": [
+              "weight_loss"
+            ],
+            "active_focus_symptoms": [
+              "weight_loss"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["appetite_change"],
+            "unresolved_question_ids": [
+              "appetite_change"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -205,39 +363,73 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I don't really know if she's eating more or less." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't really know if she's eating more or less."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["appetite_change"],
-        "extractedAnswersMatch": { "appetite_change": "unknown" },
+        "answeredQuestionsInclude": [
+          "appetite_change"
+        ],
+        "extractedAnswersMatch": {
+          "appetite_change": "unknown"
+        },
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-stool-consistency-unknown",
       "description": "Unknown stool consistency should be safely recorded and continue.",
-      "tags": ["followup", "unknown", "gi"],
+      "tags": [
+        "followup",
+        "unknown",
+        "gi"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Benny", "breed": "Beagle", "age_years": 5, "weight": 29, "species": "dog" },
+        "pet": {
+          "name": "Benny",
+          "breed": "Beagle",
+          "age_years": 5,
+          "weight": 29,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["diarrhea"],
+          "known_symptoms": [
+            "diarrhea"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["dietary_indiscretion", "parasites", "colitis"],
-          "body_systems_involved": ["gi"],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "parasites",
+            "colitis"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
           "last_question_asked": "stool_consistency",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["diarrhea"],
-            "active_focus_symptoms": ["diarrhea"],
+            "chief_complaints": [
+              "diarrhea"
+            ],
+            "active_focus_symptoms": [
+              "diarrhea"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["stool_consistency"],
+            "unresolved_question_ids": [
+              "stool_consistency"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -249,39 +441,73 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I have no idea, I didn't get a good look." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I have no idea, I didn't get a good look."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["stool_consistency"],
-        "extractedAnswersMatch": { "stool_consistency": "unknown" },
+        "answeredQuestionsInclude": [
+          "stool_consistency"
+        ],
+        "extractedAnswersMatch": {
+          "stool_consistency": "unknown"
+        },
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-seasonal-pattern-unknown",
       "description": "Unknown seasonal pattern should be safely recorded for itch workups.",
-      "tags": ["followup", "unknown", "dermatology"],
+      "tags": [
+        "followup",
+        "unknown",
+        "dermatology"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Mochi", "breed": "French Bulldog", "age_years": 3, "weight": 25, "species": "dog" },
+        "pet": {
+          "name": "Mochi",
+          "breed": "French Bulldog",
+          "age_years": 3,
+          "weight": 25,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["excessive_scratching"],
+          "known_symptoms": [
+            "excessive_scratching"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["allergic_dermatitis", "flea_allergy", "food_allergy"],
-          "body_systems_involved": ["skin"],
+          "candidate_diseases": [
+            "allergic_dermatitis",
+            "flea_allergy",
+            "food_allergy"
+          ],
+          "body_systems_involved": [
+            "skin"
+          ],
           "last_question_asked": "seasonal_pattern",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["excessive_scratching"],
-            "active_focus_symptoms": ["excessive_scratching"],
+            "chief_complaints": [
+              "excessive_scratching"
+            ],
+            "active_focus_symptoms": [
+              "excessive_scratching"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["seasonal_pattern"],
+            "unresolved_question_ids": [
+              "seasonal_pattern"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -293,39 +519,73 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I'm honestly not sure if it's seasonal or not." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm honestly not sure if it's seasonal or not."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["seasonal_pattern"],
-        "extractedAnswersMatch": { "seasonal_pattern": "unknown" },
+        "answeredQuestionsInclude": [
+          "seasonal_pattern"
+        ],
+        "extractedAnswersMatch": {
+          "seasonal_pattern": "unknown"
+        },
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-trembling-timing-unknown",
       "description": "Unknown trembling timing should be safely recorded and continue.",
-      "tags": ["followup", "unknown", "neurologic"],
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Loki", "breed": "Chihuahua", "age_years": 7, "weight": 8, "species": "dog" },
+        "pet": {
+          "name": "Loki",
+          "breed": "Chihuahua",
+          "age_years": 7,
+          "weight": 8,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["trembling"],
+          "known_symptoms": [
+            "trembling"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["pain", "anxiety", "hypoglycemia"],
-          "body_systems_involved": ["neurologic"],
+          "candidate_diseases": [
+            "pain",
+            "anxiety",
+            "hypoglycemia"
+          ],
+          "body_systems_involved": [
+            "neurologic"
+          ],
           "last_question_asked": "trembling_timing",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["trembling"],
-            "active_focus_symptoms": ["trembling"],
+            "chief_complaints": [
+              "trembling"
+            ],
+            "active_focus_symptoms": [
+              "trembling"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["trembling_timing"],
+            "unresolved_question_ids": [
+              "trembling_timing"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -337,39 +597,75 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "Hard to tell if it's constant or just on and off." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hard to tell if it's constant or just on and off."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["trembling_timing"],
-        "extractedAnswersMatch": { "trembling_timing": "unknown" },
+        "answeredQuestionsInclude": [
+          "trembling_timing"
+        ],
+        "extractedAnswersMatch": {
+          "trembling_timing": "unknown"
+        },
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-weight-bearing-unknown",
       "description": "Unknown weight-bearing status should be safely recorded and continue.",
-      "tags": ["followup", "unknown", "orthopedic"],
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Bruno", "breed": "Golden Retriever", "age_years": 5, "weight": 72, "species": "dog" },
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["limping"],
-          "answered_questions": ["which_leg", "limping_onset", "limping_progression"],
+          "known_symptoms": [
+            "limping"
+          ],
+          "answered_questions": [
+            "which_leg",
+            "limping_onset",
+            "limping_progression"
+          ],
           "extracted_answers": {
             "which_leg": "left back leg",
             "limping_onset": "sudden",
             "limping_progression": "worse"
           },
           "red_flags_triggered": [],
-          "candidate_diseases": ["ccl_rupture", "soft_tissue_injury", "patellar_luxation"],
-          "body_systems_involved": ["musculoskeletal"],
+          "candidate_diseases": [
+            "ccl_rupture",
+            "soft_tissue_injury",
+            "patellar_luxation"
+          ],
+          "body_systems_involved": [
+            "musculoskeletal"
+          ],
           "last_question_asked": "weight_bearing",
           "case_memory": {
             "turn_count": 4,
-            "chief_complaints": ["limping"],
-            "active_focus_symptoms": ["limping"],
+            "chief_complaints": [
+              "limping"
+            ],
+            "active_focus_symptoms": [
+              "limping"
+            ],
             "confirmed_facts": {
               "which_leg": "left back leg",
               "limping_onset": "sudden",
@@ -377,7 +673,9 @@
             },
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["weight_bearing"],
+            "unresolved_question_ids": [
+              "weight_bearing"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -389,39 +687,73 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "I can't really tell how much weight he's putting on it." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't really tell how much weight he's putting on it."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["weight_bearing"],
-        "extractedAnswersMatch": { "weight_bearing": "unknown" },
+        "answeredQuestionsInclude": [
+          "weight_bearing"
+        ],
+        "extractedAnswersMatch": {
+          "weight_bearing": "unknown"
+        },
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-vomit-duration-raw-text",
-      "description": "Natural duration phrasing should be preserved for vomiting duration extraction.",
-      "tags": ["followup", "duration", "gi"],
+      "description": "A casual timeline for vomiting should stay as owner-provided duration text instead of being over-normalized.",
+      "tags": [
+        "followup",
+        "duration",
+        "gi"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Ruby", "breed": "Mini Schnauzer", "age_years": 6, "weight": 18, "species": "dog" },
+        "pet": {
+          "name": "Ruby",
+          "breed": "Mini Schnauzer",
+          "age_years": 6,
+          "weight": 18,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["vomiting"],
+          "known_symptoms": [
+            "vomiting"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["dietary_indiscretion", "pancreatitis", "foreign_body"],
-          "body_systems_involved": ["gi"],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "pancreatitis",
+            "foreign_body"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
           "last_question_asked": "vomit_duration",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["vomiting"],
-            "active_focus_symptoms": ["vomiting"],
+            "chief_complaints": [
+              "vomiting"
+            ],
+            "active_focus_symptoms": [
+              "vomiting"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["vomit_duration"],
+            "unresolved_question_ids": [
+              "vomit_duration"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -433,38 +765,70 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "For about three days, maybe since Monday night." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "For about three days, maybe since Monday night."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["vomit_duration"],
+        "answeredQuestionsInclude": [
+          "vomit_duration"
+        ],
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-diarrhea-duration-raw-text",
-      "description": "Natural duration phrasing should be preserved for diarrhea duration extraction.",
-      "tags": ["followup", "duration", "gi"],
+      "description": "A conversational diarrhea timeline should remain preserved as natural-language duration evidence.",
+      "tags": [
+        "followup",
+        "duration",
+        "gi"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Teddy", "breed": "Cavalier King Charles Spaniel", "age_years": 4, "weight": 19, "species": "dog" },
+        "pet": {
+          "name": "Teddy",
+          "breed": "Cavalier King Charles Spaniel",
+          "age_years": 4,
+          "weight": 19,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["diarrhea"],
+          "known_symptoms": [
+            "diarrhea"
+          ],
           "answered_questions": [],
           "extracted_answers": {},
           "red_flags_triggered": [],
-          "candidate_diseases": ["dietary_indiscretion", "parasites", "colitis"],
-          "body_systems_involved": ["gi"],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "parasites",
+            "colitis"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
           "last_question_asked": "diarrhea_duration",
           "case_memory": {
             "turn_count": 2,
-            "chief_complaints": ["diarrhea"],
-            "active_focus_symptoms": ["diarrhea"],
+            "chief_complaints": [
+              "diarrhea"
+            ],
+            "active_focus_symptoms": [
+              "diarrhea"
+            ],
             "confirmed_facts": {},
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["diarrhea_duration"],
+            "unresolved_question_ids": [
+              "diarrhea_duration"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -476,25 +840,50 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "It started last Monday, so a couple of days now." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "It started last Monday, so a couple of days now."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["diarrhea_duration"],
+        "answeredQuestionsInclude": [
+          "diarrhea_duration"
+        ],
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "followup-swelling-present-no",
       "description": "A direct no answer should close swelling-present follow-up cleanly.",
-      "tags": ["followup", "boolean", "orthopedic"],
+      "tags": [
+        "followup",
+        "boolean",
+        "orthopedic"
+      ],
       "weight": 2,
       "request": {
         "action": "chat",
-        "pet": { "name": "Bruno", "breed": "Golden Retriever", "age_years": 5, "weight": 72, "species": "dog" },
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
         "session": {
-          "known_symptoms": ["limping"],
-          "answered_questions": ["which_leg", "limping_onset", "limping_progression", "weight_bearing"],
+          "known_symptoms": [
+            "limping"
+          ],
+          "answered_questions": [
+            "which_leg",
+            "limping_onset",
+            "limping_progression",
+            "weight_bearing"
+          ],
           "extracted_answers": {
             "which_leg": "left back leg",
             "limping_onset": "sudden",
@@ -502,13 +891,22 @@
             "weight_bearing": "partial"
           },
           "red_flags_triggered": [],
-          "candidate_diseases": ["ccl_rupture", "soft_tissue_injury"],
-          "body_systems_involved": ["musculoskeletal"],
+          "candidate_diseases": [
+            "ccl_rupture",
+            "soft_tissue_injury"
+          ],
+          "body_systems_involved": [
+            "musculoskeletal"
+          ],
           "last_question_asked": "swelling_present",
           "case_memory": {
             "turn_count": 5,
-            "chief_complaints": ["limping"],
-            "active_focus_symptoms": ["limping"],
+            "chief_complaints": [
+              "limping"
+            ],
+            "active_focus_symptoms": [
+              "limping"
+            ],
             "confirmed_facts": {
               "which_leg": "left back leg",
               "limping_onset": "sudden",
@@ -517,7 +915,9 @@
             },
             "image_findings": [],
             "red_flag_notes": [],
-            "unresolved_question_ids": ["swelling_present"],
+            "unresolved_question_ids": [
+              "swelling_present"
+            ],
             "timeline_notes": [],
             "visual_evidence": [],
             "retrieval_evidence": [],
@@ -529,50 +929,117 @@
             "ambiguity_flags": []
           }
         },
-        "messages": [{ "role": "user", "content": "No, I don't see any swelling." }]
+        "messages": [
+          {
+            "role": "user",
+            "content": "No, I don't see any swelling."
+          }
+        ]
       },
       "expectations": {
         "responseType": "question",
-        "answeredQuestionsInclude": ["swelling_present"],
-        "extractedAnswersMatch": { "swelling_present": false },
+        "answeredQuestionsInclude": [
+          "swelling_present"
+        ],
+        "extractedAnswersMatch": {
+          "swelling_present": false
+        },
         "readyForReport": false
-      }
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "emergency-acute-paralysis",
       "description": "Acute inability to use the back legs should escalate immediately.",
-      "tags": ["emergency", "neurologic", "mobility"],
+      "tags": [
+        "emergency",
+        "neurologic",
+        "mobility"
+      ],
       "weight": 3,
       "request": {
         "action": "chat",
-        "pet": { "name": "Duke", "breed": "Dachshund", "age_years": 7, "weight": 17, "species": "dog" },
-        "messages": [{ "role": "user", "content": "My dog suddenly can't use his back legs and is dragging himself." }]
+        "pet": {
+          "name": "Duke",
+          "breed": "Dachshund",
+          "age_years": 7,
+          "weight": 17,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog suddenly can't use his back legs and is dragging himself."
+          }
+        ]
       },
-      "expectations": { "responseType": "emergency", "readyForReport": true }
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "emergency-hypoglycemia-toy-breed",
       "description": "Toy-breed puppy with tremors and collapse cues should escalate.",
-      "tags": ["emergency", "metabolic", "puppy"],
+      "tags": [
+        "emergency",
+        "metabolic",
+        "puppy"
+      ],
       "weight": 3,
       "request": {
         "action": "chat",
-        "pet": { "name": "Pip", "breed": "Yorkshire Terrier", "age_years": 0.4, "weight": 3.2, "species": "dog" },
-        "messages": [{ "role": "user", "content": "My tiny puppy is shaky, weak, and just flopped over after not eating well." }]
+        "pet": {
+          "name": "Pip",
+          "breed": "Yorkshire Terrier",
+          "age_years": 0.4,
+          "weight": 3.2,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My tiny puppy is shaky, weak, and just flopped over after not eating well."
+          }
+        ]
       },
-      "expectations": { "responseType": "emergency", "readyForReport": true }
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": []
     },
     {
       "id": "emergency-repeated-nonproductive-heaving",
       "description": "Repeated nonproductive heaving with distress should escalate as abdominal emergency.",
-      "tags": ["emergency", "abdomen", "retching"],
+      "tags": [
+        "emergency",
+        "abdomen",
+        "retching"
+      ],
       "weight": 3,
       "request": {
         "action": "chat",
-        "pet": { "name": "Atlas", "breed": "Weimaraner", "age_years": 6, "weight": 84, "species": "dog" },
-        "messages": [{ "role": "user", "content": "He keeps heaving like he needs to vomit but nothing is coming up and he looks panicked." }]
+        "pet": {
+          "name": "Atlas",
+          "breed": "Weimaraner",
+          "age_years": 6,
+          "weight": 84,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "He keeps heaving like he needs to vomit but nothing is coming up and he looks panicked."
+          }
+        ]
       },
-      "expectations": { "responseType": "emergency", "readyForReport": true }
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": []
     }
   ]
 }
