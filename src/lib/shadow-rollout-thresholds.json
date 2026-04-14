@@ -1,0 +1,54 @@
+{
+  "windowHours": 24,
+  "sampleIntervalMinutes": 5,
+  "requiredHealthySampleRatio": 0.95,
+  "requiredHealthySamples": 288,
+  "loadTest": {
+    "required": true,
+    "minTargetRpsMultiplier": 2,
+    "maxErrorRate": 0.05,
+    "maxP99LatencyMs": 2500
+  },
+  "services": {
+    "vision-preprocess-service": {
+      "minObservations": 2,
+      "maxTimeoutRate": 0.2,
+      "maxErrorRate": 0.1,
+      "maxFallbackRate": 0.1,
+      "maxAverageLatencyMs": 3500,
+      "maxDisagreementCount": 2
+    },
+    "text-retrieval-service": {
+      "minObservations": 2,
+      "maxTimeoutRate": 0.2,
+      "maxErrorRate": 0.1,
+      "maxFallbackRate": 0.1,
+      "maxAverageLatencyMs": 3000,
+      "maxDisagreementCount": 2
+    },
+    "image-retrieval-service": {
+      "minObservations": 2,
+      "maxTimeoutRate": 0.2,
+      "maxErrorRate": 0.1,
+      "maxFallbackRate": 0.1,
+      "maxAverageLatencyMs": 3000,
+      "maxDisagreementCount": 2
+    },
+    "multimodal-consult-service": {
+      "minObservations": 2,
+      "maxTimeoutRate": 0.2,
+      "maxErrorRate": 0.1,
+      "maxFallbackRate": 0.1,
+      "maxAverageLatencyMs": 9000,
+      "maxDisagreementCount": 3
+    },
+    "async-review-service": {
+      "minObservations": 1,
+      "maxTimeoutRate": 0.35,
+      "maxErrorRate": 0.15,
+      "maxFallbackRate": 0.15,
+      "maxAverageLatencyMs": 20000,
+      "maxDisagreementCount": 5
+    }
+  }
+}

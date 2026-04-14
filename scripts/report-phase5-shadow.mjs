@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 
@@ -63,6 +64,7 @@ const SIDEcar_SECRET =
   (process.env.HF_SIDECAR_API_KEY || process.env.ASYNC_REVIEW_WEBHOOK_SECRET || "").trim();
 const podsPath = path.join(rootDir, "deploy", "runpod", "pods.json");
 const outputArg = process.argv.find((arg) => arg.startsWith("--output="));
+const skipLoadTest = process.argv.includes("--skip-load-test");
 const outputPath = outputArg
   ? path.resolve(rootDir, outputArg.split("=")[1])
   : path.join(rootDir, "phase5-shadow-report.md");
@@ -86,6 +88,30 @@ async function fetchJson(url, options = {}) {
     body = null;
   }
   return { ok: response.ok, status: response.status, body, rawText };
+}
+
+function runLoadTest() {
+  const result = spawnSync(
+    process.execPath,
+    [
+      path.join(rootDir, "scripts", "load-phase5-shadow.mjs"),
+      "--json",
+      `--base-url=${APP_BASE_URL}`,
+    ],
+    {
+      cwd: rootDir,
+      env: process.env,
+      encoding: "utf8",
+    }
+  );
+
+  if (result.status !== 0) {
+    throw new Error(
+      result.stderr?.trim() || result.stdout?.trim() || "load test failed"
+    );
+  }
+
+  return JSON.parse(result.stdout || "null");
 }
 
 function buildShadowProbePayload() {
@@ -152,6 +178,7 @@ async function main() {
     Authorization: `Bearer ${SIDEcar_SECRET}`,
     "Content-Type": "application/json",
   };
+  const loadTest = skipLoadTest ? null : runLoadTest();
 
   const readinessUrl = buildAppRouteUrl(APP_BASE_URL, "/api/ai/sidecar-readiness");
   const shadowUrl = buildAppRouteUrl(APP_BASE_URL, "/api/ai/shadow-rollout");
@@ -161,7 +188,10 @@ async function main() {
     fetchJson(shadowUrl, {
       method: "POST",
       headers,
-      body: JSON.stringify(buildShadowProbePayload()),
+      body: JSON.stringify({
+        ...buildShadowProbePayload(),
+        loadTest,
+      }),
     }),
   ]);
 
@@ -183,6 +213,7 @@ async function main() {
       summary: shadow.body?.summary || null,
       observability: shadow.body?.observability || null,
     },
+    loadTest,
     runpodPods: pods,
   };
 
@@ -211,11 +242,36 @@ async function main() {
     `- HTTP status: ${report.shadow.status}`,
     `- OK: ${report.shadow.ok}`,
     `- Overall status: ${report.shadow.summary?.overallStatus ?? "n/a"}`,
-    `- Ready services: ${report.shadow.summary?.readyServices?.length ?? 0}`,
-    `- Watch services: ${report.shadow.summary?.watchServices?.length ?? 0}`,
-    `- Blocked services: ${report.shadow.summary?.blockedServices?.length ?? 0}`,
+    `- Ready services: ${report.shadow.summary?.services?.filter((service) => service.status === "ready").length ?? 0}`,
+    `- Watch services: ${report.shadow.summary?.services?.filter((service) => service.status === "watch").length ?? 0}`,
+    `- Blocked services: ${report.shadow.summary?.services?.filter((service) => service.status === "blocked").length ?? 0}`,
+    `- Insufficient-data services: ${report.shadow.summary?.services?.filter((service) => service.status === "insufficient_data").length ?? 0}`,
     `- Recent service call count: ${report.shadow.observability?.recentServiceCallCount ?? "n/a"}`,
     `- Recent shadow comparison count: ${report.shadow.observability?.recentShadowComparisonCount ?? "n/a"}`,
+    "",
+    "## Load Test",
+    "",
+    `- Executed: ${report.loadTest ? "yes" : "no"}`,
+    `- Target route: ${report.loadTest?.targetRoute ?? "n/a"}`,
+    `- Baseline RPS: ${report.loadTest?.baselineRps ?? "n/a"}`,
+    `- Target RPS: ${report.loadTest?.targetRps ?? "n/a"}`,
+    `- Duration (seconds): ${report.loadTest?.durationSeconds ?? "n/a"}`,
+    `- Total requests: ${report.loadTest?.totalRequests ?? "n/a"}`,
+    `- Error rate: ${report.loadTest ? `${Math.round(report.loadTest.errorRate * 100)}%` : "n/a"}`,
+    `- p99 latency: ${report.loadTest?.p99LatencyMs ?? "n/a"}`,
+    `- Passed: ${report.loadTest?.passed ?? "n/a"}`,
+    report.loadTest?.blockers?.length
+      ? `- Blockers: ${report.loadTest.blockers.join(" | ")}`
+      : "- Blockers: none",
+    "",
+    "## Service Gates",
+    "",
+    ...(report.shadow.summary?.services || []).flatMap((service) => [
+      `- ${service.service}: status=${service.status}, sampleMode=${service.sampleMode}, windowSamples=${service.window?.observedWindowSamples ?? "n/a"}, healthyRatio=${service.window ? `${Math.round(service.window.healthySampleRatio * 100)}%` : "n/a"}, loadTest=${service.loadTestStatus}`,
+      ...(service.blockers?.length
+        ? [`  blockers: ${service.blockers.join(" | ")}`]
+        : ["  blockers: none"]),
+    ]),
     "",
     "## RunPod Pods",
     "",
