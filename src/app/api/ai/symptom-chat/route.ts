@@ -105,7 +105,8 @@ import {
   appendSidecarObservation,
   buildObservabilitySnapshot,
   describeShadowComparison,
-  isShadowModeEnabledForService,
+  describeShadowModeDecision,
+  getShadowModeDecision,
 } from "@/lib/sidecar-observability";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
@@ -399,9 +400,12 @@ export async function POST(request: Request) {
       : "unsupported";
 
     if (image) {
-      const visionPreprocessShadowMode = isShadowModeEnabledForService(
-        "vision-preprocess-service"
-      );
+      const visionPreprocessDecision = getShadowModeDecision({
+        service: "vision-preprocess-service",
+        session,
+        pet: effectivePet,
+        additionalKey: imageHash || lastUserMessage.content,
+      });
       if (isVisionPreprocessConfigured()) {
         const startedAt = Date.now();
         try {
@@ -417,13 +421,13 @@ export async function POST(request: Request) {
             service: "vision-preprocess-service",
             stage: "preprocess",
             latencyMs: Date.now() - startedAt,
-            outcome: visionPreprocessShadowMode ? "shadow" : "success",
-            shadowMode: visionPreprocessShadowMode,
-            fallbackUsed: visionPreprocessShadowMode,
-            note: `domain=${preprocessedImage.domain}; quality=${preprocessedImage.imageQuality}`,
+            outcome: visionPreprocessDecision.enabled ? "shadow" : "success",
+            shadowMode: visionPreprocessDecision.enabled,
+            fallbackUsed: visionPreprocessDecision.enabled,
+            note: `domain=${preprocessedImage.domain}; quality=${preprocessedImage.imageQuality}; ${describeShadowModeDecision(visionPreprocessDecision)}`,
           });
 
-          if (visionPreprocessShadowMode) {
+          if (visionPreprocessDecision.enabled) {
             session = appendShadowComparison(
               session,
               describeShadowComparison(
@@ -445,9 +449,9 @@ export async function POST(request: Request) {
             stage: "preprocess",
             latencyMs: Date.now() - startedAt,
             outcome: timedOut ? "timeout" : "error",
-            shadowMode: visionPreprocessShadowMode,
+            shadowMode: visionPreprocessDecision.enabled,
             fallbackUsed: true,
-            note: timedOut ? "vision preprocess timeout" : "vision preprocess failed",
+            note: `${timedOut ? "vision preprocess timeout" : "vision preprocess failed"}; ${describeShadowModeDecision(visionPreprocessDecision)}`,
           });
           if (isSidecarAbortError(error)) {
             serviceTimeouts.push({
@@ -998,9 +1002,16 @@ export async function POST(request: Request) {
       }
 
       if (visualEvidence.requiresConsult && image && isMultimodalConsultConfigured()) {
-        const consultShadowMode = isShadowModeEnabledForService(
-          "multimodal-consult-service"
-        );
+        const consultShadowDecision = getShadowModeDecision({
+          service: "multimodal-consult-service",
+          session,
+          pet: effectivePet,
+          urgencyHint:
+            visualEvidence.severity === "urgent"
+              ? "high"
+              : buildDiagnosisContext(session, effectivePet).highest_urgency,
+          additionalKey: imageHash || lastUserMessage.content,
+        });
         const startedAt = Date.now();
         try {
           const nextConsultOpinion = await consultWithMultimodalSidecar({
@@ -1024,13 +1035,13 @@ export async function POST(request: Request) {
             service: "multimodal-consult-service",
             stage: "sync-consult",
             latencyMs: Date.now() - startedAt,
-            outcome: consultShadowMode ? "shadow" : "success",
-            shadowMode: consultShadowMode,
-            fallbackUsed: consultShadowMode,
-            note: `disagreements=${nextConsultOpinion.disagreements.length}`,
+            outcome: consultShadowDecision.enabled ? "shadow" : "success",
+            shadowMode: consultShadowDecision.enabled,
+            fallbackUsed: consultShadowDecision.enabled,
+            note: `disagreements=${nextConsultOpinion.disagreements.length}; ${describeShadowModeDecision(consultShadowDecision)}`,
           });
 
-          if (consultShadowMode) {
+          if (consultShadowDecision.enabled) {
             session = appendShadowComparison(
               session,
               describeShadowComparison(
@@ -1054,9 +1065,9 @@ export async function POST(request: Request) {
             stage: "sync-consult",
             latencyMs: Date.now() - startedAt,
             outcome: timedOut ? "timeout" : "error",
-            shadowMode: consultShadowMode,
+            shadowMode: consultShadowDecision.enabled,
             fallbackUsed: true,
-            note: timedOut ? "multimodal consult timeout" : "multimodal consult failed",
+            note: `${timedOut ? "multimodal consult timeout" : "multimodal consult failed"}; ${describeShadowModeDecision(consultShadowDecision)}`,
           });
           if (isSidecarAbortError(error)) {
             serviceTimeouts.push({
