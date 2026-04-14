@@ -198,6 +198,18 @@ const DOG: PetProfile = {
 
 const HIDDEN_MARKER = "internal-safety-marker";
 
+type ClientPayload = {
+  system_observability?: unknown;
+  session: {
+    case_memory: {
+      clarification_reasons?: unknown;
+      shadow_comparisons?: unknown[];
+      service_timeouts?: unknown[];
+      service_observations?: Array<Parameters<typeof isInternalTelemetry>[0]>;
+    };
+  };
+};
+
 function buildAuthSupabase(userId: string | null) {
   return {
     auth: {
@@ -294,9 +306,9 @@ function buildRequest(
   });
 }
 
-function expectNoInternalTelemetry(payload: Record<string, any>) {
+function expectNoInternalTelemetry(payload: ClientPayload) {
   const serialized = JSON.stringify(payload);
-  const observations = payload.session.case_memory.service_observations;
+  const observations = payload.session.case_memory.service_observations ?? [];
 
   expect(payload.system_observability).toBeUndefined();
   expect(payload.session.case_memory.clarification_reasons).toBeUndefined();

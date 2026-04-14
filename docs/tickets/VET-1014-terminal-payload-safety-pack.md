@@ -24,9 +24,10 @@ Add a focused regression suite proving internal telemetry never leaks through ow
 ## Verification
 
 - `npx jest tests/symptom-chat.payload-safety.test.ts --runInBand`
+- `npx eslint tests/symptom-chat.payload-safety.test.ts`
 
 ## Validation Notes
 
-- static file validation reported no TypeScript or Markdown errors in the new test and ticket files
-- repeated local attempts to run the exact Jest command were blocked by an inconsistent Windows npm install state in this worktree (`ts-jest` missing before install, then `jest-cli` package config / `yargs` resolution failures while `npm ci` was still finalizing)
-- no repository files outside the allowed test and ticket note were changed to work around the local package-manager issue
+- local validation now passes after a clean `npm ci` in the dedicated worktree
+- `npx eslint tests/symptom-chat.payload-safety.test.ts` passes
+- `npx jest tests/symptom-chat.payload-safety.test.ts --runInBand` passes
