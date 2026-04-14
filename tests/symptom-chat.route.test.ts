@@ -332,6 +332,19 @@ function buildEmergencyReportSession() {
   return session;
 }
 
+function buildPendingQuestionSession(symptom: string, questionId: string) {
+  let session = createSession();
+  session = addSymptoms(session, [symptom]);
+  session.last_question_asked = questionId;
+  session.case_memory = {
+    ...session.case_memory!,
+    turn_count: 1,
+    unresolved_question_ids: [],
+  };
+
+  return session;
+}
+
 function getEmitCalls(eventType: string) {
   return mockEmit.mock.calls.filter(([type]) => type === eventType);
 }
@@ -6175,6 +6188,120 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.owner_message).toContain("What color are your dog's gums?");
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
     });
+  });
+
+  describe("VET-1029 critical info and alternate observable regression matrix", () => {
+    it("blocks report readiness until respiratory critical info is answered", () => {
+      let session = createSession();
+      session = addSymptoms(session, ["difficulty_breathing"]);
+      session = recordAnswer(session, "breathing_onset", "gradual");
+      session = recordAnswer(session, "breathing_rate", 36);
+      session = recordAnswer(
+        session,
+        "position_preference",
+        "prefers standing upright"
+      );
+
+      expect(session.answered_questions).toEqual(
+        expect.arrayContaining([
+          "breathing_onset",
+          "breathing_rate",
+          "position_preference",
+        ])
+      );
+      expect(isReadyForDiagnosis(session)).toBe(false);
+      expect(getNextQuestion(session)).toBe("gum_color");
+
+      const readySession = recordAnswer(session, "gum_color", "pink_normal");
+
+      expect(isReadyForDiagnosis(readySession)).toBe(true);
+      expect(getNextQuestion(readySession)).toBeNull();
+    });
+
+    it("routes the supported gum-color branch through one alternate observable retry before cannot_assess", async () => {
+      const session = buildPendingQuestionSession(
+        "difficulty_breathing",
+        "gum_color"
+      );
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["difficulty_breathing"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const retryResponse = await POST(makeTextOnlyRequest(session, "I can't tell"));
+      const retryPayload = await retryResponse.json();
+
+      expect(retryResponse.status).toBe(200);
+      expect(retryPayload.type).toBe("question");
+      expect(retryPayload.question_id).toBe("gum_color");
+      expect(retryPayload.reason_code).toBe("alternate_observable_gum_color");
+      expect(retryPayload.conversationState).toBe("needs_clarification");
+      expect(retryPayload.ready_for_report).toBe(false);
+      expect(retryPayload.message).toContain("gently lift the upper lip");
+      expect(retryPayload.message).toContain("Pink is normal");
+      expect(retryPayload.session.last_question_asked).toBe("gum_color");
+      expect(retryPayload.session.case_memory.ambiguity_flags).toContain(
+        "alternate_observable_prompted_gum_color"
+      );
+
+      const cannotAssessResponse = await POST(
+        makeTextOnlyRequest(retryPayload.session, "Still can't tell")
+      );
+      const cannotAssessPayload = await cannotAssessResponse.json();
+
+      expect(cannotAssessResponse.status).toBe(200);
+      expect(cannotAssessPayload.type).toBe("cannot_assess");
+      expect(cannotAssessPayload.terminal_state).toBe("cannot_assess");
+      expect(cannotAssessPayload.reason_code).toBe(
+        "owner_cannot_assess_gum_color"
+      );
+      expect(cannotAssessPayload.conversationState).toBe("escalation");
+      expect(cannotAssessPayload.ready_for_report).toBe(false);
+      expect(cannotAssessPayload.recommended_next_step).toContain(
+        "Seek veterinary assessment"
+      );
+    });
+
+    it.each([
+      {
+        symptom: "difficulty_breathing",
+        questionId: "breathing_onset",
+        ownerReply: "I can't tell",
+      },
+      {
+        symptom: "possible_poisoning",
+        questionId: "consciousness_level",
+        ownerReply: "I can't tell",
+      },
+    ])(
+      "keeps unsupported critical unknowns on cannot_assess for $questionId",
+      async ({ symptom, questionId, ownerReply }) => {
+        const session = buildPendingQuestionSession(symptom, questionId);
+        mockExtractWithQwen.mockResolvedValueOnce(
+          JSON.stringify({ symptoms: [symptom], answers: {} })
+        );
+
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(session, ownerReply));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("cannot_assess");
+        expect(payload.terminal_state).toBe("cannot_assess");
+        expect(payload.reason_code).toBe(
+          `owner_cannot_assess_${questionId}`
+        );
+        expect(payload.conversationState).toBe("escalation");
+        expect(payload.ready_for_report).toBe(false);
+        expect(payload.owner_message).toContain(
+          "can't safely continue without confirming this critical sign"
+        );
+        expect(payload.recommended_next_step).toContain(
+          "Seek veterinary assessment"
+        );
+        expect(payload.message).not.toContain("gently lift the upper lip");
+      }
+    );
   });
 
   // --- 3.5: Compression boundary preservation ---
