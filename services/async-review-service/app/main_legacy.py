@@ -139,6 +139,13 @@ EXPECTED_API_KEY = os.environ.get("SIDECAR_API_KEY", "").strip()
 logger = logging.getLogger("async-review-service")
 
 
+def parse_bool_env(name: str, default: str = "false") -> bool:
+    return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+FORCE_FALLBACK = parse_bool_env("FORCE_FALLBACK")
+
+
 def _trim_list_in_place(values: list[Any], max_items: int) -> None:
     if max_items > 0 and len(values) > max_items:
         del values[:-max_items]
@@ -195,6 +202,35 @@ def validate_auth(authorization: str | None) -> None:
     expected_header = f"Bearer {EXPECTED_API_KEY}"
     if authorization != expected_header:
         raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+def health_mode() -> str:
+    if STUB_MODE:
+        return "stub"
+    if FORCE_FALLBACK:
+        return "forced_fallback"
+    return "production"
+
+
+def build_review_fallback_response(case_id: str, reason: str) -> ReviewResponse:
+    reason_text = reason.replace("_", " ")
+    return ReviewResponse(
+        model=f"{MODEL_NAME} ({reason})",
+        summary=(
+            "Async review inference is unavailable, so this fallback preserves queue and polling "
+            "behavior without generating a real 32B multimodal opinion."
+        ),
+        agreements=[],
+        disagreements=[],
+        uncertainties=[
+            f"Async review used fallback mode because {reason_text}.",
+            "The deterministic clinical matrix remains the authority for this case.",
+        ],
+        confidence=0.2,
+        mode="async",
+        case_id=case_id,
+        processed_at=datetime.utcnow().isoformat() + "Z",
+    )
 
 
 def load_model():
@@ -544,6 +580,9 @@ async def generate_review(request: AsyncReviewRequest, case_id: str) -> ReviewRe
             case_id=case_id,
             processed_at=datetime.utcnow().isoformat() + "Z",
         )
+
+    if FORCE_FALLBACK:
+        return build_review_fallback_response(case_id, "force_fallback")
 
     model, processor = load_model()
 
@@ -3389,7 +3428,7 @@ def _build_confidence_shift_narrative(evolution: dict) -> dict:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for model loading."""
-    if not STUB_MODE:
+    if not STUB_MODE and not FORCE_FALLBACK:
         load_model()
     yield
     global MODEL, PROCESSOR
@@ -3418,7 +3457,16 @@ def healthz():
     return {
         "ok": True,
         "service": "async-review-service",
-        "mode": "stub" if STUB_MODE else "production",
+        "mode": health_mode(),
+        "fallback": {
+            "stub_mode": STUB_MODE,
+            "force_fallback": FORCE_FALLBACK,
+            "reason": "stub_mode"
+            if STUB_MODE
+            else "force_fallback"
+            if FORCE_FALLBACK
+            else None,
+        },
         "model": MODEL_NAME,
         "device": DEVICE,
         "queue_size": queue_size,
