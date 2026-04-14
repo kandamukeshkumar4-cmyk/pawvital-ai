@@ -399,6 +399,19 @@ describe("VET-1012 route-backed emergency sentinel replay", () => {
     jest.restoreAllMocks();
   });
 
+  it("keeps the replay pack broad enough to cover direct emergencies and safe question paths", () => {
+    const firstTurnCount = replayFixtures.filter(
+      (fixture) => fixture.mode === "first_turn"
+    ).length;
+    const followupUnknownCount = replayFixtures.filter(
+      (fixture) => fixture.mode === "followup_unknown"
+    ).length;
+
+    expect(replayFixtures.length).toBeGreaterThanOrEqual(24);
+    expect(firstTurnCount).toBeGreaterThanOrEqual(18);
+    expect(followupUnknownCount).toBeGreaterThanOrEqual(4);
+  });
+
   it.each(replayFixtures)("$benchmarkId stays in a safety-approved route path", async (fixture) => {
     const benchmark = benchmarkCases.get(fixture.benchmarkId);
     expect(benchmark).toBeDefined();

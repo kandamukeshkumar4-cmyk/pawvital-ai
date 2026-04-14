@@ -182,6 +182,97 @@
     }
   },
   {
+    "benchmarkId": "emergency-urinary-blockage",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["urination_problem"],
+      "answers": { "urinary_blockage": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["urination_problem"],
+      "redFlags": ["urinary_blockage"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-deep-bleeding-wound",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["wound_skin_issue"],
+      "answers": { "wound_deep_bleeding": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["wound_skin_issue"],
+      "redFlags": ["wound_deep_bleeding"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-anaphylaxis",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["excessive_scratching"],
+      "answers": { "face_swelling": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["excessive_scratching"],
+      "redFlags": ["face_swelling"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-pale-gums-collapse",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["lethargy"],
+      "answers": { "collapse": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["lethargy"],
+      "redFlags": ["collapse"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-repeated-nonproductive-heaving",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["swollen_abdomen"],
+      "answers": { "unproductive_retching": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["swollen_abdomen"],
+      "redFlags": ["unproductive_retching"]
+    }
+  },
+  {
+    "benchmarkId": "cardiac-emergency-collapse-blue-gums",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["difficulty_breathing"],
+      "answers": { "gum_color": "blue" }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "redFlags": ["blue_gums"]
+    }
+  },
+  {
+    "benchmarkId": "emergency-seizure-first-time",
+    "mode": "first_turn",
+    "mockExtraction": {
+      "symptoms": ["seizure_collapse"],
+      "answers": { "collapse": true }
+    },
+    "expected": {
+      "allowedTypes": ["emergency"],
+      "knownSymptoms": ["seizure_collapse"],
+      "redFlags": ["collapse"]
+    }
+  },
+  {
     "benchmarkId": "followup-breathing-onset-unknown-escalates",
     "mode": "followup_unknown",
     "seedSession": {
@@ -200,6 +291,57 @@
   },
   {
     "benchmarkId": "followup-gum-color-unknown-escalates",
+    "mode": "followup_unknown",
+    "seedSession": {
+      "knownSymptoms": ["difficulty_breathing"],
+      "lastQuestionAsked": "gum_color"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["cannot_assess"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "reasonCode": "owner_cannot_assess_gum_color"
+    }
+  },
+  {
+    "benchmarkId": "followup-consciousness-unknown-escalates",
+    "mode": "followup_unknown",
+    "seedSession": {
+      "knownSymptoms": ["seizure_collapse"],
+      "lastQuestionAsked": "consciousness_level"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["cannot_assess"],
+      "knownSymptoms": ["seizure_collapse"],
+      "reasonCode": "owner_cannot_assess_consciousness_level"
+    }
+  },
+  {
+    "benchmarkId": "followup-trauma-history-unknown",
+    "mode": "followup_unknown",
+    "seedSession": {
+      "knownSymptoms": ["difficulty_breathing"],
+      "lastQuestionAsked": "breathing_onset"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["cannot_assess"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "reasonCode": "owner_cannot_assess_breathing_onset"
+    }
+  },
+  {
+    "benchmarkId": "followup-vomit-color-unknown",
     "mode": "followup_unknown",
     "seedSession": {
       "knownSymptoms": ["difficulty_breathing"],
