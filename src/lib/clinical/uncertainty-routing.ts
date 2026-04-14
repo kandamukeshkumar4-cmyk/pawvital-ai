@@ -1,5 +1,10 @@
+import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
 import type { ConversationState } from "@/lib/conversation-state/types";
-import type { PetProfile, TriageSession } from "@/lib/triage-engine";
+import {
+  getMissingQuestions,
+  type PetProfile,
+  type TriageSession,
+} from "@/lib/triage-engine";
 import { resolveUncertainty } from "./uncertainty-contract";
 
 export type UncertaintyTerminalState = "cannot_assess" | "out_of_scope";
@@ -84,6 +89,23 @@ const ALTERNATE_OBSERVABLE_PATTERNS: AlternateObservablePattern[] = [
   },
 ];
 
+const REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS = [
+  "breathing_onset",
+  "consciousness_level",
+  "gum_color",
+] as const;
+
+type ReportBlockingCriticalInfoQuestionId =
+  (typeof REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS)[number];
+
+type ReportBlockingCriticalInfoReason = "missing" | "unknown";
+
+export interface ReportBlockingCriticalInfoFinding {
+  questionId: ReportBlockingCriticalInfoQuestionId;
+  questionText: string | null;
+  reason: ReportBlockingCriticalInfoReason;
+}
+
 function normalizeSpecies(species: string | undefined): string {
   return String(species ?? "").trim().toLowerCase();
 }
@@ -127,6 +149,64 @@ function getAlternateObservablePattern(
   return ALTERNATE_OBSERVABLE_PATTERNS.find(
     (pattern) => pattern.questionId === questionId
   );
+}
+
+function isReportBlockingCriticalInfoQuestionId(
+  questionId: string
+): questionId is ReportBlockingCriticalInfoQuestionId {
+  return REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS.includes(
+    questionId as ReportBlockingCriticalInfoQuestionId
+  );
+}
+
+function isQuestionRelevantToCurrentSession(
+  session: TriageSession,
+  questionId: ReportBlockingCriticalInfoQuestionId
+): boolean {
+  if (
+    session.answered_questions.includes(questionId) ||
+    questionId in session.extracted_answers
+  ) {
+    return true;
+  }
+
+  return getMissingQuestions(session).includes(questionId);
+}
+
+function isUnknownCriticalInfoValue(value: unknown): boolean {
+  return typeof value === "string" && value.trim().toLowerCase() === "unknown";
+}
+
+export function findReportBlockingCriticalInfo(
+  session: TriageSession
+): ReportBlockingCriticalInfoFinding | null {
+  for (const questionId of REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS) {
+    if (!isQuestionRelevantToCurrentSession(session, questionId)) {
+      continue;
+    }
+
+    const questionText = FOLLOW_UP_QUESTIONS[questionId]?.question_text ?? null;
+    const answerValue = session.extracted_answers[questionId];
+    const wasAnswered = session.answered_questions.includes(questionId);
+
+    if (!wasAnswered) {
+      return {
+        questionId,
+        questionText,
+        reason: "missing",
+      };
+    }
+
+    if (isUnknownCriticalInfoValue(answerValue)) {
+      return {
+        questionId,
+        questionText,
+        reason: "unknown",
+      };
+    }
+  }
+
+  return null;
 }
 
 export function detectOutOfScopeTurn(input: {
@@ -203,6 +283,10 @@ export function buildAlternateObservableRecoveryOutcome(input: {
   petName: string;
   questionId: string;
 }): AlternateObservableRecoveryOutcome | null {
+  if (!isReportBlockingCriticalInfoQuestionId(input.questionId)) {
+    return null;
+  }
+
   const pattern = getAlternateObservablePattern(input.questionId);
   if (!pattern) {
     return null;
