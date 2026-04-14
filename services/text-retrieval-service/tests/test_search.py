@@ -100,6 +100,8 @@ def test_search_uses_model_reranking_when_available(monkeypatch) -> None:
     assert body["candidate_source"] == "rpc"
     assert body["candidate_count"] == 2
     assert body["text_chunks"][0]["title"] == "Model match wins"
+    assert body["text_chunks"][0]["score"] <= 1
+    assert all(0 <= score <= 1 for score in body["rerank_scores"])
 
 
 def test_force_fallback_skips_model_backend(monkeypatch) -> None:
