@@ -65,6 +65,7 @@ next-env.d.ts
 !/scripts/generate-benchmark-adjudication-pack.mjs
 !/scripts/runpod-hero-job-manifests.mjs
 !/scripts/runpod-provision-narrow.mjs
+!/scripts/backfill-outcome-feedback.ts
 !/scripts/eval-harness.ts
 !/scripts/generate-benchmark-cases.ts
 !/scripts/validate-benchmark.ts
