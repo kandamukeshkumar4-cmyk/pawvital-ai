@@ -6223,9 +6223,13 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         "difficulty_breathing",
         "gum_color"
       );
-      mockExtractWithQwen.mockResolvedValue(
-        JSON.stringify({ symptoms: ["difficulty_breathing"], answers: {} })
-      );
+      mockExtractWithQwen
+        .mockResolvedValueOnce(
+          JSON.stringify({ symptoms: ["difficulty_breathing"], answers: {} })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify({ symptoms: ["difficulty_breathing"], answers: {} })
+        );
 
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const retryResponse = await POST(makeTextOnlyRequest(session, "I can't tell"));
@@ -6448,6 +6452,18 @@ describe("VET-900: world-class symptom checker regression pack", () => {
     it("VET-900: multi-turn conversation progresses without errors", async () => {
       let session = createSession();
       session = addSymptoms(session, ["limping"]);
+      const deterministicAnswers: Record<string, string | boolean> = {
+        which_leg: "left back leg",
+        limping_onset: "sudden",
+        limping_progression: "worse",
+        weight_bearing: "partial",
+        pain_on_touch: true,
+        trauma_history: "no_trauma",
+        worse_after_rest: false,
+        swelling_present: false,
+        warmth_present: false,
+        prior_limping: false,
+      };
 
       mockExtractWithQwen.mockResolvedValueOnce(
         JSON.stringify({ symptoms: ["limping"], answers: {} })
@@ -6471,7 +6487,9 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         const mockAnswer: Record<string, string | boolean> = {};
         if (pendingQ) {
           const questionSchema = (await import("@/lib/clinical-matrix")).FOLLOW_UP_QUESTIONS[pendingQ];
-          if (questionSchema?.data_type === "choice" && questionSchema.choices?.includes("unknown")) {
+          if (pendingQ in deterministicAnswers) {
+            mockAnswer[pendingQ] = deterministicAnswers[pendingQ];
+          } else if (questionSchema?.data_type === "choice" && questionSchema.choices?.includes("unknown")) {
             mockAnswer[pendingQ] = "unknown";
           } else if (questionSchema?.data_type === "choice") {
             mockAnswer[pendingQ] = questionSchema.choices?.[0] ?? "yes";
@@ -6481,11 +6499,19 @@ describe("VET-900: world-class symptom checker regression pack", () => {
             mockAnswer[pendingQ] = "test_value";
           }
         }
+        const userReply =
+          pendingQ && pendingQ in mockAnswer
+            ? typeof mockAnswer[pendingQ] === "boolean"
+              ? mockAnswer[pendingQ]
+                ? "yes"
+                : "no"
+              : String(mockAnswer[pendingQ])
+            : `answer ${i + 1}`;
 
         mockExtractWithQwen.mockResolvedValueOnce(
           JSON.stringify({ symptoms: ["limping"], answers: mockAnswer })
         );
-        const res = await POST(makeTextOnlyRequest(session, `answer ${i + 1}`));
+        const res = await POST(makeTextOnlyRequest(session, userReply));
         const p = await res.json();
         expect(res.status).toBe(200);
 
