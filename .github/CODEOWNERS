@@ -1,6 +1,8 @@
 # Safety-sensitive threshold proposal surfaces
-/src/lib/threshold-proposals.ts @kandamukeshkumar4-cmyk
-/src/lib/admin-threshold-proposals.ts @kandamukeshkumar4-cmyk
-/src/components/admin/threshold-proposal-panel.tsx @kandamukeshkumar4-cmyk
-/src/app/api/admin/threshold-proposals/** @kandamukeshkumar4-cmyk
-/supabase-threshold-learning-schema.sql @kandamukeshkumar4-cmyk
+# Keep both reviewers on every protected path so GitHub requests both humans.
+/src/lib/threshold-proposals.ts @kandamukeshkumar4-cmyk @18rsoni
+/src/lib/admin-threshold-proposals.ts @kandamukeshkumar4-cmyk @18rsoni
+/src/components/admin/threshold-proposal-panel.tsx @kandamukeshkumar4-cmyk @18rsoni
+/src/app/api/admin/threshold-proposals/** @kandamukeshkumar4-cmyk @18rsoni
+/supabase-threshold-learning-schema.sql @kandamukeshkumar4-cmyk @18rsoni
+/plans/threshold-proposals/** @kandamukeshkumar4-cmyk @18rsoni
