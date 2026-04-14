@@ -10,6 +10,7 @@ Current implementation now provides:
 - lexical scoring plus deterministic reranking
 - default-on `BAAI/bge-m3` semantic embedding rerank
 - default-on `BAAI/bge-reranker-v2-m3` cross-encoder rerank
+- authenticated `/embed` endpoint for passage/query embedding regeneration
 - dog-only and requested-domain filtering
 
 Runtime controls:
