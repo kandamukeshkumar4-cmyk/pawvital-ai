@@ -67,8 +67,11 @@ jobs:
           AGENT=$(echo "$BRANCH" | cut -d'/' -f1)
           echo "agent=$AGENT" >> "$GITHUB_OUTPUT"
 
-          # Build title from branch name
-          TITLE=$(echo "$BRANCH" | sed 's|.*/||' | sed 's/-/ /g' | sed 's/v[0-9]*$//')
+          # Build title from the documented <agent>/vet-<id>-<slug>-vN branch contract
+          TITLE=$(echo "$BRANCH" | sed 's|.*/||' | sed -E 's/^vet-[0-9]+-//' | sed -E 's/-v[0-9]+$//' | sed 's/-/ /g' | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
+          if [ -z "$TITLE" ]; then
+            TITLE=$(echo "$BRANCH" | sed 's|.*/||' | sed 's/-/ /g')
+          fi
           if [ "$TICKET" != "no-ticket" ]; then
             TITLE="$TICKET: $TITLE"
           fi
@@ -101,7 +104,7 @@ jobs:
           ${{ steps.info.outputs.commits }}
 
           ---
-          *Auto-created by CI pipeline. Waiting for checks to pass before AI review.*
+          *Auto-created by CI pipeline. Waiting for CI and the AI Review Gate before auto-merge.*
           ENDOFBODY
           )
 

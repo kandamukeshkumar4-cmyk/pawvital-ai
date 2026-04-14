@@ -64,11 +64,12 @@ git push origin qwen/vet-XXX-your-slug-v1
 
 ### 4. AI Code Review
 
-**Triggered by**: `ai-review.yml` after CI Pipeline succeeds
+**Triggered by**: `ai-review.yml` after CI Pipeline succeeds, and again when a draft PR becomes ready for review
 
 **What happens**:
 - Workflow finds the PR for your branch
 - Fetches PR diff (max 80KB)
+- Publishes an `AI Review Gate` check on the PR head SHA
 - Sends to OpenRouter AI model (configurable, default: `xiaomi/mimo-v2-pro`)
 - AI reviews against PawVital-specific rules:
   - Deterministic clinical logic must remain source of truth
@@ -76,7 +77,8 @@ git push origin qwen/vet-XXX-your-slug-v1
   - Telemetry stays internal unless explicitly intended
   - No hidden regressions in route.ts, triage-engine.ts, symptom-memory.ts, clinical-matrix.ts
 - Posts review comment with verdict and findings
-- If APPROVED: submits GitHub approval on the PR
+- If APPROVED: submits GitHub approval on the PR and marks `AI Review Gate` successful
+- If the review secret/model cannot produce a verdict: `AI Review Gate` fails closed and merge stays blocked
 
 ### 5. Auto-Merge
 
@@ -86,7 +88,7 @@ git push origin qwen/vet-XXX-your-slug-v1
 1. CI Gate passed with success
 2. PR is not a draft
 3. PR has no merge conflicts
-4. AI review verdict is APPROVED
+4. `AI Review Gate` succeeded on the current PR head SHA
 5. AI bot approved the specific commit SHA
 
 **If all gates pass**:
@@ -167,7 +169,7 @@ Common reasons:
 - **Draft PR**: Mark as ready for review in GitHub UI
 - **Merge conflict**: Rebase onto latest master and resolve conflicts
 - **CI not green**: Fix CI failures first
-- **AI not approved**: Address review findings
+- **AI Review Gate failed**: Address review findings or restore the review secret/model response path
 
 ## Verification Commands
 
@@ -189,8 +191,8 @@ vercel inspect https://pawvital-ai.vercel.app
 |------|---------|
 | `.github/workflows/auto-pr.yml` | Auto-creates PRs for supported branches |
 | `.github/workflows/ci.yml` | Runs lint, typecheck, build, test, CI gate |
-| `.github/workflows/ai-review.yml` | AI-powered code review |
-| `.github/workflows/auto-merge.yml` | Auto-merges when all gates pass |
+| `.github/workflows/ai-review.yml` | AI-powered code review plus the `AI Review Gate` status check |
+| `.github/workflows/auto-merge.yml` | Auto-merges when CI, `AI Review Gate`, and AI approval all pass |
 | `scripts/agent-done.mjs` | Finish agent's work (push + PR) |
 | `scripts/finalize-pawvital-ticket.mjs` | Full completion workflow |
 | `scripts/land-pawvital-ticket.mjs` | Land to production repo |
