@@ -5663,7 +5663,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(response.status).toBe(200);
     });
 
-    it("VET-900: 'not sure' about UNSAFE gum_color triggers clarification", async () => {
+    it("VET-900: 'not sure' about UNSAFE gum_color triggers alternate observable retry", async () => {
       const session = createSession();
       const sessionWithSymptom = addSymptoms(session, ["lethargy"]);
       sessionWithSymptom.last_question_asked = "gum_color"; // UNSAFE: no "unknown"
@@ -5682,8 +5682,12 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      // Should either be needs_clarification or escalation (emergency question)
-      expect(["needs_clarification", "emergency"]).toContain(payload.type ?? payload.conversationState);
+      expect(["question", "emergency"]).toContain(payload.type);
+
+      if (payload.type === "question") {
+        expect(payload.reason_code).toBe("alternate_observable_gum_color");
+        expect(payload.conversationState).toBe("needs_clarification");
+      }
     });
 
     it("VET-900: 'don't know' about breathing_onset triggers escalation", async () => {

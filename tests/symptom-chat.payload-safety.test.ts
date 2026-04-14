@@ -477,7 +477,23 @@ describe("VET-1014 terminal payload safety pack", () => {
     session = addSymptoms(session, ["difficulty_breathing"]);
     session.last_question_asked = "gum_color";
 
-    const { response, payload } = await runChat(session, DOG, "I don't know.");
+    const { response: retryResponse, payload: retryPayload } = await runChat(
+      session,
+      DOG,
+      "I don't know."
+    );
+
+    expect(retryResponse.status).toBe(200);
+    expect(retryPayload.type).toBe("question");
+    expect(retryPayload.reason_code).toBe("alternate_observable_gum_color");
+    expect(retryPayload.ready_for_report).toBe(false);
+    expectNoInternalTelemetry(retryPayload);
+
+    const { response, payload } = await runChat(
+      retryPayload.session,
+      DOG,
+      "I still don't know."
+    );
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("cannot_assess");
