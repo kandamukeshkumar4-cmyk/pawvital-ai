@@ -74,6 +74,25 @@ export const pdfStyles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
   },
+  alertBox: {
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  alertBoxEmergency: {
+    backgroundColor: brand.redLight,
+    borderColor: brand.red,
+  },
+  alertBoxUrgent: {
+    backgroundColor: brand.orangeLight,
+    borderColor: brand.orange,
+  },
+  alertTitle: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: brand.gray900,
+  },
   badge: {
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
@@ -131,6 +150,13 @@ export const pdfStyles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
     borderColor: "#bae6fd",
+  },
+  handoffBox: {
+    padding: 10,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: brand.red,
+    backgroundColor: brand.redLight,
   },
   footer: {
     position: "absolute",

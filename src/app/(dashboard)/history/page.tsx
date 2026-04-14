@@ -18,6 +18,10 @@ import {
   severityConfig,
   type SymptomReport,
 } from "@/components/symptom-report";
+import {
+  buildVetHandoffPacket,
+  isEscalatedReport,
+} from "@/lib/report-handoff";
 
 const PAGE_SIZE = 10;
 
@@ -261,9 +265,12 @@ export default function HistoryPage() {
   }, [rows]);
 
   const copyVetHandoff = async (report: SymptomReport | null) => {
-    const text =
-      report?.vet_handoff_summary?.trim() ||
-      `${report?.title ?? "Symptom check"}\n\n${report?.explanation ?? ""}`.trim();
+    const text = report
+      ? buildVetHandoffPacket({
+          ...report,
+          vet_handoff_summary: report.vet_handoff_summary ?? report.explanation,
+        })
+      : "";
     if (!text) {
       setShareMessage("Nothing to copy yet.");
       window.setTimeout(() => setShareMessage(null), 2500);
@@ -271,7 +278,11 @@ export default function HistoryPage() {
     }
     try {
       await navigator.clipboard.writeText(text);
-      setShareMessage("Copied for your vet.");
+      setShareMessage(
+        report && isEscalatedReport(report)
+          ? "Clinic handoff copied."
+          : "Vet handoff copied."
+      );
       window.setTimeout(() => setShareMessage(null), 2500);
     } catch {
       setShareMessage("Could not copy — select text manually.");
@@ -394,7 +405,7 @@ export default function HistoryPage() {
                       className="gap-1"
                     >
                       <Share2 className="w-4 h-4" />
-                      Share with Vet
+                      Copy Clinic Packet
                     </Button>
                   </div>
                 </div>
