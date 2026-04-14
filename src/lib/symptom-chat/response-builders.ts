@@ -18,14 +18,20 @@ interface RedFlagEmergencyResponseInput extends EmergencyResponseInput {
   redFlags: string[];
 }
 
-type CannotAssessTerminalOutcome = UncertaintyTerminalOutcome & {
-  type: "cannot_assess";
-  terminalState: "cannot_assess";
-};
-
 interface CannotAssessResponseInput {
-  outcome: CannotAssessTerminalOutcome;
+  outcome: UncertaintyTerminalOutcome;
   session: TriageSession;
+}
+
+function assertCannotAssessOutcome(outcome: UncertaintyTerminalOutcome) {
+  if (
+    outcome.type !== "cannot_assess" ||
+    outcome.terminalState !== "cannot_assess"
+  ) {
+    throw new Error(
+      "Cannot-assess response builder requires a cannot_assess terminal outcome"
+    );
+  }
 }
 
 function buildEmergencyResponse(message: string, session: TriageSession) {
@@ -60,6 +66,8 @@ export function buildRedFlagEmergencyResponse(
 }
 
 export function buildCannotAssessResponse(input: CannotAssessResponseInput) {
+  assertCannotAssessOutcome(input.outcome);
+
   return {
     type: input.outcome.type,
     terminal_state: input.outcome.terminalState,

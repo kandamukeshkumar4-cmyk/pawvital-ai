@@ -2193,10 +2193,7 @@ function buildTerminalOutcomeResponse(
   outcome: UncertaintyTerminalOutcome,
   session: TriageSession
 ) {
-  if (
-    outcome.type === "cannot_assess" &&
-    outcome.terminalState === "cannot_assess"
-  ) {
+  if (outcome.type === "cannot_assess") {
     return buildCannotAssessResponse({ outcome, session });
   }
 
