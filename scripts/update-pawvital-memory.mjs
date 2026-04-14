@@ -2,8 +2,11 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
+const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
 const repoRoot = path.resolve(scriptDir, "..");
@@ -12,6 +15,7 @@ const vaultRoot = path.join(workspaceRoot, "petviatal", "01 Projects", "PawVital
 const dailyRoot = path.join(workspaceRoot, "petviatal", "02 Daily");
 const ticketBriefRoot = path.join(vaultRoot, "18 Ticket Briefs");
 const statePath = path.join(vaultRoot, ".memory-automation.json");
+const GITHUB_REPO = "kandamukeshkumar4-cmyk/pawvital-ai";
 
 const notePaths = {
   activeWork: path.join(vaultRoot, "01 Active Work.md"),
@@ -306,6 +310,113 @@ function inferTicket(...values) {
   return "";
 }
 
+function extractTicketsFromText(value) {
+  const matches = String(value ?? "").match(/\bVET-\d+[A-Z]?\b/gi) ?? [];
+  return [...new Set(matches.map((match) => match.toUpperCase()))];
+}
+
+function stripLeadingTicketLabel(title, ticket) {
+  if (!ticket) {
+    return sanitizeInline(title);
+  }
+
+  const pattern = new RegExp(`^${escapeRegExp(ticket)}(?:\\s*[-:—]\\s*|\\s+)`, "i");
+  return sanitizeInline(title).replace(pattern, "").trim();
+}
+
+function isFollowOnIssueTitle(title) {
+  return /follow[- ]on|follow[- ]up|reland|continuation|phase\s+\d+/i.test(
+    String(title ?? ""),
+  );
+}
+
+async function readJsonCommand(command, args) {
+  const { stdout } = await execFileAsync(command, args, {
+    cwd: repoRoot,
+    maxBuffer: 1024 * 1024 * 8,
+  });
+
+  return JSON.parse(stdout || "[]");
+}
+
+async function loadLiveQueueContext(state) {
+  const fallbackResolvedTickets = new Set(state.landed.map((entry) => entry.ticket));
+
+  try {
+    const [openIssues, mergedPulls] = await Promise.all([
+      readJsonCommand("gh", [
+        "issue",
+        "list",
+        "--repo",
+        GITHUB_REPO,
+        "--state",
+        "open",
+        "--json",
+        "number,title,url",
+      ]),
+      readJsonCommand("gh", [
+        "pr",
+        "list",
+        "--repo",
+        GITHUB_REPO,
+        "--state",
+        "merged",
+        "--limit",
+        "200",
+        "--json",
+        "number,title,url,mergedAt",
+      ]),
+    ]);
+
+    const resolvedTickets = new Set(fallbackResolvedTickets);
+    mergedPulls.forEach((pull) => {
+      extractTicketsFromText(pull.title).forEach((ticket) => resolvedTickets.add(ticket));
+    });
+
+    const normalizedIssues = openIssues.map((issue) => {
+      const tickets = extractTicketsFromText(issue.title);
+      const ticket = tickets.length === 1 ? tickets[0] : "";
+      const followOn = isFollowOnIssueTitle(issue.title);
+      let exclusionReason = "";
+
+      if (tickets.length === 0) {
+        exclusionReason = "no VET ticket id in title";
+      } else if (tickets.length > 1) {
+        exclusionReason = "multi-ticket session/meta issue";
+      } else if (resolvedTickets.has(ticket) && !followOn) {
+        exclusionReason = "ticket already appears landed on master";
+      }
+
+      return {
+        ...issue,
+        ticket,
+        tickets,
+        followOn,
+        summary: stripLeadingTicketLabel(issue.title, ticket),
+        exclusionReason,
+      };
+    });
+
+    return {
+      available: true,
+      actionableIssues: normalizedIssues.filter((issue) => !issue.exclusionReason),
+      excludedIssues: normalizedIssues.filter((issue) => issue.exclusionReason),
+      resolvedTickets,
+    };
+  } catch (error) {
+    console.warn(
+      `Warning: unable to load live GitHub queue; falling back to local memory state. ${error instanceof Error ? error.message : String(error)}`,
+    );
+
+    return {
+      available: false,
+      actionableIssues: [],
+      excludedIssues: [],
+      resolvedTickets: fallbackResolvedTickets,
+    };
+  }
+}
+
 function renderList(items, emptyLine) {
   if (items.length === 0) {
     return emptyLine;
@@ -532,12 +643,167 @@ function extractSectionByPrefix(content, headingPrefix) {
   return collected.join("\n").trim();
 }
 
-function renderCurrentContextPacket(activeWork, ticketBoard, currentSprint, state, ticketBriefLinks) {
+function replaceSectionByPrefix(content, headingPrefix, replacement) {
+  const lines = content.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => line.trim().startsWith(headingPrefix));
+
+  if (startIndex === -1) {
+    fail(`Missing section heading ${headingPrefix}`);
+  }
+
+  const match = lines[startIndex].match(/^(#+)\s+/);
+  const level = match ? match[1].length : 2;
+  let endIndex = lines.length;
+
+  for (let index = startIndex + 1; index < lines.length; index += 1) {
+    const headingMatch = lines[index].match(/^(#+)\s+/);
+    if (headingMatch && headingMatch[1].length <= level) {
+      endIndex = index;
+      break;
+    }
+  }
+
+  const bodyLines = replacement.trim().split("\n");
+  return [
+    ...lines.slice(0, startIndex + 1),
+    "",
+    ...bodyLines,
+    ...lines.slice(endIndex),
+  ]
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
+}
+
+function filterResolvedTicketLines(sectionContent, resolvedTickets) {
+  if (!sectionContent) {
+    return "";
+  }
+
+  const filteredLines = sectionContent
+    .split(/\r?\n/)
+    .filter((line) => {
+      const tickets = extractTicketsFromText(line);
+      return tickets.length === 0 || tickets.some((ticket) => !resolvedTickets.has(ticket));
+    })
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return filteredLines;
+}
+
+function renderFallbackSection(sectionContent, resolvedTickets, emptyLine) {
+  const filtered = filterResolvedTicketLines(sectionContent, resolvedTickets);
+  return filtered || emptyLine;
+}
+
+function renderLiveIssueBullet(issue) {
+  return `- \`${issue.ticket}\` — GitHub issue #${issue.number} — ${issue.summary}`;
+}
+
+function renderLiveIssueDetail(issue) {
+  return `- **${issue.ticket}** — GitHub issue #${issue.number} — ${issue.summary}`;
+}
+
+function renderExcludedIssueBullet(issue) {
+  const ticketPart = issue.ticket ? ` / ${issue.ticket}` : "";
+  return `- \`#${issue.number}${ticketPart}\` — ${issue.exclusionReason}`;
+}
+
+function renderLiveNextTicketSection(liveQueue) {
+  const lines = ["### Actionable Open GitHub Issues", ""];
+
+  if (liveQueue.actionableIssues.length === 0) {
+    lines.push("- No actionable single-ticket open GitHub issues after reconciliation.");
+  } else {
+    liveQueue.actionableIssues.slice(0, 3).forEach((issue, index) => {
+      lines.push(`${index + 1}. **${issue.ticket}** — ${issue.summary} (issue #${issue.number})`);
+    });
+  }
+
+  lines.push(
+    "",
+    "### Reconciliation Rules",
+    "",
+    "- Prefer open GitHub issue state over stale static queue prose.",
+    "- Exclude single-ticket issues when that ticket already appears landed in the memory ledger or merged PR history, unless the issue is explicitly marked follow-on.",
+    "- Exclude multi-ticket session/meta issues from single-ticket next-work suggestions.",
+  );
+
+  if (liveQueue.excludedIssues.length > 0) {
+    lines.push("", "### Excluded This Refresh", "", ...liveQueue.excludedIssues.slice(0, 5).map(renderExcludedIssueBullet));
+  }
+
+  return lines.join("\n");
+}
+
+function renderLiveReadySection(liveQueue) {
+  if (liveQueue.actionableIssues.length === 0) {
+    return "- No actionable single-ticket open GitHub issues after reconciliation.";
+  }
+
+  return liveQueue.actionableIssues.slice(0, 5).map(renderLiveIssueBullet).join("\n");
+}
+
+function renderLivePendingSection(liveQueue) {
+  const lines =
+    liveQueue.actionableIssues.length === 0
+      ? ["- No actionable single-ticket open GitHub issues after reconciliation."]
+      : liveQueue.actionableIssues.slice(0, 5).map(renderLiveIssueDetail);
+
+  if (liveQueue.excludedIssues.length > 0) {
+    lines.push(
+      `- Excluded from next-work suggestions this refresh: ${liveQueue.excludedIssues
+        .slice(0, 5)
+        .map((issue) => `#${issue.number}`)
+        .join(", ")}.`,
+    );
+  }
+
+  return lines.join("\n");
+}
+
+function renderLiveQueueSnapshot(liveQueue) {
+  const lines = [
+    `- Live GitHub queue after reconciliation: \`${liveQueue.actionableIssues.length}\` actionable single-ticket issue(s), \`${liveQueue.excludedIssues.length}\` excluded meta/stale item(s).`,
+  ];
+
+  if (liveQueue.actionableIssues[0]) {
+    const nextIssue = liveQueue.actionableIssues[0];
+    lines.push(
+      `- Next actionable issue: **${nextIssue.ticket}** — ${nextIssue.summary} (issue #${nextIssue.number}).`,
+    );
+  }
+
+  if (liveQueue.excludedIssues[0]) {
+    lines.push(`- Excluded from next suggestions: ${liveQueue.excludedIssues.slice(0, 3).map((issue) => `#${issue.number}`).join(", ")}.`);
+  }
+
+  return lines.join("\n");
+}
+
+function renderCurrentContextPacket(
+  activeWork,
+  ticketBoard,
+  currentSprint,
+  state,
+  ticketBriefLinks,
+  liveQueue,
+) {
   const nowSection = extractSectionByPrefix(activeWork, "## Now");
   const nextTicketSection = extractSectionByPrefix(activeWork, "## Next Ticket");
   const sprintFocus = extractSectionByPrefix(currentSprint, "## Sprint Focus");
-  const priorities = extractSectionByPrefix(currentSprint, "## Current Priorities");
+  const priorities = filterResolvedTicketLines(
+    extractSectionByPrefix(currentSprint, "## Current Priorities"),
+    liveQueue.resolvedTickets,
+  );
   const pendingWork = extractSectionByPrefix(ticketBoard, "## Pending / Unblocked Work");
+  const immediateSnapshot = liveQueue.available
+    ? `${nowSection || "- Snapshot unavailable."}\n${renderLiveQueueSnapshot(liveQueue)}`
+    : nowSection || "- Snapshot unavailable.";
+  const renderedNextTicketSection = liveQueue.available
+    ? renderLiveNextTicketSection(liveQueue)
+    : nextTicketSection || "- No next ticket section found.";
 
   return `# Current Context Packet
 
@@ -546,11 +812,11 @@ Read this first when you need the fastest possible project snapshot.
 
 ## Immediate Snapshot
 
-${nowSection || "- Snapshot unavailable."}
+${immediateSnapshot}
 
 ## Next Ticket
 
-${nextTicketSection || "- No next ticket section found."}
+${renderedNextTicketSection}
 
 ## Sprint Focus
 
@@ -558,7 +824,7 @@ ${sprintFocus || "- Sprint focus unavailable."}
 
 ## Current Priorities
 
-${priorities || "- Sprint priorities unavailable."}
+${priorities || "- Sprint priorities unavailable after reconciliation."}
 
 ## Review Queue
 
@@ -724,17 +990,51 @@ async function renderNotes(state, dryRun) {
   const agentRegistry = await fs.readFile(notePaths.agentRegistry, "utf8");
   const currentSprint = await fs.readFile(notePaths.currentSprint, "utf8");
   const ticketBriefLinks = await listTicketBriefLinks();
+  const liveQueue = await loadLiveQueueContext(state);
 
-  const nextActiveWork = replaceAutoBlock(
+  const activeWorkWithReviewQueue = replaceAutoBlock(
     activeWork,
     MARKERS.activeReviewQueue,
     renderInReview(state.inReview),
   );
+  const nextActiveWork = replaceSectionByPrefix(
+    activeWorkWithReviewQueue,
+    "## Next Ticket",
+    liveQueue.available
+      ? renderLiveNextTicketSection(liveQueue)
+      : renderFallbackSection(
+          extractSectionByPrefix(activeWork, "## Next Ticket"),
+          liveQueue.resolvedTickets,
+          "- No actionable single-ticket queue items available.",
+        ),
+  );
 
-  const nextTicketBoard = replaceAutoBlock(
+  const ticketBoardWithReviewQueue = replaceAutoBlock(
     replaceAutoBlock(ticketBoard, MARKERS.boardInReview, renderInReview(state.inReview)),
     MARKERS.boardRecentLandings,
     renderRecentLandings(state.landed),
+  );
+  const ticketBoardWithReadyQueue = replaceSectionByPrefix(
+    ticketBoardWithReviewQueue,
+    "## Ready",
+    liveQueue.available
+      ? renderLiveReadySection(liveQueue)
+      : renderFallbackSection(
+          extractSectionByPrefix(ticketBoard, "## Ready"),
+          liveQueue.resolvedTickets,
+          "- No actionable single-ticket open GitHub issues after reconciliation.",
+        ),
+  );
+  const nextTicketBoard = replaceSectionByPrefix(
+    ticketBoardWithReadyQueue,
+    "## Pending / Unblocked Work",
+    liveQueue.available
+      ? renderLivePendingSection(liveQueue)
+      : renderFallbackSection(
+          extractSectionByPrefix(ticketBoard, "## Pending / Unblocked Work"),
+          liveQueue.resolvedTickets,
+          "- No actionable single-ticket open GitHub issues after reconciliation.",
+        ),
   );
 
   const nextCompletedTickets = replaceAutoBlock(
@@ -759,6 +1059,7 @@ async function renderNotes(state, dryRun) {
     currentSprint,
     state,
     ticketBriefLinks,
+    liveQueue,
   );
 
   const nextActivityLog = renderActivityLog(state);
