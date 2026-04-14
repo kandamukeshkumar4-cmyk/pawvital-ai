@@ -1,52 +1,17 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { getAdminRequestContext } from "@/lib/admin-auth";
 
 export const revalidate = 60; // Cached 60s via next
 
-async function checkAdminAuth() {
-  if (process.env.ADMIN_OVERRIDE === "true") {
-    return true;
-  }
-
-  try {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return false;
-
-    if (user.user_metadata?.role === "admin" || user.role === "admin") {
-      return true;
-    }
-
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (userRow?.role === "admin") {
-      return true;
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message === "DEMO_MODE") {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 export async function GET() {
   try {
-    const isAdmin = await checkAdminAuth();
-    if (!isAdmin) {
+    const adminContext = await getAdminRequestContext();
+    if (!adminContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const vercelToken = process.env.VERCEL_TOKEN;
-    if (!vercelToken) {
+    if (adminContext.isDemo || !vercelToken) {
       // Return demo status if no token
       return NextResponse.json({
         state: "READY",
