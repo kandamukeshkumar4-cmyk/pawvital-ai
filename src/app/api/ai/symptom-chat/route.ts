@@ -1114,7 +1114,7 @@ export async function POST(request: Request) {
       session = recordTerminalOutcomeTelemetry(
         session,
         terminalOutcome,
-        session.last_question_asked ?? session.pending_question_id ?? undefined
+        session.last_question_asked ?? undefined
       );
       return NextResponse.json(
         buildTerminalOutcomeResponse(terminalOutcome, session)
