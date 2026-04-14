@@ -1,49 +1,14 @@
 import { NextResponse } from "next/server";
+import { getAdminRequestContext } from "@/lib/admin-auth";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 // Revalidate every 60 seconds (or 0 for dynamic)
 export const revalidate = 0;
 
-async function checkAdminAuth() {
-  if (process.env.ADMIN_OVERRIDE === "true") {
-    return true;
-  }
-
-  try {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return false;
-
-    if (user.user_metadata?.role === "admin" || user.role === "admin") {
-      return true;
-    }
-
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (userRow?.role === "admin") {
-      return true;
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message === "DEMO_MODE") {
-      // Allow demo mode without auth
-      return true;
-    }
-  }
-
-  return false;
-}
-
 export async function GET() {
   try {
-    const isAdmin = await checkAdminAuth();
-    if (!isAdmin) {
+    const adminContext = await getAdminRequestContext();
+    if (!adminContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -60,7 +25,7 @@ export async function GET() {
     try {
       supabase = await createServerSupabaseClient();
     } catch (error) {
-      if (error instanceof Error && error.message === "DEMO_MODE") {
+      if (adminContext.isDemo) {
         return NextResponse.json(defaultStats);
       }
       throw error;
