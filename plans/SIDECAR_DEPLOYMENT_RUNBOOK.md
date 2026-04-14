@@ -105,6 +105,18 @@ npm run runpod:provision:consult:confirm
 npm run runpod:provision:review:confirm
 ```
 
+Lifecycle follow-ups now live in the same toolchain:
+
+```bash
+npm run runpod:status
+npm run runpod:start:consult
+npm run runpod:stop:consult
+npm run runpod:reconcile
+npm run runpod:billing
+```
+
+Use `npm run runpod:reconcile:apply` only after reviewing the dry-run drift report.
+
 Expected paths:
 - `/healthz`
 - `/infer`
