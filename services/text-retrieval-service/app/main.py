@@ -221,6 +221,26 @@ def summarize_text(text: str, max_chars: int = 320) -> str:
     return compact[: max_chars - 3].rstrip() + "..."
 
 
+def normalize_output_scores(scores: list[float]) -> list[float]:
+    if not scores:
+        return []
+
+    if all(0.0 <= score <= 1.0 for score in scores):
+        return [round(score, 4) for score in scores]
+
+    highest = max(scores)
+    lowest = min(scores)
+    if highest == lowest:
+        baseline = 0.85 if highest > 0 else 0.0
+        return [round(baseline, 4) for _ in scores]
+
+    spread = highest - lowest
+    return [
+        round(0.2 + 0.75 * ((score - lowest) / spread), 4)
+        for score in scores
+    ]
+
+
 def build_candidate_text(row: dict[str, Any]) -> str:
     keyword_tags = [str(tag) for tag in row.get("keyword_tags") or []]
     return " ".join(
@@ -507,21 +527,23 @@ def search(payload: RetrievalRequest, authorization: str | None = Header(default
     ranked.sort(key=lambda item: item[0], reverse=True)
     ranked, response_meta = rerank_with_models(query, ranked)
     top_rows = ranked[: max(1, payload.text_limit)]
+    normalized_scores = normalize_output_scores([score for score, _ in top_rows])
 
     text_chunks: list[dict[str, Any]] = []
     citations: list[str] = []
     rerank_scores: list[float] = []
 
-    for score, row in top_rows:
+    for index, (_, row) in enumerate(top_rows):
+        output_score = normalized_scores[index]
         source_url = row.get("source_url")
         citation = row.get("citation") or source_url or row.get("source_title")
         citations.append(str(citation))
-        rerank_scores.append(round(score, 4))
+        rerank_scores.append(output_score)
         text_chunks.append(
             {
                 "title": str(row.get("chunk_title") or row.get("source_title") or "Veterinary Reference"),
                 "citation": citation,
-                "score": round(score, 4),
+                "score": output_score,
                 "summary": summarize_text(str(row.get("text_content") or "")),
                 "source_url": source_url,
             }
