@@ -109,7 +109,10 @@ import {
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
-import { detectTextContradictions } from "@/lib/clinical/contradiction-detector";
+import {
+  buildContradictionRecord,
+  detectTextContradictions,
+} from "@/lib/clinical/contradiction-detector";
 import {
   buildCannotAssessOutcome,
   buildTerminalOutcomeMessage,
@@ -875,6 +878,9 @@ export async function POST(request: Request) {
     });
     if (textContradictions.length > 0) {
       ambiguityFlags.push(...textContradictions.map((item) => item.flag));
+      const contradictionRecords = textContradictions.map((item) =>
+        buildContradictionRecord(item, session.case_memory?.turn_count ?? 0)
+      );
       session = recordConversationTelemetry(session, {
         event: "contradiction_detection",
         turn_count: session.case_memory?.turn_count ?? 0,
@@ -882,6 +888,7 @@ export async function POST(request: Request) {
         reason: textContradictions.map((item) => item.id).join(","),
         contradiction_count: textContradictions.length,
         contradiction_ids: textContradictions.map((item) => item.id),
+        contradiction_records: contradictionRecords,
       });
     }
 

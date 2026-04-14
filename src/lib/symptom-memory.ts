@@ -1,4 +1,5 @@
 import { FOLLOW_UP_QUESTIONS } from "./clinical-matrix";
+import type { NormalizedContradictionRecord } from "./clinical/contradiction-detector";
 import type {
   ConsultOpinion,
   RetrievalImageEvidence,
@@ -903,6 +904,8 @@ export interface ConversationTelemetryEvent {
   contradiction_ids?: string[];
   /** Number of contradictions detected this turn */
   contradiction_count?: number;
+  /** Normalized contradiction records for durable internal telemetry */
+  contradiction_records?: NormalizedContradictionRecord[];
   /** Timestamp for the event */
   timestamp?: number;
 }
@@ -1020,6 +1023,13 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
   if (event.contradiction_ids?.length) {
     parts.push(`contradiction_ids=${event.contradiction_ids.join(",")}`);
   }
+  if (event.contradiction_records?.length) {
+    parts.push(
+      `contradiction_records=${encodeURIComponent(
+        JSON.stringify(event.contradiction_records)
+      )}`
+    );
+  }
 
   return parts.join(" | ");
 }
@@ -1051,6 +1061,7 @@ function emitTelemetryLog(event: ConversationTelemetryEvent): void {
     control_state_preserved: event.control_state_preserved,
     contradiction_count: event.contradiction_count,
     contradiction_ids: event.contradiction_ids,
+    contradiction_records: event.contradiction_records,
   };
 
   if (event.outcome === "error" || event.outcome === "failure") {
