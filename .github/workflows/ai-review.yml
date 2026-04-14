@@ -4,8 +4,11 @@ on:
   workflow_run:
     workflows: ["CI Pipeline"]
     types: [completed]
+  pull_request_target:
+    types: [ready_for_review]
 
 permissions:
+  checks: write
   contents: read
   pull-requests: write
 
@@ -14,32 +17,69 @@ jobs:
     name: AI Review
     runs-on: ubuntu-latest
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch != 'master'
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch != 'master') ||
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.base.ref == 'master' &&
+       github.event.pull_request.draft == false)
     env:
       REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'xiaomi/mimo-v2-pro' }}
     steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Get PR for branch
+      - name: Resolve PR context
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          EVENT_PR_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          PR_NUMBER=$(gh pr list --head "$BRANCH" --base master --state open --json number \
-            --jq '.[0].number // empty' 2>/dev/null || echo "")
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            BRANCH="${{ github.event.workflow_run.head_branch }}"
+            HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+            PR_NUMBER=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --base master --state open --json number \
+              --jq '.[0].number // empty' 2>/dev/null || echo "")
+          else
+            PR_NUMBER="$EVENT_PR_NUMBER"
+            BRANCH="$EVENT_PR_BRANCH"
+            HEAD_SHA="$EVENT_PR_SHA"
+          fi
+
           if [ -z "$PR_NUMBER" ]; then
             echo "No open PR found for branch $BRANCH -- skipping review"
             echo "found=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
           echo "found=true" >> "$GITHUB_OUTPUT"
           echo "Reviewing PR #$PR_NUMBER on branch $BRANCH"
+
+      - name: Open AI review gate
+        if: steps.pr.outputs.found == 'true'
+        id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const result = await github.rest.checks.create({
+              owner,
+              repo,
+              name: "AI Review Gate",
+              head_sha: process.env.HEAD_SHA,
+              status: "in_progress",
+              output: {
+                title: "AI review running",
+                summary:
+                  "Collecting the PR diff and querying the configured review model.",
+              },
+            });
+
+            core.setOutput("id", String(result.data.id));
+        env:
+          HEAD_SHA: ${{ steps.pr.outputs.sha }}
 
       - name: Get PR diff
         if: steps.pr.outputs.found == 'true'
@@ -48,7 +88,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          gh pr diff "$PR_NUMBER" > /tmp/pr-diff.txt
+          gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" > /tmp/pr-diff.txt
           DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
           if [ "$DIFF_SIZE" -gt 81920 ]; then
             head -c 81920 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
@@ -62,7 +102,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          gh pr view "$PR_NUMBER" --json files --jq '.files[].path' > /tmp/changed-files.txt
+          gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json files --jq '.files[].path' > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
 
       - name: Get PR metadata
@@ -72,10 +112,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
-          PR_BODY=$(gh pr view "$PR_NUMBER" --json body --jq '.body // ""')
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json title --jq '.title')
+          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json body --jq '.body // ""')
           echo "title=$PR_TITLE" >> "$GITHUB_OUTPUT"
-          # Write body to file to avoid multiline output issues
           echo "$PR_BODY" > /tmp/pr-body.txt
 
       - name: Run AI review
@@ -85,8 +124,27 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           if [ -z "$OPENROUTER_API_KEY" ]; then
-            echo "OPENROUTER_API_KEY not set -- skipping AI review"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            jq -n \
+              --arg summary "Configured AI review gate could not run because OPENROUTER_API_KEY is missing. Merge remains blocked until the secret is configured and the workflow is rerun." \
+              --arg fix "Add OPENROUTER_API_KEY to the repository Actions secrets and rerun the AI review workflow." \
+              '{
+                verdict: "BLOCKED",
+                summary: $summary,
+                issues: [
+                  {
+                    severity: "warning",
+                    file: ".github/workflows/ai-review.yml",
+                    message: "OPENROUTER_API_KEY is not configured for the privileged AI review workflow."
+                  }
+                ],
+                safe_to_merge: false,
+                fix_instructions: $fix
+              }' > /tmp/review-result.json
+            echo "verdict=BLOCKED" >> "$GITHUB_OUTPUT"
+            echo "safe=false" >> "$GITHUB_OUTPUT"
+            echo "gate_conclusion=failure" >> "$GITHUB_OUTPUT"
+            echo "gate_title=AI review gate blocked" >> "$GITHUB_OUTPUT"
+            echo "Configured AI review gate could not run because OPENROUTER_API_KEY is missing. Merge remains blocked until the secret is configured and the workflow is rerun." > /tmp/gate-summary.txt
             exit 0
           fi
 
@@ -113,18 +171,37 @@ jobs:
             -d "$(jq -n \
               --arg model "${{ env.REVIEW_MODEL }}" \
               --arg content "$PROMPT" \
-              '{model: $model, max_tokens: 2048, response_format: {type: "json_object"}, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')")
+              '{model: $model, max_tokens: 2048, response_format: {type: "json_object"}, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')" || true)
 
-          RAW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+          RAW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty' 2>/dev/null || echo "")
 
           if [ -z "$RAW_TEXT" ]; then
-            echo "AI review API returned no content -- skipping"
+            echo "AI review API returned no content -- blocking merge"
             echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null || true
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            jq -n \
+              --arg summary "Configured AI review gate did not receive a usable response from the review API. Merge remains blocked until the workflow is rerun successfully." \
+              --arg fix "Inspect the workflow logs, confirm the configured review model is healthy, and rerun the AI review workflow." \
+              '{
+                verdict: "UNKNOWN",
+                summary: $summary,
+                issues: [
+                  {
+                    severity: "warning",
+                    file: ".github/workflows/ai-review.yml",
+                    message: "The review API returned no parseable content for this PR."
+                  }
+                ],
+                safe_to_merge: false,
+                fix_instructions: $fix
+              }' > /tmp/review-result.json
+            echo "verdict=UNKNOWN" >> "$GITHUB_OUTPUT"
+            echo "safe=false" >> "$GITHUB_OUTPUT"
+            echo "gate_conclusion=failure" >> "$GITHUB_OUTPUT"
+            echo "gate_title=AI review returned no verdict" >> "$GITHUB_OUTPUT"
+            echo "Configured AI review gate did not receive a usable response from the review API. Merge remains blocked until the workflow is rerun successfully." > /tmp/gate-summary.txt
             exit 0
           fi
 
-          # Strip markdown fences and extract JSON object
           REVIEW_TEXT=$(echo "$RAW_TEXT" | sed 's/^```json//;s/^```//;s/```$//' | perl -0777 -ne 'print $1 if /(\{.*\})/s')
 
           if [ -z "$REVIEW_TEXT" ]; then
@@ -133,9 +210,7 @@ jobs:
             REVIEW_TEXT="{\"verdict\":\"UNKNOWN\",\"summary\":\"Model response was not valid JSON.\",\"issues\":[],\"safe_to_merge\":false,\"fix_instructions\":\"\"}"
           fi
 
-          echo "skip=false" >> "$GITHUB_OUTPUT"
           RAW_VERDICT=$(echo "$REVIEW_TEXT" | jq -r '.verdict // "UNKNOWN"' 2>/dev/null || echo "UNKNOWN")
-          # Normalize fuzzy verdicts: models sometimes return "APPROVED", "APTESTING", "approve", etc.
           UPPER_VERDICT=$(echo "$RAW_VERDICT" | tr '[:lower:]' '[:upper:]')
           if echo "$UPPER_VERDICT" | grep -qE '^AP'; then
             VERDICT="APPROVE"
@@ -146,43 +221,61 @@ jobs:
           fi
           echo "Raw verdict: $RAW_VERDICT -> Normalized: $VERDICT"
           SAFE=$(echo "$REVIEW_TEXT" | jq -r '.safe_to_merge // false' 2>/dev/null || echo "false")
+          SUMMARY=$(echo "$REVIEW_TEXT" | jq -r '.summary // "No summary"' 2>/dev/null || echo "No summary")
+
+          if [ "$VERDICT" = "APPROVE" ] && [ "$SAFE" = "true" ]; then
+            GATE_CONCLUSION="success"
+            GATE_TITLE="AI review approved"
+          elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
+            GATE_CONCLUSION="failure"
+            GATE_TITLE="AI review requested changes"
+          else
+            GATE_CONCLUSION="failure"
+            GATE_TITLE="AI review requires manual attention"
+          fi
+
           echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
           echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
+          echo "gate_conclusion=$GATE_CONCLUSION" >> "$GITHUB_OUTPUT"
+          echo "gate_title=$GATE_TITLE" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$SUMMARY" > /tmp/gate-summary.txt
           echo "$REVIEW_TEXT" > /tmp/review-result.json
 
-      - name: Post review comment
-        if: steps.pr.outputs.found == 'true' && steps.review.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build review comment
+        if: steps.pr.outputs.found == 'true' && steps.review.outcome == 'success'
         run: |
-          PR_NUMBER="${{ steps.pr.outputs.number }}"
           VERDICT="${{ steps.review.outputs.verdict }}"
+          GATE_CONCLUSION="${{ steps.review.outputs.gate_conclusion }}"
           REVIEW=$(cat /tmp/review-result.json)
           SUMMARY=$(echo "$REVIEW" | jq -r '.summary // "No summary"' 2>/dev/null || echo "Review completed")
           ISSUES=$(echo "$REVIEW" | jq -r 'if .issues and (.issues | length > 0) then .issues[] | "- **\(.severity)**: `\(.file // "general")` -- \(.message)" else "No issues found." end' 2>/dev/null || echo "No structured issues.")
           FIX_INSTRUCTIONS=$(echo "$REVIEW" | jq -r '.fix_instructions // ""' 2>/dev/null || echo "")
 
-          if [ "$VERDICT" = "APPROVE" ]; then
+          if [ "$VERDICT" = "APPROVE" ] && [ "$GATE_CONCLUSION" = "success" ]; then
             ICON=":white_check_mark:"
             STATUS="Approved"
           elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
             ICON=":x:"
             STATUS="Changes Requested"
+          elif [ "$VERDICT" = "BLOCKED" ]; then
+            ICON=":warning:"
+            STATUS="Blocked"
           else
             ICON=":warning:"
-            STATUS="Review Completed (manual check recommended)"
+            STATUS="Manual Check Recommended"
           fi
 
           {
             echo "## AI Code Review -- ${ICON} ${STATUS}"
             echo ""
             echo "**Model:** \`${{ env.REVIEW_MODEL }}\`"
+            echo "**Gate:** \`AI Review Gate = ${GATE_CONCLUSION}\`"
             echo "**Summary:** ${SUMMARY}"
             echo ""
             echo "### Issues"
             echo "${ISSUES}"
             echo ""
-            if [ -n "$FIX_INSTRUCTIONS" ] && [ "$VERDICT" = "REQUEST_CHANGES" ]; then
+            if [ -n "$FIX_INSTRUCTIONS" ] && [ "$VERDICT" != "APPROVE" ]; then
               echo "### How to fix"
               echo "${FIX_INSTRUCTIONS}"
               echo ""
@@ -190,24 +283,78 @@ jobs:
             echo "*(Reviewed by \`${{ env.REVIEW_MODEL }}\` via OpenRouter. Verdict: \`${VERDICT}\`)*"
           } > /tmp/comment.md
 
-          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
+      - name: Post review comment
+        if: steps.pr.outputs.found == 'true' && steps.review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "${{ steps.pr.outputs.number }}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/comment.md
 
       - name: Submit approval
-        if: steps.pr.outputs.found == 'true' && steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'APPROVE'
+        if: >
+          steps.pr.outputs.found == 'true' &&
+          steps.review.outcome == 'success' &&
+          steps.review.outputs.verdict == 'APPROVE' &&
+          steps.review.outputs.gate_conclusion == 'success'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr review ${{ steps.pr.outputs.number }} \
+            --repo "$GITHUB_REPOSITORY" \
             --approve \
             --body "AI review passed. Safe to merge."
 
       - name: Request changes
-        if: steps.pr.outputs.found == 'true' && steps.review.outputs.skip != 'true' && steps.review.outputs.verdict == 'REQUEST_CHANGES'
+        if: >
+          steps.pr.outputs.found == 'true' &&
+          steps.review.outcome == 'success' &&
+          steps.review.outputs.verdict == 'REQUEST_CHANGES'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr review ${{ steps.pr.outputs.number }} \
+            --repo "$GITHUB_REPOSITORY" \
             --request-changes \
             --body "AI review found issues. See comment above for details and fix instructions."
+
+      - name: Complete AI review gate
+        if: steps.pr.outputs.found == 'true' && steps.gate.outputs.id != '' && always()
+        uses: actions/github-script@v7
+        env:
+          CHECK_RUN_ID: ${{ steps.gate.outputs.id }}
+          GATE_CONCLUSION: ${{ steps.review.outputs.gate_conclusion || 'failure' }}
+          GATE_TITLE: ${{ steps.review.outputs.gate_title || 'AI review did not finish cleanly' }}
+          REVIEW_STEP_OUTCOME: ${{ steps.review.outcome }}
+        with:
+          script: |
+            const fs = require("node:fs");
+            const { owner, repo } = context.repo;
+            const checkRunId = Number(process.env.CHECK_RUN_ID);
+            const summaryPath = "/tmp/gate-summary.txt";
+            const commentPath = "/tmp/comment.md";
+            const fallbackSummary =
+              process.env.REVIEW_STEP_OUTCOME === "success"
+                ? "AI review completed without a detailed summary."
+                : "AI review did not complete cleanly. Inspect the workflow logs before merging.";
+            const summary = fs.existsSync(summaryPath)
+              ? fs.readFileSync(summaryPath, "utf8").slice(0, 65535)
+              : fallbackSummary;
+            const text = fs.existsSync(commentPath)
+              ? fs.readFileSync(commentPath, "utf8").slice(0, 65535)
+              : "";
+
+            await github.rest.checks.update({
+              owner,
+              repo,
+              check_run_id: checkRunId,
+              status: "completed",
+              conclusion: process.env.GATE_CONCLUSION || "failure",
+              completed_at: new Date().toISOString(),
+              output: {
+                title: process.env.GATE_TITLE || "AI review completed",
+                summary,
+                text,
+              },
+            });
