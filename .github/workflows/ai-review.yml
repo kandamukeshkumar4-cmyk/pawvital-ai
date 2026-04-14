@@ -10,6 +10,7 @@ on:
 permissions:
   checks: write
   contents: read
+  models: read
   pull-requests: write
 
 jobs:
@@ -25,7 +26,7 @@ jobs:
        github.event.pull_request.base.ref == 'master' &&
        github.event.pull_request.draft == false)
     env:
-      REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'xiaomi/mimo-v2-pro' }}
+      REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'openai/gpt-4o-mini' }}
     steps:
       - name: Resolve PR context
         id: pr
@@ -73,7 +74,7 @@ jobs:
               output: {
                 title: "AI review running",
                 summary:
-                  "Collecting the PR diff and querying the configured review model.",
+                  "Collecting the PR diff and querying the configured GitHub Models review model.",
               },
             });
 
@@ -121,12 +122,12 @@ jobs:
         if: steps.pr.outputs.found == 'true'
         id: review
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -z "$OPENROUTER_API_KEY" ]; then
+          if [ -z "$GITHUB_TOKEN" ]; then
             jq -n \
-              --arg summary "Configured AI review gate could not run because OPENROUTER_API_KEY is missing. Merge remains blocked until the secret is configured and the workflow is rerun." \
-              --arg fix "Add OPENROUTER_API_KEY to the repository Actions secrets and rerun the AI review workflow." \
+              --arg summary "Configured AI review gate could not run because GITHUB_TOKEN was unavailable to the workflow. Merge remains blocked until the workflow token is restored and the review is rerun." \
+              --arg fix "Confirm GitHub Actions provided GITHUB_TOKEN and rerun the AI review workflow." \
               '{
                 verdict: "BLOCKED",
                 summary: $summary,
@@ -134,7 +135,7 @@ jobs:
                   {
                     severity: "warning",
                     file: ".github/workflows/ai-review.yml",
-                    message: "OPENROUTER_API_KEY is not configured for the privileged AI review workflow."
+                    message: "GITHUB_TOKEN was unavailable to the privileged AI review workflow."
                   }
                 ],
                 safe_to_merge: false,
@@ -144,7 +145,7 @@ jobs:
             echo "safe=false" >> "$GITHUB_OUTPUT"
             echo "gate_conclusion=failure" >> "$GITHUB_OUTPUT"
             echo "gate_title=AI review gate blocked" >> "$GITHUB_OUTPUT"
-            echo "Configured AI review gate could not run because OPENROUTER_API_KEY is missing. Merge remains blocked until the secret is configured and the workflow is rerun." > /tmp/gate-summary.txt
+            echo "Configured AI review gate could not run because GITHUB_TOKEN was unavailable. Merge remains blocked until the workflow token is restored and the review is rerun." > /tmp/gate-summary.txt
             exit 0
           fi
 
@@ -163,24 +164,29 @@ jobs:
             --arg diff "$DIFF" \
             '$rules + "\n\nPR DETAILS:\nTitle: " + $title + "\nDescription: " + $body + "\n\nChanged files:\n" + $files + "\n\nDiff:\n" + $diff')
 
-          RESPONSE=$(curl -s -X POST https://openrouter.ai/api/v1/chat/completions \
-            -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+          RESPONSE=$(curl -sS -L -X POST https://models.github.ai/inference/chat/completions \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
             -H "Content-Type: application/json" \
-            -H "HTTP-Referer: https://github.com/${{ github.repository }}" \
-            -H "X-Title: PawVital CI Review" \
             -d "$(jq -n \
               --arg model "${{ env.REVIEW_MODEL }}" \
               --arg content "$PROMPT" \
-              '{model: $model, max_tokens: 2048, response_format: {type: "json_object"}, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')" || true)
+              '{model: $model, max_tokens: 1024, temperature: 0.1, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')" || true)
 
           RAW_TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty' 2>/dev/null || echo "")
 
           if [ -z "$RAW_TEXT" ]; then
-            echo "AI review API returned no content -- blocking merge"
-            echo "$RESPONSE" | jq '.error // "unknown error"' 2>/dev/null || true
+            echo "GitHub Models review API returned no content -- blocking merge"
+            ERROR_MESSAGE=$(echo "$RESPONSE" | jq -r '.error.message // .message // empty' 2>/dev/null || echo "")
+            ERROR_CODE=$(echo "$RESPONSE" | jq -r '.error.code // .code // empty' 2>/dev/null || echo "")
+            if [ -n "$ERROR_MESSAGE" ]; then
+              echo "$RESPONSE" | jq '.error // {message: .message, code: .code} // "unknown error"' 2>/dev/null || true
+            fi
             jq -n \
-              --arg summary "Configured AI review gate did not receive a usable response from the review API. Merge remains blocked until the workflow is rerun successfully." \
-              --arg fix "Inspect the workflow logs, confirm the configured review model is healthy, and rerun the AI review workflow." \
+              --arg summary "Configured AI review gate did not receive a usable response from GitHub Models. Merge remains blocked until models access is restored or the workflow is rerun successfully." \
+              --arg fix "Inspect the workflow logs, confirm the configured GitHub Models policy allows the selected model, and rerun the AI review workflow." \
+              --arg detail "${ERROR_MESSAGE:-The review API returned no parseable content for this PR.}${ERROR_CODE:+ (code: $ERROR_CODE)}" \
               '{
                 verdict: "UNKNOWN",
                 summary: $summary,
@@ -188,7 +194,7 @@ jobs:
                   {
                     severity: "warning",
                     file: ".github/workflows/ai-review.yml",
-                    message: "The review API returned no parseable content for this PR."
+                    message: $detail
                   }
                 ],
                 safe_to_merge: false,
@@ -198,7 +204,7 @@ jobs:
             echo "safe=false" >> "$GITHUB_OUTPUT"
             echo "gate_conclusion=failure" >> "$GITHUB_OUTPUT"
             echo "gate_title=AI review returned no verdict" >> "$GITHUB_OUTPUT"
-            echo "Configured AI review gate did not receive a usable response from the review API. Merge remains blocked until the workflow is rerun successfully." > /tmp/gate-summary.txt
+            echo "Configured AI review gate did not receive a usable response from GitHub Models. Merge remains blocked until models access is restored or the workflow is rerun successfully." > /tmp/gate-summary.txt
             exit 0
           fi
 
@@ -280,7 +286,7 @@ jobs:
               echo "${FIX_INSTRUCTIONS}"
               echo ""
             fi
-            echo "*(Reviewed by \`${{ env.REVIEW_MODEL }}\` via OpenRouter. Verdict: \`${VERDICT}\`)*"
+            echo "*(Reviewed by \`${{ env.REVIEW_MODEL }}\` via GitHub Models. Verdict: \`${VERDICT}\`)*"
           } > /tmp/comment.md
 
       - name: Post review comment

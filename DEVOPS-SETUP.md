@@ -5,22 +5,20 @@
 This pipeline provides end-to-end DevOps automation for multi-agent development:
 
 ```
-Agent pushes branch → Auto-PR → CI (lint/typecheck/build/test) → AI Review (OpenRouter model) → Auto-Merge → Vercel Deploy
+Agent pushes branch → Auto-PR → CI (lint/typecheck/build/test) → AI Review (GitHub Models) → Auto-Merge → Vercel Deploy
 ```
 
 Works with **any tool**: Claude Code, Cursor, GitHub Copilot, Codex CLI, Antigravity, or manual commits.
 
 ---
 
-## Step 1: Add GitHub Secrets
+## Step 1: Confirm GitHub Models Access
 
 Go to **GitHub repo → Settings → Secrets and variables → Actions**
 
-### Required Secret
+### Required Workflow Access
 
-| Secret | Description | Where to get it |
-|--------|-------------|-----------------|
-| `OPENROUTER_API_KEY` | OpenRouter API key for AI review and CI analysis | [openrouter.ai/keys](https://openrouter.ai/keys) |
+No extra AI secret is required for PR review or CI analysis. The workflows call GitHub Models with the built-in `GITHUB_TOKEN`, so the repo/org only needs GitHub Models enabled for the configured model.
 
 ### Optional Variables
 
@@ -28,9 +26,10 @@ Go to **Settings → Secrets and variables → Actions → Variables tab**
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `REVIEW_MODEL` | `xiaomi/mimo-v2-pro` | Model used by `ai-review.yml` for PR review |
+| `REVIEW_MODEL` | `openai/gpt-4o-mini` | Model used by `ai-review.yml` for PR review |
+| `AUTOFIX_MODEL` | `openai/gpt-4o-mini` | Model used by `auto-fix.yml` for CI failure analysis |
 
-> `GITHUB_TOKEN` is automatically provided by GitHub Actions — no setup needed.
+> `GITHUB_TOKEN` is automatically provided by GitHub Actions. The workflows must keep `models: read` permission so GitHub Models can be called from CI.
 
 ---
 
@@ -100,7 +99,7 @@ On failure, a comment is posted on the PR with the failing job and a link to log
 
 ### 3. AI Code Review (`ai-review.yml`)
 
-After CI passes, the diff is sent to the configured **OpenRouter** review model for review.
+After CI passes, the diff is sent to the configured **GitHub Models** review model for review.
 
 Review checks:
 - Clinical logic safety (no medical decisions in prompts)
@@ -170,7 +169,7 @@ The PR stays open until all issues are fixed. Push new commits to the same branc
 ## Cost Notes
 
 - **CI runs**: Free on GitHub Actions (2,000 min/month for free tier)
-- **OpenRouter review calls**: Check current pricing for your configured model at [openrouter.ai/models](https://openrouter.ai/models)
+- **GitHub Models review calls**: Usage follows your GitHub Models / Copilot access policy for the configured model
 - **Vercel**: Deploys only on merge to master (no extra cost from PRs)
 
 ---
@@ -180,8 +179,8 @@ The PR stays open until all issues are fixed. Push new commits to the same branc
 ### CI Gate not appearing as required check
 The `CI Gate` check only exists after the first PR triggers it. Create one PR, let CI run, then go back to branch protection settings and select `CI Gate` from the dropdown.
 
-### AI review skipped
-Check that `OPENROUTER_API_KEY` is set in GitHub Secrets. The workflow logs will show "OPENROUTER_API_KEY not set -- skipping AI review" if missing.
+### AI review blocked
+Check that the configured model is allowed for the repo/org and that the workflow still has `models: read` permission. The workflow logs will surface the GitHub Models error if access is unavailable.
 
 ### Auto-merge not triggering
 1. Verify "Allow auto-merge" is enabled in repo settings

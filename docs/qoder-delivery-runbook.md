@@ -70,7 +70,7 @@ git push origin qwen/vet-XXX-your-slug-v1
 - Workflow finds the PR for your branch
 - Fetches PR diff (max 80KB)
 - Publishes an `AI Review Gate` check on the PR head SHA
-- Sends to OpenRouter AI model (configurable, default: `xiaomi/mimo-v2-pro`)
+- Sends to GitHub Models (configurable, default: `openai/gpt-4o-mini`)
 - AI reviews against PawVital-specific rules:
   - Deterministic clinical logic must remain source of truth
   - Protected state (`answered_questions`, `extracted_answers`, `unresolved_question_ids`) must not be mutated by compression
@@ -78,7 +78,7 @@ git push origin qwen/vet-XXX-your-slug-v1
   - No hidden regressions in route.ts, triage-engine.ts, symptom-memory.ts, clinical-matrix.ts
 - Posts review comment with verdict and findings
 - If APPROVED: submits GitHub approval on the PR and marks `AI Review Gate` successful
-- If the review secret/model cannot produce a verdict: `AI Review Gate` fails closed and merge stays blocked
+- If GitHub Models cannot produce a verdict or the configured model is unavailable: `AI Review Gate` fails closed and merge stays blocked
 
 ### 5. Auto-Merge
 
@@ -169,7 +169,7 @@ Common reasons:
 - **Draft PR**: Mark as ready for review in GitHub UI
 - **Merge conflict**: Rebase onto latest master and resolve conflicts
 - **CI not green**: Fix CI failures first
-- **AI Review Gate failed**: Address review findings or restore the review secret/model response path
+- **AI Review Gate failed**: Address review findings or restore GitHub Models access / an allowed review model
 
 ## Verification Commands
 
