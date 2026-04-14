@@ -85,6 +85,13 @@ logger = logging.getLogger("multimodal-consult-service")
 STATE_LOCK = RLock()
 
 
+def parse_bool_env(name: str, default: str = "false") -> bool:
+    return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+FORCE_FALLBACK = parse_bool_env("FORCE_FALLBACK")
+
+
 def validate_auth(authorization: str | None) -> None:
     if not EXPECTED_API_KEY:
         return
@@ -92,6 +99,38 @@ def validate_auth(authorization: str | None) -> None:
     expected_header = f"Bearer {EXPECTED_API_KEY}"
     if authorization != expected_header:
         raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+def health_mode() -> str:
+    if STUB_MODE:
+        return "stub"
+    if FORCE_FALLBACK:
+        return "forced_fallback"
+    return "production"
+
+
+def build_consult_fallback_response(reason: str) -> ConsultResponse:
+    reason_text = reason.replace("_", " ")
+    return ConsultResponse(
+        model=f"{MODEL_NAME} ({reason})",
+        summary=(
+            "Multimodal consult inference is unavailable, so the clinical matrix remains "
+            "the sole authority for this case."
+        ),
+        agreements=[],
+        disagreements=[],
+        uncertainties=[
+            f"Multimodal consult used fallback mode because {reason_text}.",
+            "No external multimodal specialist opinion was generated.",
+        ],
+        confidence=0.2,
+        mode="sync",
+        morphological_indicators={},
+        temporal_patterns={},
+        risk_stratifiers=[],
+        recommended_next_steps=[],
+        comparison_to_baseline={},
+    )
 
 
 def load_model():
@@ -528,6 +567,9 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
             mode="sync",
         )
 
+    if FORCE_FALLBACK:
+        return build_consult_fallback_response("force_fallback")
+
     model, processor = load_model()
 
     # Decode image
@@ -623,7 +665,7 @@ async def generate_consult(request: ConsultRequest) -> ConsultResponse:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for model loading."""
-    if not STUB_MODE:
+    if not STUB_MODE and not FORCE_FALLBACK:
         load_model()
     yield
     global MODEL, PROCESSOR
@@ -644,7 +686,16 @@ def healthz():
     return {
         "ok": True,
         "service": "multimodal-consult-service",
-        "mode": "stub" if STUB_MODE else "production",
+        "mode": health_mode(),
+        "fallback": {
+            "stub_mode": STUB_MODE,
+            "force_fallback": FORCE_FALLBACK,
+            "reason": "stub_mode"
+            if STUB_MODE
+            else "force_fallback"
+            if FORCE_FALLBACK
+            else None,
+        },
         "model": MODEL_NAME,
         "device": DEVICE,
     }
