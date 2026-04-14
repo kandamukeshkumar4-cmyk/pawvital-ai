@@ -19,7 +19,7 @@ Each internal terminal outcome metric carries:
 - `reason_code`
 - `conversation_state`
 - `recommended_next_step`
-- `turn_number`
+- `turn_number` for the current owner turn across both early `out_of_scope` exits and later `cannot_assess` exits
 - `question_id` when a terminal outcome is tied to a specific critical question
 
 ## Validation

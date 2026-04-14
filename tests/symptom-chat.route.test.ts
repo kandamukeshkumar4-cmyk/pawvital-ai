@@ -2408,6 +2408,7 @@ describe("symptom-chat mixed text + image routing", () => {
       expect(String(terminalTelemetry)).toContain(
         '"question_id":"breathing_onset"'
       );
+      expect(String(terminalTelemetry)).toContain('"turn_number":2');
     } finally {
       logSpy.mockRestore();
     }
@@ -2448,6 +2449,7 @@ describe("symptom-chat mixed text + image routing", () => {
         '"terminal_state":"out_of_scope"'
       );
       expect(String(terminalTelemetry)).not.toContain('"question_id":"');
+      expect(String(terminalTelemetry)).toContain('"turn_number":1');
     } finally {
       logSpy.mockRestore();
     }

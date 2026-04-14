@@ -313,7 +313,12 @@ export async function POST(request: Request) {
       message: lastUserMessage.content,
     });
     if (outOfScopeOutcome) {
-      session = recordTerminalOutcomeTelemetry(session, outOfScopeOutcome);
+      session = recordTerminalOutcomeTelemetry(
+        session,
+        outOfScopeOutcome,
+        undefined,
+        (session.case_memory?.turn_count ?? 0) + 1
+      );
       return NextResponse.json(
         buildTerminalOutcomeResponse(outOfScopeOutcome, session)
       );
@@ -2184,9 +2189,11 @@ function buildTerminalOutcomeResponse(
 function recordTerminalOutcomeTelemetry(
   session: TriageSession,
   outcome: UncertaintyTerminalOutcome,
-  questionId?: string
+  questionId?: string,
+  turnNumberOverride?: number
 ) {
-  const turnNumber = session.case_memory?.turn_count ?? 0;
+  const turnNumber =
+    turnNumberOverride ?? (session.case_memory?.turn_count ?? 0);
 
   return recordConversationTelemetry(session, {
     event: "terminal_outcome",
