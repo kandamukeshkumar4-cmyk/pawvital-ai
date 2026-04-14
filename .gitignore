@@ -60,6 +60,7 @@ next-env.d.ts
 !/scripts/fix-readlink.js
 !/scripts/load-phase5-shadow.mjs
 !/scripts/reindex-live-corpus.mjs
+!/scripts/retrieval-quality-harness.mjs
 !/scripts/runpod-benchmark.mjs
 !/scripts/generate-benchmark-adjudication-pack.mjs
 !/scripts/runpod-hero-job-manifests.mjs

@@ -60,6 +60,8 @@
     "verify:corpus:live": "node scripts/verify-live-corpus.mjs",
     "reindex:corpus:live": "node scripts/reindex-live-corpus.mjs",
     "reindex:corpus:live:dry": "node scripts/reindex-live-corpus.mjs --dry-run",
+    "eval:retrieval:harness": "node scripts/retrieval-quality-harness.mjs",
+    "eval:retrieval:harness:baseline": "node scripts/retrieval-quality-harness.mjs --write-baseline",
     "db:apply-rag-schema": "node scripts/apply-rag-schema.mjs",
     "seed:public-corpus": "node scripts/seed-public-corpus.mjs",
     "seed:public-corpus:dry": "node scripts/seed-public-corpus.mjs --dry-run",
