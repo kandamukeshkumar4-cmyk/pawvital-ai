@@ -14,6 +14,7 @@ import {
   stripMarkdownCodeFences,
   stripThinkingBlocks,
 } from "@/lib/llm-output";
+import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   createSession,
   addSymptoms,
@@ -114,7 +115,6 @@ import {
   detectTextContradictions,
 } from "@/lib/clinical/contradiction-detector";
 import {
-  buildAlternateObservableRecoveryOutcome,
   buildCannotAssessOutcome,
   findReportBlockingCriticalInfo,
   buildTerminalOutcomeMessage,
@@ -122,13 +122,12 @@ import {
   detectOutOfScopeTurn,
   type UncertaintyTerminalOutcome,
 } from "@/lib/clinical/uncertainty-routing";
+import { evaluateCriticalInfoRule } from "@/lib/clinical/critical-info-rules";
 import { emit, EventType } from "@/lib/events/event-bus";
 import "@/lib/events/notification-handler";
-import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   getNextQuestionAvoidingRepeat,
   coerceAnswerForQuestion,
-  shouldEscalateForUnknown,
   questionAllowsCanonicalUnknown,
 } from "@/lib/symptom-chat/answer-coercion";
 import {
@@ -819,29 +818,18 @@ export async function POST(request: Request) {
         (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
       const isAmbiguousReply =
         coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
+      const criticalInfoDecision = evaluateCriticalInfoRule({
+        questionId: pendingQ,
+        rawMessage: lastUserMessage.content,
+        hasRecoveredAnswer: pendingAnswer !== null,
+        ambiguityFlags: session.case_memory?.ambiguity_flags ?? [],
+        alternateObservablePetName: effectivePet.name || pet.name || "your dog",
+        cannotAssessPetName: pet.name || "your dog",
+        questionText: getQuestionText(pendingQ),
+      });
 
-      const alternateRecovery = shouldEscalateForUnknown(pendingQ)
-        ? buildAlternateObservableRecoveryOutcome({
-            petName: effectivePet.name || pet.name || "your dog",
-            questionId: pendingQ,
-          })
-        : null;
-      const alternateAlreadyOffered = Boolean(
-        alternateRecovery &&
-          (session.case_memory?.ambiguity_flags ?? []).includes(
-            alternateRecovery.retryMarker
-          )
-      );
-      const shouldEscalateAfterAlternateRetry = Boolean(
-        alternateRecovery && alternateAlreadyOffered && pendingAnswer === null
-      );
-
-      if (
-        shouldEscalateForUnknown(pendingQ) &&
-        (isAmbiguousReply || shouldEscalateAfterAlternateRetry)
-      ) {
-
-        if (alternateRecovery && !alternateAlreadyOffered) {
+      if (criticalInfoDecision) {
+        if (criticalInfoDecision.kind === "alternate_observable") {
           const caseMemory = ensureStructuredCaseMemory(session);
           const unresolvedQuestionIds = caseMemory.unresolved_question_ids.includes(
             pendingQ
@@ -849,10 +837,13 @@ export async function POST(request: Request) {
             ? caseMemory.unresolved_question_ids
             : [...caseMemory.unresolved_question_ids, pendingQ];
           const ambiguityFlags = caseMemory.ambiguity_flags.includes(
-            alternateRecovery.retryMarker
+            criticalInfoDecision.outcome.retryMarker
           )
             ? caseMemory.ambiguity_flags
-            : [...caseMemory.ambiguity_flags, alternateRecovery.retryMarker];
+            : [
+                ...caseMemory.ambiguity_flags,
+                criticalInfoDecision.outcome.retryMarker,
+              ];
 
           session = {
             ...session,
@@ -871,16 +862,16 @@ export async function POST(request: Request) {
             question_id: pendingQ,
             outcome: "needs_clarification",
             source: "unresolved",
-            reason: alternateRecovery.reasonCode,
+            reason: criticalInfoDecision.outcome.reasonCode,
             pending_before: hadUnresolved,
             pending_after: true,
           });
-          alternateObservableOutcome = alternateRecovery;
+          alternateObservableOutcome = criticalInfoDecision.outcome;
         } else {
           session = transitionToEscalation({
             session,
-            redFlags: [`cannot_assess_${pendingQ}`],
-            reason: "owner_cannot_assess_critical_indicator",
+            redFlags: [criticalInfoDecision.redFlag],
+            reason: criticalInfoDecision.transitionReason,
           });
           console.log(
             `[Engine] Escalation triggered — owner cannot assess critical indicator "${pendingQ}"`
@@ -891,15 +882,11 @@ export async function POST(request: Request) {
             question_id: pendingQ,
             outcome: "escalation",
             source: "unresolved",
-            reason: "owner_cannot_assess_critical_indicator",
+            reason: criticalInfoDecision.telemetryReason,
             pending_before: hadUnresolved,
             pending_after: true,
           });
-          terminalOutcome = buildCannotAssessOutcome({
-            petName: pet.name || "your dog",
-            questionId: pendingQ,
-            questionText: getQuestionText(pendingQ),
-          });
+          terminalOutcome = criticalInfoDecision.outcome;
         }
       } else if (pendingAnswer !== null) {
         session = transitionToAnswered({

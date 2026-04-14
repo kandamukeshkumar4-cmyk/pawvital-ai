@@ -6128,6 +6128,34 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.recommended_next_step).toContain("Seek veterinary assessment");
     });
 
+    it("VET-1025: critical info registry keeps consciousness_level on immediate cannot_assess path", async () => {
+      const session = createSession();
+      const sessionWithSymptom = addSymptoms(session, ["coughing"]);
+      sessionWithSymptom.last_question_asked = "consciousness_level";
+      sessionWithSymptom.case_memory = {
+        ...sessionWithSymptom.case_memory!,
+        turn_count: 1,
+        unresolved_question_ids: [],
+      };
+
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["coughing"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(sessionWithSymptom, "I can't tell")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_consciousness_level");
+      expect(payload.conversationState).toBe("escalation");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.message).not.toContain("gently lift the upper lip");
+    });
+
     it("VET-1002: medication dosing request returns out_of_scope terminal outcome", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const response = await POST(
