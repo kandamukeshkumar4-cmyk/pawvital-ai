@@ -3,8 +3,13 @@
  *
  * Usage:
  *   node scripts/runpod-health-and-wire.mjs                 # check health only
+ *   node scripts/runpod-health-and-wire.mjs --status       # explicit status alias
  *   node scripts/runpod-health-and-wire.mjs --wire         # check + push passing URLs to Vercel
  *   node scripts/runpod-health-and-wire.mjs --plan
+ *   node scripts/runpod-health-and-wire.mjs --start-consult
+ *   node scripts/runpod-health-and-wire.mjs --stop-consult
+ *   node scripts/runpod-health-and-wire.mjs --reconcile [--confirm]
+ *   node scripts/runpod-health-and-wire.mjs --billing-audit
  *   node scripts/runpod-health-and-wire.mjs --provision-consult [--rehearsal] [--confirm]
  *   node scripts/runpod-health-and-wire.mjs --provision-review [--rehearsal] [--confirm]
  *   node scripts/runpod-health-and-wire.mjs --teardown-consult [--rehearsal] [--confirm]
@@ -78,6 +83,7 @@ function statusLine(level, msg) {
 const ROLE_PROVISION_COMMAND = {
   consult_retrieval: "npm run runpod:provision:consult",
   async_review: "npm run runpod:provision:review",
+  narrow_model_pack: "npm run runpod:provision:narrow",
 };
 
 function getRoleConfig(roleKey) {
@@ -925,6 +931,253 @@ async function teardownRole(roleKey, { rehearsal = false, confirm = false } = {}
   );
 }
 
+async function listRunpodPods() {
+  const fixturePath = String(process.env.RUNPOD_PODS_FIXTURE_JSON || "").trim();
+  if (fixturePath) {
+    const resolvedPath = path.resolve(rootDir, fixturePath);
+    const parsed = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
+    const podsList = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.pods)
+        ? parsed.pods
+        : null;
+    if (!Array.isArray(podsList)) {
+      throw new Error(`Fixture at ${resolvedPath} must contain an array of pods`);
+    }
+    statusLine("warn", `Using RunPod reconcile fixture ${resolvedPath}`);
+    return podsList;
+  }
+
+  const response = await runpodRequest("/pods", { method: "GET" });
+  const podsList = Array.isArray(response.body)
+    ? response.body
+    : Array.isArray(response.body?.pods)
+      ? response.body.pods
+      : null;
+
+  if (response.status !== 200 || !Array.isArray(podsList)) {
+    throw new Error(
+      `Unable to list RunPod pods: HTTP ${response.status} - ${JSON.stringify(response.body).slice(0, 240)}`
+    );
+  }
+
+  return podsList;
+}
+
+function remotePodId(remotePod) {
+  return String(
+    remotePod?.id ||
+      remotePod?.podId ||
+      remotePod?.machineId ||
+      remotePod?.pod_id ||
+      ""
+  ).trim();
+}
+
+function remotePodName(remotePod) {
+  return String(remotePod?.name || remotePod?.podName || "").trim();
+}
+
+function remotePodStatus(remotePod) {
+  return String(
+    remotePod?.desiredStatus ||
+      remotePod?.status ||
+      remotePod?.state ||
+      remotePod?.machineStatus ||
+      "unknown"
+  )
+    .trim()
+    .toLowerCase();
+}
+
+async function startRole(roleKey) {
+  const pod = pods[roleKey];
+  if (!pod?.pod_id) {
+    statusLine("warn", `${roleKey} has no live pod to start`);
+    return;
+  }
+
+  const response = await runpodRequest(`/pods/${pod.pod_id}/start`, {
+    method: "POST",
+  });
+  if (response.status >= 200 && response.status < 300) {
+    pod.status = "starting";
+    writePods();
+    statusLine("ok", `Started ${roleKey}: ${pod.pod_id}`);
+    return;
+  }
+
+  throw new Error(
+    `Failed to start ${roleKey}: HTTP ${response.status} - ${JSON.stringify(response.body).slice(0, 200)}`
+  );
+}
+
+async function stopRole(roleKey) {
+  const pod = pods[roleKey];
+  if (!pod?.pod_id) {
+    statusLine("warn", `${roleKey} has no live pod to stop`);
+    return;
+  }
+
+  const response = await runpodRequest(`/pods/${pod.pod_id}/stop`, {
+    method: "POST",
+  });
+  if (response.status >= 200 && response.status < 300) {
+    pod.status = "stopped";
+    writePods();
+    statusLine("ok", `Stopped ${roleKey}: ${pod.pod_id}`);
+    return;
+  }
+
+  throw new Error(
+    `Failed to stop ${roleKey}: HTTP ${response.status} - ${JSON.stringify(response.body).slice(0, 200)}`
+  );
+}
+
+function estimatedDailyCost(roleKey, pod) {
+  if (!pod?.pod_id) return 0;
+  if (roleKey === "consult_retrieval") return 17.76;
+  if (roleKey === "async_review") {
+    return String(pod.gpu || "").toLowerCase().includes("h100") ? 47.76 : 28.56;
+  }
+  return 0;
+}
+
+function printBillingAudit() {
+  const warningThreshold = 40;
+  const criticalThreshold = 50;
+  const escalationThreshold = 60;
+  let total = 0;
+
+  console.log("");
+  console.log("=== RunPod billing audit ===");
+  for (const [role, pod] of Object.entries(pods)) {
+    const estimated = estimatedDailyCost(role, pod);
+    if (estimated <= 0) continue;
+    total += estimated;
+    const running = !["deleted", "not_provisioned", "stopped"].includes(
+      String(pod.status || "").toLowerCase()
+    );
+    statusLine(
+      running ? "ok" : "warn",
+      `${role}: ${pod.gpu || "unknown GPU"} ${pod.status || "unknown"} -> estimated ${running ? "$" + estimated.toFixed(2) : "$0.00"} / day GPU spend`
+    );
+  }
+
+  console.log(`Total estimated running GPU spend/day: $${total.toFixed(2)}`);
+  if (total >= escalationThreshold) {
+    statusLine("fail", `Estimated daily spend exceeds escalation threshold ($${escalationThreshold.toFixed(2)})`);
+  } else if (total >= criticalThreshold) {
+    statusLine("warn", `Estimated daily spend exceeds critical threshold ($${criticalThreshold.toFixed(2)})`);
+  } else if (total >= warningThreshold) {
+    statusLine("warn", `Estimated daily spend exceeds warning threshold ($${warningThreshold.toFixed(2)})`);
+  } else {
+    statusLine("ok", `Estimated daily spend remains below warning threshold ($${warningThreshold.toFixed(2)})`);
+  }
+}
+
+async function reconcilePods(confirm = false) {
+  const remotePods = await listRunpodPods();
+  const remoteById = new Map(remotePods.map((pod) => [remotePodId(pod), pod]));
+  const remoteByName = new Map(
+    remotePods
+      .map((pod) => [remotePodName(pod), pod])
+      .filter(([name]) => Boolean(name))
+  );
+  let changes = 0;
+
+  console.log("");
+  console.log("=== RunPod registry reconcile ===");
+
+  for (const [role, pod] of Object.entries(pods)) {
+    ensureRoleState(role);
+    const remoteByRegistryId = pod.pod_id ? remoteById.get(pod.pod_id) : null;
+    const remoteByRegistryName = pod.name ? remoteByName.get(pod.name) : null;
+
+    if (pod.pod_id && !remoteByRegistryId && !remoteByRegistryName) {
+      statusLine(
+        "warn",
+        `${role}: registry points at missing pod ${pod.pod_id}`
+      );
+      if (confirm) {
+        pod.pod_id = "";
+        pod.proxy_base = "";
+        pod.status = "deleted";
+        pod.note = `Cleared by reconcile on ${new Date().toISOString().slice(0, 10)} after RunPod reported the pod missing.`;
+        changes += 1;
+      }
+    } else if (!pod.pod_id && remoteByRegistryName) {
+      statusLine(
+        "warn",
+        `${role}: registry is missing pod id, but RunPod still has ${remotePodId(remoteByRegistryName)} for ${pod.name}`
+      );
+      if (confirm) {
+        pod.pod_id = remotePodId(remoteByRegistryName);
+        pod.proxy_base = `https://${pod.pod_id}-{port}.proxy.runpod.net`;
+        pod.status = remotePodStatus(remoteByRegistryName);
+        pod.note = `Adopted by reconcile on ${new Date().toISOString().slice(0, 10)} from remote pod inventory.`;
+        changes += 1;
+      }
+    } else if (pod.pod_id && remoteByRegistryName && !remoteByRegistryId) {
+      statusLine(
+        "warn",
+        `${role}: registry pod id ${pod.pod_id} is stale; RunPod now reports ${remotePodId(remoteByRegistryName)} for ${pod.name}`
+      );
+      if (confirm) {
+        pod.pod_id = remotePodId(remoteByRegistryName);
+        pod.proxy_base = `https://${pod.pod_id}-{port}.proxy.runpod.net`;
+        pod.status = remotePodStatus(remoteByRegistryName);
+        pod.note = `Reconciled pod id on ${new Date().toISOString().slice(0, 10)} from remote pod inventory.`;
+        changes += 1;
+      }
+    } else if (remoteByRegistryId) {
+      const remoteStatus = remotePodStatus(remoteByRegistryId);
+      if (remoteStatus && remoteStatus !== String(pod.status || "").toLowerCase()) {
+        statusLine(
+          "warn",
+          `${role}: registry status ${pod.status || "unknown"} differs from RunPod ${remoteStatus}`
+        );
+        if (confirm) {
+          pod.status = remoteStatus;
+          changes += 1;
+        }
+      } else {
+        statusLine("ok", `${role}: registry matches remote pod ${pod.pod_id}`);
+      }
+    }
+
+    if (pod.rehearsal?.pod_id && !remoteById.has(pod.rehearsal.pod_id)) {
+      statusLine(
+        "warn",
+        `${role}: rehearsal pod ${pod.rehearsal.pod_id} is stale in the registry`
+      );
+      if (confirm) {
+        pod.rehearsal = {
+          ...(pod.rehearsal || {}),
+          pod_id: "",
+          name: "",
+          status: "deleted",
+          note: "Cleared by reconcile after RunPod reported the rehearsal pod missing.",
+        };
+        changes += 1;
+      }
+    }
+  }
+
+  if (!confirm) {
+    statusLine("warn", "Dry run only. Re-run with --confirm to write the registry changes.");
+    return;
+  }
+
+  if (changes === 0) {
+    statusLine("ok", "No registry changes were required.");
+    return;
+  }
+
+  writePods();
+  statusLine("ok", `Reconciled deploy/runpod/pods.json with ${changes} change(s).`);
+}
+
 async function stopRegistryPods() {
   for (const [role, pod] of Object.entries(pods)) {
     if (!pod.pod_id) continue;
@@ -943,20 +1196,35 @@ async function stopRegistryPods() {
 // Main
 // ---------------------------------------------------------------------------
 const args = process.argv.slice(2);
+const doStatus = args.includes("--status");
 const doWire = args.includes("--wire");
 const doPlan = args.includes("--plan");
 const doConfirm = args.includes("--confirm");
 const doRehearsal = args.includes("--rehearsal");
 const doProvisionConsult = args.includes("--provision-consult");
 const doProvisionReview = args.includes("--provision-review");
+const doStartConsult = args.includes("--start-consult");
+const doStartReview = args.includes("--start-review");
+const doStopConsult = args.includes("--stop-consult");
+const doStopReview = args.includes("--stop-review");
 const doTeardownConsult = args.includes("--teardown-consult");
 const doTeardownReview = args.includes("--teardown-review");
+const doReconcile = args.includes("--reconcile");
+const doBillingAudit = args.includes("--billing-audit");
 const doStopAll = args.includes("--stop-all");
 
 if (doPlan) {
   printSizingSummary();
   printProvisionPlan("consult_retrieval", false);
   printProvisionPlan("async_review", false);
+} else if (doStartConsult) {
+  await startRole("consult_retrieval");
+} else if (doStartReview) {
+  await startRole("async_review");
+} else if (doStopConsult) {
+  await stopRole("consult_retrieval");
+} else if (doStopReview) {
+  await stopRole("async_review");
 } else if (doProvisionConsult) {
   await provisionRole("consult_retrieval", {
     rehearsal: doRehearsal,
@@ -977,6 +1245,10 @@ if (doPlan) {
     rehearsal: doRehearsal,
     confirm: doConfirm,
   });
+} else if (doReconcile) {
+  await reconcilePods(doConfirm);
+} else if (doBillingAudit) {
+  printBillingAudit();
 } else if (doStopAll) {
   await stopRegistryPods();
 } else {
@@ -992,7 +1264,7 @@ if (doPlan) {
       printHealthNextSteps(summary);
       process.exit(1);
     }
-  } else if (healthyCount > 0) {
+  } else if (healthyCount > 0 || doStatus || args.length === 0) {
     console.log("\nRun with --wire to push these URLs into Vercel.");
   }
 
