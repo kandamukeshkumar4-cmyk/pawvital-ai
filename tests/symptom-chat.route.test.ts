@@ -6175,6 +6175,38 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.owner_message).toContain("medication dosing");
     });
 
+    it("VET-1032: out_of_scope response builder preserves terminal payload shape", async () => {
+      const { detectOutOfScopeTurn } = await import(
+        "@/lib/clinical/uncertainty-routing"
+      );
+      const { buildOutOfScopeResponse } = await import(
+        "@/lib/symptom-chat/response-builders"
+      );
+
+      const outcome = detectOutOfScopeTurn({
+        pet: { name: "Milo", species: "dog", breed: "Mixed Breed" },
+        session: createSession(),
+        message: "How much Benadryl can I give my dog for itching?",
+      });
+
+      expect(outcome).not.toBeNull();
+
+      const payload = buildOutOfScopeResponse({
+        outcome: outcome!,
+        session: createSession(),
+      });
+
+      expect(payload.type).toBe("out_of_scope");
+      expect(payload.terminal_state).toBe("out_of_scope");
+      expect(payload.reason_code).toBe("medication_dosing_request");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.conversationState).toBe("idle");
+      expect(payload.owner_message).toContain("medication dosing");
+      expect(payload.message).toContain(
+        "can't provide medication dosing"
+      );
+    });
+
     it("VET-1002: non-dog species returns out_of_scope terminal outcome", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const response = await POST(
