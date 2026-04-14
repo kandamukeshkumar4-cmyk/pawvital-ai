@@ -53,6 +53,7 @@
     "runpod:benchmark:gold:dry": "node scripts/runpod-benchmark.mjs --dry-run --input=data/benchmarks/dog-triage/gold-candidate",
     "runpod:benchmark:adjudication": "node scripts/generate-benchmark-adjudication-pack.mjs",
     "runpod:hero:jobs": "node scripts/runpod-hero-job-manifests.mjs",
+    "phase5:load-test": "node scripts/load-phase5-shadow.mjs",
     "phase5:report": "node scripts/report-phase5-shadow.mjs",
     "phase5:cycle": "node scripts/runpod-phase5-cycle.mjs",
     "verify:sidecars:strict": "node scripts/verify-sidecars.mjs all --strict",

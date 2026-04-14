@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { buildObservabilitySnapshot } from "@/lib/sidecar-observability";
-import { buildShadowRolloutSummary } from "@/lib/shadow-rollout";
+import {
+  buildShadowRolloutSummary,
+  type ShadowLoadTestSummary,
+} from "@/lib/shadow-rollout";
 import type { TriageSession } from "@/lib/triage-engine";
 
 const SHADOW_ROLLOUT_DEBUG_SECRET =
@@ -10,6 +13,7 @@ const SHADOW_ROLLOUT_DEBUG_SECRET =
 
 interface ShadowRolloutRequestBody {
   session?: TriageSession;
+  loadTest?: ShadowLoadTestSummary | null;
 }
 
 function isAuthorized(request: Request): boolean {
@@ -49,7 +53,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const summary = buildShadowRolloutSummary(body.session);
+  const summary = buildShadowRolloutSummary(body.session, {
+    loadTest: body.loadTest || null,
+  });
   const observability = buildObservabilitySnapshot(body.session);
 
   return NextResponse.json({

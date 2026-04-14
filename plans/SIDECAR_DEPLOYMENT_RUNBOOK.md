@@ -48,6 +48,9 @@ These variables are consumed by app-side code such as [G:\MY Website\pawvital-ai
 | `HF_SHADOW_IMAGE_RETRIEVAL` | Optional | Service-specific shadow mode flag |
 | `HF_SHADOW_MULTIMODAL_CONSULT` | Optional | Service-specific shadow mode flag |
 | `HF_SHADOW_ASYNC_REVIEW` | Optional | Service-specific shadow mode flag |
+| `HF_SHADOW_REQUIRED_HEALTH_SAMPLES` | Optional | Override the rolling 24h sample-count gate used by `/api/ai/shadow-rollout` |
+| `HF_SHADOW_REQUIRED_HEALTHY_RATIO` | Optional | Override the rolling 24h healthy-sample ratio gate used by `/api/ai/shadow-rollout` |
+| `HF_SHADOW_LOAD_TEST_REQUIRED` | Optional | Require synthetic load-test evidence before any service can report `ready` |
 | `APP_BASE_URL` or `NEXT_PUBLIC_APP_URL` | Recommended for rollout checks | Base app URL used by verification scripts to hit `/api/ai/shadow-rollout` |
 
 ### Sidecar container/runtime variables
@@ -211,8 +214,11 @@ In shadow mode:
 - the sidecar runs
 - the result is logged into observability
 - the fallback/live path still drives the app response
+- `/api/ai/shadow-rollout` evaluates a rolling 24-hour window gate that requires `>=95%` healthy samples over at least `288` samples by default
 - the guarded `/api/ai/shadow-rollout` route can be checked with `npm run verify:sidecars:shadow` to confirm the app can summarize rollout readiness from a real session payload
 - the guarded `/api/ai/sidecar-readiness` route can be checked with `npm run verify:sidecars:readiness` to confirm the app can summarize env wiring and live sidecar health from the deployed app boundary
+- `npm run phase5:load-test` runs the pre-promotion synthetic load test
+- `npm run phase5:report` now includes the load-test result in the final promotion report
 
 ### Step 5.5: Confirm curated corpus readiness
 
@@ -241,6 +247,8 @@ Review:
 - timeout rate
 - fallback rate
 - disagreement count
+- rolling 24-hour healthy sample ratio and sample count
+- synthetic load-test p99 latency and error rate at 2x baseline RPS
 - whether shadow outputs are cleaner than the live fallback path
 - whether the guarded debug routes are reachable without `401` once secrets are aligned
 
@@ -252,9 +260,11 @@ Do not promote a sidecar out of shadow mode until all of the following are true:
 
 1. `/healthz` stays healthy
 2. the app contract tests pass
-3. timeouts are acceptable for that service role
-4. fallback rate is low enough to be operationally useful
-5. the shadow output is at least as good as the current live path
+3. the rolling 24-hour shadow window shows `>=95%` healthy samples across at least `288` samples
+4. timeouts are acceptable for that service role
+5. fallback rate is low enough to be operationally useful
+6. the shadow output is at least as good as the current live path
+7. the 2x-baseline synthetic load test passes its p99 latency and error-rate thresholds
 
 ## Rollback Rules
 
