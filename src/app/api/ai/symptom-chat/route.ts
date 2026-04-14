@@ -176,6 +176,7 @@ import {
   safetyVerify,
 } from "@/lib/symptom-chat/report-helpers";
 import {
+  buildCannotAssessResponse,
   buildRedFlagEmergencyResponse,
   buildVisionGuardrailEmergencyResponse,
 } from "@/lib/symptom-chat/response-builders";
@@ -2192,6 +2193,10 @@ function buildTerminalOutcomeResponse(
   outcome: UncertaintyTerminalOutcome,
   session: TriageSession
 ) {
+  if (outcome.type === "cannot_assess") {
+    return buildCannotAssessResponse({ outcome, session });
+  }
+
   return {
     type: outcome.type,
     terminal_state: outcome.terminalState,

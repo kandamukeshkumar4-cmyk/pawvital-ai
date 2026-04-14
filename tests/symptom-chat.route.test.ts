@@ -6087,6 +6087,34 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.recommended_next_step).toContain("Seek veterinary assessment");
     });
 
+    it("VET-1031: cannot_assess response builder preserves terminal payload shape", async () => {
+      const { buildCannotAssessOutcome } = await import(
+        "@/lib/clinical/uncertainty-routing"
+      );
+      const { buildCannotAssessResponse } = await import(
+        "@/lib/symptom-chat/response-builders"
+      );
+
+      const outcome = buildCannotAssessOutcome({
+        petName: "Milo",
+        questionId: "breathing_onset",
+        questionText: "Did the breathing change start suddenly or gradually?",
+      });
+      const payload = buildCannotAssessResponse({
+        outcome,
+        session: createSession(),
+      });
+
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.terminal_state).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_breathing_onset");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.conversationState).toBe("escalation");
+      expect(payload.owner_message).toContain("Milo");
+      expect(payload.message).toContain("can't safely continue");
+      expect(payload.recommended_next_step).toContain("Seek veterinary assessment");
+    });
+
     it("VET-1002: medication dosing request returns out_of_scope terminal outcome", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const response = await POST(
