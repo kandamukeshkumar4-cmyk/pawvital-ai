@@ -552,6 +552,30 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.extracted_answers.wound_location).toBe("left leg");
   });
 
+  it("returns an emergency response when the vision guardrail blocks further analysis", async () => {
+    mockImageGuardrail.mockReturnValue({
+      triggered: true,
+      flags: ["deep wound", "active bleeding"],
+      blockFurtherAnalysis: true,
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeRequest(createSession(), "what about this?"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.message).toContain(
+      "Based on my analysis of Bruno's photo, I've detected signs that require IMMEDIATE veterinary attention:"
+    );
+    expect(payload.message).toContain("• deep wound");
+    expect(payload.message).toContain("• active bleeding");
+    expect(payload.message).toContain(
+      "Please take Bruno to the nearest emergency veterinary hospital NOW."
+    );
+  });
+
   it("keeps the limping flow when the image adds no new symptom evidence", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -1175,6 +1199,13 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.message).toContain(
+      "I've detected potential emergency signs (vomit_blood)."
+    );
+    expect(payload.message).toContain(
+      "Please take Bruno to the nearest emergency veterinary hospital IMMEDIATELY."
+    );
     expect(payload.session.red_flags_triggered).toContain("vomit_blood");
   });
 

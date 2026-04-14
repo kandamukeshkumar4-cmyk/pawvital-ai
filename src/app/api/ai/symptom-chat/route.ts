@@ -175,6 +175,10 @@ import {
   safetyVerify,
 } from "@/lib/symptom-chat/report-helpers";
 import {
+  buildRedFlagEmergencyResponse,
+  buildVisionGuardrailEmergencyResponse,
+} from "@/lib/symptom-chat/response-builders";
+import {
   extractDataFromMessage,
   extractSymptomsFromKeywords,
   parseLooseJsonRecord,
@@ -614,12 +618,13 @@ export async function POST(request: Request) {
                 };
               }
 
-              return NextResponse.json({
-                type: "emergency",
-                message: `Based on my analysis of ${pet.name}'s photo, I've detected signs that require IMMEDIATE veterinary attention:\n\n${guardrail.flags.map(f => `• ${f}`).join("\n")}\n\nPlease take ${pet.name} to the nearest emergency veterinary hospital NOW. Do not wait. Call ahead so they can prepare. I can generate a full report for the vet while you're on the way.`,
-                session: sanitizeSessionForClient(session),
-                ready_for_report: true,
-              });
+              return NextResponse.json(
+                buildVisionGuardrailEmergencyResponse({
+                  petName: pet.name,
+                  flags: guardrail.flags,
+                  session,
+                })
+              );
             }
           }
         } catch (guardrailErr) {
@@ -1086,8 +1091,6 @@ export async function POST(request: Request) {
     // STEP 3: Check red flags — EMERGENCY OVERRIDE (pure code)
     // ═══════════════════════════════════════════════════════════════════
     if (session.red_flags_triggered.length > 0) {
-      const flags = session.red_flags_triggered.join(", ");
-
       // VET-900: Fire escalation state transition before returning
       // so sidecar telemetry records the red-flag override.
       session = transitionToEscalation({
@@ -1096,12 +1099,13 @@ export async function POST(request: Request) {
         reason: "red_flags_detected",
       });
 
-      return NextResponse.json({
-        type: "emergency",
-        message: `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${pet.name} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
-        session: sanitizeSessionForClient(session),
-        ready_for_report: true,
-      });
+      return NextResponse.json(
+        buildRedFlagEmergencyResponse({
+          petName: pet.name,
+          redFlags: session.red_flags_triggered,
+          session,
+        })
+      );
     }
 
     if (terminalOutcome) {
