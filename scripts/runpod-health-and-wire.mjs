@@ -4,8 +4,11 @@
  * Usage:
  *   node scripts/runpod-health-and-wire.mjs                 # check health only
  *   node scripts/runpod-health-and-wire.mjs --wire         # check + push passing URLs to Vercel
- *   node scripts/runpod-health-and-wire.mjs --provision-consult
- *   node scripts/runpod-health-and-wire.mjs --provision-review
+ *   node scripts/runpod-health-and-wire.mjs --plan
+ *   node scripts/runpod-health-and-wire.mjs --provision-consult [--rehearsal] [--confirm]
+ *   node scripts/runpod-health-and-wire.mjs --provision-review [--rehearsal] [--confirm]
+ *   node scripts/runpod-health-and-wire.mjs --teardown-consult [--rehearsal] [--confirm]
+ *   node scripts/runpod-health-and-wire.mjs --teardown-review [--rehearsal] [--confirm]
  *   node scripts/runpod-health-and-wire.mjs --stop-all
  *
  * Reads RUNPOD_API_KEY from .env.local / .env.sidecars / env
@@ -53,7 +56,16 @@ const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || "";
 // Load pod registry
 // ---------------------------------------------------------------------------
 const podsPath = path.join(rootDir, "deploy", "runpod", "pods.json");
+const sizingDocPath = path.join(rootDir, "plans", "SIDECAR_SIZING.md");
 const pods = JSON.parse(fs.readFileSync(podsPath, "utf8"));
+
+const SIZING_MARKERS = [
+  "hard prerequisite for `VET-1106`",
+  "consult_retrieval + async_review",
+  "approved starting point",
+  "20% VRAM headroom",
+  "5800 ms",
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -67,6 +79,88 @@ const ROLE_PROVISION_COMMAND = {
   consult_retrieval: "npm run runpod:provision:consult",
   async_review: "npm run runpod:provision:review",
 };
+
+function getRoleConfig(roleKey) {
+  if (roleKey === "consult_retrieval") {
+    return {
+      role: roleKey,
+      displayName: "consult + retrieval",
+      liveName: "pawvital-consult-retrieval-v6",
+      rehearsalNamePrefix: "pawvital-consult-retrieval-rehearsal",
+      gpuLabel: "RTX 6000 Ada 48 GB",
+      dailyCostUsd: 17.76,
+      vramHeadroomTargetGb: 38.4,
+      syncPathBudgetMs: 5800,
+      services: [
+        "text-retrieval-service:8081",
+        "image-retrieval-service:8082",
+        "multimodal-consult-service:8083",
+      ],
+      ports: ["8081/http", "8082/http", "8083/http", "22/tcp"],
+      requiredEnv: [
+        "HF_SIDECAR_API_KEY",
+        "SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+      ],
+      gpuTypeIds: [
+        "NVIDIA GeForce RTX 4090",
+        "NVIDIA RTX A6000",
+        "NVIDIA RTX 6000 Ada Generation",
+        "NVIDIA L40S",
+        "NVIDIA GeForce RTX 3090",
+      ],
+      containerDiskInGb: 40,
+      volumeInGb: 80,
+      command: "npm run runpod:provision:consult",
+      rehearsalCommand: "npm run runpod:rehearse:consult",
+      teardownCommand: "npm run runpod:teardown:consult",
+      buildEnv(publicKey) {
+        return {
+          PUBLIC_KEY: publicKey,
+          SIDECAR_API_KEY: HF_SIDECAR_API_KEY,
+          SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY,
+        };
+      },
+      buildStartupScript: buildConsultStartupScript,
+    };
+  }
+
+  if (roleKey === "async_review") {
+    return {
+      role: roleKey,
+      displayName: "async review",
+      liveName: "pawvital-async-review-v1",
+      rehearsalNamePrefix: "pawvital-async-review-rehearsal",
+      gpuLabel: "A100 80 GB",
+      dailyCostUsd: 28.56,
+      vramHeadroomTargetGb: 64.0,
+      syncPathBudgetMs: 250,
+      services: ["async-review-service:8084"],
+      ports: ["8084/http", "22/tcp"],
+      requiredEnv: ["HF_SIDECAR_API_KEY"],
+      gpuTypeIds: [
+        "NVIDIA A100 80GB PCIe",
+        "NVIDIA A100-SXM4-80GB",
+        "NVIDIA H100 NVL",
+      ],
+      containerDiskInGb: 40,
+      volumeInGb: 120,
+      command: "npm run runpod:provision:review",
+      rehearsalCommand: "npm run runpod:rehearse:review",
+      teardownCommand: "npm run runpod:teardown:review",
+      buildEnv(publicKey) {
+        return {
+          PUBLIC_KEY: publicKey,
+          SIDECAR_API_KEY: HF_SIDECAR_API_KEY,
+        };
+      },
+      buildStartupScript: buildReviewStartupScript,
+    };
+  }
+
+  return null;
+}
 
 async function fetchJson(url, opts = {}) {
   return new Promise((resolve, reject) => {
@@ -316,6 +410,160 @@ function writePods() {
   fs.writeFileSync(podsPath, JSON.stringify(pods, null, 2));
 }
 
+function ensureRoleState(roleKey) {
+  if (!pods[roleKey]) {
+    throw new Error(`Unknown role: ${roleKey}`);
+  }
+  if (!pods[roleKey].rehearsal || typeof pods[roleKey].rehearsal !== "object") {
+    pods[roleKey].rehearsal = {
+      pod_id: "",
+      name: "",
+      status: "not_run",
+      lastDryRunAt: "",
+      lastProvisionedAt: "",
+      lastTeardownAt: "",
+      note: "Throwaway rehearsal guard for VET-1106.",
+    };
+  }
+  return pods[roleKey];
+}
+
+function timestamp() {
+  return new Date().toISOString();
+}
+
+function readSizingDoc() {
+  if (!fs.existsSync(sizingDocPath)) {
+    return {
+      ok: false,
+      errors: [`Missing ${path.relative(rootDir, sizingDocPath)}`],
+    };
+  }
+
+  const text = fs.readFileSync(sizingDocPath, "utf8");
+  const missingMarkers = SIZING_MARKERS.filter((marker) => !text.includes(marker));
+  return {
+    ok: missingMarkers.length === 0,
+    errors: missingMarkers.map(
+      (marker) => `Sizing doc is missing required marker: ${marker}`
+    ),
+  };
+}
+
+function printSizingSummary() {
+  const sizing = readSizingDoc();
+  if (!sizing.ok) {
+    statusLine("fail", "Sizing gate is not satisfied for VET-1106.");
+    for (const error of sizing.errors) {
+      statusLine("fail", error);
+    }
+    return false;
+  }
+
+  statusLine(
+    "ok",
+    "Sizing gate passed: approved topology is consult_retrieval + async_review with 20% VRAM headroom"
+  );
+  statusLine(
+    "ok",
+    `Sizing doc: ${path.relative(rootDir, sizingDocPath)} (sync-path budget 5800 ms)`
+  );
+  return true;
+}
+
+function rehearsalIsComplete(roleKey) {
+  const pod = ensureRoleState(roleKey);
+  return Boolean(
+    pod.rehearsal?.lastProvisionedAt &&
+      pod.rehearsal?.lastTeardownAt &&
+      pod.rehearsal?.status === "torn_down"
+  );
+}
+
+function validateRoleEnv(roleKey) {
+  const config = getRoleConfig(roleKey);
+  if (!config) return [`Unknown role: ${roleKey}`];
+
+  const missing = [];
+  for (const envName of config.requiredEnv) {
+    if (!String(process.env[envName] || "").trim()) {
+      missing.push(envName);
+    }
+  }
+  if (!readRunpodPublicKey()) {
+    missing.push("~/.ssh/runpod_id_ed25519.pub");
+  }
+  return missing;
+}
+
+function buildRolePayload(roleKey, rehearsal = false) {
+  const config = getRoleConfig(roleKey);
+  if (!config) {
+    throw new Error(`Unknown role: ${roleKey}`);
+  }
+
+  const publicKey = readRunpodPublicKey();
+  const suffix = new Date()
+    .toISOString()
+    .replace(/[-:TZ.]/g, "")
+    .slice(0, 14);
+  const name = rehearsal
+    ? `${config.rehearsalNamePrefix}-${suffix}`
+    : config.liveName;
+
+  return {
+    name,
+    cloudType: "COMMUNITY",
+    computeType: "GPU",
+    gpuCount: 1,
+    gpuTypeIds: config.gpuTypeIds,
+    gpuTypePriority: "custom",
+    allowedCudaVersions: ["12.8", "12.6", "12.5", "12.4"],
+    imageName: "runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04",
+    ports: config.ports,
+    containerDiskInGb: config.containerDiskInGb,
+    volumeInGb: config.volumeInGb,
+    volumeMountPath: "/workspace",
+    env: config.buildEnv(publicKey),
+    dockerStartCmd: ["bash", "-lc", config.buildStartupScript()],
+  };
+}
+
+function printProvisionPlan(roleKey, rehearsal = false) {
+  const config = getRoleConfig(roleKey);
+  const payload = buildRolePayload(roleKey, rehearsal);
+  const missing = validateRoleEnv(roleKey);
+
+  console.log("");
+  console.log(`=== ${config.displayName} provisioning plan ===`);
+  console.log(`Role:           ${roleKey}`);
+  console.log(`Mode:           ${rehearsal ? "throwaway rehearsal" : "live"}`);
+  console.log(`Pod name:       ${payload.name}`);
+  console.log(`GPU target:     ${config.gpuLabel}`);
+  console.log(`VRAM ceiling:   <= ${config.vramHeadroomTargetGb} GB steady-state`);
+  console.log(`Daily cost:     $${config.dailyCostUsd.toFixed(2)}`);
+  console.log(`Ports:          ${config.ports.join(", ")}`);
+  console.log(`Services:       ${config.services.join(", ")}`);
+  console.log(`Sync budget:    ${config.syncPathBudgetMs} ms`);
+
+  if (missing.length > 0) {
+    statusLine("warn", `Missing required provisioning inputs: ${missing.join(", ")}`);
+  } else {
+    statusLine("ok", "Required provisioning env and SSH inputs are present");
+  }
+
+  if (!rehearsal) {
+    statusLine(
+      rehearsalIsComplete(roleKey) ? "ok" : "warn",
+      rehearsalIsComplete(roleKey)
+        ? "Throwaway rehearsal already completed for this role"
+        : `Live provisioning is blocked until ${config.rehearsalCommand} completes and ${config.teardownCommand} tears it down`
+    );
+  }
+
+  statusLine("warn", "Dry run only. Re-run with --confirm to create the pod.");
+}
+
 // ---------------------------------------------------------------------------
 // Health check all known pods
 // ---------------------------------------------------------------------------
@@ -536,107 +784,145 @@ echo "[live] async-review started in LIVE mode" >> /workspace/logs/startup.log
 exec tail -F /workspace/logs/async-review.log`;
 }
 
-async function provisionConsultPod() {
-  if (!HF_SIDECAR_API_KEY) {
-    console.error("[FATAL] HF_SIDECAR_API_KEY not set");
-    process.exit(1);
-  }
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.error("[FATAL] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing");
-    process.exit(1);
+async function provisionRole(roleKey, { rehearsal = false, confirm = false } = {}) {
+  const config = getRoleConfig(roleKey);
+  const roleState = ensureRoleState(roleKey);
+  const sizing = readSizingDoc();
+  const missing = validateRoleEnv(roleKey);
+
+  printSizingSummary();
+  printProvisionPlan(roleKey, rehearsal);
+
+  if (!confirm) {
+    return;
   }
 
-  const publicKey = readRunpodPublicKey();
-  const payload = {
-    name: "pawvital-consult-retrieval-v6",
-    cloudType: "COMMUNITY",
-    computeType: "GPU",
-    gpuCount: 1,
-    gpuTypeIds: [
-      "NVIDIA GeForce RTX 4090",
-      "NVIDIA RTX A6000",
-      "NVIDIA RTX 6000 Ada Generation",
-      "NVIDIA L40S",
-      "NVIDIA GeForce RTX 3090",
-    ],
-    gpuTypePriority: "custom",
-    allowedCudaVersions: ["12.8", "12.6", "12.5", "12.4"],
-    imageName: "runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04",
-    ports: ["8081/http", "8082/http", "8083/http", "22/tcp"],
-    containerDiskInGb: 40,
-    volumeInGb: 80,
-    volumeMountPath: "/workspace",
-    env: {
-      PUBLIC_KEY: publicKey,
-      SIDECAR_API_KEY: HF_SIDECAR_API_KEY,
-      SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE_KEY,
-    },
-    dockerStartCmd: ["bash", "-lc", buildConsultStartupScript()],
-  };
+  if (!sizing.ok) {
+    throw new Error(
+      `VET-1106 is blocked until ${path.relative(rootDir, sizingDocPath)} passes validation`
+    );
+  }
 
-  const r = await runpodRequest("/pods", { method: "POST", body: payload });
-  if (r.status === 200 || r.status === 201) {
-    const pod = r.body;
-    statusLine("ok", `Provisioned consult/retrieval pod: ${pod.id} (${pod.name})`);
-    pods.consult_retrieval.pod_id = pod.id;
-    pods.consult_retrieval.name = pod.name;
-    pods.consult_retrieval.proxy_base = `https://${pod.id}-{port}.proxy.runpod.net`;
-    pods.consult_retrieval.status = "booting";
-    pods.consult_retrieval.created = new Date().toISOString().slice(0, 10);
-    writePods();
-    statusLine("ok", `Updated deploy/runpod/pods.json with consult pod ${pod.id}`);
+  if (missing.length > 0) {
+    throw new Error(`Cannot provision ${roleKey}; missing ${missing.join(", ")}`);
+  }
+
+  if (!rehearsal && roleState.pod_id) {
+    throw new Error(
+      `${roleKey} already has a live pod in deploy/runpod/pods.json (${roleState.pod_id}). Teardown or reconcile it first.`
+    );
+  }
+
+  if (!rehearsal && !rehearsalIsComplete(roleKey)) {
+    throw new Error(
+      `${roleKey} live provisioning is blocked until a throwaway rehearsal is provisioned and torn down successfully`
+    );
+  }
+
+  if (rehearsal && roleState.rehearsal?.pod_id) {
+    throw new Error(
+      `${roleKey} already has an active throwaway rehearsal pod (${roleState.rehearsal.pod_id}). Teardown it before provisioning another.`
+    );
+  }
+
+  const payload = buildRolePayload(roleKey, rehearsal);
+  const response = await runpodRequest("/pods", { method: "POST", body: payload });
+  if (!(response.status === 200 || response.status === 201)) {
+    throw new Error(
+      `Failed to provision ${roleKey}: HTTP ${response.status} - ${JSON.stringify(response.body).slice(0, 200)}`
+    );
+  }
+
+  const pod = response.body;
+  statusLine(
+    "ok",
+    `Provisioned ${rehearsal ? "throwaway " : ""}${config.displayName} pod: ${pod.id} (${pod.name})`
+  );
+
+  if (rehearsal) {
+    roleState.rehearsal = {
+      ...(roleState.rehearsal || {}),
+      pod_id: pod.id,
+      name: pod.name,
+      status: "booting",
+      lastProvisionedAt: timestamp(),
+      note: "Throwaway VET-1106 rehearsal pod. Teardown required before live provision.",
+    };
   } else {
-    statusLine("fail", `Failed to provision consult pod: HTTP ${r.status} - ${JSON.stringify(r.body).slice(0, 200)}`);
-    process.exit(1);
+    roleState.pod_id = pod.id;
+    roleState.name = pod.name;
+    roleState.gpu = config.gpuLabel;
+    roleState.services = [...config.services];
+    roleState.proxy_base = `https://${pod.id}-{port}.proxy.runpod.net`;
+    roleState.status = "booting";
+    roleState.created = new Date().toISOString().slice(0, 10);
+    roleState.note = `Provisioned on ${new Date().toISOString().slice(0, 10)} for VET-1106 after completed throwaway rehearsal.`;
   }
+
+  writePods();
+  statusLine(
+    "ok",
+    `Updated deploy/runpod/pods.json with ${rehearsal ? "rehearsal" : "live"} pod ${pod.id}`
+  );
 }
 
-async function provisionReviewPod() {
-  if (!HF_SIDECAR_API_KEY) {
-    console.error("[FATAL] HF_SIDECAR_API_KEY not set");
-    process.exit(1);
+async function teardownRole(roleKey, { rehearsal = false, confirm = false } = {}) {
+  const roleState = ensureRoleState(roleKey);
+  const config = getRoleConfig(roleKey);
+  const target = rehearsal ? roleState.rehearsal : roleState;
+
+  if (!target?.pod_id) {
+    statusLine(
+      "warn",
+      `${roleKey} has no ${rehearsal ? "rehearsal" : "live"} pod to teardown`
+    );
+    return;
   }
 
-  const publicKey = readRunpodPublicKey();
-  const payload = {
-    name: "pawvital-async-review-v1",
-    cloudType: "COMMUNITY",
-    computeType: "GPU",
-    gpuCount: 1,
-    gpuTypeIds: [
-      "NVIDIA A100 80GB PCIe",
-      "NVIDIA A100-SXM4-80GB",
-      "NVIDIA H100 NVL",
-    ],
-    gpuTypePriority: "custom",
-    allowedCudaVersions: ["12.8", "12.6", "12.5", "12.4"],
-    imageName: "runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04",
-    ports: ["8084/http", "22/tcp"],
-    containerDiskInGb: 40,
-    volumeInGb: 120,
-    volumeMountPath: "/workspace",
-    env: {
-      PUBLIC_KEY: publicKey,
-      SIDECAR_API_KEY: HF_SIDECAR_API_KEY,
-    },
-    dockerStartCmd: ["bash", "-lc", buildReviewStartupScript()],
-  };
+  console.log("");
+  console.log(`=== ${config.displayName} teardown plan ===`);
+  console.log(`Role:     ${roleKey}`);
+  console.log(`Mode:     ${rehearsal ? "throwaway rehearsal" : "live"}`);
+  console.log(`Pod ID:   ${target.pod_id}`);
+  console.log(`Pod name: ${target.name || "unknown"}`);
+  statusLine("warn", "Dry run only. Re-run with --confirm to delete this pod.");
 
-  const r = await runpodRequest("/pods", { method: "POST", body: payload });
-  if (r.status === 200 || r.status === 201) {
-    const pod = r.body;
-    statusLine("ok", `Provisioned review pod: ${pod.id} (${pod.name})`);
-    pods.async_review.pod_id = pod.id;
-    pods.async_review.name = pod.name;
-    pods.async_review.proxy_base = `https://${pod.id}-{port}.proxy.runpod.net`;
-    pods.async_review.status = "booting";
-    writePods();
-    statusLine("ok", `Updated deploy/runpod/pods.json with review pod ${pod.id}`);
+  if (!confirm) {
+    return;
+  }
+
+  const response = await runpodRequest(`/pods/${target.pod_id}`, {
+    method: "DELETE",
+  });
+  if (![200, 202, 204, 404].includes(response.status)) {
+    throw new Error(
+      `Failed to teardown ${roleKey}: HTTP ${response.status} - ${JSON.stringify(response.body).slice(0, 200)}`
+    );
+  }
+
+  if (rehearsal) {
+    roleState.rehearsal = {
+      ...(roleState.rehearsal || {}),
+      pod_id: "",
+      name: "",
+      status: "torn_down",
+      lastTeardownAt: timestamp(),
+      note: "Throwaway rehearsal completed and torn down.",
+    };
   } else {
-    statusLine("fail", `Failed to provision review pod: HTTP ${r.status} - ${JSON.stringify(r.body).slice(0, 200)}`);
-    process.exit(1);
+    roleState.pod_id = "";
+    roleState.proxy_base = "";
+    roleState.status = "deleted";
+    roleState.note = `Deleted on ${new Date().toISOString().slice(0, 10)} by teardown command.`;
   }
+
+  writePods();
+  statusLine(
+    response.status === 404 ? "warn" : "ok",
+    response.status === 404
+      ? `${roleKey} pod was already absent on RunPod; registry cleared locally`
+      : `Deleted ${roleKey} ${rehearsal ? "rehearsal " : ""}pod ${target.pod_id}`
+  );
 }
 
 async function stopRegistryPods() {
@@ -658,17 +944,43 @@ async function stopRegistryPods() {
 // ---------------------------------------------------------------------------
 const args = process.argv.slice(2);
 const doWire = args.includes("--wire");
+const doPlan = args.includes("--plan");
+const doConfirm = args.includes("--confirm");
+const doRehearsal = args.includes("--rehearsal");
 const doProvisionConsult = args.includes("--provision-consult");
 const doProvisionReview = args.includes("--provision-review");
+const doTeardownConsult = args.includes("--teardown-consult");
+const doTeardownReview = args.includes("--teardown-review");
 const doStopAll = args.includes("--stop-all");
 
-if (doProvisionConsult) {
-  await provisionConsultPod();
+if (doPlan) {
+  printSizingSummary();
+  printProvisionPlan("consult_retrieval", false);
+  printProvisionPlan("async_review", false);
+} else if (doProvisionConsult) {
+  await provisionRole("consult_retrieval", {
+    rehearsal: doRehearsal,
+    confirm: doConfirm,
+  });
 } else if (doProvisionReview) {
-  await provisionReviewPod();
+  await provisionRole("async_review", {
+    rehearsal: doRehearsal,
+    confirm: doConfirm,
+  });
+} else if (doTeardownConsult) {
+  await teardownRole("consult_retrieval", {
+    rehearsal: doRehearsal,
+    confirm: doConfirm,
+  });
+} else if (doTeardownReview) {
+  await teardownRole("async_review", {
+    rehearsal: doRehearsal,
+    confirm: doConfirm,
+  });
 } else if (doStopAll) {
   await stopRegistryPods();
 } else {
+  printSizingSummary();
   const { results, summary } = await runHealthChecks();
 
   const healthyCount = Object.values(results).flatMap((r) => Object.values(r)).filter((s) => s.healthy).length;

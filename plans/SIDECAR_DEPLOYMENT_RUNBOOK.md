@@ -79,6 +79,32 @@ These are consumed by the service entrypoints under [G:\MY Website\pawvital-ai\s
 
 Deploy each sidecar service with its own runtime and health endpoint.
 
+Before any live RunPod pod create:
+
+```bash
+npm run runpod:plan
+npm run runpod:provision:consult
+npm run runpod:provision:review
+```
+
+Provision commands are dry-run by default and print the approved GPU, VRAM, cost, and latency budget for the role.
+
+Then run the required throwaway rehearsal for each heavy role:
+
+```bash
+npm run runpod:rehearse:consult
+npm run runpod:teardown:consult
+npm run runpod:rehearse:review
+npm run runpod:teardown:review
+```
+
+Only after those teardown steps succeed should a live create be attempted:
+
+```bash
+npm run runpod:provision:consult:confirm
+npm run runpod:provision:review:confirm
+```
+
 Expected paths:
 - `/healthz`
 - `/infer`
@@ -90,6 +116,8 @@ Current result:
 - verified on Vercel: `vision-preprocess-service`
 - blocked on Vercel footprint: `text-retrieval-service`, `image-retrieval-service`, `multimodal-consult-service`, `async-review-service`
 - bridge path available now: `deploy/sidecars-gpu-host/docker-compose.yml` + `deploy/sidecars-gpu-host/Caddyfile`
+- hard gate for `VET-1106`: `plans/SIDECAR_SIZING.md`
+- approved starting topology for this wave: `consult_retrieval + async_review`
 
 ### Step 2: Wire app envs
 
@@ -124,6 +152,7 @@ Run:
 
 ```bash
 npm run verify:sidecars:env
+npm run runpod:health
 npm run verify:sidecars:health
 npm run verify:sidecars:readiness
 npm run verify:sidecars:shadow
