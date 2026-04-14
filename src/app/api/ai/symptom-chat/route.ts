@@ -313,6 +313,7 @@ export async function POST(request: Request) {
       message: lastUserMessage.content,
     });
     if (outOfScopeOutcome) {
+      session = recordTerminalOutcomeTelemetry(session, outOfScopeOutcome);
       return NextResponse.json(
         buildTerminalOutcomeResponse(outOfScopeOutcome, session)
       );
@@ -1105,6 +1106,11 @@ export async function POST(request: Request) {
     }
 
     if (terminalOutcome) {
+      session = recordTerminalOutcomeTelemetry(
+        session,
+        terminalOutcome,
+        session.last_question_asked ?? session.pending_question_id ?? undefined
+      );
       return NextResponse.json(
         buildTerminalOutcomeResponse(terminalOutcome, session)
       );
@@ -2173,6 +2179,30 @@ function buildTerminalOutcomeResponse(
     ready_for_report: false,
     conversationState: outcome.conversationState,
   };
+}
+
+function recordTerminalOutcomeTelemetry(
+  session: TriageSession,
+  outcome: UncertaintyTerminalOutcome,
+  questionId?: string
+) {
+  const turnNumber = session.case_memory?.turn_count ?? 0;
+
+  return recordConversationTelemetry(session, {
+    event: "terminal_outcome",
+    turn_count: turnNumber,
+    question_id: questionId,
+    outcome: "success",
+    reason: outcome.reasonCode,
+    terminal_outcome_metric: {
+      terminal_state: outcome.terminalState,
+      reason_code: outcome.reasonCode,
+      conversation_state: outcome.conversationState,
+      recommended_next_step: outcome.recommendedNextStep,
+      turn_number: turnNumber,
+      ...(questionId ? { question_id: questionId } : {}),
+    },
+  });
 }
 
 function buildAlternateObservableRecoveryResponse(

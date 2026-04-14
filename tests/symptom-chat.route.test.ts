@@ -9,7 +9,10 @@ import {
 import { buildContradictionRecord } from "@/lib/clinical/contradiction-detector";
 import { transitionToConfirmed } from "@/lib/conversation-state";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
-import { buildObservabilitySnapshot } from "@/lib/sidecar-observability";
+import {
+  buildObservabilitySnapshot,
+  extractTerminalOutcomeMetricsFromObservations,
+} from "@/lib/sidecar-observability";
 import { recordConversationTelemetry } from "@/lib/symptom-memory";
 
 const mockCheckRateLimit = jest.fn();
@@ -2358,6 +2361,98 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.type).not.toBe("error");
   });
 
+  it("VET-1028: cannot_assess terminal telemetry is logged internally and excluded from client session", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      const session = createSession();
+      const sessionWithSymptom = addSymptoms(session, ["coughing"]);
+      sessionWithSymptom.last_question_asked = "breathing_onset";
+      sessionWithSymptom.case_memory = {
+        ...sessionWithSymptom.case_memory!,
+        turn_count: 1,
+        unresolved_question_ids: [],
+      };
+
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["coughing"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(sessionWithSymptom, "I can't tell")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(
+        payload.session.case_memory.service_observations ?? []
+      ).toEqual(
+        expect.not.arrayContaining([
+          expect.objectContaining({ service: "async-review-service" }),
+        ])
+      );
+
+      const terminalTelemetry = findConsoleLine(
+        logSpy,
+        "[VET-705][terminal_outcome]"
+      );
+      expect(terminalTelemetry).toBeDefined();
+      expect(String(terminalTelemetry)).toContain(
+        '"reason_code":"owner_cannot_assess_breathing_onset"'
+      );
+      expect(String(terminalTelemetry)).toContain(
+        '"terminal_state":"cannot_assess"'
+      );
+      expect(String(terminalTelemetry)).toContain(
+        '"question_id":"breathing_onset"'
+      );
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("VET-1028: out_of_scope terminal telemetry is logged internally and excluded from client session", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+
+    try {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "How much Benadryl can I give my dog for itching?"
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("out_of_scope");
+      expect(
+        payload.session.case_memory.service_observations ?? []
+      ).toEqual(
+        expect.not.arrayContaining([
+          expect.objectContaining({ service: "async-review-service" }),
+        ])
+      );
+
+      const terminalTelemetry = findConsoleLine(
+        logSpy,
+        "[VET-705][terminal_outcome]"
+      );
+      expect(terminalTelemetry).toBeDefined();
+      expect(String(terminalTelemetry)).toContain(
+        '"reason_code":"medication_dosing_request"'
+      );
+      expect(String(terminalTelemetry)).toContain(
+        '"terminal_state":"out_of_scope"'
+      );
+      expect(String(terminalTelemetry)).not.toContain('"question_id":"');
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
   // =============================================================================
   // VET-705: Internal Conversation Telemetry
   // Tests to verify telemetry is recorded without changing user-facing payload.
@@ -2633,6 +2728,43 @@ describe("symptom-chat mixed text + image routing", () => {
         turn_number: 3,
       },
     ]);
+  });
+
+  it("VET-1028: terminal outcome metrics stay internal while observability helpers expose normalized records", () => {
+    const session = recordConversationTelemetry(createSession(), {
+      event: "terminal_outcome",
+      turn_count: 2,
+      question_id: "gum_color",
+      outcome: "success",
+      reason: "owner_cannot_assess_gum_color",
+      terminal_outcome_metric: {
+        terminal_state: "cannot_assess",
+        reason_code: "owner_cannot_assess_gum_color",
+        conversation_state: "escalation",
+        recommended_next_step:
+          "Please seek veterinary assessment rather than guessing at home.",
+        question_id: "gum_color",
+        turn_number: 2,
+      },
+    });
+
+    const metrics = extractTerminalOutcomeMetricsFromObservations(
+      session.case_memory?.service_observations ?? []
+    );
+    const snapshot = buildObservabilitySnapshot(session);
+
+    expect(metrics).toEqual([
+      {
+        terminal_state: "cannot_assess",
+        reason_code: "owner_cannot_assess_gum_color",
+        conversation_state: "escalation",
+        recommended_next_step:
+          "Please seek veterinary assessment rather than guessing at home.",
+        question_id: "gum_color",
+        turn_number: 2,
+      },
+    ]);
+    expect(snapshot).not.toHaveProperty("terminalOutcomeMetrics");
   });
 
   it("VET-705: user-facing payload shape is unchanged by telemetry recording", async () => {
@@ -6337,6 +6469,17 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         recordedAt: new Date().toISOString(),
       },
       {
+        service: "async-review-service" as const,
+        stage: "terminal_outcome",
+        latencyMs: 0,
+        outcome: "success",
+        shadowMode: false,
+        fallbackUsed: false,
+        note:
+          "outcome=success | reason=medication_dosing_request | terminal_outcome_metric=%7B%22terminal_state%22%3A%22out_of_scope%22%2C%22reason_code%22%3A%22medication_dosing_request%22%2C%22conversation_state%22%3A%22idle%22%2C%22recommended_next_step%22%3A%22Please%20contact%20your%20veterinarian%20or%20an%20emergency%20clinic%20before%20giving%20medication.%22%2C%22turn_number%22%3A1%7D",
+        recordedAt: new Date().toISOString(),
+      },
+      {
         service: "some-safe-service" as const,
         stage: "vision",
         latencyMs: 200,
@@ -6369,10 +6512,12 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         "contradiction_detection",
         "pending_recovery",
         "repeat_suppression",
+        "terminal_outcome",
       ])
         .not.toContain(obs.stage);
       expect(String(obs.note ?? "")).not.toMatch(/question_state=/);
       expect(String(obs.note ?? "")).not.toMatch(/conversation_state=/);
+      expect(String(obs.note ?? "")).not.toMatch(/terminal_outcome_metric=/);
     }
 
     // Safe service observation survives
