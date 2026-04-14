@@ -114,8 +114,10 @@ import {
   detectTextContradictions,
 } from "@/lib/clinical/contradiction-detector";
 import {
+  buildAlternateObservableRecoveryOutcome,
   buildCannotAssessOutcome,
   buildTerminalOutcomeMessage,
+  type AlternateObservableRecoveryOutcome,
   detectOutOfScopeTurn,
   type UncertaintyTerminalOutcome,
 } from "@/lib/clinical/uncertainty-routing";
@@ -259,6 +261,8 @@ export async function POST(request: Request) {
     let consultOpinion: ConsultOpinion | null = null;
     const serviceTimeouts: ServiceTimeoutRecord[] = [];
     const ambiguityFlags: string[] = [];
+    let alternateObservableOutcome: AlternateObservableRecoveryOutcome | null =
+      null;
     let terminalOutcome: UncertaintyTerminalOutcome | null = null;
 
     if (imageHash && session.last_uploaded_image_hash !== imageHash) {
@@ -789,30 +793,87 @@ export async function POST(request: Request) {
       const isAmbiguousReply =
         coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
 
-      if (isAmbiguousReply && shouldEscalateForUnknown(pendingQ)) {
-        session = transitionToEscalation({
-          session,
-          redFlags: [`cannot_assess_${pendingQ}`],
-          reason: "owner_cannot_assess_critical_indicator",
-        });
-        console.log(
-          `[Engine] Escalation triggered — owner cannot assess critical indicator "${pendingQ}"`
-        );
-        session = recordConversationTelemetry(session, {
-          event: "pending_recovery",
-          turn_count: session.case_memory?.turn_count ?? 0,
-          question_id: pendingQ,
-          outcome: "escalation",
-          source: "unresolved",
-          reason: "owner_cannot_assess_critical_indicator",
-          pending_before: hadUnresolved,
-          pending_after: true,
-        });
-        terminalOutcome = buildCannotAssessOutcome({
-          petName: pet.name || "your dog",
-          questionId: pendingQ,
-          questionText: getQuestionText(pendingQ),
-        });
+      const alternateRecovery = shouldEscalateForUnknown(pendingQ)
+        ? buildAlternateObservableRecoveryOutcome({
+            petName: effectivePet.name || pet.name || "your dog",
+            questionId: pendingQ,
+          })
+        : null;
+      const alternateAlreadyOffered = Boolean(
+        alternateRecovery &&
+          (session.case_memory?.ambiguity_flags ?? []).includes(
+            alternateRecovery.retryMarker
+          )
+      );
+      const shouldEscalateAfterAlternateRetry = Boolean(
+        alternateRecovery && alternateAlreadyOffered && pendingAnswer === null
+      );
+
+      if (
+        shouldEscalateForUnknown(pendingQ) &&
+        (isAmbiguousReply || shouldEscalateAfterAlternateRetry)
+      ) {
+
+        if (alternateRecovery && !alternateAlreadyOffered) {
+          const caseMemory = ensureStructuredCaseMemory(session);
+          const unresolvedQuestionIds = caseMemory.unresolved_question_ids.includes(
+            pendingQ
+          )
+            ? caseMemory.unresolved_question_ids
+            : [...caseMemory.unresolved_question_ids, pendingQ];
+          const ambiguityFlags = caseMemory.ambiguity_flags.includes(
+            alternateRecovery.retryMarker
+          )
+            ? caseMemory.ambiguity_flags
+            : [...caseMemory.ambiguity_flags, alternateRecovery.retryMarker];
+
+          session = {
+            ...session,
+            case_memory: {
+              ...caseMemory,
+              ambiguity_flags: ambiguityFlags,
+              unresolved_question_ids: unresolvedQuestionIds,
+            },
+          };
+          console.log(
+            `[Engine] Alternate observable recovery offered for critical indicator "${pendingQ}"`
+          );
+          session = recordConversationTelemetry(session, {
+            event: "pending_recovery",
+            turn_count: session.case_memory?.turn_count ?? 0,
+            question_id: pendingQ,
+            outcome: "needs_clarification",
+            source: "unresolved",
+            reason: alternateRecovery.reasonCode,
+            pending_before: hadUnresolved,
+            pending_after: true,
+          });
+          alternateObservableOutcome = alternateRecovery;
+        } else {
+          session = transitionToEscalation({
+            session,
+            redFlags: [`cannot_assess_${pendingQ}`],
+            reason: "owner_cannot_assess_critical_indicator",
+          });
+          console.log(
+            `[Engine] Escalation triggered — owner cannot assess critical indicator "${pendingQ}"`
+          );
+          session = recordConversationTelemetry(session, {
+            event: "pending_recovery",
+            turn_count: session.case_memory?.turn_count ?? 0,
+            question_id: pendingQ,
+            outcome: "escalation",
+            source: "unresolved",
+            reason: "owner_cannot_assess_critical_indicator",
+            pending_before: hadUnresolved,
+            pending_after: true,
+          });
+          terminalOutcome = buildCannotAssessOutcome({
+            petName: pet.name || "your dog",
+            questionId: pendingQ,
+            questionText: getQuestionText(pendingQ),
+          });
+        }
       } else if (pendingAnswer !== null) {
         session = transitionToAnswered({
           session,
@@ -1046,6 +1107,15 @@ export async function POST(request: Request) {
     if (terminalOutcome) {
       return NextResponse.json(
         buildTerminalOutcomeResponse(terminalOutcome, session)
+      );
+    }
+
+    if (alternateObservableOutcome) {
+      return NextResponse.json(
+        buildAlternateObservableRecoveryResponse(
+          alternateObservableOutcome,
+          session
+        )
       );
     }
 
@@ -2099,6 +2169,21 @@ function buildTerminalOutcomeResponse(
     owner_message: outcome.ownerMessage,
     recommended_next_step: outcome.recommendedNextStep,
     message: buildTerminalOutcomeMessage(outcome),
+    session: sanitizeSessionForClient(session),
+    ready_for_report: false,
+    conversationState: outcome.conversationState,
+  };
+}
+
+function buildAlternateObservableRecoveryResponse(
+  outcome: AlternateObservableRecoveryOutcome,
+  session: TriageSession
+) {
+  return {
+    type: "question",
+    question_id: outcome.questionId,
+    reason_code: outcome.reasonCode,
+    message: outcome.message,
     session: sanitizeSessionForClient(session),
     ready_for_report: false,
     conversationState: outcome.conversationState,

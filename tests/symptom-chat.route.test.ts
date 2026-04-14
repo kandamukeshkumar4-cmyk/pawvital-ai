@@ -5814,6 +5814,80 @@ describe("VET-900: world-class symptom checker regression pack", () => {
   });
 
   describe("uncertainty terminal outcomes", () => {
+    it("VET-1021: gum_color unknown gets one alternate observable retry before cannot_assess", async () => {
+      const session = createSession();
+      const sessionWithSymptom = addSymptoms(session, ["lethargy"]);
+      sessionWithSymptom.last_question_asked = "gum_color";
+      sessionWithSymptom.case_memory = {
+        ...sessionWithSymptom.case_memory!,
+        turn_count: 1,
+        unresolved_question_ids: [],
+      };
+
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["lethargy"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const retryResponse = await POST(
+        makeTextOnlyRequest(sessionWithSymptom, "I can't tell")
+      );
+      const retryPayload = await retryResponse.json();
+
+      expect(retryResponse.status).toBe(200);
+      expect(retryPayload.type).toBe("question");
+      expect(retryPayload.question_id).toBe("gum_color");
+      expect(retryPayload.reason_code).toBe("alternate_observable_gum_color");
+      expect(retryPayload.conversationState).toBe("needs_clarification");
+      expect(retryPayload.ready_for_report).toBe(false);
+      expect(retryPayload.message).toContain("gently lift the upper lip");
+      expect(retryPayload.message).toContain("Pink is normal");
+      expect(retryPayload.session.last_question_asked).toBe("gum_color");
+      expect(retryPayload.session.case_memory.ambiguity_flags).toContain(
+        "alternate_observable_prompted_gum_color"
+      );
+
+      const cannotAssessResponse = await POST(
+        makeTextOnlyRequest(retryPayload.session, "I still can't tell")
+      );
+      const cannotAssessPayload = await cannotAssessResponse.json();
+
+      expect(cannotAssessResponse.status).toBe(200);
+      expect(cannotAssessPayload.type).toBe("cannot_assess");
+      expect(cannotAssessPayload.reason_code).toBe(
+        "owner_cannot_assess_gum_color"
+      );
+      expect(cannotAssessPayload.conversationState).toBe("escalation");
+      expect(cannotAssessPayload.ready_for_report).toBe(false);
+    });
+
+    it("VET-1021: breathing_onset unknown stays on cannot_assess path", async () => {
+      const session = createSession();
+      const sessionWithSymptom = addSymptoms(session, ["coughing"]);
+      sessionWithSymptom.last_question_asked = "breathing_onset";
+      sessionWithSymptom.case_memory = {
+        ...sessionWithSymptom.case_memory!,
+        turn_count: 1,
+        unresolved_question_ids: [],
+      };
+
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["coughing"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(sessionWithSymptom, "I can't tell")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_breathing_onset");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.message).not.toContain("gently lift the upper lip");
+    });
+
     it("VET-1002: ambiguous answer on critical sign returns cannot_assess terminal outcome", async () => {
       const session = createSession();
       const sessionWithSymptom = addSymptoms(session, ["coughing"]);

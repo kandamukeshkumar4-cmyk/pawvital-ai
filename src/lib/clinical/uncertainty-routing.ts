@@ -13,11 +13,26 @@ export interface UncertaintyTerminalOutcome {
   conversationState: ConversationState;
 }
 
+export interface AlternateObservableRecoveryOutcome {
+  questionId: string;
+  reasonCode: string;
+  retryMarker: string;
+  message: string;
+  conversationState: ConversationState;
+}
+
 interface OutOfScopePattern {
   reasonCode: string;
   ownerMessage: string;
   recommendedNextStep: string;
   regex: RegExp;
+}
+
+interface AlternateObservablePattern {
+  questionId: string;
+  reasonCode: string;
+  retryMarker: string;
+  buildMessage: (petName: string) => string;
 }
 
 const OUT_OF_SCOPE_PATTERNS: OutOfScopePattern[] = [
@@ -59,6 +74,16 @@ const OUT_OF_SCOPE_PATTERNS: OutOfScopePattern[] = [
   },
 ];
 
+const ALTERNATE_OBSERVABLE_PATTERNS: AlternateObservablePattern[] = [
+  {
+    questionId: "gum_color",
+    reasonCode: "alternate_observable_gum_color",
+    retryMarker: "alternate_observable_prompted_gum_color",
+    buildMessage: (petName) =>
+      `Before I say I can't safely assess ${petName}, please try one quick gum check in good light: gently lift the upper lip and look at the gums above the teeth. Pink is normal. Blue, pale or white, or bright red is concerning. If you still can't tell after checking, tell me that and I will give you the safest next step.`,
+  },
+];
+
 function normalizeSpecies(species: string | undefined): string {
   return String(species ?? "").trim().toLowerCase();
 }
@@ -94,6 +119,14 @@ function getOutOfScopeNextStep(
 function formatCriticalQuestion(questionText: string | null | undefined): string {
   const trimmed = String(questionText ?? "").trim();
   return trimmed ? `The missing sign is: ${trimmed}` : "A critical sign is still unconfirmed.";
+}
+
+function getAlternateObservablePattern(
+  questionId: string
+): AlternateObservablePattern | undefined {
+  return ALTERNATE_OBSERVABLE_PATTERNS.find(
+    (pattern) => pattern.questionId === questionId
+  );
 }
 
 export function detectOutOfScopeTurn(input: {
@@ -163,6 +196,34 @@ export function buildCannotAssessOutcome(input: {
       rule.safeNextStep ||
       "Please seek veterinary assessment rather than guessing at home.",
     conversationState: "escalation",
+  };
+}
+
+export function buildAlternateObservableRecoveryOutcome(input: {
+  petName: string;
+  questionId: string;
+}): AlternateObservableRecoveryOutcome | null {
+  const pattern = getAlternateObservablePattern(input.questionId);
+  if (!pattern) {
+    return null;
+  }
+
+  const rule = resolveUncertainty("owner_cannot_assess", {
+    isCriticalSign: true,
+    hasAlternateObservable: true,
+    isEmergencyScreen: true,
+    confidenceScore: 0.1,
+  });
+  if (rule.action !== "alternate_observable") {
+    return null;
+  }
+
+  return {
+    questionId: pattern.questionId,
+    reasonCode: pattern.reasonCode,
+    retryMarker: pattern.retryMarker,
+    message: pattern.buildMessage(input.petName),
+    conversationState: "needs_clarification",
   };
 }
 
