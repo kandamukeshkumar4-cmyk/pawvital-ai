@@ -14,6 +14,7 @@ import {
   stripMarkdownCodeFences,
   stripThinkingBlocks,
 } from "@/lib/llm-output";
+import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   createSession,
   addSymptoms,
@@ -815,6 +816,8 @@ export async function POST(request: Request) {
       const hadUnresolved =
         incomingUnresolvedIds.includes(pendingQ) ||
         (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
+      const isAmbiguousReply =
+        coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
       const criticalInfoDecision = evaluateCriticalInfoRule({
         questionId: pendingQ,
         rawMessage: lastUserMessage.content,
