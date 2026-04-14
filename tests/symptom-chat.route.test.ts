@@ -332,6 +332,19 @@ function buildEmergencyReportSession() {
   return session;
 }
 
+function buildPendingQuestionSession(symptom: string, questionId: string) {
+  let session = createSession();
+  session = addSymptoms(session, [symptom]);
+  session.last_question_asked = questionId;
+  session.case_memory = {
+    ...session.case_memory!,
+    turn_count: 1,
+    unresolved_question_ids: [],
+  };
+
+  return session;
+}
+
 function getEmitCalls(eventType: string) {
   return mockEmit.mock.calls.filter(([type]) => type === eventType);
 }
@@ -6177,6 +6190,124 @@ describe("VET-900: world-class symptom checker regression pack", () => {
     });
   });
 
+  describe("VET-1029 critical info and alternate observable regression matrix", () => {
+    it("blocks report readiness until respiratory critical info is answered", () => {
+      let session = createSession();
+      session = addSymptoms(session, ["difficulty_breathing"]);
+      session = recordAnswer(session, "breathing_onset", "gradual");
+      session = recordAnswer(session, "breathing_rate", 36);
+      session = recordAnswer(
+        session,
+        "position_preference",
+        "prefers standing upright"
+      );
+
+      expect(session.answered_questions).toEqual(
+        expect.arrayContaining([
+          "breathing_onset",
+          "breathing_rate",
+          "position_preference",
+        ])
+      );
+      expect(isReadyForDiagnosis(session)).toBe(false);
+      expect(getNextQuestion(session)).toBe("gum_color");
+
+      const readySession = recordAnswer(session, "gum_color", "pink_normal");
+
+      expect(isReadyForDiagnosis(readySession)).toBe(true);
+      expect(getNextQuestion(readySession)).toBeNull();
+    });
+
+    it("routes the supported gum-color branch through one alternate observable retry before cannot_assess", async () => {
+      const session = buildPendingQuestionSession(
+        "difficulty_breathing",
+        "gum_color"
+      );
+      mockExtractWithQwen
+        .mockResolvedValueOnce(
+          JSON.stringify({ symptoms: ["difficulty_breathing"], answers: {} })
+        )
+        .mockResolvedValueOnce(
+          JSON.stringify({ symptoms: ["difficulty_breathing"], answers: {} })
+        );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const retryResponse = await POST(makeTextOnlyRequest(session, "I can't tell"));
+      const retryPayload = await retryResponse.json();
+
+      expect(retryResponse.status).toBe(200);
+      expect(retryPayload.type).toBe("question");
+      expect(retryPayload.question_id).toBe("gum_color");
+      expect(retryPayload.reason_code).toBe("alternate_observable_gum_color");
+      expect(retryPayload.conversationState).toBe("needs_clarification");
+      expect(retryPayload.ready_for_report).toBe(false);
+      expect(retryPayload.message).toContain("gently lift the upper lip");
+      expect(retryPayload.message).toContain("Pink is normal");
+      expect(retryPayload.session.last_question_asked).toBe("gum_color");
+      expect(retryPayload.session.case_memory.ambiguity_flags).toContain(
+        "alternate_observable_prompted_gum_color"
+      );
+
+      const cannotAssessResponse = await POST(
+        makeTextOnlyRequest(retryPayload.session, "Still can't tell")
+      );
+      const cannotAssessPayload = await cannotAssessResponse.json();
+
+      expect(cannotAssessResponse.status).toBe(200);
+      expect(cannotAssessPayload.type).toBe("cannot_assess");
+      expect(cannotAssessPayload.terminal_state).toBe("cannot_assess");
+      expect(cannotAssessPayload.reason_code).toBe(
+        "owner_cannot_assess_gum_color"
+      );
+      expect(cannotAssessPayload.conversationState).toBe("escalation");
+      expect(cannotAssessPayload.ready_for_report).toBe(false);
+      expect(cannotAssessPayload.recommended_next_step).toContain(
+        "Seek veterinary assessment"
+      );
+    });
+
+    it.each([
+      {
+        symptom: "difficulty_breathing",
+        questionId: "breathing_onset",
+        ownerReply: "I can't tell",
+      },
+      {
+        symptom: "possible_poisoning",
+        questionId: "consciousness_level",
+        ownerReply: "I can't tell",
+      },
+    ])(
+      "keeps unsupported critical unknowns on cannot_assess for $questionId",
+      async ({ symptom, questionId, ownerReply }) => {
+        const session = buildPendingQuestionSession(symptom, questionId);
+        mockExtractWithQwen.mockResolvedValueOnce(
+          JSON.stringify({ symptoms: [symptom], answers: {} })
+        );
+
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(session, ownerReply));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("cannot_assess");
+        expect(payload.terminal_state).toBe("cannot_assess");
+        expect(payload.reason_code).toBe(
+          `owner_cannot_assess_${questionId}`
+        );
+        expect(payload.conversationState).toBe("escalation");
+        expect(payload.ready_for_report).toBe(false);
+        expect(payload.owner_message).toContain(
+          "can't safely continue without confirming this critical sign"
+        );
+        expect(payload.recommended_next_step).toContain(
+          "Seek veterinary assessment"
+        );
+        expect(payload.message).not.toContain("gently lift the upper lip");
+      }
+    );
+  });
+
   // --- 3.5: Compression boundary preservation ---
   describe("compression boundary preservation", () => {
     it("VET-900: answered_questions preserved after compression", async () => {
@@ -6321,6 +6452,18 @@ describe("VET-900: world-class symptom checker regression pack", () => {
     it("VET-900: multi-turn conversation progresses without errors", async () => {
       let session = createSession();
       session = addSymptoms(session, ["limping"]);
+      const deterministicAnswers: Record<string, string | boolean> = {
+        which_leg: "left back leg",
+        limping_onset: "sudden",
+        limping_progression: "worse",
+        weight_bearing: "partial",
+        pain_on_touch: true,
+        trauma_history: "no_trauma",
+        worse_after_rest: false,
+        swelling_present: false,
+        warmth_present: false,
+        prior_limping: false,
+      };
 
       mockExtractWithQwen.mockResolvedValueOnce(
         JSON.stringify({ symptoms: ["limping"], answers: {} })
@@ -6331,6 +6474,9 @@ describe("VET-900: world-class symptom checker regression pack", () => {
 
       let currentSession = p1.session;
       const uniqueQuestionsAsked = new Set<string>();
+      if (p1.session.last_question_asked) {
+        uniqueQuestionsAsked.add(p1.session.last_question_asked);
+      }
 
       // Run 5 turns, providing appropriate answers for each pending question
       for (let i = 0; i < 5; i++) {
@@ -6341,7 +6487,9 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         const mockAnswer: Record<string, string | boolean> = {};
         if (pendingQ) {
           const questionSchema = (await import("@/lib/clinical-matrix")).FOLLOW_UP_QUESTIONS[pendingQ];
-          if (questionSchema?.data_type === "choice" && questionSchema.choices?.includes("unknown")) {
+          if (pendingQ in deterministicAnswers) {
+            mockAnswer[pendingQ] = deterministicAnswers[pendingQ];
+          } else if (questionSchema?.data_type === "choice" && questionSchema.choices?.includes("unknown")) {
             mockAnswer[pendingQ] = "unknown";
           } else if (questionSchema?.data_type === "choice") {
             mockAnswer[pendingQ] = questionSchema.choices?.[0] ?? "yes";
@@ -6351,11 +6499,19 @@ describe("VET-900: world-class symptom checker regression pack", () => {
             mockAnswer[pendingQ] = "test_value";
           }
         }
+        const userReply =
+          pendingQ && pendingQ in mockAnswer
+            ? typeof mockAnswer[pendingQ] === "boolean"
+              ? mockAnswer[pendingQ]
+                ? "yes"
+                : "no"
+              : String(mockAnswer[pendingQ])
+            : `answer ${i + 1}`;
 
         mockExtractWithQwen.mockResolvedValueOnce(
           JSON.stringify({ symptoms: ["limping"], answers: mockAnswer })
         );
-        const res = await POST(makeTextOnlyRequest(session, `answer ${i + 1}`));
+        const res = await POST(makeTextOnlyRequest(session, userReply));
         const p = await res.json();
         expect(res.status).toBe(200);
 
