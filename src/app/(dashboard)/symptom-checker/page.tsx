@@ -19,7 +19,13 @@ import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import PlanGate from "@/components/subscription/plan-gate";
-import { ProgressBar, StateBadge } from "@/components/symptom-checker";
+import {
+  ProgressBar,
+  StateBadge,
+  TerminalOutcomePanel,
+  TerminalOutcomeStatusBadge,
+  type TerminalOutcomeType,
+} from "@/components/symptom-checker";
 import type { ConversationState } from "@/lib/conversation-state/types";
 import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
@@ -54,6 +60,10 @@ interface ChatMessage {
     | "out_of_scope";
   gate?: ImageGateWarning;
   image?: string;
+  terminalState?: TerminalOutcomeType;
+  reasonCode?: string | null;
+  ownerMessage?: string | null;
+  recommendedNextStep?: string | null;
   timestamp: Date;
 }
 
@@ -513,12 +523,34 @@ export default function SymptomCheckerPage() {
           data.session || triageSessionRef.current
         );
       } else {
+        const isTerminalOutcome =
+          data.type === "cannot_assess" || data.type === "out_of_scope";
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: data.message,
+            content:
+              isTerminalOutcome && typeof data.owner_message === "string"
+                ? data.owner_message
+                : data.message,
             type: data.type,
+            terminalState:
+              isTerminalOutcome && typeof data.terminal_state === "string"
+                ? data.terminal_state
+                : undefined,
+            reasonCode:
+              isTerminalOutcome && typeof data.reason_code === "string"
+                ? data.reason_code
+                : null,
+            ownerMessage:
+              isTerminalOutcome && typeof data.owner_message === "string"
+                ? data.owner_message
+                : null,
+            recommendedNextStep:
+              isTerminalOutcome &&
+              typeof data.recommended_next_step === "string"
+                ? data.recommended_next_step
+                : null,
             timestamp: new Date(),
           },
         ]);
@@ -603,6 +635,21 @@ export default function SymptomCheckerPage() {
     .map((msg, index) => ({ msg, index }))
     .reverse()
     .find(({ msg }) => msg.role === "assistant")?.index;
+  const activeTerminalMessage =
+    latestAssistantIndex === undefined
+      ? null
+      : (() => {
+          const latestAssistantMessage = messages[latestAssistantIndex];
+          if (
+            latestAssistantMessage.type !== "cannot_assess" &&
+            latestAssistantMessage.type !== "out_of_scope"
+          ) {
+            return null;
+          }
+
+          return latestAssistantMessage;
+        })();
+  const isTerminalConversation = activeTerminalMessage !== null;
 
   const handleRetakePhoto = () => {
     clearComposerImage();
@@ -736,11 +783,20 @@ export default function SymptomCheckerPage() {
             </div>
             {!report && (
               <div className="ml-auto flex-shrink-0">
-                <StateBadge state={conversationState} />
+                {activeTerminalMessage ? (
+                  <TerminalOutcomeStatusBadge
+                    type={
+                      activeTerminalMessage.terminalState ??
+                      (activeTerminalMessage.type as TerminalOutcomeType)
+                    }
+                  />
+                ) : (
+                  <StateBadge state={conversationState} />
+                )}
               </div>
             )}
           </div>
-          {!report && (
+          {!report && !isTerminalConversation && (
             <div className="px-4 pb-3">
               <ProgressBar
                 answered={answeredCount}
@@ -783,6 +839,21 @@ export default function SymptomCheckerPage() {
                       </Button>
                     </div>
                   )}
+                {(msg.type === "cannot_assess" || msg.type === "out_of_scope") &&
+                  i === latestAssistantIndex && (
+                    <div className="ml-11">
+                      <TerminalOutcomePanel
+                        type={
+                          msg.terminalState ??
+                          (msg.type as TerminalOutcomeType)
+                        }
+                        ownerMessage={msg.ownerMessage}
+                        reasonCode={msg.reasonCode}
+                        recommendedNextStep={msg.recommendedNextStep}
+                        onStartNewSession={startNewSession}
+                      />
+                    </div>
+                  )}
               </div>
             ))}
 
@@ -804,7 +875,7 @@ export default function SymptomCheckerPage() {
           </div>
 
           {/* Input area — hide when report is generated */}
-          {!report && (
+          {!report && !isTerminalConversation && (
             <div className="border-t border-gray-100 p-3">
               {selectedImage && (
                 <div className="mb-3 relative inline-block">
