@@ -76,6 +76,11 @@ class RetrievalRequest(BaseModel):
     text_limit: int = 4
 
 
+class EmbedRequest(BaseModel):
+    texts: list[str] = Field(default_factory=list, max_length=64)
+    input_type: str = "passage"
+
+
 app = FastAPI(title="text-retrieval-service", version="0.2.0")
 
 
@@ -276,6 +281,25 @@ def rerank_with_models(
         return ranked_rows
 
 
+def embed_texts_for_reindex(texts: list[str]) -> list[list[float]]:
+    embed_model, _ = load_models()
+    if not embed_model:
+        raise HTTPException(
+            status_code=503,
+            detail=MODEL_LOAD_ERROR or "BGE-M3 embed model is unavailable",
+        )
+
+    try:
+        embeddings = embed_model.encode(texts, normalize_embeddings=True)
+        return [
+            embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
+            for embedding in embeddings
+        ]
+    except Exception as error:
+        logger.error("Embedding generation failed", exc_info=error)
+        raise HTTPException(status_code=500, detail="Embedding generation failed") from error
+
+
 def fetch_rpc_candidates(query: str, limit: int) -> list[dict[str, Any]]:
     if not SUPABASE_URL or not SUPABASE_KEY:
         return []
@@ -395,6 +419,30 @@ def healthz():
         "embed_model": TEXT_EMBED_MODEL_NAME,
         "rerank_model": TEXT_RERANK_MODEL_NAME,
         "model_load_error": MODEL_LOAD_ERROR,
+    }
+
+
+@app.post("/embed")
+def embed(payload: EmbedRequest, authorization: str | None = Header(default=None)):
+    validate_auth(authorization)
+
+    if STUB_MODE:
+        raise HTTPException(status_code=503, detail="Embedding endpoint unavailable in stub mode")
+
+    if payload.input_type not in {"passage", "query"}:
+        raise HTTPException(status_code=400, detail="input_type must be passage or query")
+
+    cleaned_texts = [value.strip() for value in payload.texts if value and value.strip()]
+    if not cleaned_texts:
+        raise HTTPException(status_code=400, detail="texts must contain at least one non-empty item")
+
+    embeddings = embed_texts_for_reindex(cleaned_texts)
+    return {
+        "ok": True,
+        "model": TEXT_EMBED_MODEL_NAME,
+        "input_type": payload.input_type,
+        "count": len(cleaned_texts),
+        "embeddings": embeddings,
     }
 
 

@@ -10,6 +10,7 @@ Current implementation now provides:
 - lexical scoring plus deterministic reranking
 - optional `BAAI/bge-m3` semantic embedding rerank
 - optional `BAAI/bge-reranker-v2-m3` cross-encoder rerank
+- authenticated `/embed` endpoint for passage/query embedding regeneration
 - dog-only and requested-domain filtering
 
 If the HF model runtime is unavailable, the service degrades gracefully to deterministic retrieval instead of failing the request.

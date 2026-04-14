@@ -58,6 +58,8 @@
     "phase5:cycle": "node scripts/runpod-phase5-cycle.mjs",
     "verify:sidecars:strict": "node scripts/verify-sidecars.mjs all --strict",
     "verify:corpus:live": "node scripts/verify-live-corpus.mjs",
+    "reindex:corpus:live": "node scripts/reindex-live-corpus.mjs",
+    "reindex:corpus:live:dry": "node scripts/reindex-live-corpus.mjs --dry-run",
     "db:apply-rag-schema": "node scripts/apply-rag-schema.mjs",
     "seed:public-corpus": "node scripts/seed-public-corpus.mjs",
     "seed:public-corpus:dry": "node scripts/seed-public-corpus.mjs --dry-run",
