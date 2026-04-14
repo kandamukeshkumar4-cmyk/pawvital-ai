@@ -177,6 +177,7 @@ import {
 } from "@/lib/symptom-chat/report-helpers";
 import {
   buildCannotAssessResponse,
+  buildOutOfScopeResponse,
   buildRedFlagEmergencyResponse,
   buildVisionGuardrailEmergencyResponse,
 } from "@/lib/symptom-chat/response-builders";
@@ -339,9 +340,10 @@ export async function POST(request: Request) {
         undefined,
         (session.case_memory?.turn_count ?? 0) + 1
       );
-      return NextResponse.json(
-        buildTerminalOutcomeResponse(outOfScopeOutcome, session)
-      );
+      return NextResponse.json(buildOutOfScopeResponse({
+        outcome: outOfScopeOutcome,
+        session,
+      }));
     }
 
     const fastPathExtraction = getDeterministicFastPathExtraction(

@@ -34,6 +34,22 @@ function assertCannotAssessOutcome(outcome: UncertaintyTerminalOutcome) {
   }
 }
 
+interface OutOfScopeResponseInput {
+  outcome: UncertaintyTerminalOutcome;
+  session: TriageSession;
+}
+
+function assertOutOfScopeOutcome(outcome: UncertaintyTerminalOutcome) {
+  if (
+    outcome.type !== "out_of_scope" ||
+    outcome.terminalState !== "out_of_scope"
+  ) {
+    throw new Error(
+      "Out-of-scope response builder requires an out_of_scope terminal outcome"
+    );
+  }
+}
+
 function buildEmergencyResponse(message: string, session: TriageSession) {
   return {
     type: "emergency" as const,
@@ -67,6 +83,22 @@ export function buildRedFlagEmergencyResponse(
 
 export function buildCannotAssessResponse(input: CannotAssessResponseInput) {
   assertCannotAssessOutcome(input.outcome);
+
+  return {
+    type: input.outcome.type,
+    terminal_state: input.outcome.terminalState,
+    reason_code: input.outcome.reasonCode,
+    owner_message: input.outcome.ownerMessage,
+    recommended_next_step: input.outcome.recommendedNextStep,
+    message: buildTerminalOutcomeMessage(input.outcome),
+    session: sanitizeSessionForClient(input.session),
+    ready_for_report: false,
+    conversationState: input.outcome.conversationState,
+  };
+}
+
+export function buildOutOfScopeResponse(input: OutOfScopeResponseInput) {
+  assertOutOfScopeOutcome(input.outcome);
 
   return {
     type: input.outcome.type,
