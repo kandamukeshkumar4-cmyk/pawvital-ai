@@ -33,7 +33,6 @@ function assertCannotAssessOutcome(outcome: UncertaintyTerminalOutcome) {
     );
   }
 }
-
 interface OutOfScopeResponseInput {
   outcome: UncertaintyTerminalOutcome;
   session: TriageSession;
@@ -96,7 +95,6 @@ export function buildCannotAssessResponse(input: CannotAssessResponseInput) {
     conversationState: input.outcome.conversationState,
   };
 }
-
 export function buildOutOfScopeResponse(input: OutOfScopeResponseInput) {
   assertOutOfScopeOutcome(input.outcome);
 
