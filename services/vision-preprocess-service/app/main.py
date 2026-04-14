@@ -40,6 +40,12 @@ DOMAIN_TO_LABELS = {
 SIDECAR_API_KEY = os.getenv("SIDECAR_API_KEY", "").strip()
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("IMAGE_FETCH_TIMEOUT_SECONDS", "8"))
 STUB_MODE = os.getenv("STUB_MODE", "false").strip().lower() == "true"
+FORCE_FALLBACK = os.getenv("FORCE_FALLBACK", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 GROUNDING_DINO_TIMEOUT_MS = int(os.getenv("GROUNDING_DINO_TIMEOUT_MS", "500"))
 SAM2_TIMEOUT_MS = int(os.getenv("SAM2_TIMEOUT_MS", "800"))
 FLORENCE_TIMEOUT_MS = int(os.getenv("FLORENCE_TIMEOUT_MS", "600"))
@@ -287,6 +293,14 @@ def build_model_response(
     owner_text: str,
     known_symptoms: list[str],
 ) -> dict[str, Any]:
+    if FORCE_FALLBACK:
+        return build_fallback_response(
+            image,
+            owner_text,
+            known_symptoms,
+            "force_fallback",
+        )
+
     domain, body_region, image_quality, quality_confidence, quality_limitations = (
         resolve_context(image, owner_text, known_symptoms)
     )
@@ -358,10 +372,20 @@ def build_model_response(
 
 @app.get("/healthz")
 def healthz() -> dict[str, Any]:
+    mode = "stub" if STUB_MODE else "forced_fallback" if FORCE_FALLBACK else "live_with_fallback"
     return {
         "ok": True,
         "service": "vision-preprocess-service",
-        "mode": "stub" if STUB_MODE else "live_with_fallback",
+        "mode": mode,
+        "fallback": {
+            "stub_mode": STUB_MODE,
+            "force_fallback": FORCE_FALLBACK,
+            "reason": "stub_mode"
+            if STUB_MODE
+            else "force_fallback"
+            if FORCE_FALLBACK
+            else None,
+        },
         "models": {
             "grounding_dino": GROUNDING_DINO.health(),
             "sam2": SAM2.health(),
