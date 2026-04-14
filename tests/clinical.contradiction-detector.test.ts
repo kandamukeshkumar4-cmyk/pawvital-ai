@@ -1,4 +1,7 @@
-import { detectTextContradictions } from "@/lib/clinical/contradiction-detector";
+import {
+  buildContradictionRecord,
+  detectTextContradictions,
+} from "@/lib/clinical/contradiction-detector";
 import {
   addSymptoms,
   createSession,
@@ -49,7 +52,27 @@ describe("detectTextContradictions", () => {
       })
     );
 
-    expect(contradictions.map((item) => item.id)).toContain("appetite_conflict");
+    expect(contradictions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "appetite_conflict",
+          severity: "moderate",
+          affectedKey: "appetite_status",
+          sourcePair: [
+            {
+              source: "previous_answer",
+              key: "appetite_status",
+              value: "normal",
+            },
+            {
+              source: "owner_text",
+              key: "owner_text",
+              value: "not_eating_signal",
+            },
+          ],
+        }),
+      ])
+    );
   });
 
   it("detects energy_conflict from prior mild lethargy and severe immobility text", () => {
@@ -144,5 +167,36 @@ describe("detectTextContradictions", () => {
     );
 
     expect(contradictions).toEqual([]);
+  });
+
+  it("builds a normalized contradiction record with turn metadata", () => {
+    const contradiction = detectTextContradictions(
+      buildInput({
+        ownerText: "His gums look pale and almost white.",
+        previousAnswers: { gum_color: "pink_normal" },
+      })
+    )[0];
+
+    const record = buildContradictionRecord(contradiction, 4);
+
+    expect(record).toEqual({
+      contradiction_type: "gum_conflict",
+      severity: "high",
+      resolution: "escalate",
+      source_pair: [
+        {
+          source: "previous_answer",
+          key: "gum_color",
+          value: "pink_normal",
+        },
+        {
+          source: "owner_text",
+          key: "owner_text",
+          value: "pale_gums_signal",
+        },
+      ],
+      affected_key: "gum_color",
+      turn_number: 4,
+    });
   });
 });

@@ -3,6 +3,7 @@ import type {
   SidecarObservation,
   SidecarServiceName,
 } from "./clinical-evidence";
+import type { NormalizedContradictionRecord } from "./clinical/contradiction-detector";
 import type { TriageSession } from "./triage-engine";
 import { ensureStructuredCaseMemory } from "./symptom-memory";
 
@@ -42,7 +43,43 @@ export const INTERNAL_TELEMETRY_NOTE_MARKERS = [
   "question_state=",
   "conversation_state=",
   "clarification_reason=",
+  "contradiction_records=",
 ];
+
+function parseContradictionRecordsFromNote(
+  note: string | undefined
+): NormalizedContradictionRecord[] {
+  const noteText = typeof note === "string" ? note : "";
+  const contradictionPart = noteText
+    .split(" | ")
+    .find((part) => part.startsWith("contradiction_records="));
+
+  if (!contradictionPart) {
+    return [];
+  }
+
+  const encoded = contradictionPart.slice("contradiction_records=".length);
+  if (!encoded) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(encoded));
+    return Array.isArray(parsed)
+      ? (parsed as NormalizedContradictionRecord[])
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function extractContradictionRecordsFromObservations(
+  observations: SidecarObservation[]
+): NormalizedContradictionRecord[] {
+  return observations.flatMap((observation) =>
+    parseContradictionRecordsFromNote(observation.note)
+  );
+}
 
 /**
  * VET-900: Centralized check for internal-only telemetry observations.
@@ -107,8 +144,11 @@ export function appendShadowComparison(
 
 export function buildObservabilitySnapshot(session: TriageSession) {
   const memory = ensureStructuredCaseMemory(session);
+  const contradictionRecords = extractContradictionRecordsFromObservations(
+    memory.service_observations || []
+  );
   const observations = (memory.service_observations || []).filter(
-    (item) => item.service !== "async-review-service"
+    (item) => !isInternalTelemetry(item)
   );
   const timeouts: unknown[] = [];
   const shadowComparisons: unknown[] = [];
@@ -121,6 +161,7 @@ export function buildObservabilitySnapshot(session: TriageSession) {
   return {
     shadowModeActive: GLOBAL_SHADOW_MODE,
     recentServiceCalls: observations.slice(-8),
+    contradictionRecords: contradictionRecords.slice(-8),
     recentShadowComparisons: shadowComparisons.slice(-4),
     timeoutCount: timeouts.length,
     serviceCallCounts: byService,

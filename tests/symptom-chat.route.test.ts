@@ -6,8 +6,11 @@ import {
   recordAnswer,
   type TriageSession,
 } from "@/lib/triage-engine";
+import { buildContradictionRecord } from "@/lib/clinical/contradiction-detector";
 import { transitionToConfirmed } from "@/lib/conversation-state";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
+import { buildObservabilitySnapshot } from "@/lib/sidecar-observability";
+import { recordConversationTelemetry } from "@/lib/symptom-memory";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
@@ -2564,9 +2567,72 @@ describe("symptom-chat mixed text + image routing", () => {
       expect(String(contradictionTelemetry)).toContain('"outcome":"warning"');
       expect(String(contradictionTelemetry)).toContain('"contradiction_count":1');
       expect(String(contradictionTelemetry)).toContain("appetite_conflict");
+      expect(String(contradictionTelemetry)).toContain('"contradiction_records":[');
+      expect(String(contradictionTelemetry)).toContain('"severity":"moderate"');
+      expect(String(contradictionTelemetry)).toContain('"affected_key":"appetite_status"');
+      expect(String(contradictionTelemetry)).toContain('"turn_number":0');
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it("VET-1022: contradiction payload stays internal while observability snapshot exposes normalized records", () => {
+    const session = recordConversationTelemetry(createSession(), {
+      event: "contradiction_detection",
+      turn_count: 3,
+      outcome: "warning",
+      reason: "gum_conflict",
+      contradiction_count: 1,
+      contradiction_ids: ["gum_conflict"],
+      contradiction_records: [
+        buildContradictionRecord(
+          {
+            id: "gum_conflict",
+            resolution: "escalate",
+            severity: "high",
+            flag: "gum_conflict: prior gum_color=pink_normal conflicts with owner describing pale or white gums",
+            affectedKey: "gum_color",
+            sourcePair: [
+              {
+                source: "previous_answer",
+                key: "gum_color",
+                value: "pink_normal",
+              },
+              {
+                source: "owner_text",
+                key: "owner_text",
+                value: "pale_gums_signal",
+              },
+            ],
+          },
+          3
+        ),
+      ],
+    });
+
+    const snapshot = buildObservabilitySnapshot(session);
+
+    expect(snapshot.contradictionRecords).toEqual([
+      {
+        contradiction_type: "gum_conflict",
+        severity: "high",
+        resolution: "escalate",
+        source_pair: [
+          {
+            source: "previous_answer",
+            key: "gum_color",
+            value: "pink_normal",
+          },
+          {
+            source: "owner_text",
+            key: "owner_text",
+            value: "pale_gums_signal",
+          },
+        ],
+        affected_key: "gum_color",
+        turn_number: 3,
+      },
+    ]);
   });
 
   it("VET-705: user-facing payload shape is unchanged by telemetry recording", async () => {
@@ -6188,7 +6254,8 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         outcome: "success",
         shadowMode: false,
         fallbackUsed: false,
-        note: "contradictions=1 | contradiction_ids=appetite_conflict",
+        note:
+          "contradictions=1 | contradiction_ids=appetite_conflict | contradiction_records=%5B%7B%22contradiction_type%22%3A%22appetite_conflict%22%2C%22severity%22%3A%22moderate%22%2C%22resolution%22%3A%22clarify%22%2C%22source_pair%22%3A%5B%7B%22source%22%3A%22previous_answer%22%2C%22key%22%3A%22appetite_status%22%2C%22value%22%3A%22normal%22%7D%2C%7B%22source%22%3A%22owner_text%22%2C%22key%22%3A%22owner_text%22%2C%22value%22%3A%22not_eating_signal%22%7D%5D%2C%22affected_key%22%3A%22appetite_status%22%2C%22turn_number%22%3A1%7D%5D",
         recordedAt: new Date().toISOString(),
       },
       {
