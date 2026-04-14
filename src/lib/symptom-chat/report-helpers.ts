@@ -35,7 +35,8 @@ import {
   appendShadowComparison,
   appendSidecarObservation,
   describeShadowComparison,
-  isShadowModeEnabledForService,
+  describeShadowModeDecision,
+  getShadowModeDecision,
 } from "@/lib/sidecar-observability";
 import { ensureStructuredCaseMemory } from "@/lib/symptom-memory";
 import { verifyWithGLM } from "@/lib/nvidia-models";
@@ -291,9 +292,21 @@ export async function buildReportRetrievalBundle(
   conditionHints: string[]
 ): Promise<{ session: TriageSession; bundle: RetrievalBundle }> {
   const domain = session.latest_image_domain || null;
-  const retrievalShadowMode =
-    isShadowModeEnabledForService("text-retrieval-service") ||
-    isShadowModeEnabledForService("image-retrieval-service");
+  const retrievalUrgency = buildDiagnosisContext(session, pet).highest_urgency;
+  const textShadowDecision = getShadowModeDecision({
+    service: "text-retrieval-service",
+    session,
+    pet,
+    urgencyHint: retrievalUrgency,
+    additionalKey: knowledgeQuery,
+  });
+  const imageShadowDecision = getShadowModeDecision({
+    service: "image-retrieval-service",
+    session,
+    pet,
+    urgencyHint: retrievalUrgency,
+    additionalKey: referenceImageQuery,
+  });
 
   let sidecarBundle: RetrievalBundle | null = null;
 
@@ -335,10 +348,10 @@ export async function buildReportRetrievalBundle(
         service: "text-retrieval-service",
         stage: "report-retrieval",
         latencyMs: Date.now() - textStarted,
-        outcome: retrievalShadowMode ? "shadow" : "success",
-        shadowMode: retrievalShadowMode,
-        fallbackUsed: retrievalShadowMode,
-        note: `chunks=${textResult.value.textChunks.length}`,
+        outcome: textShadowDecision.enabled ? "shadow" : "success",
+        shadowMode: textShadowDecision.enabled,
+        fallbackUsed: textShadowDecision.enabled,
+        note: `chunks=${textResult.value.textChunks.length}; ${describeShadowModeDecision(textShadowDecision)}`,
       });
     } else if (isTextRetrievalConfigured()) {
       const timedOut = isSidecarAbortError(textResult.reason);
@@ -347,9 +360,9 @@ export async function buildReportRetrievalBundle(
         stage: "report-retrieval",
         latencyMs: Date.now() - textStarted,
         outcome: timedOut ? "timeout" : "error",
-        shadowMode: retrievalShadowMode,
+        shadowMode: textShadowDecision.enabled,
         fallbackUsed: true,
-        note: timedOut ? "text retrieval timeout" : "text retrieval failed",
+        note: `${timedOut ? "text retrieval timeout" : "text retrieval failed"}; ${describeShadowModeDecision(textShadowDecision)}`,
       });
       if (timedOut) {
         session.case_memory = {
@@ -371,10 +384,10 @@ export async function buildReportRetrievalBundle(
         service: "image-retrieval-service",
         stage: "report-retrieval",
         latencyMs: Date.now() - imageStarted,
-        outcome: retrievalShadowMode ? "shadow" : "success",
-        shadowMode: retrievalShadowMode,
-        fallbackUsed: retrievalShadowMode,
-        note: `images=${imageResult.value.imageMatches.length}`,
+        outcome: imageShadowDecision.enabled ? "shadow" : "success",
+        shadowMode: imageShadowDecision.enabled,
+        fallbackUsed: imageShadowDecision.enabled,
+        note: `images=${imageResult.value.imageMatches.length}; ${describeShadowModeDecision(imageShadowDecision)}`,
       });
     } else if (isImageRetrievalConfigured()) {
       const timedOut = isSidecarAbortError(imageResult.reason);
@@ -383,9 +396,9 @@ export async function buildReportRetrievalBundle(
         stage: "report-retrieval",
         latencyMs: Date.now() - imageStarted,
         outcome: timedOut ? "timeout" : "error",
-        shadowMode: retrievalShadowMode,
+        shadowMode: imageShadowDecision.enabled,
         fallbackUsed: true,
-        note: timedOut ? "image retrieval timeout" : "image retrieval failed",
+        note: `${timedOut ? "image retrieval timeout" : "image retrieval failed"}; ${describeShadowModeDecision(imageShadowDecision)}`,
       });
       if (timedOut) {
         session.case_memory = {
@@ -402,24 +415,78 @@ export async function buildReportRetrievalBundle(
       }
     }
 
+    const fallbackBundle = await buildFallbackRetrievalBundle(
+      knowledgeQuery,
+      referenceImageQuery,
+      domain
+    );
+
+    if (textResult.status === "fulfilled" && textShadowDecision.enabled) {
+      session = appendShadowComparison(
+        session,
+        describeShadowComparison(
+          "text-retrieval-service",
+          "fallback-retrieval",
+          "hf-text-retrieval",
+          `Fallback text=${fallbackBundle.textChunks.length}; shadow text=${textResult.value.textChunks.length}`,
+          Math.abs(
+            fallbackBundle.textChunks.length - textResult.value.textChunks.length
+          )
+        )
+      );
+    }
+
+    if (imageResult.status === "fulfilled" && imageShadowDecision.enabled) {
+      session = appendShadowComparison(
+        session,
+        describeShadowComparison(
+          "image-retrieval-service",
+          "fallback-retrieval",
+          "hf-image-retrieval",
+          `Fallback images=${fallbackBundle.imageMatches.length}; shadow images=${imageResult.value.imageMatches.length}`,
+          Math.abs(
+            fallbackBundle.imageMatches.length -
+              imageResult.value.imageMatches.length
+          )
+        )
+      );
+    }
+
     sidecarBundle = {
       textChunks:
-        textResult.status === "fulfilled" ? textResult.value.textChunks : [],
+        textResult.status === "fulfilled" && !textShadowDecision.enabled
+          ? textResult.value.textChunks
+          : fallbackBundle.textChunks,
       imageMatches:
-        imageResult.status === "fulfilled" ? imageResult.value.imageMatches : [],
+        imageResult.status === "fulfilled" && !imageShadowDecision.enabled
+          ? imageResult.value.imageMatches
+          : fallbackBundle.imageMatches,
       rerankScores:
-        textResult.status === "fulfilled" ? textResult.value.rerankScores : [],
+        textResult.status === "fulfilled" && !textShadowDecision.enabled
+          ? textResult.value.rerankScores
+          : fallbackBundle.rerankScores,
       sourceCitations: [
-        ...(textResult.status === "fulfilled"
+        ...(textResult.status === "fulfilled" && !textShadowDecision.enabled
           ? textResult.value.sourceCitations
-          : []),
-        ...(imageResult.status === "fulfilled"
+          : fallbackBundle.sourceCitations.filter((citation) =>
+              fallbackBundle.textChunks.some(
+                (chunk) =>
+                  chunk.citation === citation || chunk.sourceUrl === citation
+              )
+            )),
+        ...(imageResult.status === "fulfilled" && !imageShadowDecision.enabled
           ? imageResult.value.sourceCitations
-          : []),
+          : fallbackBundle.sourceCitations.filter((citation) =>
+              fallbackBundle.imageMatches.some(
+                (match) => match.citation === citation || match.assetUrl === citation
+              )
+            )),
       ].slice(0, 8),
     };
   } else if (isRetrievalSidecarConfigured()) {
     const startedAt = Date.now();
+    const combinedShadowMode =
+      textShadowDecision.enabled || imageShadowDecision.enabled;
     try {
       sidecarBundle = await retrieveVeterinaryEvidenceFromSidecar({
         query: knowledgeQuery,
@@ -434,10 +501,10 @@ export async function buildReportRetrievalBundle(
         service: "text-retrieval-service",
         stage: "legacy-combined-retrieval",
         latencyMs: Date.now() - startedAt,
-        outcome: retrievalShadowMode ? "shadow" : "success",
-        shadowMode: retrievalShadowMode,
-        fallbackUsed: retrievalShadowMode,
-        note: "legacy combined retrieval endpoint",
+        outcome: combinedShadowMode ? "shadow" : "success",
+        shadowMode: combinedShadowMode,
+        fallbackUsed: combinedShadowMode,
+        note: `legacy combined retrieval endpoint; text=${describeShadowModeDecision(textShadowDecision)}; image=${describeShadowModeDecision(imageShadowDecision)}`,
       });
     } catch (error) {
       console.error("[HF Retrieval Sidecar] failed:", error);
@@ -446,9 +513,9 @@ export async function buildReportRetrievalBundle(
         stage: "legacy-combined-retrieval",
         latencyMs: Date.now() - startedAt,
         outcome: isSidecarAbortError(error) ? "timeout" : "error",
-        shadowMode: retrievalShadowMode,
+        shadowMode: combinedShadowMode,
         fallbackUsed: true,
-        note: "legacy combined retrieval failed",
+        note: `legacy combined retrieval failed; text=${describeShadowModeDecision(textShadowDecision)}; image=${describeShadowModeDecision(imageShadowDecision)}`,
       });
     }
   }
@@ -460,26 +527,6 @@ export async function buildReportRetrievalBundle(
   );
 
   if (sidecarBundle) {
-    if (retrievalShadowMode) {
-      session = appendShadowComparison(
-        session,
-        describeShadowComparison(
-          "text-retrieval-service",
-          "fallback-retrieval",
-          "hf-retrieval-sidecars",
-          `Fallback text=${fallbackBundle.textChunks.length}, images=${fallbackBundle.imageMatches.length}; shadow text=${sidecarBundle.textChunks.length}, images=${sidecarBundle.imageMatches.length}`,
-          Math.abs(
-            fallbackBundle.textChunks.length - sidecarBundle.textChunks.length
-          ) +
-            Math.abs(
-              fallbackBundle.imageMatches.length -
-                sidecarBundle.imageMatches.length
-            )
-        )
-      );
-      return { session, bundle: fallbackBundle };
-    }
-
     return { session, bundle: sidecarBundle };
   }
 

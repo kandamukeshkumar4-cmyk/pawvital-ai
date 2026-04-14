@@ -25,8 +25,6 @@ jobs:
       (github.event_name == 'pull_request_target' &&
        github.event.pull_request.base.ref == 'master' &&
        github.event.pull_request.draft == false)
-    env:
-      REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'openai/gpt-4o-mini' }}
     steps:
       - name: Resolve PR context
         id: pr
@@ -57,6 +55,21 @@ jobs:
           echo "sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
           echo "found=true" >> "$GITHUB_OUTPUT"
           echo "Reviewing PR #$PR_NUMBER on branch $BRANCH"
+
+      - name: Resolve review model
+        if: steps.pr.outputs.found == 'true'
+        id: model
+        env:
+          CONFIGURED_REVIEW_MODEL: ${{ vars.REVIEW_MODEL }}
+        run: |
+          MODEL="${CONFIGURED_REVIEW_MODEL:-openai/gpt-4o-mini}"
+          case "$MODEL" in
+            xiaomi/mimo-v2-pro|mimo-v2-pro)
+              echo "Configured review model '$MODEL' is not available via GitHub Models; falling back to openai/gpt-4o-mini."
+              MODEL="openai/gpt-4o-mini"
+              ;;
+          esac
+          echo "name=$MODEL" >> "$GITHUB_OUTPUT"
 
       - name: Open AI review gate
         if: steps.pr.outputs.found == 'true'
@@ -89,13 +102,17 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" > /tmp/pr-diff.txt
-          DIFF_SIZE=$(wc -c < /tmp/pr-diff.txt)
-          if [ "$DIFF_SIZE" -gt 81920 ]; then
-            head -c 81920 /tmp/pr-diff.txt > /tmp/pr-diff-truncated.txt
+          MAX_DIFF_CHARS="${REVIEW_DIFF_CHAR_LIMIT:-12000}"
+          gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" > /tmp/pr-diff-full.txt
+          DIFF_SIZE=$(wc -c < /tmp/pr-diff-full.txt)
+          if [ "$DIFF_SIZE" -gt "$MAX_DIFF_CHARS" ]; then
+            head -c "$MAX_DIFF_CHARS" /tmp/pr-diff-full.txt > /tmp/pr-diff-truncated.txt
             printf '\n...\n[DIFF TRUNCATED]\n' >> /tmp/pr-diff-truncated.txt
             mv /tmp/pr-diff-truncated.txt /tmp/pr-diff.txt
+          else
+            mv /tmp/pr-diff-full.txt /tmp/pr-diff.txt
           fi
+          echo "chars=$(wc -c < /tmp/pr-diff.txt)" >> "$GITHUB_OUTPUT"
 
       - name: Get changed files
         if: steps.pr.outputs.found == 'true'
@@ -103,7 +120,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json files --jq '.files[].path' > /tmp/changed-files.txt
+          MAX_FILES="${REVIEW_FILE_LIMIT:-60}"
+          gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json files --jq ".files[:$MAX_FILES][] | \"\\(.path) (+\\(.additions)/-\\(.deletions))\"" > /tmp/changed-files.txt
           cat /tmp/changed-files.txt
 
       - name: Get PR metadata
@@ -113,10 +131,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          PR_TITLE=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json title --jq '.title')
-          PR_BODY=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json body --jq '.body // ""')
+          MAX_BODY_CHARS="${REVIEW_BODY_CHAR_LIMIT:-2000}"
+          PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json title,body)
+          PR_TITLE=$(echo "$PR_JSON" | jq -r '.title')
+          PR_BODY=$(echo "$PR_JSON" | jq -r '.body // ""')
           echo "title=$PR_TITLE" >> "$GITHUB_OUTPUT"
-          echo "$PR_BODY" > /tmp/pr-body.txt
+          printf '%s' "$PR_BODY" > /tmp/pr-body-full.txt
+          BODY_SIZE=$(wc -c < /tmp/pr-body-full.txt)
+          if [ "$BODY_SIZE" -gt "$MAX_BODY_CHARS" ]; then
+            head -c "$MAX_BODY_CHARS" /tmp/pr-body-full.txt > /tmp/pr-body.txt
+            printf '\n...\n[PR BODY TRUNCATED]\n' >> /tmp/pr-body.txt
+          else
+            mv /tmp/pr-body-full.txt /tmp/pr-body.txt
+          fi
 
       - name: Run AI review
         if: steps.pr.outputs.found == 'true'
@@ -154,7 +181,7 @@ jobs:
           PR_TITLE="${{ steps.meta.outputs.title }}"
           PR_BODY=$(cat /tmp/pr-body.txt)
 
-          RULES="You are a senior code reviewer for PawVital, a veterinary AI triage system. Review this pull request against these rules: (1) Clinical logic files are protected -- medical decisions must not be placed in LLM prompts. (2) Protected state fields must never be guessed or overwritten: answered_questions, extracted_answers, unresolved_question_ids, last_question_asked. (3) Telemetry must stay internal. (4) No hardcoded secrets. (5) No SQL injection vectors. (6) Tests must not weaken existing assertions. (7) One ticket per branch. (8) Docs-only or test-only PRs default to APPROVE. Respond ONLY with valid JSON: {\"verdict\":\"APPROVE or REQUEST_CHANGES\",\"summary\":\"2-3 sentences\",\"issues\":[{\"severity\":\"critical|warning|info\",\"file\":\"path\",\"message\":\"desc\"}],\"safe_to_merge\":true,\"fix_instructions\":\"steps if REQUEST_CHANGES else empty\"}"
+          RULES="Review this PawVital PR for actionable blockers only. Keep the review compact. Hard rules: no medical decision logic moves into prompts; do not overwrite answered_questions, extracted_answers, unresolved_question_ids, or last_question_asked; telemetry must stay internal; no secrets; no SQL injection vectors; tests must not weaken existing assertions; docs-only or test-only PRs usually approve. Respond with JSON only: {\"verdict\":\"APPROVE|REQUEST_CHANGES\",\"summary\":\"2-3 sentences\",\"issues\":[{\"severity\":\"critical|warning|info\",\"file\":\"path\",\"message\":\"desc\"}],\"safe_to_merge\":true|false,\"fix_instructions\":\"empty when approving\"}."
 
           PROMPT=$(jq -rn \
             --arg rules "$RULES" \
@@ -162,7 +189,9 @@ jobs:
             --arg body "$PR_BODY" \
             --arg files "$FILES" \
             --arg diff "$DIFF" \
-            '$rules + "\n\nPR DETAILS:\nTitle: " + $title + "\nDescription: " + $body + "\n\nChanged files:\n" + $files + "\n\nDiff:\n" + $diff')
+            '$rules + "\n\nTitle: " + $title + "\nDescription: " + $body + "\n\nChanged files:\n" + $files + "\n\nDiff excerpt:\n" + $diff')
+
+          echo "Prompt size (chars): $(printf "%s" "$PROMPT" | wc -c)"
 
           RESPONSE=$(curl -sS -L -X POST https://models.github.ai/inference/chat/completions \
             -H "Accept: application/vnd.github+json" \
@@ -170,7 +199,7 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             -H "Content-Type: application/json" \
             -d "$(jq -n \
-              --arg model "${{ env.REVIEW_MODEL }}" \
+              --arg model "${{ steps.model.outputs.name }}" \
               --arg content "$PROMPT" \
               '{model: $model, max_tokens: 1024, temperature: 0.1, messages: [{role: "system", content: "You are a code review bot. Always respond with valid JSON only, no markdown fences."}, {role: "user", content: $content}]}')" || true)
 
@@ -274,7 +303,7 @@ jobs:
           {
             echo "## AI Code Review -- ${ICON} ${STATUS}"
             echo ""
-            echo "**Model:** \`${{ env.REVIEW_MODEL }}\`"
+            echo "**Model:** \`${{ steps.model.outputs.name }}\`"
             echo "**Gate:** \`AI Review Gate = ${GATE_CONCLUSION}\`"
             echo "**Summary:** ${SUMMARY}"
             echo ""
@@ -286,7 +315,7 @@ jobs:
               echo "${FIX_INSTRUCTIONS}"
               echo ""
             fi
-            echo "*(Reviewed by \`${{ env.REVIEW_MODEL }}\` via GitHub Models. Verdict: \`${VERDICT}\`)*"
+            echo "*(Reviewed by \`${{ steps.model.outputs.name }}\` via GitHub Models. Verdict: \`${VERDICT}\`)*"
           } > /tmp/comment.md
 
       - name: Post review comment

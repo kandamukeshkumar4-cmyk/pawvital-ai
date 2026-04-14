@@ -1,11 +1,16 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Phone, Copy, CheckCheck } from "lucide-react";
+import { ArrowDownRight, Copy, CheckCheck } from "lucide-react";
 import Card from "@/components/ui/card";
 import Badge from "@/components/ui/badge";
 import type { SymptomReport } from "./types";
 import { severityConfig } from "./constants";
+import {
+  getRecommendationLabel,
+  isEmergencyReport,
+  isEscalatedReport,
+} from "@/lib/report-handoff";
 
 type CopyState = "idle" | "copied" | "error";
 
@@ -13,6 +18,7 @@ interface SeverityHeaderProps {
   report: SymptomReport;
   copyState: CopyState;
   onCopyVetSummary: () => void | Promise<void>;
+  onJumpToHandoff?: () => void;
   /** Extra controls (e.g. PDF / share) shown in the header row */
   headerActions?: ReactNode;
 }
@@ -21,10 +27,30 @@ export function SeverityHeader({
   report,
   copyState,
   onCopyVetSummary,
+  onJumpToHandoff,
   headerActions,
 }: SeverityHeaderProps) {
-  const isEmergencyReport =
-    report.recommendation === "emergency_vet" || report.severity === "emergency";
+  const emergencyReport = isEmergencyReport(report);
+  const escalatedReport = isEscalatedReport(report);
+  const bannerTone = emergencyReport
+    ? {
+        border: "border-red-300",
+        button:
+          "border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50",
+        helper:
+          "Leave now if you can travel safely. Call the clinic on the way and use the clinic handoff below at intake.",
+        pill: "bg-red-600 text-white",
+        title: "Emergency clinic handoff",
+      }
+    : {
+        border: "border-orange-300",
+        button:
+          "border-orange-300 bg-white px-4 py-2 text-sm font-semibold text-orange-900 hover:bg-orange-50",
+        helper:
+          "Arrange same-day veterinary follow-up and copy the clinic handoff before you leave.",
+        pill: "bg-orange-600 text-white",
+        title: "Same-day veterinary follow-up",
+      };
 
   return (
     <Card className={`p-6 border-2 ${severityConfig[report.severity].bg}`}>
@@ -57,13 +83,7 @@ export function SeverityHeader({
           <p className="text-sm text-gray-600 mt-1">
             Recommendation:{" "}
             <span className="font-semibold">
-              {report.recommendation === "emergency_vet"
-                ? "Seek Emergency Veterinary Care Immediately"
-                : report.recommendation === "vet_24h"
-                  ? "Schedule Veterinary Visit Within 24 Hours"
-                  : report.recommendation === "vet_48h"
-                    ? "Schedule Veterinary Visit Within 48 Hours"
-                    : "Monitor at Home with Parameters Below"}
+              {getRecommendationLabel(report)}
             </span>
           </p>
         </div>
@@ -71,40 +91,56 @@ export function SeverityHeader({
       <p className="text-gray-700 leading-relaxed mt-4 text-[15px]">
         {report.explanation}
       </p>
-      {isEmergencyReport && (
-        <div className="mt-4 rounded-xl border border-red-300 bg-white/80 p-4">
+      {escalatedReport && (
+        <div className={`mt-4 rounded-xl border bg-white/90 p-4 ${bannerTone.border}`}>
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="font-semibold text-red-900">
-                This should be treated as an emergency.
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${bannerTone.pill}`}
+                >
+                  Act before you travel
+                </span>
+                <p className="font-semibold text-gray-900">
+                  {bannerTone.title}
+                </p>
+              </div>
+              <p className="text-sm text-gray-800 mt-2">
+                {bannerTone.helper}
               </p>
-              <p className="text-sm text-red-800 mt-1">
-                Call an emergency veterinary hospital now and bring the handoff
-                summary below with you.
+              <p className="text-xs text-gray-600 mt-2">
+                The copied clinic packet includes the recommendation, handoff
+                summary, top differentials, recommended diagnostics, and
+                escalation signs.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <a
-                href="tel:"
-                className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                Open Phone Dialer
-              </a>
               {report.vet_handoff_summary && (
                 <button
                   type="button"
                   onClick={onCopyVetSummary}
-                  className="inline-flex items-center gap-2 rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 transition-colors"
+                  className={`inline-flex items-center gap-2 rounded-full transition-colors ${bannerTone.button}`}
                 >
                   {copyState === "copied" ? (
                     <CheckCheck className="w-4 h-4" />
                   ) : (
                     <Copy className="w-4 h-4" />
                   )}
-                  {copyState === "copied" ? "Summary Copied" : "Copy Vet Summary"}
+                  {copyState === "copied"
+                    ? "Clinic Handoff Copied"
+                    : "Copy Clinic Handoff"}
                 </button>
               )}
+              {onJumpToHandoff ? (
+                <button
+                  type="button"
+                  onClick={onJumpToHandoff}
+                  className={`inline-flex items-center gap-2 rounded-full transition-colors ${bannerTone.button}`}
+                >
+                  <ArrowDownRight className="w-4 h-4" />
+                  Jump to Handoff
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

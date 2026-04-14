@@ -1,65 +1,60 @@
+from __future__ import annotations
+
 import base64
 import os
-import re
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 from io import BytesIO
-from typing import Any
+from typing import Any, Callable, TypeVar
 
-import numpy as np
 import requests
 from fastapi import FastAPI, Header, HTTPException
 from PIL import Image, ImageOps
 from pydantic import BaseModel, Field
 
+from .models import FlorenceCaptioner, GroundingDinoDetector, Sam2Segmenter
+from .models.fallback import (
+    build_heuristic_localization,
+    classify_quality,
+    encode_crop,
+    infer_body_region,
+    infer_domain,
+)
 
-DOMAIN_KEYWORDS: list[tuple[str, list[str]]] = [
-    (
-        "eye",
-        ["eye", "eyes", "eyelid", "eyelids", "cornea", "conjunctiva", "ocular"],
-    ),
-    ("ear", ["ear", "ears", "ear flap", "ear canal", "otitis", "mites"]),
-    (
-        "stool_vomit",
-        ["vomit", "vomiting", "stool", "poop", "diarrhea", "diarrhoea", "feces", "faeces"],
-    ),
-    (
-        "skin_wound",
-        [
-            "wound",
-            "cut",
-            "scrape",
-            "rash",
-            "skin",
-            "hot spot",
-            "hotspot",
-            "lesion",
-            "lump",
-            "bump",
-            "mass",
-            "bleeding",
-            "swelling",
-            "paw",
-            "leg",
-            "limp",
-            "limping",
-        ],
-    ),
-]
 
-BODY_REGION_KEYWORDS: list[tuple[str, list[str]]] = [
-    ("left front leg", ["left front leg", "left foreleg", "left front paw"]),
-    ("right front leg", ["right front leg", "right foreleg", "right front paw"]),
-    ("left back leg", ["left back leg", "left hind leg", "left rear leg"]),
-    ("right back leg", ["right back leg", "right hind leg", "right rear leg"]),
-    ("paw", ["paw", "foot", "pad", "pads", "toe", "toes"]),
-    ("eye", ["eye", "eyelid", "ocular"]),
-    ("ear", ["ear", "ear flap", "ear canal"]),
-    ("abdomen", ["belly", "abdomen", "stomach", "side"]),
-    ("mouth", ["mouth", "gum", "gums", "lip", "teeth"]),
-]
+MODEL_LABELS = ("wound", "rash", "lesion", "paw", "eye", "ear", "skin")
+LABEL_TO_DOMAIN = {
+    "eye": "eye",
+    "ear": "ear",
+    "paw": "skin_wound",
+    "skin": "skin_wound",
+    "wound": "skin_wound",
+    "rash": "skin_wound",
+    "lesion": "skin_wound",
+}
+DOMAIN_TO_LABELS = {
+    "skin_wound": ("wound", "rash", "lesion", "paw", "skin"),
+    "eye": ("eye",),
+    "ear": ("ear",),
+}
 
 SIDECAR_API_KEY = os.getenv("SIDECAR_API_KEY", "").strip()
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("IMAGE_FETCH_TIMEOUT_SECONDS", "8"))
 STUB_MODE = os.getenv("STUB_MODE", "false").strip().lower() == "true"
+FORCE_FALLBACK = os.getenv("FORCE_FALLBACK", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+GROUNDING_DINO_TIMEOUT_MS = int(os.getenv("GROUNDING_DINO_TIMEOUT_MS", "500"))
+SAM2_TIMEOUT_MS = int(os.getenv("SAM2_TIMEOUT_MS", "800"))
+FLORENCE_TIMEOUT_MS = int(os.getenv("FLORENCE_TIMEOUT_MS", "600"))
+
+GROUNDING_DINO = GroundingDinoDetector()
+SAM2 = Sam2Segmenter()
+FLORENCE = FlorenceCaptioner()
+
+app = FastAPI(title="vision-preprocess-service", version="0.3.0")
 
 
 class VisionPreprocessRequest(BaseModel):
@@ -71,11 +66,8 @@ class VisionPreprocessRequest(BaseModel):
     weight: float | None = None
 
 
-app = FastAPI(title="vision-preprocess-service", version="0.2.0")
-
-
-def normalize_text(value: str | None) -> str:
-    return re.sub(r"\s+", " ", (value or "").strip().lower())
+ModelStageCallable = Callable[[], Any]
+ModelStageResult = TypeVar("ModelStageResult")
 
 
 def validate_auth(authorization: str | None) -> None:
@@ -105,195 +97,320 @@ def decode_image_bytes(value: str) -> bytes:
 
 
 def load_image(value: str) -> Image.Image:
-    image_bytes = decode_image_bytes(value)
-    image = Image.open(BytesIO(image_bytes))
+    image = Image.open(BytesIO(decode_image_bytes(value)))
     image = ImageOps.exif_transpose(image)
     return image.convert("RGB")
 
 
-def infer_domain(owner_text: str, known_symptoms: list[str]) -> str:
-    combined = normalize_text(" ".join([owner_text, *known_symptoms]))
-    for domain, keywords in DOMAIN_KEYWORDS:
-        if any(keyword in combined for keyword in keywords):
-            return domain
-    return "unsupported"
+def domain_labels(domain: str) -> tuple[str, ...]:
+    return DOMAIN_TO_LABELS.get(domain, MODEL_LABELS)
 
 
-def infer_body_region(owner_text: str) -> str | None:
-    normalized = normalize_text(owner_text)
-    for body_region, keywords in BODY_REGION_KEYWORDS:
-        if any(keyword in normalized for keyword in keywords):
-            return body_region
-    return None
+def update_domain_with_detection(domain: str, label: str) -> str:
+    normalized = str(label or "").strip().lower()
+    detected_domain = LABEL_TO_DOMAIN.get(normalized)
+    if not detected_domain:
+        return domain
+    if domain in {"unsupported", "skin_wound"}:
+        return detected_domain
+    return domain
 
 
-def classify_quality(image: Image.Image) -> tuple[str, float, list[str]]:
-    width, height = image.size
-    rgb = np.asarray(image).astype(np.float32)
-    gray = rgb.mean(axis=2)
-    brightness = float(gray.mean())
-    contrast = float(gray.std())
-    if gray.shape[0] > 1 and gray.shape[1] > 1:
-        edge_strength = float(np.abs(np.diff(gray, axis=0)).mean() + np.abs(np.diff(gray, axis=1)).mean())
-    else:
-        edge_strength = 0.0
-
-    limitations: list[str] = []
-    if min(width, height) < 256:
-        limitations.append("Image resolution is low for confident preprocessing.")
-    if brightness < 45 or brightness > 225:
-        limitations.append("Lighting is poor or overexposed.")
-    if contrast < 20:
-        limitations.append("Image contrast is low.")
-    if edge_strength < 18:
-        limitations.append("Image may be blurry.")
-
-    quality = "excellent"
-    if min(width, height) < 256 or brightness < 45 or brightness > 225 or edge_strength < 10:
-        quality = "poor"
-    elif min(width, height) < 384 or contrast < 20 or edge_strength < 18:
-        quality = "borderline"
-    elif min(width, height) < 768 or edge_strength < 28:
-        quality = "good"
-
-    confidence = 0.92
-    if quality == "good":
-        confidence = 0.78
-    elif quality == "borderline":
-        confidence = 0.62
-    elif quality == "poor":
-        confidence = 0.4
-
-    return quality, confidence, limitations
-
-
-def compute_inflammation_box(image: Image.Image) -> tuple[tuple[int, int, int, int] | None, float]:
-    rgb = np.asarray(image).astype(np.float32)
-    red = rgb[:, :, 0]
-    green = rgb[:, :, 1]
-    blue = rgb[:, :, 2]
-    redness = red - (0.82 * green) - (0.82 * blue)
-    mask = (red > 90) & (redness > 18)
-
-    coordinates = np.argwhere(mask)
-    if coordinates.size == 0:
-        return None, 0.0
-
-    y_min, x_min = coordinates.min(axis=0)
-    y_max, x_max = coordinates.max(axis=0)
-    area_ratio = float(mask.mean())
-    if area_ratio < 0.005:
-        return None, area_ratio
-
-    padding_x = max(12, int((x_max - x_min) * 0.15))
-    padding_y = max(12, int((y_max - y_min) * 0.15))
-    left = max(0, int(x_min - padding_x))
-    top = max(0, int(y_min - padding_y))
-    right = min(image.size[0], int(x_max + padding_x))
-    bottom = min(image.size[1], int(y_max + padding_y))
-    return (left, top, right, bottom), area_ratio
-
-
-def encode_crop(image: Image.Image, box: tuple[int, int, int, int] | None) -> str | None:
-    if not box:
-        return None
-
-    crop = image.crop(box)
-    crop.thumbnail((512, 512))
-    buffer = BytesIO()
-    crop.save(buffer, format="JPEG", quality=85)
-    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
-    return f"data:image/jpeg;base64,{encoded}"
-
-
-def build_detected_regions(
-    image: Image.Image,
-    domain: str,
-    owner_text: str,
-) -> tuple[list[dict[str, Any]], str | None, list[str], float]:
-    findings: list[dict[str, Any]] = []
-    limitations: list[str] = []
-    best_crop: str | None = None
-    confidence_boost = 0.0
-
-    if domain == "skin_wound" or domain == "unsupported":
-        box, area_ratio = compute_inflammation_box(image)
-        if box:
-            confidence = round(min(0.94, 0.55 + area_ratio * 8.0), 2)
-            findings.append(
-                {
-                    "label": "inflamed skin region",
-                    "confidence": confidence,
-                    "notes": "Color clustering suggests irritation, inflammation, or an open lesion.",
-                }
-            )
-            best_crop = encode_crop(image, box)
-            confidence_boost = max(confidence_boost, confidence - 0.5)
-        else:
-            limitations.append("No focal inflamed region was confidently localized.")
-
-    if not findings and domain in {"eye", "ear"}:
-        findings.append(
-            {
-                "label": f"{domain.replace('_', ' ')} region",
-                "confidence": 0.58,
-                "notes": f"Domain was inferred from the owner description: {owner_text[:120]}",
-            }
-        )
-        confidence_boost = max(confidence_boost, 0.08)
-
-    return findings, best_crop, limitations, confidence_boost
-
-
-@app.get("/healthz")
-def healthz():
+def build_stub_response() -> dict[str, Any]:
     return {
-        "ok": True,
-        "service": "vision-preprocess-service",
-        "mode": "stub" if STUB_MODE else "heuristic_live",
+        "domain": "unsupported",
+        "body_region": None,
+        "detected_regions": [
+            {
+                "label": "stub region",
+                "confidence": 0.2,
+                "notes": "Deterministic stub fixture for test mode.",
+            }
+        ],
+        "best_crop": None,
+        "image_quality": "borderline",
+        "preprocess_confidence": 0.2,
+        "limitations": [
+            "stub service - replace with Grounding DINO, SAM2.1, and Florence-2 inference"
+        ],
+        "fallback_reason": "stub_mode",
+        "pipeline_mode": "stub",
     }
 
 
-@app.post("/infer")
-def infer(payload: VisionPreprocessRequest, authorization: str | None = Header(default=None)):
-    validate_auth(authorization)
+def normalize_detection_regions(
+    detections: list[Any],
+    caption: str,
+) -> list[dict[str, Any]]:
+    regions: list[dict[str, Any]] = []
+    for index, detection in enumerate(detections[:3]):
+        notes = caption if index == 0 and caption else None
+        regions.append(
+            {
+                "label": detection.label,
+                "confidence": round(detection.confidence, 2),
+                **({"notes": notes} if notes else {}),
+            }
+        )
+    return regions
 
-    if STUB_MODE:
-        return {
-            "domain": "unsupported",
-            "body_region": None,
-            "detected_regions": [],
-            "best_crop": None,
-            "image_quality": "borderline",
-            "preprocess_confidence": 0.2,
-            "limitations": [
-                "stub service - replace with Grounding DINO, SAM2.1, and Florence-2 inference"
-            ],
-        }
 
+def clamp_confidence(*values: float) -> float:
+    clean_values = [float(value) for value in values]
+    if not clean_values:
+        return 0.5
+    average = sum(clean_values) / len(clean_values)
+    return round(max(0.0, min(0.97, average)), 2)
+
+
+def run_stage(
+    name: str,
+    timeout_ms: int,
+    callback: ModelStageCallable,
+) -> ModelStageResult:
+    executor = ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(callback)
     try:
-        image = load_image(payload.image)
+        return future.result(timeout=timeout_ms / 1000.0)
+    except FutureTimeoutError as error:
+        future.cancel()
+        raise RuntimeError(f"{name}_timeout") from error
     except Exception as error:
-        raise HTTPException(status_code=400, detail=f"Unable to decode image: {error}") from error
+        raise RuntimeError(f"{name}_error:{error}") from error
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
-    domain = infer_domain(payload.owner_text, payload.known_symptoms)
-    body_region = infer_body_region(payload.owner_text)
+
+def build_fallback_response(
+    image: Image.Image,
+    owner_text: str,
+    known_symptoms: list[str],
+    fallback_reason: str,
+    domain_override: str | None = None,
+    body_region_override: str | None = None,
+) -> dict[str, Any]:
+    domain = domain_override or infer_domain(owner_text, known_symptoms)
+    body_region = body_region_override or infer_body_region(owner_text)
     image_quality, quality_confidence, quality_limitations = classify_quality(image)
-    detected_regions, best_crop, detection_limitations, confidence_boost = build_detected_regions(
-        image=image,
-        domain=domain,
-        owner_text=payload.owner_text,
+    detected_regions, best_crop, localization_limitations, confidence_boost = (
+        build_heuristic_localization(image=image, domain=domain, owner_text=owner_text)
     )
-
-    confidence = round(min(0.97, quality_confidence + confidence_boost), 2)
-    limitations = [*quality_limitations, *detection_limitations]
-
+    limitations = [
+        *quality_limitations,
+        *localization_limitations,
+        f"Used heuristic fallback because {fallback_reason.replace('_', ' ')}.",
+    ]
     return {
         "domain": domain,
         "body_region": body_region,
         "detected_regions": detected_regions,
         "best_crop": best_crop,
         "image_quality": image_quality,
-        "preprocess_confidence": confidence,
+        "preprocess_confidence": clamp_confidence(
+            quality_confidence,
+            quality_confidence + confidence_boost,
+        ),
         "limitations": limitations,
+        "fallback_reason": fallback_reason,
+        "pipeline_mode": "heuristic",
     }
+
+
+def resolve_context(
+    image: Image.Image,
+    owner_text: str,
+    known_symptoms: list[str],
+) -> tuple[str, str | None, str, float, list[str]]:
+    domain = infer_domain(owner_text, known_symptoms)
+    body_region = infer_body_region(owner_text)
+    image_quality, quality_confidence, quality_limitations = classify_quality(image)
+    return domain, body_region, image_quality, quality_confidence, quality_limitations
+
+
+def detect_regions(image: Image.Image, domain: str) -> list[Any]:
+    return run_stage(
+        "grounding_dino",
+        GROUNDING_DINO_TIMEOUT_MS,
+        lambda: GROUNDING_DINO.detect(image, domain_labels(domain)),
+    )
+
+
+def segment_region(
+    image: Image.Image,
+    detection: Any,
+) -> Any:
+    return run_stage(
+        "sam2",
+        SAM2_TIMEOUT_MS,
+        lambda: SAM2.segment_box(image, detection.box),
+    )
+
+
+def caption_crop(image: Image.Image, crop_box: tuple[int, int, int, int]) -> str:
+    crop_image = image.crop(crop_box)
+    return run_stage(
+        "florence",
+        FLORENCE_TIMEOUT_MS,
+        lambda: FLORENCE.caption(crop_image),
+    )
+
+
+def build_success_response(
+    image: Image.Image,
+    domain: str,
+    body_region: str | None,
+    image_quality: str,
+    quality_confidence: float,
+    quality_limitations: list[str],
+    detections: list[Any],
+    segmentation: Any,
+    caption: str,
+) -> dict[str, Any]:
+    limitations = list(quality_limitations)
+    if segmentation.coverage <= 0.01:
+        limitations.append("Segmentation mask was sparse; using conservative crop bounds.")
+
+    crop_box = segmentation.box or detections[0].box
+    return {
+        "domain": domain,
+        "body_region": body_region,
+        "detected_regions": normalize_detection_regions(detections, caption),
+        "best_crop": encode_crop(image, crop_box),
+        "image_quality": image_quality,
+        "preprocess_confidence": clamp_confidence(
+            quality_confidence,
+            detections[0].confidence,
+            min(0.95, 0.55 + segmentation.coverage),
+        ),
+        "limitations": limitations,
+        "fallback_reason": None,
+        "pipeline_mode": "model",
+    }
+
+
+def build_model_response(
+    image: Image.Image,
+    owner_text: str,
+    known_symptoms: list[str],
+) -> dict[str, Any]:
+    if FORCE_FALLBACK:
+        return build_fallback_response(
+            image,
+            owner_text,
+            known_symptoms,
+            "force_fallback",
+        )
+
+    domain, body_region, image_quality, quality_confidence, quality_limitations = (
+        resolve_context(image, owner_text, known_symptoms)
+    )
+
+    try:
+        detections = detect_regions(image, domain)
+    except RuntimeError as error:
+        return build_fallback_response(image, owner_text, known_symptoms, str(error))
+
+    if not detections:
+        return build_fallback_response(
+            image,
+            owner_text,
+            known_symptoms,
+            "grounding_dino_no_detections",
+        )
+
+    primary_detection = detections[0]
+    domain = update_domain_with_detection(domain, primary_detection.label)
+    body_region = body_region or infer_body_region(primary_detection.label)
+
+    try:
+        segmentation = segment_region(image, primary_detection)
+    except RuntimeError as error:
+        return build_fallback_response(
+            image,
+            owner_text,
+            known_symptoms,
+            str(error),
+            domain_override=domain,
+            body_region_override=body_region,
+        )
+
+    crop_box = segmentation.box or primary_detection.box
+    if not crop_box:
+        return build_fallback_response(
+            image,
+            owner_text,
+            known_symptoms,
+            "sam2_empty_mask",
+            domain_override=domain,
+            body_region_override=body_region,
+        )
+
+    try:
+        caption = caption_crop(image, crop_box)
+    except RuntimeError as error:
+        return build_fallback_response(
+            image,
+            owner_text,
+            known_symptoms,
+            str(error),
+            domain_override=domain,
+            body_region_override=body_region,
+        )
+
+    return build_success_response(
+        image=image,
+        domain=domain,
+        body_region=body_region,
+        image_quality=image_quality,
+        quality_confidence=quality_confidence,
+        quality_limitations=quality_limitations,
+        detections=detections,
+        segmentation=segmentation,
+        caption=caption,
+    )
+
+
+@app.get("/healthz")
+def healthz() -> dict[str, Any]:
+    mode = "stub" if STUB_MODE else "forced_fallback" if FORCE_FALLBACK else "live_with_fallback"
+    return {
+        "ok": True,
+        "service": "vision-preprocess-service",
+        "mode": mode,
+        "fallback": {
+            "stub_mode": STUB_MODE,
+            "force_fallback": FORCE_FALLBACK,
+            "reason": "stub_mode"
+            if STUB_MODE
+            else "force_fallback"
+            if FORCE_FALLBACK
+            else None,
+        },
+        "models": {
+            "grounding_dino": GROUNDING_DINO.health(),
+            "sam2": SAM2.health(),
+            "florence2": FLORENCE.health(),
+        },
+    }
+
+
+@app.post("/infer")
+def infer(
+    payload: VisionPreprocessRequest,
+    authorization: str | None = Header(default=None),
+) -> dict[str, Any]:
+    validate_auth(authorization)
+
+    if STUB_MODE:
+        return build_stub_response()
+
+    try:
+        image = load_image(payload.image)
+    except Exception as error:
+        raise HTTPException(status_code=400, detail=f"Unable to decode image: {error}") from error
+
+    return build_model_response(
+        image=image,
+        owner_text=payload.owner_text,
+        known_symptoms=payload.known_symptoms,
+    )

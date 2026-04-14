@@ -97,7 +97,9 @@ describe("shadow-rollout route", () => {
 
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
-    expect(mockBuildShadowRolloutSummary).toHaveBeenCalledWith(session);
+    expect(mockBuildShadowRolloutSummary).toHaveBeenCalledWith(session, {
+      loadTest: null,
+    });
     expect(mockBuildObservabilitySnapshot).toHaveBeenCalledWith(session);
     expect(payload.summary.overallStatus).toBe("watch");
     expect(payload.observability).toEqual({

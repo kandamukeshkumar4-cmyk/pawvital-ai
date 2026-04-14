@@ -23,6 +23,7 @@ const SUPABASE_URL =
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const isDryRun = process.argv.includes("--dry-run");
+const dogOnlyMode = process.argv.includes("--dog-only");
 const fileArgIdx = process.argv.indexOf("--file");
 const fileFilter = fileArgIdx !== -1 ? process.argv[fileArgIdx + 1] : null;
 
@@ -73,6 +74,15 @@ function parseCSVLine(line) {
   }
   result.push(current);
   return result;
+}
+
+const CAT_MARKER_PATTERN = /\b(cat|cats|feline|kitten|kittens)\b/i;
+
+function isDogCompatibleRow(row) {
+  const haystack = Object.values(row || {})
+    .map((value) => String(value || ""))
+    .join(" ");
+  return !CAT_MARKER_PATTERN.test(haystack);
 }
 
 // ── Supabase helpers ────────────────────────────────────────────────────────
@@ -254,6 +264,7 @@ const PROCESSORS = {
 async function main() {
   console.log("=== PawVital CSV Corpus Ingestion ===\n");
   if (isDryRun) console.log("   [DRY RUN — no database writes]\n");
+  if (dogOnlyMode) console.log("   [DOG-ONLY LIVE CORPUS MODE]\n");
 
   for (const config of CSV_CONFIGS) {
     if (fileFilter) {
@@ -280,10 +291,14 @@ async function main() {
     console.log(`   File: ${path.basename(filePath)}`);
     const content = fs.readFileSync(filePath, "utf-8");
     const rows = parseCSV(content);
+    const filteredRows = dogOnlyMode ? rows.filter(isDogCompatibleRow) : rows;
     console.log(`   Total rows: ${rows.length}`);
+    if (dogOnlyMode) {
+      console.log(`   Dog-compatible rows: ${filteredRows.length}`);
+    }
 
     const processor = PROCESSORS[config.processor];
-    const { chunks, errors } = processor(rows);
+    const { chunks, errors } = processor(filteredRows);
     console.log(`   Valid chunks: ${chunks.length}`);
     if (errors.length > 0) {
       console.log(`   Skipped rows: ${errors.length}`);
@@ -302,7 +317,7 @@ async function main() {
         config.kind,
         config.title,
         config.trustLevel,
-        config.speciesScope
+        dogOnlyMode ? ["dog"] : config.speciesScope
       );
 
       let insertedCount = 0;

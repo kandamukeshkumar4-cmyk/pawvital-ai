@@ -43,3 +43,33 @@ Effective: 2026-04-13
 - Sidecar shadow promotion one lane at a time after Phase 5 green
 - Contradiction resolution only if Phase 4 telemetry shows it is needed
 - Owner: Qoder (breed), Codex (sidecar/contradiction)
+
+## VET-1100 World-Class Execution Guardrails
+
+- Canonical spec: `plans/VET-1100-world-class-completion-mega-ticket.md`
+- Hard prerequisite before any Phase 3 branch opens: `plans/SIDECAR_SIZING.md`
+- `VET-1106` remains blocked unless the chosen topology preserves:
+  - 20% VRAM headroom on every GPU tier
+  - sync-path latency budget below 6 seconds
+- Ownership update:
+  - Codex owns `VET-1104` and `VET-1105`
+  - Codex owns `services/multimodal-consult-service/app/main.py`
+  - Codex owns `services/async-review-service/app/main.py`
+- Phase 3 runtime rule:
+  - `VET-1101` through `VET-1105` must each ship and test a `FORCE_FALLBACK=1` kill switch
+- Phase 4 to Phase 5 gate:
+  - `>=95%` healthy samples over a rolling 24-hour window
+  - sample every 5 minutes
+  - require at least 288 samples
+- Shadow activation rule for `VET-1109`:
+  - 100% of `high` and `emergency` cases
+  - 5% of routine traffic by deterministic case hash
+  - routine sampling auto-disables if overhead exceeds `+50ms p95` over a rolling 15-minute window or shadow error rate exceeds 20%
+- Promotion rule for `VET-1110`:
+  - no service reaches `ready` without the synthetic 2x baseline load test
+- Corpus dependency:
+  - `VET-1111` waits for `VET-1102`
+  - embedding regeneration lands before domain backfill
+- Phase 8 split:
+  - `VET-1114a` = forward dual-write plus proposal logic
+  - `VET-1114b` = historical backfill and reconciliation

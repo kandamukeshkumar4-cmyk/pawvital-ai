@@ -4,7 +4,11 @@ import type {
   SidecarServiceName,
 } from "./clinical-evidence";
 import type { NormalizedContradictionRecord } from "./clinical/contradiction-detector";
-import type { TriageSession } from "./triage-engine";
+import {
+  buildDiagnosisContext,
+  type PetProfile,
+  type TriageSession,
+} from "./triage-engine";
 import {
   ensureStructuredCaseMemory,
   type NormalizedTerminalOutcomeMetric,
@@ -15,7 +19,36 @@ function parseBooleanEnv(value: string | undefined): boolean {
   return ["1", "true", "yes", "on"].includes(value.trim().toLowerCase());
 }
 
+function parseNumberEnv(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clampRate(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
 const GLOBAL_SHADOW_MODE = parseBooleanEnv(process.env.HF_SIDECAR_SHADOW_MODE);
+const ROUTINE_SHADOW_SAMPLE_RATE = clampRate(
+  parseNumberEnv(
+    process.env.HF_SHADOW_ROUTINE_SAMPLE_RATE ||
+      process.env.HF_SHADOW_SAMPLE_RATE ||
+      process.env.SHADOW_SAMPLE_RATE,
+    0.05
+  )
+);
+const SHADOW_EMERGENCY_ONLY = parseBooleanEnv(
+  process.env.HF_SHADOW_EMERGENCY_ONLY
+);
+const ROUTINE_SHADOW_MAX_P95_OVERHEAD_MS = Math.max(
+  0,
+  parseNumberEnv(process.env.HF_SHADOW_MAX_P95_OVERHEAD_MS, 50)
+);
+const ROUTINE_SHADOW_MAX_ERROR_RATE = clampRate(
+  parseNumberEnv(process.env.HF_SHADOW_MAX_ERROR_RATE, 0.2)
+);
+const SHADOW_GUARDRAIL_WINDOW_MS = 15 * 60 * 1000;
 
 const SERVICE_SHADOW_MODE_FLAGS: Record<SidecarServiceName, boolean> = {
   "vision-preprocess-service": parseBooleanEnv(
@@ -32,6 +65,39 @@ const SERVICE_SHADOW_MODE_FLAGS: Record<SidecarServiceName, boolean> = {
   ),
   "async-review-service": parseBooleanEnv(process.env.HF_SHADOW_ASYNC_REVIEW),
 };
+
+export type ShadowUrgencyBucket = "emergency" | "high" | "routine";
+
+export interface ShadowModeDecision {
+  service: SidecarServiceName;
+  enabled: boolean;
+  urgency: ShadowUrgencyBucket;
+  mode:
+    | "disabled"
+    | "urgent_all"
+    | "routine_sampled"
+    | "routine_skipped"
+    | "emergency_only"
+    | "routine_auto_disabled";
+  routineSampleRate: number;
+  caseSample: number;
+  autoDisabled: boolean;
+  autoDisableReason: string | null;
+}
+
+interface ShadowGuardrailMetrics {
+  shadowObservationCount: number;
+  shadowErrorRate: number;
+  liveP95LatencyMs: number | null;
+  shadowP95LatencyMs: number | null;
+  p95OverheadMs: number | null;
+}
+
+interface InferShadowUrgencyInput {
+  session: TriageSession;
+  pet?: PetProfile | null;
+  fallbackUrgency?: string | null;
+}
 
 export const INTERNAL_TELEMETRY_STAGES = new Set([
   "compression",
@@ -141,6 +207,250 @@ export function isShadowModeEnabledForService(
   return GLOBAL_SHADOW_MODE || SERVICE_SHADOW_MODE_FLAGS[service];
 }
 
+function normalizeUrgencyBucket(
+  value: string | null | undefined
+): ShadowUrgencyBucket {
+  if (value === "emergency") return "emergency";
+  if (value === "high") return "high";
+  return "routine";
+}
+
+function percentile(values: number[], percentileValue: number): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil(sorted.length * percentileValue) - 1)
+  );
+  return sorted[index] ?? null;
+}
+
+function isWithinGuardrailWindow(recordedAt: string, now: number): boolean {
+  const timestamp = Date.parse(recordedAt);
+  if (!Number.isFinite(timestamp)) {
+    return false;
+  }
+  return now - timestamp <= SHADOW_GUARDRAIL_WINDOW_MS;
+}
+
+function buildShadowCaseSignature(
+  session: TriageSession,
+  service: SidecarServiceName,
+  additionalKey?: string
+): string {
+  const memory = ensureStructuredCaseMemory(session);
+  const answerSignature = Object.entries(session.extracted_answers || {})
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+    .map(([key, value]) => `${key}:${String(value)}`)
+    .join("|")
+    .slice(0, 400);
+
+  return [
+    service,
+    session.last_uploaded_image_hash || "",
+    session.latest_image_domain || "",
+    memory.chief_complaints.join(","),
+    session.known_symptoms.join(","),
+    answerSignature,
+    memory.latest_owner_turn || "",
+    additionalKey || "",
+  ].join("|");
+}
+
+function deterministicSample(signature: string): number {
+  let hash = 2166136261;
+  for (const char of signature) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function buildShadowGuardrailMetrics(
+  session: TriageSession,
+  service: SidecarServiceName
+): ShadowGuardrailMetrics {
+  const now = Date.now();
+  const observations = ensureStructuredCaseMemory(session).service_observations.filter(
+    (entry) =>
+      entry.service === service && isWithinGuardrailWindow(entry.recordedAt, now)
+  );
+
+  const shadowObservations = observations.filter((entry) => entry.shadowMode);
+  const liveObservations = observations.filter((entry) => !entry.shadowMode);
+  const shadowErrorRate =
+    shadowObservations.length > 0
+      ? shadowObservations.filter(
+          (entry) => entry.outcome === "timeout" || entry.outcome === "error"
+        ).length / shadowObservations.length
+      : 0;
+
+  const liveP95LatencyMs = percentile(
+    liveObservations
+      .map((entry) => entry.latencyMs)
+      .filter((value) => Number.isFinite(value) && value >= 0),
+    0.95
+  );
+  const shadowP95LatencyMs = percentile(
+    shadowObservations
+      .map((entry) => entry.latencyMs)
+      .filter((value) => Number.isFinite(value) && value >= 0),
+    0.95
+  );
+
+  return {
+    shadowObservationCount: shadowObservations.length,
+    shadowErrorRate,
+    liveP95LatencyMs,
+    shadowP95LatencyMs,
+    p95OverheadMs:
+      liveP95LatencyMs !== null && shadowP95LatencyMs !== null
+        ? Math.round(shadowP95LatencyMs - liveP95LatencyMs)
+        : null,
+  };
+}
+
+export function inferShadowUrgencyBucket(
+  input: InferShadowUrgencyInput
+): ShadowUrgencyBucket {
+  const fallbackUrgency = normalizeUrgencyBucket(input.fallbackUrgency);
+  if (fallbackUrgency !== "routine") {
+    return fallbackUrgency;
+  }
+
+  if (input.session.red_flags_triggered.length > 0) {
+    return "emergency";
+  }
+
+  if (
+    input.session.vision_severity === "urgent" ||
+    input.session.latest_visual_evidence?.severity === "urgent"
+  ) {
+    return "high";
+  }
+
+  if (input.pet && input.session.known_symptoms.length > 0) {
+    return normalizeUrgencyBucket(
+      buildDiagnosisContext(input.session, input.pet).highest_urgency
+    );
+  }
+
+  return "routine";
+}
+
+export function getShadowModeDecision(input: {
+  service: SidecarServiceName;
+  session: TriageSession;
+  pet?: PetProfile | null;
+  urgencyHint?: string | null;
+  additionalKey?: string;
+}): ShadowModeDecision {
+  const urgency = inferShadowUrgencyBucket({
+    session: input.session,
+    pet: input.pet,
+    fallbackUrgency: input.urgencyHint,
+  });
+  const caseSample = deterministicSample(
+    buildShadowCaseSignature(input.session, input.service, input.additionalKey)
+  );
+  const guardrails = buildShadowGuardrailMetrics(input.session, input.service);
+
+  if (!isShadowModeEnabledForService(input.service)) {
+    return {
+      service: input.service,
+      enabled: false,
+      urgency,
+      mode: "disabled",
+      routineSampleRate: ROUTINE_SHADOW_SAMPLE_RATE,
+      caseSample,
+      autoDisabled: false,
+      autoDisableReason: null,
+    };
+  }
+
+  if (urgency === "emergency" || urgency === "high") {
+    return {
+      service: input.service,
+      enabled: true,
+      urgency,
+      mode: "urgent_all",
+      routineSampleRate: ROUTINE_SHADOW_SAMPLE_RATE,
+      caseSample,
+      autoDisabled: false,
+      autoDisableReason: null,
+    };
+  }
+
+  if (SHADOW_EMERGENCY_ONLY) {
+    return {
+      service: input.service,
+      enabled: false,
+      urgency,
+      mode: "emergency_only",
+      routineSampleRate: ROUTINE_SHADOW_SAMPLE_RATE,
+      caseSample,
+      autoDisabled: false,
+      autoDisableReason: "routine shadow sampling disabled by HF_SHADOW_EMERGENCY_ONLY",
+    };
+  }
+
+  const overheadExceeded =
+    guardrails.p95OverheadMs !== null &&
+    guardrails.p95OverheadMs > ROUTINE_SHADOW_MAX_P95_OVERHEAD_MS;
+  const errorRateExceeded =
+    guardrails.shadowErrorRate > ROUTINE_SHADOW_MAX_ERROR_RATE;
+  const autoDisableReason = overheadExceeded
+    ? `shadow p95 overhead ${guardrails.p95OverheadMs}ms exceeds ${ROUTINE_SHADOW_MAX_P95_OVERHEAD_MS}ms`
+    : errorRateExceeded
+      ? `shadow error rate ${Math.round(guardrails.shadowErrorRate * 100)}% exceeds ${Math.round(ROUTINE_SHADOW_MAX_ERROR_RATE * 100)}%`
+      : null;
+
+  if (autoDisableReason) {
+    return {
+      service: input.service,
+      enabled: false,
+      urgency,
+      mode: "routine_auto_disabled",
+      routineSampleRate: ROUTINE_SHADOW_SAMPLE_RATE,
+      caseSample,
+      autoDisabled: true,
+      autoDisableReason,
+    };
+  }
+
+  return {
+    service: input.service,
+    enabled: caseSample < ROUTINE_SHADOW_SAMPLE_RATE,
+    urgency,
+    mode:
+      caseSample < ROUTINE_SHADOW_SAMPLE_RATE
+        ? "routine_sampled"
+        : "routine_skipped",
+    routineSampleRate: ROUTINE_SHADOW_SAMPLE_RATE,
+    caseSample,
+    autoDisabled: false,
+    autoDisableReason: null,
+  };
+}
+
+export function describeShadowModeDecision(
+  decision: ShadowModeDecision
+): string {
+  const parts = [
+    `shadowMode=${decision.enabled}`,
+    `shadowPolicy=${decision.mode}`,
+    `shadowUrgency=${decision.urgency}`,
+    `shadowSampleRate=${decision.routineSampleRate.toFixed(2)}`,
+    `shadowCaseSample=${decision.caseSample.toFixed(4)}`,
+  ];
+
+  if (decision.autoDisableReason) {
+    parts.push(`shadowGuardrail=${decision.autoDisableReason}`);
+  }
+
+  return parts.join("; ");
+}
+
 export function appendSidecarObservation(
   session: TriageSession,
   observation: Omit<SidecarObservation, "recordedAt">
@@ -193,8 +503,12 @@ export function buildObservabilitySnapshot(session: TriageSession) {
   const observations = (memory.service_observations || []).filter(
     (item) => !isInternalTelemetry(item)
   );
-  const timeouts: unknown[] = [];
-  const shadowComparisons: unknown[] = [];
+  const timeouts = memory.service_timeouts || [];
+  const shadowComparisons = memory.shadow_comparisons || [];
+  const recentGuardrails = Object.keys(SERVICE_SHADOW_MODE_FLAGS).map((service) => ({
+    service,
+    ...buildShadowGuardrailMetrics(session, service as SidecarServiceName),
+  }));
 
   const byService = observations.reduce<Record<string, number>>((acc, item) => {
     acc[item.service] = (acc[item.service] || 0) + 1;
@@ -202,13 +516,28 @@ export function buildObservabilitySnapshot(session: TriageSession) {
   }, {});
 
   return {
-    shadowModeActive: GLOBAL_SHADOW_MODE,
+    shadowModeActive:
+      GLOBAL_SHADOW_MODE ||
+      Object.values(SERVICE_SHADOW_MODE_FLAGS).some(Boolean) ||
+      observations.some((item) => item.shadowMode) ||
+      shadowComparisons.length > 0,
     recentServiceCalls: observations.slice(-8),
     contradictionRecords: contradictionRecords.slice(-8),
     recentShadowComparisons: shadowComparisons.slice(-4),
     timeoutCount: timeouts.length,
     serviceCallCounts: byService,
-    fallbackCount: observations.filter((item) => item.fallbackUsed).length,
+    fallbackCount: observations.filter(
+      (item) => item.fallbackUsed && !item.shadowMode
+    ).length,
+    shadowConfig: {
+      globalMode: GLOBAL_SHADOW_MODE,
+      routineSampleRate: ROUTINE_SHADOW_SAMPLE_RATE,
+      emergencyOnly: SHADOW_EMERGENCY_ONLY,
+      maxRoutineOverheadP95Ms: ROUTINE_SHADOW_MAX_P95_OVERHEAD_MS,
+      maxShadowErrorRate: ROUTINE_SHADOW_MAX_ERROR_RATE,
+      guardrailWindowMinutes: SHADOW_GUARDRAIL_WINDOW_MS / 60000,
+    },
+    recentShadowGuardrails: recentGuardrails,
   };
 }
 

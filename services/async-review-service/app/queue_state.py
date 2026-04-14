@@ -1,0 +1,23 @@
+"""Mutable review queue state exports."""
+
+from .main_legacy import (
+    DEAD_LETTER_QUEUE,
+    OUTCOME_FEEDBACK,
+    PROCESSING_QUEUE,
+    REVIEW_CONTEXT,
+    REVIEW_RESULTS,
+    REVIEW_STATE_TRANSITIONS,
+    SHADOW_DISAGREEMENTS,
+    STATE_LOCK,
+)
+
+__all__ = [
+    "DEAD_LETTER_QUEUE",
+    "OUTCOME_FEEDBACK",
+    "PROCESSING_QUEUE",
+    "REVIEW_CONTEXT",
+    "REVIEW_RESULTS",
+    "REVIEW_STATE_TRANSITIONS",
+    "SHADOW_DISAGREEMENTS",
+    "STATE_LOCK",
+]

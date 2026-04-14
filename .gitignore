@@ -58,10 +58,14 @@ next-env.d.ts
 !/scripts/hooks/*.mjs
 !/scripts/build.js
 !/scripts/fix-readlink.js
+!/scripts/load-phase5-shadow.mjs
+!/scripts/reindex-live-corpus.mjs
+!/scripts/retrieval-quality-harness.mjs
 !/scripts/runpod-benchmark.mjs
 !/scripts/generate-benchmark-adjudication-pack.mjs
 !/scripts/runpod-hero-job-manifests.mjs
 !/scripts/runpod-provision-narrow.mjs
+!/scripts/backfill-outcome-feedback.ts
 !/scripts/eval-harness.ts
 !/scripts/generate-benchmark-cases.ts
 !/scripts/validate-benchmark.ts

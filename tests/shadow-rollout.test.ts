@@ -1,4 +1,3 @@
-import { buildShadowRolloutSummary } from "@/lib/shadow-rollout";
 import type { TriageSession } from "@/lib/triage-engine";
 
 function makeSession(partial?: Partial<TriageSession>): TriageSession {
@@ -17,9 +16,12 @@ function makeSession(partial?: Partial<TriageSession>): TriageSession {
       image_findings: [],
       red_flag_notes: [],
       unresolved_question_ids: [],
+      clarification_reasons: {},
       timeline_notes: [],
       visual_evidence: [],
       retrieval_evidence: [],
+      consult_opinions: [],
+      evidence_chain: [],
       service_timeouts: [],
       service_observations: [],
       shadow_comparisons: [],
@@ -29,16 +31,40 @@ function makeSession(partial?: Partial<TriageSession>): TriageSession {
   };
 }
 
+function minutesAgo(minutes: number): string {
+  return new Date(Date.now() - minutes * 60 * 1000).toISOString();
+}
+
 describe("shadow rollout summary", () => {
-  it("reports insufficient data when there are no sidecar observations yet", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    jest.resetModules();
+    process.env = {
+      ...originalEnv,
+      HF_SHADOW_REQUIRED_HEALTH_SAMPLES: "2",
+      HF_SHADOW_REQUIRED_HEALTHY_RATIO: "0.5",
+      HF_SHADOW_LOAD_TEST_REQUIRED: "0",
+    };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  it("reports insufficient data when there are no sidecar observations yet", async () => {
+    const { buildShadowRolloutSummary } = await import("@/lib/shadow-rollout");
     const summary = buildShadowRolloutSummary(makeSession());
 
     expect(summary.overallStatus).toBe("insufficient_data");
     expect(summary.shadowModeDataPresent).toBe(false);
-    expect(summary.services.every((service) => service.status === "insufficient_data")).toBe(true);
+    expect(
+      summary.services.every((service) => service.status === "insufficient_data")
+    ).toBe(true);
   });
 
-  it("marks a service as blocked when timeout rate is too high", () => {
+  it("marks a service as blocked when timeout rate is too high", async () => {
+    const { buildShadowRolloutSummary } = await import("@/lib/shadow-rollout");
     const session = makeSession({
       case_memory: {
         turn_count: 1,
@@ -48,9 +74,12 @@ describe("shadow rollout summary", () => {
         image_findings: [],
         red_flag_notes: [],
         unresolved_question_ids: [],
+        clarification_reasons: {},
         timeline_notes: [],
         visual_evidence: [],
         retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
         service_timeouts: [],
         service_observations: [
           {
@@ -60,16 +89,16 @@ describe("shadow rollout summary", () => {
             outcome: "timeout",
             shadowMode: true,
             fallbackUsed: true,
-            recordedAt: "2026-03-27T00:00:00.000Z",
+            recordedAt: minutesAgo(2),
           },
           {
             service: "text-retrieval-service",
             stage: "retrieve",
             latencyMs: 1300,
-            outcome: "success",
+            outcome: "shadow",
             shadowMode: true,
             fallbackUsed: true,
-            recordedAt: "2026-03-27T00:01:00.000Z",
+            recordedAt: minutesAgo(1),
           },
         ],
         shadow_comparisons: [],
@@ -87,7 +116,8 @@ describe("shadow rollout summary", () => {
     expect(summary.overallStatus).toBe("blocked");
   });
 
-  it("treats shadow-mode fallbackUsed flags as non-failures and stays ready with healthy samples", () => {
+  it("treats shadow-mode fallbackUsed flags as non-failures and stays ready with healthy samples", async () => {
+    const { buildShadowRolloutSummary } = await import("@/lib/shadow-rollout");
     const session = makeSession({
       case_memory: {
         turn_count: 2,
@@ -97,9 +127,12 @@ describe("shadow rollout summary", () => {
         image_findings: [],
         red_flag_notes: [],
         unresolved_question_ids: [],
+        clarification_reasons: {},
         timeline_notes: [],
         visual_evidence: [],
         retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
         service_timeouts: [],
         service_observations: [
           {
@@ -109,7 +142,7 @@ describe("shadow rollout summary", () => {
             outcome: "shadow",
             shadowMode: true,
             fallbackUsed: true,
-            recordedAt: "2026-03-27T00:00:00.000Z",
+            recordedAt: minutesAgo(2),
           },
           {
             service: "vision-preprocess-service",
@@ -118,7 +151,7 @@ describe("shadow rollout summary", () => {
             outcome: "shadow",
             shadowMode: true,
             fallbackUsed: true,
-            recordedAt: "2026-03-27T00:01:00.000Z",
+            recordedAt: minutesAgo(1),
           },
         ],
         shadow_comparisons: [
@@ -128,7 +161,7 @@ describe("shadow rollout summary", () => {
             shadowStrategy: "hf-vision-preprocess",
             summary: "Same domain and body region.",
             disagreementCount: 1,
-            recordedAt: "2026-03-27T00:01:30.000Z",
+            recordedAt: minutesAgo(1),
           },
         ],
         ambiguity_flags: [],
@@ -146,7 +179,8 @@ describe("shadow rollout summary", () => {
     expect(summary.shadowModeDataPresent).toBe(true);
   });
 
-  it("surfaces disagreement-heavy services as watch status", () => {
+  it("surfaces disagreement-heavy services as watch status", async () => {
+    const { buildShadowRolloutSummary } = await import("@/lib/shadow-rollout");
     const session = makeSession({
       case_memory: {
         turn_count: 3,
@@ -156,9 +190,12 @@ describe("shadow rollout summary", () => {
         image_findings: [],
         red_flag_notes: [],
         unresolved_question_ids: [],
+        clarification_reasons: {},
         timeline_notes: [],
         visual_evidence: [],
         retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
         service_timeouts: [],
         service_observations: [
           {
@@ -168,7 +205,7 @@ describe("shadow rollout summary", () => {
             outcome: "shadow",
             shadowMode: true,
             fallbackUsed: true,
-            recordedAt: "2026-03-27T00:00:00.000Z",
+            recordedAt: minutesAgo(3),
           },
           {
             service: "multimodal-consult-service",
@@ -177,7 +214,7 @@ describe("shadow rollout summary", () => {
             outcome: "shadow",
             shadowMode: true,
             fallbackUsed: true,
-            recordedAt: "2026-03-27T00:01:00.000Z",
+            recordedAt: minutesAgo(2),
           },
         ],
         shadow_comparisons: [
@@ -187,7 +224,7 @@ describe("shadow rollout summary", () => {
             shadowStrategy: "hf-consult",
             summary: "Different lesion severity framing.",
             disagreementCount: 2,
-            recordedAt: "2026-03-27T00:02:00.000Z",
+            recordedAt: minutesAgo(1),
           },
           {
             service: "multimodal-consult-service",
@@ -195,7 +232,7 @@ describe("shadow rollout summary", () => {
             shadowStrategy: "hf-consult",
             summary: "Different recommended follow-up.",
             disagreementCount: 2,
-            recordedAt: "2026-03-27T00:03:00.000Z",
+            recordedAt: minutesAgo(1),
           },
         ],
         ambiguity_flags: [],
@@ -210,5 +247,59 @@ describe("shadow rollout summary", () => {
     expect(consultService?.status).toBe("watch");
     expect(consultService?.blockers.join(" ")).toContain("Shadow disagreements");
     expect(summary.overallStatus).toBe("watch");
+  });
+
+  it("requires synthetic load-test evidence before a service can stay ready", async () => {
+    process.env.HF_SHADOW_LOAD_TEST_REQUIRED = "1";
+    const { buildShadowRolloutSummary } = await import("@/lib/shadow-rollout");
+    const session = makeSession({
+      case_memory: {
+        turn_count: 4,
+        chief_complaints: [],
+        active_focus_symptoms: [],
+        confirmed_facts: {},
+        image_findings: [],
+        red_flag_notes: [],
+        unresolved_question_ids: [],
+        clarification_reasons: {},
+        timeline_notes: [],
+        visual_evidence: [],
+        retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
+        service_timeouts: [],
+        service_observations: [
+          {
+            service: "vision-preprocess-service",
+            stage: "preprocess",
+            latencyMs: 1800,
+            outcome: "shadow",
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt: minutesAgo(2),
+          },
+          {
+            service: "vision-preprocess-service",
+            stage: "preprocess",
+            latencyMs: 1900,
+            outcome: "shadow",
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt: minutesAgo(1),
+          },
+        ],
+        shadow_comparisons: [],
+        ambiguity_flags: [],
+      },
+    });
+
+    const summary = buildShadowRolloutSummary(session);
+    const visionService = summary.services.find(
+      (service) => service.service === "vision-preprocess-service"
+    );
+
+    expect(visionService?.status).toBe("watch");
+    expect(visionService?.loadTestStatus).toBe("missing");
+    expect(visionService?.blockers.join(" ")).toContain("Synthetic load-test");
   });
 });

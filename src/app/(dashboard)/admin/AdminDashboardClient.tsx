@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Server, Database, CheckCircle, AlertCircle, X, FileAudio } from "lucide-react";
+import type { ThresholdProposalDashboardData } from "@/lib/admin-threshold-proposals";
+import { ThresholdProposalPanel } from "@/components/admin/threshold-proposal-panel";
 
 interface AdminDashboardProps {
   initialStats: {
@@ -21,9 +23,14 @@ interface AdminDashboardProps {
     commit_sha?: string;
     [key: string]: string | undefined;
   };
+  initialThresholdProposals: ThresholdProposalDashboardData;
 }
 
-export default function AdminDashboardClient({ initialStats, initialDeployment }: AdminDashboardProps) {
+export default function AdminDashboardClient({
+  initialStats,
+  initialDeployment,
+  initialThresholdProposals,
+}: AdminDashboardProps) {
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [issueTitle, setIssueTitle] = useState("");
   const [issueBody, setIssueBody] = useState("");
@@ -263,6 +270,8 @@ export default function AdminDashboardClient({ initialStats, initialDeployment }
           </div>
         </div>
       )}
+
+      <ThresholdProposalPanel initialData={initialThresholdProposals} />
     </div>
   );
 }
