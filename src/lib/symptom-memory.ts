@@ -846,7 +846,17 @@ export type ConversationTelemetryEventType =
   | "pending_recovery"
   | "compression"
   | "repeat_suppression"
-  | "contradiction_detection";
+  | "contradiction_detection"
+  | "terminal_outcome";
+
+export interface NormalizedTerminalOutcomeMetric {
+  terminal_state: "cannot_assess" | "out_of_scope";
+  reason_code: string;
+  conversation_state: string;
+  recommended_next_step: string;
+  turn_number: number;
+  question_id?: string;
+}
 
 /**
  * Recovery source for pending question resolution.
@@ -906,6 +916,8 @@ export interface ConversationTelemetryEvent {
   contradiction_count?: number;
   /** Normalized contradiction records for durable internal telemetry */
   contradiction_records?: NormalizedContradictionRecord[];
+  /** Normalized terminal outcome metric for durable internal telemetry */
+  terminal_outcome_metric?: NormalizedTerminalOutcomeMetric;
   /** Timestamp for the event */
   timestamp?: number;
 }
@@ -1030,6 +1042,13 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
       )}`
     );
   }
+  if (event.terminal_outcome_metric) {
+    parts.push(
+      `terminal_outcome_metric=${encodeURIComponent(
+        JSON.stringify(event.terminal_outcome_metric)
+      )}`
+    );
+  }
 
   return parts.join(" | ");
 }
@@ -1062,6 +1081,7 @@ function emitTelemetryLog(event: ConversationTelemetryEvent): void {
     contradiction_count: event.contradiction_count,
     contradiction_ids: event.contradiction_ids,
     contradiction_records: event.contradiction_records,
+    terminal_outcome_metric: event.terminal_outcome_metric,
   };
 
   if (event.outcome === "error" || event.outcome === "failure") {

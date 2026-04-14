@@ -5,7 +5,10 @@ import type {
 } from "./clinical-evidence";
 import type { NormalizedContradictionRecord } from "./clinical/contradiction-detector";
 import type { TriageSession } from "./triage-engine";
-import { ensureStructuredCaseMemory } from "./symptom-memory";
+import {
+  ensureStructuredCaseMemory,
+  type NormalizedTerminalOutcomeMetric,
+} from "./symptom-memory";
 
 function parseBooleanEnv(value: string | undefined): boolean {
   if (!value) return false;
@@ -37,6 +40,7 @@ export const INTERNAL_TELEMETRY_STAGES = new Set([
   "pending_recovery",
   "repeat_suppression",
   "state_transition",
+  "terminal_outcome",
 ]);
 
 export const INTERNAL_TELEMETRY_NOTE_MARKERS = [
@@ -44,6 +48,7 @@ export const INTERNAL_TELEMETRY_NOTE_MARKERS = [
   "conversation_state=",
   "clarification_reason=",
   "contradiction_records=",
+  "terminal_outcome_metric=",
 ];
 
 function parseContradictionRecordsFromNote(
@@ -78,6 +83,44 @@ export function extractContradictionRecordsFromObservations(
 ): NormalizedContradictionRecord[] {
   return observations.flatMap((observation) =>
     parseContradictionRecordsFromNote(observation.note)
+  );
+}
+
+function parseTerminalOutcomeMetricFromNote(
+  note: string | undefined
+): NormalizedTerminalOutcomeMetric[] {
+  const noteText = typeof note === "string" ? note : "";
+  const terminalMetricPart = noteText
+    .split(" | ")
+    .find((part) => part.startsWith("terminal_outcome_metric="));
+
+  if (!terminalMetricPart) {
+    return [];
+  }
+
+  const encoded = terminalMetricPart.slice("terminal_outcome_metric=".length);
+  if (!encoded) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(decodeURIComponent(encoded));
+    return parsed &&
+      typeof parsed === "object" &&
+      typeof parsed.terminal_state === "string" &&
+      typeof parsed.reason_code === "string"
+      ? [parsed as NormalizedTerminalOutcomeMetric]
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function extractTerminalOutcomeMetricsFromObservations(
+  observations: SidecarObservation[]
+): NormalizedTerminalOutcomeMetric[] {
+  return observations.flatMap((observation) =>
+    parseTerminalOutcomeMetricFromNote(observation.note)
   );
 }
 
