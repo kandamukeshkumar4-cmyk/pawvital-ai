@@ -303,9 +303,9 @@
       "answers": {}
     },
     "expected": {
-      "allowedTypes": ["cannot_assess"],
+      "allowedTypes": ["question"],
       "knownSymptoms": ["difficulty_breathing"],
-      "reasonCode": "owner_cannot_assess_gum_color"
+      "reasonCode": "alternate_observable_gum_color"
     }
   },
   {
@@ -357,9 +357,9 @@
       "answers": {}
     },
     "expected": {
-      "allowedTypes": ["cannot_assess"],
+      "allowedTypes": ["question"],
       "knownSymptoms": ["difficulty_breathing"],
-      "reasonCode": "owner_cannot_assess_gum_color"
+      "reasonCode": "alternate_observable_gum_color"
     }
   }
 ]
