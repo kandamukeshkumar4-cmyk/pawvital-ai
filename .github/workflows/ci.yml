@@ -331,21 +331,7 @@ jobs:
             NODE
           fi
 
-          report_status=$(node - <<'NODE'
-          const fs = require("node:fs");
-
-          const report = JSON.parse(
-            fs.readFileSync(
-              "data/benchmark/route-dangerous-replay-advisory.json",
-              "utf8"
-            )
-          );
-
-          process.stdout.write(
-            typeof report.status === "string" ? report.status : "missing"
-          );
-          NODE
-          )
+          report_status=$(node -e "const fs = require('node:fs'); const report = JSON.parse(fs.readFileSync('data/benchmark/route-dangerous-replay-advisory.json', 'utf8')); process.stdout.write(typeof report.status === 'string' ? report.status : 'missing');")
 
           echo "report_status=$report_status" >> "$GITHUB_OUTPUT"
 
