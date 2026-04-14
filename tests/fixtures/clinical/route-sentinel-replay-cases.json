@@ -275,6 +275,7 @@
   {
     "benchmarkId": "followup-breathing-onset-unknown-escalates",
     "mode": "followup_unknown",
+    "message": "I can't tell when it started.",
     "seedSession": {
       "knownSymptoms": ["difficulty_breathing"],
       "lastQuestionAsked": "breathing_onset"
@@ -292,6 +293,7 @@
   {
     "benchmarkId": "followup-gum-color-unknown-escalates",
     "mode": "followup_unknown",
+    "message": "I don't know what color the gums are.",
     "seedSession": {
       "knownSymptoms": ["difficulty_breathing"],
       "lastQuestionAsked": "gum_color"
@@ -309,6 +311,7 @@
   {
     "benchmarkId": "followup-consciousness-unknown-escalates",
     "mode": "followup_unknown",
+    "message": "I don't know.",
     "seedSession": {
       "knownSymptoms": ["seizure_collapse"],
       "lastQuestionAsked": "consciousness_level"
@@ -326,6 +329,7 @@
   {
     "benchmarkId": "followup-trauma-history-unknown",
     "mode": "followup_unknown",
+    "message": "I can't tell when it started.",
     "seedSession": {
       "knownSymptoms": ["difficulty_breathing"],
       "lastQuestionAsked": "breathing_onset"
@@ -343,6 +347,7 @@
   {
     "benchmarkId": "followup-vomit-color-unknown",
     "mode": "followup_unknown",
+    "message": "I don't know what color the gums are.",
     "seedSession": {
       "knownSymptoms": ["difficulty_breathing"],
       "lastQuestionAsked": "gum_color"

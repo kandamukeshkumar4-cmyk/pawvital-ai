@@ -18,6 +18,7 @@
 - expanded `tests/fixtures/clinical/route-sentinel-replay-cases.json` to 26 curated replay cases
 - added more direct emergency replays across urinary obstruction, hemorrhagic wound, allergic swelling, collapse, cardio-respiratory distress, and seizure contexts
 - added more `followup_unknown` sentinels so all current critical unknown escalation paths are represented in the pack
+- made the follow-up unknown replays explicit with owner unknown-response messages instead of relying on corpus wording
 - added a small fixture-shape guard in `tests/benchmark.route-sentinels.test.ts` so the pack does not silently shrink below the intended breadth
 
 ## Acceptance
