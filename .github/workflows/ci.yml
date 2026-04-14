@@ -280,26 +280,7 @@ jobs:
           mkdir -p data/benchmark
 
           if [ ! -f scripts/route-dangerous-replay.mjs ]; then
-            node - <<'NODE'
-            const fs = require("node:fs");
-            const path = require("node:path");
-
-            const outputPath = path.join(
-              "data",
-              "benchmark",
-              "route-dangerous-replay-advisory.json"
-            );
-            const report = {
-              generatedAt: new Date().toISOString(),
-              reporter: "route-dangerous-replay-advisory",
-              status: "skipped",
-              reason: "script_missing",
-              message:
-                "scripts/route-dangerous-replay.mjs is not present on this ref yet.",
-            };
-
-            fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
-            NODE
+            node -e 'const fs = require("node:fs"); const path = require("node:path"); const outputPath = path.join("data", "benchmark", "route-dangerous-replay-advisory.json"); const report = { generatedAt: new Date().toISOString(), reporter: "route-dangerous-replay-advisory", status: "skipped", reason: "script_missing", message: "scripts/route-dangerous-replay.mjs is not present on this ref yet." }; fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);'
             echo "report_status=skipped" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -309,26 +290,7 @@ jobs:
             --output=data/benchmark/route-dangerous-replay-advisory.json || cli_exit=$?
 
           if [ ! -f data/benchmark/route-dangerous-replay-advisory.json ]; then
-            node - <<'NODE'
-            const fs = require("node:fs");
-            const path = require("node:path");
-
-            const outputPath = path.join(
-              "data",
-              "benchmark",
-              "route-dangerous-replay-advisory.json"
-            );
-            const report = {
-              generatedAt: new Date().toISOString(),
-              reporter: "route-dangerous-replay-advisory",
-              status: "error",
-              reason: "artifact_missing",
-              message:
-                "route-dangerous-replay did not produce an output artifact.",
-            };
-
-            fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
-            NODE
+            node -e 'const fs = require("node:fs"); const path = require("node:path"); const outputPath = path.join("data", "benchmark", "route-dangerous-replay-advisory.json"); const report = { generatedAt: new Date().toISOString(), reporter: "route-dangerous-replay-advisory", status: "error", reason: "artifact_missing", message: "route-dangerous-replay did not produce an output artifact." }; fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);'
           fi
 
           report_status=$(node -e "const fs = require('node:fs'); const report = JSON.parse(fs.readFileSync('data/benchmark/route-dangerous-replay-advisory.json', 'utf8')); process.stdout.write(typeof report.status === 'string' ? report.status : 'missing');")

@@ -229,7 +229,7 @@ def build_review_fallback_response(case_id: str, reason: str) -> ReviewResponse:
         confidence=0.2,
         mode="async",
         case_id=case_id,
-        processed_at=datetime.utcnow().isoformat() + "Z",
+        processed_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     )
 
 
@@ -578,7 +578,7 @@ async def generate_review(request: AsyncReviewRequest, case_id: str) -> ReviewRe
             confidence=0.2,
             mode="async",
             case_id=case_id,
-            processed_at=datetime.utcnow().isoformat() + "Z",
+            processed_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         )
 
     if FORCE_FALLBACK:
@@ -693,7 +693,7 @@ async def generate_review(request: AsyncReviewRequest, case_id: str) -> ReviewRe
         confidence=float(parsed.get("confidence", 0.5)),
         mode="async",
         case_id=case_id,
-        processed_at=datetime.utcnow().isoformat() + "Z",
+        processed_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     )
 
 
@@ -893,7 +893,7 @@ def _compute_shadow_disagreement(case_id: str, consult_opinion: dict, review_res
     # Find overlap and divergence
     shadow_summary = {
         "case_id": case_id,
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "consult_model": consult_opinion.get("model", "unknown"),
         "review_model": review_result.model,
         "consult_summary": consult_opinion.get("summary", "")[:240],
@@ -1087,7 +1087,7 @@ def _store_outcome_feedback(case_id: str, review_result: ReviewResponse, request
 
     feedback_entry = {
         "case_id": case_id,
-        "stored_at": datetime.utcnow().isoformat() + "Z",
+        "stored_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "review_model": review_result.model,
         "review_confidence": confidence,
         "review_summary_length": len(review_summary),
@@ -3732,7 +3732,7 @@ async def record_outcome_feedback(feedback_data: dict):
 
     entry = {
         "case_id": feedback_data["case_id"],
-        "recorded_at": datetime.utcnow().isoformat() + "Z",
+        "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "feedback_kind": "manual_outcome",
         "outcome": feedback_data["outcome"],
         "outcome_confidence": feedback_data.get("outcome_confidence"),
@@ -3897,7 +3897,7 @@ async def get_feedback_synthesis():
 
     # Build synthesis response
     synthesis = {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "total_entries": total_entries,
         "shadow_analyzed_count": shadow_analyzed_count,
         "statistics": {
