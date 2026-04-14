@@ -1,18 +1,18 @@
 # Gold V1 Benchmark Report
 
 **Version**: gold-v1
-**Freeze Date**: 2026-04-13
-**Total Cases**: 219
+**Freeze Date**: 2026-04-14
+**Total Cases**: 223
 **Shard Count**: 13
-**Shard Hash**: `a551f4cbff90f292...`
+**Shard Hash**: `d798f93f15977878...`
 
 ## Coverage Summary
 
 | Metric | Value |
 |--------|-------|
-| Total Cases | 219 |
+| Total Cases | 223 |
 | Complaint Families | 50 |
-| Must-Not-Miss Cases | 42 |
+| Must-Not-Miss Cases | 46 |
 | Shard Files | 13 |
 
 ## Family Distribution
@@ -35,8 +35,9 @@
 | coughing | 6 |
 | senior_decline | 6 |
 | recurrent_skin | 6 |
+| seizure_collapse | 5 |
+| pregnancy_birth | 5 |
 | drinking_more | 5 |
-| seizure_collapse | 4 |
 | ear_scratching | 4 |
 | swelling_lump | 4 |
 | eye_discharge | 3 |
@@ -45,7 +46,6 @@
 | coughing_breathing_combined | 3 |
 | fecal_incontinence | 3 |
 | skin_odor_greasy | 3 |
-| pregnancy_birth | 2 |
 | vomiting_diarrhea_combined | 2 |
 | vaginal_discharge | 2 |
 | blood_in_stool | 2 |
@@ -74,11 +74,11 @@
 
 | Tier | Cases |
 |------|-------|
-| tier_1_emergency | 42 |
+| tier_1_emergency | 46 |
 | tier_2_same_day | 28 |
 | tier_3_48h_monitor | 149 |
 
 ## Coverage Gaps
 
 - All 50 canonical complaint families represented.
-- Thin coverage remains for 24 families with fewer than 3 cases: heat_intolerance, vision_loss, pregnancy_birth, not_eating, regurgitation, constipation, generalized_stiffness, nasal_discharge, vaginal_discharge, testicular_prostate, exercise_induced_lameness, recurrent_ear, inappropriate_urination, vomiting_diarrhea_combined, oral_mass, hearing_loss, aggression, pacing_restlessness, abnormal_gait, postoperative_concern, medication_reaction, puppy_concern, multi_system_decline, blood_in_stool
+- Thin coverage remains for 23 families with fewer than 3 cases: heat_intolerance, vision_loss, not_eating, regurgitation, constipation, generalized_stiffness, nasal_discharge, vaginal_discharge, testicular_prostate, exercise_induced_lameness, recurrent_ear, inappropriate_urination, vomiting_diarrhea_combined, oral_mass, hearing_loss, aggression, pacing_restlessness, abnormal_gait, postoperative_concern, medication_reaction, puppy_concern, multi_system_decline, blood_in_stool
