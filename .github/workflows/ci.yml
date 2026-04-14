@@ -178,8 +178,31 @@ jobs:
         with:
           path: node_modules
           key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
-      - run: npm run eval:sentinels:advisory
-      - run: npm run eval:benchmark:dangerous
+      - name: Run sentinel advisory
+        id: sentinel_advisory
+        run: npm run eval:sentinels:advisory
+        continue-on-error: true
+      - name: Run dangerous benchmark advisory
+        id: dangerous_benchmark
+        if: always()
+        run: npm run eval:benchmark:dangerous
+        continue-on-error: true
+      - name: Upload benchmark advisory artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emergency-sentinel-advisory-benchmark-artifacts
+          if-no-files-found: warn
+          path: |
+            data/benchmark/scorecard-*.json
+      - name: Preserve advisory job result
+        if: always()
+        run: |
+          if [ "${{ steps.sentinel_advisory.outcome }}" != "success" ] || \
+             [ "${{ steps.dangerous_benchmark.outcome }}" != "success" ]; then
+            echo "Emergency sentinel advisory reported failures"
+            exit 1
+          fi
 
   benchmark-integrity:
     name: Benchmark Integrity
@@ -194,8 +217,32 @@ jobs:
         with:
           path: node_modules
           key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
-      - run: npm run eval:benchmark:validate
-      - run: npm run eval:benchmark:lint
+      - name: Validate benchmark schema
+        id: benchmark_validate
+        run: npm run eval:benchmark:validate
+        continue-on-error: true
+      - name: Lint benchmark coverage
+        id: benchmark_lint
+        if: always()
+        run: npm run eval:benchmark:lint
+        continue-on-error: true
+      - name: Upload benchmark integrity artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-integrity-artifacts
+          if-no-files-found: warn
+          path: |
+            data/benchmark/scorecard-*.json
+            data/benchmarks/dog-triage/benchmark-lint-report.md
+      - name: Preserve benchmark integrity result
+        if: always()
+        run: |
+          if [ "${{ steps.benchmark_validate.outcome }}" != "success" ] || \
+             [ "${{ steps.benchmark_lint.outcome }}" != "success" ]; then
+            echo "Benchmark integrity checks failed"
+            exit 1
+          fi
 
   route-sentinel-replay:
     name: Route Sentinel Replay
