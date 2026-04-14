@@ -193,6 +193,7 @@ jest.mock("@/lib/events/notification-handler", () => ({}));
 interface ReplayFixture {
   benchmarkId: string;
   mode: "first_turn" | "followup_unknown";
+  message?: string;
   mockExtraction: {
     symptoms: string[];
     answers: Record<string, string | boolean | number>;
@@ -399,6 +400,19 @@ describe("VET-1012 route-backed emergency sentinel replay", () => {
     jest.restoreAllMocks();
   });
 
+  it("keeps the replay pack broad enough to cover direct emergencies and safe question paths", () => {
+    const firstTurnCount = replayFixtures.filter(
+      (fixture) => fixture.mode === "first_turn"
+    ).length;
+    const followupUnknownCount = replayFixtures.filter(
+      (fixture) => fixture.mode === "followup_unknown"
+    ).length;
+
+    expect(replayFixtures.length).toBeGreaterThanOrEqual(24);
+    expect(firstTurnCount).toBeGreaterThanOrEqual(18);
+    expect(followupUnknownCount).toBeGreaterThanOrEqual(4);
+  });
+
   it.each(replayFixtures)("$benchmarkId stays in a safety-approved route path", async (fixture) => {
     const benchmark = benchmarkCases.get(fixture.benchmarkId);
     expect(benchmark).toBeDefined();
@@ -408,7 +422,7 @@ describe("VET-1012 route-backed emergency sentinel replay", () => {
     );
 
     const session = buildSeededSession(fixture);
-    const message = benchmark!.request.messages[0]?.content ?? "";
+    const message = fixture.message ?? benchmark!.request.messages[0]?.content ?? "";
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
     const response = await POST(buildRequest(session, benchmark!.request.pet, message));
     const payload = await response.json();
