@@ -18,8 +18,13 @@ interface RedFlagEmergencyResponseInput extends EmergencyResponseInput {
   redFlags: string[];
 }
 
+type CannotAssessTerminalOutcome = UncertaintyTerminalOutcome & {
+  type: "cannot_assess";
+  terminalState: "cannot_assess";
+};
+
 interface CannotAssessResponseInput {
-  outcome: Extract<UncertaintyTerminalOutcome, { type: "cannot_assess" }>;
+  outcome: CannotAssessTerminalOutcome;
   session: TriageSession;
 }
 
