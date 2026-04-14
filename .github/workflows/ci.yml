@@ -259,6 +259,105 @@ jobs:
           key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
       - run: npm run eval:benchmark:route-sentinels
 
+  route-dangerous-replay-advisory:
+    name: Route Dangerous Replay Advisory
+    needs: install
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v5
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
+      - name: Run route dangerous replay advisory
+        id: route_dangerous_replay
+        shell: bash
+        run: |
+          mkdir -p data/benchmark
+
+          if [ ! -f scripts/route-dangerous-replay.mjs ]; then
+            node - <<'NODE'
+            const fs = require("node:fs");
+            const path = require("node:path");
+
+            const outputPath = path.join(
+              "data",
+              "benchmark",
+              "route-dangerous-replay-advisory.json"
+            );
+            const report = {
+              generatedAt: new Date().toISOString(),
+              reporter: "route-dangerous-replay-advisory",
+              status: "skipped",
+              reason: "script_missing",
+              message:
+                "scripts/route-dangerous-replay.mjs is not present on this ref yet.",
+            };
+
+            fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
+            NODE
+            echo "report_status=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          cli_exit=0
+          node scripts/route-dangerous-replay.mjs \
+            --output=data/benchmark/route-dangerous-replay-advisory.json || cli_exit=$?
+
+          if [ ! -f data/benchmark/route-dangerous-replay-advisory.json ]; then
+            node - <<'NODE'
+            const fs = require("node:fs");
+            const path = require("node:path");
+
+            const outputPath = path.join(
+              "data",
+              "benchmark",
+              "route-dangerous-replay-advisory.json"
+            );
+            const report = {
+              generatedAt: new Date().toISOString(),
+              reporter: "route-dangerous-replay-advisory",
+              status: "error",
+              reason: "artifact_missing",
+              message:
+                "route-dangerous-replay did not produce an output artifact.",
+            };
+
+            fs.writeFileSync(outputPath, `${JSON.stringify(report, null, 2)}\n`);
+            NODE
+          fi
+
+          report_status=$(node -e "const fs = require('node:fs'); const report = JSON.parse(fs.readFileSync('data/benchmark/route-dangerous-replay-advisory.json', 'utf8')); process.stdout.write(typeof report.status === 'string' ? report.status : 'missing');")
+
+          echo "report_status=$report_status" >> "$GITHUB_OUTPUT"
+
+          if [ "$cli_exit" -ne 0 ] || \
+             [ "$report_status" = "failed" ] || \
+             [ "$report_status" = "error" ] || \
+             [ "$report_status" = "missing" ]; then
+            echo "Route dangerous replay advisory reported $report_status"
+            exit 1
+          fi
+      - name: Upload route dangerous replay advisory artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-dangerous-replay-advisory-artifacts
+          if-no-files-found: warn
+          path: |
+            data/benchmark/route-dangerous-replay-advisory.json
+      - name: Preserve advisory job result
+        if: always()
+        run: |
+          if [ "${{ steps.route_dangerous_replay.outcome }}" != "success" ]; then
+            echo "Route dangerous replay advisory reported failures"
+            exit 1
+          fi
+
   ci-gate:
     name: CI Gate
     needs: [lint, typecheck, build, test, benchmark-integrity, route-sentinel-replay]
