@@ -1,4 +1,8 @@
 import type { TriageSession } from "@/lib/triage-engine";
+import {
+  buildTerminalOutcomeMessage,
+  type UncertaintyTerminalOutcome,
+} from "@/lib/clinical/uncertainty-routing";
 import { sanitizeSessionForClient } from "./context-helpers";
 
 interface EmergencyResponseInput {
@@ -12,6 +16,22 @@ interface VisionEmergencyResponseInput extends EmergencyResponseInput {
 
 interface RedFlagEmergencyResponseInput extends EmergencyResponseInput {
   redFlags: string[];
+}
+
+interface CannotAssessResponseInput {
+  outcome: UncertaintyTerminalOutcome;
+  session: TriageSession;
+}
+
+function assertCannotAssessOutcome(outcome: UncertaintyTerminalOutcome) {
+  if (
+    outcome.type !== "cannot_assess" ||
+    outcome.terminalState !== "cannot_assess"
+  ) {
+    throw new Error(
+      "Cannot-assess response builder requires a cannot_assess terminal outcome"
+    );
+  }
 }
 
 function buildEmergencyResponse(message: string, session: TriageSession) {
@@ -43,4 +63,20 @@ export function buildRedFlagEmergencyResponse(
     `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${input.petName} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
     input.session
   );
+}
+
+export function buildCannotAssessResponse(input: CannotAssessResponseInput) {
+  assertCannotAssessOutcome(input.outcome);
+
+  return {
+    type: input.outcome.type,
+    terminal_state: input.outcome.terminalState,
+    reason_code: input.outcome.reasonCode,
+    owner_message: input.outcome.ownerMessage,
+    recommended_next_step: input.outcome.recommendedNextStep,
+    message: buildTerminalOutcomeMessage(input.outcome),
+    session: sanitizeSessionForClient(input.session),
+    ready_for_report: false,
+    conversationState: input.outcome.conversationState,
+  };
 }
