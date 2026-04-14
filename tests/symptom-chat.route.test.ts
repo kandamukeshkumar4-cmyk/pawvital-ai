@@ -5964,6 +5964,52 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.ready_for_report).toBe(false);
       expect(payload.owner_message).toContain("only assess dog symptom cases");
     });
+
+    it("VET-1020: generate_report blocks when a report-blocking critical sign is still unanswered", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["difficulty_breathing"]);
+      session = recordAnswer(session, "breathing_rate", 40);
+      session = recordAnswer(session, "gum_color", "pink_normal");
+      session = recordAnswer(session, "position_preference", "standing");
+      session.case_memory = {
+        ...session.case_memory!,
+        latest_owner_turn: "He is breathing hard, keeps standing up, and his gums still look pink.",
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_breathing_onset");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.owner_message).toContain("breathing difficulty start suddenly or gradually");
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+
+    it("VET-1020: generate_report blocks when gum color is still unknown for an active high-risk family", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["difficulty_breathing"]);
+      session = recordAnswer(session, "breathing_onset", "sudden");
+      session = recordAnswer(session, "gum_color", "unknown");
+      session = recordAnswer(session, "position_preference", "standing");
+      session.case_memory = {
+        ...session.case_memory!,
+        latest_owner_turn: "He started struggling to breathe suddenly and I could not tell what color the gums were.",
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_gum_color");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.owner_message).toContain("What color are your dog's gums?");
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
   });
 
   // --- 3.5: Compression boundary preservation ---

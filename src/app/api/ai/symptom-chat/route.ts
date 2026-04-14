@@ -116,6 +116,7 @@ import {
 import {
   buildAlternateObservableRecoveryOutcome,
   buildCannotAssessOutcome,
+  findReportBlockingCriticalInfo,
   buildTerminalOutcomeMessage,
   type AlternateObservableRecoveryOutcome,
   detectOutOfScopeTurn,
@@ -287,6 +288,20 @@ export async function POST(request: Request) {
     }
 
     if (action === "generate_report") {
+      const reportBlockingCriticalInfo = findReportBlockingCriticalInfo(session);
+      if (reportBlockingCriticalInfo) {
+        return NextResponse.json(
+          buildTerminalOutcomeResponse(
+            buildCannotAssessOutcome({
+              petName: pet.name || "your dog",
+              questionId: reportBlockingCriticalInfo.questionId,
+              questionText: reportBlockingCriticalInfo.questionText,
+            }),
+            session
+          )
+        );
+      }
+
       return await generateReport(
         session,
         effectivePet,
