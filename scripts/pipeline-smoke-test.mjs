@@ -4,7 +4,7 @@
  * Pipeline Smoke Test for VET-917
  *
  * Creates a temporary smoke branch, pushes it, verifies PR creation,
- * and documents the expected CI chain. Optionally cleans up afterward.
+ * and documents the expected CI + approval chain. Optionally cleans up afterward.
  *
  * Usage:
  *   node scripts/pipeline-smoke-test.mjs              # full test with cleanup
@@ -163,13 +163,13 @@ async function main() {
   }
   console.log();
 
-  // Step 6: Document expected CI chain
-  console.log("Step 6: Expected CI Chain");
+  // Step 6: Document expected delivery chain
+  console.log("Step 6: Expected Delivery Chain");
   console.log("-".repeat(40));
   console.log("1. auto-pr.yml — PR creation (should be complete if PR exists)");
   console.log("2. ci.yml — Lint, Type Check, Build, Test, CI Gate (~2-5 minutes)");
-  console.log("3. ai-review.yml — AI Code Review (~1-2 minutes after CI)");
-  console.log("4. auto-merge.yml — Squash merge to master (if all gates pass)");
+  console.log("3. Human review — non-author approval on the current head SHA");
+  console.log("4. auto-merge.yml — Squash merge to master (if CI and approval both pass)");
   console.log("5. Vercel — Production deploy (~30 seconds after merge)");
   console.log();
 
@@ -178,7 +178,7 @@ async function main() {
     console.log(`  ${prUrl}`);
     console.log();
     console.log("CI checks will appear as status checks on the PR.");
-    console.log("AI review will post as a comment when ready.");
+    console.log("After CI passes, request a non-author approval on the current head SHA.");
   }
   console.log();
 
@@ -232,8 +232,8 @@ async function main() {
   console.log();
   console.log("Next steps:");
   console.log("1. If PR exists, monitor CI checks on GitHub");
-  console.log("2. Verify AI review posts after CI passes");
-  console.log("3. Verify auto-merge triggers after AI approval");
+  console.log("2. Verify a non-author approval is added after CI passes");
+  console.log("3. Verify auto-merge triggers after approval");
   console.log("4. Verify Vercel production deployment after merge");
   console.log();
   console.log("Smoke test complete!");

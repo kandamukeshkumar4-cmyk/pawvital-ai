@@ -3,7 +3,7 @@
  * agent-watcher.mjs
  *
  * Runs in the background on your local machine. Polls GitHub every 60 seconds
- * for open PRs with failed CI or rejected AI reviews. When it finds one, it
+ * for open PRs with failed CI or requested review changes. When it finds one, it
  * dispatches the fix to the agent that created the branch:
  *
  *   claude/*       → Claude Code CLI (automatic fix)
@@ -135,11 +135,14 @@ function getOpenPRs() {
 }
 
 function getPRCheckStatus(prNumber) {
-  // Get SHA via gh --json (no jq — Windows-safe)
-  const prRaw = gh(`pr view ${prNumber} --json headRefOid`);
+  // Get SHA and review state via gh --json (no jq — Windows-safe)
+  const prRaw = gh(`pr view ${prNumber} --json headRefOid,reviewDecision`);
   let sha = '';
+  let reviewDecision = 'REVIEW_REQUIRED';
   try {
-    sha = JSON.parse(prRaw).headRefOid;
+    const parsed = JSON.parse(prRaw);
+    sha = parsed.headRefOid;
+    reviewDecision = parsed.reviewDecision || 'REVIEW_REQUIRED';
   } catch {
     return { ci: 'unknown', review: 'unknown', details: '' };
   }
@@ -160,8 +163,6 @@ function getPRCheckStatus(prNumber) {
   }
 
   const ciGate = checks.find(c => c.name === 'CI Gate');
-  const aiReview = checks.find(c => c.name === 'AI Review');
-
   let ci = 'pending';
   if (ciGate) {
     if (ciGate.conclusion === 'success') ci = 'passed';
@@ -169,40 +170,19 @@ function getPRCheckStatus(prNumber) {
     else if (ciGate.status === 'completed') ci = ciGate.conclusion || 'unknown';
   }
 
-  // AI Review runs via workflow_run (not on the PR commit), so check PR comments
-  // for the review verdict instead of check runs
   let review = 'pending';
   let verdict = '';
-  let fixInstructions = '';
-  const commentsRaw = gh(`pr view ${prNumber} --json comments`);
-  try {
-    const comments = JSON.parse(commentsRaw).comments || [];
-    // Find the AI review comment (look for our marker)
-    for (const c of comments) {
-      if (c.body && c.body.includes('AI Code Review')) {
-        review = 'completed';
-        if (c.body.includes('REQUEST_CHANGES') || c.body.includes(':x:')) {
-          verdict = 'REQUEST_CHANGES';
-        } else if (c.body.includes(':white_check_mark:') && c.body.includes('Verdict: `APPROVE`')) {
-          verdict = 'APPROVE';
-        } else {
-          verdict = 'UNKNOWN';
-        }
-        // Extract fix instructions
-        const fixMatch = c.body.match(/### How to fix\n([\s\S]*?)(?:\n---|\n\*\(|$)/);
-        if (fixMatch) fixInstructions = fixMatch[1].trim();
-      }
-    }
-  } catch { /* ignore parse errors */ }
-
-  // If CI passed but no review comment yet, check how long PR has been open
-  // If > 10 minutes with no review, something is wrong
-  if (ci === 'passed' && review === 'pending') {
-    // Leave as pending — watcher will check again next cycle
+  if (reviewDecision === 'APPROVED') {
+    review = 'completed';
+    verdict = 'APPROVE';
+  } else if (reviewDecision === 'CHANGES_REQUESTED') {
+    review = 'completed';
+    verdict = 'REQUEST_CHANGES';
   }
 
   // Get CI failure details
   let ciFailureDetails = '';
+  const commentsRaw = gh(`pr view ${prNumber} --json comments`);
   if (ci === 'failed') {
     const failedChecks = checks
       .filter(c => c.conclusion === 'failure' && c.name !== 'CI Gate')
@@ -225,7 +205,6 @@ function getPRCheckStatus(prNumber) {
     ci,
     review,
     verdict,
-    fixInstructions,
     ciFailureDetails,
     details: `CI: ${ci}, Review: ${review}${verdict ? `, Verdict: ${verdict}` : ''}`,
   };
@@ -262,12 +241,8 @@ function buildFixContext(pr, checkStatus) {
   }
 
   if (checkStatus.verdict === 'REQUEST_CHANGES') {
-    parts.push('## AI Review: Changes Requested');
-    if (checkStatus.fixInstructions) {
-      parts.push(checkStatus.fixInstructions);
-    } else {
-      parts.push('The AI reviewer requested changes. Check the PR comments for details.');
-    }
+    parts.push('## Review Changes Requested');
+    parts.push('A reviewer requested changes. Check the PR conversation and review summary in GitHub for details.');
     parts.push('');
   }
 

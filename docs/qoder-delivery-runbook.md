@@ -62,34 +62,25 @@ git push origin qwen/vet-XXX-your-slug-v1
 - CI Gate blocks further progression
 - Fix on the same branch, push again, CI re-runs
 
-### 4. AI Code Review
+### 4. Required Human Approval
 
-**Triggered by**: `ai-review.yml` after CI Pipeline succeeds, and again when a draft PR becomes ready for review
+**Triggered by**: human review after CI Pipeline succeeds
 
 **What happens**:
-- Workflow finds the PR for your branch
-- Fetches PR diff (max 80KB)
-- Publishes an `AI Review Gate` check on the PR head SHA
-- Sends to GitHub Models (configurable, default: `openai/gpt-4o-mini`)
-- AI reviews against PawVital-specific rules:
-  - Deterministic clinical logic must remain source of truth
-  - Protected state (`answered_questions`, `extracted_answers`, `unresolved_question_ids`) must not be mutated by compression
-  - Telemetry stays internal unless explicitly intended
-  - No hidden regressions in route.ts, triage-engine.ts, symptom-memory.ts, clinical-matrix.ts
-- Posts review comment with verdict and findings
-- If APPROVED: submits GitHub approval on the PR and marks `AI Review Gate` successful
-- If GitHub Models cannot produce a verdict or the configured model is unavailable: `AI Review Gate` fails closed and merge stays blocked
+- A human reviewer checks the PR after CI turns green
+- The reviewer confirms the latest branch head still matches the intended ticket scope
+- The reviewer approves the current head SHA in GitHub
 
 ### 5. Auto-Merge
 
-**Triggered by**: `auto-merge.yml` after AI Review succeeds
+**Triggered by**: `auto-merge.yml` after CI succeeds or a review is submitted/dismissed
 
 **Gate checks** (all must pass):
 1. CI Gate passed with success
 2. PR is not a draft
 3. PR has no merge conflicts
-4. `AI Review Gate` succeeded on the current PR head SHA
-5. AI bot approved the specific commit SHA
+4. PR review decision is `APPROVED`
+5. At least one non-author human approval matches the current PR head SHA
 
 **If all gates pass**:
 - Squash-merges to `master`
@@ -156,12 +147,12 @@ This script:
    ```
 3. CI re-runs automatically
 
-### AI Review Requests Changes
+### Review Requests Changes
 
-1. Read the AI review comment on the PR
+1. Read the reviewer feedback on the PR
 2. Fix the issues on the same branch
 3. Push again
-4. AI review re-runs automatically
+4. Ask the reviewer to re-check and approve the latest head SHA
 
 ### Auto-Merge Blocked
 
@@ -169,7 +160,7 @@ Common reasons:
 - **Draft PR**: Mark as ready for review in GitHub UI
 - **Merge conflict**: Rebase onto latest master and resolve conflicts
 - **CI not green**: Fix CI failures first
-- **AI Review Gate failed**: Address review findings or restore GitHub Models access / an allowed review model
+- **Approval missing or stale**: Ask a non-author reviewer to approve the current head SHA
 
 ## Verification Commands
 
@@ -191,8 +182,7 @@ vercel inspect https://pawvital-ai.vercel.app
 |------|---------|
 | `.github/workflows/auto-pr.yml` | Auto-creates PRs for supported branches |
 | `.github/workflows/ci.yml` | Runs lint, typecheck, build, test, CI gate |
-| `.github/workflows/ai-review.yml` | AI-powered code review plus the `AI Review Gate` status check |
-| `.github/workflows/auto-merge.yml` | Auto-merges when CI, `AI Review Gate`, and AI approval all pass |
+| `.github/workflows/auto-merge.yml` | Auto-merges when CI and a non-author human approval both match the current head SHA |
 | `scripts/agent-done.mjs` | Finish agent's work (push + PR) |
 | `scripts/finalize-pawvital-ticket.mjs` | Full completion workflow |
 | `scripts/land-pawvital-ticket.mjs` | Land to production repo |

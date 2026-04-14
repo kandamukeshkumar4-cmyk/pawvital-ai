@@ -216,8 +216,8 @@ console.log('');
 console.log('What happens next (automatically):');
 console.log('  1. GitHub opens a PR for your branch (~10 seconds)');
 console.log('  2. CI runs: lint → typecheck → build → tests (~2 min)');
-console.log('  3. The configured GitHub Models review model checks the PR');
-console.log('  4. All checks pass and AI review approves → auto-merged to master → Vercel deploys');
+console.log('  3. A non-author human reviewer approves the current PR head SHA');
+console.log('  4. CI + approval pass → auto-merged to master → Vercel deploys');
 console.log('');
 
 if (prPageUrl) {

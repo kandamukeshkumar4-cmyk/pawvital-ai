@@ -44,13 +44,13 @@ node scripts/agent-done.mjs <ticket-slug> "<what you did>" --agent <your-name>
 **What happens automatically after you push:**
 1. GitHub opens a PR for your branch (~10 seconds)
 2. CI runs: lint → typecheck → build → tests (~2 minutes)
-3. The configured GitHub Models review model checks the PR for correctness and clinical safety and must pass the `AI Review Gate`
-4. `AI Review Gate` + CI + matching AI approval all pass → auto-merged to master → Vercel deploys → live in ~30 seconds
-5. CI fails → auto-fixes lint/TS errors, or AI posts exact fix instructions on the PR
+3. A non-author human approval on the current PR head SHA is required before auto-merge
+4. CI + the required approval pass → auto-merged to master → Vercel deploys → live in ~30 seconds
+5. CI fails → auto-fixes lint errors when possible, or posts the failing checks and local TypeScript excerpt on the PR
 
 **You do not need to merge anything manually.**
 
-> No extra AI secret is required for PR review. GitHub Actions uses the built-in `GITHUB_TOKEN` plus `models: read` permission to call GitHub Models. If the configured model is not allowed for the repo/org, the `AI Review Gate` still fails closed until model access is restored or the workflow is rerun.
+> No AI/model access is required for the PR path. The merge contract is CI plus a non-author human approval on the current head SHA.
 
 ### Demo mode
 

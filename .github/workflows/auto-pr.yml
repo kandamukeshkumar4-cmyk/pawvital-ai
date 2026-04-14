@@ -104,7 +104,7 @@ jobs:
           ${{ steps.info.outputs.commits }}
 
           ---
-          *Auto-created by CI pipeline. Waiting for CI and the AI Review Gate before auto-merge.*
+          *Auto-created by CI pipeline. Waiting for CI and the required human approval before auto-merge.*
           ENDOFBODY
           )
 

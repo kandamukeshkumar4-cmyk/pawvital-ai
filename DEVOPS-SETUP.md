@@ -5,39 +5,18 @@
 This pipeline provides end-to-end DevOps automation for multi-agent development:
 
 ```
-Agent pushes branch → Auto-PR → CI (lint/typecheck/build/test) → AI Review (GitHub Models) → Auto-Merge → Vercel Deploy
+Agent pushes branch → Auto-PR → CI (lint/typecheck/build/test) → Human approval → Auto-Merge → Vercel Deploy
 ```
 
 Works with **any tool**: Claude Code, Cursor, GitHub Copilot, Codex CLI, Antigravity, or manual commits.
 
 ---
 
-## Step 1: Confirm GitHub Models Access
-
-Go to **GitHub repo → Settings → Secrets and variables → Actions**
-
-### Required Workflow Access
-
-No extra AI secret is required for PR review or CI analysis. The workflows call GitHub Models with the built-in `GITHUB_TOKEN`, so the repo/org only needs GitHub Models enabled for the configured model.
-
-### Optional Variables
-
-Go to **Settings → Secrets and variables → Actions → Variables tab**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REVIEW_MODEL` | `openai/gpt-4o-mini` | Model used by `ai-review.yml` for PR review |
-| `AUTOFIX_MODEL` | `openai/gpt-4o-mini` | Model used by `auto-fix.yml` for CI failure analysis |
-
-> `GITHUB_TOKEN` is automatically provided by GitHub Actions. The workflows must keep `models: read` permission so GitHub Models can be called from CI.
-
----
-
-## Step 2: Enable Branch Protection
+## Step 1: Enable Branch Protection
 
 Go to **GitHub repo → Settings → Branches → Add branch protection rule**
 
-### Rule for `master`:
+### Rule for `master`
 
 | Setting | Value |
 |---------|-------|
@@ -52,11 +31,11 @@ Go to **GitHub repo → Settings → Branches → Add branch protection rule**
 This ensures:
 - No direct pushes to master (all changes go through PRs)
 - CI must pass before merge
-- At least one approval (AI or human) before merge
+- At least one human approval before merge
 
 ---
 
-## Step 3: Enable Auto-Merge (Optional)
+## Step 2: Enable Auto-Merge (Optional)
 
 Go to **GitHub repo → Settings → General → Pull Requests**
 
@@ -97,22 +76,9 @@ All four must pass for the **CI Gate** to go green.
 
 On failure, a comment is posted on the PR with the failing job and a link to logs.
 
-### 3. AI Code Review (`ai-review.yml`)
+### 3. Required Human Approval + Auto-Merge (`auto-merge.yml`)
 
-After CI passes, the diff is sent to the configured **GitHub Models** review model for review.
-
-Review checks:
-- Clinical logic safety (no medical decisions in prompts)
-- Protected state integrity (compression can't mutate control state)
-- Telemetry boundaries (no internal markers in user payloads)
-- Security (no XSS, injection, etc.)
-- Scope discipline (changes match the stated ticket)
-
-Verdict is either `APPROVE` (posts approval) or `REQUEST_CHANGES` (blocks merge with feedback).
-
-### 4. Auto-Merge (`auto-merge.yml`)
-
-When both CI Gate passes AND the AI review approves:
+When both CI Gate passes AND a non-author human approval matches the current PR head SHA:
 - Squash-merges the PR to master
 - Deletes the branch
 - Vercel auto-deploys from master
@@ -125,28 +91,28 @@ When both CI Gate passes AND the AI review approves:
 ```bash
 # Agent finishes work, pushes branch
 git push origin qwen/vet-XXX-description-v1
-# → Auto-PR → CI → AI Review → Auto-Merge
+# → Auto-PR → CI → Human approval → Auto-Merge
 ```
 
 ### Cursor / Copilot
 ```bash
 # Make changes in IDE, commit, push
 git push origin feature/my-change
-# → Auto-PR → CI → AI Review → Auto-Merge
+# → Auto-PR → CI → Human approval → Auto-Merge
 ```
 
 ### Antigravity
 ```bash
 # Push from Antigravity
 git push origin fix/bug-description
-# → Auto-PR → CI → AI Review → Auto-Merge
+# → Auto-PR → CI → Human approval → Auto-Merge
 ```
 
 ### Manual
 ```bash
 # Create PR manually via gh CLI
 gh pr create --base master --head my-branch --title "My change"
-# → CI → AI Review → Auto-Merge
+# → CI → Human approval → Auto-Merge
 ```
 
 ---
@@ -159,18 +125,10 @@ gh pr create --base master --head my-branch --title "My change"
 | Type check fails | Comment on PR with error link | Branch author |
 | Build fails | Comment on PR with error link | Branch author |
 | Tests fail | Comment on PR with error link | Branch author |
-| AI review rejects | REQUEST_CHANGES with specific feedback | Branch author |
+| Approval missing or dismissed | PR stays open until a reviewer re-approves the current head SHA | Branch author / reviewer |
 | Merge conflict | Auto-merge skips, PR stays open | Branch author rebases |
 
-The PR stays open until all issues are fixed. Push new commits to the same branch and CI + review re-run automatically.
-
----
-
-## Cost Notes
-
-- **CI runs**: Free on GitHub Actions (2,000 min/month for free tier)
-- **GitHub Models review calls**: Usage follows your GitHub Models / Copilot access policy for the configured model
-- **Vercel**: Deploys only on merge to master (no extra cost from PRs)
+The PR stays open until all issues are fixed. Push new commits to the same branch, let CI re-run, and ask the reviewer to approve the latest head SHA again.
 
 ---
 
@@ -179,11 +137,12 @@ The PR stays open until all issues are fixed. Push new commits to the same branc
 ### CI Gate not appearing as required check
 The `CI Gate` check only exists after the first PR triggers it. Create one PR, let CI run, then go back to branch protection settings and select `CI Gate` from the dropdown.
 
-### AI review blocked
-Check that the configured model is allowed for the repo/org and that the workflow still has `models: read` permission. The workflow logs will surface the GitHub Models error if access is unavailable.
+### Auto-merge not triggering after CI
+Check that a non-author reviewer approved the current PR head SHA. Pushing a new commit clears the old approval for the workflow gate, so the reviewer must approve the latest head again.
 
 ### Auto-merge not triggering
 1. Verify "Allow auto-merge" is enabled in repo settings
 2. Verify branch protection requires the `CI Gate` status check
 3. Verify the PR is not a draft
 4. Verify there are no merge conflicts
+5. Verify the PR has a non-author human approval on the current head SHA

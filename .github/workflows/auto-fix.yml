@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  models: read
   pull-requests: write
 
 jobs:
@@ -123,106 +122,62 @@ jobs:
           git commit -m "fix: auto-fix eslint errors [ci-autofix]"
           git push origin HEAD
 
-      - name: Analyze failure with AI
+      - name: Summarize failure details
         if: >
           steps.pr.outputs.found == 'true' &&
           steps.limit.outputs.reached == 'false' &&
           steps.lint-fix.outputs.fixed != 'true'
-        id: analysis
+        id: summary
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AUTOFIX_MODEL: ${{ vars.AUTOFIX_MODEL || vars.REVIEW_MODEL || 'openai/gpt-4o-mini' }}
         run: |
-          if [ -z "$GITHUB_TOKEN" ]; then
-            echo "GITHUB_TOKEN unavailable — skipping AI analysis"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Get the failed check details
           SHA="${{ github.event.workflow_run.head_sha }}"
           FAILED_CHECKS=$(gh api repos/${{ github.repository }}/commits/${SHA}/check-runs \
             --jq '[.check_runs[] | select(.conclusion == "failure") | {name: .name, details_url: .details_url}]' \
             2>/dev/null || echo "[]")
+          FAILED_LIST=$(echo "$FAILED_CHECKS" | jq -r '
+            if length == 0 then
+              "- Failed checks were unavailable from the workflow run."
+            else
+              .[] | "- \(.name): \(.details_url // "no details URL available")"
+            end')
 
-          # Get TypeScript errors if typecheck failed
           TSC_ERRORS=""
           if echo "$FAILED_CHECKS" | grep -q "Type Check"; then
             TSC_ERRORS=$(npx tsc --noEmit 2>&1 | head -100 || true)
           fi
 
-          # Get PR diff (first 30KB)
-          DIFF=$(gh pr diff ${{ steps.pr.outputs.number }} 2>/dev/null | head -c 30000 || echo "")
-
-          PROMPT=$(cat <<EOF
-          CI failed on PR #${{ steps.pr.outputs.number }} in the PawVital AI veterinary triage system.
-
-          Failed checks:
-          ${FAILED_CHECKS}
-
-          TypeScript errors (if any):
-          ${TSC_ERRORS}
-
-          PR diff (first 30KB):
-          ${DIFF}
-
-          Analyze what failed and provide:
-          1. Root cause of each failure
-          2. Exact fix instructions (specific files and specific changes needed)
-          3. Any patterns that suggest a deeper architectural issue
-
-          Respond ONLY with valid JSON — no markdown fences, no preamble:
-          {"analysis": "root cause summary", "fixes": [{"file": "path", "instruction": "exactly what to change"}], "severity": "simple|complex"}
-          EOF
-          )
-
-          RESPONSE=$(curl -sS -L -X POST https://models.github.ai/inference/chat/completions \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg model "$AUTOFIX_MODEL" \
-              --arg content "$PROMPT" \
-              '{model: $model, max_tokens: 900, temperature: 0.1, messages: [{role: "system", content: "Return valid JSON only with no markdown fences."}, {role: "user", content: $content}]}')" || true)
-
-          ANALYSIS=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // "Analysis unavailable"')
-          if [ "$ANALYSIS" = "Analysis unavailable" ]; then
-            ERROR_MESSAGE=$(echo "$RESPONSE" | jq -r '.error.message // .message // "GitHub Models analysis was unavailable for this failure."' 2>/dev/null || echo "GitHub Models analysis was unavailable for this failure.")
-            ANALYSIS=$(jq -n \
-              --arg message "$ERROR_MESSAGE" \
-              '{
-                analysis: $message,
-                fixes: [],
-                severity: "complex"
-              }')
-          fi
-          echo "result<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$ANALYSIS" >> "$GITHUB_OUTPUT"
+          echo "checks<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$FAILED_LIST" >> "$GITHUB_OUTPUT"
           echo "EOF" >> "$GITHUB_OUTPUT"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "tsc<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$TSC_ERRORS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-      - name: Post analysis comment
-        if: steps.analysis.outputs.skip != 'true'
+      - name: Post failure summary comment
+        if: >
+          steps.pr.outputs.found == 'true' &&
+          steps.limit.outputs.reached == 'false' &&
+          steps.lint-fix.outputs.fixed != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Use env: to pass model output safely — avoids shell breakage on single quotes
-          ANALYSIS_RESULT: ${{ steps.analysis.outputs.result }}
-          AUTOFIX_MODEL: ${{ vars.AUTOFIX_MODEL || vars.REVIEW_MODEL || 'openai/gpt-4o-mini' }}
+          FAILED_CHECKS: ${{ steps.summary.outputs.checks }}
+          TYPECHECK_EXCERPT: ${{ steps.summary.outputs.tsc }}
         run: |
-          SUMMARY=$(echo "$ANALYSIS_RESULT" | jq -r '.analysis // "See CI logs for details"' 2>/dev/null || echo "CI failed — check the logs above")
-          FIXES=$(echo "$ANALYSIS_RESULT" | jq -r '.fixes[]? | "- `\(.file)`: \(.instruction)"' 2>/dev/null || echo "")
           BODY=$(cat <<EOF
-          ## CI Failed — AI Analysis
+          ## CI Failed — Manual Fix Required
 
-          **Root cause:** ${SUMMARY}
+          Automatic ESLint fixes did not resolve this failure. Review the failing checks below and push the next fix to this branch.
 
-          ### What to fix
-          ${FIXES}
+          ### Failed checks
+          ${FAILED_CHECKS}
 
-          ---
-          *Analyzed by ${AUTOFIX_MODEL} via GitHub Models. Push the fix to this branch and CI will re-run automatically.*
+          ### TypeScript excerpt
+          \`\`\`text
+          ${TYPECHECK_EXCERPT:-No TypeScript excerpt was captured for this run.}
+          \`\`\`
+
+          Push the next fix to this branch and CI will re-run automatically.
           EOF
           )
           gh pr comment ${{ steps.pr.outputs.number }} --body "$BODY"
