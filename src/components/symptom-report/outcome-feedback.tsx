@@ -88,7 +88,8 @@ export function OutcomeFeedbackSection({
       <div className="space-y-4 mt-2">
         <p className="text-sm text-gray-600">
           Sharing the confirmed outcome helps PawVital get better at thresholds,
-          retrieval quality, and ambiguity handling over time.
+          retrieval quality, and ambiguity handling over time. These entries now
+          feed reviewable proposal drafts rather than automatic threshold changes.
         </p>
 
         <div>
@@ -180,7 +181,8 @@ export function OutcomeFeedbackSection({
           )}
           {feedbackState === "saved" && (
             <span className="text-sm text-emerald-700">
-              Thanks. This case can now be used for future quality review.
+              Thanks. This case can now be used for future quality review and
+              proposal drafting.
             </span>
           )}
         </div>
