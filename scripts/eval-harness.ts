@@ -1,7 +1,11 @@
 /**
  * PawVital Evaluation Harness (VET-910)
  *
- * Automated scoring of the PawVital symptom checker against vet-adjudicated benchmark cases.
+ * Simulated scoring scaffold for PawVital benchmark cases.
+ *
+ * This harness does not call the live symptom-chat route. It mirrors
+ * adjudication labels to exercise scorecard generation and reporting while
+ * route-backed safety checks live elsewhere.
  *
  * Usage:
  *   npx ts-node --esm scripts/eval-harness.ts                    # Run full benchmark
@@ -99,6 +103,7 @@ interface Scorecard {
   timestamp: string;
   version: string;
   benchmark_version: string;
+  execution_mode: 'simulated';
   total_cases: number;
   primary_metrics: {
     emergency_recall: number;
@@ -158,13 +163,11 @@ const DISPOSITION_URGENCY: Record<string, number> = {
 // === SIMULATION ENGINE ===
 
 /**
- * Simulates the triage engine's behavior on a benchmark case.
+ * Simulates PawVital outcome scoring from benchmark adjudication labels.
  *
- * In a full implementation, this would call the actual triage engine
- * (symptom-chat endpoint) and capture the output. For now, we simulate
- * based on the case's adjudication labels to establish the scoring framework.
- *
- * TODO: Replace with actual API call to /api/ai/symptom-chat when ready.
+ * This function is intentionally not route-backed. It exists to produce a
+ * stable simulated scorecard for benchmark reporting without claiming live
+ * symptom-chat route coverage.
  */
 function simulateTriage(
   c: BenchmarkCase,
@@ -434,6 +437,7 @@ function scoreBenchmark(
     timestamp: new Date().toISOString(),
     version: process.env.GIT_COMMIT || 'dev',
     benchmark_version: 'v1.0',
+    execution_mode: 'simulated',
     total_cases: filtered.length,
     primary_metrics: {
       emergency_recall: parseFloat(emergencyRecall.toFixed(3)),
@@ -491,9 +495,11 @@ function main() {
   const cases: BenchmarkCase[] = lines.map(l => JSON.parse(l));
 
   console.log(`\n${'='.repeat(60)}`);
-  console.log(`PAWVITAL EVALUATION HARNESS`);
+  console.log(`PAWVITAL EVALUATION HARNESS (SIMULATED)`);
   console.log(`${'='.repeat(60)}`);
   console.log(`Loading ${cases.length} benchmark cases...`);
+  console.log(`Execution mode: simulated`);
+  console.log(`This harness does not call /api/ai/symptom-chat.`);
 
   if (filter.category) {
     console.log(`Filtering by category: ${filter.category}`);
@@ -511,6 +517,7 @@ function main() {
   console.log(`\n${'='.repeat(60)}`);
   console.log(`SCORECARD: ${scorecard.run_id}`);
   console.log(`${'='.repeat(60)}`);
+  console.log(`Execution mode: ${scorecard.execution_mode}`);
   console.log(`Total cases: ${scorecard.total_cases}`);
   console.log(`Result: ${scorecard.pass_fail}`);
 

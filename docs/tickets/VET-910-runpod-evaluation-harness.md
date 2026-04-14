@@ -49,6 +49,7 @@ RunPod is appropriate here because batch benchmark execution is embarrassingly p
 - Scorecard output: `data/benchmark/scorecard-EVAL-*.json`
 - Gold benchmark: `data/benchmark/gold-benchmark-v1.jsonl` (575 cases)
 - Additional harness: `scripts/eval-harness.ts` with per-category breakdowns
+- `scripts/eval-harness.ts` is a simulated scorecard scaffold, not a live route-backed safety gate
 
 ### Manifest exists under `deploy/runpod/jobs/`
 - `deploy/runpod/jobs/vet-910-benchmark-eval.json` — job manifest with command, env, inputs, outputs
@@ -63,9 +64,14 @@ RunPod is appropriate here because batch benchmark execution is embarrassingly p
 - **Silent trial schema:** `data/benchmarks/dog-triage/silent-trial.schema.json`
 - **Gold benchmark v1:** `data/benchmarks/dog-triage/gold-v1-enriched.jsonl`
 - **Full benchmark:** `data/benchmark/gold-benchmark-v1.jsonl` (575 cases across 50 complaint families)
-- **Evaluation harness:** `scripts/eval-harness.ts` (Case Runner → Scorer → Scorecard architecture)
+- **Evaluation harness:** `scripts/eval-harness.ts` (simulated Case Runner → Scorer → Scorecard architecture, not route-backed)
 - **Benchmark generator:** `scripts/generate-benchmark-cases.ts`
 - **Benchmark validator:** `scripts/validate-benchmark.ts` (575 cases validated)
 - **npm scripts:** `eval:benchmark`, `eval:benchmark:dangerous`, `eval:benchmark:case`, `eval:benchmark:generate`, `eval:benchmark:validate`
 
 ## Status: COMPLETE
+
+## Clarification
+
+- `scripts/runpod-benchmark.mjs` is the live deployed-app benchmark path when `APP_BASE_URL` is configured
+- `scripts/eval-harness.ts` is intentionally simulated and should not be interpreted as the live route-backed safety gate
