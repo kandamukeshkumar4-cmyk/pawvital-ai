@@ -44,6 +44,10 @@ NON_DOG_MARKERS = {
 logger = logging.getLogger("text-retrieval-service")
 
 
+def parse_bool_env(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
 SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
 SUPABASE_KEY = (
     os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
@@ -51,14 +55,15 @@ SUPABASE_KEY = (
 )
 SIDECAR_API_KEY = os.getenv("SIDECAR_API_KEY", "").strip()
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("SUPABASE_TIMEOUT_SECONDS", "8"))
-STUB_MODE = os.getenv("STUB_MODE", "false").strip().lower() == "true"
+STUB_MODE = parse_bool_env("STUB_MODE")
+FORCE_FALLBACK = parse_bool_env("FORCE_FALLBACK")
 DEFAULT_CANDIDATE_LIMIT = int(os.getenv("TEXT_RETRIEVAL_CANDIDATE_LIMIT", "18"))
 TEXT_EMBED_MODEL_NAME = os.getenv("TEXT_EMBED_MODEL_NAME", "BAAI/bge-m3").strip()
 TEXT_RERANK_MODEL_NAME = os.getenv(
     "TEXT_RERANK_MODEL_NAME",
     "BAAI/bge-reranker-v2-m3",
 ).strip()
-TEXT_MODEL_ENABLED = os.getenv("TEXT_MODEL_ENABLED", "true").strip().lower() == "true"
+TEXT_MODEL_ENABLED = parse_bool_env("TEXT_MODEL_ENABLED", default="true")
 TEXT_MODEL_MAX_CANDIDATES = int(os.getenv("TEXT_MODEL_MAX_CANDIDATES", "24"))
 
 EMBED_MODEL = None
@@ -151,9 +156,15 @@ def validate_auth(authorization: str | None) -> None:
 def health_mode() -> str:
     if STUB_MODE:
         return "stub"
-    if SUPABASE_URL and SUPABASE_KEY:
-        return "live"
-    return "degraded"
+    if not (SUPABASE_URL and SUPABASE_KEY):
+        return "degraded"
+    if FORCE_FALLBACK:
+        return "forced_fallback"
+    if EMBED_MODEL is not None and RERANK_MODEL is not None:
+        return "live_with_models"
+    if not TEXT_MODEL_ENABLED or MODEL_LOAD_ERROR:
+        return "live_with_fallback"
+    return "live_pending_model_load"
 
 
 def build_supabase_headers() -> dict[str, str]:
@@ -176,7 +187,26 @@ def build_search_terms(payload: RetrievalRequest) -> list[str]:
 
 
 def model_backend_enabled() -> bool:
-    return TEXT_MODEL_ENABLED and not STUB_MODE
+    return TEXT_MODEL_ENABLED and not STUB_MODE and not FORCE_FALLBACK
+
+
+def default_fallback_reason() -> str | None:
+    if STUB_MODE:
+        return "stub_mode"
+    if FORCE_FALLBACK:
+        return "force_fallback"
+    if not TEXT_MODEL_ENABLED:
+        return "text_model_disabled"
+    if MODEL_LOAD_ERROR:
+        return "model_load_failed"
+    return None
+
+
+def build_response_meta(mode: str, fallback_reason: str | None) -> dict[str, Any]:
+    return {
+        "retrieval_mode": mode,
+        "fallback_reason": fallback_reason,
+    }
 
 
 def build_or_filter(search_terms: list[str]) -> str:
@@ -241,16 +271,25 @@ def load_models():
 def rerank_with_models(
     query: str,
     ranked_rows: list[tuple[float, dict[str, Any]]],
-) -> list[tuple[float, dict[str, Any]]]:
+) -> tuple[list[tuple[float, dict[str, Any]]], dict[str, Any]]:
+    if not model_backend_enabled():
+        return ranked_rows, build_response_meta(
+            "lexical_fallback",
+            default_fallback_reason() or "model_backend_disabled",
+        )
+
     embed_model, rerank_model = load_models()
     if not embed_model or not rerank_model:
-        return ranked_rows
+        return ranked_rows, build_response_meta(
+            "lexical_fallback",
+            default_fallback_reason() or "model_unavailable",
+        )
 
     model_rows = ranked_rows[: max(1, TEXT_MODEL_MAX_CANDIDATES)]
     remainder = ranked_rows[max(1, TEXT_MODEL_MAX_CANDIDATES) :]
     candidate_texts = [build_candidate_text(row) for _, row in model_rows]
     if not candidate_texts:
-        return ranked_rows
+        return ranked_rows, build_response_meta("model", None)
 
     try:
         import numpy as np
@@ -270,10 +309,10 @@ def rerank_with_models(
             rescored.append((combined_score, row))
 
         rescored.sort(key=lambda item: item[0], reverse=True)
-        return rescored + remainder
+        return rescored + remainder, build_response_meta("model", None)
     except Exception as error:
         logger.warning("Model reranking failed; using deterministic ranking", exc_info=error)
-        return ranked_rows
+        return ranked_rows, build_response_meta("lexical_fallback", "rerank_failed")
 
 
 def fetch_rpc_candidates(query: str, limit: int) -> list[dict[str, Any]]:
@@ -391,10 +430,24 @@ def healthz():
         "service": "text-retrieval-service",
         "mode": health_mode(),
         "supabase_configured": bool(SUPABASE_URL and SUPABASE_KEY),
+        "fallback": {
+            "stub_mode": STUB_MODE,
+            "force_fallback": FORCE_FALLBACK,
+            "reason": default_fallback_reason(),
+        },
         "model_backend_enabled": model_backend_enabled(),
         "embed_model": TEXT_EMBED_MODEL_NAME,
         "rerank_model": TEXT_RERANK_MODEL_NAME,
         "model_load_error": MODEL_LOAD_ERROR,
+        "models": {
+            "enabled": TEXT_MODEL_ENABLED,
+            "backend_enabled": model_backend_enabled(),
+            "load_attempted": MODEL_LOAD_ATTEMPTED,
+            "loaded": EMBED_MODEL is not None and RERANK_MODEL is not None,
+            "embed_model": TEXT_EMBED_MODEL_NAME,
+            "rerank_model": TEXT_RERANK_MODEL_NAME,
+            "load_error": MODEL_LOAD_ERROR,
+        },
     }
 
 
@@ -403,20 +456,36 @@ def search(payload: RetrievalRequest, authorization: str | None = Header(default
     validate_auth(authorization)
 
     if STUB_MODE:
-        return {"text_chunks": [], "rerank_scores": [], "source_citations": []}
+        return {
+            "text_chunks": [],
+            "rerank_scores": [],
+            "source_citations": [],
+            **build_response_meta("stub", "stub_mode"),
+            "candidate_source": None,
+            "candidate_count": 0,
+        }
 
     search_terms = build_search_terms(payload)
     if not search_terms:
-        return {"text_chunks": [], "rerank_scores": [], "source_citations": []}
+        return {
+            "text_chunks": [],
+            "rerank_scores": [],
+            "source_citations": [],
+            **build_response_meta("lexical_fallback", "empty_query"),
+            "candidate_source": None,
+            "candidate_count": 0,
+        }
 
     query = " ".join(search_terms[:8])
     candidate_limit = max(payload.text_limit * 4, DEFAULT_CANDIDATE_LIMIT)
+    candidate_source = "rpc"
 
     try:
         candidates = fetch_rpc_candidates(query, candidate_limit)
     except Exception as error:
         logger.error("RPC search failed", exc_info=error)
         candidates = []
+        candidate_source = "rpc_error"
 
     if not candidates:
         try:
@@ -424,6 +493,9 @@ def search(payload: RetrievalRequest, authorization: str | None = Header(default
         except Exception as error:
             logger.error("Fallback lexical search failed", exc_info=error)
             candidates = []
+            candidate_source = "lexical_error"
+        else:
+            candidate_source = "lexical_fallback"
 
     ranked: list[tuple[float, dict[str, Any]]] = []
     for candidate in candidates:
@@ -433,7 +505,7 @@ def search(payload: RetrievalRequest, authorization: str | None = Header(default
         ranked.append((score, candidate))
 
     ranked.sort(key=lambda item: item[0], reverse=True)
-    ranked = rerank_with_models(query, ranked)
+    ranked, response_meta = rerank_with_models(query, ranked)
     top_rows = ranked[: max(1, payload.text_limit)]
 
     text_chunks: list[dict[str, Any]] = []
@@ -467,4 +539,7 @@ def search(payload: RetrievalRequest, authorization: str | None = Header(default
         "text_chunks": text_chunks,
         "rerank_scores": rerank_scores,
         "source_citations": deduped_citations[:10],
+        **response_meta,
+        "candidate_source": candidate_source,
+        "candidate_count": len(candidates),
     }
