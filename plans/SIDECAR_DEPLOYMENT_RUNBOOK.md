@@ -134,11 +134,15 @@ When the real sidecar endpoint URLs are present locally in `.env.sidecars`, `.en
 npm run sync:sidecars:vercel
 ```
 
+This diff preview touches only the four heavy-sidecar `HF_*_URL` vars and intentionally leaves `HF_VISION_PREPROCESS_URL` unchanged.
+
 Then apply it with:
 
 ```bash
 npm run sync:sidecars:vercel:apply
 ```
+
+Apply mode requires the diff preview in the same invocation and writes both preview and production targets.
 
 If the heavy sidecars are being exposed behind one subdomain-based reverse proxy, generate the app-facing `HF_*_URL` values first with:
 
