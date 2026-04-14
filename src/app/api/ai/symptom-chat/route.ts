@@ -340,10 +340,17 @@ export async function POST(request: Request) {
         undefined,
         (session.case_memory?.turn_count ?? 0) + 1
       );
-      return NextResponse.json(buildOutOfScopeResponse({
-        outcome: outOfScopeOutcome,
-        session,
-      }));
+      if (
+        outOfScopeOutcome.type === "out_of_scope" &&
+        outOfScopeOutcome.terminalState === "out_of_scope"
+      ) {
+        return NextResponse.json(
+          buildOutOfScopeResponse({
+            outcome: outOfScopeOutcome,
+            session,
+          })
+        );
+      }
     }
 
     const fastPathExtraction = getDeterministicFastPathExtraction(
