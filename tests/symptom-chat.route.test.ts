@@ -6458,6 +6458,9 @@ describe("VET-900: world-class symptom checker regression pack", () => {
 
       let currentSession = p1.session;
       const uniqueQuestionsAsked = new Set<string>();
+      if (p1.session.last_question_asked) {
+        uniqueQuestionsAsked.add(p1.session.last_question_asked);
+      }
 
       // Run 5 turns, providing appropriate answers for each pending question
       for (let i = 0; i < 5; i++) {
