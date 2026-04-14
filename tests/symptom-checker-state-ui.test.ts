@@ -1,10 +1,14 @@
 /** @jest-environment jsdom */
 
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { StateBadge } from "@/components/symptom-checker/state-badge";
 import { ProgressBar } from "@/components/symptom-checker";
 import { getConversationStateUi } from "@/app/(dashboard)/symptom-checker/conversation-state-ui";
+import {
+  TerminalOutcomePanel,
+  TerminalOutcomeStatusBadge,
+} from "@/components/symptom-checker/terminal-outcome-panel";
 
 describe("symptom-checker conversation state UI", () => {
   // Case 1: asking badge
@@ -136,5 +140,66 @@ describe("symptom-checker conversation state UI", () => {
     const ui = getConversationStateUi("answered_unconfirmed", false);
     expect(ui.badgeLabel).toBe("Reviewing detail");
     expect(ui.tone).toBe("warning");
+  });
+
+  it("renders cannot_assess terminal outcome details with mapped reason and restart action", () => {
+    const handleStartNewSession = jest.fn();
+
+    render(
+      React.createElement(TerminalOutcomePanel, {
+        type: "cannot_assess",
+        reasonCode: "owner_cannot_assess_gum_color",
+        ownerMessage:
+          "I can't safely continue without confirming this critical sign for Buddy.",
+        recommendedNextStep:
+          "Seek veterinary assessment - this sign requires professional evaluation",
+        onStartNewSession: handleStartNewSession,
+      })
+    );
+
+    expect(screen.getByText("Cannot assess")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This symptom check ended because a critical sign could not be confirmed"
+      )
+    ).toBeTruthy();
+    expect(screen.getByText("Could not confirm gum color")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Seek veterinary assessment - this sign requires professional evaluation"
+      )
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start New Session" }));
+    expect(handleStartNewSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders out_of_scope terminal badge and reason copy for unsupported cases", () => {
+    render(
+      React.createElement(
+        "div",
+        {},
+        React.createElement(TerminalOutcomeStatusBadge, {
+          type: "out_of_scope",
+        }),
+        React.createElement(TerminalOutcomePanel, {
+          type: "out_of_scope",
+          reasonCode: "species_not_supported",
+          ownerMessage:
+            "I can only assess dog symptom cases in this workflow right now.",
+          recommendedNextStep:
+            "Please contact a veterinarian for help with this species.",
+          onStartNewSession: jest.fn(),
+        })
+      )
+    );
+
+    expect(screen.getAllByText("Out of scope").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByText("Species not supported in this workflow")
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Please contact a veterinarian for help with this species.")
+    ).toBeTruthy();
   });
 });
