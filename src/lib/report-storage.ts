@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
+import type { SymptomReport } from "@/components/symptom-report/types";
 import type { PetProfile, TriageSession } from "./triage-engine";
+import { buildThresholdProposalDraft } from "./threshold-proposals";
 
 export interface OutcomeFeedbackInput {
   symptomCheckId: string;
@@ -7,6 +9,14 @@ export interface OutcomeFeedbackInput {
   confirmedDiagnosis?: string;
   vetOutcome?: string;
   ownerNotes?: string;
+}
+
+export interface OutcomeFeedbackSaveResult {
+  ok: boolean;
+  legacyUpdated: boolean;
+  proposalCreated: boolean;
+  structuredStored: boolean;
+  warnings: string[];
 }
 
 function getServerSupabase() {
@@ -74,19 +84,33 @@ export async function saveSymptomReportToDB(
 
 export async function saveOutcomeFeedbackToDB(
   input: OutcomeFeedbackInput
-): Promise<boolean> {
+): Promise<OutcomeFeedbackSaveResult> {
   const supabase = getServerSupabase();
-  if (!supabase) return false;
+  if (!supabase) {
+    return {
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Supabase is not configured"],
+    };
+  }
 
   const { data, error } = await supabase
     .from("symptom_checks")
-    .select("id, ai_response")
+    .select("id, symptoms, severity, recommendation, ai_response")
     .eq("id", input.symptomCheckId)
     .maybeSingle();
 
   if (error || !data) {
     console.error("[DB] Failed to load symptom check for feedback:", error);
-    return false;
+    return {
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Failed to load symptom check"],
+    };
   }
 
   let aiResponse: Record<string, unknown> = {};
@@ -99,13 +123,14 @@ export async function saveOutcomeFeedbackToDB(
     aiResponse = {};
   }
 
-  aiResponse.outcome_feedback = {
+  const feedbackPayload = {
     matched_expectation: input.matchedExpectation,
     confirmed_diagnosis: input.confirmedDiagnosis?.trim() || null,
     vet_outcome: input.vetOutcome?.trim() || null,
     owner_notes: input.ownerNotes?.trim() || null,
     submitted_at: new Date().toISOString(),
   };
+  aiResponse.outcome_feedback = feedbackPayload;
 
   const { error: updateError } = await supabase
     .from("symptom_checks")
@@ -116,8 +141,102 @@ export async function saveOutcomeFeedbackToDB(
 
   if (updateError) {
     console.error("[DB] Failed to save outcome feedback:", updateError);
-    return false;
+    return {
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Failed to update legacy ai_response outcome feedback"],
+    };
   }
 
-  return true;
+  const warnings: string[] = [];
+  let structuredStored = false;
+  let proposalCreated = false;
+  let outcomeFeedbackId: string | null = null;
+
+  try {
+    const reportSnapshot = aiResponse as unknown as SymptomReport;
+    const { data: feedbackEntry, error: feedbackError } = await supabase
+      .from("outcome_feedback_entries")
+      .insert({
+        confirmed_diagnosis: input.confirmedDiagnosis?.trim() || null,
+        feedback_source: "owner_feedback",
+        matched_expectation: input.matchedExpectation,
+        owner_notes: input.ownerNotes?.trim() || null,
+        report_recommendation:
+          typeof data.recommendation === "string" ? data.recommendation : null,
+        report_severity:
+          typeof data.severity === "string" ? data.severity : null,
+        report_snapshot: aiResponse,
+        report_title:
+          typeof reportSnapshot.title === "string" ? reportSnapshot.title : null,
+        submitted_at: feedbackPayload.submitted_at,
+        symptom_check_id: input.symptomCheckId,
+        symptom_summary:
+          typeof data.symptoms === "string" ? data.symptoms : null,
+        vet_outcome: input.vetOutcome?.trim() || null,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (feedbackError) {
+      warnings.push("Structured outcome feedback write failed");
+      console.error(
+        "[DB] Failed to dual-write outcome feedback entry:",
+        feedbackError
+      );
+    } else {
+      structuredStored = true;
+      outcomeFeedbackId =
+        feedbackEntry && typeof feedbackEntry.id === "string"
+          ? feedbackEntry.id
+          : null;
+    }
+
+    const proposal = buildThresholdProposalDraft({
+      feedback: input,
+      report: reportSnapshot,
+      symptomSummary:
+        typeof data.symptoms === "string" ? data.symptoms : "unknown",
+    });
+
+    if (proposal && structuredStored) {
+      const { error: proposalError } = await supabase
+        .from("threshold_proposals")
+        .insert({
+          outcome_feedback_id: outcomeFeedbackId,
+          payload: proposal.payload,
+          proposal_type: proposal.proposalType,
+          rationale: proposal.rationale,
+          status: "draft",
+          summary: proposal.summary,
+          symptom_check_id: input.symptomCheckId,
+        });
+
+      if (proposalError) {
+        warnings.push("Threshold proposal draft write failed");
+        console.error(
+          "[DB] Failed to create threshold proposal draft:",
+          proposalError
+        );
+      } else {
+        proposalCreated = true;
+      }
+    }
+  } catch (structuredError) {
+    warnings.push("Structured outcome feedback write threw unexpectedly");
+    console.error(
+      "[DB] Unexpected structured outcome feedback failure:",
+      structuredError
+    );
+  }
+
+  return {
+    ok: true,
+    legacyUpdated: true,
+    proposalCreated,
+    structuredStored,
+    warnings,
+  };
 }

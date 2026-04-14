@@ -32,12 +32,24 @@ export async function POST(request: Request) {
     ownerNotes: body.ownerNotes,
   });
 
-  if (!saved) {
+  const saveOk =
+    typeof saved === "boolean" ? saved : saved.ok;
+
+  if (!saveOk) {
     return NextResponse.json(
       { ok: false, error: "Unable to save outcome feedback" },
       { status: 503 }
     );
   }
 
-  return NextResponse.json({ ok: true });
+  if (typeof saved === "boolean") {
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    proposalCreated: saved.proposalCreated,
+    structuredStored: saved.structuredStored,
+    warnings: saved.warnings,
+  });
 }
