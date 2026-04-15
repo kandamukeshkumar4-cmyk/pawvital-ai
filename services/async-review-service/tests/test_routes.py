@@ -117,6 +117,11 @@ def test_healthz_reports_startup_failure_reason(monkeypatch) -> None:
     }
 
 
+def test_resolve_model_source_prefers_snapshot_download(monkeypatch) -> None:
+    monkeypatch.setattr(legacy, "snapshot_download", lambda repo_id: f"/tmp/{repo_id.replace('/', '__')}")
+    assert legacy._resolve_model_source() == "/tmp/Qwen__Qwen2.5-VL-32B-Instruct"
+
+
 def test_force_fallback_review_preserves_queue_contract(monkeypatch) -> None:
     reset_queue_state()
     monkeypatch.setattr(legacy, "STUB_MODE", False)

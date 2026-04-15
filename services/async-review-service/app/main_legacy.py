@@ -30,11 +30,13 @@ from PIL import Image
 
 try:
     import torch
+    from huggingface_hub import snapshot_download
     from transformers import AutoProcessor, AutoModelForVision2Seq
     from qwen_vl_utils import process_vision_info
     _TORCH_AVAILABLE = True
 except ImportError:
     torch = None  # type: ignore[assignment]
+    snapshot_download = None  # type: ignore[assignment,misc]
     AutoProcessor = None  # type: ignore[assignment,misc]
     AutoModelForVision2Seq = None  # type: ignore[assignment,misc]
     process_vision_info = None  # type: ignore[assignment]
@@ -277,14 +279,23 @@ def _describe_model_load_failure(error: Exception) -> str:
     return detail[:240] if detail else "model_load_failed"
 
 
+def _resolve_model_source() -> str:
+    if snapshot_download is None:
+        return MODEL_NAME
+
+    logger.info("Downloading local snapshot for %s", MODEL_NAME)
+    return snapshot_download(repo_id=MODEL_NAME)
+
+
 def _load_model_once():
     if STUB_MODE:
         return None, None
 
+    model_source = _resolve_model_source()
     logger.info("Loading %s on %s", MODEL_NAME, DEVICE)
-    processor = AutoProcessor.from_pretrained(MODEL_NAME)
+    processor = AutoProcessor.from_pretrained(model_source)
     model = AutoModelForVision2Seq.from_pretrained(
-        MODEL_NAME,
+        model_source,
         torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32,
         device_map="auto" if DEVICE == "cuda" else None,
     )
