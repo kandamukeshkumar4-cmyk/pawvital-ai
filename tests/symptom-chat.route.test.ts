@@ -47,6 +47,7 @@ const mockRetrieveVeterinaryImageEvidenceWithResult = jest.fn();
 const mockEnqueueAsyncReview = jest.fn();
 const mockSaveSymptomReportToDB = jest.fn();
 const mockEmit = jest.fn();
+const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockEventType = {
   REPORT_READY: "REPORT_READY",
   URGENCY_HIGH: "URGENCY_HIGH",
@@ -186,13 +187,8 @@ jest.mock("@/lib/async-review-client", () => ({
 }));
 
 jest.mock("@/lib/confidence-calibrator", () => ({
-  calibrateDiagnosticConfidence: ({ baseConfidence }: { baseConfidence: number }) => ({
-    final_confidence: baseConfidence,
-    base_confidence: baseConfidence,
-    adjustments: [],
-    confidence_level: "moderate",
-    recommendation: "No significant adjustments needed",
-  }),
+  calibrateDiagnosticConfidence: (...args: unknown[]) =>
+    mockCalibrateDiagnosticConfidence(...args),
 }));
 
 jest.mock("@/lib/icd-10-mapper", () => ({
@@ -455,6 +451,15 @@ describe("symptom-chat mixed text + image routing", () => {
       success: true,
       reset: Date.now() + 60_000,
     });
+    mockCalibrateDiagnosticConfidence.mockImplementation(
+      ({ baseConfidence }: { baseConfidence: number }) => ({
+        final_confidence: baseConfidence,
+        base_confidence: baseConfidence,
+        adjustments: [],
+        confidence_level: "moderate",
+        recommendation: "No significant adjustments needed",
+      })
+    );
     mockGetRateLimitId.mockReturnValue("test-user");
     mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
     mockExtractWithQwen.mockResolvedValue(
@@ -971,10 +976,26 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.case_memory.service_timeouts).toEqual([]);
   });
 
-  it("adds evidence-chain data and capped confidence to the final report", async () => {
+  it("adds evidence-chain data and calibrated confidence metadata to the final report", async () => {
     mockIsMultimodalConsultConfigured.mockReturnValue(true);
     mockIsTextRetrievalConfigured.mockReturnValue(true);
     mockIsImageRetrievalConfigured.mockReturnValue(true);
+    mockDiagnoseWithDeepSeek.mockResolvedValue(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Localized skin lesion",
+        explanation: "Explanation",
+        differential_diagnoses: [],
+        clinical_notes: "Notes",
+        recommended_tests: [],
+        home_care: [],
+        actions: [],
+        warning_signs: [],
+        vet_questions: [],
+        confidence: 0.84,
+      })
+    );
     mockRetrieveVeterinaryTextEvidenceWithResult.mockResolvedValue(
       buildOkSidecarResult("text-retrieval-service", {
         textChunks: [
@@ -1047,7 +1068,16 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("report");
-    expect(payload.report.confidence).toBeLessThanOrEqual(0.98);
+    expect(payload.report.confidence).toBe(0.84);
+    expect(payload.report.calibrated_confidence).toEqual(
+      expect.objectContaining({
+        base_confidence: 0.84,
+        final_confidence: 0.84,
+        confidence_level: "moderate",
+        recommendation: "No significant adjustments needed",
+        adjustments: expect.any(Array),
+      })
+    );
     expect(payload.report.evidence_chain).toEqual(
       expect.arrayContaining([
         expect.stringContaining("Visual evidence"),
@@ -1066,6 +1096,70 @@ describe("symptom-chat mixed text + image routing", () => {
       ])
     );
     expect(payload.report.async_review_scheduled).toBe(true);
+  });
+
+  it("falls back to null calibrated confidence when calibration throws", async () => {
+    mockCalibrateDiagnosticConfidence.mockImplementation(() => {
+      throw new Error("calibrator failed");
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeReportRequest(buildModerateReportSession()));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("report");
+    expect(payload.report.calibrated_confidence).toBeNull();
+  });
+
+  it("does not change report urgency when calibration adjusts confidence", async () => {
+    mockCalibrateDiagnosticConfidence.mockImplementation(() => ({
+      final_confidence: 0.2,
+      base_confidence: 0.9,
+      adjustments: [
+        {
+          factor: "model_disagreement",
+          delta: -0.7,
+          direction: "decrease",
+          reason: "Disagreement lowered confidence.",
+        },
+      ],
+      confidence_level: "low",
+      recommendation: "Confidence is limited by disagreement.",
+    }));
+    mockDiagnoseWithDeepSeek.mockResolvedValue(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Localized skin lesion",
+        explanation: "Explanation",
+        differential_diagnoses: [],
+        clinical_notes: "Notes",
+        recommended_tests: [],
+        home_care: [],
+        actions: [],
+        warning_signs: [],
+        vet_questions: [],
+        confidence: 0.9,
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeReportRequest(buildModerateReportSession()));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("report");
+    expect(payload.report.severity).toBe("medium");
+    expect(payload.report.recommendation).toBe("vet_48h");
+    expect(payload.report.confidence).toBe(0.9);
+    expect(payload.report.calibrated_confidence).toEqual(
+      expect.objectContaining({
+        base_confidence: 0.9,
+        final_confidence: 0.2,
+        confidence_level: "low",
+      })
+    );
   });
 
   it("keeps report generation alive when GLM safety review returns malformed JSON", async () => {

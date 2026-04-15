@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ArrowDownRight, Copy, CheckCheck } from "lucide-react";
 import Card from "@/components/ui/card";
 import Badge from "@/components/ui/badge";
+import { formatConfidenceLevelLabel } from "@/lib/report-confidence";
 import type { SymptomReport } from "./types";
 import { severityConfig } from "./constants";
 import {
@@ -30,6 +31,8 @@ export function SeverityHeader({
   onJumpToHandoff,
   headerActions,
 }: SeverityHeaderProps) {
+  const calibratedConfidence =
+    report.calibrated_confidence ?? report.confidence_calibration;
   const emergencyReport = isEmergencyReport(report);
   const escalatedReport = isEscalatedReport(report);
   const bannerTone = emergencyReport
@@ -74,6 +77,14 @@ export function SeverityHeader({
               {typeof report.confidence === "number" && (
                 <Badge variant="info">
                   Confidence {(report.confidence * 100).toFixed(0)}%
+                </Badge>
+              )}
+              {calibratedConfidence && (
+                <Badge variant="default">
+                  {formatConfidenceLevelLabel(
+                    calibratedConfidence.confidence_level
+                  )}{" "}
+                  confidence
                 </Badge>
               )}
               {report.async_review_scheduled && (

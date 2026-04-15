@@ -52,7 +52,6 @@ import {
   formatClinicalCaseContext,
 } from "@/lib/knowledge-retrieval";
 import {
-  capDiagnosticConfidence,
   inferSupportedImageDomain,
   type ConsultOpinion,
   type ServiceTimeoutRecord,
@@ -74,6 +73,7 @@ import {
   getRateLimitId,
 } from "@/lib/rate-limit";
 import { computeBayesianScore } from "@/lib/bayesian-scorer";
+import { buildReportConfidenceCalibration } from "@/lib/report-confidence";
 import {
   evaluateSymptomCheckUsageGate,
   getPlanFromSubscription,
@@ -2164,24 +2164,6 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
 
     const report = parseReportJSON(rawReport);
-    report.confidence = capDiagnosticConfidence({
-      baseConfidence:
-        typeof report.confidence === "number"
-          ? report.confidence
-          : deriveBaselineReportConfidence(context),
-      hasModelDisagreement: Boolean(
-        session.case_memory?.consult_opinions?.some(
-          (opinion) => opinion.disagreements.length > 0
-        )
-      ),
-      lowQualityImage:
-        session.latest_image_quality === "poor" ||
-        session.latest_image_quality === "borderline",
-      weakRetrievalSupport:
-        retrievalBundle.textChunks.length === 0 &&
-        retrievalBundle.imageMatches.length === 0,
-      ambiguityFlags: session.case_memory?.ambiguity_flags || [],
-    });
     if (!Array.isArray(report.evidence_chain)) {
       report.evidence_chain = buildEvidenceChainForResponse(
         session,
@@ -2204,6 +2186,51 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       } catch (safetyError) {
         console.error("Safety verification failed (non-blocking):", safetyError);
       }
+    }
+
+    const hasModelDisagreement = Boolean(
+      session.case_memory?.consult_opinions?.some(
+        (opinion) => opinion.disagreements.length > 0
+      )
+    );
+    try {
+      finalReport.calibrated_confidence = buildReportConfidenceCalibration({
+        baseConfidence:
+          typeof finalReport.confidence === "number"
+            ? finalReport.confidence
+            : deriveBaselineReportConfidence(context),
+        reportSeverity:
+          finalReport.severity === "emergency" ||
+          finalReport.severity === "high" ||
+          finalReport.severity === "medium" ||
+          finalReport.severity === "low"
+            ? finalReport.severity
+            : context.highest_urgency === "emergency" ||
+                context.highest_urgency === "high" ||
+                context.highest_urgency === "moderate"
+              ? context.highest_urgency === "moderate"
+                ? "medium"
+                : context.highest_urgency
+              : "low",
+        session,
+        hasModelDisagreement,
+        textChunkCount: retrievalBundle.textChunks.length,
+        imageMatchCount: retrievalBundle.imageMatches.length,
+        breedKnown: Boolean(pet.breed?.trim()),
+        ageKnown: Number.isFinite(pet.age_years),
+        topDifferentialCondition:
+          Array.isArray(finalReport.differential_diagnoses) &&
+          finalReport.differential_diagnoses.length > 0 &&
+          typeof finalReport.differential_diagnoses[0]?.condition === "string"
+            ? finalReport.differential_diagnoses[0].condition
+            : null,
+      });
+    } catch (calibrationError) {
+      console.error(
+        "[Engine] Confidence calibration failed (non-blocking):",
+        calibrationError
+      );
+      finalReport.calibrated_confidence = null;
     }
 
     // ── Save to Supabase (non-blocking) ──
