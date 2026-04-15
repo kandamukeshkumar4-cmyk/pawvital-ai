@@ -296,4 +296,69 @@ describe("sidecar observability", () => {
     expect(decision.enabled).toBe(false);
     expect(decision.mode).toBe("emergency_only");
   });
+
+  it("disables live traffic when the configured live split is 0%", async () => {
+    process.env = {
+      ...originalEnv,
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "0",
+    };
+
+    const { getLiveTrafficDecision } = await import(
+      "@/lib/sidecar-observability"
+    );
+
+    const decision = getLiveTrafficDecision({
+      service: "text-retrieval-service",
+      session: makeSession(),
+      additionalKey: "split-zero",
+    });
+
+    expect(decision.configured).toBe(true);
+    expect(decision.liveSplitPct).toBe(0);
+    expect(decision.enabled).toBe(false);
+    expect(decision.mode).toBe("disabled");
+  });
+
+  it("falls back to the legacy live path when no live split env is configured", async () => {
+    process.env = {
+      ...originalEnv,
+    };
+    delete process.env.SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL;
+
+    const { getLiveTrafficDecision } = await import(
+      "@/lib/sidecar-observability"
+    );
+
+    const decision = getLiveTrafficDecision({
+      service: "text-retrieval-service",
+      session: makeSession(),
+      additionalKey: "legacy-default",
+    });
+
+    expect(decision.configured).toBe(false);
+    expect(decision.enabled).toBe(true);
+    expect(decision.mode).toBe("legacy_default");
+  });
+
+  it("treats invalid live split values as an explicit 0% rollout", async () => {
+    process.env = {
+      ...originalEnv,
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "17",
+    };
+
+    const { getLiveTrafficDecision } = await import(
+      "@/lib/sidecar-observability"
+    );
+
+    const decision = getLiveTrafficDecision({
+      service: "text-retrieval-service",
+      session: makeSession(),
+      additionalKey: "invalid-split",
+    });
+
+    expect(decision.configured).toBe(true);
+    expect(decision.liveSplitPct).toBe(0);
+    expect(decision.enabled).toBe(false);
+    expect(decision.mode).toBe("disabled");
+  });
 });

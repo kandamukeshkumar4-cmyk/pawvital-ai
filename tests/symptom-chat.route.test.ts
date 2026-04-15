@@ -976,6 +976,87 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.case_memory.service_timeouts).toEqual([]);
   });
 
+  it("keeps multimodal consult on the primary path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_MULTIMODAL_CONSULT: "0",
+    };
+
+    try {
+      mockIsMultimodalConsultConfigured.mockReturnValue(true);
+      mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+        buildOkSidecarResult("vision-preprocess-service", {
+          domain: "eye",
+          bodyRegion: "left eye",
+          detectedRegions: [{ label: "eye", confidence: 0.65 }],
+          bestCrop: null,
+          imageQuality: "borderline",
+          confidence: 0.58,
+          limitations: ["partial blur"],
+        })
+      );
+      mockRunVisionPipeline.mockResolvedValue({
+        combined: "{\"confidence\":0.52,\"summary\":\"ocular irritation\"}",
+        severity: "needs_review",
+        tiersUsed: [1, 2],
+        woundDetected: false,
+        tier1_fast: "{\"confidence\":0.52}",
+        tier2_detailed: "{\"estimated_severity\":\"moderate\"}",
+        tier3_deep: null,
+      });
+      mockParseVisionForMatrix.mockReturnValue({
+        symptoms: [],
+        redFlags: [],
+        severityClass: "needs_review",
+      });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeRequest(createSession(), "his eye looks weird")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockConsultWithMultimodalSidecarWithResult).not.toHaveBeenCalled();
+      expect(payload.session.latest_consult_opinion).toBeUndefined();
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("keeps vision preprocess on the fallback path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_VISION_PREPROCESS: "0",
+    };
+
+    try {
+      mockIsVisionPreprocessConfigured.mockReturnValue(true);
+
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "which_leg";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeRequest(session, "left leg"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockPreprocessVeterinaryImageWithResult).not.toHaveBeenCalled();
+      expect(payload.session.latest_image_domain).toBe("skin_wound");
+      expect(
+        payload.session.case_memory?.service_observations?.some(
+          (entry: SidecarObservation) =>
+            entry.service === "vision-preprocess-service"
+        ) ?? false
+      ).toBe(false);
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
   it("adds evidence-chain data and calibrated confidence metadata to the final report", async () => {
     mockIsMultimodalConsultConfigured.mockReturnValue(true);
     mockIsTextRetrievalConfigured.mockReturnValue(true);
@@ -1096,6 +1177,31 @@ describe("symptom-chat mixed text + image routing", () => {
       ])
     );
     expect(payload.report.async_review_scheduled).toBe(true);
+  });
+
+  it("keeps retrieval on the fallback path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "0",
+      SIDECAR_LIVE_SPLIT_IMAGE_RETRIEVAL: "0",
+    };
+
+    try {
+      mockIsTextRetrievalConfigured.mockReturnValue(true);
+      mockIsImageRetrievalConfigured.mockReturnValue(true);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(mockRetrieveVeterinaryTextEvidenceWithResult).not.toHaveBeenCalled();
+      expect(mockRetrieveVeterinaryImageEvidenceWithResult).not.toHaveBeenCalled();
+    } finally {
+      process.env = envBeforeTest;
+    }
   });
 
   it("falls back to null calibrated confidence when calibration throws", async () => {

@@ -108,8 +108,10 @@ import {
   appendShadowComparison,
   appendSidecarObservation,
   buildObservabilitySnapshot,
+  describeLiveTrafficDecision,
   describeShadowComparison,
   describeShadowModeDecision,
+  getLiveTrafficDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
 import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
@@ -585,59 +587,68 @@ export async function POST(request: Request) {
         pet: effectivePet,
         additionalKey: imageHash || lastUserMessage.content,
       });
+      const visionLiveDecision = getLiveTrafficDecision({
+        service: "vision-preprocess-service",
+        session,
+        additionalKey: imageHash || lastUserMessage.content,
+      });
+      const shouldInvokeVisionPreprocess =
+        visionPreprocessDecision.enabled || visionLiveDecision.enabled;
       if (isVisionPreprocessConfigured()) {
-        const startedAt = Date.now();
-        try {
-          const preprocessedImage = await preprocessVeterinaryImage({
-            image,
-            ownerText: lastUserMessage.content,
-            knownSymptoms: session.known_symptoms,
-            breed: effectivePet.breed,
-            ageYears: effectivePet.age_years,
-            weight: effectivePet.weight,
-          });
-          session = appendSidecarObservation(session, {
-            service: "vision-preprocess-service",
-            stage: "preprocess",
-            latencyMs: Date.now() - startedAt,
-            outcome: visionPreprocessDecision.enabled ? "shadow" : "success",
-            shadowMode: visionPreprocessDecision.enabled,
-            fallbackUsed: visionPreprocessDecision.enabled,
-            note: `domain=${preprocessedImage.domain}; quality=${preprocessedImage.imageQuality}; ${describeShadowModeDecision(visionPreprocessDecision)}`,
-          });
-
-          if (visionPreprocessDecision.enabled) {
-            session = appendShadowComparison(
-              session,
-              describeShadowComparison(
-                "vision-preprocess-service",
-                "fallback-domain-inference",
-                "hf-vision-preprocess",
-                `Fallback domain=${fallbackImageDomain}; shadow domain=${preprocessedImage.domain}; bodyRegion=${preprocessedImage.bodyRegion || "unknown"}`,
-                preprocessedImage.domain !== fallbackImageDomain ? 1 : 0
-              )
-            );
-          } else {
-            imagePreprocess = preprocessedImage;
-          }
-        } catch (error) {
-          console.error("[HF Vision Preprocess] failed:", error);
-          const timedOut = isSidecarAbortError(error);
-          session = appendSidecarObservation(session, {
-            service: "vision-preprocess-service",
-            stage: "preprocess",
-            latencyMs: Date.now() - startedAt,
-            outcome: timedOut ? "timeout" : "error",
-            shadowMode: visionPreprocessDecision.enabled,
-            fallbackUsed: true,
-            note: `${timedOut ? "vision preprocess timeout" : "vision preprocess failed"}; ${describeShadowModeDecision(visionPreprocessDecision)}`,
-          });
-          if (isSidecarAbortError(error)) {
-            serviceTimeouts.push({
+        if (shouldInvokeVisionPreprocess) {
+          const startedAt = Date.now();
+          try {
+            const preprocessedImage = await preprocessVeterinaryImage({
+              image,
+              ownerText: lastUserMessage.content,
+              knownSymptoms: session.known_symptoms,
+              breed: effectivePet.breed,
+              ageYears: effectivePet.age_years,
+              weight: effectivePet.weight,
+            });
+            session = appendSidecarObservation(session, {
               service: "vision-preprocess-service",
               stage: "preprocess",
-              reason: "timeout",
+              latencyMs: Date.now() - startedAt,
+              outcome: visionPreprocessDecision.enabled ? "shadow" : "success",
+              shadowMode: visionPreprocessDecision.enabled,
+              fallbackUsed: visionPreprocessDecision.enabled,
+              note: `domain=${preprocessedImage.domain}; quality=${preprocessedImage.imageQuality}; ${describeShadowModeDecision(visionPreprocessDecision)}; ${describeLiveTrafficDecision(visionLiveDecision)}`,
             });
+
+            if (visionPreprocessDecision.enabled) {
+              session = appendShadowComparison(
+                session,
+                describeShadowComparison(
+                  "vision-preprocess-service",
+                  "fallback-domain-inference",
+                  "hf-vision-preprocess",
+                  `Fallback domain=${fallbackImageDomain}; shadow domain=${preprocessedImage.domain}; bodyRegion=${preprocessedImage.bodyRegion || "unknown"}`,
+                  preprocessedImage.domain !== fallbackImageDomain ? 1 : 0
+                )
+              );
+            } else {
+              imagePreprocess = preprocessedImage;
+            }
+          } catch (error) {
+            console.error("[HF Vision Preprocess] failed:", error);
+            const timedOut = isSidecarAbortError(error);
+            session = appendSidecarObservation(session, {
+              service: "vision-preprocess-service",
+              stage: "preprocess",
+              latencyMs: Date.now() - startedAt,
+              outcome: timedOut ? "timeout" : "error",
+              shadowMode: visionPreprocessDecision.enabled,
+              fallbackUsed: true,
+              note: `${timedOut ? "vision preprocess timeout" : "vision preprocess failed"}; ${describeShadowModeDecision(visionPreprocessDecision)}; ${describeLiveTrafficDecision(visionLiveDecision)}`,
+            });
+            if (isSidecarAbortError(error)) {
+              serviceTimeouts.push({
+                service: "vision-preprocess-service",
+                stage: "preprocess",
+                reason: "timeout",
+              });
+            }
           }
         }
       }
@@ -1191,69 +1202,78 @@ export async function POST(request: Request) {
               : buildDiagnosisContext(session, effectivePet).highest_urgency,
           additionalKey: imageHash || lastUserMessage.content,
         });
-        const startedAt = Date.now();
-        try {
-          const nextConsultOpinion = await consultWithMultimodalSidecar({
-            image,
-            ownerText: lastUserMessage.content,
-            preprocess:
-              imagePreprocess ||
-              buildFallbackPreprocessResult(
-                inferSupportedImageDomain(
-                  lastUserMessage.content,
-                  session.known_symptoms
-                )
-              ),
-            visionSummary: visionAnalysis || session.vision_analysis || "",
-            severity: visualEvidence.severity,
-            contradictions,
-            deterministicFacts: session.extracted_answers,
-            mode: "sync",
-          });
-          session = appendSidecarObservation(session, {
-            service: "multimodal-consult-service",
-            stage: "sync-consult",
-            latencyMs: Date.now() - startedAt,
-            outcome: consultShadowDecision.enabled ? "shadow" : "success",
-            shadowMode: consultShadowDecision.enabled,
-            fallbackUsed: consultShadowDecision.enabled,
-            note: `disagreements=${nextConsultOpinion.disagreements.length}; ${describeShadowModeDecision(consultShadowDecision)}`,
-          });
-
-          if (consultShadowDecision.enabled) {
-            session = appendShadowComparison(
-              session,
-              describeShadowComparison(
-                "multimodal-consult-service",
-                "nvidia-vision-only",
-                nextConsultOpinion.model,
-                nextConsultOpinion.summary.slice(0, 180),
-                nextConsultOpinion.disagreements.length
-              )
-            );
-          } else {
-            consultOpinion = nextConsultOpinion;
-            session.latest_consult_opinion = consultOpinion;
-            ambiguityFlags.push(...consultOpinion.uncertainties);
-          }
-        } catch (error) {
-          console.error("[HF Multimodal Consult] failed:", error);
-          const timedOut = isSidecarAbortError(error);
-          session = appendSidecarObservation(session, {
-            service: "multimodal-consult-service",
-            stage: "sync-consult",
-            latencyMs: Date.now() - startedAt,
-            outcome: timedOut ? "timeout" : "error",
-            shadowMode: consultShadowDecision.enabled,
-            fallbackUsed: true,
-            note: `${timedOut ? "multimodal consult timeout" : "multimodal consult failed"}; ${describeShadowModeDecision(consultShadowDecision)}`,
-          });
-          if (isSidecarAbortError(error)) {
-            serviceTimeouts.push({
+        const consultLiveDecision = getLiveTrafficDecision({
+          service: "multimodal-consult-service",
+          session,
+          additionalKey: imageHash || lastUserMessage.content,
+        });
+        const shouldInvokeConsult =
+          consultShadowDecision.enabled || consultLiveDecision.enabled;
+        if (shouldInvokeConsult) {
+          const startedAt = Date.now();
+          try {
+            const nextConsultOpinion = await consultWithMultimodalSidecar({
+              image,
+              ownerText: lastUserMessage.content,
+              preprocess:
+                imagePreprocess ||
+                buildFallbackPreprocessResult(
+                  inferSupportedImageDomain(
+                    lastUserMessage.content,
+                    session.known_symptoms
+                  )
+                ),
+              visionSummary: visionAnalysis || session.vision_analysis || "",
+              severity: visualEvidence.severity,
+              contradictions,
+              deterministicFacts: session.extracted_answers,
+              mode: "sync",
+            });
+            session = appendSidecarObservation(session, {
               service: "multimodal-consult-service",
               stage: "sync-consult",
-              reason: "timeout",
+              latencyMs: Date.now() - startedAt,
+              outcome: consultShadowDecision.enabled ? "shadow" : "success",
+              shadowMode: consultShadowDecision.enabled,
+              fallbackUsed: consultShadowDecision.enabled,
+              note: `disagreements=${nextConsultOpinion.disagreements.length}; ${describeShadowModeDecision(consultShadowDecision)}; ${describeLiveTrafficDecision(consultLiveDecision)}`,
             });
+
+            if (consultShadowDecision.enabled) {
+              session = appendShadowComparison(
+                session,
+                describeShadowComparison(
+                  "multimodal-consult-service",
+                  "nvidia-vision-only",
+                  nextConsultOpinion.model,
+                  nextConsultOpinion.summary.slice(0, 180),
+                  nextConsultOpinion.disagreements.length
+                )
+              );
+            } else {
+              consultOpinion = nextConsultOpinion;
+              session.latest_consult_opinion = consultOpinion;
+              ambiguityFlags.push(...consultOpinion.uncertainties);
+            }
+          } catch (error) {
+            console.error("[HF Multimodal Consult] failed:", error);
+            const timedOut = isSidecarAbortError(error);
+            session = appendSidecarObservation(session, {
+              service: "multimodal-consult-service",
+              stage: "sync-consult",
+              latencyMs: Date.now() - startedAt,
+              outcome: timedOut ? "timeout" : "error",
+              shadowMode: consultShadowDecision.enabled,
+              fallbackUsed: true,
+              note: `${timedOut ? "multimodal consult timeout" : "multimodal consult failed"}; ${describeShadowModeDecision(consultShadowDecision)}; ${describeLiveTrafficDecision(consultLiveDecision)}`,
+            });
+            if (isSidecarAbortError(error)) {
+              serviceTimeouts.push({
+                service: "multimodal-consult-service",
+                stage: "sync-consult",
+                reason: "timeout",
+              });
+            }
           }
         }
       }

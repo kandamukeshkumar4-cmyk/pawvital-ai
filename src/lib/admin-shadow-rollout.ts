@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   LIVE_SPLIT_VALUES,
+  serviceToLiveSplitEnv,
   type LiveSplitPct,
 } from "./admin-shadow-rollout-shared";
 import sidecarServiceRegistry from "./sidecar-service-registry.json";
@@ -139,11 +140,6 @@ function serviceLabel(service: SidecarServiceName) {
     .split("-")
     .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
     .join(" ");
-}
-
-function serviceToLiveSplitEnv(service: SidecarServiceName) {
-  const suffix = service.replace(/-service$/, "").replace(/-/g, "_").toUpperCase();
-  return `SIDECAR_LIVE_SPLIT_${suffix}`;
 }
 
 function parseLiveSplitPct(value: unknown): LiveSplitPct {
