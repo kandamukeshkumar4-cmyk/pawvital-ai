@@ -20,6 +20,17 @@ const sidecarRegistry = JSON.parse(
 const readinessRoutePath = "/api/ai/sidecar-readiness";
 const readinessTimeoutMs = Number(process.env.HF_SIDECAR_HEALTH_TIMEOUT_MS) || 8000;
 
+function normalizeEnvValue(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
 function loadEnvFiles() {
   for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
     const fullPath = path.join(rootDir, relativePath);
@@ -29,8 +40,8 @@ function loadEnvFiles() {
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eq = trimmed.indexOf("=");
       if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
+      const key = trimmed.slice(0, eq).replace(/^export\s+/, "").trim();
+      const value = normalizeEnvValue(trimmed.slice(eq + 1));
       if (!process.env[key]) {
         process.env[key] = value;
       }
@@ -205,6 +216,7 @@ async function runPreflight(baseUrl) {
   const requiredServices = Array.isArray(sidecarRegistry) ? sidecarRegistry.length : 5;
   const configuredCount = Number(readiness.configuredCount || 0);
   const healthyCount = Number(readiness.healthyCount || 0);
+  const warmingCount = Number(readiness.warmingCount || 0);
   const stubCount = Number(readiness.stubCount || 0);
   const blockers = [];
 
@@ -218,6 +230,11 @@ async function runPreflight(baseUrl) {
       `healthy=${healthyCount}/${requiredServices}; all sidecars must be healthy`
     );
   }
+  if (warmingCount > 0) {
+    blockers.push(
+      `warming=${warmingCount}; wait for background model startup to finish`
+    );
+  }
   if (stubCount > 0) {
     blockers.push(`stub=${stubCount}; live baseline forbids stub sidecars`);
   }
@@ -229,6 +246,7 @@ async function runPreflight(baseUrl) {
     requiredServices,
     configuredCount,
     healthyCount,
+    warmingCount,
     stubCount,
     blockers,
     readiness,

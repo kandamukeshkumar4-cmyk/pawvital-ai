@@ -4,6 +4,7 @@ transformers==4.50.0
 torch==2.5.1
 torchvision==0.20.1
 accelerate==1.2.1
+huggingface_hub[hf_xet]>=0.32.0
 qwen-vl-utils==0.0.8
 Pillow==11.3.0
 python-multipart==0.0.20

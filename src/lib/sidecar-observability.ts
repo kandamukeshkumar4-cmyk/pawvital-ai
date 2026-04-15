@@ -3,6 +3,11 @@ import type {
   SidecarObservation,
   SidecarServiceName,
 } from "./clinical-evidence";
+import {
+  LIVE_SPLIT_VALUES,
+  type LiveSplitPct,
+  serviceToLiveSplitEnv,
+} from "./admin-shadow-rollout-shared";
 import type { NormalizedContradictionRecord } from "./clinical/contradiction-detector";
 import {
   buildDiagnosisContext,
@@ -66,6 +71,25 @@ const SERVICE_SHADOW_MODE_FLAGS: Record<SidecarServiceName, boolean> = {
   "async-review-service": parseBooleanEnv(process.env.HF_SHADOW_ASYNC_REVIEW),
 };
 
+function parseConfiguredLiveSplitPct(
+  service: SidecarServiceName
+): { configured: boolean; liveSplitPct: LiveSplitPct } {
+  const envName = serviceToLiveSplitEnv(service);
+  const rawValue = process.env[envName];
+
+  if (typeof rawValue !== "string" || rawValue.trim() === "") {
+    return { configured: false, liveSplitPct: 0 };
+  }
+
+  const numeric = Number.parseInt(rawValue, 10);
+  return {
+    configured: true,
+    liveSplitPct: LIVE_SPLIT_VALUES.includes(numeric as LiveSplitPct)
+      ? (numeric as LiveSplitPct)
+      : 0,
+  };
+}
+
 export type ShadowUrgencyBucket = "emergency" | "high" | "routine";
 
 export interface ShadowModeDecision {
@@ -83,6 +107,16 @@ export interface ShadowModeDecision {
   caseSample: number;
   autoDisabled: boolean;
   autoDisableReason: string | null;
+}
+
+export interface LiveTrafficDecision {
+  service: SidecarServiceName;
+  enabled: boolean;
+  configured: boolean;
+  liveSplitPct: LiveSplitPct;
+  effectiveLivePct: number;
+  caseSample: number;
+  mode: "legacy_default" | "disabled" | "promoted" | "held_back";
 }
 
 interface ObservabilitySnapshotOptions {
@@ -437,6 +471,54 @@ export function getShadowModeDecision(input: {
   };
 }
 
+export function getLiveTrafficDecision(input: {
+  service: SidecarServiceName;
+  session: TriageSession;
+  pet?: PetProfile | null;
+  urgencyHint?: string | null;
+  additionalKey?: string;
+}): LiveTrafficDecision {
+  const { configured, liveSplitPct } = parseConfiguredLiveSplitPct(input.service);
+  const caseSample = deterministicSample(
+    buildShadowCaseSignature(input.session, input.service, input.additionalKey)
+  );
+
+  if (!configured) {
+    return {
+      service: input.service,
+      enabled: true,
+      configured: false,
+      liveSplitPct: 0,
+      effectiveLivePct: 1,
+      caseSample,
+      mode: "legacy_default",
+    };
+  }
+
+  const effectiveLivePct = liveSplitPct / 100;
+  if (liveSplitPct === 0) {
+    return {
+      service: input.service,
+      enabled: false,
+      configured: true,
+      liveSplitPct,
+      effectiveLivePct,
+      caseSample,
+      mode: "disabled",
+    };
+  }
+
+  return {
+    service: input.service,
+    enabled: caseSample < effectiveLivePct,
+    configured: true,
+    liveSplitPct,
+    effectiveLivePct,
+    caseSample,
+    mode: caseSample < effectiveLivePct ? "promoted" : "held_back",
+  };
+}
+
 export function describeShadowModeDecision(
   decision: ShadowModeDecision
 ): string {
@@ -453,6 +535,22 @@ export function describeShadowModeDecision(
   }
 
   return parts.join("; ");
+}
+
+export function describeLiveTrafficDecision(
+  decision: LiveTrafficDecision
+): string {
+  if (!decision.configured) {
+    return `liveSplitConfigured=false; liveTraffic=true; liveSplitPolicy=${decision.mode}; liveCaseSample=${decision.caseSample.toFixed(4)}`;
+  }
+
+  return [
+    "liveSplitConfigured=true",
+    `liveTraffic=${decision.enabled}`,
+    `liveSplitPct=${decision.liveSplitPct}`,
+    `liveSplitPolicy=${decision.mode}`,
+    `liveCaseSample=${decision.caseSample.toFixed(4)}`,
+  ].join("; ");
 }
 
 export function appendSidecarObservation(

@@ -25,6 +25,7 @@ export interface SidecarHealthSummary {
   service: SidecarServiceName;
   status:
     | "healthy"
+    | "warming"
     | "stub"
     | "unconfigured"
     | "misconfigured"
@@ -43,6 +44,7 @@ export interface SidecarReadinessSnapshot {
   misconfiguredCount: number;
   unconfiguredCount: number;
   healthyCount: number;
+  warmingCount: number;
   stubCount: number;
   unhealthyCount: number;
   unreachableCount: number;
@@ -204,13 +206,32 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
           } satisfies SidecarHealthSummary;
         }
 
+        if (mode === "startup_failed") {
+          return {
+            service: entry.name,
+            status: "unhealthy",
+            statusCode: result.status,
+            mode,
+            model,
+            detail: "Model startup failed and requires operator intervention.",
+          } satisfies SidecarHealthSummary;
+        }
+
         return {
           service: entry.name,
-          status: mode === "stub" ? "stub" : "healthy",
+          status:
+            mode === "stub"
+              ? "stub"
+              : mode === "warming"
+                ? "warming"
+                : "healthy",
           statusCode: result.status,
           mode,
           model,
-          detail: null,
+          detail:
+            mode === "warming"
+              ? "Model is warming in the background and is not ready for live baseline traffic yet."
+              : null,
         } satisfies SidecarHealthSummary;
       } catch (error) {
         return {
@@ -241,6 +262,7 @@ export async function buildSidecarReadinessSnapshot(options?: {
     ).length,
     unconfiguredCount: configs.filter((entry) => !entry.configured).length,
     healthyCount: health.filter((entry) => entry.status === "healthy").length,
+    warmingCount: health.filter((entry) => entry.status === "warming").length,
     stubCount: health.filter((entry) => entry.status === "stub").length,
     unhealthyCount: health.filter((entry) => entry.status === "unhealthy").length,
     unreachableCount: health.filter((entry) => entry.status === "unreachable").length,

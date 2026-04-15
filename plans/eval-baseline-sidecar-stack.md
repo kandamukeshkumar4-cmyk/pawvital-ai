@@ -1,59 +1,70 @@
-# VET-1206 Live Eval Baseline Status
+# VET-1206 Live Eval Baseline
 
-- Updated: 2026-04-14
-- Scope: `data/benchmarks/dog-triage/gold-candidate`
-- Frozen case count: `223`
-- Coverage artifact: `scripts/benchmark-coverage-report.ts`
-- Live executor: `scripts/runpod-benchmark.mjs`
-- Live scorer: `scripts/eval-harness.ts`
+- Generated at: 2026-04-15T21:42:23.548Z
+- Suite: gold-candidate-merged
+- Base URL: https://pawvital-ai.vercel.app
+- Filters: none
+- Result: FAIL
 
-## What is now true
+## Primary Metrics
 
-- The benchmark executor validates the full frozen 223-case pack in dry-run mode.
-- The executor now fails closed on sidecar readiness before live runs unless `--skip-preflight` is set explicitly.
-- The evaluation harness now scores live route artifacts instead of simulated adjudication outputs.
-- Coverage reporting is now explicit, so the baseline can state exactly what suite it attempted to run.
+- Cases: 223
+- Expectation pass rate: 30.9%
+- Mean expectation score: 53.3%
+- Emergency recall: 0.0% (74 cases)
+- Unsafe downgrade rate: 13.45%
+- Blocking failures: 74
 
-## Current production blocker
+## Sidecar Preflight
 
-As of the latest production readiness check against `https://pawvital-ai.vercel.app`:
+- Ready: yes
+- Configured services: 5/5
+- Healthy services: 5/5
+- Warming services: 0
+- Stub services: 0
 
-- `configured=5/5`
-- `healthy=1/5`
-- `stub=0`
-- `text-retrieval-service`, `image-retrieval-service`, `multimodal-consult-service`, and `async-review-service` are returning `404` from `/healthz`
+- none
 
-That means a truthful "full sidecar stack" live baseline is blocked right now. The harness correctly refuses to run a real baseline until readiness is green.
+## By Response Type
 
-## Shadow status snapshot
+| Bucket | Cases | Passed | Failed | Mean score |
+| --- | ---: | ---: | ---: | ---: |
+| emergency | 74 | 0 | 74 | 0.0% |
+| question | 149 | 69 | 80 | 79.8% |
 
-- Overall status: `insufficient_data`
-- Vision samples in rolling 24h window: `0`
-- Text retrieval samples in rolling 24h window: `1`
-- Image retrieval samples in rolling 24h window: `0`
-- Multimodal consult samples in rolling 24h window: `0`
-- Async review samples in rolling 24h window: `0`
-- Required healthy-window samples: `288`
+## By Risk Tier
 
-This matches the dependency chain: `VET-1202` must produce the real shadow baseline before `VET-1206` can claim a full-stack live eval.
+| Bucket | Cases | Passed | Failed | Mean score |
+| --- | ---: | ---: | ---: | ---: |
+| tier_1_emergency | 30 | 0 | 30 | 0.0% |
+| tier_2_same_day | 25 | 8 | 17 | 77.3% |
+| tier_3_48h_monitor | 67 | 43 | 24 | 84.8% |
+| unclassified | 101 | 18 | 83 | 42.2% |
 
-## Verification completed
+## P0 Blockers for VET-1207
 
-- `node scripts/runpod-benchmark.mjs --dry-run --input=data/benchmarks/dog-triage/gold-candidate`
-- `npx ts-node --esm scripts/benchmark-coverage-report.ts --input=data/benchmarks/dog-triage/gold-candidate`
-- `npx ts-node --esm scripts/eval-harness.ts --input=<synthetic live artifact>`
-- `node scripts/verify-sidecars.mjs readiness`
-- `node scripts/report-phase5-shadow.mjs --json`
+- 74 critical blocker(s) require VET-1207 follow-up before the sidecar stack can be considered clinically safe.
+- [CRITICAL] cardiac-emergency-collapse-after-excitement — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] cardiac-emergency-collapse-blue-gums — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] cardiac-emergency-rapid-breathing-pale — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] cardiac-emergency-resting-breathing-distress — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-acute-paralysis — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-addisonian-crisis — unsafe_downgrade: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-allergic-reaction-hives — unsafe_downgrade: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-anaphylaxis — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-bloat-after-meal — unsafe_downgrade: Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen
+- [CRITICAL] emergency-bloat-gasdilation — unsafe_downgrade: Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen
 
-## Next command once readiness is green
+## Top Failures
 
-```powershell
-npx ts-node --esm scripts/eval-harness.ts --suite=data/benchmarks/dog-triage/gold-candidate
-```
+- [CRITICAL] cardiac-emergency-collapse-after-excitement — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] cardiac-emergency-collapse-blue-gums — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] cardiac-emergency-rapid-breathing-pale — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] cardiac-emergency-resting-breathing-distress — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-acute-paralysis — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-addisonian-crisis — unsafe_downgrade: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-allergic-reaction-hives — unsafe_downgrade: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-anaphylaxis — missed_emergency: Failed checks: responseType, readyForReport
+- [CRITICAL] emergency-bloat-after-meal — unsafe_downgrade: Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen
+- [CRITICAL] emergency-bloat-gasdilation — unsafe_downgrade: Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen
 
-That command will:
-
-1. run the live route benchmark against `/api/ai/symptom-chat`
-2. enforce five-sidecar readiness before the first case executes
-3. write the live scorecard JSON
-4. refresh this markdown baseline artifact

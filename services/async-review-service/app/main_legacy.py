@@ -18,7 +18,7 @@ import json
 import hashlib
 import logging
 import re
-from threading import RLock
+from threading import Event, RLock, Thread
 from typing import Any, Optional
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -30,11 +30,13 @@ from PIL import Image
 
 try:
     import torch
+    from huggingface_hub import snapshot_download
     from transformers import AutoProcessor, AutoModelForVision2Seq
     from qwen_vl_utils import process_vision_info
     _TORCH_AVAILABLE = True
 except ImportError:
     torch = None  # type: ignore[assignment]
+    snapshot_download = None  # type: ignore[assignment,misc]
     AutoProcessor = None  # type: ignore[assignment,misc]
     AutoModelForVision2Seq = None  # type: ignore[assignment,misc]
     process_vision_info = None  # type: ignore[assignment]
@@ -137,6 +139,11 @@ DEVICE = "cuda" if (_TORCH_AVAILABLE and torch.cuda.is_available()) else "cpu"
 STUB_MODE = os.environ.get("STUB_MODE", "false").strip().lower() == "true"
 EXPECTED_API_KEY = os.environ.get("SIDECAR_API_KEY", "").strip()
 logger = logging.getLogger("async-review-service")
+MODEL_READY_EVENT = Event()
+MODEL_LOAD_STATE = "idle"
+MODEL_LOAD_STARTED_AT: str | None = None
+MODEL_LOAD_COMPLETED_AT: str | None = None
+MODEL_LOAD_FAILURE_REASON: str | None = None
 
 
 def parse_bool_env(name: str, default: str = "false") -> bool:
@@ -209,7 +216,11 @@ def health_mode() -> str:
         return "stub"
     if FORCE_FALLBACK:
         return "forced_fallback"
-    return "production"
+    if model_load_ready():
+        return "production"
+    if model_load_failed():
+        return "startup_failed"
+    return "warming"
 
 
 def build_review_fallback_response(case_id: str, reason: str) -> ReviewResponse:
@@ -233,25 +244,115 @@ def build_review_fallback_response(case_id: str, reason: str) -> ReviewResponse:
     )
 
 
-def load_model():
-    """Load Qwen2.5-VL-32B-Instruct model and processor."""
-    global MODEL, PROCESSOR
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
+
+def model_load_ready() -> bool:
+    with STATE_LOCK:
+        return MODEL is not None and PROCESSOR is not None
+
+
+def model_load_failed() -> bool:
+    with STATE_LOCK:
+        return MODEL_LOAD_STATE == "failed"
+
+
+def _set_model_load_state(state: str, *, failure_reason: str | None = None) -> None:
+    global MODEL_LOAD_STATE, MODEL_LOAD_STARTED_AT, MODEL_LOAD_COMPLETED_AT, MODEL_LOAD_FAILURE_REASON
+
+    with STATE_LOCK:
+        MODEL_LOAD_STATE = state
+        MODEL_LOAD_FAILURE_REASON = failure_reason
+        if state == "loading":
+            MODEL_LOAD_STARTED_AT = _utc_now_iso()
+            MODEL_LOAD_COMPLETED_AT = None
+            MODEL_READY_EVENT.clear()
+            return
+        if state in {"ready", "failed"}:
+            MODEL_LOAD_COMPLETED_AT = _utc_now_iso()
+            MODEL_READY_EVENT.set()
+
+
+def _describe_model_load_failure(error: Exception) -> str:
+    detail = f"{type(error).__name__}: {error}".strip()
+    return detail[:240] if detail else "model_load_failed"
+
+
+def _resolve_model_source() -> str:
+    if snapshot_download is None:
+        return MODEL_NAME
+
+    logger.info("Downloading local snapshot for %s", MODEL_NAME)
+    return snapshot_download(repo_id=MODEL_NAME)
+
+
+def _load_model_once():
     if STUB_MODE:
         return None, None
 
-    if MODEL is None or PROCESSOR is None:
-        logger.info("Loading %s on %s", MODEL_NAME, DEVICE)
-        PROCESSOR = AutoProcessor.from_pretrained(MODEL_NAME)
-        MODEL = AutoModelForVision2Seq.from_pretrained(
-            MODEL_NAME,
-            torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32,
-            device_map="auto" if DEVICE == "cuda" else None,
-        )
-        MODEL.eval()
-        logger.info("Model loaded successfully")
+    model_source = _resolve_model_source()
+    logger.info("Loading %s on %s", MODEL_NAME, DEVICE)
+    processor = AutoProcessor.from_pretrained(model_source)
+    model = AutoModelForVision2Seq.from_pretrained(
+        model_source,
+        torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32,
+        device_map="auto" if DEVICE == "cuda" else None,
+    )
+    model.eval()
+    logger.info("Model loaded successfully")
+    return model, processor
 
-    return MODEL, PROCESSOR
+
+def _load_model_in_background() -> None:
+    global MODEL, PROCESSOR
+
+    try:
+        model, processor = _load_model_once()
+        with STATE_LOCK:
+            MODEL = model
+            PROCESSOR = processor
+        _set_model_load_state("ready")
+    except Exception as error:
+        logger.exception("Async review model load failed during startup")
+        _set_model_load_state("failed", failure_reason=_describe_model_load_failure(error))
+
+
+def start_background_model_load(force_retry: bool = False) -> bool:
+    if STUB_MODE or FORCE_FALLBACK:
+        return False
+
+    with STATE_LOCK:
+        should_start = MODEL_LOAD_STATE == "idle"
+        if force_retry and MODEL_LOAD_STATE == "failed":
+            should_start = True
+        if not should_start:
+            return False
+
+    _set_model_load_state("loading")
+    Thread(
+        target=_load_model_in_background,
+        name="async-review-model-loader",
+        daemon=True,
+    ).start()
+    return True
+
+
+def load_model(wait_for_ready: bool = True):
+    """Load Qwen2.5-VL-32B-Instruct model and processor."""
+    if STUB_MODE:
+        return None, None
+    if model_load_ready():
+        return MODEL, PROCESSOR
+    if not FORCE_FALLBACK and MODEL_LOAD_STATE == "idle":
+        start_background_model_load()
+    if not wait_for_ready:
+        return None, None
+
+    MODEL_READY_EVENT.wait()
+    if model_load_ready():
+        return MODEL, PROCESSOR
+    raise RuntimeError(MODEL_LOAD_FAILURE_REASON or "Async review model failed to load")
 
 
 def decode_image(image_data: str) -> Image.Image:
@@ -3429,11 +3530,16 @@ def _build_confidence_shift_narrative(evolution: dict) -> dict:
 async def lifespan(app: FastAPI):
     """Lifespan context manager for model loading."""
     if not STUB_MODE and not FORCE_FALLBACK:
-        load_model()
+        start_background_model_load()
     yield
-    global MODEL, PROCESSOR
+    global MODEL, PROCESSOR, MODEL_LOAD_STATE, MODEL_LOAD_STARTED_AT, MODEL_LOAD_COMPLETED_AT, MODEL_LOAD_FAILURE_REASON
     MODEL = None
     PROCESSOR = None
+    MODEL_LOAD_STATE = "idle"
+    MODEL_LOAD_STARTED_AT = None
+    MODEL_LOAD_COMPLETED_AT = None
+    MODEL_LOAD_FAILURE_REASON = None
+    MODEL_READY_EVENT.clear()
 
 
 app = FastAPI(
@@ -3453,6 +3559,10 @@ def healthz():
         outcome_feedback_entries = len(OUTCOME_FEEDBACK)
         dead_letter_size = len(DEAD_LETTER_QUEUE)
         state_transitions_tracked = len(REVIEW_STATE_TRANSITIONS)
+        model_load_state = MODEL_LOAD_STATE
+        model_load_started_at = MODEL_LOAD_STARTED_AT
+        model_load_completed_at = MODEL_LOAD_COMPLETED_AT
+        model_load_failure_reason = MODEL_LOAD_FAILURE_REASON
 
     return {
         "ok": True,
@@ -3468,6 +3578,13 @@ def healthz():
             else None,
         },
         "model": MODEL_NAME,
+        "model_load": {
+            "state": model_load_state,
+            "ready": model_load_state == "ready" or STUB_MODE or FORCE_FALLBACK,
+            "started_at": model_load_started_at,
+            "completed_at": model_load_completed_at,
+            "failure_reason": model_load_failure_reason,
+        },
         "device": DEVICE,
         "queue_size": queue_size,
         "results_cached": results_cached,

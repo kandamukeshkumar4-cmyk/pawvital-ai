@@ -42,6 +42,7 @@ export interface RouteBenchmarkPreflight {
   requiredServices: number;
   configuredCount: number;
   healthyCount: number;
+  warmingCount?: number;
   stubCount: number;
   blockers: string[];
   readiness?: Record<string, unknown> | null;
@@ -147,6 +148,10 @@ function isEmergencyExpectation(result: RouteBenchmarkCaseResult): boolean {
   return responseTypeKey(result) === "emergency";
 }
 
+function isMissedEmergency(result: RouteBenchmarkCaseResult): boolean {
+  return isEmergencyExpectation(result) && result.actualType !== "emergency";
+}
+
 function isUnsafeDowngrade(result: RouteBenchmarkCaseResult): boolean {
   const tier = riskTierKey(result);
   return (
@@ -158,10 +163,11 @@ function isUnsafeDowngrade(result: RouteBenchmarkCaseResult): boolean {
 function classifySeverity(
   result: RouteBenchmarkCaseResult
 ): LiveEvalFailure["severity"] {
-  const tier = riskTierKey(result);
-  if (result.mustNotMissMarker === true || tier === "tier_1_emergency") {
+  if (isMissedEmergency(result) || isUnsafeDowngrade(result)) {
     return "CRITICAL";
   }
+
+  const tier = riskTierKey(result);
   if (tier.startsWith("tier_2")) {
     return "HIGH";
   }
@@ -190,7 +196,7 @@ function buildFailures(results: RouteBenchmarkCaseResult[]): LiveEvalFailure[] {
         severity,
         category: isUnsafeDowngrade(result)
           ? "unsafe_downgrade"
-          : isEmergencyExpectation(result) && result.actualType !== "emergency"
+          : isMissedEmergency(result)
             ? "missed_emergency"
             : "expectation_mismatch",
         expected,
@@ -212,6 +218,19 @@ function buildFailures(results: RouteBenchmarkCaseResult[]): LiveEvalFailure[] {
 
     return failures;
   });
+}
+
+function compareFailureSeverity(
+  left: LiveEvalFailure,
+  right: LiveEvalFailure
+): number {
+  const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 };
+  const severityDelta = order[left.severity] - order[right.severity];
+  if (severityDelta !== 0) {
+    return severityDelta;
+  }
+
+  return left.caseId.localeCompare(right.caseId);
 }
 
 function summarizeBucket(
@@ -323,7 +342,7 @@ export function scoreLiveBenchmarkReport(
       .map(([key, results]) => [key, summarizeBucket(results)])
   );
 
-  const failures = buildFailures(filtered);
+  const failures = buildFailures(filtered).sort(compareFailureSeverity);
   const blockingFailures = failures.filter(
     (failure) => failure.severity === "CRITICAL"
   ).length;
@@ -404,6 +423,18 @@ export function renderLiveScorecardMarkdown(
           return `- [${failure.severity}] ${failure.caseId} — ${failure.category}: ${failure.description}`;
         })
       : ["- none"];
+  const p0Blockers = scorecard.failures.filter(
+    (failure) => failure.severity === "CRITICAL"
+  );
+  const p0BlockerLines =
+    p0Blockers.length > 0
+      ? [
+          `- ${p0Blockers.length} critical blocker(s) require VET-1207 follow-up before the sidecar stack can be considered clinically safe.`,
+          ...p0Blockers.slice(0, 10).map((failure) => {
+            return `- [${failure.severity}] ${failure.caseId} — ${failure.category}: ${failure.description}`;
+          }),
+        ]
+      : ["- none"];
 
   return [
     "# VET-1206 Live Eval Baseline",
@@ -428,6 +459,7 @@ export function renderLiveScorecardMarkdown(
     `- Ready: ${scorecard.preflight?.ready ? "yes" : "no"}`,
     `- Configured services: ${scorecard.preflight?.configuredCount ?? 0}/${scorecard.preflight?.requiredServices ?? 0}`,
     `- Healthy services: ${scorecard.preflight?.healthyCount ?? 0}/${scorecard.preflight?.requiredServices ?? 0}`,
+    `- Warming services: ${scorecard.preflight?.warmingCount ?? 0}`,
     `- Stub services: ${scorecard.preflight?.stubCount ?? 0}`,
     "",
     ...blockerLines,
@@ -435,6 +467,10 @@ export function renderLiveScorecardMarkdown(
     renderBucketSection("By Response Type", scorecard.byResponseType),
     "",
     renderBucketSection("By Risk Tier", scorecard.byRiskTier),
+    "",
+    "## P0 Blockers for VET-1207",
+    "",
+    ...p0BlockerLines,
     "",
     "## Top Failures",
     "",
