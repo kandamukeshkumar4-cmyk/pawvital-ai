@@ -116,6 +116,34 @@ describe("benchmark live eval scoring", () => {
     expect(markdown).toContain("VET-1206 Live Eval Baseline");
     expect(markdown).toContain("question");
   });
+
+  it("surfaces blocked live baselines without treating them as scored passes", () => {
+    const blocked = scoreLiveBenchmarkReport({
+      mode: "blocked",
+      generatedAt: "2026-04-15T00:00:00.000Z",
+      suiteId: "dog-triage-gold-candidate-merged",
+      species: "dog",
+      baseUrl: "https://pawvital.example.com",
+      preflight: {
+        performedAt: "2026-04-15T00:00:00.000Z",
+        routeUrl: "https://pawvital.example.com/api/ai/sidecar-readiness",
+        ready: false,
+        requiredServices: 5,
+        configuredCount: 5,
+        healthyCount: 1,
+        stubCount: 0,
+        blockers: ["healthy=1/5; all sidecars must be healthy"],
+        readiness: { healthyCount: 1 },
+      },
+      summary: { blocked: true },
+      cases: [],
+    });
+
+    expect(blocked.passFail).toBe("BLOCKED");
+    expect(blocked.totalCases).toBe(0);
+    expect(blocked.preflight?.ready).toBe(false);
+    expect(renderLiveScorecardMarkdown(blocked)).toContain("Result: BLOCKED");
+  });
 });
 
 describe("benchmark coverage summary", () => {

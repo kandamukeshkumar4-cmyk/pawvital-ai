@@ -92,6 +92,11 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function writeJson(filePath, payload) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
+}
+
 function loadSuite(inputPath) {
   const stat = fs.statSync(inputPath);
   if (stat.isDirectory()) {
@@ -452,8 +457,24 @@ async function main() {
     return;
   }
 
-  const preflight = options.skipPreflight
-    ? {
+  let preflight;
+  if (options.skipPreflight) {
+    preflight = {
+      performedAt: new Date().toISOString(),
+      routeUrl: new URL(readinessRoutePath, options.baseUrl).toString(),
+      ready: false,
+      requiredServices: Array.isArray(sidecarRegistry) ? sidecarRegistry.length : 5,
+      configuredCount: 0,
+      healthyCount: 0,
+      stubCount: 0,
+      blockers: ["preflight skipped by operator"],
+      readiness: null,
+    };
+  } else {
+    try {
+      preflight = await runPreflight(options.baseUrl);
+    } catch (error) {
+      preflight = {
         performedAt: new Date().toISOString(),
         routeUrl: new URL(readinessRoutePath, options.baseUrl).toString(),
         ready: false,
@@ -461,15 +482,34 @@ async function main() {
         configuredCount: 0,
         healthyCount: 0,
         stubCount: 0,
-        blockers: ["preflight skipped by operator"],
+        blockers: [
+          error instanceof Error ? error.message : String(error),
+        ],
         readiness: null,
-      }
-    : await runPreflight(options.baseUrl);
+      };
+    }
+  }
 
   if (!options.skipPreflight && !preflight.ready) {
-    throw new Error(
-      `Refusing live benchmark run because sidecar preflight is not ready: ${preflight.blockers.join("; ")}`
+    const blockedReport = {
+      mode: "blocked",
+      generatedAt: new Date().toISOString(),
+      suiteId: suite.suite_id,
+      species: suite.species,
+      baseUrl: options.baseUrl,
+      preflight,
+      summary: {
+        blocked: true,
+        reason: `sidecar_preflight_not_ready: ${preflight.blockers.join("; ")}`,
+      },
+      cases: [],
+    };
+    writeJson(options.output, blockedReport);
+    console.log(
+      `Skipped live benchmark run because sidecar preflight is not ready: ${preflight.blockers.join("; ")}`
     );
+    console.log(`Wrote blocked report to ${options.output}`);
+    return;
   }
 
   const caseResults = [];
@@ -508,7 +548,7 @@ async function main() {
     cases: caseResults,
   };
 
-  fs.writeFileSync(options.output, JSON.stringify(report, null, 2) + "\n");
+  writeJson(options.output, report);
   console.log(`Ran ${caseResults.length} benchmark case(s) against ${options.baseUrl}`);
   console.log(`Wrote live report to ${options.output}`);
 }

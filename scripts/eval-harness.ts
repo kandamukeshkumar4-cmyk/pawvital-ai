@@ -14,13 +14,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
-import {
-  renderLiveScorecardMarkdown,
-  scoreLiveBenchmarkReport,
-  type LiveEvalFilter,
-  type RouteBenchmarkReport,
-} from "../src/lib/benchmark-live-eval.ts";
+import type {
+  LiveEvalFilter,
+  LiveEvalScorecard,
+  RouteBenchmarkReport,
+} from "../src/lib/benchmark-live-eval";
 
 interface EvalCliOptions {
   suite: string | null;
@@ -30,6 +30,7 @@ interface EvalCliOptions {
   markdownOutput: string | null;
   baseUrl: string;
   skipPreflight: boolean;
+  allowBlocked: boolean;
   filter: LiveEvalFilter;
 }
 
@@ -55,6 +56,14 @@ const DEFAULT_MARKDOWN = path.join(
   "eval-baseline-sidecar-stack.md"
 );
 
+async function loadBenchmarkLiveEval() {
+  return import(
+    pathToFileURL(
+      path.join(ROOT, "src", "lib", "benchmark-live-eval.ts")
+    ).href
+  );
+}
+
 function parseArgs(argv: string[]): EvalCliOptions {
   const options: EvalCliOptions = {
     suite: null,
@@ -67,6 +76,7 @@ function parseArgs(argv: string[]): EvalCliOptions {
       process.env.NEXT_PUBLIC_APP_URL ||
       "http://localhost:3000",
     skipPreflight: false,
+    allowBlocked: false,
     filter: {},
   };
 
@@ -119,6 +129,11 @@ function parseArgs(argv: string[]): EvalCliOptions {
     }
     if (arg === "--skip-preflight") {
       options.skipPreflight = true;
+      continue;
+    }
+    if (arg === "--allow-blocked") {
+      options.allowBlocked = true;
+      continue;
     }
   }
 
@@ -139,7 +154,9 @@ function isRouteBenchmarkReport(value: unknown): value is RouteBenchmarkReport {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<RouteBenchmarkReport>;
   return (
-    (candidate.mode === "live" || candidate.mode === "dry-run") &&
+    (candidate.mode === "live" ||
+      candidate.mode === "dry-run" ||
+      candidate.mode === "blocked") &&
     typeof candidate.suiteId === "string" &&
     Array.isArray(candidate.cases)
   );
@@ -175,7 +192,7 @@ function runLiveSuite(options: EvalCliOptions): string {
   return artifactOutput;
 }
 
-function printSummary(scorecard: ReturnType<typeof scoreLiveBenchmarkReport>) {
+function printSummary(scorecard: LiveEvalScorecard) {
   console.log(`\n${"=".repeat(64)}`);
   console.log("PAWVITAL LIVE EVALUATION HARNESS");
   console.log(`${"=".repeat(64)}`);
@@ -224,8 +241,10 @@ function writeFile(filePath: string, contents: string) {
   fs.writeFileSync(filePath, contents);
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
+  const { renderLiveScorecardMarkdown, scoreLiveBenchmarkReport } =
+    await loadBenchmarkLiveEval();
   const artifactPath = options.suite
     ? runLiveSuite(options)
     : options.input || DEFAULT_ARTIFACT;
@@ -236,7 +255,10 @@ function main() {
     isRouteBenchmarkReport(report),
     `Benchmark artifact is not a live route report: ${artifactPath}`
   );
-  ensure(report.mode === "live", "Dry-run artifacts cannot be scored as live baselines");
+  ensure(
+    report.mode !== "dry-run",
+    "Dry-run artifacts cannot be scored as live baselines"
+  );
 
   const scorecard = scoreLiveBenchmarkReport(report, options.filter);
   scorecard.preflight = report.preflight || null;
@@ -254,7 +276,11 @@ function main() {
     console.log(`Markdown baseline written to ${markdownOutput}`);
   }
 
-  process.exitCode = scorecard.passFail === "PASS" ? 0 : 1;
+  process.exitCode =
+    scorecard.passFail === "PASS" ||
+    (scorecard.passFail === "BLOCKED" && options.allowBlocked)
+      ? 0
+      : 1;
 }
 
-main();
+void main();

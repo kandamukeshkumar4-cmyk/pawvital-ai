@@ -48,7 +48,7 @@ export interface RouteBenchmarkPreflight {
 }
 
 export interface RouteBenchmarkReport {
-  mode: "live" | "dry-run";
+  mode: "live" | "dry-run" | "blocked";
   generatedAt: string;
   suiteId: string;
   species: string;
@@ -101,7 +101,7 @@ export interface LiveEvalScorecard {
   emergencyMissCount: number;
   unsafeDowngradeRate: number;
   blockingFailures: number;
-  passFail: "PASS" | "FAIL";
+  passFail: "PASS" | "FAIL" | "BLOCKED";
   preflight: RouteBenchmarkPreflight | null;
   byResponseType: Record<string, LiveEvalBucketSummary>;
   byRiskTier: Record<string, LiveEvalBucketSummary>;
@@ -229,6 +229,35 @@ export function scoreLiveBenchmarkReport(
   report: RouteBenchmarkReport,
   filter: LiveEvalFilter = {}
 ): LiveEvalScorecard {
+  if (report.mode === "blocked") {
+    return {
+      runId: `LIVE-EVAL-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+      generatedAt: new Date().toISOString(),
+      executionMode: "live_route",
+      suiteId: report.suiteId,
+      baseUrl: report.baseUrl || null,
+      filters: filter,
+      totalCases: 0,
+      passedCases: 0,
+      failedCases: 0,
+      totalChecks: 0,
+      passedChecks: 0,
+      failedChecks: 0,
+      expectationPassRate: 0,
+      meanExpectationScore: 0,
+      emergencyRecall: 0,
+      emergencyCaseCount: 0,
+      emergencyMissCount: 0,
+      unsafeDowngradeRate: 0,
+      blockingFailures: 0,
+      passFail: "BLOCKED",
+      preflight: report.preflight || null,
+      byResponseType: {},
+      byRiskTier: {},
+      failures: [],
+    };
+  }
+
   const filtered = report.cases.filter((result) => matchesFilter(result, filter));
   const totalCases = filtered.length;
   const passedCases = filtered.filter((result) => result.evaluation.pass).length;
