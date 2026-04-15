@@ -22,6 +22,9 @@ const redis = isConfigured
     })
   : null;
 
+const RATE_LIMIT_ERROR_LOG_INTERVAL_MS = 60_000;
+let lastRateLimitErrorLogAt = 0;
+
 // ── Rate limiters ──────────────────────────────────────────────────────────
 
 /** Symptom chat: 30 requests per minute per user */
@@ -56,9 +59,25 @@ export const generalApiLimiter = redis
 
 // ── Helper ──────────────────────────────────────────────────────────────────
 
-type RateLimitResult =
-  | { success: true }
+export type RateLimitResult =
+  | { success: true; degraded?: boolean; reason?: "redis_unavailable" }
   | { success: false; reset: number; remaining: number };
+
+function logRateLimitFailure(
+  identifier: string,
+  error: unknown,
+  now = Date.now()
+) {
+  if (now - lastRateLimitErrorLogAt < RATE_LIMIT_ERROR_LOG_INTERVAL_MS) {
+    return;
+  }
+
+  lastRateLimitErrorLogAt = now;
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(
+    `[rate-limit] Upstash limiter unavailable; failing open for ${identifier}: ${message}`
+  );
+}
 
 export async function checkRateLimit(
   limiter: Ratelimit | null,
@@ -66,13 +85,22 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   if (!limiter) return { success: true }; // No-op in dev/demo
 
-  const result = await limiter.limit(identifier);
+  try {
+    const result = await limiter.limit(identifier);
 
-  if (!result.success) {
+    if (!result.success) {
+      return {
+        success: false,
+        reset: result.reset,
+        remaining: result.remaining,
+      };
+    }
+  } catch (error) {
+    logRateLimitFailure(identifier, error);
     return {
-      success: false,
-      reset: result.reset,
-      remaining: result.remaining,
+      success: true,
+      degraded: true,
+      reason: "redis_unavailable",
     };
   }
 

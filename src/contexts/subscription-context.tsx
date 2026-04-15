@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getPlanFromSubscription } from "@/lib/subscription-state";
 import { useAppStore } from "@/store/app-store";
 import type { SubscriptionPlanTier, SubscriptionRow } from "@/types";
 
@@ -87,14 +88,36 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     void refresh();
   }, [user?.id, userDataLoaded, refresh]);
 
+  useEffect(() => {
+    if (!userDataLoaded || !user?.id || !isSupabaseConfigured) {
+      return;
+    }
+
+    const handleFocus = () => {
+      void refresh();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refresh();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [refresh, user?.id, userDataLoaded]);
+
   const plan = useMemo((): SubscriptionPlanTier => {
-    if (!isSupabaseConfigured) return DEFAULT_FREE;
-    if (!subscription) return DEFAULT_FREE;
-    const activeLike = ["active", "trialing"].includes(subscription.status);
-    if (!activeLike) return DEFAULT_FREE;
-    const p = subscription.plan;
-    if (p === "pro" || p === "clinic") return p;
-    return DEFAULT_FREE;
+    if (!isSupabaseConfigured) {
+      return DEFAULT_FREE;
+    }
+
+    return getPlanFromSubscription(subscription);
   }, [subscription]);
 
   const value = useMemo(

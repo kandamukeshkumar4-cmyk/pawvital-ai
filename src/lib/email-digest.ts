@@ -12,6 +12,11 @@
  */
 
 import { getServiceSupabase } from "@/lib/supabase-admin";
+import {
+  isPendingNotificationDelivery,
+  type NotificationDeliveryState,
+  withNotificationDeliveryState,
+} from "@/lib/notification-delivery";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -28,6 +33,23 @@ export interface DigestEmail {
   html: string;
   text: string;
   notificationCount: number;
+  notificationIds: string[];
+}
+
+export interface DigestTransportResult {
+  confirmationId?: string | null;
+}
+
+export type DigestTransport = (
+  digest: DigestEmail
+) => Promise<DigestTransportResult | void>;
+
+export interface DigestDeliveryResult {
+  status: "skipped" | "sent" | "failed";
+  attempts: number;
+  notificationCount: number;
+  deadLettered: boolean;
+  lastError: string | null;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -40,9 +62,19 @@ const DIGEST_FREQUENCY_WINDOW: Record<string, number> = {
   weekly: MS_PER_WEEK,
   never: 0,
 };
+const DIGEST_RETRY_DELAYS_MS = [1000, 2000, 4000] as const;
 
 const BRAND_COLOR = "#4f46e5";
 const BRAND_NAME = "PawVital";
+
+interface DigestNotificationRecord extends DigestNotificationItem {
+  metadata: Record<string, unknown>;
+}
+
+interface PreparedDigest {
+  digest: DigestEmail;
+  notifications: DigestNotificationRecord[];
+}
 
 // ── HTML generator ────────────────────────────────────────────────────────────
 
@@ -147,23 +179,22 @@ function generateDigestText(
   ].join("\n");
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-/**
- * Build a digest email for a user based on their unread notifications
- * within their preferred time window.
- *
- * Returns null when Supabase is unconfigured or there are no notifications.
- */
-export async function buildDigestForUser(
+function normalizeDigestError(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown digest delivery failure";
+}
+
+async function prepareDigestForUser(
   userId: string
-): Promise<DigestEmail | null> {
+): Promise<PreparedDigest | null> {
   const supabase = getServiceSupabase();
   if (!supabase) {
     return null;
   }
 
-  // Look up the user's digest frequency preference
   const { data: prefs } = await supabase
     .from("notification_preferences")
     .select("email_digest, digest_frequency")
@@ -182,7 +213,7 @@ export async function buildDigestForUser(
 
   const { data: notifications, error } = await supabase
     .from("notifications")
-    .select("id, type, title, body, created_at")
+    .select("id, type, title, body, created_at, metadata")
     .eq("user_id", userId)
     .eq("read", false)
     .gte("created_at", since)
@@ -193,21 +224,161 @@ export async function buildDigestForUser(
     return null;
   }
 
-  if (!notifications || notifications.length === 0) {
+  const pendingNotifications = ((notifications ?? []) as DigestNotificationRecord[])
+    .map((notification) => ({
+      ...notification,
+      metadata:
+        notification.metadata &&
+        typeof notification.metadata === "object" &&
+        !Array.isArray(notification.metadata)
+          ? notification.metadata
+          : {},
+    }))
+    .filter((notification) => isPendingNotificationDelivery(notification.metadata));
+
+  if (pendingNotifications.length === 0) {
     return null;
   }
 
-  const items = notifications as DigestNotificationItem[];
-  const count = items.length;
+  const count = pendingNotifications.length;
   const subject =
     count === 1
       ? `${BRAND_NAME}: 1 new notification`
       : `${BRAND_NAME}: ${count} new notifications`;
 
   return {
-    subject,
-    html: generateDigestHtml(items),
-    text: generateDigestText(items),
-    notificationCount: count,
+    digest: {
+      subject,
+      html: generateDigestHtml(pendingNotifications),
+      text: generateDigestText(pendingNotifications),
+      notificationCount: count,
+      notificationIds: pendingNotifications.map((item) => item.id),
+    },
+    notifications: pendingNotifications,
+  };
+}
+
+async function persistDigestDeliveryState(
+  userId: string,
+  notifications: DigestNotificationRecord[],
+  patch: Partial<NotificationDeliveryState>
+): Promise<void> {
+  if (notifications.length === 0) {
+    return;
+  }
+
+  const supabase = getServiceSupabase();
+  if (!supabase) {
+    return;
+  }
+
+  await Promise.all(
+    notifications.map(async (notification) => {
+      const metadata = withNotificationDeliveryState(
+        notification.metadata,
+        patch
+      );
+
+      const { error } = await supabase
+        .from("notifications")
+        .update({ metadata })
+        .eq("id", notification.id)
+        .eq("user_id", userId);
+
+      if (error) {
+        console.error(
+          "[EmailDigest] Failed to persist digest delivery state:",
+          error
+        );
+      }
+    })
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
+/**
+ * Build a digest email for a user based on their unread notifications
+ * within their preferred time window.
+ *
+ * Returns null when Supabase is unconfigured or there are no notifications.
+ */
+export async function buildDigestForUser(
+  userId: string
+): Promise<DigestEmail | null> {
+  const prepared = await prepareDigestForUser(userId);
+  return prepared?.digest ?? null;
+}
+
+export async function deliverDigestForUser(
+  userId: string,
+  transport: DigestTransport,
+  wait: (ms: number) => Promise<void> = sleep
+): Promise<DigestDeliveryResult> {
+  const prepared = await prepareDigestForUser(userId);
+  if (!prepared) {
+    return {
+      status: "skipped",
+      attempts: 0,
+      notificationCount: 0,
+      deadLettered: false,
+      lastError: null,
+    };
+  }
+
+  let attempt = 0;
+  let lastError: string | null = null;
+
+  while (attempt <= DIGEST_RETRY_DELAYS_MS.length) {
+    attempt += 1;
+
+    try {
+      const result = await transport(prepared.digest);
+      const deliveredAt = new Date().toISOString();
+
+      await persistDigestDeliveryState(userId, prepared.notifications, {
+        status: "sent",
+        attempts: attempt,
+        last_attempt_at: deliveredAt,
+        delivered_at: deliveredAt,
+        confirmation_id: result?.confirmationId ?? null,
+        last_error: null,
+        dead_lettered: false,
+      });
+
+      return {
+        status: "sent",
+        attempts: attempt,
+        notificationCount: prepared.digest.notificationCount,
+        deadLettered: false,
+        lastError: null,
+      };
+    } catch (error) {
+      lastError = normalizeDigestError(error);
+
+      if (attempt > DIGEST_RETRY_DELAYS_MS.length) {
+        break;
+      }
+
+      await wait(DIGEST_RETRY_DELAYS_MS[attempt - 1]);
+    }
+  }
+
+  await persistDigestDeliveryState(userId, prepared.notifications, {
+    status: "failed",
+    attempts: attempt,
+    last_attempt_at: new Date().toISOString(),
+    delivered_at: null,
+    confirmation_id: null,
+    last_error: lastError,
+    dead_lettered: true,
+  });
+
+  return {
+    status: "failed",
+    attempts: attempt,
+    notificationCount: prepared.digest.notificationCount,
+    deadLettered: true,
+    lastError,
   };
 }

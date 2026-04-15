@@ -44,10 +44,10 @@ export default function Pricing() {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
           {/* Free tier */}
           <motion.div
-            className="bg-white rounded-2xl border-2 border-gray-200 p-8 flex flex-col"
+            className="flex flex-col rounded-2xl border-2 border-gray-200 bg-white p-6 sm:p-8"
             initial={{ opacity: 0, y: 30 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: 0.1 }}
@@ -76,7 +76,7 @@ export default function Pricing() {
               ))}
             </div>
 
-            <Link href="/signup">
+            <Link href="/signup" className="block">
               <Button variant="outline" className="w-full">
                 Sign Up Free
               </Button>
@@ -98,11 +98,9 @@ export default function Pricing() {
               </div>
             </div>
 
-            <div className="bg-white rounded-[calc(1rem-2px)] p-8 flex flex-col">
+            <div className="flex flex-col rounded-[calc(1rem-2px)] bg-white p-6 sm:p-8">
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Premium
-                </h3>
+                <h3 className="text-lg font-semibold text-gray-900">Premium</h3>
                 <div className="flex items-baseline gap-1 mt-2">
                   <span className="text-4xl font-extrabold text-gray-900">
                     $9.97
@@ -125,13 +123,12 @@ export default function Pricing() {
                 ))}
               </div>
 
-              <Link href="/signup">
+              <Link href="/signup" className="block">
                 <Button
                   size="lg"
                   className="w-full bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500"
                 >
-                  Start 7-Day Free Trial{" "}
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  Start 7-Day Free Trial <ArrowRight className="w-5 h-5 ml-2" />
                 </Button>
               </Link>
             </div>
@@ -140,7 +137,7 @@ export default function Pricing() {
 
         {/* Cost comparison */}
         <motion.div
-          className="mt-12 grid grid-cols-3 gap-4 text-center text-sm text-gray-500 max-w-2xl mx-auto"
+          className="mx-auto mt-12 grid max-w-2xl grid-cols-1 gap-3 text-center text-sm text-gray-500 sm:grid-cols-3 sm:gap-4"
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.5, delay: 0.3 }}
