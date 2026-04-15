@@ -96,6 +96,10 @@ function readEnv(name) {
   return (process.env[name] || "").trim();
 }
 
+function readSupabaseUrl() {
+  return readEnv("SUPABASE_URL") || readEnv("NEXT_PUBLIC_SUPABASE_URL");
+}
+
 function normalizeMode(rawValue) {
   return String(rawValue || "").trim().toLowerCase();
 }
@@ -351,11 +355,14 @@ function runEnvChecks() {
   }
 
   if (readEnv("HF_TEXT_RETRIEVAL_URL") || readEnv("HF_IMAGE_RETRIEVAL_URL")) {
-    if (readEnv("SUPABASE_URL")) {
+    if (readSupabaseUrl()) {
       statusLine("ok", "SUPABASE_URL is configured for retrieval sidecars");
     } else {
       warnings += 1;
-      statusLine("warn", "SUPABASE_URL is missing for retrieval sidecars");
+      statusLine(
+        "warn",
+        "SUPABASE_URL is missing for retrieval sidecars (NEXT_PUBLIC_SUPABASE_URL also not found)"
+      );
     }
 
     if (readEnv("SUPABASE_SERVICE_ROLE_KEY")) {
@@ -581,13 +588,39 @@ async function runReadinessChecks() {
       return { failures, warnings };
     }
 
+    const readiness = result.body.readiness || {};
+    const requiredServices = services.length;
+    const configuredCount = Number(readiness.configuredCount ?? 0);
+    const healthyCount = Number(readiness.healthyCount ?? 0);
+    const stubCount = Number(readiness.stubCount ?? 0);
+
+    if (configuredCount < requiredServices) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `sidecar readiness route reports configured=${configuredCount}/${requiredServices}; full-stack validation requires all services configured`
+      );
+    }
+
+    if (healthyCount < requiredServices) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `sidecar readiness route reports healthy=${healthyCount}/${requiredServices}; full-stack validation requires all services healthy`
+      );
+    }
+
+    if (stubCount > 0) {
+      warnings += 1;
+      statusLine(
+        "warn",
+        `sidecar readiness route reports stub=${stubCount}; live baseline should not run on stub services`
+      );
+    }
+
     statusLine(
       "ok",
-      `sidecar readiness route healthy at ${routeUrl} (configured=${Number(
-        result.body.readiness?.configuredCount ?? 0
-      )}, healthy=${Number(result.body.readiness?.healthyCount ?? 0)}, stub=${Number(
-        result.body.readiness?.stubCount ?? 0
-      )})`
+      `sidecar readiness route healthy at ${routeUrl} (configured=${configuredCount}, healthy=${healthyCount}, stub=${stubCount})`
     );
   } catch (error) {
     failures += 1;
@@ -682,7 +715,8 @@ async function main() {
     console.error(
       `Unknown command "${command}". Use env, health, shadow, readiness, vercel, or all.`
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   if (command === "env" || command === "all") {
@@ -729,7 +763,7 @@ async function main() {
   );
 
   if (failures > 0 || (strictMode && warnings > 0)) {
-    process.exit(1);
+    process.exitCode = 1;
   }
 }
 

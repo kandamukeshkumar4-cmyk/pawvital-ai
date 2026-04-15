@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { buildLoginPath, buildRedirectTarget } from "@/lib/auth-routing";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { DEMO_PETS_STORAGE_KEY } from "@/lib/demo-storage";
 import { useAppStore } from "@/store/app-store";
@@ -19,24 +20,29 @@ function persistDemoPets(pets: Pet[]) {
 // ─── Auth Hook ────────────────────────────────────────────────────────────────
 
 export function useAuth() {
-  const { user, setUser } = useAppStore();
+  const { user, setUser, setPets, setActivePet, setUserDataLoaded } = useAppStore();
   const router = useRouter();
 
   const signOut = useCallback(async () => {
+    setUser(null);
+    setPets([]);
+    setActivePet(null);
+    setUserDataLoaded(true);
+
     if (!isSupabaseConfigured) {
-      router.push("/login");
+      router.replace("/login");
       return;
     }
+
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      setUser(null);
-      router.push("/login");
     } catch (err) {
       console.error("Sign out error:", err);
-      router.push("/login");
     }
-  }, [router, setUser]);
+
+    router.replace("/login");
+  }, [router, setActivePet, setPets, setUser, setUserDataLoaded]);
 
   return { user, signOut, isConfigured: isSupabaseConfigured };
 }
@@ -45,6 +51,8 @@ export function useAuth() {
 
 export function useLoadUserData() {
   const { setUser, setPets, setActivePet, activePet, setUserDataLoaded } = useAppStore();
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -68,67 +76,133 @@ export function useLoadUserData() {
       return;
     }
 
+    const supabase = createClient();
+    let mounted = true;
+
+    function clearUserData() {
+      setUser(null);
+      setPets([]);
+      setActivePet(null);
+    }
+
+    function redirectToLogin() {
+      const redirectTarget = buildRedirectTarget(pathname || "/dashboard");
+      router.replace(
+        buildLoginPath(redirectTarget, {
+          reason: "session_expired",
+        })
+      );
+    }
+
     async function load() {
       try {
-        const supabase = createClient();
-
         // Get current auth user
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const {
+          data: { user: authUser },
+          error: authError,
+        } = await supabase.auth.getUser();
+
+        if (authError) {
+          throw authError;
+        }
+
         if (!authUser) {
+          clearUserData();
           setUserDataLoaded(true);
+          redirectToLogin();
           return;
         }
 
-        // Get profile from profiles table
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", authUser.id)
-          .single();
+        const fallbackUser: UserProfile = {
+          id: authUser.id,
+          email: authUser.email || "",
+          full_name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Pet Parent",
+          subscription_status: "free_trial",
+          created_at: authUser.created_at,
+        };
 
-        if (profile) {
-          const userProfile: UserProfile = {
-            id: profile.id,
-            email: authUser.email || "",
-            full_name: profile.full_name || authUser.email?.split("@")[0] || "Pet Parent",
-            avatar_url: profile.avatar_url,
-            subscription_status: profile.subscription_status || "free_trial",
-            trial_ends_at: profile.trial_ends_at,
-            stripe_customer_id: profile.stripe_customer_id,
-            created_at: profile.created_at,
-          };
-          setUser(userProfile);
-        } else {
-          // Profile doesn't exist yet — use auth user data
-          setUser({
-            id: authUser.id,
-            email: authUser.email || "",
-            full_name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Pet Parent",
-            subscription_status: "free_trial",
-            created_at: authUser.created_at,
-          });
-        }
+        try {
+          // Get profile from profiles table
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", authUser.id)
+            .single();
 
-        // Load pets for this user
-        const { data: pets } = await supabase
-          .from("pets")
-          .select("*")
-          .eq("user_id", authUser.id)
-          .order("created_at", { ascending: true });
+          if (profile) {
+            const userProfile: UserProfile = {
+              id: profile.id,
+              email: authUser.email || "",
+              full_name: profile.full_name || authUser.email?.split("@")[0] || "Pet Parent",
+              avatar_url: profile.avatar_url,
+              subscription_status: profile.subscription_status || "free_trial",
+              trial_ends_at: profile.trial_ends_at,
+              stripe_customer_id: profile.stripe_customer_id,
+              created_at: profile.created_at,
+            };
+            setUser(userProfile);
+          } else {
+            // Profile doesn't exist yet — use auth user data
+            setUser(fallbackUser);
+          }
 
-        if (pets && pets.length > 0) {
-          setPets(pets as Pet[]);
-          // Set first pet as active if none selected
-          if (!activePet) setActivePet(pets[0] as Pet);
+          // Load pets for this user
+          const { data: pets } = await supabase
+            .from("pets")
+            .select("*")
+            .eq("user_id", authUser.id)
+            .order("created_at", { ascending: true });
+
+          if (pets && pets.length > 0) {
+            setPets(pets as Pet[]);
+            // Set first pet as active if none selected
+            if (!activePet) setActivePet(pets[0] as Pet);
+          }
+        } catch (err) {
+          setUser(fallbackUser);
+          console.error("Failed to load user profile data:", err);
         }
       } catch (err) {
-        console.error("Failed to load user data:", err);
+        clearUserData();
+        console.error("Failed to resolve auth session:", err);
+        redirectToLogin();
       } finally {
-        setUserDataLoaded(true);
+        if (mounted) {
+          setUserDataLoaded(true);
+        }
       }
     }
 
     void load();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) {
+        return;
+      }
+
+      if (event === "SIGNED_OUT" || !session?.user) {
+        clearUserData();
+        setUserDataLoaded(true);
+        redirectToLogin();
+        return;
+      }
+
+      if (
+        event === "SIGNED_IN" ||
+        event === "TOKEN_REFRESHED" ||
+        event === "USER_UPDATED" ||
+        event === "PASSWORD_RECOVERY"
+      ) {
+        void load();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }

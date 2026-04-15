@@ -52,7 +52,6 @@ import {
   formatClinicalCaseContext,
 } from "@/lib/knowledge-retrieval";
 import {
-  capDiagnosticConfidence,
   inferSupportedImageDomain,
   type ConsultOpinion,
   type ServiceTimeoutRecord,
@@ -74,6 +73,11 @@ import {
   getRateLimitId,
 } from "@/lib/rate-limit";
 import { computeBayesianScore } from "@/lib/bayesian-scorer";
+import { buildReportConfidenceCalibration } from "@/lib/report-confidence";
+import {
+  evaluateSymptomCheckUsageGate,
+  getPlanFromSubscription,
+} from "@/lib/subscription-state";
 import {
   buildCaseMemorySnapshot,
   buildDeterministicCaseSummary,
@@ -108,6 +112,7 @@ import {
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
+import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
@@ -188,6 +193,7 @@ import {
   buildConfirmedQASummary,
   buildDeterministicQuestionFallback,
 } from "@/lib/symptom-chat/extraction-helpers";
+import type { SubscriptionRow } from "@/types";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -208,6 +214,13 @@ import {
 // Detect which engine to use
 const useNvidia = isNvidiaConfigured();
 
+const USAGE_LIMIT_BYPASS_PATTERNS = [
+  /\b(can(?:not|'?t)\s+breathe|difficulty breathing|struggling to breathe|not breathing)\b/i,
+  /\b(vomit(?:ing|ed)? blood|blood in vomit|coughing blood|bloody diarrhea)\b/i,
+  /\b(seizure|collapsed?|collapse|unresponsive)\b/i,
+  /\b(hit by a car|car accident|distended abdomen|bloated abdomen|bloat)\b/i,
+];
+
 interface RequestBody {
   messages: { role: "user" | "assistant"; content: string }[];
   pet: PetProfile;
@@ -216,6 +229,163 @@ interface RequestBody {
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
+}
+
+function hasConversationStarted(session: TriageSession | null | undefined) {
+  if (!session) {
+    return false;
+  }
+
+  return (
+    session.known_symptoms.length > 0 ||
+    session.answered_questions.length > 0 ||
+    Object.keys(session.extracted_answers ?? {}).length > 0 ||
+    Boolean(session.last_question_asked) ||
+    (session.case_memory?.turn_count ?? 0) > 0
+  );
+}
+
+function hasEmergencyUsageGateBypassSignal(
+  session: TriageSession,
+  messages: RequestBody["messages"]
+) {
+  if ((session.red_flags_triggered?.length ?? 0) > 0) {
+    return true;
+  }
+
+  const latestUserMessage =
+    [...messages].reverse().find((message) => message.role === "user")
+      ?.content ?? "";
+
+  return USAGE_LIMIT_BYPASS_PATTERNS.some((pattern) =>
+    pattern.test(latestUserMessage)
+  );
+}
+
+async function loadLatestSubscriptionForUser(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`SUBSCRIPTION_LOOKUP_FAILED:${error.message}`);
+  }
+
+  return (data ?? null) as SubscriptionRow | null;
+}
+
+async function countMonthlySymptomChecksForUser(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  userId: string
+) {
+  const { data: pets, error: petsError } = await supabase
+    .from("pets")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (petsError) {
+    throw new Error(`PET_LOOKUP_FAILED:${petsError.message}`);
+  }
+
+  const petIds = (pets ?? [])
+    .map((pet) => String((pet as { id?: string }).id ?? "").trim())
+    .filter(Boolean);
+  if (petIds.length === 0) {
+    return 0;
+  }
+
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+
+  const { count, error: checksError } = await supabase
+    .from("symptom_checks")
+    .select("*", { count: "exact", head: true })
+    .in("pet_id", petIds)
+    .gte("created_at", monthStart.toISOString());
+
+  if (checksError) {
+    throw new Error(`USAGE_COUNT_FAILED:${checksError.message}`);
+  }
+
+  return count ?? 0;
+}
+
+async function maybeBuildUsageLimitResponse(input: {
+  action: RequestBody["action"];
+  messages: RequestBody["messages"];
+  session: TriageSession;
+}) {
+  if (input.action !== "chat") {
+    return null;
+  }
+
+  const conversationStarted = hasConversationStarted(input.session);
+  const emergencyBypass = hasEmergencyUsageGateBypassSignal(
+    input.session,
+    input.messages
+  );
+
+  if (conversationStarted || emergencyBypass) {
+    return null;
+  }
+
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return null;
+    }
+
+    const [latestSubscription, completedChecksThisMonth] = await Promise.all([
+      loadLatestSubscriptionForUser(supabase, user.id),
+      countMonthlySymptomChecksForUser(supabase, user.id),
+    ]);
+
+    const usageGate = evaluateSymptomCheckUsageGate({
+      completedChecksThisMonth,
+      conversationStarted: false,
+      isEmergency: false,
+      plan: getPlanFromSubscription(latestSubscription),
+    });
+
+    if (usageGate.allowed) {
+      return null;
+    }
+
+    return NextResponse.json(
+      {
+        type: "usage_limit",
+        code: "FREE_TIER_LIMIT_REACHED",
+        error: "Monthly free-tier limit reached",
+        message: `You've reached the free limit of ${usageGate.limit} new symptom checks this month. Upgrade to keep starting new checks, or continue any symptom conversation already in progress.`,
+        requires_upgrade: usageGate.requiresUpgrade,
+        usage_gate: {
+          limit: usageGate.limit,
+          reason: usageGate.reason,
+          remaining: usageGate.remaining,
+        },
+        ready_for_report: false,
+        conversationState: "idle",
+        session: sanitizeSessionForClient(input.session),
+      },
+      { status: 402 }
+    );
+  } catch (error) {
+    console.error("[Billing] Usage gate failed open:", error);
+    return null;
+  }
 }
 
 export async function POST(request: Request) {
@@ -256,6 +426,15 @@ export async function POST(request: Request) {
     }
 
     let session = clientSession || createSession();
+    const usageLimitResponse = await maybeBuildUsageLimitResponse({
+      action,
+      messages,
+      session,
+    });
+    if (usageLimitResponse) {
+      return usageLimitResponse;
+    }
+
     const incomingUnresolvedIds =
       session.case_memory?.unresolved_question_ids ?? [];
     let effectivePet = getEffectivePetProfile(pet, session);
@@ -1986,24 +2165,6 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
 
     const report = parseReportJSON(rawReport);
-    report.confidence = capDiagnosticConfidence({
-      baseConfidence:
-        typeof report.confidence === "number"
-          ? report.confidence
-          : deriveBaselineReportConfidence(context),
-      hasModelDisagreement: Boolean(
-        session.case_memory?.consult_opinions?.some(
-          (opinion) => opinion.disagreements.length > 0
-        )
-      ),
-      lowQualityImage:
-        session.latest_image_quality === "poor" ||
-        session.latest_image_quality === "borderline",
-      weakRetrievalSupport:
-        retrievalBundle.textChunks.length === 0 &&
-        retrievalBundle.imageMatches.length === 0,
-      ambiguityFlags: session.case_memory?.ambiguity_flags || [],
-    });
     if (!Array.isArray(report.evidence_chain)) {
       report.evidence_chain = buildEvidenceChainForResponse(
         session,
@@ -2026,6 +2187,51 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       } catch (safetyError) {
         console.error("Safety verification failed (non-blocking):", safetyError);
       }
+    }
+
+    const hasModelDisagreement = Boolean(
+      session.case_memory?.consult_opinions?.some(
+        (opinion) => opinion.disagreements.length > 0
+      )
+    );
+    try {
+      finalReport.calibrated_confidence = buildReportConfidenceCalibration({
+        baseConfidence:
+          typeof finalReport.confidence === "number"
+            ? finalReport.confidence
+            : deriveBaselineReportConfidence(context),
+        reportSeverity:
+          finalReport.severity === "emergency" ||
+          finalReport.severity === "high" ||
+          finalReport.severity === "medium" ||
+          finalReport.severity === "low"
+            ? finalReport.severity
+            : context.highest_urgency === "emergency" ||
+                context.highest_urgency === "high" ||
+                context.highest_urgency === "moderate"
+              ? context.highest_urgency === "moderate"
+                ? "medium"
+                : context.highest_urgency
+              : "low",
+        session,
+        hasModelDisagreement,
+        textChunkCount: retrievalBundle.textChunks.length,
+        imageMatchCount: retrievalBundle.imageMatches.length,
+        breedKnown: Boolean(pet.breed?.trim()),
+        ageKnown: Number.isFinite(pet.age_years),
+        topDifferentialCondition:
+          Array.isArray(finalReport.differential_diagnoses) &&
+          finalReport.differential_diagnoses.length > 0 &&
+          typeof finalReport.differential_diagnoses[0]?.condition === "string"
+            ? finalReport.differential_diagnoses[0].condition
+            : null,
+      });
+    } catch (calibrationError) {
+      console.error(
+        "[Engine] Confidence calibration failed (non-blocking):",
+        calibrationError
+      );
+      finalReport.calibrated_confidence = null;
     }
 
     // ── Save to Supabase (non-blocking) ──
@@ -2087,7 +2293,32 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       pet,
       finalReport
     );
-    finalReport.system_observability = buildObservabilitySnapshot(session);
+    const observabilitySnapshot = buildObservabilitySnapshot(session);
+    const persistedObservabilitySnapshot = buildObservabilitySnapshot(session, {
+      includeInternalTelemetry: true,
+    });
+    finalReport.system_observability = observabilitySnapshot;
+
+    const persistShadowTelemetry = async () => {
+      try {
+        await appendShadowTelemetrySnapshot({
+          generatedAt: new Date().toISOString(),
+          recentServiceCalls:
+            persistedObservabilitySnapshot.recentServiceCalls || [],
+          recentShadowComparisons:
+            persistedObservabilitySnapshot.recentShadowComparisons || [],
+        });
+      } catch (shadowTelemetryError) {
+        console.error(
+          "[ShadowTelemetry] Failed to persist report telemetry:",
+          shadowTelemetryError
+        );
+      }
+    };
+
+    if (!runAfterSafely(persistShadowTelemetry)) {
+      void persistShadowTelemetry();
+    }
 
     try {
       finalReport.bayesian_differentials = await computeBayesianScore(

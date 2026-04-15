@@ -2,10 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, User, Heart, Check } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import {
+  appendRedirectParam,
+  buildCallbackUrl,
+  getAuthFeedbackMessage,
+  resolvePostAuthRedirect,
+} from "@/lib/auth-routing";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const benefits = [
@@ -17,34 +23,53 @@ const benefits = [
 
 export default function SignupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const redirectTarget = resolvePostAuthRedirect(searchParams.get("redirect"));
+  const authFeedback = getAuthFeedbackMessage(
+    searchParams.get("reason"),
+    searchParams.get("error")
+  );
+  const feedbackClasses =
+    authFeedback?.tone === "error"
+      ? "bg-red-50 text-red-700"
+      : "bg-blue-50 text-blue-700";
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccessMessage("");
 
     try {
       if (!isSupabaseConfigured) {
         // Demo mode: skip auth and go to dashboard
-        router.push("/dashboard");
+        router.replace(redirectTarget);
         return;
       }
       const supabase = createClient();
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { full_name: name },
+          emailRedirectTo: buildCallbackUrl(window.location.origin, redirectTarget),
         },
       });
 
       if (authError) throw authError;
-      router.push("/dashboard");
+
+      if (data.session) {
+        router.replace(redirectTarget);
+        return;
+      }
+
+      setSuccessMessage("Check your email to confirm your account and continue.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create account";
       setError(message);
@@ -98,6 +123,16 @@ export default function SignupPage() {
 
           <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
             <form onSubmit={handleSignup} className="space-y-5">
+              {authFeedback && !error && !successMessage && (
+                <div className={`${feedbackClasses} rounded-xl p-3 text-sm`}>
+                  {authFeedback.text}
+                </div>
+              )}
+              {successMessage && (
+                <div className="bg-green-50 text-green-700 rounded-xl p-3 text-sm">
+                  {successMessage}
+                </div>
+              )}
               {error && (
                 <div className="bg-red-50 text-red-700 rounded-xl p-3 text-sm">{error}</div>
               )}
@@ -143,7 +178,10 @@ export default function SignupPage() {
 
             <div className="mt-6 text-center text-sm text-gray-600">
               Already have an account?{" "}
-              <Link href="/login" className="text-blue-600 hover:text-blue-700 font-semibold">
+              <Link
+                href={appendRedirectParam("/login", redirectTarget)}
+                className="text-blue-600 hover:text-blue-700 font-semibold"
+              >
                 Sign in
               </Link>
             </div>
