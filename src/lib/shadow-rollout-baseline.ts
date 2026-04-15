@@ -3,6 +3,10 @@ import type {
   SidecarObservation,
   SidecarServiceName,
 } from "./clinical-evidence";
+import {
+  isShadowTelemetryStoreConfigured,
+  listShadowTelemetrySnapshots,
+} from "./shadow-telemetry-store";
 import { buildShadowRolloutSummary } from "./shadow-rollout";
 import { getServiceSupabase } from "./supabase-admin";
 import type { TriageSession } from "./triage-engine";
@@ -217,6 +221,101 @@ function buildServiceMetrics(session: TriageSession): PersistedShadowServiceMetr
   });
 }
 
+function appendObservabilityPayload(
+  session: TriageSession,
+  recentServiceCalls: unknown[],
+  recentShadowComparisons: unknown[]
+) {
+  session.case_memory!.service_observations.push(
+    ...recentServiceCalls
+      .map((entry) => normalizeObservation(entry))
+      .filter((entry): entry is SidecarObservation => Boolean(entry))
+  );
+  session.case_memory!.shadow_comparisons.push(
+    ...recentShadowComparisons
+      .map((entry) => normalizeComparison(entry))
+      .filter((entry): entry is ShadowComparisonRecord => Boolean(entry))
+  );
+}
+
+function buildSnapshotFromSession(input: {
+  session: TriageSession;
+  windowHours: number;
+  reportCount: number;
+  parsedReportCount: number;
+  malformedReportCount: number;
+  warning: string | null;
+}): PersistedShadowBaselineSnapshot {
+  return {
+    generatedAt: new Date().toISOString(),
+    windowHours: input.windowHours,
+    reportCount: input.reportCount,
+    parsedReportCount: input.parsedReportCount,
+    malformedReportCount: input.malformedReportCount,
+    observationCount: input.session.case_memory!.service_observations.length,
+    shadowComparisonCount: input.session.case_memory!.shadow_comparisons.length,
+    summary: buildShadowRolloutSummary(input.session),
+    serviceMetrics: buildServiceMetrics(input.session),
+    warning: input.warning,
+  };
+}
+
+async function buildFallbackSnapshotFromRedis(
+  windowHours: number,
+  limit: number,
+  warning: string | null
+): Promise<PersistedShadowBaselineSnapshot> {
+  const emptySession = buildEmptySession();
+  const entries = await listShadowTelemetrySnapshots(limit);
+
+  if (!entries) {
+    return buildSnapshotFromSession({
+      session: emptySession,
+      windowHours,
+      reportCount: 0,
+      parsedReportCount: 0,
+      malformedReportCount: 0,
+      warning:
+        warning || "Neither Supabase nor the Upstash shadow telemetry store is configured.",
+    });
+  }
+
+  const windowStartMs = Date.now() - windowHours * 60 * 60 * 1000;
+  let parsedReportCount = 0;
+  let malformedReportCount = 0;
+
+  for (const entry of entries) {
+    const recordedAtMs = Date.parse(entry.generatedAt);
+    if (!Number.isFinite(recordedAtMs) || recordedAtMs < windowStartMs) {
+      continue;
+    }
+
+    const hasArrays =
+      Array.isArray(entry.recentServiceCalls) &&
+      Array.isArray(entry.recentShadowComparisons);
+    if (!hasArrays) {
+      malformedReportCount += 1;
+      continue;
+    }
+
+    parsedReportCount += 1;
+    appendObservabilityPayload(
+      emptySession,
+      entry.recentServiceCalls,
+      entry.recentShadowComparisons
+    );
+  }
+
+  return buildSnapshotFromSession({
+    session: emptySession,
+    windowHours,
+    reportCount: entries.length,
+    parsedReportCount,
+    malformedReportCount,
+    warning,
+  });
+}
+
 export async function buildPersistedShadowBaselineSnapshot(options?: {
   windowHours?: number;
   limit?: number;
@@ -227,29 +326,47 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   const supabase = getServiceSupabase();
 
   if (!supabase) {
-    return {
-      generatedAt: new Date().toISOString(),
+    return buildFallbackSnapshotFromRedis(
       windowHours,
-      reportCount: 0,
-      parsedReportCount: 0,
-      malformedReportCount: 0,
-      observationCount: 0,
-      shadowComparisonCount: 0,
-      summary: buildShadowRolloutSummary(emptySession),
-      serviceMetrics: buildServiceMetrics(emptySession),
-      warning: "Supabase service client is not configured.",
-    };
+      limit,
+      isShadowTelemetryStoreConfigured()
+        ? "Using Upstash shadow telemetry fallback because Supabase is not configured."
+        : "Supabase service client is not configured."
+    );
   }
 
   const sinceIso = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
-  const { data, error } = await supabase
-    .from("symptom_checks")
-    .select("id, ai_response")
-    .gte("created_at", sinceIso)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  let data: unknown[] | null = null;
+  let error: { message?: string } | null = null;
+
+  try {
+    const result = await supabase
+      .from("symptom_checks")
+      .select("id, ai_response")
+      .gte("created_at", sinceIso)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    data = result.data as unknown[] | null;
+    error = result.error as { message?: string } | null;
+  } catch (queryError) {
+    if (isShadowTelemetryStoreConfigured()) {
+      return buildFallbackSnapshotFromRedis(
+        windowHours,
+        limit,
+        `Supabase telemetry read threw (${queryError instanceof Error ? queryError.message : String(queryError)}); using Upstash shadow telemetry fallback.`
+      );
+    }
+    throw queryError;
+  }
 
   if (error) {
+    if (isShadowTelemetryStoreConfigured()) {
+      return buildFallbackSnapshotFromRedis(
+        windowHours,
+        limit,
+        `Supabase telemetry read failed (${error.message || "unknown error"}); using Upstash shadow telemetry fallback.`
+      );
+    }
     throw new Error(
       `Unable to load persisted shadow telemetry: ${error.message || "unknown error"}`
     );
@@ -277,30 +394,21 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
       ? report.system_observability?.recentShadowComparisons
       : [];
 
-    emptySession.case_memory!.service_observations.push(
-      ...recentServiceCalls
-        .map((entry) => normalizeObservation(entry))
-        .filter((entry): entry is SidecarObservation => Boolean(entry))
-    );
-    emptySession.case_memory!.shadow_comparisons.push(
-      ...recentShadowComparisons
-        .map((entry) => normalizeComparison(entry))
-        .filter((entry): entry is ShadowComparisonRecord => Boolean(entry))
+    appendObservabilityPayload(
+      emptySession,
+      recentServiceCalls,
+      recentShadowComparisons
     );
   }
 
-  return {
-    generatedAt: new Date().toISOString(),
+  return buildSnapshotFromSession({
+    session: emptySession,
     windowHours,
     reportCount: (data || []).length,
     parsedReportCount,
     malformedReportCount,
-    observationCount: emptySession.case_memory!.service_observations.length,
-    shadowComparisonCount: emptySession.case_memory!.shadow_comparisons.length,
-    summary: buildShadowRolloutSummary(emptySession),
-    serviceMetrics: buildServiceMetrics(emptySession),
     warning: null,
-  };
+  });
 }
 
 export function mergeServiceSummaryWithMetrics(
