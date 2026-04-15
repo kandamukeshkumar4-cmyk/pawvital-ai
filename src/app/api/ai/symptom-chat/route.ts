@@ -2015,39 +2015,45 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
         (opinion) => opinion.disagreements.length > 0
       )
     );
-    const confidenceCalibration = buildReportConfidenceCalibration({
-      baseConfidence:
-        typeof finalReport.confidence === "number"
-          ? finalReport.confidence
-          : deriveBaselineReportConfidence(context),
-      reportSeverity:
-        finalReport.severity === "emergency" ||
-        finalReport.severity === "high" ||
-        finalReport.severity === "medium" ||
-        finalReport.severity === "low"
-          ? finalReport.severity
-          : context.highest_urgency === "emergency" ||
-              context.highest_urgency === "high" ||
-              context.highest_urgency === "moderate"
-            ? context.highest_urgency === "moderate"
-              ? "medium"
-              : context.highest_urgency
-            : "low",
-      session,
-      hasModelDisagreement,
-      textChunkCount: retrievalBundle.textChunks.length,
-      imageMatchCount: retrievalBundle.imageMatches.length,
-      breedKnown: Boolean(pet.breed?.trim()),
-      ageKnown: Number.isFinite(pet.age_years),
-      topDifferentialCondition:
-        Array.isArray(finalReport.differential_diagnoses) &&
-        finalReport.differential_diagnoses.length > 0 &&
-        typeof finalReport.differential_diagnoses[0]?.condition === "string"
-          ? finalReport.differential_diagnoses[0].condition
-          : null,
-    });
-    finalReport.confidence = confidenceCalibration.final_confidence;
-    finalReport.confidence_calibration = confidenceCalibration;
+    try {
+      finalReport.calibrated_confidence = buildReportConfidenceCalibration({
+        baseConfidence:
+          typeof finalReport.confidence === "number"
+            ? finalReport.confidence
+            : deriveBaselineReportConfidence(context),
+        reportSeverity:
+          finalReport.severity === "emergency" ||
+          finalReport.severity === "high" ||
+          finalReport.severity === "medium" ||
+          finalReport.severity === "low"
+            ? finalReport.severity
+            : context.highest_urgency === "emergency" ||
+                context.highest_urgency === "high" ||
+                context.highest_urgency === "moderate"
+              ? context.highest_urgency === "moderate"
+                ? "medium"
+                : context.highest_urgency
+              : "low",
+        session,
+        hasModelDisagreement,
+        textChunkCount: retrievalBundle.textChunks.length,
+        imageMatchCount: retrievalBundle.imageMatches.length,
+        breedKnown: Boolean(pet.breed?.trim()),
+        ageKnown: Number.isFinite(pet.age_years),
+        topDifferentialCondition:
+          Array.isArray(finalReport.differential_diagnoses) &&
+          finalReport.differential_diagnoses.length > 0 &&
+          typeof finalReport.differential_diagnoses[0]?.condition === "string"
+            ? finalReport.differential_diagnoses[0].condition
+            : null,
+      });
+    } catch (calibrationError) {
+      console.error(
+        "[Engine] Confidence calibration failed (non-blocking):",
+        calibrationError
+      );
+      finalReport.calibrated_confidence = null;
+    }
 
     // ── Save to Supabase (non-blocking) ──
     let asyncReviewScheduled = false;

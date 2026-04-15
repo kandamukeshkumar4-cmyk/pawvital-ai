@@ -306,7 +306,7 @@ export function FullReport({
       <EvidenceSourcesBar report={report} />
 
       <ConfidenceCalibrationSection
-        calibration={report.confidence_calibration}
+        calibration={report.calibrated_confidence ?? report.confidence_calibration}
       />
 
       {report.bayesian_differentials && report.bayesian_differentials.length > 0 && (

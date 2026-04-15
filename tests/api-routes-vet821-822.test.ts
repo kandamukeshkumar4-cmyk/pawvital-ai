@@ -216,7 +216,7 @@ const sampleReport = {
   warning_signs: ["Vomiting blood"],
   vet_questions: ["Is the pet still eating?"],
   confidence: 0.84,
-  confidence_calibration: {
+  calibrated_confidence: {
     final_confidence: 0.84,
     base_confidence: 0.8,
     adjustments: [

@@ -31,6 +31,8 @@ export function SeverityHeader({
   onJumpToHandoff,
   headerActions,
 }: SeverityHeaderProps) {
+  const calibratedConfidence =
+    report.calibrated_confidence ?? report.confidence_calibration;
   const emergencyReport = isEmergencyReport(report);
   const escalatedReport = isEscalatedReport(report);
   const bannerTone = emergencyReport
@@ -73,10 +75,10 @@ export function SeverityHeader({
                   Confidence {(report.confidence * 100).toFixed(0)}%
                 </Badge>
               )}
-              {report.confidence_calibration && (
+              {calibratedConfidence && (
                 <Badge variant="default">
                   {formatConfidenceLevelLabel(
-                    report.confidence_calibration.confidence_level
+                    calibratedConfidence.confidence_level
                   )}{" "}
                   confidence
                 </Badge>

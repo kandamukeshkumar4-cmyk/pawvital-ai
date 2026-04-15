@@ -73,6 +73,7 @@ export interface SymptomReport {
   warning_signs: string[];
   vet_questions?: string[];
   confidence?: number;
+  calibrated_confidence?: ConfidenceCalibrationSummary | null;
   confidence_calibration?: ConfidenceCalibrationSummary;
   evidenceChain?: StructuredEvidenceChainItem[];
   vet_handoff_summary?: string;

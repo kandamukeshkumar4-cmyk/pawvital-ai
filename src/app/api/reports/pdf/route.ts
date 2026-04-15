@@ -51,6 +51,7 @@ const SymptomReportSchema = z.object({
   warning_signs: z.array(z.string()),
   vet_questions: z.array(z.string()).optional(),
   confidence: z.number().optional(),
+  calibrated_confidence: ConfidenceCalibrationSchema.nullable().optional(),
   confidence_calibration: ConfidenceCalibrationSchema.optional(),
   evidenceChain: z.array(EvidenceChainItemSchema).optional(),
   vet_handoff_summary: z.string().optional(),
