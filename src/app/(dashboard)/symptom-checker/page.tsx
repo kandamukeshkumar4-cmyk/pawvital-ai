@@ -594,10 +594,9 @@ export default function SymptomCheckerPage() {
     inputRef.current?.focus();
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const generateReport = async (
     overrideMessages?: { role: string; content: string }[],
-    overrideSession?: any,
+    overrideSession?: unknown,
   ) => {
     setGeneratingReport(true);
     try {
