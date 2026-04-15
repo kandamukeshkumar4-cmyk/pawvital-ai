@@ -1064,31 +1064,86 @@ describe("symptom-chat mixed text + image routing", () => {
       ambiguity_flags: ["borderline image quality"],
     };
 
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      HF_SHADOW_ASYNC_REVIEW: "1",
+    };
+
+    try {
+      mockIsAsyncReviewServiceConfigured.mockReturnValue(true);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session, IMAGE));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.confidence).toBeLessThanOrEqual(0.98);
+      expect(payload.report.evidence_chain).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("Visual evidence"),
+          expect.stringContaining("Reference support"),
+        ])
+      );
+      expect(payload.report.evidenceChain).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            source: "visual-analysis",
+            confidence: 0.71,
+          }),
+          expect.objectContaining({
+            source: "text-retrieval",
+          }),
+        ])
+      );
+      expect(payload.report.async_review_scheduled).toBe(true);
+      expect(mockEnqueueAsyncReview).toHaveBeenCalledTimes(1);
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("keeps async review unscheduled when rollout is disabled even if the service is configured", async () => {
+    const session = buildModerateReportSession();
+    session.latest_preprocess = {
+      domain: "skin_wound",
+      bodyRegion: "left hind leg",
+      detectedRegions: [],
+      bestCrop: null,
+      imageQuality: "good",
+      confidence: 0.7,
+      limitations: [],
+    };
+    session.vision_analysis = "Raw lesion on the left hind leg.";
+    session.vision_severity = "needs_review";
+    session.latest_visual_evidence = {
+      domain: "skin_wound",
+      bodyRegion: "left hind leg",
+      findings: ["raw lesion"],
+      severity: "needs_review",
+      confidence: 0.7,
+      supportedSymptoms: ["wound_skin_issue"],
+      contradictions: [],
+      requiresConsult: false,
+      limitations: [],
+      influencedQuestionSelection: true,
+    };
+    session.case_memory = {
+      ...session.case_memory!,
+      ambiguity_flags: ["borderline image quality"],
+    };
+
+    mockIsAsyncReviewServiceConfigured.mockReturnValue(true);
+
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
     const response = await POST(makeReportRequest(session, IMAGE));
     const payload = await response.json();
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("report");
-    expect(payload.report.confidence).toBeLessThanOrEqual(0.98);
-    expect(payload.report.evidence_chain).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("Visual evidence"),
-        expect.stringContaining("Reference support"),
-      ])
-    );
-    expect(payload.report.evidenceChain).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          source: "visual-analysis",
-          confidence: 0.71,
-        }),
-        expect.objectContaining({
-          source: "text-retrieval",
-        }),
-      ])
-    );
-    expect(payload.report.async_review_scheduled).toBe(true);
+    expect(payload.report.async_review_scheduled).toBeUndefined();
+    expect(mockEnqueueAsyncReview).not.toHaveBeenCalled();
   });
 
   it("keeps retrieval on the fallback path when live split is explicitly 0%", async () => {
