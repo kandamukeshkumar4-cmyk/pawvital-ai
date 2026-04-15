@@ -11,6 +11,7 @@
 
 import { on, EventType } from "./event-bus";
 import { getServiceSupabase } from "@/lib/supabase-admin";
+import { withNotificationDeliveryState } from "@/lib/notification-delivery";
 
 type NotificationRow = {
   user_id: string;
@@ -27,7 +28,20 @@ async function insertNotification(row: NotificationRow): Promise<void> {
     return;
   }
 
-  const { error } = await supabase.from("notifications").insert(row);
+  const payload = {
+    ...row,
+    metadata: withNotificationDeliveryState(row.metadata, {
+      status: "pending",
+      attempts: 0,
+      dead_lettered: false,
+      last_attempt_at: null,
+      delivered_at: null,
+      confirmation_id: null,
+      last_error: null,
+    }),
+  };
+
+  const { error } = await supabase.from("notifications").insert(payload);
   if (error) {
     console.error("[NotificationHandler] Failed to insert notification:", error);
   }
