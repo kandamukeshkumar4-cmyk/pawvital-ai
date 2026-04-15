@@ -2741,6 +2741,40 @@ describe("symptom-chat mixed text + image routing", () => {
     }
   });
 
+  it("VET-1204: ambiguous choice replies do not raw-fallback and close the pending question", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_type";
+    session.answered_questions = [];
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: ["cough_type"],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "I'm not sure what kind of cough it is.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.answered_questions).not.toContain("cough_type");
+    expect(payload.session.extracted_answers.cough_type).toBeUndefined();
+    expect(payload.session.last_question_asked).toBe("cough_type");
+    expect(payload.message).not.toContain("How long has the coughing been going on?");
+  });
+
   it("VET-705: compression telemetry is logged internally on success and excluded from client session", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
