@@ -272,6 +272,11 @@ def _set_model_load_state(state: str, *, failure_reason: str | None = None) -> N
             MODEL_READY_EVENT.set()
 
 
+def _describe_model_load_failure(error: Exception) -> str:
+    detail = f"{type(error).__name__}: {error}".strip()
+    return detail[:240] if detail else "model_load_failed"
+
+
 def _load_model_once():
     if STUB_MODE:
         return None, None
@@ -297,9 +302,9 @@ def _load_model_in_background() -> None:
             MODEL = model
             PROCESSOR = processor
         _set_model_load_state("ready")
-    except Exception:
+    except Exception as error:
         logger.exception("Async review model load failed during startup")
-        _set_model_load_state("failed", failure_reason="model_load_failed")
+        _set_model_load_state("failed", failure_reason=_describe_model_load_failure(error))
 
 
 def start_background_model_load(force_retry: bool = False) -> bool:

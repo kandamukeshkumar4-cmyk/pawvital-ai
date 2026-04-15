@@ -60,6 +60,47 @@ const RUNPOD_REPO_ARCHIVE_URL =
   String(process.env.RUNPOD_REPO_ARCHIVE_URL || "").trim() ||
   "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/archive/refs/heads/master.tar.gz";
 
+function readGpuTypeIdsOverride(envName, fallback) {
+  const raw = String(process.env[envName] || "").trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = raw
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return parsed.length > 0 ? parsed : fallback;
+}
+
+function readNumberOverride(envName, fallback) {
+  const raw = String(process.env[envName] || "").trim();
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function readBooleanOverride(envName) {
+  const raw = String(process.env[envName] || "").trim().toLowerCase();
+  if (!raw) {
+    return undefined;
+  }
+
+  if (["1", "true", "yes", "on"].includes(raw)) {
+    return true;
+  }
+
+  if (["0", "false", "no", "off"].includes(raw)) {
+    return false;
+  }
+
+  return undefined;
+}
+
 // ---------------------------------------------------------------------------
 // Load pod registry
 // ---------------------------------------------------------------------------
@@ -136,25 +177,36 @@ function getRoleConfig(roleKey) {
   }
 
   if (roleKey === "async_review") {
+    const gpuTypeIds = readGpuTypeIdsOverride("RUNPOD_ASYNC_REVIEW_GPU_TYPE_IDS", [
+      "NVIDIA A100 80GB PCIe",
+      "NVIDIA A100-SXM4-80GB",
+      "NVIDIA H100 NVL",
+    ]);
+    const gpuLabel =
+      String(process.env.RUNPOD_ASYNC_REVIEW_GPU_LABEL || "").trim() ||
+      "A100 80 GB";
+
     return {
       role: roleKey,
       displayName: "async review",
       liveName: "pawvital-async-review-v1",
       rehearsalNamePrefix: "pawvital-async-review-rehearsal",
-      gpuLabel: "A100 80 GB",
-      dailyCostUsd: 28.56,
+      gpuLabel,
+      dailyCostUsd: readNumberOverride("RUNPOD_ASYNC_REVIEW_DAILY_COST_USD", 28.56),
       vramHeadroomTargetGb: 64.0,
       syncPathBudgetMs: 250,
       services: ["async-review-service:8084"],
       ports: ["8084/http", "22/tcp"],
       requiredEnv: ["HF_SIDECAR_API_KEY"],
-      gpuTypeIds: [
-        "NVIDIA A100 80GB PCIe",
-        "NVIDIA A100-SXM4-80GB",
-        "NVIDIA H100 NVL",
-      ],
-      containerDiskInGb: 40,
-      volumeInGb: 120,
+      gpuTypeIds,
+      cloudType:
+        String(process.env.RUNPOD_ASYNC_REVIEW_CLOUD_TYPE || "").trim() ||
+        "COMMUNITY",
+      dataCenterIds: readGpuTypeIdsOverride("RUNPOD_ASYNC_REVIEW_DATA_CENTER_IDS", []),
+      globalNetworking: readBooleanOverride("RUNPOD_ASYNC_REVIEW_GLOBAL_NETWORKING"),
+      publicIp: readBooleanOverride("RUNPOD_ASYNC_REVIEW_PUBLIC_IP"),
+      containerDiskInGb: readNumberOverride("RUNPOD_ASYNC_REVIEW_CONTAINER_DISK_IN_GB", 40),
+      volumeInGb: readNumberOverride("RUNPOD_ASYNC_REVIEW_VOLUME_IN_GB", 120),
       command: "npm run runpod:provision:review",
       rehearsalCommand: "npm run runpod:rehearse:review",
       teardownCommand: "npm run runpod:teardown:review",
@@ -533,9 +585,9 @@ function buildRolePayload(roleKey, rehearsal = false) {
     ? `${config.rehearsalNamePrefix}-${suffix}`
     : config.liveName;
 
-  return {
+  const payload = {
     name,
-    cloudType: "COMMUNITY",
+    cloudType: config.cloudType || "COMMUNITY",
     computeType: "GPU",
     gpuCount: 1,
     gpuTypeIds: config.gpuTypeIds,
@@ -544,11 +596,28 @@ function buildRolePayload(roleKey, rehearsal = false) {
     imageName: "runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04",
     ports: config.ports,
     containerDiskInGb: config.containerDiskInGb,
-    volumeInGb: config.volumeInGb,
-    volumeMountPath: "/workspace",
     env: config.buildEnv(publicKey),
     dockerStartCmd: ["bash", "-lc", config.buildStartupScript()],
   };
+
+  if (config.volumeInGb > 0) {
+    payload.volumeInGb = config.volumeInGb;
+    payload.volumeMountPath = "/workspace";
+  }
+
+  if (Array.isArray(config.dataCenterIds) && config.dataCenterIds.length > 0) {
+    payload.dataCenterIds = config.dataCenterIds;
+  }
+
+  if (typeof config.globalNetworking === "boolean") {
+    payload.globalNetworking = config.globalNetworking;
+  }
+
+  if (typeof config.publicIp === "boolean") {
+    payload.publicIp = config.publicIp;
+  }
+
+  return payload;
 }
 
 function printProvisionPlan(roleKey, rehearsal = false) {

@@ -92,6 +92,31 @@ def test_healthz_reports_force_fallback(monkeypatch) -> None:
     assert body["model_load"]["ready"] is True
 
 
+def test_healthz_reports_startup_failure_reason(monkeypatch) -> None:
+    reset_queue_state()
+    monkeypatch.setattr(legacy, "STUB_MODE", False)
+    monkeypatch.setattr(legacy, "FORCE_FALLBACK", False)
+    monkeypatch.setattr(legacy, "start_background_model_load", lambda force_retry=False: False)
+    legacy.MODEL_LOAD_STATE = "failed"
+    legacy.MODEL_LOAD_STARTED_AT = "2026-04-15T15:00:00Z"
+    legacy.MODEL_LOAD_COMPLETED_AT = "2026-04-15T15:00:10Z"
+    legacy.MODEL_LOAD_FAILURE_REASON = "ValueError: model config missing"
+
+    with TestClient(entry.app) as client:
+        response = client.get("/healthz")
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["mode"] == "startup_failed"
+    assert body["model_load"] == {
+        "state": "failed",
+        "ready": False,
+        "started_at": "2026-04-15T15:00:00Z",
+        "completed_at": "2026-04-15T15:00:10Z",
+        "failure_reason": "ValueError: model config missing",
+    }
+
+
 def test_force_fallback_review_preserves_queue_contract(monkeypatch) -> None:
     reset_queue_state()
     monkeypatch.setattr(legacy, "STUB_MODE", False)
