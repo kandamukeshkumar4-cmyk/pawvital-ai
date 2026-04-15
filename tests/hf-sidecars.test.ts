@@ -2,6 +2,39 @@ describe("hf-sidecars integration contracts", () => {
   const originalEnv = process.env;
   const fetchMock = jest.fn();
 
+  function makeSession() {
+    return {
+      known_symptoms: ["wound_skin_issue"],
+      answered_questions: ["wound_location"],
+      extracted_answers: { wound_location: "left hind leg" },
+      red_flags_triggered: [],
+      candidate_diseases: ["wound_infection"],
+      body_systems_involved: ["skin"],
+      last_uploaded_image_hash: "image-hash-123",
+      latest_image_domain: "skin_wound",
+      case_memory: {
+        turn_count: 3,
+        chief_complaints: ["skin lesion"],
+        active_focus_symptoms: ["wound_skin_issue"],
+        confirmed_facts: { wound_location: "left hind leg" },
+        image_findings: [],
+        red_flag_notes: [],
+        unresolved_question_ids: [],
+        clarification_reasons: {},
+        timeline_notes: [],
+        visual_evidence: [],
+        retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
+        service_timeouts: [],
+        service_observations: [],
+        shadow_comparisons: [],
+        ambiguity_flags: [],
+        latest_owner_turn: "There is a sore on his left hind leg.",
+      },
+    };
+  }
+
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
@@ -306,5 +339,95 @@ describe("hf-sidecars integration contracts", () => {
     expect(bundle.textChunks).toHaveLength(1);
     expect(bundle.imageMatches).toHaveLength(1);
     expect(bundle.sourceCitations).toEqual(["Merck", "Dataset A"]);
+  });
+
+  it("resolves promoted services to a 5% live split by default", async () => {
+    const sidecars = await import("@/lib/hf-sidecars");
+    const liveSplit = sidecars.listSidecarLiveSplitStates();
+
+    expect(liveSplit).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: "vision-preprocess-service",
+          promotion_status: "promoted",
+          live_split_pct: 5,
+          effective_live_split_pct: 5,
+        }),
+        expect.objectContaining({
+          service: "async-review-service",
+          promotion_status: "shadow_only",
+          live_split_pct: 0,
+          effective_live_split_pct: 0,
+        }),
+      ])
+    );
+  });
+
+  it("uses deterministic 5% live routing for promoted services", async () => {
+    const sidecars = await import("@/lib/hf-sidecars");
+    const session = makeSession();
+    let promotedDecision:
+      | ReturnType<typeof sidecars.getLiveTrafficDecision>
+      | null = null;
+    let heldBackDecision:
+      | ReturnType<typeof sidecars.getLiveTrafficDecision>
+      | null = null;
+
+    for (let index = 0; index < 500; index += 1) {
+      const decision = sidecars.getLiveTrafficDecision({
+        service: "text-retrieval-service",
+        session,
+        additionalKey: `case-${index}`,
+      });
+
+      if (decision.enabled && !promotedDecision) {
+        promotedDecision = decision;
+      }
+
+      if (!decision.enabled && !heldBackDecision) {
+        heldBackDecision = decision;
+      }
+
+      if (promotedDecision && heldBackDecision) {
+        break;
+      }
+    }
+
+    expect(promotedDecision).toEqual(
+      expect.objectContaining({
+        live_split_pct: 5,
+        effective_live_split_pct: 5,
+        enabled: true,
+        mode: "promoted",
+      })
+    );
+    expect(heldBackDecision).toEqual(
+      expect.objectContaining({
+        live_split_pct: 5,
+        effective_live_split_pct: 5,
+        enabled: false,
+        mode: "held_back",
+      })
+    );
+  });
+
+  it("lets the env kill-switch disable live traffic instantly", async () => {
+    process.env = {
+      ...process.env,
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "0",
+    };
+
+    const sidecars = await import("@/lib/hf-sidecars");
+    const decision = sidecars.getLiveTrafficDecision({
+      service: "text-retrieval-service",
+      session: makeSession(),
+      additionalKey: "kill-switch",
+    });
+
+    expect(decision.live_split_pct).toBe(5);
+    expect(decision.effective_live_split_pct).toBe(0);
+    expect(decision.enabled).toBe(false);
+    expect(decision.mode).toBe("disabled");
+    expect(decision.env_override_pct).toBe(0);
   });
 });
