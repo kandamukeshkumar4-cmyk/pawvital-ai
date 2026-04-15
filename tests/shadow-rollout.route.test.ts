@@ -1,6 +1,8 @@
 const mockBuildShadowRolloutSummary = jest.fn();
+const mockBuildInternalShadowTelemetrySnapshot = jest.fn();
 const mockBuildObservabilitySnapshot = jest.fn();
 const mockBuildPersistedShadowBaselineSnapshot = jest.fn();
+const mockAppendShadowTelemetrySnapshot = jest.fn();
 const mockPersistShadowLoadTestSummary = jest.fn();
 
 jest.mock("@/lib/shadow-rollout", () => ({
@@ -9,6 +11,8 @@ jest.mock("@/lib/shadow-rollout", () => ({
 }));
 
 jest.mock("@/lib/sidecar-observability", () => ({
+  buildInternalShadowTelemetrySnapshot: (...args: unknown[]) =>
+    mockBuildInternalShadowTelemetrySnapshot(...args),
   buildObservabilitySnapshot: (...args: unknown[]) =>
     mockBuildObservabilitySnapshot(...args),
 }));
@@ -19,10 +23,11 @@ jest.mock("@/lib/shadow-rollout-baseline", () => ({
 }));
 
 jest.mock("@/lib/shadow-telemetry-store", () => ({
+  appendShadowTelemetrySnapshot: (...args: unknown[]) =>
+    mockAppendShadowTelemetrySnapshot(...args),
   persistShadowLoadTestSummary: (...args: unknown[]) =>
     mockPersistShadowLoadTestSummary(...args),
 }));
-
 function makeRequest(
   body: Record<string, unknown>,
   headers?: Record<string, string>
@@ -47,6 +52,7 @@ describe("shadow-rollout route", () => {
       ...originalEnv,
       HF_SIDECAR_API_KEY: "shadow-secret",
     };
+    mockAppendShadowTelemetrySnapshot.mockResolvedValue(true);
     mockPersistShadowLoadTestSummary.mockResolvedValue(true);
 
     mockBuildShadowRolloutSummary.mockReturnValue({
@@ -80,6 +86,17 @@ describe("shadow-rollout route", () => {
       timeoutCount: 0,
       serviceCallCounts: { "text-retrieval-service": 3 },
       fallbackCount: 0,
+    });
+    mockBuildInternalShadowTelemetrySnapshot.mockReturnValue({
+      generatedAt: "2026-04-15T00:00:00.000Z",
+      recentServiceCalls: [
+        { service: "text-retrieval-service" },
+        { service: "async-review-service" },
+      ],
+      recentShadowComparisons: [
+        { service: "text-retrieval-service" },
+        { service: "async-review-service" },
+      ],
     });
 
     mockBuildPersistedShadowBaselineSnapshot.mockResolvedValue({
@@ -185,7 +202,22 @@ describe("shadow-rollout route", () => {
       loadTest: null,
     });
     expect(mockBuildObservabilitySnapshot).toHaveBeenCalledWith(session);
+    expect(mockBuildInternalShadowTelemetrySnapshot).toHaveBeenCalledWith(
+      session
+    );
+    expect(mockAppendShadowTelemetrySnapshot).toHaveBeenCalledWith({
+      generatedAt: "2026-04-15T00:00:00.000Z",
+      recentServiceCalls: [
+        { service: "text-retrieval-service" },
+        { service: "async-review-service" },
+      ],
+      recentShadowComparisons: [
+        { service: "text-retrieval-service" },
+        { service: "async-review-service" },
+      ],
+    });
     expect(payload.summary.overallStatus).toBe("watch");
+    expect(payload.persistedTelemetry).toBe(true);
     expect(payload.observability).toEqual({
       shadowModeActive: true,
       timeoutCount: 0,
@@ -194,6 +226,25 @@ describe("shadow-rollout route", () => {
       recentServiceCallCount: 1,
       recentShadowComparisonCount: 1,
     });
+  });
+
+  it("accepts normalized tokens when the configured secret has an escaped newline suffix", async () => {
+    process.env = {
+      ...originalEnv,
+      HF_SIDECAR_API_KEY: "shadow-secret\\r\\n",
+    };
+
+    const { GET } = await import("@/app/api/ai/shadow-rollout/route");
+    const response = await GET(
+      new Request("http://localhost/api/ai/shadow-rollout", {
+        headers: { Authorization: "Bearer shadow-secret" },
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(mockBuildPersistedShadowBaselineSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it("rejects requests without a session body", async () => {

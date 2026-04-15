@@ -10,7 +10,6 @@ import {
   searchReferenceImages,
 } from "@/lib/knowledge-retrieval";
 import {
-  capDiagnosticConfidence,
   inferSupportedImageDomain,
   type ConsultOpinion,
   type RetrievalBundle,
@@ -27,6 +26,8 @@ import {
   retrieveVeterinaryTextEvidence,
 } from "@/lib/text-retrieval-service";
 import {
+  describeLiveTrafficDecision,
+  getLiveTrafficDecision,
   isAbortLikeError as isSidecarAbortError,
   isRetrievalSidecarConfigured,
   retrieveVeterinaryEvidenceFromSidecar,
@@ -34,10 +35,8 @@ import {
 import {
   appendShadowComparison,
   appendSidecarObservation,
-  describeLiveTrafficDecision,
   describeShadowComparison,
   describeShadowModeDecision,
-  getLiveTrafficDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
 import { ensureStructuredCaseMemory } from "@/lib/symptom-memory";
@@ -442,7 +441,11 @@ export async function buildReportRetrievalBundle(
       domain
     );
 
-    if (shouldInvokeTextRetrieval && textResult.status === "fulfilled" && textShadowDecision.enabled) {
+    if (
+      shouldInvokeTextRetrieval &&
+      textResult.status === "fulfilled" &&
+      textShadowDecision.enabled
+    ) {
       session = appendShadowComparison(
         session,
         describeShadowComparison(

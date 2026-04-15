@@ -26,28 +26,10 @@ import path from "node:path";
 import process from "node:process";
 import https from "node:https";
 import { spawnSync } from "node:child_process";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
 
 const rootDir = process.cwd();
-
-// ---------------------------------------------------------------------------
-// Load env from .env files
-// ---------------------------------------------------------------------------
-function loadEnvFiles() {
-  for (const f of [".env.sidecars", ".env.local", ".env"]) {
-    const p = path.join(rootDir, f);
-    if (!fs.existsSync(p)) continue;
-    for (const line of fs.readFileSync(p, "utf8").split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const val = trimmed.slice(eq + 1).trim();
-      if (!process.env[key]) process.env[key] = val;
-    }
-  }
-}
-loadEnvFiles();
+loadEnvFiles(rootDir);
 
 const RUNPOD_API_KEY = process.env.RUNPOD_API_KEY || "";
 const HF_SIDECAR_API_KEY = process.env.HF_SIDECAR_API_KEY || "";

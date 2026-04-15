@@ -9,7 +9,11 @@ const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
 const SHADOW_TELEMETRY_KEY = "shadow:rollout:reports:v1";
 const SHADOW_LOAD_TEST_KEY = "shadow:rollout:load-test:v1";
 const MAX_STORED_REPORTS = 2000;
-const DEFAULT_FILE_STORE_DIR = path.join(process.cwd(), "plans", ".shadow-telemetry");
+const DEFAULT_FILE_STORE_DIR = path.join(
+  process.cwd(),
+  "plans",
+  ".shadow-telemetry"
+);
 const FILE_STORE_REPORTS_PATH = path.resolve(
   process.cwd(),
   process.env.SHADOW_TELEMETRY_FILE_PATH?.trim() ||
@@ -49,6 +53,10 @@ function isFileFallbackEnabled(): boolean {
   return process.env.NODE_ENV === "development";
 }
 
+export function shouldPreferShadowTelemetryFileStore(): boolean {
+  return isTruthyFlag(process.env.SHADOW_TELEMETRY_FILE_FALLBACK);
+}
+
 function ensureParentDir(filePath: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
@@ -82,7 +90,9 @@ function normalizeSnapshot(
   };
 }
 
-function isShadowLoadTestSummary(value: unknown): value is StoredShadowLoadTestSummary {
+function isShadowLoadTestSummary(
+  value: unknown
+): value is StoredShadowLoadTestSummary {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -158,6 +168,13 @@ export async function appendShadowTelemetrySnapshot(
 ): Promise<boolean> {
   const normalized = normalizeSnapshot(snapshot);
 
+  if (shouldPreferShadowTelemetryFileStore()) {
+    const existingSnapshots = readSnapshotsFromFile(MAX_STORED_REPORTS) || [];
+    return writeSnapshotsToFile(
+      [normalized, ...existingSnapshots].slice(0, MAX_STORED_REPORTS)
+    );
+  }
+
   if (redis) {
     try {
       const payload = JSON.stringify(normalized);
@@ -172,12 +189,18 @@ export async function appendShadowTelemetrySnapshot(
   }
 
   const existingSnapshots = readSnapshotsFromFile(MAX_STORED_REPORTS) || [];
-  return writeSnapshotsToFile([normalized, ...existingSnapshots].slice(0, MAX_STORED_REPORTS));
+  return writeSnapshotsToFile(
+    [normalized, ...existingSnapshots].slice(0, MAX_STORED_REPORTS)
+  );
 }
 
 export async function listShadowTelemetrySnapshots(
   limit: number
 ): Promise<StoredShadowTelemetrySnapshot[] | null> {
+  if (shouldPreferShadowTelemetryFileStore()) {
+    return readSnapshotsFromFile(limit);
+  }
+
   if (redis) {
     try {
       const rawEntries = await redis.lrange<string[]>(
@@ -213,6 +236,10 @@ export async function listShadowTelemetrySnapshots(
 export async function persistShadowLoadTestSummary(
   summary: StoredShadowLoadTestSummary
 ): Promise<boolean> {
+  if (shouldPreferShadowTelemetryFileStore()) {
+    return writeLoadTestToFile(summary);
+  }
+
   if (redis) {
     try {
       await redis.set(SHADOW_LOAD_TEST_KEY, JSON.stringify(summary));
@@ -228,6 +255,10 @@ export async function persistShadowLoadTestSummary(
 }
 
 export async function readShadowLoadTestSummary(): Promise<StoredShadowLoadTestSummary | null> {
+  if (shouldPreferShadowTelemetryFileStore()) {
+    return readLoadTestFromFile();
+  }
+
   if (redis) {
     try {
       const rawValue = await redis.get<string | null>(SHADOW_LOAD_TEST_KEY);
