@@ -5594,6 +5594,26 @@ describe("VET-900 comprehensive scenarios", () => {
       expect(response.status).toBe(429);
       const payload = await response.json();
       expect(payload.error).toContain("Too many requests");
+      expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
+    });
+
+    it("fails open when the symptom-chat limiter is degraded", async () => {
+      mockCheckRateLimit.mockResolvedValue({
+        success: true,
+        degraded: true,
+        reason: "redis_unavailable",
+      });
+
+      const session = createSession();
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "my dog is limping"));
+      const payload = await response.json();
+
+      expect(mockCheckRateLimit).toHaveBeenCalledWith({}, "test-user");
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.message).toContain("Which leg is affected");
     });
   });
 
