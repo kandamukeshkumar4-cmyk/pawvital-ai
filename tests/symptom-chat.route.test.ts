@@ -1068,6 +1068,7 @@ describe("symptom-chat mixed text + image routing", () => {
     process.env = {
       ...envBeforeTest,
       HF_SHADOW_ASYNC_REVIEW: "1",
+      HF_SHADOW_SAMPLE_RATE: "1",
     };
 
     try {
