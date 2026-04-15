@@ -307,6 +307,79 @@ function buildAuthSupabase(userId: string | null) {
   };
 }
 
+function buildBillingSupabase(options?: {
+  completedChecksThisMonth?: number;
+  latestSubscription?: Record<string, unknown> | null;
+  pets?: Array<{ id: string }>;
+  userId?: string | null;
+  petsError?: { message: string } | null;
+  subscriptionError?: { message: string } | null;
+  usageError?: { message: string } | null;
+}) {
+  const subscriptionSelectChain = {
+    eq: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue({
+      data: options?.latestSubscription ?? null,
+      error: options?.subscriptionError ?? null,
+    }),
+  };
+
+  const petsSelectChain = {
+    eq: jest.fn().mockResolvedValue({
+      data: options?.pets ?? [{ id: "pet-1" }],
+      error: options?.petsError ?? null,
+    }),
+  };
+
+  const symptomChecksSelectChain = {
+    in: jest.fn().mockReturnValue({
+      gte: jest.fn().mockResolvedValue({
+        count: options?.completedChecksThisMonth ?? 0,
+        error: options?.usageError ?? null,
+      }),
+    }),
+  };
+
+  return {
+    auth: {
+      getUser: jest.fn().mockResolvedValue({
+        data: {
+          user:
+            options?.userId === undefined
+              ? { id: "user-1" }
+              : options.userId
+                ? { id: options.userId }
+                : null,
+        },
+        error: null,
+      }),
+    },
+    from: jest.fn((table: string) => {
+      if (table === "subscriptions") {
+        return {
+          select: jest.fn().mockReturnValue(subscriptionSelectChain),
+        };
+      }
+
+      if (table === "pets") {
+        return {
+          select: jest.fn().mockReturnValue(petsSelectChain),
+        };
+      }
+
+      if (table === "symptom_checks") {
+        return {
+          select: jest.fn().mockReturnValue(symptomChecksSelectChain),
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }),
+  };
+}
+
 function buildModerateReportSession() {
   let session = createSession();
   session = addSymptoms(session, ["excessive_scratching"]);
@@ -5487,6 +5560,87 @@ describe("VET-900 comprehensive scenarios", () => {
       expect(response.status).toBe(429);
       const payload = await response.json();
       expect(payload.error).toContain("Too many requests");
+    });
+  });
+
+  describe("subscription usage limits", () => {
+    it("blocks a new free-tier conversation at the monthly threshold with an upgrade prompt", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValueOnce(
+        buildBillingSupabase({
+          completedChecksThisMonth: 5,
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(402);
+      expect(payload.type).toBe("usage_limit");
+      expect(payload.code).toBe("FREE_TIER_LIMIT_REACHED");
+      expect(payload.requires_upgrade).toBe(true);
+      expect(payload.usage_gate).toEqual(
+        expect.objectContaining({
+          limit: 5,
+          reason: "free_tier_limit_reached",
+          remaining: 0,
+        })
+      );
+      expect(payload.message).toContain("Upgrade");
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
+    });
+
+    it("fails open when the billing gate check throws", async () => {
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      mockCreateServerSupabaseClient.mockRejectedValueOnce(
+        new Error("billing unavailable")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
+      expect(
+        consoleErrorSpy.mock.calls.some((call) =>
+          String(call[0]).includes("[Billing] Usage gate failed open:")
+        )
+      ).toBe(true);
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("bypasses the usage gate for emergency-start conversations", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildBillingSupabase({
+          completedChecksThisMonth: 999,
+          userId: "user-1",
+        })
+      );
+
+      const emergencySession = createSession();
+      emergencySession.red_flags_triggered = ["vomit_blood"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          emergencySession,
+          "My dog is vomiting blood and looks weak."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).not.toBe("usage_limit");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
     });
   });
 

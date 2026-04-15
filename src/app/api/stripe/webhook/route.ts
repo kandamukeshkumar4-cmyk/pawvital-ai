@@ -38,6 +38,29 @@ function customerIdFromSession(session: Stripe.Checkout.Session): string | null 
   return customer?.id ?? null;
 }
 
+function getSubscriptionPeriodEndIso(
+  subscription: Stripe.Subscription
+): string | null {
+  const itemPeriodEnds = subscription.items.data
+    .map((item) => item.current_period_end)
+    .filter(
+      (value): value is number =>
+        typeof value === "number" && Number.isFinite(value)
+    );
+
+  const legacyPeriodEnd = (
+    subscription as Stripe.Subscription & { current_period_end?: number | null }
+  ).current_period_end;
+  const unixSeconds =
+    itemPeriodEnds.length > 0
+      ? Math.max(...itemPeriodEnds)
+      : typeof legacyPeriodEnd === "number"
+        ? legacyPeriodEnd
+        : null;
+
+  return unixSeconds ? new Date(unixSeconds * 1000).toISOString() : null;
+}
+
 async function resolvePlanTier(sub: Stripe.Subscription): Promise<SubscriptionPlanTier> {
   const item = sub.items.data[0];
   const price = item?.price;
@@ -232,11 +255,7 @@ async function upsertSubscriptionState(input: {
 }) {
   const plan = await resolvePlanTier(input.stripeSubscription);
   const customerId = customerIdFromSubscription(input.stripeSubscription);
-  const currentPeriodEndRaw = input.stripeSubscription.current_period_end ?? null;
-  const currentPeriodEnd =
-    typeof currentPeriodEndRaw === "number"
-      ? new Date(currentPeriodEndRaw * 1000).toISOString()
-      : null;
+  const currentPeriodEnd = getSubscriptionPeriodEndIso(input.stripeSubscription);
 
   const { error } = await input.supabase.from("subscriptions").upsert(
     {

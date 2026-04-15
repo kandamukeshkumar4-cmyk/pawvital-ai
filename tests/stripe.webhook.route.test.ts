@@ -202,11 +202,11 @@ describe("POST /api/stripe/webhook", () => {
     });
     mockSubscriptionRetrieve.mockResolvedValue({
       id: "sub_from_checkout",
-      current_period_end: 1_710_000_000,
       customer: "cus_checkout",
       items: {
         data: [
           {
+            current_period_end: 1_710_000_000,
             price: {
               metadata: { plan: "pro" },
               product: { name: "PawVital AI Pro" },
@@ -263,6 +263,7 @@ describe("POST /api/stripe/webhook", () => {
     });
     expect(subscriptionUpserts[0]).toEqual(
       expect.objectContaining({
+        current_period_end: "2024-03-09T16:00:00.000Z",
         plan: "pro",
         status: "trialing",
         stripe_customer_id: "cus_checkout",
@@ -293,11 +294,11 @@ describe("POST /api/stripe/webhook", () => {
       data: {
         object: {
           id: "sub_live",
-          current_period_end: 1_720_000_000,
           customer: "cus_live",
           items: {
             data: [
               {
+                current_period_end: 1_720_000_000,
                 price: {
                   metadata: { plan: "clinic" },
                   product: { name: "PawVital Clinic" },
@@ -317,6 +318,7 @@ describe("POST /api/stripe/webhook", () => {
     expect(response.status).toBe(200);
     expect(subscriptionUpserts[0]).toEqual(
       expect.objectContaining({
+        current_period_end: "2024-07-03T09:46:40.000Z",
         plan: "clinic",
         status: "active",
         stripe_customer_id: "cus_live",
