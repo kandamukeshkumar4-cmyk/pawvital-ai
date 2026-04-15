@@ -65,26 +65,30 @@ export default function PricingPage() {
     <div className="min-h-screen bg-white">
       {/* Nav */}
       <nav className="border-b border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Heart className="w-5 h-5 text-white fill-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">PawVital AI</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">Log In</Button>
+          <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-4">
+            <Link href="/login" className="flex-1 sm:flex-none">
+              <Button variant="ghost" size="sm" className="w-full sm:w-auto">
+                Log In
+              </Button>
             </Link>
-            <Link href="/signup">
-              <Button size="sm">Start Free Trial</Button>
+            <Link href="/signup" className="flex-1 sm:flex-none">
+              <Button size="sm" className="w-full sm:w-auto">
+                Start Free Trial
+              </Button>
             </Link>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="py-20 bg-gradient-to-br from-blue-50 via-white to-amber-50">
+      <section className="bg-gradient-to-br from-blue-50 via-white to-amber-50 py-16 sm:py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900">
             One Plan. Everything Your Pet Needs.
@@ -100,7 +104,7 @@ export default function PricingPage() {
       <section className="py-16">
         <div className="max-w-lg mx-auto px-4">
           <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-1">
-            <div className="bg-white rounded-[calc(1.5rem-2px)] p-8 md:p-10">
+            <div className="bg-white rounded-[calc(1.5rem-2px)] p-6 sm:p-8 md:p-10">
               <div className="flex items-center gap-3 mb-4">
                 <Zap className="w-6 h-6 text-amber-500" />
                 <span className="text-sm font-bold text-amber-600 uppercase tracking-wide">
@@ -109,7 +113,9 @@ export default function PricingPage() {
               </div>
 
               <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-5xl font-extrabold text-gray-900">$9.97</span>
+                <span className="text-5xl font-extrabold text-gray-900">
+                  $9.97
+                </span>
                 <span className="text-xl text-gray-500">/month</span>
               </div>
               <p className="text-gray-500 mb-8">
@@ -127,7 +133,12 @@ export default function PricingPage() {
                 ))}
               </div>
 
-              <Button size="lg" className="w-full text-lg" onClick={handleCheckout} loading={loading}>
+              <Button
+                size="lg"
+                className="w-full text-lg"
+                onClick={handleCheckout}
+                loading={loading}
+              >
                 Start 7-Day Free Trial <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
 
@@ -139,14 +150,18 @@ export default function PricingPage() {
           </div>
 
           {/* Price Comparison */}
-          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
+          <div className="mt-8 grid grid-cols-1 gap-3 text-center sm:grid-cols-3 sm:gap-4">
             <div className="bg-gray-50 rounded-xl p-4">
               <p className="text-xl font-bold text-gray-900">$847</p>
-              <p className="text-xs text-gray-500 mt-1">Avg emergency vet visit</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Avg emergency vet visit
+              </p>
             </div>
             <div className="bg-gray-50 rounded-xl p-4">
               <p className="text-xl font-bold text-gray-900">$2,026</p>
-              <p className="text-xs text-gray-500 mt-1">Avg annual pet spending</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Avg annual pet spending
+              </p>
             </div>
             <div className="bg-blue-50 rounded-xl p-4">
               <p className="text-xl font-bold text-blue-600">$9.97</p>
@@ -169,7 +184,7 @@ export default function PricingPage() {
                 className="bg-white rounded-xl border border-gray-200 overflow-hidden"
               >
                 <button
-                  className="w-full px-6 py-4 text-left flex items-center justify-between"
+                  className="flex w-full items-center justify-between px-4 py-4 text-left sm:px-6"
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
                 >
                   <span className="font-semibold text-gray-900">{faq.q}</span>
@@ -195,7 +210,8 @@ export default function PricingPage() {
             Your Pet Deserves the Best
           </h2>
           <p className="mt-4 text-blue-200">
-            Start your free trial today and see the difference AI-powered wellness makes.
+            Start your free trial today and see the difference AI-powered
+            wellness makes.
           </p>
           <div className="mt-8">
             <Button variant="secondary" size="lg" onClick={handleCheckout}>
