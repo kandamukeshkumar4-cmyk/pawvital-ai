@@ -83,6 +83,18 @@ function runNodeScript(scriptPath, args = [], capture = false) {
   return run(nodeBin, [scriptPath, ...args], { capture });
 }
 
+function readPods() {
+  const podsPath = path.join(rootDir, "deploy", "runpod", "pods.json");
+  if (!fs.existsSync(podsPath)) {
+    return {};
+  }
+  return JSON.parse(fs.readFileSync(podsPath, "utf8"));
+}
+
+function hasRegisteredPod(roleKey) {
+  return Boolean(String(readPods()?.[roleKey]?.pod_id || "").trim());
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -289,11 +301,21 @@ async function main() {
 
   runNodeScript("scripts/runpod-health-and-wire.mjs", ["--status"]);
 
-  console.log("[phase5] ensuring consult/retrieval pod is present");
-  runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-consult", "--confirm"]);
+  if (hasRegisteredPod("consult_retrieval")) {
+    console.log("[phase5] starting existing consult/retrieval pod");
+    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--start-consult"]);
+  } else {
+    console.log("[phase5] ensuring consult/retrieval pod is present");
+    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-consult", "--confirm"]);
+  }
 
-  console.log("[phase5] ensuring async-review pod is present");
-  runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-review", "--confirm"]);
+  if (hasRegisteredPod("async_review")) {
+    console.log("[phase5] starting existing async-review pod");
+    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--start-review"]);
+  } else {
+    console.log("[phase5] ensuring async-review pod is present");
+    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-review", "--confirm"]);
+  }
 
   console.log("[phase5] wiring pod URLs into Vercel");
   runNodeScript("scripts/runpod-health-and-wire.mjs", ["--wire"]);
@@ -330,5 +352,5 @@ async function main() {
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+  process.exitCode = 1;
 });

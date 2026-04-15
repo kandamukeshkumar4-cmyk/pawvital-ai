@@ -96,6 +96,10 @@ function readEnv(name) {
   return (process.env[name] || "").trim();
 }
 
+function readSupabaseUrl() {
+  return readEnv("SUPABASE_URL") || readEnv("NEXT_PUBLIC_SUPABASE_URL");
+}
+
 function normalizeMode(rawValue) {
   return String(rawValue || "").trim().toLowerCase();
 }
@@ -351,11 +355,14 @@ function runEnvChecks() {
   }
 
   if (readEnv("HF_TEXT_RETRIEVAL_URL") || readEnv("HF_IMAGE_RETRIEVAL_URL")) {
-    if (readEnv("SUPABASE_URL")) {
+    if (readSupabaseUrl()) {
       statusLine("ok", "SUPABASE_URL is configured for retrieval sidecars");
     } else {
       warnings += 1;
-      statusLine("warn", "SUPABASE_URL is missing for retrieval sidecars");
+      statusLine(
+        "warn",
+        "SUPABASE_URL is missing for retrieval sidecars (NEXT_PUBLIC_SUPABASE_URL also not found)"
+      );
     }
 
     if (readEnv("SUPABASE_SERVICE_ROLE_KEY")) {
