@@ -15,7 +15,20 @@ interface DraftResult {
     title: string;
   };
   mode: "github" | "preview";
+  reviewCycle: {
+    fileContent: string;
+    filePath: string;
+    title: string;
+  };
   url?: string;
+}
+
+interface ReviewCyclePreviewResult {
+  reviewCycle: {
+    fileContent: string;
+    filePath: string;
+    title: string;
+  };
 }
 
 interface ThresholdProposalPanelProps {
@@ -51,8 +64,11 @@ export function ThresholdProposalPanel({
   const [proposals, setProposals] = useState(initialData.proposals);
   const [reviewerNotes, setReviewerNotes] = useState<Record<string, string>>(
     Object.fromEntries(
-      initialData.proposals.map((proposal) => [proposal.id, proposal.reviewerNotes])
-    )
+      initialData.proposals.map((proposal) => [
+        proposal.id,
+        proposal.reviewerNotes,
+      ]),
+    ),
   );
   const [savingId, setSavingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -70,11 +86,37 @@ export function ThresholdProposalPanel({
   const approvedProposalIds = proposals
     .filter((proposal) => proposal.status === "approved")
     .map((proposal) => proposal.id);
+  const reviewedProposalIds = proposals
+    .filter((proposal) => proposal.status !== "draft")
+    .map((proposal) => proposal.id);
+  const reviewedProposalsMissingNotes = proposals.filter(
+    (proposal) =>
+      proposal.status !== "draft" &&
+      (reviewerNotes[proposal.id] || "").trim().length === 0,
+  );
+  const [reviewCycleState, setReviewCycleState] = useState<{
+    message: string;
+    result: ReviewCyclePreviewResult | null;
+    status: "idle" | "submitting" | "success" | "error";
+  }>({
+    message: "",
+    result: null,
+    status: "idle",
+  });
 
   async function reviewProposal(
     proposalId: string,
-    status: Extract<ThresholdProposalStatus, "approved" | "rejected" | "superseded">
+    status: Extract<
+      ThresholdProposalStatus,
+      "approved" | "rejected" | "superseded"
+    >,
   ) {
+    const note = (reviewerNotes[proposalId] || "").trim();
+    if (!note) {
+      setErrorMessage("Add reviewer notes before recording a decision.");
+      return;
+    }
+
     setSavingId(proposalId);
     setErrorMessage("");
 
@@ -82,7 +124,7 @@ export function ThresholdProposalPanel({
       const response = await fetch("/api/admin/threshold-proposals", {
         body: JSON.stringify({
           proposalId,
-          reviewerNotes: reviewerNotes[proposalId] || "",
+          reviewerNotes: note,
           status,
         }),
         headers: { "Content-Type": "application/json" },
@@ -103,12 +145,12 @@ export function ThresholdProposalPanel({
                 status: payload.proposal.status,
                 updatedAt: payload.proposal.updatedAt,
               }
-            : proposal
-        )
+            : proposal,
+        ),
       );
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Failed to save review"
+        error instanceof Error ? error.message : "Failed to save review",
       );
     } finally {
       setSavingId(null);
@@ -125,7 +167,7 @@ export function ThresholdProposalPanel({
     try {
       const response = await fetch("/api/admin/threshold-proposals/pr-draft", {
         body: JSON.stringify({
-          proposalIds: approvedProposalIds,
+          proposalIds: reviewedProposalIds,
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
@@ -148,6 +190,7 @@ export function ThresholdProposalPanel({
             title: payload.draft.title,
           },
           mode: payload.mode,
+          reviewCycle: payload.reviewCycle,
           url: payload.url,
         },
         status: "success",
@@ -156,6 +199,48 @@ export function ThresholdProposalPanel({
       setDraftState({
         message:
           error instanceof Error ? error.message : "Failed to create draft PR",
+        result: null,
+        status: "error",
+      });
+    }
+  }
+
+  async function previewReviewCycle() {
+    setReviewCycleState({
+      message: "",
+      result: null,
+      status: "submitting",
+    });
+
+    try {
+      const response = await fetch(
+        "/api/admin/threshold-proposals/review-cycle",
+        {
+          body: JSON.stringify({
+            cycleSlug: "round1",
+            proposalIds: reviewedProposalIds,
+          }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to build review cycle record");
+      }
+
+      setReviewCycleState({
+        message:
+          "Round-one review record generated. This is documentation only and does not change runtime thresholds.",
+        result: payload,
+        status: "success",
+      });
+    } catch (error) {
+      setReviewCycleState({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to build review cycle record",
         result: null,
         status: "error",
       });
@@ -176,16 +261,36 @@ export function ThresholdProposalPanel({
             summary for manual follow-through.
           </p>
         </div>
-        <button
-          className="inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-          disabled={approvedProposalIds.length === 0 || draftState.status === "submitting"}
-          onClick={createDraftPullRequest}
-          type="button"
-        >
-          {draftState.status === "submitting"
-            ? "Creating Draft..."
-            : `Create Draft PR (${summary.readyForDraftPr})`}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            disabled={
+              reviewedProposalIds.length === 0 ||
+              reviewedProposalsMissingNotes.length > 0 ||
+              reviewCycleState.status === "submitting"
+            }
+            onClick={previewReviewCycle}
+            type="button"
+          >
+            {reviewCycleState.status === "submitting"
+              ? "Generating Review Record..."
+              : `Preview Round 1 Record (${reviewedProposalIds.length})`}
+          </button>
+          <button
+            className="inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            disabled={
+              approvedProposalIds.length === 0 ||
+              reviewedProposalsMissingNotes.length > 0 ||
+              draftState.status === "submitting"
+            }
+            onClick={createDraftPullRequest}
+            type="button"
+          >
+            {draftState.status === "submitting"
+              ? "Creating Draft..."
+              : `Create Draft PR (${summary.readyForDraftPr})`}
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -210,7 +315,8 @@ export function ThresholdProposalPanel({
         <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
           <p className="text-sm font-medium text-sky-700">Review Mix</p>
           <p className="mt-2 text-sm font-semibold text-sky-900">
-            {summary.thresholdReview} threshold / {summary.calibrationReview} calibration
+            {summary.thresholdReview} threshold / {summary.calibrationReview}{" "}
+            calibration
           </p>
         </div>
       </div>
@@ -237,12 +343,22 @@ export function ThresholdProposalPanel({
           {draftState.result ? (
             <div className="mt-3 rounded-md bg-white p-3 text-xs text-slate-600">
               <p>
-                <span className="font-semibold text-slate-800">Draft title:</span>{" "}
+                <span className="font-semibold text-slate-800">
+                  Draft title:
+                </span>{" "}
                 {draftState.result.draft.title}
               </p>
               <p className="mt-1">
-                <span className="font-semibold text-slate-800">Batch file:</span>{" "}
+                <span className="font-semibold text-slate-800">
+                  Batch file:
+                </span>{" "}
                 {draftState.result.draft.filePath}
+              </p>
+              <p className="mt-1">
+                <span className="font-semibold text-slate-800">
+                  Review cycle record:
+                </span>{" "}
+                {draftState.result.reviewCycle.filePath}
               </p>
               <pre className="mt-3 overflow-auto rounded bg-slate-950 p-3 text-slate-100">
                 {draftState.result.draft.body}
@@ -252,9 +368,47 @@ export function ThresholdProposalPanel({
         </div>
       )}
 
+      {reviewCycleState.status !== "idle" && (
+        <div
+          className={`mt-4 rounded-lg border p-4 text-sm ${
+            reviewCycleState.status === "error"
+              ? "border-rose-200 bg-rose-50 text-rose-700"
+              : "border-sky-200 bg-sky-50 text-sky-700"
+          }`}
+        >
+          <p className="font-medium">{reviewCycleState.message}</p>
+          {reviewCycleState.result ? (
+            <div className="mt-3 rounded-md bg-white p-3 text-xs text-slate-600">
+              <p>
+                <span className="font-semibold text-slate-800">
+                  Record title:
+                </span>{" "}
+                {reviewCycleState.result.reviewCycle.title}
+              </p>
+              <p className="mt-1">
+                <span className="font-semibold text-slate-800">
+                  Record file:
+                </span>{" "}
+                {reviewCycleState.result.reviewCycle.filePath}
+              </p>
+              <pre className="mt-3 max-h-72 overflow-auto rounded bg-slate-950 p-3 text-slate-100">
+                {reviewCycleState.result.reviewCycle.fileContent}
+              </pre>
+            </div>
+          ) : null}
+        </div>
+      )}
+
       {errorMessage ? (
         <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           {errorMessage}
+        </div>
+      ) : null}
+
+      {reviewedProposalsMissingNotes.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Add reviewer notes to every reviewed proposal before generating the
+          round-one record or draft PR.
         </div>
       ) : null}
 
@@ -279,7 +433,9 @@ export function ThresholdProposalPanel({
                     {proposalTypeLabel(proposal)}
                   </span>
                 </div>
-                <p className="mt-2 text-sm text-slate-600">{proposal.rationale}</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {proposal.rationale}
+                </p>
               </div>
               <div className="text-xs text-slate-500">
                 <p>Created {formatDate(proposal.createdAt)}</p>
@@ -297,13 +453,15 @@ export function ThresholdProposalPanel({
                   Severity: {proposal.feedback?.reportSeverity || "unknown"}
                 </p>
                 <p className="mt-1">
-                  Recommendation: {proposal.feedback?.reportRecommendation || "unknown"}
+                  Recommendation:{" "}
+                  {proposal.feedback?.reportRecommendation || "unknown"}
                 </p>
               </div>
               <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
                 <p className="font-semibold text-slate-900">Clinical context</p>
                 <p className="mt-1">
-                  Diagnosis: {proposal.feedback?.confirmedDiagnosis || "Not recorded"}
+                  Diagnosis:{" "}
+                  {proposal.feedback?.confirmedDiagnosis || "Not recorded"}
                 </p>
                 <p className="mt-1">
                   Vet outcome: {proposal.feedback?.vetOutcome || "Not recorded"}
@@ -312,7 +470,8 @@ export function ThresholdProposalPanel({
               <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
                 <p className="font-semibold text-slate-900">Symptoms</p>
                 <p className="mt-1">
-                  {proposal.feedback?.symptomSummary || "No symptom summary stored."}
+                  {proposal.feedback?.symptomSummary ||
+                    "No symptom summary stored."}
                 </p>
               </div>
               <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
