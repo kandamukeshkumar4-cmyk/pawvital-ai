@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildObservabilitySnapshot } from "@/lib/sidecar-observability";
 import { buildPersistedShadowBaselineSnapshot } from "@/lib/shadow-rollout-baseline";
+import { persistShadowLoadTestSummary } from "@/lib/shadow-telemetry-store";
 import {
   buildShadowRolloutSummary,
   type ShadowLoadTestSummary,
@@ -47,20 +48,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body.session || typeof body.session !== "object") {
+  const hasSession = Boolean(body.session && typeof body.session === "object");
+  const hasLoadTest = Boolean(body.loadTest && typeof body.loadTest === "object");
+
+  if (!hasSession && !hasLoadTest) {
     return NextResponse.json(
-      { error: "session is required" },
+      { error: "session or loadTest is required" },
       { status: 400 }
     );
   }
 
-  const summary = buildShadowRolloutSummary(body.session, {
+  let persistedLoadTest = false;
+  if (hasLoadTest) {
+    persistedLoadTest = await persistShadowLoadTestSummary(
+      body.loadTest as ShadowLoadTestSummary
+    );
+  }
+
+  if (!hasSession) {
+    return NextResponse.json({
+      ok: true,
+      persistedLoadTest,
+      loadTest: body.loadTest || null,
+    });
+  }
+
+  const summary = buildShadowRolloutSummary(body.session!, {
     loadTest: body.loadTest || null,
   });
-  const observability = buildObservabilitySnapshot(body.session);
+  const observability = buildObservabilitySnapshot(body.session!);
 
   return NextResponse.json({
     ok: true,
+    persistedLoadTest,
     summary,
     observability: {
       shadowModeActive: observability.shadowModeActive,
@@ -92,6 +112,7 @@ export async function GET(request: Request) {
         malformedReportCount: baseline.malformedReportCount,
         observationCount: baseline.observationCount,
         shadowComparisonCount: baseline.shadowComparisonCount,
+        loadTest: baseline.loadTest,
         serviceMetrics: baseline.serviceMetrics,
         warning: baseline.warning,
       },

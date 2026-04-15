@@ -180,6 +180,8 @@ async function main() {
     readiness: readiness.body?.readiness || null,
     shadowSummary: shadow.body?.summary || null,
     baseline: shadow.body?.baseline || null,
+    loadTest:
+      shadow.body?.summary?.loadTest || shadow.body?.baseline?.loadTest || null,
     readinessHttp: { ok: readiness.ok, status: readiness.status },
     shadowHttp: { ok: shadow.ok, status: shadow.status },
   };
@@ -241,6 +243,22 @@ async function main() {
     `- Aggregated service observations: ${report.baseline?.observationCount ?? "n/a"}`,
     `- Aggregated shadow comparisons: ${report.baseline?.shadowComparisonCount ?? "n/a"}`,
     report.baseline?.warning ? `- Warning: ${report.baseline.warning}` : null,
+    `- Persisted load test: ${
+      report.loadTest
+        ? report.loadTest.passed
+          ? "passed"
+          : "failed"
+        : "missing"
+    }`,
+    report.loadTest
+      ? `- Load test target: ${report.loadTest.targetRoute} @ ${report.loadTest.targetRps} RPS`
+      : null,
+    report.loadTest
+      ? `- Load test p99 latency: ${formatMs(report.loadTest.p99LatencyMs ?? null)}`
+      : null,
+    report.loadTest
+      ? `- Load test error rate: ${formatPct(report.loadTest.errorRate ?? null)}`
+      : null,
     "",
     "## Services",
     "",

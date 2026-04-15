@@ -95,6 +95,20 @@ function buildRouteUrl(baseUrl, routePath) {
   return url.toString();
 }
 
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const rawText = await response.text();
+  let body = null;
+
+  try {
+    body = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    body = null;
+  }
+
+  return { ok: response.ok, status: response.status, body, rawText };
+}
+
 function buildShadowProbePayload() {
   return {
     session: {
@@ -144,6 +158,36 @@ function buildShadowProbePayload() {
       },
     },
   };
+}
+
+async function persistLoadTestSummary(baseUrl, summary) {
+  const sidecarSecret =
+    (process.env.HF_SIDECAR_API_KEY ||
+      process.env.ASYNC_REVIEW_WEBHOOK_SECRET ||
+      "").trim();
+
+  if (!sidecarSecret) {
+    return { persisted: false, reason: "missing_debug_secret" };
+  }
+
+  const response = await fetchJson(buildRouteUrl(baseUrl, "/api/ai/shadow-rollout"), {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${sidecarSecret}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ loadTest: summary }),
+  });
+
+  if (!response.ok || response.body?.ok !== true) {
+    throw new Error(
+      `Unable to persist Phase 5 load-test summary: HTTP ${response.status} (${String(
+        response.body?.error || response.rawText || "unknown error"
+      ).slice(0, 160)})`
+    );
+  }
+
+  return { persisted: true };
 }
 
 function buildRequestOptions(targetRoute) {
@@ -279,6 +323,9 @@ async function main() {
   };
 
   fs.writeFileSync(options.output, JSON.stringify(summary, null, 2));
+  const persistence = await persistLoadTestSummary(options.baseUrl, summary);
+  summary.persistedToShadowRollout = persistence.persisted;
+  fs.writeFileSync(options.output, JSON.stringify(summary, null, 2));
 
   if (options.json) {
     console.log(JSON.stringify(summary, null, 2));
@@ -286,6 +333,9 @@ async function main() {
     console.log(
       `Load test ${summary.passed ? "passed" : "failed"} for ${summary.targetRoute} at ${options.targetRps} RPS (${summary.totalRequests} requests).`
     );
+    if (summary.persistedToShadowRollout) {
+      console.log("Persisted Phase 5 load-test verdict to /api/ai/shadow-rollout");
+    }
     console.log(`Saved to ${options.output}`);
   }
 }

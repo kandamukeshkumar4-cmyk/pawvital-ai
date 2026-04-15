@@ -1,6 +1,7 @@
 const mockBuildShadowRolloutSummary = jest.fn();
 const mockBuildObservabilitySnapshot = jest.fn();
 const mockBuildPersistedShadowBaselineSnapshot = jest.fn();
+const mockPersistShadowLoadTestSummary = jest.fn();
 
 jest.mock("@/lib/shadow-rollout", () => ({
   buildShadowRolloutSummary: (...args: unknown[]) =>
@@ -15,6 +16,11 @@ jest.mock("@/lib/sidecar-observability", () => ({
 jest.mock("@/lib/shadow-rollout-baseline", () => ({
   buildPersistedShadowBaselineSnapshot: (...args: unknown[]) =>
     mockBuildPersistedShadowBaselineSnapshot(...args),
+}));
+
+jest.mock("@/lib/shadow-telemetry-store", () => ({
+  persistShadowLoadTestSummary: (...args: unknown[]) =>
+    mockPersistShadowLoadTestSummary(...args),
 }));
 
 function makeRequest(
@@ -41,6 +47,7 @@ describe("shadow-rollout route", () => {
       ...originalEnv,
       HF_SIDECAR_API_KEY: "shadow-secret",
     };
+    mockPersistShadowLoadTestSummary.mockResolvedValue(true);
 
     mockBuildShadowRolloutSummary.mockReturnValue({
       overallStatus: "watch",
@@ -83,6 +90,7 @@ describe("shadow-rollout route", () => {
       malformedReportCount: 2,
       observationCount: 18,
       shadowComparisonCount: 5,
+      loadTest: null,
       summary: {
         overallStatus: "watch",
         shadowModeDataPresent: true,
@@ -196,7 +204,36 @@ describe("shadow-rollout route", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(400);
-    expect(payload.error).toContain("session");
+    expect(payload.error).toContain("session or loadTest");
+  });
+
+  it("persists load test summaries without requiring a session body", async () => {
+    const loadTest = {
+      targetRoute: "/api/ai/shadow-rollout",
+      baselineRps: 2,
+      targetRps: 4,
+      durationSeconds: 60,
+      totalRequests: 240,
+      successCount: 240,
+      failureCount: 0,
+      errorRate: 0,
+      p50LatencyMs: 10,
+      p95LatencyMs: 20,
+      p99LatencyMs: 30,
+      passed: true,
+      blockers: [],
+    };
+
+    const { POST } = await import("@/app/api/ai/shadow-rollout/route");
+    const response = await POST(
+      makeRequest({ loadTest }, { Authorization: "Bearer shadow-secret" })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.persistedLoadTest).toBe(true);
+    expect(mockPersistShadowLoadTestSummary).toHaveBeenCalledWith(loadTest);
   });
 
   it("returns the persisted baseline summary for authorized GET requests", async () => {
@@ -216,6 +253,7 @@ describe("shadow-rollout route", () => {
         windowHours: 24,
         reportCount: 12,
         observationCount: 18,
+        loadTest: null,
       })
     );
   });
