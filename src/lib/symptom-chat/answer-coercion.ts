@@ -538,6 +538,13 @@ export function shouldPersistRawPendingAnswer(
     return false;
   }
 
+  // Raw fallback is only safe for free-text prompts. For choice/boolean/number
+  // questions, persisting arbitrary owner text closes the question with an
+  // invalid typed answer and can skip required clarification.
+  if (question.data_type !== "string") {
+    return false;
+  }
+
   const normalizedMessage = normalizeIntentText(rawMessage);
   if (!normalizedMessage) {
     return false;
@@ -548,44 +555,26 @@ export function shouldPersistRawPendingAnswer(
   );
   const hasOtherTurnSymptoms = turnSymptoms.length > 0;
 
-  if (question.data_type === "string") {
-    if (isShortUnknownResponse(normalizedMessage)) {
-      return true;
-    }
-
-    if (
-      questionLooksDurationLike(question) &&
-      hasDurationLikeSignal(normalizedMessage)
-    ) {
-      return true;
-    }
-
-    if (hasOtherTurnAnswers || hasOtherTurnSymptoms) {
-      return false;
-    }
-
-    if (messageMentionsQuestionContext(question, normalizedMessage)) {
-      return true;
-    }
-
-    return normalizedMessage.split(/\s+/).length <= 5;
+  if (isShortUnknownResponse(normalizedMessage)) {
+    return true;
   }
 
   if (
-    question.data_type === "choice" ||
-    question.data_type === "boolean" ||
-    question.data_type === "number"
+    questionLooksDurationLike(question) &&
+    hasDurationLikeSignal(normalizedMessage)
   ) {
-    return (
-      isShortAffirmativeResponse(normalizedMessage) ||
-      isShortNegativeResponse(normalizedMessage) ||
-      (question.data_type === "boolean" &&
-        isShortUnknownResponse(normalizedMessage)) ||
-      messageMentionsQuestionContext(question, normalizedMessage)
-    );
+    return true;
   }
 
-  return false;
+  if (hasOtherTurnAnswers || hasOtherTurnSymptoms) {
+    return false;
+  }
+
+  if (messageMentionsQuestionContext(question, normalizedMessage)) {
+    return true;
+  }
+
+  return normalizedMessage.split(/\s+/).length <= 5;
 }
 
 export function sanitizePendingRawAnswer(rawMessage: string): string | null {
