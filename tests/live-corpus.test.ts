@@ -3,6 +3,7 @@ import {
   inferLiveCorpusDomain,
   isLiveCorpusEligibleMatch,
   listLiveCorpusSourcePolicies,
+  MINIMUM_LIVE_CORPUS_TRUST_LEVEL,
   matchesRequestedLiveDomain,
 } from "@/lib/live-corpus";
 
@@ -15,6 +16,9 @@ describe("live corpus policy helpers", () => {
     expect(
       getLiveCorpusSourcePolicy("kaggle-pet-disease-images-dog")?.supportedDomains
     ).toContain("eye");
+    expect(
+      getLiveCorpusSourcePolicy("mendeley-dog-skin-disease-multispectral")?.trustLevel
+    ).toBeGreaterThanOrEqual(MINIMUM_LIVE_CORPUS_TRUST_LEVEL);
     expect(
       getLiveCorpusSourcePolicy("roboflow-dog-eye-disease")?.status
     ).toBe("pending_assets");
@@ -74,6 +78,20 @@ describe("live corpus policy helpers", () => {
           species_scope: "dog",
           live_retrieval_status: "live",
           live_domain: "eye",
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      isLiveCorpusEligibleMatch({
+        sourceSlug: "kaggle-pet-disease-images-dog",
+        conditionLabel: "eye_infection",
+        caption: "Eye Infection in Dog",
+        metadata: {
+          species_scope: "dog",
+          live_retrieval_status: "live",
+          live_domain: "eye",
+          trust_level: MINIMUM_LIVE_CORPUS_TRUST_LEVEL - 10,
         },
       })
     ).toBe(false);

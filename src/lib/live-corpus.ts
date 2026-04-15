@@ -2,12 +2,14 @@ import type { SupportedImageDomain } from "./clinical-evidence";
 import liveCorpusRegistry from "./live-corpus-registry.json";
 
 export type LiveCorpusStatus = "live" | "benchmark_only" | "pending_assets";
+export const MINIMUM_LIVE_CORPUS_TRUST_LEVEL = 60;
 
 export interface LiveCorpusSourcePolicy {
   slug: string;
   status: LiveCorpusStatus;
   speciesScope: "dog" | "mixed";
   supportedDomains: SupportedImageDomain[];
+  trustLevel?: number;
   note?: string;
   directoryHints?: string[];
 }
@@ -94,6 +96,23 @@ function getMetadataStringArray(
     : [];
 }
 
+function getMetadataNumber(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string
+): number | null {
+  const value = metadata?.[key];
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
 export function getLiveCorpusSourcePolicy(
   sourceSlug: string | null | undefined
 ): LiveCorpusSourcePolicy | null {
@@ -107,6 +126,22 @@ export function listLiveCorpusSourcePolicies(): LiveCorpusSourcePolicy[] {
     supportedDomains: [...policy.supportedDomains],
     directoryHints: [...(policy.directoryHints || [])],
   }));
+}
+
+function getEffectiveTrustLevel(
+  policy: LiveCorpusSourcePolicy | null,
+  metadata: Record<string, unknown> | null | undefined
+): number {
+  const metadataTrust =
+    getMetadataNumber(metadata, "trust_level") ??
+    getMetadataNumber(metadata, "source_trust_level");
+  if (metadataTrust !== null) {
+    return metadataTrust;
+  }
+
+  return Number.isFinite(Number(policy?.trustLevel))
+    ? Number(policy?.trustLevel)
+    : 100;
 }
 
 export function inferLiveCorpusDomain(input: MatchLike): SupportedImageDomain | null {
@@ -147,6 +182,13 @@ export function inferLiveCorpusDomain(input: MatchLike): SupportedImageDomain | 
 export function isLiveCorpusEligibleMatch(input: MatchLike): boolean {
   const policy = getLiveCorpusSourcePolicy(input.sourceSlug);
   if (policy && policy.status !== "live") {
+    return false;
+  }
+
+  if (
+    getEffectiveTrustLevel(policy, input.metadata) <
+    MINIMUM_LIVE_CORPUS_TRUST_LEVEL
+  ) {
     return false;
   }
 
