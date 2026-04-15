@@ -89,6 +89,16 @@ describe("VET-900 Phase 6: ICD-10 Mapper", () => {
       expect(result!.primary_code.code).toBe(expectedCode);
       expect(result!.primary_code.notes).toContain("Reference-only");
     });
+
+    it("preserves emergency urgency for heart failure and hypoglycemia", () => {
+      const heartFailure = getICD10CodesForDisease("heart_failure");
+      const hypoglycemia = getICD10CodesForDisease("hypoglycemia");
+
+      expect(heartFailure).not.toBeNull();
+      expect(heartFailure!.primary_code.urgency).toBe("emergency");
+      expect(hypoglycemia).not.toBeNull();
+      expect(hypoglycemia!.primary_code.urgency).toBe("emergency");
+    });
   });
 
   describe("getAllICD10Categories", () => {
