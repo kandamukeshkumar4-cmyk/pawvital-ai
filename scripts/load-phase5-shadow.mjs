@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
 
 const rootDir = process.cwd();
 const outputPath = path.join(rootDir, "phase5-load-test-report.json");
@@ -10,24 +11,6 @@ const rolloutThresholds = JSON.parse(
     "utf8"
   )
 );
-
-function loadEnvFiles() {
-  for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
-    const fullPath = path.join(rootDir, relativePath);
-    if (!fs.existsSync(fullPath)) continue;
-    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
-}
 
 function parseArgs(argv) {
   const baselineRps = Number(process.env.PHASE5_BASELINE_RPS || 2);
@@ -95,7 +78,22 @@ function buildRouteUrl(baseUrl, routePath) {
   return url.toString();
 }
 
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const rawText = await response.text();
+  let body = null;
+
+  try {
+    body = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    body = null;
+  }
+
+  return { ok: response.ok, status: response.status, body, rawText };
+}
+
 function buildShadowProbePayload() {
+  const recordedAt = new Date().toISOString();
   return {
     session: {
       known_symptoms: ["wound_skin_issue"],
@@ -120,16 +118,60 @@ function buildShadowProbePayload() {
         service_timeouts: [],
         service_observations: [
           {
-            service: "text-retrieval-service",
-            stage: "shadow_probe",
+            service: "vision-preprocess-service",
+            stage: "preprocess",
             outcome: "shadow",
-            latencyMs: 1200,
+            latencyMs: 180,
             shadowMode: true,
             fallbackUsed: false,
-            recordedAt: new Date().toISOString(),
+            recordedAt,
+          },
+          {
+            service: "text-retrieval-service",
+            stage: "report-retrieval",
+            outcome: "shadow",
+            latencyMs: 220,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+          {
+            service: "image-retrieval-service",
+            stage: "report-retrieval",
+            outcome: "shadow",
+            latencyMs: 260,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+          {
+            service: "multimodal-consult-service",
+            stage: "sync-consult",
+            outcome: "shadow",
+            latencyMs: 840,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+          {
+            service: "async-review-service",
+            stage: "report-review",
+            outcome: "shadow",
+            latencyMs: 1300,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
           },
         ],
         shadow_comparisons: [
+          {
+            service: "vision-preprocess-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow vision preprocessing aligned with primary path.",
+            disagreementCount: 0,
+            recordedAt,
+          },
           {
             service: "text-retrieval-service",
             usedStrategy: "nvidia-primary",
@@ -137,13 +179,70 @@ function buildShadowProbePayload() {
             summary:
               "Shadow retrieval aligned with primary evidence selection.",
             disagreementCount: 0,
-            recordedAt: new Date().toISOString(),
+            recordedAt,
+          },
+          {
+            service: "image-retrieval-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow image retrieval aligned with primary evidence selection.",
+            disagreementCount: 0,
+            recordedAt,
+          },
+          {
+            service: "multimodal-consult-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow consult aligned with the deterministic route recommendation.",
+            disagreementCount: 0,
+            recordedAt,
+          },
+          {
+            service: "async-review-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow async review aligned with the primary report packaging.",
+            disagreementCount: 0,
+            recordedAt,
           },
         ],
         ambiguity_flags: [],
       },
     },
   };
+}
+
+async function persistLoadTestSummary(baseUrl, summary) {
+  const sidecarSecret =
+    (process.env.HF_SIDECAR_API_KEY ||
+      process.env.ASYNC_REVIEW_WEBHOOK_SECRET ||
+      "").trim();
+
+  if (!sidecarSecret) {
+    return { persisted: false, reason: "missing_debug_secret" };
+  }
+
+  const response = await fetchJson(
+    buildRouteUrl(baseUrl, "/api/ai/shadow-rollout"),
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sidecarSecret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ loadTest: summary }),
+    }
+  );
+
+  if (!response.ok || response.body?.ok !== true) {
+    throw new Error(
+      `Unable to persist Phase 5 load-test summary: HTTP ${response.status} (${String(
+        response.body?.error || response.rawText || "unknown error"
+      ).slice(0, 160)})`
+    );
+  }
+
+  return { persisted: true };
 }
 
 function buildRequestOptions(targetRoute) {
@@ -205,7 +304,7 @@ async function sleep(ms) {
 }
 
 async function main() {
-  loadEnvFiles();
+  loadEnvFiles(rootDir);
   const options = parseArgs(process.argv.slice(2));
   const requestUrl = buildRouteUrl(options.baseUrl, options.targetRoute);
   const requestOptions = buildRequestOptions(options.targetRoute);
@@ -279,6 +378,9 @@ async function main() {
   };
 
   fs.writeFileSync(options.output, JSON.stringify(summary, null, 2));
+  const persistence = await persistLoadTestSummary(options.baseUrl, summary);
+  summary.persistedToShadowRollout = persistence.persisted;
+  fs.writeFileSync(options.output, JSON.stringify(summary, null, 2));
 
   if (options.json) {
     console.log(JSON.stringify(summary, null, 2));
@@ -286,6 +388,9 @@ async function main() {
     console.log(
       `Load test ${summary.passed ? "passed" : "failed"} for ${summary.targetRoute} at ${options.targetRps} RPS (${summary.totalRequests} requests).`
     );
+    if (summary.persistedToShadowRollout) {
+      console.log("Persisted Phase 5 load-test verdict to /api/ai/shadow-rollout");
+    }
     console.log(`Saved to ${options.output}`);
   }
 }

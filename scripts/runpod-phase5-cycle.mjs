@@ -1,30 +1,11 @@
-import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
 
 const rootDir = process.cwd();
 const nodeBin = process.execPath;
 const defaultTimeoutMs = 45 * 60_000;
-
-function loadEnvFiles() {
-  for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
-    const fullPath = path.join(rootDir, relativePath);
-    if (!fs.existsSync(fullPath)) continue;
-
-    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
-}
 
 function parseArgs(argv) {
   const options = {
@@ -274,7 +255,7 @@ async function waitForBaseline(options) {
 }
 
 async function main() {
-  loadEnvFiles();
+  loadEnvFiles(rootDir);
   const options = parseArgs(process.argv.slice(2));
 
   if (options.dryRun) {

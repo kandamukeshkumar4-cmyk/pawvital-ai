@@ -541,6 +541,16 @@ export function buildObservabilitySnapshot(session: TriageSession) {
   };
 }
 
+export function buildInternalShadowTelemetrySnapshot(session: TriageSession) {
+  const memory = ensureStructuredCaseMemory(session);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    recentServiceCalls: [...(memory.service_observations || [])].slice(-8),
+    recentShadowComparisons: [...(memory.shadow_comparisons || [])].slice(-8),
+  };
+}
+
 export function describeShadowComparison(
   service: SidecarServiceName,
   usedStrategy: string,

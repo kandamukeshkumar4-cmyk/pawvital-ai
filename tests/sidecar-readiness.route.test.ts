@@ -68,6 +68,23 @@ describe("sidecar-readiness route", () => {
     expect(mockBuildSidecarReadinessSnapshot).toHaveBeenCalledWith();
   });
 
+  it("accepts normalized tokens when the configured secret has an escaped newline suffix", async () => {
+    process.env = {
+      ...originalEnv,
+      HF_SIDECAR_API_KEY: "sidecar-secret\\r\\n",
+    };
+
+    const { GET } = await import("@/app/api/ai/sidecar-readiness/route");
+    const response = await GET(
+      makeRequest("GET", undefined, { Authorization: "Bearer sidecar-secret" })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(mockBuildSidecarReadinessSnapshot).toHaveBeenCalledWith();
+  });
+
   it("passes session context through POST requests", async () => {
     const session = { known_symptoms: ["wound_skin_issue"] };
     const { POST } = await import("@/app/api/ai/sidecar-readiness/route");

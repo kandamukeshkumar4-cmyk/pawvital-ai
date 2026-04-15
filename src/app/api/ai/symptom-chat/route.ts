@@ -103,11 +103,13 @@ import {
 import {
   appendShadowComparison,
   appendSidecarObservation,
+  buildInternalShadowTelemetrySnapshot,
   buildObservabilitySnapshot,
   describeShadowComparison,
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
+import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
@@ -2087,7 +2089,25 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       pet,
       finalReport
     );
-    finalReport.system_observability = buildObservabilitySnapshot(session);
+    const persistedObservabilitySnapshot = buildObservabilitySnapshot(session);
+    finalReport.system_observability = persistedObservabilitySnapshot;
+    const persistedShadowTelemetrySnapshot =
+      buildInternalShadowTelemetrySnapshot(session);
+
+    const persistShadowTelemetry = async () => {
+      try {
+        await appendShadowTelemetrySnapshot(persistedShadowTelemetrySnapshot);
+      } catch (shadowTelemetryError) {
+        console.error(
+          "[ShadowTelemetry] Failed to persist report telemetry:",
+          shadowTelemetryError
+        );
+      }
+    };
+
+    if (!runAfterSafely(persistShadowTelemetry)) {
+      void persistShadowTelemetry();
+    }
 
     try {
       finalReport.bayesian_differentials = await computeBayesianScore(
