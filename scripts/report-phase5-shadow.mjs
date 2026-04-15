@@ -223,6 +223,7 @@ async function main() {
     `- HTTP: ${report.readinessHttp.status} (${report.readinessHttp.ok ? "ok" : "error"})`,
     `- Configured sidecars: ${report.readiness?.configuredCount ?? "n/a"}`,
     `- Healthy sidecars: ${report.readiness?.healthyCount ?? "n/a"}`,
+    `- Warming sidecars: ${report.readiness?.warmingCount ?? "n/a"}`,
     `- Stub sidecars: ${report.readiness?.stubCount ?? "n/a"}`,
     `- Unhealthy sidecars: ${report.readiness?.unhealthyCount ?? "n/a"}`,
     `- Unreachable sidecars: ${report.readiness?.unreachableCount ?? "n/a"}`,

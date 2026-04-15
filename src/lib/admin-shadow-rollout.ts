@@ -78,6 +78,7 @@ export interface AdminShadowRolloutDashboardData {
     | "configuredCount"
     | "generatedAt"
     | "healthyCount"
+    | "warmingCount"
     | "misconfiguredCount"
     | "stubCount"
     | "unconfiguredCount"
@@ -663,6 +664,7 @@ export async function buildAdminShadowRolloutDashboardData(): Promise<AdminShado
       configuredCount: readiness.configuredCount,
       generatedAt: readiness.generatedAt,
       healthyCount: readiness.healthyCount,
+      warmingCount: readiness.warmingCount,
       misconfiguredCount: readiness.misconfiguredCount,
       stubCount: readiness.stubCount,
       unconfiguredCount: readiness.unconfiguredCount,
@@ -877,6 +879,7 @@ export function buildDemoShadowRolloutDashboardData(): AdminShadowRolloutDashboa
       configuredCount: services.length,
       generatedAt: new Date().toISOString(),
       healthyCount: services.length,
+      warmingCount: 0,
       misconfiguredCount: 0,
       stubCount: 0,
       unconfiguredCount: 0,

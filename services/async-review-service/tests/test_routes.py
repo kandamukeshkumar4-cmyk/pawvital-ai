@@ -34,6 +34,43 @@ def reset_queue_state() -> None:
     legacy.OUTCOME_FEEDBACK.clear()
     legacy.DEAD_LETTER_QUEUE.clear()
     legacy.REVIEW_STATE_TRANSITIONS.clear()
+    legacy.MODEL = None
+    legacy.PROCESSOR = None
+    legacy.MODEL_LOAD_STATE = "idle"
+    legacy.MODEL_LOAD_STARTED_AT = None
+    legacy.MODEL_LOAD_COMPLETED_AT = None
+    legacy.MODEL_LOAD_FAILURE_REASON = None
+    legacy.MODEL_READY_EVENT.clear()
+
+
+def test_healthz_reports_warming_during_background_model_load(monkeypatch) -> None:
+    reset_queue_state()
+    monkeypatch.setattr(legacy, "STUB_MODE", False)
+    monkeypatch.setattr(legacy, "FORCE_FALLBACK", False)
+
+    def fake_start_background_model_load(force_retry: bool = False) -> bool:
+        legacy.MODEL_READY_EVENT.clear()
+        legacy.MODEL_LOAD_STATE = "loading"
+        legacy.MODEL_LOAD_STARTED_AT = "2026-04-15T15:00:00Z"
+        legacy.MODEL_LOAD_COMPLETED_AT = None
+        legacy.MODEL_LOAD_FAILURE_REASON = None
+        return True
+
+    monkeypatch.setattr(legacy, "start_background_model_load", fake_start_background_model_load)
+
+    with TestClient(entry.app) as client:
+        response = client.get("/healthz")
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["mode"] == "warming"
+    assert body["model_load"] == {
+        "state": "loading",
+        "ready": False,
+        "started_at": "2026-04-15T15:00:00Z",
+        "completed_at": None,
+        "failure_reason": None,
+    }
 
 
 def test_healthz_reports_force_fallback(monkeypatch) -> None:
@@ -52,6 +89,7 @@ def test_healthz_reports_force_fallback(monkeypatch) -> None:
         "force_fallback": True,
         "reason": "force_fallback",
     }
+    assert body["model_load"]["ready"] is True
 
 
 def test_force_fallback_review_preserves_queue_contract(monkeypatch) -> None:

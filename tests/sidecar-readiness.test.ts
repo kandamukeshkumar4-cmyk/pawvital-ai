@@ -42,4 +42,36 @@ describe("sidecar readiness helpers", () => {
     expect(snapshot.health.find((item) => item.service === "vision-preprocess-service")?.status).toBe("healthy");
     expect(snapshot.health.find((item) => item.service === "image-retrieval-service")?.status).toBe("misconfigured");
   });
+
+  it("preserves warming sidecars without counting them as healthy", async () => {
+    process.env = {
+      ...originalEnv,
+      HF_TEXT_RETRIEVAL_URL: "http://localhost:8081/search",
+    };
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          ok: true,
+          service: "text-retrieval-service",
+          mode: "warming",
+          model: "bge-m3",
+        }),
+    });
+
+    const readiness = await import("@/lib/sidecar-readiness");
+    const snapshot = await readiness.buildSidecarReadinessSnapshot();
+
+    expect(snapshot.healthyCount).toBe(0);
+    expect(snapshot.warmingCount).toBe(1);
+    expect(
+      snapshot.health.find((item) => item.service === "text-retrieval-service")
+    ).toMatchObject({
+      status: "warming",
+      detail:
+        "Model is warming in the background and is not ready for live baseline traffic yet.",
+    });
+  });
 });

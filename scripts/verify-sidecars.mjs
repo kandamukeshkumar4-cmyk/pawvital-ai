@@ -592,6 +592,7 @@ async function runReadinessChecks() {
     const requiredServices = services.length;
     const configuredCount = Number(readiness.configuredCount ?? 0);
     const healthyCount = Number(readiness.healthyCount ?? 0);
+    const warmingCount = Number(readiness.warmingCount ?? 0);
     const stubCount = Number(readiness.stubCount ?? 0);
 
     if (configuredCount < requiredServices) {
@@ -618,9 +619,17 @@ async function runReadinessChecks() {
       );
     }
 
+    if (warmingCount > 0) {
+      warnings += 1;
+      statusLine(
+        "warn",
+        `sidecar readiness route reports warming=${warmingCount}; wait for background model startup to finish before running the live baseline`
+      );
+    }
+
     statusLine(
       "ok",
-      `sidecar readiness route healthy at ${routeUrl} (configured=${configuredCount}, healthy=${healthyCount}, stub=${stubCount})`
+      `sidecar readiness route healthy at ${routeUrl} (configured=${configuredCount}, healthy=${healthyCount}, warming=${warmingCount}, stub=${stubCount})`
     );
   } catch (error) {
     failures += 1;

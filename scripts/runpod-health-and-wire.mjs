@@ -56,6 +56,9 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN || "";
 const VERCEL_PROJECT_ID = process.env.VERCEL_PROJECT_ID || "pawvital-ai";
 const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || "";
+const RUNPOD_REPO_ARCHIVE_URL =
+  String(process.env.RUNPOD_REPO_ARCHIVE_URL || "").trim() ||
+  "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/archive/refs/heads/master.tar.gz";
 
 // ---------------------------------------------------------------------------
 // Load pod registry
@@ -407,6 +410,15 @@ async function checkHealth(url) {
   });
 }
 
+function parseHealthBody(body) {
+  if (!body) return null;
+  try {
+    return JSON.parse(body);
+  } catch {
+    return null;
+  }
+}
+
 function readRunpodPublicKey() {
   const sshPubKeyPath = path.join(process.env.USERPROFILE || process.env.HOME || "", ".ssh", "runpod_id_ed25519.pub");
   return fs.existsSync(sshPubKeyPath) ? fs.readFileSync(sshPubKeyPath, "utf8").trim() : "";
@@ -676,8 +688,15 @@ async function runHealthChecks() {
       const [name, port] = svc.split(":");
       const url = `https://${pod.pod_id}-${port}.proxy.runpod.net/healthz`;
       const { status, body } = await checkHealth(url);
+      const parsedBody = parseHealthBody(body);
+      const mode = typeof parsedBody?.mode === "string" ? parsedBody.mode.trim() : "";
 
-      if (status === 200) {
+      if (status === 200 && mode === "warming") {
+        statusLine("warn", `${name}:${port} warming  ${body?.slice(0, 80) ?? ""}`);
+        if (!summary.bootingPods.find((entry) => entry.role === role)) {
+          summary.bootingPods.push({ role, podId: pod.pod_id });
+        }
+      } else if (status === 200) {
         statusLine("ok", `${name}:${port} healthy  ${body?.slice(0, 80) ?? ""}`);
         if (!results[role]) results[role] = {};
         results[role][port] = { url: `https://${pod.pod_id}-${port}.proxy.runpod.net`, healthy: true };
@@ -847,9 +866,14 @@ if [ -n "\${PUBLIC_KEY:-}" ]; then
 fi
 /usr/sbin/sshd
 rm -rf /workspace/pawvital-ai /workspace/pawvital-ai-master /workspace/repo.tgz
-curl -L --fail https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/archive/refs/heads/master.tar.gz -o /workspace/repo.tgz
+curl -L --fail "${RUNPOD_REPO_ARCHIVE_URL}" -o /workspace/repo.tgz
 tar -xzf /workspace/repo.tgz -C /workspace
-mv /workspace/pawvital-ai-master /workspace/pawvital-ai
+REPO_ARCHIVE_DIR="$(find /workspace -maxdepth 1 -type d -name 'pawvital-ai-*' | head -n 1)"
+if [ -z "$REPO_ARCHIVE_DIR" ]; then
+  echo "[startup] extracted repo directory not found" >&2
+  exit 1
+fi
+mv "$REPO_ARCHIVE_DIR" /workspace/pawvital-ai
 cd /workspace/pawvital-ai
 /usr/bin/env python3 -m venv /workspace/venvs/consult
 /workspace/venvs/consult/bin/pip install --upgrade pip setuptools wheel > /workspace/logs/full-install.log 2>&1
@@ -874,9 +898,14 @@ if [ -n "\${PUBLIC_KEY:-}" ]; then
 fi
 /usr/sbin/sshd
 rm -rf /workspace/pawvital-ai /workspace/pawvital-ai-master /workspace/repo.tgz
-curl -L --fail https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/archive/refs/heads/master.tar.gz -o /workspace/repo.tgz
+curl -L --fail "${RUNPOD_REPO_ARCHIVE_URL}" -o /workspace/repo.tgz
 tar -xzf /workspace/repo.tgz -C /workspace
-mv /workspace/pawvital-ai-master /workspace/pawvital-ai
+REPO_ARCHIVE_DIR="$(find /workspace -maxdepth 1 -type d -name 'pawvital-ai-*' | head -n 1)"
+if [ -z "$REPO_ARCHIVE_DIR" ]; then
+  echo "[startup] extracted repo directory not found" >&2
+  exit 1
+fi
+mv "$REPO_ARCHIVE_DIR" /workspace/pawvital-ai
 cd /workspace/pawvital-ai
 /usr/bin/env python3 -m venv /workspace/venvs/review
 /workspace/venvs/review/bin/pip install --upgrade pip setuptools wheel > /workspace/logs/full-install.log 2>&1

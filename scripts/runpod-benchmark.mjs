@@ -205,6 +205,7 @@ async function runPreflight(baseUrl) {
   const requiredServices = Array.isArray(sidecarRegistry) ? sidecarRegistry.length : 5;
   const configuredCount = Number(readiness.configuredCount || 0);
   const healthyCount = Number(readiness.healthyCount || 0);
+  const warmingCount = Number(readiness.warmingCount || 0);
   const stubCount = Number(readiness.stubCount || 0);
   const blockers = [];
 
@@ -218,6 +219,11 @@ async function runPreflight(baseUrl) {
       `healthy=${healthyCount}/${requiredServices}; all sidecars must be healthy`
     );
   }
+  if (warmingCount > 0) {
+    blockers.push(
+      `warming=${warmingCount}; wait for background model startup to finish`
+    );
+  }
   if (stubCount > 0) {
     blockers.push(`stub=${stubCount}; live baseline forbids stub sidecars`);
   }
@@ -229,6 +235,7 @@ async function runPreflight(baseUrl) {
     requiredServices,
     configuredCount,
     healthyCount,
+    warmingCount,
     stubCount,
     blockers,
     readiness,

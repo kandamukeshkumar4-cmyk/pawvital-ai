@@ -48,6 +48,8 @@ function healthClasses(status: AdminShadowRolloutServiceControl["health"]["statu
   switch (status) {
     case "healthy":
       return "bg-green-100 text-green-800";
+    case "warming":
+      return "bg-sky-100 text-sky-800";
     case "stub":
       return "bg-amber-100 text-amber-800";
     case "unhealthy":
@@ -209,7 +211,9 @@ export function ShadowRolloutControlPanel({
             {dashboard.summary.healthyServiceCount}
           </p>
           <p className="mt-2 text-xs text-green-700">
-            {dashboard.readiness.healthyCount} healthy / {dashboard.summary.totalServices} total
+            {dashboard.readiness.healthyCount} healthy /{" "}
+            {dashboard.readiness.warmingCount} warming /{" "}
+            {dashboard.summary.totalServices} total
           </p>
         </div>
         <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">

@@ -42,6 +42,7 @@ export interface RouteBenchmarkPreflight {
   requiredServices: number;
   configuredCount: number;
   healthyCount: number;
+  warmingCount?: number;
   stubCount: number;
   blockers: string[];
   readiness?: Record<string, unknown> | null;
@@ -428,6 +429,7 @@ export function renderLiveScorecardMarkdown(
     `- Ready: ${scorecard.preflight?.ready ? "yes" : "no"}`,
     `- Configured services: ${scorecard.preflight?.configuredCount ?? 0}/${scorecard.preflight?.requiredServices ?? 0}`,
     `- Healthy services: ${scorecard.preflight?.healthyCount ?? 0}/${scorecard.preflight?.requiredServices ?? 0}`,
+    `- Warming services: ${scorecard.preflight?.warmingCount ?? 0}`,
     `- Stub services: ${scorecard.preflight?.stubCount ?? 0}`,
     "",
     ...blockerLines,
