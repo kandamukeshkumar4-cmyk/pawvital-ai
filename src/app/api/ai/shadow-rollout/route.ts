@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildObservabilitySnapshot } from "@/lib/sidecar-observability";
+import { buildPersistedShadowBaselineSnapshot } from "@/lib/shadow-rollout-baseline";
 import {
   buildShadowRolloutSummary,
   type ShadowLoadTestSummary,
@@ -71,4 +72,39 @@ export async function POST(request: Request) {
         observability.recentShadowComparisons.length,
     },
   });
+}
+
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const baseline = await buildPersistedShadowBaselineSnapshot();
+    return NextResponse.json({
+      ok: true,
+      summary: baseline.summary,
+      baseline: {
+        generatedAt: baseline.generatedAt,
+        windowHours: baseline.windowHours,
+        reportCount: baseline.reportCount,
+        parsedReportCount: baseline.parsedReportCount,
+        malformedReportCount: baseline.malformedReportCount,
+        observationCount: baseline.observationCount,
+        shadowComparisonCount: baseline.shadowComparisonCount,
+        serviceMetrics: baseline.serviceMetrics,
+        warning: baseline.warning,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to build persisted shadow baseline",
+      },
+      { status: 500 }
+    );
+  }
 }

@@ -85,6 +85,10 @@ export interface ShadowModeDecision {
   autoDisableReason: string | null;
 }
 
+interface ObservabilitySnapshotOptions {
+  includeInternalTelemetry?: boolean;
+}
+
 interface ShadowGuardrailMetrics {
   shadowObservationCount: number;
   shadowErrorRate: number;
@@ -495,13 +499,17 @@ export function appendShadowComparison(
   };
 }
 
-export function buildObservabilitySnapshot(session: TriageSession) {
+export function buildObservabilitySnapshot(
+  session: TriageSession,
+  options: ObservabilitySnapshotOptions = {}
+) {
   const memory = ensureStructuredCaseMemory(session);
   const contradictionRecords = extractContradictionRecordsFromObservations(
     memory.service_observations || []
   );
-  const observations = (memory.service_observations || []).filter(
-    (item) => !isInternalTelemetry(item)
+  const includeInternalTelemetry = options.includeInternalTelemetry === true;
+  const observations = (memory.service_observations || []).filter((item) =>
+    includeInternalTelemetry ? true : !isInternalTelemetry(item)
   );
   const timeouts = memory.service_timeouts || [];
   const shadowComparisons = memory.shadow_comparisons || [];
