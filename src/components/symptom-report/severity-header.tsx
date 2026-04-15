@@ -53,7 +53,9 @@ export function SeverityHeader({
       };
 
   return (
-    <Card className={`p-6 border-2 ${severityConfig[report.severity].bg}`}>
+    <Card
+      className={`border-2 p-4 sm:p-6 ${severityConfig[report.severity].bg}`}
+    >
       <div className="flex items-start gap-3">
         {(() => {
           const config = severityConfig[report.severity];
@@ -63,7 +65,9 @@ export function SeverityHeader({
         <div className="min-w-0 flex-1">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
-              <h3 className="text-xl font-bold text-gray-900">{report.title}</h3>
+              <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
+                {report.title}
+              </h3>
               <Badge variant={severityConfig[report.severity].color}>
                 {severityConfig[report.severity].label}
               </Badge>
@@ -77,7 +81,9 @@ export function SeverityHeader({
               )}
             </div>
             {headerActions ? (
-              <div className="flex flex-shrink-0 flex-wrap items-center gap-2">{headerActions}</div>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-shrink-0 sm:flex-row sm:flex-wrap sm:items-center">
+                {headerActions}
+              </div>
             ) : null}
           </div>
           <p className="text-sm text-gray-600 mt-1">
@@ -92,9 +98,11 @@ export function SeverityHeader({
         {report.explanation}
       </p>
       {escalatedReport && (
-        <div className={`mt-4 rounded-xl border bg-white/90 p-4 ${bannerTone.border}`}>
+        <div
+          className={`mt-4 rounded-xl border bg-white/90 p-4 ${bannerTone.border}`}
+        >
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${bannerTone.pill}`}
@@ -105,21 +113,19 @@ export function SeverityHeader({
                   {bannerTone.title}
                 </p>
               </div>
-              <p className="text-sm text-gray-800 mt-2">
-                {bannerTone.helper}
-              </p>
+              <p className="text-sm text-gray-800 mt-2">{bannerTone.helper}</p>
               <p className="text-xs text-gray-600 mt-2">
                 The copied clinic packet includes the recommendation, handoff
                 summary, top differentials, recommended diagnostics, and
                 escalation signs.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {report.vet_handoff_summary && (
                 <button
                   type="button"
                   onClick={onCopyVetSummary}
-                  className={`inline-flex items-center gap-2 rounded-full transition-colors ${bannerTone.button}`}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full transition-colors sm:w-auto ${bannerTone.button}`}
                 >
                   {copyState === "copied" ? (
                     <CheckCheck className="w-4 h-4" />
@@ -135,7 +141,7 @@ export function SeverityHeader({
                 <button
                   type="button"
                   onClick={onJumpToHandoff}
-                  className={`inline-flex items-center gap-2 rounded-full transition-colors ${bannerTone.button}`}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full transition-colors sm:w-auto ${bannerTone.button}`}
                 >
                   <ArrowDownRight className="w-4 h-4" />
                   Jump to Handoff

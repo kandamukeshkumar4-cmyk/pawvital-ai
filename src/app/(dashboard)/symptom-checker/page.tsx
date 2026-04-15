@@ -115,14 +115,14 @@ function ChatBubble({
           isUser
             ? "bg-blue-100"
             : isEmergency
-            ? "bg-red-100"
-            : isCannotAssess
-            ? "bg-amber-100"
-            : isOutOfScope
-            ? "bg-slate-100"
-            : isImageGate
-            ? "bg-amber-100"
-            : "bg-purple-100"
+              ? "bg-red-100"
+              : isCannotAssess
+                ? "bg-amber-100"
+                : isOutOfScope
+                  ? "bg-slate-100"
+                  : isImageGate
+                    ? "bg-amber-100"
+                    : "bg-purple-100"
         }`}
       >
         {isUser ? (
@@ -140,37 +140,37 @@ function ChatBubble({
         )}
       </div>
       <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+        className={`max-w-[min(85%,32rem)] rounded-2xl px-4 py-3 sm:max-w-[80%] ${
           isUser
             ? "bg-blue-600 text-white"
             : highlightEscalation
-            ? "bg-red-50 border-2 border-red-500 text-red-900 animate-pulse"
-            : highlightClarification
-            ? "bg-orange-50 border border-orange-200 border-l-4 border-l-orange-400 text-orange-950"
-            : isEmergency
-            ? "bg-red-50 border-2 border-red-300 text-red-900"
-            : isCannotAssess
-            ? "bg-amber-50 border border-amber-400 text-amber-950"
-            : isOutOfScope
-            ? "bg-slate-50 border border-slate-300 text-slate-900"
-            : isImageGate
-            ? "bg-amber-50 border border-amber-300 text-amber-950"
-            : "bg-gray-100 text-gray-800"
+              ? "bg-red-50 border-2 border-red-500 text-red-900 animate-pulse"
+              : highlightClarification
+                ? "bg-orange-50 border border-orange-200 border-l-4 border-l-orange-400 text-orange-950"
+                : isEmergency
+                  ? "bg-red-50 border-2 border-red-300 text-red-900"
+                  : isCannotAssess
+                    ? "bg-amber-50 border border-amber-400 text-amber-950"
+                    : isOutOfScope
+                      ? "bg-slate-50 border border-slate-300 text-slate-900"
+                      : isImageGate
+                        ? "bg-amber-50 border border-amber-300 text-amber-950"
+                        : "bg-gray-100 text-gray-800"
         }`}
-        >
-          {isCannotAssess && (
-            <p className="mb-1 text-xs font-semibold text-amber-700">
-              Cannot safely assess at home
-            </p>
-          )}
-          {isOutOfScope && (
-            <p className="mb-1 text-xs font-semibold text-slate-600">
-              Outside symptom-triage scope
-            </p>
-          )}
-          {message.image && (
-            <img
-              src={message.image}
+      >
+        {isCannotAssess && (
+          <p className="mb-1 text-xs font-semibold text-amber-700">
+            Cannot safely assess at home
+          </p>
+        )}
+        {isOutOfScope && (
+          <p className="mb-1 text-xs font-semibold text-slate-600">
+            Outside symptom-triage scope
+          </p>
+        )}
+        {message.image && (
+          <img
+            src={message.image}
             alt="Uploaded by user"
             className="w-full max-w-sm rounded-lg mb-2 border border-blue-400/30 object-contain"
           />
@@ -181,20 +181,22 @@ function ChatBubble({
             <span>Let me clarify...</span>
           </p>
         )}
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+          {message.content}
+        </p>
         <p
           className={`text-[10px] mt-1 ${
             isUser
               ? "text-blue-200"
               : isEmergency
-              ? "text-red-400"
-              : isCannotAssess
-              ? "text-amber-700"
-              : isOutOfScope
-              ? "text-slate-500"
-              : isImageGate
-              ? "text-amber-600"
-              : "text-gray-400"
+                ? "text-red-400"
+                : isCannotAssess
+                  ? "text-amber-700"
+                  : isOutOfScope
+                    ? "text-slate-500"
+                    : isImageGate
+                      ? "text-amber-600"
+                      : "text-gray-400"
           }`}
         >
           {message.timestamp.toLocaleTimeString([], {
@@ -207,7 +209,6 @@ function ChatBubble({
   );
 }
 
-
 // --- Main Page ---
 
 export default function SymptomCheckerPage() {
@@ -215,15 +216,19 @@ export default function SymptomCheckerPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedImageMeta, setSelectedImageMeta] = useState<ImageMeta | null>(null);
+  const [selectedImageMeta, setSelectedImageMeta] = useState<ImageMeta | null>(
+    null,
+  );
   const [pendingGateImage, setPendingGateImage] = useState<string | null>(null);
-  const [pendingGateImageMeta, setPendingGateImageMeta] = useState<ImageMeta | null>(null);
+  const [pendingGateImageMeta, setPendingGateImageMeta] =
+    useState<ImageMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<SymptomReport | null>(null);
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
-  const [conversationState, setConversationState] = useState<ConversationState>("idle");
+  const [conversationState, setConversationState] =
+    useState<ConversationState>("idle");
   const [answeredCount, setAnsweredCount] = useState<number>(0);
   const [totalQuestions, setTotalQuestions] = useState<number>(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -303,7 +308,7 @@ export default function SymptomCheckerPage() {
       if (blurScore < 15) {
         // Very blurry — warn user but still allow
         alert(
-          "This photo looks a bit blurry. For the best analysis, try taking a clearer, well-lit photo of the affected area."
+          "This photo looks a bit blurry. For the best analysis, try taking a clearer, well-lit photo of the affected area.",
         );
       }
 
@@ -318,7 +323,7 @@ export default function SymptomCheckerPage() {
         estimatedKb,
       });
       console.log(
-        `[Preprocessing] ${img.width}x${img.height} → ${width}x${height}, blur=${blurScore.toFixed(1)}, size=${Math.round(base64.length * 0.75 / 1024)}KB`
+        `[Preprocessing] ${img.width}x${img.height} → ${width}x${height}, blur=${blurScore.toFixed(1)}, size=${Math.round((base64.length * 0.75) / 1024)}KB`,
       );
     };
 
@@ -363,7 +368,9 @@ export default function SymptomCheckerPage() {
   }
 
   // Build API-compatible messages array from current state
-  const getApiMessages = (extraMessages?: { role: string; content: string }[]) => {
+  const getApiMessages = (
+    extraMessages?: { role: string; content: string }[],
+  ) => {
     const base = messages
       .filter((m) => m.type !== "image_gate")
       .map((m) => ({
@@ -386,8 +393,12 @@ export default function SymptomCheckerPage() {
       unresolved_question_ids?: unknown[];
     };
 
-    const answered = answeredQuestions ? Object.keys(answeredQuestions).length : 0;
-    const unresolved = Array.isArray(unresolvedQuestionIds) ? unresolvedQuestionIds.length : 0;
+    const answered = answeredQuestions
+      ? Object.keys(answeredQuestions).length
+      : 0;
+    const unresolved = Array.isArray(unresolvedQuestionIds)
+      ? unresolvedQuestionIds.length
+      : 0;
 
     setAnsweredCount(answered);
     setTotalQuestions(answered + unresolved);
@@ -396,7 +407,7 @@ export default function SymptomCheckerPage() {
   // --- Send message to hybrid /api/ai/symptom-chat ---
   const sendMessage = async (
     text?: string,
-    options: SendMessageOptions = {}
+    options: SendMessageOptions = {},
   ) => {
     const {
       imageOverride,
@@ -435,7 +446,10 @@ export default function SymptomCheckerPage() {
       const baseMessages = getApiMessages();
       const apiMsgs =
         appendUserMessage && userMessage
-          ? [...baseMessages, { role: "user" as const, content: userMessage.content }]
+          ? [
+              ...baseMessages,
+              { role: "user" as const, content: userMessage.content },
+            ]
           : baseMessages;
 
       const res = await fetch("/api/ai/symptom-chat", {
@@ -478,7 +492,7 @@ export default function SymptomCheckerPage() {
         // Fallback: infer from session data when API doesn't include conversationState
         const inferred = resolveConversationStateFromSession(
           data.session,
-          undefined
+          undefined,
         );
         setConversationState(inferred);
       }
@@ -520,7 +534,7 @@ export default function SymptomCheckerPage() {
         // Auto-trigger report generation with the latest session + messages
         generateReport(
           [...apiMsgs, { role: "assistant", content: data.message }],
-          data.session || triageSessionRef.current
+          data.session || triageSessionRef.current,
         );
       } else {
         const isTerminalOutcome =
@@ -581,7 +595,10 @@ export default function SymptomCheckerPage() {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const generateReport = async (overrideMessages?: { role: string; content: string }[], overrideSession?: any) => {
+  const generateReport = async (
+    overrideMessages?: { role: string; content: string }[],
+    overrideSession?: any,
+  ) => {
     setGeneratingReport(true);
     try {
       const res = await fetch("/api/ai/symptom-chat", {
@@ -677,226 +694,312 @@ export default function SymptomCheckerPage() {
 
   return (
     <PlanGate requiredPlan="pro">
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Veterinary Symptom Analyzer
-            </h1>
-            <Badge variant="info">
-              <Activity className="w-3 h-3 mr-1" />
-              Clinical Matrix AI
-            </Badge>
-          </div>
-          <p className="text-gray-500 mt-1">
-            4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
-          </p>
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
-          {sessionStarted && (
-            <Button
-              variant="secondary"
-              onClick={startNewSession}
-              className="flex-shrink-0"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              New Session
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Pre-session: Welcome + Quick Start */}
-      {!sessionStarted && (
-        <Card className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-              <Stethoscope className="w-5 h-5 text-purple-600" />
+      <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+                Veterinary Symptom Analyzer
+              </h1>
+              <Badge variant="info">
+                <Activity className="w-3 h-3 mr-1" />
+                Clinical Matrix AI
+              </Badge>
             </div>
-            <div>
-              <h2 className="font-semibold text-gray-900">
-                Tell me what&apos;s going on with {pet.name}
-              </h2>
-              <p className="text-sm text-gray-500">
-                I&apos;ll ask follow-up questions like a real vet, then generate
-                a full clinical report with differential diagnoses
-              </p>
-            </div>
+            <p className="text-gray-500 mt-1">
+              4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
+            </p>
           </div>
+          <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
+            {sessionStarted && (
+              <Button
+                variant="secondary"
+                onClick={startNewSession}
+                className="w-full flex-shrink-0 sm:w-auto"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                New Session
+              </Button>
+            )}
+          </div>
+        </div>
 
-          <div className="bg-purple-50 rounded-xl p-4 mb-4">
-            <div className="flex items-start gap-2">
-              <Bot className="w-5 h-5 text-purple-600 mt-0.5" />
+        {/* Pre-session: Welcome + Quick Start */}
+        {!sessionStarted && (
+          <Card className="p-4 sm:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Stethoscope className="w-5 h-5 text-purple-600" />
+              </div>
               <div>
-                <p className="text-sm text-purple-900 font-medium">
-                  How this works:
+                <h2 className="font-semibold text-gray-900">
+                  Tell me what&apos;s going on with {pet.name}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  I&apos;ll ask follow-up questions like a real vet, then
+                  generate a full clinical report with differential diagnoses
                 </p>
-                <ol className="text-sm text-purple-800 mt-1 space-y-1 list-decimal ml-4">
-                  <li>Describe what&apos;s happening in your own words or upload a photo of the issue</li>
-                  <li>I&apos;ll ask 3-5 focused clinical questions</li>
-                  <li>
-                    I&apos;ll generate a full report: differential diagnoses,
-                    diagnostic tests, home care, and vet prep questions
-                  </li>
-                </ol>
               </div>
             </div>
-          </div>
 
-          {/* Quick start symptom buttons */}
-          <div>
-            <p className="text-xs text-gray-500 mb-2">
-              Quick start — or type your own below:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {quickSymptoms.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => sendMessage(`${pet.name} has been ${s.toLowerCase()}`)}
-                  className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
+            <div className="bg-purple-50 rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-2">
+                <Bot className="w-5 h-5 text-purple-600 mt-0.5" />
+                <div>
+                  <p className="text-sm text-purple-900 font-medium">
+                    How this works:
+                  </p>
+                  <ol className="text-sm text-purple-800 mt-1 space-y-1 list-decimal ml-4">
+                    <li>
+                      Describe what&apos;s happening in your own words or upload
+                      a photo of the issue
+                    </li>
+                    <li>I&apos;ll ask 3-5 focused clinical questions</li>
+                    <li>
+                      I&apos;ll generate a full report: differential diagnoses,
+                      diagnostic tests, home care, and vet prep questions
+                    </li>
+                  </ol>
+                </div>
+              </div>
             </div>
-          </div>
-        </Card>
-      )}
 
-      {/* Chat Messages */}
-      {sessionStarted && (
-        <Card className="p-0 overflow-hidden">
-          {/* Chat header */}
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-              <Bot className="w-4 h-4 text-purple-600" />
-            </div>
+            {/* Quick start symptom buttons */}
             <div>
-              <p className="text-sm font-semibold text-gray-900">
-                Veterinary Triage for {pet.name}
+              <p className="text-xs text-gray-500 mb-2">
+                Quick start — or type your own below:
               </p>
-              <p className="text-xs text-gray-500">
-                {pet.breed}, {pet.age_years}y, {pet.weight} lbs
-              </p>
+              <div className="flex flex-wrap gap-2">
+                {quickSymptoms.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() =>
+                      sendMessage(`${pet.name} has been ${s.toLowerCase()}`)
+                    }
+                    className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            {!report && (
-              <div className="ml-auto flex-shrink-0">
-                {activeTerminalMessage ? (
-                  <TerminalOutcomeStatusBadge
-                    type={
-                      activeTerminalMessage.terminalState ??
-                      (activeTerminalMessage.type as TerminalOutcomeType)
+          </Card>
+        )}
+
+        {/* Chat Messages */}
+        {sessionStarted && (
+          <Card className="p-0 overflow-hidden">
+            {/* Chat header */}
+            <div className="flex flex-wrap items-start gap-3 border-b border-gray-100 bg-gray-50/50 px-4 py-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                <Bot className="w-4 h-4 text-purple-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900">
+                  Veterinary Triage for {pet.name}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {pet.breed}, {pet.age_years}y, {pet.weight} lbs
+                </p>
+              </div>
+              {!report && (
+                <div className="ml-auto flex-shrink-0">
+                  {activeTerminalMessage ? (
+                    <TerminalOutcomeStatusBadge
+                      type={
+                        activeTerminalMessage.terminalState ??
+                        (activeTerminalMessage.type as TerminalOutcomeType)
+                      }
+                    />
+                  ) : (
+                    <StateBadge state={conversationState} />
+                  )}
+                </div>
+              )}
+            </div>
+            {!report && !isTerminalConversation && (
+              <div className="px-4 pb-3">
+                <ProgressBar
+                  answered={answeredCount}
+                  total={totalQuestions}
+                  state={conversationState}
+                />
+              </div>
+            )}
+
+            {/* Messages area */}
+            <div className="min-h-[200px] max-h-[60vh] space-y-4 overflow-y-auto p-4 sm:max-h-[500px]">
+              {messages.map((msg, i) => (
+                <div key={i} className="space-y-2">
+                  <ChatBubble
+                    message={msg}
+                    highlightClarification={
+                      conversationState === "needs_clarification" &&
+                      msg.role === "assistant" &&
+                      i === latestAssistantIndex
+                    }
+                    highlightEscalation={
+                      conversationState === "escalation" &&
+                      msg.role === "assistant" &&
+                      i === latestAssistantIndex
                     }
                   />
-                ) : (
-                  <StateBadge state={conversationState} />
+                  {msg.type === "image_gate" &&
+                    i === messages.length - 1 &&
+                    pendingGateImage && (
+                      <div className="pl-11 sm:ml-11 sm:pl-0">
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={handleRetakePhoto}
+                            disabled={loading}
+                          >
+                            Retake Photo
+                          </Button>
+                          <Button
+                            onClick={handleAnalyzeAnyway}
+                            disabled={loading}
+                          >
+                            Analyze Anyway
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  {(msg.type === "cannot_assess" ||
+                    msg.type === "out_of_scope") &&
+                    i === latestAssistantIndex && (
+                      <div className="pl-11 sm:ml-11 sm:pl-0">
+                        <TerminalOutcomePanel
+                          type={
+                            msg.terminalState ??
+                            (msg.type as TerminalOutcomeType)
+                          }
+                          ownerMessage={msg.ownerMessage}
+                          reasonCode={msg.reasonCode}
+                          recommendedNextStep={msg.recommendedNextStep}
+                          onStartNewSession={startNewSession}
+                        />
+                      </div>
+                    )}
+                </div>
+              ))}
+
+              {loading && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                      <span className="text-sm text-gray-500">Thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input area — hide when report is generated */}
+            {!report && !isTerminalConversation && (
+              <div className="border-t border-gray-100 p-3">
+                {selectedImage && (
+                  <div className="mb-3 relative inline-block">
+                    <img
+                      src={selectedImage}
+                      alt="Preview"
+                      className="h-24 rounded border border-gray-200 object-contain bg-gray-50"
+                    />
+                    <button
+                      onClick={clearComposerImage}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="flex min-w-0 flex-1 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="shrink-0 px-3"
+                      title="Attach Photo"
+                    >
+                      <ImagePlus className="w-5 h-5 text-gray-500" />
+                    </Button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      ref={fileInputRef}
+                      className="hidden"
+                    />
+                    <textarea
+                      ref={inputRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder={
+                        messages.length === 0
+                          ? `Describe what's going on with ${pet.name} or attach a photo...`
+                          : "Type your answer or attach a photo..."
+                      }
+                      rows={2}
+                      className="min-w-0 flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={() => sendMessage()}
+                      disabled={(!input.trim() && !selectedImage) || loading}
+                      className="w-full sm:h-full sm:w-auto"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Generate Report button */}
+                {readyForReport && !generatingReport && (
+                  <div className="mt-3 flex justify-center">
+                    <button
+                      onClick={() => generateReport()}
+                      className={`flex w-full items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-all sm:w-auto ${
+                        conversationState === "escalation"
+                          ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 shadow-lg shadow-red-200 animate-pulse"
+                          : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
+                      }`}
+                    >
+                      {conversationState === "escalation" ? (
+                        <>
+                          <AlertCircle className="w-4 h-4" />
+                          Generate Emergency Report
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-4 h-4" />
+                          Generate Full Veterinary Report
+                        </>
+                      )}
+                    </button>
+                  </div>
                 )}
               </div>
             )}
-          </div>
-          {!report && !isTerminalConversation && (
-            <div className="px-4 pb-3">
-              <ProgressBar
-                answered={answeredCount}
-                total={totalQuestions}
-                state={conversationState}
-              />
-            </div>
-          )}
+          </Card>
+        )}
 
-          {/* Messages area */}
-          <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto min-h-[200px]">
-            {messages.map((msg, i) => (
-              <div key={i} className="space-y-2">
-                <ChatBubble
-                  message={msg}
-                  highlightClarification={
-                    conversationState === "needs_clarification" &&
-                    msg.role === "assistant" &&
-                    i === latestAssistantIndex
-                  }
-                  highlightEscalation={
-                    conversationState === "escalation" &&
-                    msg.role === "assistant" &&
-                    i === latestAssistantIndex
-                  }
-                />
-                {msg.type === "image_gate" &&
-                  i === messages.length - 1 &&
-                  pendingGateImage && (
-                    <div className="ml-11 flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={handleRetakePhoto}
-                        disabled={loading}
-                      >
-                        Retake Photo
-                      </Button>
-                      <Button onClick={handleAnalyzeAnyway} disabled={loading}>
-                        Analyze Anyway
-                      </Button>
-                    </div>
-                  )}
-                {(msg.type === "cannot_assess" || msg.type === "out_of_scope") &&
-                  i === latestAssistantIndex && (
-                    <div className="ml-11">
-                      <TerminalOutcomePanel
-                        type={
-                          msg.terminalState ??
-                          (msg.type as TerminalOutcomeType)
-                        }
-                        ownerMessage={msg.ownerMessage}
-                        reasonCode={msg.reasonCode}
-                        recommendedNextStep={msg.recommendedNextStep}
-                        onStartNewSession={startNewSession}
-                      />
-                    </div>
-                  )}
-              </div>
-            ))}
-
-            {loading && (
-              <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Bot className="w-4 h-4 text-purple-600" />
-                </div>
-                <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
-                    <span className="text-sm text-gray-500">Thinking...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Input area — hide when report is generated */}
-          {!report && !isTerminalConversation && (
-            <div className="border-t border-gray-100 p-3">
-              {selectedImage && (
-                <div className="mb-3 relative inline-block">
-                  <img
-                    src={selectedImage}
-                    alt="Preview"
-                    className="h-24 rounded border border-gray-200 object-contain bg-gray-50"
-                  />
-                  <button
-                    onClick={clearComposerImage}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-sm"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-              <div className="flex gap-2">
+        {!sessionStarted && !report && (
+          <div className="p-3 bg-white border border-gray-200 rounded-xl">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex min-w-0 flex-1 gap-2">
                 <Button
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-3"
+                  className="shrink-0 px-3"
                   title="Attach Photo"
                 >
                   <ImagePlus className="w-5 h-5 text-gray-500" />
@@ -913,93 +1016,22 @@ export default function SymptomCheckerPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={
-                    messages.length === 0
-                      ? `Describe what's going on with ${pet.name} or attach a photo...`
-                      : "Type your answer or attach a photo..."
-                  }
+                  placeholder={`Describe what's going on with ${pet.name} or attach a photo...`}
                   rows={2}
-                  className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="min-w-0 flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <div className="flex flex-col gap-2">
-                  <Button
-                    onClick={() => sendMessage()}
-                    disabled={(!input.trim() && !selectedImage) || loading}
-                    className="h-full"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
               </div>
-
-              {/* Generate Report button */}
-              {readyForReport && !generatingReport && (
-                <div className="mt-3 flex justify-center">
-                  <button
-                    onClick={() => generateReport()}
-                    className={`flex items-center gap-2 px-6 py-2.5 text-white text-sm font-semibold rounded-full transition-all ${
-                      conversationState === "escalation"
-                        ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 shadow-lg shadow-red-200 animate-pulse"
-                        : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
-                    }`}
-                  >
-                    {conversationState === "escalation" ? (
-                      <>
-                        <AlertCircle className="w-4 h-4" />
-                        Generate Emergency Report
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-4 h-4" />
-                        Generate Full Veterinary Report
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </Card>
-      )}
-
-      {(!sessionStarted && !report) && (
-        <div className="p-3 bg-white border border-gray-200 rounded-xl">
-           <div className="flex gap-2">
-              <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3"
-                  title="Attach Photo"
-                >
-                  <ImagePlus className="w-5 h-5 text-gray-500" />
-              </Button>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                ref={fileInputRef}
-                className="hidden"
-              />
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`Describe what's going on with ${pet.name} or attach a photo...`}
-                rows={2}
-                className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
               <div className="flex flex-col gap-2">
                 <Button
                   onClick={() => sendMessage()}
                   disabled={(!input.trim() && !selectedImage) || loading}
-                  className="h-full"
+                  className="w-full sm:h-full sm:w-auto"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
-           </div>
-           {selectedImage && (
+            </div>
+            {selectedImage && (
               <div className="mt-3 relative inline-block">
                 <img
                   src={selectedImage}
@@ -1014,27 +1046,27 @@ export default function SymptomCheckerPage() {
                 </button>
               </div>
             )}
-        </div>
-      )}
+          </div>
+        )}
 
+        {/* Generating Report Loading State */}
+        {generatingReport && (
+          <Card className="p-8 text-center animate-pulse">
+            <Stethoscope className="w-12 h-12 text-purple-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700">
+              Generating Veterinary Report...
+            </h3>
+            <p className="text-sm text-gray-500 mt-2">
+              Analyzing full conversation history, building differential
+              diagnoses with breed-specific data, and preparing diagnostic
+              recommendations...
+            </p>
+          </Card>
+        )}
 
-      {/* Generating Report Loading State */}
-      {generatingReport && (
-        <Card className="p-8 text-center animate-pulse">
-          <Stethoscope className="w-12 h-12 text-purple-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700">
-            Generating Veterinary Report...
-          </h3>
-          <p className="text-sm text-gray-500 mt-2">
-            Analyzing full conversation history, building differential diagnoses
-            with breed-specific data, and preparing diagnostic recommendations...
-          </p>
-        </Card>
-      )}
-
-      {/* Full Report */}
-      {report && <FullReport report={report} />}
-    </div>
+        {/* Full Report */}
+        {report && <FullReport report={report} />}
+      </div>
     </PlanGate>
   );
 }
