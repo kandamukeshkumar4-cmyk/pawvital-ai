@@ -107,6 +107,7 @@ import {
 import {
   appendShadowComparison,
   appendSidecarObservation,
+  buildInternalShadowTelemetrySnapshot,
   buildObservabilitySnapshot,
   describeShadowComparison,
   describeShadowModeDecision,
@@ -2294,20 +2295,13 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       finalReport
     );
     const observabilitySnapshot = buildObservabilitySnapshot(session);
-    const persistedObservabilitySnapshot = buildObservabilitySnapshot(session, {
-      includeInternalTelemetry: true,
-    });
     finalReport.system_observability = observabilitySnapshot;
+    const persistedShadowTelemetrySnapshot =
+      buildInternalShadowTelemetrySnapshot(session);
 
     const persistShadowTelemetry = async () => {
       try {
-        await appendShadowTelemetrySnapshot({
-          generatedAt: new Date().toISOString(),
-          recentServiceCalls:
-            persistedObservabilitySnapshot.recentServiceCalls || [],
-          recentShadowComparisons:
-            persistedObservabilitySnapshot.recentShadowComparisons || [],
-        });
+        await appendShadowTelemetrySnapshot(persistedShadowTelemetrySnapshot);
       } catch (shadowTelemetryError) {
         console.error(
           "[ShadowTelemetry] Failed to persist report telemetry:",

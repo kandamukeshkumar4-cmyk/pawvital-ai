@@ -9,6 +9,10 @@ const SIDECAR_READINESS_SECRET =
   process.env.ASYNC_REVIEW_WEBHOOK_SECRET?.trim() ||
   "";
 
+function normalizeConfiguredSecret(value: string): string {
+  return value.replace(/(?:\\r\\n|\\n|\\r)+$/g, "").trim();
+}
+
 interface ReadinessRequestBody {
   session?: TriageSession;
 }
@@ -18,6 +22,12 @@ function isAuthorized(request: Request): boolean {
     return process.env.NODE_ENV !== "production";
   }
 
+  const acceptedSecrets = new Set(
+    [SIDECAR_READINESS_SECRET, normalizeConfiguredSecret(SIDECAR_READINESS_SECRET)]
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+
   const authHeader = request.headers.get("authorization") || "";
   const bearerToken = authHeader.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length).trim()
@@ -26,8 +36,7 @@ function isAuthorized(request: Request): boolean {
     request.headers.get("x-sidecar-readiness-secret")?.trim() || "";
 
   return (
-    bearerToken === SIDECAR_READINESS_SECRET ||
-    directSecret === SIDECAR_READINESS_SECRET
+    acceptedSecrets.has(bearerToken) || acceptedSecrets.has(directSecret)
   );
 }
 
