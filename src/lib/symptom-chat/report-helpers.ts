@@ -371,7 +371,7 @@ export async function buildReportRetrievalBundle(
         fallbackUsed: textShadowDecision.enabled,
         note: `chunks=${textResult.value.textChunks.length}; ${describeShadowModeDecision(textShadowDecision)}; ${describeLiveTrafficDecision(textLiveDecision)}`,
       });
-    } else if (shouldInvokeTextRetrieval) {
+    } else if (shouldInvokeTextRetrieval && textResult.status === "rejected") {
       const timedOut = isSidecarAbortError(textResult.reason);
       session = appendSidecarObservation(session, {
         service: "text-retrieval-service",
@@ -407,7 +407,10 @@ export async function buildReportRetrievalBundle(
         fallbackUsed: imageShadowDecision.enabled,
         note: `images=${imageResult.value.imageMatches.length}; ${describeShadowModeDecision(imageShadowDecision)}; ${describeLiveTrafficDecision(imageLiveDecision)}`,
       });
-    } else if (shouldInvokeImageRetrieval) {
+    } else if (
+      shouldInvokeImageRetrieval &&
+      imageResult.status === "rejected"
+    ) {
       const timedOut = isSidecarAbortError(imageResult.reason);
       session = appendSidecarObservation(session, {
         service: "image-retrieval-service",
