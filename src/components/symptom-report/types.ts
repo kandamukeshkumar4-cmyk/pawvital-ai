@@ -45,6 +45,21 @@ export interface EvidenceSummary {
   reference_images_found: number;
 }
 
+export interface ConfidenceAdjustment {
+  factor: string;
+  delta: number;
+  direction: "increase" | "decrease" | "neutral";
+  reason: string;
+}
+
+export interface ConfidenceCalibrationSummary {
+  final_confidence: number;
+  base_confidence: number;
+  adjustments: ConfidenceAdjustment[];
+  confidence_level: "very_low" | "low" | "moderate" | "high" | "very_high";
+  recommendation: string;
+}
+
 export interface SymptomReport {
   severity: "low" | "medium" | "high" | "emergency";
   recommendation: "monitor" | "vet_48h" | "vet_24h" | "emergency_vet";
@@ -58,6 +73,8 @@ export interface SymptomReport {
   warning_signs: string[];
   vet_questions?: string[];
   confidence?: number;
+  calibrated_confidence?: ConfidenceCalibrationSummary | null;
+  confidence_calibration?: ConfidenceCalibrationSummary;
   evidenceChain?: StructuredEvidenceChainItem[];
   vet_handoff_summary?: string;
   async_review_scheduled?: boolean;

@@ -1,5 +1,6 @@
 import { headers, cookies } from "next/headers";
 import AdminDashboardClient from "./AdminDashboardClient";
+import { buildDemoShadowRolloutDashboardData } from "@/lib/admin-shadow-rollout";
 import { buildDemoThresholdProposalDashboardData } from "@/lib/admin-threshold-proposals";
 import { isNvidiaConfigured } from "@/lib/nvidia-models";
 
@@ -14,12 +15,17 @@ export default async function AdminDashboardPage() {
 
   let stats = null;
   let deployment = null;
+  let shadowRollout = null;
   let thresholdProposals = null;
 
   try {
-    const [statsRes, deploymentRes, thresholdProposalRes] = await Promise.all([
+    const [statsRes, deploymentRes, shadowRolloutRes, thresholdProposalRes] =
+      await Promise.all([
       fetch(`${baseUrl}/api/admin/stats`, { headers: { cookie: cookieHeader } }),
       fetch(`${baseUrl}/api/admin/deployment`, { headers: { cookie: cookieHeader } }),
+      fetch(`${baseUrl}/api/admin/shadow-rollout`, {
+        headers: { cookie: cookieHeader },
+      }),
       fetch(`${baseUrl}/api/admin/threshold-proposals`, {
         headers: { cookie: cookieHeader },
       }),
@@ -27,6 +33,7 @@ export default async function AdminDashboardPage() {
 
     if (statsRes.ok) stats = await statsRes.json();
     if (deploymentRes.ok) deployment = await deploymentRes.json();
+    if (shadowRolloutRes.ok) shadowRollout = await shadowRolloutRes.json();
     if (thresholdProposalRes.ok) {
       thresholdProposals = await thresholdProposalRes.json();
     }
@@ -50,9 +57,15 @@ export default async function AdminDashboardPage() {
       url: "https://demo.pawvital.com",
       commit_sha: "abcd123",
     };
+    shadowRollout = buildDemoShadowRolloutDashboardData();
     thresholdProposals = buildDemoThresholdProposalDashboardData();
-  } else if (!thresholdProposals) {
-    thresholdProposals = buildDemoThresholdProposalDashboardData();
+  } else {
+    if (!shadowRollout) {
+      shadowRollout = buildDemoShadowRolloutDashboardData();
+    }
+    if (!thresholdProposals) {
+      thresholdProposals = buildDemoThresholdProposalDashboardData();
+    }
   }
 
   return (
@@ -66,6 +79,7 @@ export default async function AdminDashboardPage() {
       <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-8">Admin Ops Dashboard</h1>
       <AdminDashboardClient
         initialDeployment={deployment}
+        initialShadowRollout={shadowRollout}
         initialStats={stats}
         initialThresholdProposals={thresholdProposals}
       />

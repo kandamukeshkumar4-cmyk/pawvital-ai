@@ -192,6 +192,9 @@ describe("sidecar observability", () => {
 
     const internalSnapshot = buildInternalShadowTelemetrySnapshot(session);
     const publicSnapshot = buildObservabilitySnapshot(session);
+    const persistedSnapshot = buildObservabilitySnapshot(session, {
+      includeInternalTelemetry: true,
+    });
 
     expect(internalSnapshot.recentServiceCalls).toEqual(
       expect.arrayContaining([
@@ -204,6 +207,16 @@ describe("sidecar observability", () => {
       ])
     );
     expect(publicSnapshot.recentServiceCalls).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "async-review-service" }),
+      ])
+    );
+    expect(persistedSnapshot.recentServiceCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "async-review-service" }),
+      ])
+    );
+    expect(persistedSnapshot.recentShadowComparisons).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ service: "async-review-service" }),
       ])

@@ -19,6 +19,9 @@ export interface ICD10Result {
   confidence: number;
 }
 
+const REFERENCE_ONLY_NOTE =
+  "Reference-only veterinary display mapping; does not drive clinical decisions.";
+
 // Veterinary ICD-10-CM code mappings for common canine conditions
 const DISEASE_TO_ICD10: Record<string, ICD10Mapping[]> = {
   // Wound & Skin Conditions
@@ -456,6 +459,188 @@ const DISEASE_TO_ICD10: Record<string, ICD10Mapping[]> = {
       category: "Certain infectious and parasitic diseases",
       urgency: "high",
       notes: "Lyme disease, ehrlichiosis, anaplasmosis",
+    },
+  ],
+
+  // Wave 2 audit additions (ranked by benchmark frequency)
+  pain_general: [
+    {
+      code: "R52",
+      description: "Pain, unspecified",
+      category: "Symptoms, signs and abnormal clinical and laboratory findings",
+      urgency: "moderate",
+      notes: `Generalized pain presentation. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  allergic_dermatitis: [
+    {
+      code: "L23.9",
+      description: "Allergic contact dermatitis, unspecified cause",
+      category: "Dermatitis and eczema",
+      urgency: "low",
+      notes: `Canine allergic dermatitis. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  heart_failure: [
+    {
+      code: "I50.9",
+      description: "Heart failure, unspecified",
+      category: "Diseases of the circulatory system",
+      urgency: "emergency",
+      notes: `Canine heart failure umbrella mapping. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  ccl_rupture: [
+    {
+      code: "S83.51",
+      description: "Sprain of anterior cruciate ligament of knee",
+      category: "Injury, poisoning and certain other consequences of external causes",
+      urgency: "high",
+      notes: `Alias for canine cranial cruciate ligament rupture. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  pyometra: [
+    {
+      code: "N71.9",
+      description: "Inflammatory disease of uterus, unspecified",
+      category: "Diseases of the genitourinary system",
+      urgency: "emergency",
+      notes: `Canine pyometra display mapping. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  seizure_disorder: [
+    {
+      code: "G40.9",
+      description: "Epilepsy, unspecified",
+      category: "Diseases of the nervous system",
+      urgency: "high",
+      notes: `Alias for recurrent seizure disorder. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  ivdd: [
+    {
+      code: "M51.9",
+      description: "Unspecified intervertebral disc disorder",
+      category: "Diseases of the musculoskeletal system and connective tissue",
+      urgency: "high",
+      notes: `Alias for canine IVDD. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  skin_mass: [
+    {
+      code: "R22.9",
+      description: "Localized swelling, mass and lump, unspecified",
+      category: "Symptoms, signs and abnormal clinical and laboratory findings",
+      urgency: "moderate",
+      notes: `Generic cutaneous mass mapping pending histopathology. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  cognitive_dysfunction: [
+    {
+      code: "F03.90",
+      description: "Unspecified dementia, unspecified severity, without behavioral disturbance",
+      category: "Mental, Behavioral and Neurodevelopmental disorders",
+      urgency: "moderate",
+      notes: `Canine cognitive dysfunction display mapping. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  pleural_effusion: [
+    {
+      code: "J90",
+      description: "Pleural effusion, not elsewhere classified",
+      category: "Diseases of the respiratory system",
+      urgency: "emergency",
+      notes: `Respiratory compromise risk. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  bloat: [
+    {
+      code: "K56.69",
+      description: "Other intestinal obstruction",
+      category: "Diseases of the digestive system",
+      urgency: "emergency",
+      notes: `Alias for canine gastric dilatation-volvulus (bloat). ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  oral_tumor: [
+    {
+      code: "D49.0",
+      description: "Neoplasm of unspecified behavior of lip, oral cavity and pharynx",
+      category: "Neoplasms",
+      urgency: "high",
+      notes: `Oral mass/tumor display mapping before histologic typing. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  dystocia: [
+    {
+      code: "O66.9",
+      description: "Obstructed labor, unspecified",
+      category: "Pregnancy, childbirth and the puerperium",
+      urgency: "emergency",
+      notes: `Canine dystocia display mapping. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  hypoglycemia: [
+    {
+      code: "E16.2",
+      description: "Hypoglycemia, unspecified",
+      category: "Endocrine, nutritional and metabolic diseases",
+      urgency: "emergency",
+      notes: `Canine hypoglycemia display mapping. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  urinary_infection: [
+    {
+      code: "N39.0",
+      description: "Urinary tract infection, site not specified",
+      category: "Diseases of the genitourinary system",
+      urgency: "moderate",
+      notes: `Alias for canine urinary tract infection. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  sudden_acquired_retinal_degeneration: [
+    {
+      code: "H53.9",
+      description: "Visual disturbance, unspecified",
+      category: "Diseases of the eye and adnexa",
+      urgency: "high",
+      notes: `SARDS reference mapping before ophthalmic confirmation. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  heat_stroke: [
+    {
+      code: "T67.0",
+      description: "Heatstroke and sunstroke",
+      category: "Injury, poisoning and certain other consequences of external causes",
+      urgency: "emergency",
+      notes: `Canine heat injury display mapping. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  ear_infection_bacterial: [
+    {
+      code: "H60.9",
+      description: "Otitis externa, unspecified",
+      category: "Diseases of the ear and mastoid process",
+      urgency: "moderate",
+      notes: `Alias for canine bacterial otitis externa. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  urinary_stones: [
+    {
+      code: "N21.9",
+      description: "Calculus of urinary tract, unspecified",
+      category: "Diseases of the genitourinary system",
+      urgency: "moderate",
+      notes: `Alias for canine urinary stones. ${REFERENCE_ONLY_NOTE}`,
+    },
+  ],
+  megaesophagus: [
+    {
+      code: "K22.89",
+      description: "Other specified disease of esophagus",
+      category: "Diseases of the digestive system",
+      urgency: "high",
+      notes: `Canine megaesophagus display mapping. ${REFERENCE_ONLY_NOTE}`,
     },
   ],
 };
