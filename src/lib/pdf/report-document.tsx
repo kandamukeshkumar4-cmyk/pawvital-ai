@@ -5,6 +5,7 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import type { SymptomReport } from "@/components/symptom-report/types";
+import { formatConfidenceLevelLabel } from "@/lib/report-confidence";
 import { brand, pdfStyles } from "./styles";
 import {
   getRecommendationLabel,
@@ -120,8 +121,48 @@ export function ReportPdfDocument({
               Confidence: {(report.confidence * 100).toFixed(0)}%
             </Text>
           )}
+          {report.confidence_calibration ? (
+            <Text style={[pdfStyles.bodySmall, { marginTop: 2 }]}>
+              Confidence level:{" "}
+              {formatConfidenceLevelLabel(
+                report.confidence_calibration.confidence_level
+              )}
+            </Text>
+          ) : null}
           <Text style={[pdfStyles.body, { marginTop: 8 }]}>{report.explanation}</Text>
         </View>
+
+        {report.confidence_calibration ? (
+          <>
+            <Text style={pdfStyles.sectionTitle}>Confidence calibration</Text>
+            <View style={pdfStyles.handoffBox}>
+              <Text style={pdfStyles.body}>
+                {report.confidence_calibration.recommendation}
+              </Text>
+              <Text style={[pdfStyles.bodySmall, { marginTop: 4 }]}>
+                Base {(report.confidence_calibration.base_confidence * 100).toFixed(0)}% ·
+                Final {(report.confidence_calibration.final_confidence * 100).toFixed(0)}% ·{" "}
+                {formatConfidenceLevelLabel(
+                  report.confidence_calibration.confidence_level
+                )}{" "}
+                confidence
+              </Text>
+              {report.confidence_calibration.adjustments.length > 0 ? (
+                <View style={{ marginTop: 8 }}>
+                  {report.confidence_calibration.adjustments.map((adjustment, index) => (
+                    <View key={`${adjustment.factor}-${index}`} style={pdfStyles.listItem}>
+                      <Text style={pdfStyles.bullet}>•</Text>
+                      <Text style={[pdfStyles.bodySmall, { flex: 1 }]}>
+                        {adjustment.reason} ({adjustment.delta > 0 ? "+" : ""}
+                        {(adjustment.delta * 100).toFixed(0)} pts)
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          </>
+        ) : null}
 
         {escalatedReport ? (
           <View

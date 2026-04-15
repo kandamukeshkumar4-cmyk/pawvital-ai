@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Download, Share2, Copy, CheckCheck } from "lucide-react";
 import type { SymptomReport } from "./types";
 import { SeverityHeader } from "./severity-header";
+import { ConfidenceCalibrationSection } from "./confidence-calibration";
 import { EvidenceSourcesBar } from "./evidence-sources-bar";
 import { VetHandoffSection } from "./vet-handoff";
 import { DifferentialDiagnoses } from "./differential-diagnoses";
@@ -303,6 +304,10 @@ export function FullReport({
       </Modal>
 
       <EvidenceSourcesBar report={report} />
+
+      <ConfidenceCalibrationSection
+        calibration={report.confidence_calibration}
+      />
 
       {report.bayesian_differentials && report.bayesian_differentials.length > 0 && (
         <BayesianDifferentials bayesian_differentials={report.bayesian_differentials} />

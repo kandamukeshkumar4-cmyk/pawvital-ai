@@ -898,7 +898,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.case_memory.service_timeouts).toEqual([]);
   });
 
-  it("adds evidence-chain data and capped confidence to the final report", async () => {
+  it("adds evidence-chain data and calibrated confidence metadata to the final report", async () => {
     mockIsMultimodalConsultConfigured.mockReturnValue(true);
     mockIsTextRetrievalConfigured.mockReturnValue(true);
     mockIsImageRetrievalConfigured.mockReturnValue(true);
@@ -975,6 +975,15 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     expect(payload.type).toBe("report");
     expect(payload.report.confidence).toBeLessThanOrEqual(0.98);
+    expect(payload.report.confidence_calibration).toEqual(
+      expect.objectContaining({
+        base_confidence: expect.any(Number),
+        final_confidence: payload.report.confidence,
+        confidence_level: "moderate",
+        recommendation: "No significant adjustments needed",
+        adjustments: expect.any(Array),
+      })
+    );
     expect(payload.report.evidence_chain).toEqual(
       expect.arrayContaining([
         expect.stringContaining("Visual evidence"),
