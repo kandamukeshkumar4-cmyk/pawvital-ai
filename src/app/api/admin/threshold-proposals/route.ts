@@ -52,7 +52,7 @@ export async function GET() {
             submitted_at,
             feedback_source
           )
-        `
+        `,
       )
       .order("created_at", { ascending: false })
       .limit(50);
@@ -61,7 +61,7 @@ export async function GET() {
       console.error("Threshold proposals GET failed:", error);
       return NextResponse.json(
         { error: "Failed to load threshold proposals" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -74,7 +74,7 @@ export async function GET() {
     console.error("Threshold proposals GET route error:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -96,19 +96,26 @@ export async function PATCH(request: Request) {
     if (!body.proposalId || !body.status) {
       return NextResponse.json(
         { error: "proposalId and status are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!["approved", "rejected", "superseded"].includes(body.status)) {
       return NextResponse.json(
         { error: "Unsupported proposal status" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const reviewerNotes = String(body.reviewerNotes || "").trim();
     const updatedAt = new Date().toISOString();
+
+    if (!reviewerNotes) {
+      return NextResponse.json(
+        { error: "Reviewer notes are required before recording a decision" },
+        { status: 400 },
+      );
+    }
 
     const serviceSupabase = getServiceSupabase();
     if (adminContext.isDemo || !serviceSupabase) {
@@ -136,7 +143,7 @@ export async function PATCH(request: Request) {
       console.error("Threshold proposals PATCH failed:", error);
       return NextResponse.json(
         { error: "Failed to update threshold proposal" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -153,7 +160,7 @@ export async function PATCH(request: Request) {
     console.error("Threshold proposals PATCH route error:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

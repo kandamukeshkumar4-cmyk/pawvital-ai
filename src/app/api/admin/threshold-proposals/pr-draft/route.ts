@@ -3,7 +3,9 @@ import { Octokit } from "@octokit/rest";
 import { getAdminRequestContext } from "@/lib/admin-auth";
 import {
   buildThresholdProposalPullRequestDraft,
+  buildThresholdProposalReviewCycleDraft,
   buildDemoThresholdProposalDashboardData,
+  isReviewedThresholdProposal,
   normalizeThresholdProposalRows,
 } from "@/lib/admin-threshold-proposals";
 import { getServiceSupabase } from "@/lib/supabase-admin";
@@ -13,7 +15,8 @@ interface DraftRequestBody {
 }
 
 function parseRepoInfo() {
-  const rawRepo = process.env.GITHUB_REPO || "kandamukeshkumar4-cmyk/pawvital-ai";
+  const rawRepo =
+    process.env.GITHUB_REPO || "kandamukeshkumar4-cmyk/pawvital-ai";
   const [owner, repo] = rawRepo.split("/");
   return { owner, repo };
 }
@@ -33,7 +36,10 @@ export async function POST(request: Request) {
     }
 
     const requestedProposalIds = Array.isArray(body.proposalIds)
-      ? body.proposalIds.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+      ? body.proposalIds.filter(
+          (value): value is string =>
+            typeof value === "string" && value.trim().length > 0,
+        )
       : [];
 
     let proposals = buildDemoThresholdProposalDashboardData().proposals;
@@ -66,9 +72,8 @@ export async function POST(request: Request) {
               submitted_at,
               feedback_source
             )
-          `
+          `,
         )
-        .eq("status", "approved")
         .order("created_at", { ascending: false });
 
       if (requestedProposalIds.length > 0) {
@@ -80,32 +85,59 @@ export async function POST(request: Request) {
         console.error("Threshold proposal PR draft query failed:", error);
         return NextResponse.json(
           { error: "Failed to load approved threshold proposals" },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
       proposals = normalizeThresholdProposalRows(data || []);
     } else if (requestedProposalIds.length > 0) {
       proposals = proposals.filter((proposal) =>
-        requestedProposalIds.includes(proposal.id)
+        requestedProposalIds.includes(proposal.id),
       );
     }
 
-    const approvedProposals = proposals.filter(
-      (proposal) => proposal.status === "approved"
+    const reviewedProposals = proposals.filter(isReviewedThresholdProposal);
+    if (reviewedProposals.length === 0) {
+      return NextResponse.json(
+        { error: "Review at least one proposal before generating a draft PR" },
+        { status: 400 },
+      );
+    }
+
+    const approvedProposals = reviewedProposals.filter(
+      (proposal) => proposal.status === "approved",
     );
     if (approvedProposals.length === 0) {
       return NextResponse.json(
         { error: "Select at least one approved threshold proposal" },
-        { status: 400 }
+        { status: 400 },
+      );
+    }
+
+    const missingReviewerNotes = reviewedProposals.find(
+      (proposal) => proposal.reviewerNotes.trim().length === 0,
+    );
+    if (missingReviewerNotes) {
+      return NextResponse.json(
+        {
+          error: `Proposal ${missingReviewerNotes.id} is missing reviewer notes`,
+        },
+        { status: 400 },
       );
     }
 
     const generatedAt = new Date().toISOString();
+    const reviewCycle = buildThresholdProposalReviewCycleDraft({
+      cycleSlug: "round1",
+      generatedAt,
+      generatedBy: adminContext.email || "admin-review-dashboard",
+      proposals: reviewedProposals,
+    });
     const draft = buildThresholdProposalPullRequestDraft({
       generatedAt,
       generatedBy: adminContext.email || "admin-review-dashboard",
       proposals: approvedProposals,
+      reviewCycleFilePath: reviewCycle.filePath,
     });
 
     const githubToken = process.env.GITHUB_TOKEN;
@@ -114,6 +146,7 @@ export async function POST(request: Request) {
         ok: true,
         mode: "preview",
         draft,
+        reviewCycle,
       });
     }
 
@@ -141,6 +174,12 @@ export async function POST(request: Request) {
           content: draft.fileContent,
           mode: "100644",
           path: draft.filePath,
+          type: "blob",
+        },
+        {
+          content: reviewCycle.fileContent,
+          mode: "100644",
+          path: reviewCycle.filePath,
           type: "blob",
         },
       ],
@@ -185,13 +224,14 @@ export async function POST(request: Request) {
       ok: true,
       mode: "github",
       draft,
+      reviewCycle,
       url: pullRequest.data.html_url,
     });
   } catch (error) {
     console.error("Threshold proposal PR draft route error:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

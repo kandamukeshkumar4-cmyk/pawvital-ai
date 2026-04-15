@@ -4,9 +4,7 @@ export type ThresholdProposalStatus =
   | "rejected"
   | "superseded";
 
-export type ThresholdProposalType =
-  | "threshold_review"
-  | "calibration_review";
+export type ThresholdProposalType = "threshold_review" | "calibration_review";
 
 export interface ThresholdProposalFeedbackSnapshot {
   confirmedDiagnosis: string | null;
@@ -60,6 +58,12 @@ export interface ThresholdProposalPullRequestDraft {
   title: string;
 }
 
+export interface ThresholdProposalReviewCycleDraft {
+  fileContent: string;
+  filePath: string;
+  title: string;
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -81,7 +85,7 @@ function normalizeProposalType(value: unknown): ThresholdProposalType {
 }
 
 function normalizeFeedback(
-  value: unknown
+  value: unknown,
 ): ThresholdProposalFeedbackSnapshot | null {
   const source = Array.isArray(value) ? value[0] : value;
   if (!isObject(source)) {
@@ -90,31 +94,29 @@ function normalizeFeedback(
 
   return {
     confirmedDiagnosis: asString(
-      source.confirmed_diagnosis ?? source.confirmedDiagnosis
+      source.confirmed_diagnosis ?? source.confirmedDiagnosis,
     ),
     feedbackSource: asString(source.feedback_source ?? source.feedbackSource),
     matchedExpectation: ["yes", "partly", "no"].includes(
-      String(source.matched_expectation ?? source.matchedExpectation)
+      String(source.matched_expectation ?? source.matchedExpectation),
     )
-      ? (source.matched_expectation ??
-          source.matchedExpectation) as ThresholdProposalFeedbackSnapshot["matchedExpectation"]
+      ? ((source.matched_expectation ??
+          source.matchedExpectation) as ThresholdProposalFeedbackSnapshot["matchedExpectation"])
       : null,
     ownerNotes: asString(source.owner_notes ?? source.ownerNotes),
     reportRecommendation: asString(
-      source.report_recommendation ?? source.reportRecommendation
+      source.report_recommendation ?? source.reportRecommendation,
     ),
     reportSeverity: asString(source.report_severity ?? source.reportSeverity),
     reportTitle: asString(source.report_title ?? source.reportTitle),
     submittedAt: asString(source.submitted_at ?? source.submittedAt),
-    symptomSummary: asString(
-      source.symptom_summary ?? source.symptomSummary
-    ),
+    symptomSummary: asString(source.symptom_summary ?? source.symptomSummary),
     vetOutcome: asString(source.vet_outcome ?? source.vetOutcome),
   };
 }
 
 export function normalizeThresholdProposalRows(
-  rows: unknown[]
+  rows: unknown[],
 ): ThresholdProposalRecord[] {
   return rows.flatMap((row) => {
     if (!isObject(row) || !asString(row.id)) {
@@ -126,17 +128,15 @@ export function normalizeThresholdProposalRows(
         createdAt:
           asString(row.created_at ?? row.createdAt) || new Date().toISOString(),
         feedback: normalizeFeedback(
-          row.outcome_feedback_entries ?? row.outcomeFeedbackEntries
+          row.outcome_feedback_entries ?? row.outcomeFeedbackEntries,
         ),
         id: String(row.id),
         payload: isObject(row.payload) ? row.payload : {},
         proposalType: normalizeProposalType(
-          row.proposal_type ?? row.proposalType
+          row.proposal_type ?? row.proposalType,
         ),
         rationale: asString(row.rationale) || "No rationale provided.",
-        reviewerNotes: asString(
-          row.reviewer_notes ?? row.reviewerNotes
-        ) || "",
+        reviewerNotes: asString(row.reviewer_notes ?? row.reviewerNotes) || "",
         status: normalizeStatus(row.status),
         summary: asString(row.summary) || "Untitled threshold proposal",
         symptomCheckId:
@@ -149,7 +149,7 @@ export function normalizeThresholdProposalRows(
 }
 
 export function summarizeThresholdProposals(
-  proposals: ThresholdProposalRecord[]
+  proposals: ThresholdProposalRecord[],
 ): ThresholdProposalSummary {
   return proposals.reduce<ThresholdProposalSummary>(
     (summary, proposal) => {
@@ -171,8 +171,12 @@ export function summarizeThresholdProposals(
       superseded: 0,
       thresholdReview: 0,
       total: 0,
-    }
+    },
   );
+}
+
+export function isReviewedThresholdProposal(proposal: ThresholdProposalRecord) {
+  return proposal.status !== "draft";
 }
 
 export function buildDemoThresholdProposalDashboardData(): ThresholdProposalDashboardData {
@@ -233,7 +237,8 @@ export function buildDemoThresholdProposalDashboardData(): ThresholdProposalDash
         'Owner-reported feedback was marked "partly" for a low / monitor report.',
       reviewerNotes: "",
       status: "draft",
-      summary: "Review monitor calibration for partially matched vomiting outcome",
+      summary:
+        "Review monitor calibration for partially matched vomiting outcome",
       symptomCheckId: "demo-check-2",
       updatedAt: "2026-04-13T16:05:00.000Z",
     },
@@ -276,9 +281,7 @@ function createProposalSection(proposal: ThresholdProposalRecord) {
     proposal.feedback?.ownerNotes
       ? `- Owner notes: ${proposal.feedback.ownerNotes}`
       : "",
-    proposal.reviewerNotes
-      ? `- Reviewer notes: ${proposal.reviewerNotes}`
-      : "",
+    proposal.reviewerNotes ? `- Reviewer notes: ${proposal.reviewerNotes}` : "",
     "",
     "### Rationale",
     proposal.rationale,
@@ -296,13 +299,137 @@ function toTimestampFragment(isoString: string) {
   return isoString.replace(/[-:]/g, "").replace(/\..+$/, "").toLowerCase();
 }
 
+function createReviewCycleDecisionSection(proposal: ThresholdProposalRecord) {
+  const lines = [
+    `### ${proposal.summary}`,
+    `- Proposal ID: \`${proposal.id}\``,
+    `- Decision: \`${proposal.status}\``,
+    `- Proposal type: \`${proposal.proposalType}\``,
+    `- Decision recorded: ${proposal.updatedAt}`,
+    proposal.symptomCheckId
+      ? `- Symptom check: \`${proposal.symptomCheckId}\``
+      : "",
+    proposal.feedback?.confirmedDiagnosis
+      ? `- Confirmed diagnosis: ${proposal.feedback.confirmedDiagnosis}`
+      : "",
+    proposal.feedback?.reportRecommendation
+      ? `- Report recommendation: \`${proposal.feedback.reportRecommendation}\``
+      : "",
+    proposal.feedback?.reportSeverity
+      ? `- Report severity: \`${proposal.feedback.reportSeverity}\``
+      : "",
+    proposal.feedback?.matchedExpectation
+      ? `- Matched expectation: \`${proposal.feedback.matchedExpectation}\``
+      : "",
+    "",
+    "#### Original rationale",
+    proposal.rationale,
+    "",
+    "#### Reviewer decision notes",
+    proposal.reviewerNotes || "No reviewer notes recorded.",
+  ];
+
+  return lines.filter(Boolean).join("\n");
+}
+
+function createReviewCycleStatusSection(
+  proposals: ThresholdProposalRecord[],
+  status: Extract<
+    ThresholdProposalStatus,
+    "approved" | "rejected" | "superseded"
+  >,
+) {
+  if (proposals.length === 0) {
+    return "";
+  }
+
+  const heading =
+    status === "approved"
+      ? "## Approved proposals"
+      : status === "rejected"
+        ? "## Rejected proposals"
+        : "## Superseded proposals";
+
+  return [
+    heading,
+    "",
+    proposals.map(createReviewCycleDecisionSection).join("\n\n"),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+export function buildThresholdProposalReviewCycleDraft(input: {
+  cycleSlug?: string;
+  generatedAt: string;
+  generatedBy: string;
+  proposals: ThresholdProposalRecord[];
+}): ThresholdProposalReviewCycleDraft {
+  const cycleSlug = (input.cycleSlug || "round1").trim().toLowerCase();
+  const reviewedProposals = input.proposals.filter(isReviewedThresholdProposal);
+  const summary = summarizeThresholdProposals(reviewedProposals);
+  const filePath = `plans/threshold-proposals-${cycleSlug}.md`;
+  const title = `docs: threshold proposal review ${cycleSlug}`;
+  const approved = reviewedProposals.filter(
+    (proposal) => proposal.status === "approved",
+  );
+  const rejected = reviewedProposals.filter(
+    (proposal) => proposal.status === "rejected",
+  );
+  const superseded = reviewedProposals.filter(
+    (proposal) => proposal.status === "superseded",
+  );
+  const sections = [
+    createReviewCycleStatusSection(approved, "approved"),
+    createReviewCycleStatusSection(rejected, "rejected"),
+    createReviewCycleStatusSection(superseded, "superseded"),
+  ].filter(Boolean);
+
+  const fileContent = [
+    "# Threshold Proposal Review Cycle",
+    "",
+    `Review cycle: ${cycleSlug}`,
+    `Generated at: ${input.generatedAt}`,
+    `Generated by: ${input.generatedBy}`,
+    "",
+    "This record captures the first human review cycle for threshold and calibration proposals.",
+    "It is documentation only and does not mutate deterministic triage logic or runtime thresholds.",
+    "",
+    "## Review summary",
+    `- Reviewed proposals: ${summary.approved + summary.rejected + summary.superseded}`,
+    `- Approved for documentation-only follow-up: ${summary.approved}`,
+    `- Rejected: ${summary.rejected}`,
+    `- Superseded: ${summary.superseded}`,
+    `- Still in draft: ${summary.draft}`,
+    "",
+    "## Required approvals before any threshold-changing follow-up",
+    "- [ ] Human engineer approval",
+    "- [ ] Clinical reviewer approval",
+    "- [ ] Separate implementation ticket before any runtime threshold change",
+    "",
+    sections.length > 0
+      ? sections.join("\n\n")
+      : "## Decisions\n\nNo reviewed proposals recorded yet.",
+    "",
+    "## Guardrail",
+    "Accepted proposals remain display-only. Any threshold edit must land later in a separate, clinically reviewed implementation PR.",
+  ].join("\n");
+
+  return {
+    fileContent,
+    filePath,
+    title,
+  };
+}
+
 export function buildThresholdProposalPullRequestDraft(input: {
   generatedAt: string;
   generatedBy: string;
   proposals: ThresholdProposalRecord[];
+  reviewCycleFilePath?: string;
 }): ThresholdProposalPullRequestDraft {
   const approvedProposals = input.proposals.filter(
-    (proposal) => proposal.status === "approved"
+    (proposal) => proposal.status === "approved",
   );
   const timestamp = toTimestampFragment(input.generatedAt);
   const fileSlug = `threshold-proposals-${timestamp}`;
@@ -343,6 +470,9 @@ export function buildThresholdProposalPullRequestDraft(input: {
     "## Notes",
     "- This PR does not apply runtime threshold changes.",
     `- Proposal batch file: \`${filePath}\``,
+    input.reviewCycleFilePath
+      ? `- Review cycle record: \`${input.reviewCycleFilePath}\``
+      : "",
     `- Approved proposals included: ${approvedProposals.length}`,
   ].join("\n");
 
