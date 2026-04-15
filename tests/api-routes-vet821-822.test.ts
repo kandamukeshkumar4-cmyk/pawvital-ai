@@ -216,6 +216,20 @@ const sampleReport = {
   warning_signs: ["Vomiting blood"],
   vet_questions: ["Is the pet still eating?"],
   confidence: 0.84,
+  calibrated_confidence: {
+    final_confidence: 0.84,
+    base_confidence: 0.8,
+    adjustments: [
+      {
+        factor: "symptom_count",
+        delta: 0.04,
+        direction: "increase" as const,
+        reason: "Sample calibration adjustment.",
+      },
+    ],
+    confidence_level: "high" as const,
+    recommendation: "Confidence is supported by the available evidence.",
+  },
   evidenceChain: [
     {
       source: "corpus",

@@ -28,7 +28,6 @@ jest.mock("@/lib/shadow-telemetry-store", () => ({
   persistShadowLoadTestSummary: (...args: unknown[]) =>
     mockPersistShadowLoadTestSummary(...args),
 }));
-
 function makeRequest(
   body: Record<string, unknown>,
   headers?: Record<string, string>

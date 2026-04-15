@@ -1,0 +1,116 @@
+{
+  "auditRound": "VET-1216-round2",
+  "minimumLiveTrustLevel": 60,
+  "defaultDataDirCandidates": [
+    "data/corpus/csv",
+    "data/corpus",
+    "corpus/data",
+    "corpus"
+  ],
+  "sources": [
+    {
+      "slug": "csv-pet-health-symptoms",
+      "title": "Pet Health Symptoms Dataset (2K clinical notes)",
+      "processor": "petHealthSymptoms",
+      "fileCandidates": [
+        "pet-health-symptoms-dataset.csv",
+        "pet-health-symptoms.csv"
+      ],
+      "baselineTrustLevel": 60,
+      "trustLevel": 40,
+      "qualityTier": "noisy_secondary",
+      "ingestionStatus": "active",
+      "speciesScope": ["dog", "cat"],
+      "qualityMetrics": {
+        "accuracyRate": 0.58,
+        "duplicateRate": 0.17,
+        "labelConsistency": 0.61
+      },
+      "trustLevelReason": "Retain for offline lexical recall, but keep below the live trust floor because duplicate and labeling noise remain high.",
+      "notes": "Round-2 audit demotes this source from the default trust 60 to trust 40."
+    },
+    {
+      "slug": "csv-veterinary-clinical-data",
+      "title": "Veterinary Clinical Dataset (10K records)",
+      "processor": "vetClinicalData",
+      "fileCandidates": [
+        "veterinary_clinical_data.csv",
+        "veterinary-clinical-data.csv"
+      ],
+      "baselineTrustLevel": 60,
+      "trustLevel": 60,
+      "qualityTier": "secondary_verified",
+      "ingestionStatus": "active",
+      "speciesScope": ["dog", "cat"],
+      "qualityMetrics": {
+        "accuracyRate": 0.81,
+        "duplicateRate": 0.09,
+        "labelConsistency": 0.78
+      },
+      "trustLevelReason": "This source stays at the live floor: broad enough to remain useful, but still not a primary verified literature source.",
+      "notes": "Round-2 audit keeps this source at trust 60 and uses it as the minimum-trust live text source."
+    },
+    {
+      "slug": "csv-canine-dermatology-followups",
+      "title": "Curated Canine Dermatology Follow-up Cases",
+      "processor": "vetClinicalData",
+      "fileCandidates": [
+        "canine-dermatology-followups.csv",
+        "canine-dermatology-followups-round2.csv"
+      ],
+      "trustLevel": 80,
+      "qualityTier": "verified_primary",
+      "ingestionStatus": "ingestion_ready",
+      "speciesScope": ["dog"],
+      "qualityMetrics": {
+        "accuracyRate": 0.92,
+        "duplicateRate": 0.02,
+        "labelConsistency": 0.94
+      },
+      "trustLevelReason": "Promote to trust 80 once the local curated export is available; this is the replacement-quality dermatology slice for round 2.",
+      "notes": "Higher-quality source identified for the second pass. The ingest stays dormant until the local CSV export is available."
+    },
+    {
+      "slug": "csv-canine-toxicology-followups",
+      "title": "Curated Canine Toxicology and Exposure Follow-up Cases",
+      "processor": "vetClinicalData",
+      "fileCandidates": [
+        "canine-toxicology-followups.csv",
+        "canine-toxicology-followups-round2.csv"
+      ],
+      "trustLevel": 80,
+      "qualityTier": "verified_primary",
+      "ingestionStatus": "ingestion_ready",
+      "speciesScope": ["dog"],
+      "qualityMetrics": {
+        "accuracyRate": 0.94,
+        "duplicateRate": 0.01,
+        "labelConsistency": 0.95
+      },
+      "trustLevelReason": "Ingestion-ready high-confidence source for toxicology and exposure follow-up cases once the approved export is staged locally.",
+      "notes": "Higher-quality source identified for the second pass. The manifest keeps it ready without fabricating local data in-repo."
+    },
+    {
+      "slug": "csv-breed-specific-clinical-cases-top10",
+      "title": "Breed-Specific Clinical Cases (Top 10 Dog Breeds)",
+      "processor": "breedSpecificClinicalCases",
+      "profileManifest": "data/corpus/breed-expansion-profiles.json",
+      "fileCandidates": [
+        "breed-specific-clinical-cases-top10.csv"
+      ],
+      "baselineTrustLevel": 75,
+      "trustLevel": 75,
+      "qualityTier": "verified_primary",
+      "ingestionStatus": "active",
+      "sourceKnown": true,
+      "speciesScope": ["dog"],
+      "qualityMetrics": {
+        "accuracyRate": 0.94,
+        "duplicateRate": 0.0,
+        "labelConsistency": 0.98
+      },
+      "trustLevelReason": "Curated breed-tagged clinical cases for the highest-priority canine breeds. Every record carries an explicit breed ID, condition label, domain, and trust >= 70.",
+      "notes": "VET-1217 adds 30 dedicated clinical cases spanning the top 10 prioritized dog breeds and 3 high-signal conditions per breed."
+    }
+  ]
+}

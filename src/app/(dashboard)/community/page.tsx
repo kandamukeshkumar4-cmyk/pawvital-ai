@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Plus,
-  Heart,
-  MessageCircle,
-  Search,
-} from "lucide-react";
+import { Plus, Heart, MessageCircle, Search } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Textarea from "@/components/ui/textarea";
@@ -50,7 +45,8 @@ const initialPosts: Post[] = [
     author: "Sarah M.",
     authorPet: "Cooper, Golden Retriever",
     title: "Cooper's mobility improved so much in 3 months!",
-    content: "I started the Glucosamine + Omega-3 combo that PawVital recommended and I can't believe the difference. Cooper is getting up easier, walking longer, and even tried to play fetch yesterday! For anyone with a senior dog struggling with joints, please try this combination. It changed everything for us.",
+    content:
+      "I started the Glucosamine + Omega-3 combo that PawVital recommended and I can't believe the difference. Cooper is getting up easier, walking longer, and even tried to play fetch yesterday! For anyone with a senior dog struggling with joints, please try this combination. It changed everything for us.",
     category: "senior_care",
     likes: 47,
     comments: 12,
@@ -62,7 +58,8 @@ const initialPosts: Post[] = [
     author: "Michelle T.",
     authorPet: "Buddy, Beagle Mix",
     title: "Best food for a 13-year-old with sensitive stomach?",
-    content: "Buddy has been having digestive issues lately and I'm looking for recommendations. He's on FortiFlora already but wondering if anyone has found a specific food brand that works well for senior dogs with sensitive stomachs. He's 13 and a beagle mix.",
+    content:
+      "Buddy has been having digestive issues lately and I'm looking for recommendations. He's on FortiFlora already but wondering if anyone has found a specific food brand that works well for senior dogs with sensitive stomachs. He's 13 and a beagle mix.",
     category: "nutrition",
     likes: 23,
     comments: 18,
@@ -74,7 +71,8 @@ const initialPosts: Post[] = [
     author: "Jessica R.",
     authorPet: "Luna, Labrador",
     title: "The symptom checker saved us a trip to the ER",
-    content: "Luna started acting weird last night - pacing, panting, wouldn't settle down. I was about to rush to the emergency vet ($$$) but checked the symptom checker first. It identified it as likely storm anxiety (there was a thunderstorm coming) and suggested the calming protocol. Within 30 minutes of following the steps, Luna was asleep. Would have been an $800 ER visit for nothing!",
+    content:
+      "Luna started acting weird last night - pacing, panting, wouldn't settle down. I was about to rush to the emergency vet ($$$) but checked the symptom checker first. It identified it as likely storm anxiety (there was a thunderstorm coming) and suggested the calming protocol. Within 30 minutes of following the steps, Luna was asleep. Would have been an $800 ER visit for nothing!",
     category: "health",
     likes: 89,
     comments: 24,
@@ -86,7 +84,8 @@ const initialPosts: Post[] = [
     author: "Karen L.",
     authorPet: "Max, German Shepherd",
     title: "Senior dog separation anxiety tips?",
-    content: "Max is 10 and has recently developed separation anxiety. He never had this before. He whines, barks, and has started chewing things when we leave. Any tips from other senior dog parents? We're already using the calming supplements PawVital recommended.",
+    content:
+      "Max is 10 and has recently developed separation anxiety. He never had this before. He whines, barks, and has started chewing things when we leave. Any tips from other senior dog parents? We're already using the calming supplements PawVital recommended.",
     category: "behavior",
     likes: 34,
     comments: 15,
@@ -98,7 +97,8 @@ const initialPosts: Post[] = [
     author: "Lisa P.",
     authorPet: "Daisy, Poodle",
     title: "Sharing Daisy's monthly wellness report - so proud!",
-    content: "Daisy's health score went from 62 to 88 in just 4 months! The combination of the supplement plan, better food, and consistent exercise routine has been incredible. Sharing because I want other pet parents to know it really does work if you stick with it.",
+    content:
+      "Daisy's health score went from 62 to 88 in just 4 months! The combination of the supplement plan, better food, and consistent exercise routine has been incredible. Sharing because I want other pet parents to know it really does work if you stick with it.",
     category: "general",
     likes: 112,
     comments: 31,
@@ -122,9 +122,13 @@ export default function CommunityPage() {
     setPosts((prev) =>
       prev.map((p) =>
         p.id === id
-          ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }
-          : p
-      )
+          ? {
+              ...p,
+              liked: !p.liked,
+              likes: p.liked ? p.likes - 1 : p.likes + 1,
+            }
+          : p,
+      ),
     );
   };
 
@@ -157,19 +161,22 @@ export default function CommunityPage() {
   });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900">Paw Circle</h1>
           <p className="text-gray-500 mt-1">Connect with fellow pet parents</p>
         </div>
-        <Button onClick={() => setShowNewPost(true)}>
+        <Button
+          onClick={() => setShowNewPost(true)}
+          className="w-full sm:w-auto"
+        >
           <Plus className="w-4 h-4 mr-2" /> New Post
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card className="p-4 text-center">
           <p className="text-2xl font-bold text-blue-600">2,847</p>
           <p className="text-xs text-gray-500">Community Members</p>
@@ -216,8 +223,11 @@ export default function CommunityPage() {
       {/* Posts */}
       <div className="space-y-4">
         {filtered.map((post) => (
-          <Card key={post.id} className="p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-start gap-4">
+          <Card
+            key={post.id}
+            className="p-4 transition-shadow hover:shadow-md sm:p-6"
+          >
+            <div className="flex items-start gap-3 sm:gap-4">
               <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <span className="text-sm font-bold text-blue-600">
                   {post.author.charAt(0)}
@@ -225,27 +235,38 @@ export default function CommunityPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-gray-900 text-sm">{post.author}</span>
+                  <span className="font-semibold text-gray-900 text-sm">
+                    {post.author}
+                  </span>
                   <span className="text-xs text-gray-400">·</span>
-                  <span className="text-xs text-gray-500">{post.authorPet}</span>
+                  <span className="text-xs text-gray-500">
+                    {post.authorPet}
+                  </span>
                   <span className="text-xs text-gray-400">·</span>
                   <span className="text-xs text-gray-400">{post.timeAgo}</span>
                 </div>
-                <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${categoryColors[post.category] || categoryColors.general}`}>
-                  {categories.find((c) => c.value === post.category)?.label || post.category}
+                <span
+                  className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${categoryColors[post.category] || categoryColors.general}`}
+                >
+                  {categories.find((c) => c.value === post.category)?.label ||
+                    post.category}
                 </span>
                 <h3 className="font-bold text-gray-900 mt-2">{post.title}</h3>
                 <p className="text-gray-600 mt-2 text-sm leading-relaxed line-clamp-3">
                   {post.content}
                 </p>
-                <div className="flex items-center gap-4 mt-4">
+                <div className="mt-4 flex flex-wrap items-center gap-4">
                   <button
                     onClick={() => toggleLike(post.id)}
                     className={`flex items-center gap-1.5 text-sm transition-colors ${
-                      post.liked ? "text-red-500" : "text-gray-400 hover:text-red-500"
+                      post.liked
+                        ? "text-red-500"
+                        : "text-gray-400 hover:text-red-500"
                     }`}
                   >
-                    <Heart className={`w-4 h-4 ${post.liked ? "fill-red-500" : ""}`} />
+                    <Heart
+                      className={`w-4 h-4 ${post.liked ? "fill-red-500" : ""}`}
+                    />
                     {post.likes}
                   </button>
                   <button className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-blue-500 transition-colors">
@@ -260,7 +281,12 @@ export default function CommunityPage() {
       </div>
 
       {/* New Post Modal */}
-      <Modal isOpen={showNewPost} onClose={() => setShowNewPost(false)} title="Create Post" size="lg">
+      <Modal
+        isOpen={showNewPost}
+        onClose={() => setShowNewPost(false)}
+        title="Create Post"
+        size="lg"
+      >
         <form onSubmit={addPost} className="space-y-4">
           <Input
             label="Title"
@@ -272,19 +298,27 @@ export default function CommunityPage() {
           <Select
             label="Category"
             value={newPost.category}
-            onChange={(e) => setNewPost({ ...newPost, category: e.target.value })}
+            onChange={(e) =>
+              setNewPost({ ...newPost, category: e.target.value })
+            }
             options={categories.filter((c) => c.value !== "all")}
           />
           <Textarea
             label="Content"
             value={newPost.content}
-            onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+            onChange={(e) =>
+              setNewPost({ ...newPost, content: e.target.value })
+            }
             placeholder="Share your experience, ask a question, or offer advice..."
             rows={6}
             required
           />
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="ghost" onClick={() => setShowNewPost(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowNewPost(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">Post</Button>

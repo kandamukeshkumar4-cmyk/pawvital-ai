@@ -29,6 +29,46 @@ function inferDefaultAppBaseUrl() {
   return `https://${config.projectName || inferWorkspaceProjectName()}.vercel.app`;
 }
 
+function isTrustedAppBaseUrl(baseUrl) {
+  let url;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1";
+  const isTrustedVercelHost =
+    hostname === "pawvital-ai.vercel.app" ||
+    (hostname.endsWith(".vercel.app") && hostname.includes("pawvital"));
+
+  if (isLocalHost) {
+    return url.protocol === "http:" || url.protocol === "https:";
+  }
+
+  return url.protocol === "https:" && isTrustedVercelHost;
+}
+
+function resolveAppBaseUrl() {
+  const appBaseUrl = (
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    inferDefaultAppBaseUrl()
+  ).trim();
+
+  if (
+    process.env.ALLOW_UNTRUSTED_APP_BASE_URL?.trim() === "1" ||
+    isTrustedAppBaseUrl(appBaseUrl)
+  ) {
+    return appBaseUrl;
+  }
+
+  throw new Error(
+    `Refusing to send shadow debug credentials to untrusted APP_BASE_URL host: ${appBaseUrl}. Set ALLOW_UNTRUSTED_APP_BASE_URL=1 only if you intentionally want to override this safeguard.`
+  );
+}
+
 function parseArgs(argv) {
   const outputArg = argv.find((arg) => arg.startsWith("--output="));
   return {
@@ -96,11 +136,7 @@ function buildServiceMarkdown(service, metrics) {
 async function main() {
   loadEnvFiles(rootDir);
   const args = parseArgs(process.argv.slice(2));
-  const appBaseUrl = (
-    process.env.APP_BASE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    inferDefaultAppBaseUrl()
-  ).trim();
+  const appBaseUrl = resolveAppBaseUrl();
   const sidecarSecret = (
     process.env.HF_SIDECAR_API_KEY ||
     process.env.ASYNC_REVIEW_WEBHOOK_SECRET ||
@@ -131,6 +167,20 @@ async function main() {
     readinessHttp: { ok: readiness.ok, status: readiness.status },
     shadowHttp: { ok: shadow.ok, status: shadow.status },
   };
+
+  if (!readiness.ok || !shadow.ok) {
+    const readinessError =
+      readiness.body?.error || readiness.rawText || "unknown readiness error";
+    const shadowError =
+      shadow.body?.error || shadow.rawText || "unknown shadow error";
+    throw new Error(
+      `Phase 5 report routes failed: readiness HTTP ${readiness.status} (${String(
+        readinessError
+      ).slice(0, 160)}); shadow HTTP ${shadow.status} (${String(
+        shadowError
+      ).slice(0, 160)})`
+    );
+  }
 
   if (args.json) {
     console.log(JSON.stringify(report, null, 2));

@@ -474,7 +474,11 @@ function validateRoleEnv(roleKey) {
 
   const missing = [];
   for (const envName of config.requiredEnv) {
-    if (!String(process.env[envName] || "").trim()) {
+    const present =
+      envName === "SUPABASE_URL"
+        ? Boolean(String(SUPABASE_URL || "").trim())
+        : Boolean(String(process.env[envName] || "").trim());
+    if (!present) {
       missing.push(envName);
     }
   }
@@ -560,7 +564,26 @@ async function runHealthChecks() {
   const summary = {
     missingPods: [],
     bootingPods: [],
+    stoppedPods: [],
   };
+  let registryChanged = false;
+  let remoteById = new Map();
+  let remoteByName = new Map();
+
+  try {
+    const remotePods = await listRunpodPods();
+    remoteById = new Map(remotePods.map((pod) => [remotePodId(pod), pod]));
+    remoteByName = new Map(
+      remotePods
+        .map((pod) => [remotePodName(pod), pod])
+        .filter(([name]) => Boolean(name))
+    );
+  } catch (error) {
+    statusLine(
+      "warn",
+      `RunPod inventory lookup failed; falling back to deploy/runpod/pods.json (${error instanceof Error ? error.message : String(error)})`
+    );
+  }
 
   for (const [role, pod] of Object.entries(pods)) {
     if (!pod.pod_id) {
@@ -573,6 +596,60 @@ async function runHealthChecks() {
         command: ROLE_PROVISION_COMMAND[role] || "",
       });
       continue;
+    }
+
+    const remotePod =
+      remoteById.get(pod.pod_id) || (pod.name ? remoteByName.get(pod.name) : null);
+
+    if (remoteById.size > 0 || remoteByName.size > 0) {
+      if (!remotePod) {
+        statusLine(
+          "warn",
+          `${role}: pod ${pod.pod_id} is missing from current RunPod inventory; treating registry entry as stale`
+        );
+        pod.pod_id = "";
+        pod.proxy_base = "";
+        pod.status = "deleted";
+        pod.note = `Cleared by health check on ${new Date().toISOString().slice(0, 10)} after RunPod reported the pod missing.`;
+        summary.missingPods.push({
+          role,
+          status: "deleted",
+          command: ROLE_PROVISION_COMMAND[role] || "",
+        });
+        registryChanged = true;
+        continue;
+      }
+
+      const remoteId = remotePodId(remotePod);
+      const remoteStatus = remotePodStatus(remotePod);
+
+      if (remoteId && remoteId !== pod.pod_id) {
+        statusLine(
+          "warn",
+          `${role}: updating stale pod id ${pod.pod_id} -> ${remoteId} from RunPod inventory`
+        );
+        pod.pod_id = remoteId;
+        pod.proxy_base = `https://${remoteId}-{port}.proxy.runpod.net`;
+        registryChanged = true;
+      }
+
+      if (remoteStatus && remoteStatus !== String(pod.status || "").toLowerCase()) {
+        pod.status = remoteStatus;
+        registryChanged = true;
+      }
+
+      if (["exited", "stopped", "terminated"].includes(remoteStatus)) {
+        statusLine(
+          "warn",
+          `${role}: RunPod reports ${remoteStatus}; start or reprovision before health checks`
+        );
+        summary.stoppedPods.push({
+          role,
+          podId: pod.pod_id,
+          status: remoteStatus,
+        });
+        continue;
+      }
     }
 
     console.log(`\n--- ${role} (${pod.pod_id}) ---`);
@@ -600,6 +677,10 @@ async function runHealthChecks() {
         statusLine("fail", `${name}:${port} HTTP ${status}`);
       }
     }
+  }
+
+  if (registryChanged) {
+    writePods();
   }
 
   return { results, summary };
@@ -705,6 +786,21 @@ function printHealthNextSteps(summary) {
     for (const missing of summary.missingPods) {
       const command = missing.command || "provision command not configured";
       console.log(`  - ${missing.role}: run \`${command}\``);
+    }
+  }
+
+  if (summary.stoppedPods.length > 0) {
+    console.log("\nNext steps for stopped/exited pods:");
+    for (const pod of summary.stoppedPods) {
+      const startCommand =
+        pod.role === "async_review"
+          ? "npm run runpod:start:review"
+          : pod.role === "consult_retrieval"
+            ? "npm run runpod:start:consult"
+            : ROLE_PROVISION_COMMAND[pod.role] || "start/provision command not configured";
+      console.log(
+        `  - ${pod.role}: currently ${pod.status} on ${pod.podId}; run \`${startCommand}\` or reprovision if health stays bad`
+      );
     }
   }
 

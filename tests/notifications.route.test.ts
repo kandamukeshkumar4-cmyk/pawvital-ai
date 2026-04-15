@@ -338,10 +338,22 @@ describe("POST /api/notifications/mark-all-read", () => {
   });
 
   it("marks all unread notifications as read", async () => {
+    const updateEqReadFn = jest.fn().mockResolvedValue({ error: null });
+    const updateEqUserFn = jest.fn().mockReturnValue({
+      eq: updateEqReadFn,
+    });
     const updateFn = jest.fn().mockReturnValue({
-      eq: jest.fn().mockReturnValue({
-        eq: jest.fn().mockResolvedValue({ error: null }),
-      }),
+      eq: updateEqUserFn,
+    });
+    const selectEqReadFn = jest.fn().mockResolvedValue({
+      data: [{ id: "notif-1" }, { id: "notif-2" }],
+      error: null,
+    });
+    const selectEqUserFn = jest.fn().mockReturnValue({
+      eq: selectEqReadFn,
+    });
+    const selectFn = jest.fn().mockReturnValue({
+      eq: selectEqUserFn,
     });
 
     const supabaseCustom = {
@@ -351,7 +363,7 @@ describe("POST /api/notifications/mark-all-read", () => {
           error: null,
         }),
       },
-      from: jest.fn(() => ({ update: updateFn })),
+      from: jest.fn(() => ({ select: selectFn, update: updateFn })),
     };
     mockCreateServerSupabaseClient.mockResolvedValue(supabaseCustom);
 
@@ -365,7 +377,51 @@ describe("POST /api/notifications/mark-all-read", () => {
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
+    expect(body.updatedCount).toBe(2);
+    expect(body.alreadyRead).toBe(false);
+    expect(selectFn).toHaveBeenCalledWith("id");
     expect(updateFn).toHaveBeenCalledWith({ read: true });
+    expect(updateEqUserFn).toHaveBeenCalledWith("user_id", "user-1");
+    expect(updateEqReadFn).toHaveBeenCalledWith("read", false);
+  });
+
+  it("returns success without updating when everything is already read", async () => {
+    const updateFn = jest.fn();
+    const selectEqReadFn = jest.fn().mockResolvedValue({
+      data: [],
+      error: null,
+    });
+    const selectEqUserFn = jest.fn().mockReturnValue({
+      eq: selectEqReadFn,
+    });
+    const selectFn = jest.fn().mockReturnValue({
+      eq: selectEqUserFn,
+    });
+
+    const supabaseCustom = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1" } },
+          error: null,
+        }),
+      },
+      from: jest.fn(() => ({ select: selectFn, update: updateFn })),
+    };
+    mockCreateServerSupabaseClient.mockResolvedValue(supabaseCustom);
+
+    const { POST } = await import(
+      "@/app/api/notifications/mark-all-read/route"
+    );
+    const res = await POST(
+      makePostRequest("http://localhost/api/notifications/mark-all-read")
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.updatedCount).toBe(0);
+    expect(body.alreadyRead).toBe(true);
+    expect(updateFn).not.toHaveBeenCalled();
   });
 
   it("returns 401 when unauthenticated", async () => {

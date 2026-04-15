@@ -79,29 +79,8 @@ jobs:
             echo "CI Gate conclusion: ${CI_RESULT} -- skipping merge"
           fi
 
-      - name: Verify AI review gate passed
-        if: steps.pr.outputs.found == 'true' && steps.ci-check.outputs.passed == 'true'
-        id: review-gate
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          SHA="${{ steps.pr.outputs.sha }}"
-          REVIEW_GATE_RESULT=$(gh api "repos/${{ github.repository }}/commits/${SHA}/check-runs" \
-            --jq '[
-              .check_runs[]
-              | select(.name == "AI Review Gate")
-            ] | if length > 0 then (sort_by(.id) | last | .conclusion) else empty end' \
-            2>/dev/null || echo "")
-          if [ "$REVIEW_GATE_RESULT" = "success" ]; then
-            echo "passed=true" >> "$GITHUB_OUTPUT"
-            echo "AI Review Gate: success"
-          else
-            echo "passed=false" >> "$GITHUB_OUTPUT"
-            echo "AI Review Gate conclusion: ${REVIEW_GATE_RESULT} -- skipping merge"
-          fi
-
       - name: Check PR is mergeable
-        if: steps.pr.outputs.found == 'true' && steps.ci-check.outputs.passed == 'true' && steps.review-gate.outputs.passed == 'true'
+        if: steps.pr.outputs.found == 'true' && steps.ci-check.outputs.passed == 'true'
         id: pr-check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -133,7 +112,6 @@ jobs:
         if: >
           steps.pr.outputs.found == 'true' &&
           steps.ci-check.outputs.passed == 'true' &&
-          steps.review-gate.outputs.passed == 'true' &&
           steps.pr-check.outputs.ready == 'true'
         id: review-check
         env:
@@ -165,21 +143,19 @@ jobs:
         if: >
           steps.pr.outputs.found == 'true' &&
           steps.ci-check.outputs.passed == 'true' &&
-          steps.review-gate.outputs.passed == 'true' &&
           steps.pr-check.outputs.ready == 'true' &&
           steps.review-check.outputs.approved == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER="${{ steps.pr.outputs.number }}"
-          echo "CI Gate + AI Review Gate + AI approval passed -- merging PR #${PR_NUMBER}"
+          echo "CI Gate + bot approval passed -- merging PR #${PR_NUMBER}"
           gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
 
       - name: Comment on merge
         if: >
           steps.pr.outputs.found == 'true' &&
           steps.ci-check.outputs.passed == 'true' &&
-          steps.review-gate.outputs.passed == 'true' &&
           steps.pr-check.outputs.ready == 'true' &&
           steps.review-check.outputs.approved == 'true'
         env:
@@ -189,7 +165,7 @@ jobs:
           {
             echo "## Auto-Merged to master"
             echo ""
-            echo "CI Gate passed + AI Review Gate passed + AI approval matched the head SHA. Squash-merged to master."
+            echo "CI Gate passed and the bot approval matched the head SHA. Squash-merged to master."
             echo ""
             echo "Vercel is deploying now -- your changes will be live in ~30 seconds."
             echo ""

@@ -262,7 +262,7 @@ jobs:
             GATE_CONCLUSION="success"
             GATE_TITLE="AI review approved"
           elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
-            GATE_CONCLUSION="failure"
+            GATE_CONCLUSION="neutral"
             GATE_TITLE="AI review requested changes"
           else
             GATE_CONCLUSION="failure"

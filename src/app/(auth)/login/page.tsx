@@ -2,18 +2,33 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Lock, Heart } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import {
+  appendRedirectParam,
+  getAuthFeedbackMessage,
+  resolvePostAuthRedirect,
+} from "@/lib/auth-routing";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const redirectTarget = resolvePostAuthRedirect(searchParams.get("redirect"));
+  const authFeedback = getAuthFeedbackMessage(
+    searchParams.get("reason"),
+    searchParams.get("error")
+  );
+  const feedbackClasses =
+    authFeedback?.tone === "error"
+      ? "bg-red-50 text-red-700"
+      : "bg-blue-50 text-blue-700";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +38,7 @@ export default function LoginPage() {
     try {
       if (!isSupabaseConfigured) {
         // Demo mode: skip auth and go to dashboard
-        router.push("/dashboard");
+        router.replace(redirectTarget);
         return;
       }
       const supabase = createClient();
@@ -33,7 +48,7 @@ export default function LoginPage() {
       });
 
       if (authError) throw authError;
-      router.push("/dashboard");
+      router.replace(redirectTarget);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to sign in";
       setError(message);
@@ -58,6 +73,11 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
           <form onSubmit={handleLogin} className="space-y-5">
+            {authFeedback && !error && (
+              <div className={`${feedbackClasses} rounded-xl p-3 text-sm`}>
+                {authFeedback.text}
+              </div>
+            )}
             {error && (
               <div className="bg-red-50 text-red-700 rounded-xl p-3 text-sm">
                 {error}
@@ -89,7 +109,10 @@ export default function LoginPage() {
                 <input type="checkbox" className="rounded border-gray-300" />
                 <span className="text-gray-600">Remember me</span>
               </label>
-              <Link href="/forgot-password" className="text-blue-600 hover:text-blue-700 font-medium">
+              <Link
+                href={appendRedirectParam("/forgot-password", redirectTarget)}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
                 Forgot password?
               </Link>
             </div>
@@ -101,7 +124,10 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-sm text-gray-600">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-semibold">
+            <Link
+              href={appendRedirectParam("/signup", redirectTarget)}
+              className="text-blue-600 hover:text-blue-700 font-semibold"
+            >
               Start your free trial
             </Link>
           </div>

@@ -19,16 +19,16 @@ export default function DashboardLayout({
 
   return (
     <SubscriptionProvider>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen overflow-x-hidden bg-gray-50">
         <PetOnboardingHost />
         <Sidebar />
         <div
-          className={`transition-all duration-300 ${
-            sidebarOpen ? "ml-64" : "ml-20"
+          className={`min-w-0 transition-[margin] duration-300 ${
+            sidebarOpen ? "lg:ml-64" : "lg:ml-20"
           }`}
         >
           <TopBar />
-          <main className="p-6">{children}</main>
+          <main className="p-4 sm:p-6">{children}</main>
         </div>
       </div>
     </SubscriptionProvider>
