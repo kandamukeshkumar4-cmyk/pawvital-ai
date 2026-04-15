@@ -559,7 +559,6 @@ export function shouldPersistRawPendingAnswer(
     (key) => key !== questionId
   );
   const hasOtherTurnSymptoms = turnSymptoms.length > 0;
-
   if (
     questionLooksDurationLike(question) &&
     hasDurationLikeSignal(normalizedMessage)
