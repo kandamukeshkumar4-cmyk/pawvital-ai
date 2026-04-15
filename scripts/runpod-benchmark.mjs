@@ -11,6 +11,14 @@ const defaultInputPath = path.join(
   "sample-cases.json"
 );
 const defaultOutputPath = path.join(rootDir, "runpod-benchmark-report.json");
+const sidecarRegistry = JSON.parse(
+  fs.readFileSync(
+    path.join(rootDir, "src", "lib", "sidecar-service-registry.json"),
+    "utf8"
+  )
+);
+const readinessRoutePath = "/api/ai/sidecar-readiness";
+const readinessTimeoutMs = Number(process.env.HF_SIDECAR_HEALTH_TIMEOUT_MS) || 8000;
 
 function loadEnvFiles() {
   for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
@@ -39,12 +47,15 @@ function parseArgs(argv) {
       process.env.NEXT_PUBLIC_APP_URL ||
       "http://localhost:3000",
     dryRun: false,
+    skipPreflight: false,
     help: false,
   };
 
   for (const arg of argv) {
     if (arg === "--dry-run") {
       options.dryRun = true;
+    } else if (arg === "--skip-preflight") {
+      options.skipPreflight = true;
     } else if (arg === "--help" || arg === "-h") {
       options.help = true;
     } else if (arg.startsWith("--input=")) {
@@ -69,6 +80,8 @@ Usage:
 
 Options:
   --dry-run       Validate and enumerate the suite without calling the app
+  --skip-preflight
+                  Skip strict sidecar readiness validation before live runs
   --input=PATH    Benchmark suite JSON
   --output=PATH   Output report JSON
   --base-url=URL  App base URL used for live execution
@@ -137,6 +150,84 @@ function validateSuite(suite) {
 
 function resolveSession(payload) {
   return payload?.session && typeof payload.session === "object" ? payload.session : {};
+}
+
+function buildAuthHeaders() {
+  const apiKey = String(process.env.HF_SIDECAR_API_KEY || "").trim();
+  if (!apiKey) return {};
+  return {
+    Authorization: `Bearer ${apiKey}`,
+  };
+}
+
+async function fetchReadiness(baseUrl) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), readinessTimeoutMs);
+  try {
+    const routeUrl = new URL(readinessRoutePath, baseUrl).toString();
+    const response = await fetch(routeUrl, {
+      method: "GET",
+      headers: buildAuthHeaders(),
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let parsed = null;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      parsed = null;
+    }
+    return { routeUrl, status: response.status, ok: response.ok, body: parsed, rawText: text };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function runPreflight(baseUrl) {
+  const readinessResponse = await fetchReadiness(baseUrl);
+  if (!readinessResponse.ok || readinessResponse.body?.ok !== true) {
+    const detail =
+      readinessResponse.body?.error ||
+      readinessResponse.rawText ||
+      `status ${readinessResponse.status}`;
+    throw new Error(
+      `Sidecar readiness preflight failed at ${readinessResponse.routeUrl}: ${detail}`
+    );
+  }
+
+  const readiness = readinessResponse.body?.readiness || {};
+  const requiredServices = Array.isArray(sidecarRegistry) ? sidecarRegistry.length : 5;
+  const configuredCount = Number(readiness.configuredCount || 0);
+  const healthyCount = Number(readiness.healthyCount || 0);
+  const stubCount = Number(readiness.stubCount || 0);
+  const blockers = [];
+
+  if (configuredCount < requiredServices) {
+    blockers.push(
+      `configured=${configuredCount}/${requiredServices}; all sidecars must be configured`
+    );
+  }
+  if (healthyCount < requiredServices) {
+    blockers.push(
+      `healthy=${healthyCount}/${requiredServices}; all sidecars must be healthy`
+    );
+  }
+  if (stubCount > 0) {
+    blockers.push(`stub=${stubCount}; live baseline forbids stub sidecars`);
+  }
+
+  return {
+    performedAt: new Date().toISOString(),
+    routeUrl: readinessResponse.routeUrl,
+    ready: blockers.length === 0,
+    requiredServices,
+    configuredCount,
+    healthyCount,
+    stubCount,
+    blockers,
+    readiness,
+  };
 }
 
 function resolveReport(payload) {
@@ -295,13 +386,18 @@ function evaluateExpectations(payload, expectations) {
 
 async function runCase(baseUrl, row) {
   const apiUrl = new URL("/api/ai/symptom-chat", baseUrl).toString();
+  const startedAt = Date.now();
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(row.request),
   });
   const payload = await response.json();
-  return { status: response.status, payload };
+  return {
+    status: response.status,
+    payload,
+    durationMs: Date.now() - startedAt,
+  };
 }
 
 function summarizeResults(caseResults) {
@@ -356,6 +452,26 @@ async function main() {
     return;
   }
 
+  const preflight = options.skipPreflight
+    ? {
+        performedAt: new Date().toISOString(),
+        routeUrl: new URL(readinessRoutePath, options.baseUrl).toString(),
+        ready: false,
+        requiredServices: Array.isArray(sidecarRegistry) ? sidecarRegistry.length : 5,
+        configuredCount: 0,
+        healthyCount: 0,
+        stubCount: 0,
+        blockers: ["preflight skipped by operator"],
+        readiness: null,
+      }
+    : await runPreflight(options.baseUrl);
+
+  if (!options.skipPreflight && !preflight.ready) {
+    throw new Error(
+      `Refusing live benchmark run because sidecar preflight is not ready: ${preflight.blockers.join("; ")}`
+    );
+  }
+
   const caseResults = [];
   for (const row of suite.cases) {
     const startedAt = new Date().toISOString();
@@ -365,8 +481,17 @@ async function main() {
       id: row.id,
       description: row.description,
       startedAt,
+      endedAt: new Date().toISOString(),
+      durationMs: live.durationMs,
       httpStatus: live.status,
       actualType: live.payload?.type || null,
+      tags: Array.isArray(row.tags) ? row.tags : [],
+      weight: typeof row.weight === "number" ? row.weight : 1,
+      riskTier: typeof row.risk_tier === "string" ? row.risk_tier : null,
+      complaintFamilyTags: Array.isArray(row.complaint_family_tags)
+        ? row.complaint_family_tags
+        : [],
+      mustNotMissMarker: row.must_not_miss_marker === true,
       evaluation,
       expectations: row.expectations || {},
     });
@@ -378,6 +503,7 @@ async function main() {
     suiteId: suite.suite_id,
     species: suite.species,
     baseUrl: options.baseUrl,
+    preflight,
     summary: summarizeResults(caseResults),
     cases: caseResults,
   };
@@ -389,5 +515,5 @@ async function main() {
 
 main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+  process.exitCode = 1;
 });

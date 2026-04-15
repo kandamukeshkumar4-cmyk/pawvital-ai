@@ -1001,7 +1001,7 @@ function buildSuiteMetadata(argv) {
     executionMode: "direct_route_replay",
     benchmarkPath: toRepoRelative(BENCHMARK_PATH),
     fixturePath: toRepoRelative(FIXTURE_PATH),
-    simulatedComparator: toRepoRelative(
+    benchmarkEvaluator: toRepoRelative(
       path.join(ROOT, "scripts", "eval-harness.ts")
     ),
     command: {
