@@ -133,4 +133,26 @@ describe("shadow rollout baseline persistence", () => {
     expect(snapshot.warning).toContain("fetch failed");
     expect(mockListShadowTelemetrySnapshots).toHaveBeenCalledWith(100);
   });
+
+  it("returns an empty snapshot when the Redis fallback read throws", async () => {
+    mockGetServiceSupabase.mockReturnValue(null);
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockRejectedValue(
+      new Error("getaddrinfo ENOTFOUND national-quagga-38433.upstash.io")
+    );
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(0);
+    expect(snapshot.parsedReportCount).toBe(0);
+    expect(snapshot.warning).toContain(
+      "Upstash shadow telemetry fallback failed"
+    );
+  });
 });

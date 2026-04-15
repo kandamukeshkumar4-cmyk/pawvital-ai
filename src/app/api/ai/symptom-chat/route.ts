@@ -2294,20 +2294,30 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       finalReport
     );
     const observabilitySnapshot = buildObservabilitySnapshot(session);
+    const persistedObservabilitySnapshot = buildObservabilitySnapshot(session, {
+      includeInternalTelemetry: true,
+    });
     finalReport.system_observability = observabilitySnapshot;
 
-    try {
-      await appendShadowTelemetrySnapshot({
-        generatedAt: new Date().toISOString(),
-        recentServiceCalls: observabilitySnapshot.recentServiceCalls || [],
-        recentShadowComparisons:
-          observabilitySnapshot.recentShadowComparisons || [],
-      });
-    } catch (shadowTelemetryError) {
-      console.error(
-        "[ShadowTelemetry] Failed to persist report telemetry:",
-        shadowTelemetryError
-      );
+    const persistShadowTelemetry = async () => {
+      try {
+        await appendShadowTelemetrySnapshot({
+          generatedAt: new Date().toISOString(),
+          recentServiceCalls:
+            persistedObservabilitySnapshot.recentServiceCalls || [],
+          recentShadowComparisons:
+            persistedObservabilitySnapshot.recentShadowComparisons || [],
+        });
+      } catch (shadowTelemetryError) {
+        console.error(
+          "[ShadowTelemetry] Failed to persist report telemetry:",
+          shadowTelemetryError
+        );
+      }
+    };
+
+    if (!runAfterSafely(persistShadowTelemetry)) {
+      void persistShadowTelemetry();
     }
 
     try {

@@ -133,6 +133,63 @@ describe("sidecar observability", () => {
     expect(snapshot.shadowConfig.routineSampleRate).toBe(0.05);
   });
 
+  it("can include internal async-review telemetry for persisted shadow baselines", async () => {
+    const now = new Date().toISOString();
+    const { buildObservabilitySnapshot } = await import(
+      "@/lib/sidecar-observability"
+    );
+
+    const snapshot = buildObservabilitySnapshot(
+      makeSession({
+        case_memory: {
+          turn_count: 1,
+          chief_complaints: [],
+          active_focus_symptoms: [],
+          confirmed_facts: {},
+          image_findings: [],
+          red_flag_notes: [],
+          unresolved_question_ids: [],
+          clarification_reasons: {},
+          timeline_notes: [],
+          visual_evidence: [],
+          retrieval_evidence: [],
+          consult_opinions: [],
+          evidence_chain: [],
+          service_timeouts: [],
+          service_observations: [
+            {
+              service: "async-review-service",
+              stage: "review",
+              latencyMs: 2100,
+              outcome: "shadow",
+              shadowMode: true,
+              fallbackUsed: false,
+              recordedAt: now,
+            },
+          ],
+          shadow_comparisons: [
+            {
+              service: "async-review-service",
+              usedStrategy: "nvidia-primary",
+              shadowStrategy: "hf-async-review",
+              summary: "Escalation framing aligned.",
+              disagreementCount: 0,
+              recordedAt: now,
+            },
+          ],
+          ambiguity_flags: [],
+        },
+      }),
+      { includeInternalTelemetry: true }
+    );
+
+    expect(snapshot.serviceCallCounts).toEqual({
+      "async-review-service": 1,
+    });
+    expect(snapshot.recentServiceCalls).toHaveLength(1);
+    expect(snapshot.recentShadowComparisons).toHaveLength(1);
+  });
+
   it("forces shadow sampling for urgent cases when a service is enabled", async () => {
     process.env = {
       ...originalEnv,

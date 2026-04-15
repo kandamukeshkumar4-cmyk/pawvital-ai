@@ -266,7 +266,27 @@ async function buildFallbackSnapshotFromRedis(
   warning: string | null
 ): Promise<PersistedShadowBaselineSnapshot> {
   const emptySession = buildEmptySession();
-  const entries = await listShadowTelemetrySnapshots(limit);
+  let entries: Awaited<ReturnType<typeof listShadowTelemetrySnapshots>>;
+
+  try {
+    entries = await listShadowTelemetrySnapshots(limit);
+  } catch (error) {
+    const details =
+      error instanceof Error ? error.message : String(error);
+    return buildSnapshotFromSession({
+      session: emptySession,
+      windowHours,
+      reportCount: 0,
+      parsedReportCount: 0,
+      malformedReportCount: 0,
+      warning: [
+        warning,
+        `Upstash shadow telemetry fallback failed (${details}).`,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    });
+  }
 
   if (!entries) {
     return buildSnapshotFromSession({
@@ -281,6 +301,7 @@ async function buildFallbackSnapshotFromRedis(
   }
 
   const windowStartMs = Date.now() - windowHours * 60 * 60 * 1000;
+  let reportCount = 0;
   let parsedReportCount = 0;
   let malformedReportCount = 0;
 
@@ -289,6 +310,8 @@ async function buildFallbackSnapshotFromRedis(
     if (!Number.isFinite(recordedAtMs) || recordedAtMs < windowStartMs) {
       continue;
     }
+
+    reportCount += 1;
 
     const hasArrays =
       Array.isArray(entry.recentServiceCalls) &&
@@ -309,7 +332,7 @@ async function buildFallbackSnapshotFromRedis(
   return buildSnapshotFromSession({
     session: emptySession,
     windowHours,
-    reportCount: entries.length,
+    reportCount,
     parsedReportCount,
     malformedReportCount,
     warning,

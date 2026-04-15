@@ -30,13 +30,15 @@ function parseArgs(argv) {
   const options = {
     confirm: argv.includes("--confirm"),
     dryRun: argv.includes("--dry-run"),
+    keepRunning: argv.includes("--keep-running"),
     skipLoadTest: argv.includes("--skip-load-test"),
-    stopAfter: argv.includes("--stop-after"),
     watch: argv.includes("--watch"),
     timeoutMs: defaultTimeoutMs,
     watchIntervalMs: 5 * 60_000,
     baselineOutputPath: path.join(rootDir, "plans", "phase5-shadow-baseline.md"),
   };
+
+  options.stopAfter = argv.includes("--stop-after") || !options.keepRunning;
 
   for (const arg of argv) {
     if (arg.startsWith("--timeout-minutes=")) {
@@ -250,7 +252,7 @@ function hasPromotionEligibleService(report) {
     const sampleCount = service?.window?.observedWindowSamples ?? 0;
     return (
       sampleCount >= summary.gateConfig.requiredHealthySamples &&
-      (service.status === "ready" || service.status === "watch")
+      service.status === "ready"
     );
   });
 }
@@ -299,50 +301,54 @@ async function main() {
     throw new Error("Use --dry-run first, then rerun with --confirm to mutate RunPod or Vercel.");
   }
 
-  runNodeScript("scripts/runpod-health-and-wire.mjs", ["--status"]);
+  let report = null;
 
-  if (hasRegisteredPod("consult_retrieval")) {
-    console.log("[phase5] starting existing consult/retrieval pod");
-    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--start-consult"]);
-  } else {
-    console.log("[phase5] ensuring consult/retrieval pod is present");
-    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-consult", "--confirm"]);
-  }
+  try {
+    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--status"]);
 
-  if (hasRegisteredPod("async_review")) {
-    console.log("[phase5] starting existing async-review pod");
-    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--start-review"]);
-  } else {
-    console.log("[phase5] ensuring async-review pod is present");
-    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-review", "--confirm"]);
-  }
+    if (hasRegisteredPod("consult_retrieval")) {
+      console.log("[phase5] starting existing consult/retrieval pod");
+      runNodeScript("scripts/runpod-health-and-wire.mjs", ["--start-consult"]);
+    } else {
+      console.log("[phase5] ensuring consult/retrieval pod is present");
+      runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-consult", "--confirm"]);
+    }
 
-  console.log("[phase5] wiring pod URLs into Vercel");
-  runNodeScript("scripts/runpod-health-and-wire.mjs", ["--wire"]);
+    if (hasRegisteredPod("async_review")) {
+      console.log("[phase5] starting existing async-review pod");
+      runNodeScript("scripts/runpod-health-and-wire.mjs", ["--start-review"]);
+    } else {
+      console.log("[phase5] ensuring async-review pod is present");
+      runNodeScript("scripts/runpod-health-and-wire.mjs", ["--provision-review", "--confirm"]);
+    }
 
-  console.log("[phase5] requesting production redeploy");
-  const redeploy = await redeployLatestProductionDeployment();
-  await waitForProductionDeployment(redeploy?.id || "", options.timeoutMs);
+    console.log("[phase5] wiring pod URLs into Vercel");
+    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--wire"]);
 
-  if (!options.skipLoadTest) {
-    console.log("[phase5] running synthetic load test");
-    runNodeScript("scripts/load-phase5-shadow.mjs", []);
-  }
+    console.log("[phase5] requesting production redeploy");
+    const redeploy = await redeployLatestProductionDeployment();
+    await waitForProductionDeployment(redeploy?.id || "", options.timeoutMs);
 
-  const report = options.watch
-    ? await waitForBaseline(options)
-    : readJsonFromScript("scripts/report-phase5-shadow.mjs", ["--json"]);
+    if (!options.skipLoadTest) {
+      console.log("[phase5] running synthetic load test");
+      runNodeScript("scripts/load-phase5-shadow.mjs", []);
+    }
 
-  console.log("[phase5] writing baseline report");
-  runNodeScript("scripts/report-phase5-shadow.mjs", [
-    `--output=${options.baselineOutputPath}`,
-  ]);
+    report = options.watch
+      ? await waitForBaseline(options)
+      : readJsonFromScript("scripts/report-phase5-shadow.mjs", ["--json"]);
 
-  if (options.stopAfter) {
-    console.log("[phase5] stopping pods after capture");
-    runNodeScript("scripts/runpod-health-and-wire.mjs", ["--stop-all"]);
-  } else {
-    console.log("[phase5] leaving pods running for continued shadow collection");
+    console.log("[phase5] writing baseline report");
+    runNodeScript("scripts/report-phase5-shadow.mjs", [
+      `--output=${options.baselineOutputPath}`,
+    ]);
+  } finally {
+    if (options.stopAfter) {
+      console.log("[phase5] stopping pods after capture");
+      runNodeScript("scripts/runpod-health-and-wire.mjs", ["--stop-all"]);
+    } else {
+      console.log("[phase5] leaving pods running for continued shadow collection");
+    }
   }
 
   console.log(
