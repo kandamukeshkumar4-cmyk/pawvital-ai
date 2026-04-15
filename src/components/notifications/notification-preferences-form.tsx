@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, Save, Bell, Mail, AlertTriangle, ClipboardList } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -24,6 +24,15 @@ export function NotificationPreferencesForm() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveState, setSaveState] = useState<"idle" | "saved" | "error">("idle");
+  const resetTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
@@ -49,13 +58,24 @@ export function NotificationPreferencesForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(prefs),
       });
-      setSaveState(res.ok ? "saved" : "error");
+
+      if (!res.ok) {
+        throw new Error("Failed to persist notification preferences");
+      }
+
+      const json = await res.json().catch(() => null);
+      if (json?.data) {
+        setPrefs({ ...DEFAULTS, ...json.data });
+      }
+      setSaveState("saved");
     } catch {
       setSaveState("error");
     } finally {
       setSaving(false);
-      // Reset save badge after 3s
-      setTimeout(() => setSaveState("idle"), 3000);
+      if (resetTimerRef.current !== null) {
+        window.clearTimeout(resetTimerRef.current);
+      }
+      resetTimerRef.current = window.setTimeout(() => setSaveState("idle"), 3000);
     }
   };
 

@@ -18,6 +18,21 @@ const EvidenceChainItemSchema = z.object({
   confidence: z.number(),
 });
 
+const ConfidenceAdjustmentSchema = z.object({
+  factor: z.string(),
+  delta: z.number(),
+  direction: z.enum(["increase", "decrease", "neutral"]),
+  reason: z.string(),
+});
+
+const ConfidenceCalibrationSchema = z.object({
+  final_confidence: z.number(),
+  base_confidence: z.number(),
+  adjustments: z.array(ConfidenceAdjustmentSchema),
+  confidence_level: z.enum(["very_low", "low", "moderate", "high", "very_high"]),
+  recommendation: z.string(),
+});
+
 const HomeCareSchema = z.object({
   instruction: z.string(),
   duration: z.string(),
@@ -36,6 +51,8 @@ const SymptomReportSchema = z.object({
   warning_signs: z.array(z.string()),
   vet_questions: z.array(z.string()).optional(),
   confidence: z.number().optional(),
+  calibrated_confidence: ConfidenceCalibrationSchema.nullable().optional(),
+  confidence_calibration: ConfidenceCalibrationSchema.optional(),
   evidenceChain: z.array(EvidenceChainItemSchema).optional(),
   vet_handoff_summary: z.string().optional(),
   share_url: z.string().url().optional(),

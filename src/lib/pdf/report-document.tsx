@@ -5,6 +5,7 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import type { SymptomReport } from "@/components/symptom-report/types";
+import { formatConfidenceLevelLabel } from "@/lib/report-confidence";
 import { brand, pdfStyles } from "./styles";
 import {
   getRecommendationLabel,
@@ -78,6 +79,8 @@ export function ReportPdfDocument({
   generatedAt,
   shareUrl,
 }: ReportPdfDocumentProps) {
+  const calibratedConfidence =
+    report.calibrated_confidence ?? report.confidence_calibration;
   const emergencyReport = isEmergencyReport(report);
   const escalatedReport = isEscalatedReport(report);
   const band = severityBandStyle(report.severity);
@@ -120,8 +123,35 @@ export function ReportPdfDocument({
               Confidence: {(report.confidence * 100).toFixed(0)}%
             </Text>
           )}
+          {calibratedConfidence ? (
+            <Text style={[pdfStyles.bodySmall, { marginTop: 2 }]}>
+              Confidence level:{" "}
+              {formatConfidenceLevelLabel(
+                calibratedConfidence.confidence_level
+              )}
+            </Text>
+          ) : null}
           <Text style={[pdfStyles.body, { marginTop: 8 }]}>{report.explanation}</Text>
         </View>
+
+        {calibratedConfidence ? (
+          <>
+            <Text style={pdfStyles.sectionTitle}>Confidence calibration</Text>
+            <View style={pdfStyles.handoffBox}>
+              <Text style={pdfStyles.body}>
+                {calibratedConfidence.recommendation}
+              </Text>
+              <Text style={[pdfStyles.bodySmall, { marginTop: 4 }]}>
+                Base {(calibratedConfidence.base_confidence * 100).toFixed(0)}% ·
+                Final {(calibratedConfidence.final_confidence * 100).toFixed(0)}% ·{" "}
+                {formatConfidenceLevelLabel(
+                  calibratedConfidence.confidence_level
+                )}{" "}
+                confidence
+              </Text>
+            </View>
+          </>
+        ) : null}
 
         {escalatedReport ? (
           <View

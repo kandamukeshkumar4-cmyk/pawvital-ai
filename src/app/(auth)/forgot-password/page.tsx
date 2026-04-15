@@ -2,16 +2,34 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Mail, Heart, ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import {
+  appendRedirectParam,
+  buildCallbackUrl,
+  buildRecoveryRedirectPath,
+  getAuthFeedbackMessage,
+  resolvePostAuthRedirect,
+} from "@/lib/auth-routing";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const redirectTarget = resolvePostAuthRedirect(searchParams.get("redirect"));
+  const authFeedback = getAuthFeedbackMessage(
+    searchParams.get("reason"),
+    searchParams.get("error")
+  );
+  const feedbackClasses =
+    authFeedback?.tone === "error"
+      ? "bg-red-50 text-red-700"
+      : "bg-blue-50 text-blue-700";
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +45,10 @@ export default function ForgotPasswordPage() {
       }
       const supabase = createClient();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: buildCallbackUrl(
+          window.location.origin,
+          buildRecoveryRedirectPath(redirectTarget)
+        ),
       });
       if (resetError) throw resetError;
       setSent(true);
@@ -63,7 +84,7 @@ export default function ForgotPasswordPage() {
               <p className="text-gray-600 mb-6">
                 We&apos;ve sent a password reset link to <strong>{email}</strong>
               </p>
-              <Link href="/login">
+              <Link href={appendRedirectParam("/login", redirectTarget)}>
                 <Button variant="outline" className="w-full">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back to login
                 </Button>
@@ -71,6 +92,11 @@ export default function ForgotPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleReset} className="space-y-5">
+              {authFeedback && !error && (
+                <div className={`${feedbackClasses} rounded-xl p-3 text-sm`}>
+                  {authFeedback.text}
+                </div>
+              )}
               {error && (
                 <div className="bg-red-50 text-red-700 rounded-xl p-3 text-sm">{error}</div>
               )}
@@ -91,7 +117,10 @@ export default function ForgotPasswordPage() {
 
           {!sent && (
             <div className="mt-6 text-center">
-              <Link href="/login" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+              <Link
+                href={appendRedirectParam("/login", redirectTarget)}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+              >
                 <ArrowLeft className="w-4 h-4" /> Back to login
               </Link>
             </div>

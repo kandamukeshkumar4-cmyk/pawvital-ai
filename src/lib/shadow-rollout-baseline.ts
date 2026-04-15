@@ -316,6 +316,22 @@ async function buildFallbackSnapshotFromRedis(
   });
 }
 
+export function buildEmptyPersistedShadowBaselineSnapshot(
+  warning: string | null = null,
+  windowHours = 24
+): PersistedShadowBaselineSnapshot {
+  const emptySession = buildEmptySession();
+
+  return buildSnapshotFromSession({
+    session: emptySession,
+    windowHours,
+    reportCount: 0,
+    parsedReportCount: 0,
+    malformedReportCount: 0,
+    warning,
+  });
+}
+
 export async function buildPersistedShadowBaselineSnapshot(options?: {
   windowHours?: number;
   limit?: number;

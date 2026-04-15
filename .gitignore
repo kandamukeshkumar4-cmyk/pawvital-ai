@@ -84,6 +84,8 @@ next-env.d.ts
 !/scripts/multimodal-improvement-report.mjs
 !/scripts/multimodal-triage-pilot.mjs
 !/scripts/check-emergency-sentinels.mjs
+!/scripts/rate-limit-failover-harness.ts
+!/scripts/run-rate-limit-failover-harness.cjs
 
 # Generated benchmark/deployment run reports
 /data/benchmark/scorecard-*.json

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export interface Notification {
@@ -22,6 +22,13 @@ export function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const notificationsRef = useRef<Notification[]>([]);
+  const unreadCountRef = useRef(0);
+
+  useEffect(() => {
+    notificationsRef.current = notifications;
+    unreadCountRef.current = unreadCount;
+  }, [notifications, unreadCount]);
 
   const fetchNotifications = useCallback(async () => {
     if (!isSupabaseConfigured) return;
@@ -39,21 +46,56 @@ export function useNotifications() {
   }, []);
 
   const markRead = useCallback(async (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    const previousNotifications = notificationsRef.current;
+    const previousUnreadCount = unreadCountRef.current;
+    const nextNotifications = previousNotifications.map((notification) =>
+      notification.id === id ? { ...notification, read: true } : notification
     );
-    setUnreadCount((c) => Math.max(0, c - 1));
-    await fetch(`/api/notifications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ read: true }),
-    });
+
+    setNotifications(nextNotifications);
+    setUnreadCount(
+      nextNotifications.filter((notification) => !notification.read).length
+    );
+
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to mark notification as read");
+      }
+    } catch {
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
+    }
   }, []);
 
   const markAllRead = useCallback(async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const previousNotifications = notificationsRef.current;
+    const previousUnreadCount = unreadCountRef.current;
+    const nextNotifications = previousNotifications.map((notification) => ({
+      ...notification,
+      read: true,
+    }));
+
+    setNotifications(nextNotifications);
     setUnreadCount(0);
-    await fetch("/api/notifications/mark-all-read", { method: "POST" });
+
+    try {
+      const response = await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to mark notifications as read");
+      }
+    } catch {
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
+    }
   }, []);
 
   useEffect(() => {
