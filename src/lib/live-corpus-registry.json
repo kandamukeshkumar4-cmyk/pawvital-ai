@@ -2,6 +2,7 @@
   {
     "slug": "roboflow-dog-skin-disease-detection",
     "status": "pending_assets",
+    "trustLevel": 40,
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
     "directoryHints": ["roboflow-dog-skin-classification"],
@@ -10,6 +11,7 @@
   {
     "slug": "mendeley-dog-skin-disease-multispectral",
     "status": "live",
+    "trustLevel": 85,
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
     "directoryHints": ["mendeley-dog-skin"]
@@ -17,6 +19,7 @@
   {
     "slug": "kaggle-dog-skin-diseases-5class",
     "status": "live",
+    "trustLevel": 60,
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
     "directoryHints": [
@@ -27,6 +30,7 @@
   {
     "slug": "kaggle-pet-disease-images-dog",
     "status": "live",
+    "trustLevel": 60,
     "speciesScope": "mixed",
     "supportedDomains": ["skin_wound", "eye"],
     "note": "Only the curated dog-only subset is eligible for live retrieval.",
@@ -35,6 +39,7 @@
   {
     "slug": "roboflow-dog-skin-detection-4class",
     "status": "pending_assets",
+    "trustLevel": 40,
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
     "directoryHints": ["roboflow-dog-skin-detection"],
@@ -43,6 +48,7 @@
   {
     "slug": "kaggle-yashmotiani-dog-skin",
     "status": "live",
+    "trustLevel": 80,
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
     "directoryHints": ["kaggle-yashmotiani-dog-skin"]
@@ -50,6 +56,7 @@
   {
     "slug": "roboflow-tick-detection",
     "status": "pending_assets",
+    "trustLevel": 40,
     "speciesScope": "dog",
     "supportedDomains": ["skin_wound"],
     "directoryHints": ["roboflow-tick-detection"],
@@ -58,6 +65,7 @@
   {
     "slug": "roboflow-dog-eye-disease",
     "status": "pending_assets",
+    "trustLevel": 40,
     "speciesScope": "dog",
     "supportedDomains": ["eye"],
     "directoryHints": ["roboflow-dog-eye-disease"],
