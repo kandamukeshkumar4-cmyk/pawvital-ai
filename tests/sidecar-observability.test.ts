@@ -133,61 +133,94 @@ describe("sidecar observability", () => {
     expect(snapshot.shadowConfig.routineSampleRate).toBe(0.05);
   });
 
-  it("can include internal async-review telemetry for persisted shadow baselines", async () => {
+  it("preserves internal async-review telemetry for shadow baseline persistence", async () => {
     const now = new Date().toISOString();
-    const { buildObservabilitySnapshot } = await import(
-      "@/lib/sidecar-observability"
-    );
+    const {
+      buildInternalShadowTelemetrySnapshot,
+      buildObservabilitySnapshot,
+    } = await import("@/lib/sidecar-observability");
 
-    const snapshot = buildObservabilitySnapshot(
-      makeSession({
-        case_memory: {
-          turn_count: 1,
-          chief_complaints: [],
-          active_focus_symptoms: [],
-          confirmed_facts: {},
-          image_findings: [],
-          red_flag_notes: [],
-          unresolved_question_ids: [],
-          clarification_reasons: {},
-          timeline_notes: [],
-          visual_evidence: [],
-          retrieval_evidence: [],
-          consult_opinions: [],
-          evidence_chain: [],
-          service_timeouts: [],
-          service_observations: [
-            {
-              service: "async-review-service",
-              stage: "review",
-              latencyMs: 2100,
-              outcome: "shadow",
-              shadowMode: true,
-              fallbackUsed: false,
-              recordedAt: now,
-            },
-          ],
-          shadow_comparisons: [
-            {
-              service: "async-review-service",
-              usedStrategy: "nvidia-primary",
-              shadowStrategy: "hf-async-review",
-              summary: "Escalation framing aligned.",
-              disagreementCount: 0,
-              recordedAt: now,
-            },
-          ],
-          ambiguity_flags: [],
-        },
-      }),
-      { includeInternalTelemetry: true }
-    );
-
-    expect(snapshot.serviceCallCounts).toEqual({
-      "async-review-service": 1,
+    const session = makeSession({
+      case_memory: {
+        turn_count: 1,
+        chief_complaints: [],
+        active_focus_symptoms: [],
+        confirmed_facts: {},
+        image_findings: [],
+        red_flag_notes: [],
+        unresolved_question_ids: [],
+        clarification_reasons: {},
+        timeline_notes: [],
+        visual_evidence: [],
+        retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
+        service_timeouts: [],
+        service_observations: [
+          {
+            service: "vision-preprocess-service",
+            stage: "preprocess",
+            latencyMs: 120,
+            outcome: "shadow",
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt: now,
+          },
+          {
+            service: "async-review-service",
+            stage: "report-review",
+            latencyMs: 900,
+            outcome: "shadow",
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt: now,
+          },
+        ],
+        shadow_comparisons: [
+          {
+            service: "async-review-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Aligned",
+            disagreementCount: 0,
+            recordedAt: now,
+          },
+        ],
+        ambiguity_flags: [],
+      },
     });
-    expect(snapshot.recentServiceCalls).toHaveLength(1);
-    expect(snapshot.recentShadowComparisons).toHaveLength(1);
+
+    const internalSnapshot = buildInternalShadowTelemetrySnapshot(session);
+    const publicSnapshot = buildObservabilitySnapshot(session);
+    const persistedSnapshot = buildObservabilitySnapshot(session, {
+      includeInternalTelemetry: true,
+    });
+
+    expect(internalSnapshot.recentServiceCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "async-review-service" }),
+      ])
+    );
+    expect(internalSnapshot.recentShadowComparisons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "async-review-service" }),
+      ])
+    );
+    expect(publicSnapshot.recentServiceCalls).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "async-review-service" }),
+      ])
+    );
+    expect(persistedSnapshot.recentServiceCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "async-review-service" }),
+      ])
+    );
+    expect(persistedSnapshot.recentShadowComparisons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ service: "async-review-service" }),
+      ])
+    );
   });
 
   it("forces shadow sampling for urgent cases when a service is enabled", async () => {

@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
-import { buildObservabilitySnapshot } from "@/lib/sidecar-observability";
+import {
+  buildInternalShadowTelemetrySnapshot,
+  buildObservabilitySnapshot,
+} from "@/lib/sidecar-observability";
 import { buildPersistedShadowBaselineSnapshot } from "@/lib/shadow-rollout-baseline";
-import { persistShadowLoadTestSummary } from "@/lib/shadow-telemetry-store";
+import {
+  appendShadowTelemetrySnapshot,
+  persistShadowLoadTestSummary,
+} from "@/lib/shadow-telemetry-store";
 import {
   buildShadowRolloutSummary,
   type ShadowLoadTestSummary,
@@ -13,6 +19,10 @@ const SHADOW_ROLLOUT_DEBUG_SECRET =
   process.env.ASYNC_REVIEW_WEBHOOK_SECRET?.trim() ||
   "";
 
+function normalizeConfiguredSecret(value: string): string {
+  return value.replace(/(?:\\r\\n|\\n|\\r)+$/g, "").trim();
+}
+
 interface ShadowRolloutRequestBody {
   session?: TriageSession;
   loadTest?: ShadowLoadTestSummary | null;
@@ -23,6 +33,12 @@ function isAuthorized(request: Request): boolean {
     return process.env.NODE_ENV !== "production";
   }
 
+  const acceptedSecrets = new Set(
+    [SHADOW_ROLLOUT_DEBUG_SECRET, normalizeConfiguredSecret(SHADOW_ROLLOUT_DEBUG_SECRET)]
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+
   const authHeader = request.headers.get("authorization") || "";
   const bearerToken = authHeader.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length).trim()
@@ -31,8 +47,7 @@ function isAuthorized(request: Request): boolean {
     request.headers.get("x-shadow-rollout-secret")?.trim() || "";
 
   return (
-    bearerToken === SHADOW_ROLLOUT_DEBUG_SECRET ||
-    directSecret === SHADOW_ROLLOUT_DEBUG_SECRET
+    acceptedSecrets.has(bearerToken) || acceptedSecrets.has(directSecret)
   );
 }
 
@@ -77,10 +92,14 @@ export async function POST(request: Request) {
     loadTest: body.loadTest || null,
   });
   const observability = buildObservabilitySnapshot(body.session!);
+  const persistedTelemetry = await appendShadowTelemetrySnapshot(
+    buildInternalShadowTelemetrySnapshot(body.session!)
+  );
 
   return NextResponse.json({
     ok: true,
     persistedLoadTest,
+    persistedTelemetry,
     summary,
     observability: {
       shadowModeActive: observability.shadowModeActive,

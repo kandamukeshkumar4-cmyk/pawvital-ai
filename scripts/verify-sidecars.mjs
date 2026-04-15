@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
 
 const rootDir = process.cwd();
 const vercelProjectConfigPath = path.join(rootDir, ".vercel", "project.json");
@@ -10,36 +11,7 @@ function inferWorkspaceProjectName() {
   return path.basename(rootDir).replace(/-(codex|claude|minimax)$/i, "");
 }
 
-function normalizeEnvValue(rawValue) {
-  const value = String(rawValue || "").trim();
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-  return value;
-}
-
-function loadEnvFiles() {
-  for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
-    const fullPath = path.join(rootDir, relativePath);
-    if (!fs.existsSync(fullPath)) continue;
-
-    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).replace(/^export\s+/, "").trim();
-      const value = normalizeEnvValue(trimmed.slice(eq + 1));
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
-}
-loadEnvFiles();
+loadEnvFiles(rootDir);
 
 function readVercelProjectConfigBase() {
   const envProjectId = String(process.env.VERCEL_PROJECT_ID || "").trim();
@@ -603,7 +575,6 @@ async function runReadinessChecks() {
     const requiredServices = services.length;
     const configuredCount = Number(readiness.configuredCount ?? 0);
     const healthyCount = Number(readiness.healthyCount ?? 0);
-    const warmingCount = Number(readiness.warmingCount ?? 0);
     const stubCount = Number(readiness.stubCount ?? 0);
 
     if (configuredCount < requiredServices) {
@@ -630,17 +601,9 @@ async function runReadinessChecks() {
       );
     }
 
-    if (warmingCount > 0) {
-      warnings += 1;
-      statusLine(
-        "warn",
-        `sidecar readiness route reports warming=${warmingCount}; wait for background model startup to finish before running the live baseline`
-      );
-    }
-
     statusLine(
       "ok",
-      `sidecar readiness route healthy at ${routeUrl} (configured=${configuredCount}, healthy=${healthyCount}, warming=${warmingCount}, stub=${stubCount})`
+      `sidecar readiness route healthy at ${routeUrl} (configured=${configuredCount}, healthy=${healthyCount}, stub=${stubCount})`
     );
   } catch (error) {
     failures += 1;

@@ -555,12 +555,10 @@ export function shouldPersistRawPendingAnswer(
   if (question.data_type !== "string") {
     return false;
   }
-
   const hasOtherTurnAnswers = Object.keys(turnAnswers).some(
     (key) => key !== questionId
   );
   const hasOtherTurnSymptoms = turnSymptoms.length > 0;
-
   if (
     questionLooksDurationLike(question) &&
     hasDurationLikeSignal(normalizedMessage)

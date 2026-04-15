@@ -62,7 +62,10 @@ import { buildStructuredEvidenceChain } from "@/lib/evidence-chain";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
   consultWithMultimodalSidecar,
+  describeLiveTrafficDecision,
+  getLiveTrafficDecision,
   isAbortLikeError as isSidecarAbortError,
+  isAsyncReviewServiceConfigured,
   isMultimodalConsultConfigured,
   isVisionPreprocessConfigured,
   preprocessVeterinaryImage,
@@ -107,11 +110,10 @@ import {
 import {
   appendShadowComparison,
   appendSidecarObservation,
+  buildInternalShadowTelemetrySnapshot,
   buildObservabilitySnapshot,
-  describeLiveTrafficDecision,
   describeShadowComparison,
   describeShadowModeDecision,
-  getLiveTrafficDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
 import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
@@ -2257,50 +2259,81 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     // ── Save to Supabase (non-blocking) ──
     let asyncReviewScheduled = false;
     const reviewImage = image;
+    const asyncReviewAdditionalKey = [
+      String(finalReport.title || "").trim(),
+      String(finalReport.recommendation || "").trim(),
+    ]
+      .filter(Boolean)
+      .join("|");
+    const asyncReviewShadowDecision =
+      reviewImage && requestOrigin
+        ? getShadowModeDecision({
+            service: "async-review-service",
+            session,
+            pet,
+            urgencyHint: context.highest_urgency,
+            additionalKey: asyncReviewAdditionalKey,
+          })
+        : null;
+    const asyncReviewLiveDecision = reviewImage
+      ? getLiveTrafficDecision({
+          service: "async-review-service",
+          session,
+          additionalKey: asyncReviewAdditionalKey,
+        })
+      : null;
     const shouldAttemptAsyncReview =
       Boolean(reviewImage) &&
       context.highest_urgency !== "emergency" &&
       shouldScheduleAsyncConsultReview(session) &&
-      isMultimodalConsultConfigured() &&
-      Boolean(requestOrigin);
+      isAsyncReviewServiceConfigured() &&
+      Boolean(requestOrigin) &&
+      Boolean(
+        asyncReviewShadowDecision?.enabled || asyncReviewLiveDecision?.enabled
+      );
 
-    if (shouldAttemptAsyncReview) {
-      const task = async () => {
-        try {
-          await enqueueAsyncReview({
-            baseUrl: requestOrigin!,
-            image: reviewImage!,
-            pet,
-            session,
-            report: finalReport,
-          });
+    if (
+      shouldAttemptAsyncReview &&
+      asyncReviewShadowDecision &&
+      asyncReviewLiveDecision
+    ) {
+      const startedAt = Date.now();
+      try {
+        asyncReviewScheduled = await enqueueAsyncReview({
+          baseUrl: requestOrigin!,
+          image: reviewImage!,
+          pet,
+          session,
+          report: finalReport,
+        });
+        session = appendSidecarObservation(session, {
+          service: "async-review-service",
+          stage: "queue",
+          latencyMs: Date.now() - startedAt,
+          outcome: asyncReviewScheduled
+            ? asyncReviewShadowDecision.enabled
+              ? "shadow"
+              : "success"
+            : "error",
+          shadowMode: asyncReviewShadowDecision.enabled,
+          fallbackUsed:
+            asyncReviewShadowDecision.enabled || !asyncReviewScheduled,
+          note: `queued=${asyncReviewScheduled}; ${describeShadowModeDecision(asyncReviewShadowDecision)}; ${describeLiveTrafficDecision(asyncReviewLiveDecision)}`,
+        });
+        if (asyncReviewScheduled) {
           console.log("[HF Multimodal Consult] queued async review");
-        } catch (error) {
-          console.error("[HF Multimodal Consult] async review failed:", error);
         }
-      };
-
-      asyncReviewScheduled = runAfterSafely(task);
-      if (!asyncReviewScheduled) {
-        try {
-          asyncReviewScheduled = await enqueueAsyncReview({
-            baseUrl: requestOrigin!,
-            image: reviewImage!,
-            pet,
-            session,
-            report: finalReport,
-          });
-          if (asyncReviewScheduled) {
-            console.log(
-              "[HF Multimodal Consult] queued async review via inline fallback"
-            );
-          }
-        } catch (error) {
-          console.error(
-            "[HF Multimodal Consult] inline fallback enqueue failed:",
-            error
-          );
-        }
+      } catch (error) {
+        session = appendSidecarObservation(session, {
+          service: "async-review-service",
+          stage: "queue",
+          latencyMs: Date.now() - startedAt,
+          outcome: "error",
+          shadowMode: asyncReviewShadowDecision.enabled,
+          fallbackUsed: true,
+          note: `queue_exception=true; ${describeShadowModeDecision(asyncReviewShadowDecision)}; ${describeLiveTrafficDecision(asyncReviewLiveDecision)}`,
+        });
+        console.error("[HF Multimodal Consult] async review failed:", error);
       }
     }
 
@@ -2314,20 +2347,13 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       finalReport
     );
     const observabilitySnapshot = buildObservabilitySnapshot(session);
-    const persistedObservabilitySnapshot = buildObservabilitySnapshot(session, {
-      includeInternalTelemetry: true,
-    });
     finalReport.system_observability = observabilitySnapshot;
+    const persistedShadowTelemetrySnapshot =
+      buildInternalShadowTelemetrySnapshot(session);
 
     const persistShadowTelemetry = async () => {
       try {
-        await appendShadowTelemetrySnapshot({
-          generatedAt: new Date().toISOString(),
-          recentServiceCalls:
-            persistedObservabilitySnapshot.recentServiceCalls || [],
-          recentShadowComparisons:
-            persistedObservabilitySnapshot.recentShadowComparisons || [],
-        });
+        await appendShadowTelemetrySnapshot(persistedShadowTelemetrySnapshot);
       } catch (shadowTelemetryError) {
         console.error(
           "[ShadowTelemetry] Failed to persist report telemetry:",

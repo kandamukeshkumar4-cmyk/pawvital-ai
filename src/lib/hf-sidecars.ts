@@ -5,6 +5,7 @@ import type {
   RetrievalBundle,
   RetrievalImageEvidence,
   RetrievalTextEvidence,
+  SidecarServiceName,
   SupportedImageDomain,
   VisionPreprocessResult,
   VisionSeverityClass,
@@ -16,6 +17,8 @@ import {
   ConsultOpinionSchema,
   AsyncReviewSubmissionSchema,
 } from "./api-schemas";
+import sidecarServiceRegistry from "./sidecar-service-registry.json";
+import type { TriageSession } from "./triage-engine";
 
 const VISION_PREPROCESS_URL = process.env.HF_VISION_PREPROCESS_URL?.trim() || "";
 const TEXT_RETRIEVAL_SERVICE_URL =
@@ -51,6 +54,169 @@ const MULTIMODAL_CONSULT_TIMEOUT_MS =
   Number(process.env.HF_MULTIMODAL_CONSULT_TIMEOUT_MS) || 9000;
 const ASYNC_REVIEW_SERVICE_TIMEOUT_MS =
   Number(process.env.HF_ASYNC_REVIEW_TIMEOUT_MS) || 15000;
+
+type SidecarPromotionStatus = "promoted" | "shadow_only";
+
+interface SidecarRegistryEntry {
+  name: SidecarServiceName;
+  env: string;
+  expectedPath: string;
+  expectedHealthService: SidecarServiceName;
+  promotion_status?: SidecarPromotionStatus;
+  live_split_pct?: number;
+}
+
+export interface SidecarLiveSplitState {
+  service: SidecarServiceName;
+  env: string;
+  promotion_status: SidecarPromotionStatus;
+  live_split_pct: number;
+  effective_live_split_pct: number;
+  env_override_pct: number | null;
+}
+
+export interface LiveTrafficDecision extends SidecarLiveSplitState {
+  enabled: boolean;
+  case_sample: number;
+  mode: "disabled" | "promoted" | "held_back";
+}
+
+const LIVE_SPLIT_REGISTRY = sidecarServiceRegistry as SidecarRegistryEntry[];
+
+function normalizeLiveSplitPct(value: unknown): number {
+  const numeric =
+    typeof value === "number"
+      ? value
+      : Number.parseInt(String(value ?? "").trim(), 10);
+
+  if (!Number.isInteger(numeric) || numeric < 0 || numeric > 100) {
+    return 0;
+  }
+
+  return numeric;
+}
+
+function parseEnvLiveSplitPct(rawValue: string | undefined): number | null {
+  if (typeof rawValue !== "string" || rawValue.trim() === "") {
+    return null;
+  }
+
+  return normalizeLiveSplitPct(rawValue);
+}
+
+function serviceToLiveSplitEnv(service: SidecarServiceName): string {
+  const suffix = service
+    .replace(/-service$/, "")
+    .replace(/-/g, "_")
+    .toUpperCase();
+  return `SIDECAR_LIVE_SPLIT_${suffix}`;
+}
+
+function getSidecarRegistryEntry(
+  service: SidecarServiceName
+): SidecarRegistryEntry | null {
+  return LIVE_SPLIT_REGISTRY.find((entry) => entry.name === service) || null;
+}
+
+function buildLiveSplitCaseSignature(
+  session: TriageSession,
+  service: SidecarServiceName,
+  additionalKey?: string
+): string {
+  const answerSignature = Object.entries(session.extracted_answers || {})
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+    .map(([key, value]) => `${key}:${String(value)}`)
+    .join("|")
+    .slice(0, 400);
+
+  return [
+    service,
+    session.last_uploaded_image_hash || "",
+    session.latest_image_domain || "",
+    (session.case_memory?.chief_complaints || []).join(","),
+    session.known_symptoms.join(","),
+    answerSignature,
+    session.case_memory?.latest_owner_turn || "",
+    additionalKey || "",
+  ].join("|");
+}
+
+function deterministicSplitSample(signature: string): number {
+  let hash = 2166136261;
+  for (const char of signature) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967295;
+}
+
+function resolveSidecarLiveSplitState(
+  service: SidecarServiceName
+): SidecarLiveSplitState {
+  const registryEntry = getSidecarRegistryEntry(service);
+  const env = serviceToLiveSplitEnv(service);
+  const envOverridePct = parseEnvLiveSplitPct(process.env[env]);
+  const liveSplitPct = normalizeLiveSplitPct(registryEntry?.live_split_pct ?? 0);
+  const effectiveLiveSplitPct = envOverridePct ?? liveSplitPct;
+
+  return {
+    service,
+    env,
+    promotion_status: registryEntry?.promotion_status || "shadow_only",
+    live_split_pct: liveSplitPct,
+    effective_live_split_pct: effectiveLiveSplitPct,
+    env_override_pct: envOverridePct,
+  };
+}
+
+export function listSidecarLiveSplitStates(): SidecarLiveSplitState[] {
+  return LIVE_SPLIT_REGISTRY.map((entry) => resolveSidecarLiveSplitState(entry.name));
+}
+
+export function getLiveTrafficDecision(input: {
+  service: SidecarServiceName;
+  session: TriageSession;
+  additionalKey?: string;
+}): LiveTrafficDecision {
+  const liveSplit = resolveSidecarLiveSplitState(input.service);
+  const caseSample = deterministicSplitSample(
+    buildLiveSplitCaseSignature(
+      input.session,
+      input.service,
+      input.additionalKey
+    )
+  );
+  const enabled =
+    liveSplit.effective_live_split_pct > 0 &&
+    caseSample < liveSplit.effective_live_split_pct / 100;
+
+  return {
+    ...liveSplit,
+    enabled,
+    case_sample: caseSample,
+    mode:
+      liveSplit.effective_live_split_pct === 0
+        ? "disabled"
+        : enabled
+          ? "promoted"
+          : "held_back",
+  };
+}
+
+export function describeLiveTrafficDecision(
+  decision: LiveTrafficDecision
+): string {
+  return [
+    `promotionStatus=${decision.promotion_status}`,
+    `registryLiveSplitPct=${decision.live_split_pct}`,
+    `effectiveLiveSplitPct=${decision.effective_live_split_pct}`,
+    `liveTraffic=${decision.enabled}`,
+    `liveSplitPolicy=${decision.mode}`,
+    `liveCaseSample=${decision.case_sample.toFixed(4)}`,
+    `liveSplitEnv=${decision.env}`,
+    `liveSplitEnvOverride=${decision.env_override_pct ?? "none"}`,
+  ].join("; ");
+}
 
 function buildHeaders(): HeadersInit {
   return {

@@ -1,31 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
 
 const rootDir = process.cwd();
 const vercelProjectConfigPath = path.join(rootDir, ".vercel", "project.json");
 
 function inferWorkspaceProjectName() {
   return path.basename(rootDir).replace(/-(codex|claude|minimax)$/i, "");
-}
-
-function loadEnvFiles() {
-  for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
-    const fullPath = path.join(rootDir, relativePath);
-    if (!fs.existsSync(fullPath)) continue;
-
-    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
 }
 
 function readVercelProjectConfig() {
@@ -152,7 +134,7 @@ function buildServiceMarkdown(service, metrics) {
 }
 
 async function main() {
-  loadEnvFiles();
+  loadEnvFiles(rootDir);
   const args = parseArgs(process.argv.slice(2));
   const appBaseUrl = resolveAppBaseUrl();
   const sidecarSecret = (

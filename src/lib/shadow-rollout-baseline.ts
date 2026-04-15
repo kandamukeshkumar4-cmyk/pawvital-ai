@@ -7,6 +7,7 @@ import {
   isShadowTelemetryStoreConfigured,
   listShadowTelemetrySnapshots,
   readShadowLoadTestSummary,
+  shouldPreferShadowTelemetryFileStore,
 } from "./shadow-telemetry-store";
 import { buildShadowRolloutSummary } from "./shadow-rollout";
 import type { ShadowLoadTestSummary } from "./shadow-rollout";
@@ -279,8 +280,7 @@ async function buildFallbackSnapshotFromRedis(
   try {
     entries = await listShadowTelemetrySnapshots(limit);
   } catch (error) {
-    const details =
-      error instanceof Error ? error.message : String(error);
+    const details = error instanceof Error ? error.message : String(error);
     return buildSnapshotFromSession({
       session: emptySession,
       windowHours,
@@ -306,7 +306,8 @@ async function buildFallbackSnapshotFromRedis(
       malformedReportCount: 0,
       loadTest,
       warning:
-        warning || "Neither Supabase nor the Upstash shadow telemetry store is configured.",
+        warning ||
+        "Neither Supabase nor the Upstash shadow telemetry store is configured.",
     });
   }
 
@@ -373,9 +374,17 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
 }): Promise<PersistedShadowBaselineSnapshot> {
   const windowHours = Math.max(1, options?.windowHours || 24);
   const limit = Math.max(50, options?.limit || 1000);
-  const emptySession = buildEmptySession();
   const supabase = getServiceSupabase();
   const loadTest = await readShadowLoadTestSummary().catch(() => null);
+
+  if (shouldPreferShadowTelemetryFileStore()) {
+    return buildFallbackSnapshotFromRedis(
+      windowHours,
+      limit,
+      loadTest,
+      "Using local shadow telemetry file store because SHADOW_TELEMETRY_FILE_FALLBACK is enabled."
+    );
+  }
 
   if (!supabase) {
     return buildFallbackSnapshotFromRedis(
@@ -426,6 +435,8 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
       `Unable to load persisted shadow telemetry: ${error.message || "unknown error"}`
     );
   }
+
+  const emptySession = buildEmptySession();
 
   let parsedReportCount = 0;
   let malformedReportCount = 0;
