@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import type {
   AdminShadowRolloutDashboardData,
   AdminShadowRolloutServiceControl,
-  LiveSplitPct,
 } from "@/lib/admin-shadow-rollout";
-import { LIVE_SPLIT_VALUES } from "@/lib/admin-shadow-rollout";
+import {
+  LIVE_SPLIT_VALUES,
+  type LiveSplitPct,
+} from "@/lib/admin-shadow-rollout-shared";
 
 interface ShadowRolloutControlPanelProps {
   initialData: AdminShadowRolloutDashboardData;
@@ -18,6 +20,28 @@ function formatPercent(value: number) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();
+}
+
+function buildConfirmationMessage(
+  service: AdminShadowRolloutServiceControl,
+  nextLiveSplitPct: LiveSplitPct,
+  writeMode: AdminShadowRolloutDashboardData["writeMode"]
+) {
+  if (nextLiveSplitPct === 0 && service.currentLiveSplitPct > 0) {
+    return (
+      `Kill switch ${service.serviceLabel} from ${service.currentLiveSplitPct}% to 0% live traffic? ` +
+      "This change should be reserved for active production risk."
+    );
+  }
+
+  if (writeMode === "live") {
+    return (
+      `Apply ${service.serviceLabel} live split change from ${service.currentLiveSplitPct}% ` +
+      `to ${nextLiveSplitPct}% and queue a production redeploy?`
+    );
+  }
+
+  return null;
 }
 
 function healthClasses(status: AdminShadowRolloutServiceControl["health"]["status"]) {
@@ -77,11 +101,20 @@ export function ShadowRolloutControlPanel({
     service: AdminShadowRolloutServiceControl,
     nextLiveSplitPct: LiveSplitPct
   ) {
+    const confirmationMessage = buildConfirmationMessage(
+      service,
+      nextLiveSplitPct,
+      dashboard.writeMode
+    );
+    if (confirmationMessage && !window.confirm(confirmationMessage)) {
+      return;
+    }
+
     setSavingService(service.service);
     setStatusMessage(null);
 
     try {
-      const response = await fetch("/api/admin/shadow-rollout", {
+      const response = await fetch("/api/admin/sidecars", {
         body: JSON.stringify({
           liveSplitPct: nextLiveSplitPct,
           service: service.service,
@@ -264,6 +297,15 @@ export function ShadowRolloutControlPanel({
               <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
                   <p className="font-semibold text-slate-900">Health</p>
+                  <p className="mt-1">
+                    Checked: {formatDate(dashboard.readiness.generatedAt)}
+                  </p>
+                  <p className="mt-1">
+                    Last healthy:{" "}
+                    {service.health.status === "healthy"
+                      ? formatDate(dashboard.readiness.generatedAt)
+                      : "Not healthy in the latest snapshot"}
+                  </p>
                   <p className="mt-1">Mode: {service.health.mode || "unknown"}</p>
                   <p className="mt-1">Model: {service.health.model || "unknown"}</p>
                   <p className="mt-1">

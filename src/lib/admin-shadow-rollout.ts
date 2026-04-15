@@ -1,5 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+import {
+  LIVE_SPLIT_VALUES,
+  type LiveSplitPct,
+} from "./admin-shadow-rollout-shared";
 import sidecarServiceRegistry from "./sidecar-service-registry.json";
 import type { SidecarServiceName } from "./clinical-evidence";
 import {
@@ -17,10 +21,8 @@ import {
 } from "./shadow-rollout-baseline";
 import type { ShadowRolloutStatus } from "./shadow-rollout";
 
-export const LIVE_SPLIT_VALUES = [0, 5, 10, 15, 20] as const;
-
-export type LiveSplitPct = (typeof LIVE_SPLIT_VALUES)[number];
 export type RolloutWriteMode = "live" | "preview";
+export { LIVE_SPLIT_VALUES, type LiveSplitPct } from "./admin-shadow-rollout-shared";
 
 interface SidecarRegistryEntry {
   name: SidecarServiceName;
