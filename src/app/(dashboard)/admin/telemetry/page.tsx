@@ -3,6 +3,8 @@ import { getAdminRequestContext } from "@/lib/admin-auth";
 import { loadAdminTelemetryDashboardData } from "@/lib/admin-telemetry";
 import TelemetryDashboardClient from "../TelemetryDashboardClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminTelemetryPage() {
   const adminContext = await getAdminRequestContext();
 
@@ -44,8 +46,9 @@ export default async function AdminTelemetryPage() {
             Production telemetry dashboard
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-600">
-            Persisted application telemetry only: symptom checks, feedback,
-            proposals, shares, and notifications already stored in Supabase.
+            Production-only telemetry for the diagnostic pipeline: extraction,
+            pending-question rescue, repeat suppression, sidecar latency, and
+            shadow disagreement rates.
           </p>
         </div>
         <Link
@@ -56,10 +59,11 @@ export default async function AdminTelemetryPage() {
         </Link>
       </div>
 
-      {telemetry.isDemo && (
+      {telemetry.dataMode === "unavailable" && (
         <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-          Demo mode is active because trusted Supabase telemetry access is not
-          configured in this environment.
+          Production telemetry is currently unavailable. This page does not
+          synthesize demo metrics, so it will stay empty until trusted
+          production storage is reachable.
         </div>
       )}
 

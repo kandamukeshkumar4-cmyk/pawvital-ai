@@ -1,149 +1,591 @@
+import type {
+  ShadowComparisonRecord,
+  SidecarObservation,
+  SidecarServiceName,
+} from "./clinical-evidence";
 import type { AdminRequestContext } from "@/lib/admin-auth";
 import { getServiceSupabase } from "@/lib/supabase-admin";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const SERIES_DAYS = 7;
+const LOOKBACK_DAYS = 7;
+const HISTORY_LIMIT = 500;
 
-const SEVERITY_LEVELS = ["low", "medium", "high", "emergency"] as const;
-const FEEDBACK_OUTCOMES = ["yes", "partly", "no"] as const;
-const PROPOSAL_STATUSES = [
-  "draft",
-  "approved",
-  "rejected",
-  "superseded",
-] as const;
-const NOTIFICATION_TYPES = [
-  "report_ready",
-  "urgency_alert",
-  "outcome_reminder",
-  "subscription",
-  "system",
-] as const;
+const PIPELINE_TELEMETRY_STAGES = new Set([
+  "extraction",
+  "pending_recovery",
+  "repeat_suppression",
+] as const);
 
-export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
-export type FeedbackOutcome = (typeof FEEDBACK_OUTCOMES)[number];
-export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
-export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+const SIDECAR_SERVICES: SidecarServiceName[] = [
+  "vision-preprocess-service",
+  "text-retrieval-service",
+  "image-retrieval-service",
+  "multimodal-consult-service",
+  "async-review-service",
+];
 
-export interface AdminTelemetrySeriesPoint {
-  date: string;
-  label: string;
-  notifications: number;
-  outcomeFeedback: number;
-  shareLinks: number;
-  symptomChecks: number;
+type PipelineTelemetryStage =
+  | "extraction"
+  | "pending_recovery"
+  | "repeat_suppression";
+
+type TelemetryAvailability = "available" | "unavailable";
+
+export interface PersistedSymptomCheckTelemetryRow {
+  ai_response: Record<string, unknown> | string | null;
+  created_at: string;
 }
 
-export interface AdminTelemetryTotals {
-  activeSharedReports: number;
-  approvedProposals30d: number;
-  feedbackMismatch30d: number;
-  notifications7d: number;
-  outcomeFeedback30d: number;
-  sharedReports30d: number;
-  symptomChecks24h: number;
-  symptomChecks30d: number;
-  symptomChecks7d: number;
-  thresholdProposals30d: number;
-  unreadNotifications: number;
+export interface TelemetryHistoryAdapter {
+  listSymptomChecks(
+    sinceIso: string
+  ): Promise<PersistedSymptomCheckTelemetryRow[]>;
 }
 
-export interface AdminTelemetryRatios {
-  feedbackCoverage30d: number;
-  mismatchRate30d: number;
-  proposalApprovalRate30d: number;
-  shareRate30d: number;
+export interface AdminTelemetryWindowMetric {
+  availability: TelemetryAvailability;
+  denominator24h: number;
+  denominator7d: number;
+  note: string | null;
+  numerator24h: number;
+  numerator7d: number;
+  rate24h: number | null;
+  rate7d: number | null;
 }
 
-export interface AdminTelemetryDistributions {
-  feedback30d: Record<FeedbackOutcome, number>;
-  notificationTypes7d: Record<NotificationType, number>;
-  proposalStatus30d: Record<ProposalStatus, number>;
-  severity30d: Record<SeverityLevel, number>;
+export interface AdminTelemetryPipelineMetrics {
+  extractionSuccess: AdminTelemetryWindowMetric;
+  pendingQuestionRescue: AdminTelemetryWindowMetric;
+  repeatQuestionAttempt: AdminTelemetryWindowMetric;
+}
+
+export interface AdminTelemetrySidecarSummary {
+  errorRate24h: number | null;
+  lastSeenAt: string | null;
+  observationCount24h: number;
+  p95LatencyMs: number | null;
+  service: SidecarServiceName;
+  shadowComparisonCount24h: number;
+  shadowDisagreementCount24h: number;
+  shadowDisagreementRate24h: number | null;
+  timeoutRate24h: number | null;
 }
 
 export interface AdminTelemetryDashboardData {
-  distributions: AdminTelemetryDistributions;
+  dataMode: "live" | "unavailable";
   generatedAt: string;
-  isDemo: boolean;
+  historyWindowDays: number;
   notes: string[];
-  ratios: AdminTelemetryRatios;
-  series7d: AdminTelemetrySeriesPoint[];
+  pipeline: AdminTelemetryPipelineMetrics;
+  sidecars: AdminTelemetrySidecarSummary[];
   sources: string[];
-  totals: AdminTelemetryTotals;
+  symptomCheckCount7d: number;
 }
 
 export interface AdminTelemetryAggregateInput {
-  distributions: AdminTelemetryDistributions;
+  dataMode?: AdminTelemetryDashboardData["dataMode"];
   generatedAt: string;
-  isDemo: boolean;
-  series7d: AdminTelemetrySeriesPoint[];
-  totals: AdminTelemetryTotals;
+  notes?: string[];
+  rows: PersistedSymptomCheckTelemetryRow[];
 }
 
-interface CountSpec {
-  before?: string;
-  eq?: Record<string, boolean | string>;
-  gt?: Record<string, string>;
-  since?: string;
-  table:
-    | "notifications"
-    | "outcome_feedback_entries"
-    | "shared_reports"
-    | "symptom_checks"
-    | "threshold_proposals";
-  timestampColumn?: string;
+interface ParsedStoredTelemetry {
+  createdAt: string;
+  pipelineEvents: ConversationTelemetryEvent[];
+  shadowComparisons: ShadowComparisonRecord[];
+  sidecarObservations: SidecarObservation[];
 }
 
-export interface TelemetryCountAdapter {
-  count(spec: CountSpec): Promise<number>;
+interface ConversationTelemetryEvent {
+  note: string;
+  outcome: string | null;
+  recordedAt: string;
+  stage: PipelineTelemetryStage;
 }
 
-function addDays(date: Date, days: number) {
-  return new Date(date.getTime() + days * DAY_MS);
+type ParsedPayload = Record<string, unknown>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function buildDailyWindows(now: Date, days: number) {
-  const todayStart = startOfUtcDay(now);
+function safeRatio(numerator: number, denominator: number): number | null {
+  if (denominator <= 0) {
+    return null;
+  }
 
-  return Array.from({ length: days }, (_, index) => {
-    const offset = days - 1 - index;
-    const start = addDays(todayStart, -offset);
-    const end = addDays(start, 1);
+  return Number((numerator / denominator).toFixed(3));
+}
 
-    return {
-      before: end.toISOString(),
-      label: formatUtcDayLabel(start),
-      since: start.toISOString(),
-      start,
-    };
+function percentile(values: number[], percentileValue: number): number | null {
+  if (values.length === 0) {
+    return null;
+  }
+
+  const sorted = [...values].sort((left, right) => left - right);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil(sorted.length * percentileValue) - 1)
+  );
+
+  return sorted[index] ?? null;
+}
+
+function parseStoredPayload(
+  raw: PersistedSymptomCheckTelemetryRow["ai_response"]
+): ParsedPayload | null {
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return isRecord(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return isRecord(raw) ? raw : null;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function normalizeTimestamp(value: unknown, fallback: string): string {
+  const direct = readString(value);
+  if (direct && Number.isFinite(Date.parse(direct))) {
+    return direct;
+  }
+  return fallback;
+}
+
+function readNestedArray(
+  value: Record<string, unknown>,
+  ...path: string[]
+): unknown[] {
+  let current: unknown = value;
+  for (const segment of path) {
+    if (!isRecord(current)) {
+      return [];
+    }
+    current = current[segment];
+  }
+
+  return Array.isArray(current) ? current : [];
+}
+
+function isSidecarServiceName(value: unknown): value is SidecarServiceName {
+  return (
+    typeof value === "string" &&
+    SIDECAR_SERVICES.includes(value as SidecarServiceName)
+  );
+}
+
+function normalizeSidecarObservation(
+  value: unknown,
+  fallbackRecordedAt: string
+): SidecarObservation | null {
+  if (!isRecord(value) || !isSidecarServiceName(value.service)) {
+    return null;
+  }
+
+  const stage = readString(value.stage);
+  const outcome = readString(value.outcome);
+  const latencyMs =
+    typeof value.latencyMs === "number" && Number.isFinite(value.latencyMs)
+      ? value.latencyMs
+      : 0;
+
+  if (
+    !stage ||
+    !outcome ||
+    !["success", "timeout", "error", "fallback", "shadow"].includes(outcome)
+  ) {
+    return null;
+  }
+
+  return {
+    fallbackUsed: value.fallbackUsed === true,
+    latencyMs,
+    note: readString(value.note) || undefined,
+    outcome: outcome as SidecarObservation["outcome"],
+    recordedAt: normalizeTimestamp(value.recordedAt, fallbackRecordedAt),
+    service: value.service,
+    shadowMode: value.shadowMode === true,
+    stage,
+  };
+}
+
+function normalizeShadowComparison(
+  value: unknown,
+  fallbackRecordedAt: string
+): ShadowComparisonRecord | null {
+  if (!isRecord(value) || !isSidecarServiceName(value.service)) {
+    return null;
+  }
+
+  const usedStrategy = readString(value.usedStrategy);
+  const shadowStrategy = readString(value.shadowStrategy);
+  const summary = readString(value.summary);
+  const disagreementCount =
+    typeof value.disagreementCount === "number" &&
+    Number.isFinite(value.disagreementCount)
+      ? value.disagreementCount
+      : 0;
+
+  if (!usedStrategy || !shadowStrategy || !summary) {
+    return null;
+  }
+
+  return {
+    disagreementCount,
+    recordedAt: normalizeTimestamp(value.recordedAt, fallbackRecordedAt),
+    service: value.service,
+    shadowStrategy,
+    summary,
+    usedStrategy,
+  };
+}
+
+function normalizeConversationTelemetryEvent(
+  value: unknown,
+  fallbackRecordedAt: string
+): ConversationTelemetryEvent | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const stage = readString(value.stage);
+  if (!stage || !PIPELINE_TELEMETRY_STAGES.has(stage as PipelineTelemetryStage)) {
+    return null;
+  }
+
+  return {
+    note: readString(value.note) || "",
+    outcome: readString(value.outcome),
+    recordedAt: normalizeTimestamp(value.recordedAt, fallbackRecordedAt),
+    stage: stage as PipelineTelemetryStage,
+  };
+}
+
+function parseNoteTokens(note: string): Record<string, string> {
+  return note
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .reduce<Record<string, string>>((tokens, part) => {
+      const separatorIndex = part.indexOf("=");
+      if (separatorIndex <= 0) {
+        return tokens;
+      }
+
+      const key = part.slice(0, separatorIndex).trim();
+      const value = part.slice(separatorIndex + 1).trim();
+      if (key) {
+        tokens[key] = value;
+      }
+      return tokens;
+    }, {});
+}
+
+function parseBooleanNoteToken(
+  note: string,
+  key: string
+): boolean | undefined {
+  const value = parseNoteTokens(note)[key];
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return undefined;
+}
+
+function isWithinLookback(recordedAt: string, sinceIso: string): boolean {
+  const recordedMs = Date.parse(recordedAt);
+  const sinceMs = Date.parse(sinceIso);
+  return Number.isFinite(recordedMs) && Number.isFinite(sinceMs)
+    ? recordedMs >= sinceMs
+    : false;
+}
+
+function extractPipelineTelemetry(
+  payload: ParsedPayload,
+  fallbackRecordedAt: string
+): ConversationTelemetryEvent[] {
+  const candidateArrays = [
+    readNestedArray(payload, "session", "case_memory", "service_observations"),
+    readNestedArray(payload, "case_memory", "service_observations"),
+    readNestedArray(payload, "service_observations"),
+  ];
+
+  return candidateArrays.flatMap((entries) =>
+    entries
+      .map((entry) =>
+        normalizeConversationTelemetryEvent(entry, fallbackRecordedAt)
+      )
+      .filter((entry): entry is ConversationTelemetryEvent => entry !== null)
+  );
+}
+
+function extractSidecarObservations(
+  payload: ParsedPayload,
+  fallbackRecordedAt: string
+): SidecarObservation[] {
+  return readNestedArray(payload, "system_observability", "recentServiceCalls")
+    .map((entry) => normalizeSidecarObservation(entry, fallbackRecordedAt))
+    .filter((entry): entry is SidecarObservation => entry !== null);
+}
+
+function extractShadowComparisons(
+  payload: ParsedPayload,
+  fallbackRecordedAt: string
+): ShadowComparisonRecord[] {
+  return readNestedArray(
+    payload,
+    "system_observability",
+    "recentShadowComparisons"
+  )
+    .map((entry) => normalizeShadowComparison(entry, fallbackRecordedAt))
+    .filter((entry): entry is ShadowComparisonRecord => entry !== null);
+}
+
+function parsePersistedTelemetryRow(
+  row: PersistedSymptomCheckTelemetryRow
+): ParsedStoredTelemetry | null {
+  const payload = parseStoredPayload(row.ai_response);
+  if (!payload) {
+    return null;
+  }
+
+  return {
+    createdAt: normalizeTimestamp(row.created_at, new Date(0).toISOString()),
+    pipelineEvents: extractPipelineTelemetry(payload, row.created_at),
+    shadowComparisons: extractShadowComparisons(payload, row.created_at),
+    sidecarObservations: extractSidecarObservations(payload, row.created_at),
+  };
+}
+
+function buildUnavailableWindowMetric(
+  note: string
+): AdminTelemetryWindowMetric {
+  return {
+    availability: "unavailable",
+    denominator24h: 0,
+    denominator7d: 0,
+    note,
+    numerator24h: 0,
+    numerator7d: 0,
+    rate24h: null,
+    rate7d: null,
+  };
+}
+
+function buildWindowMetric(input: {
+  denominator24h: number;
+  denominator7d: number;
+  note: string | null;
+  numerator24h: number;
+  numerator7d: number;
+}): AdminTelemetryWindowMetric {
+  return {
+    availability:
+      input.denominator24h > 0 || input.denominator7d > 0
+        ? "available"
+        : "unavailable",
+    denominator24h: input.denominator24h,
+    denominator7d: input.denominator7d,
+    note: input.note,
+    numerator24h: input.numerator24h,
+    numerator7d: input.numerator7d,
+    rate24h: safeRatio(input.numerator24h, input.denominator24h),
+    rate7d: safeRatio(input.numerator7d, input.denominator7d),
+  };
+}
+
+function buildExtractionMetric(
+  telemetry: ConversationTelemetryEvent[],
+  since24h: string,
+  since7d: string
+): AdminTelemetryWindowMetric {
+  const extractionEvents = telemetry.filter((event) => event.stage === "extraction");
+  if (extractionEvents.length === 0) {
+    return buildUnavailableWindowMetric(
+      "No persisted extraction telemetry was found in saved production reports."
+    );
+  }
+
+  const calcCounts = (sinceIso: string) => {
+    const inWindow = extractionEvents.filter((event) =>
+      isWithinLookback(event.recordedAt, sinceIso)
+    );
+    const numerator = inWindow.filter(
+      (event) => parseBooleanNoteToken(event.note, "valid_json") === true
+    ).length;
+    return { denominator: inWindow.length, numerator };
+  };
+
+  const in24h = calcCounts(since24h);
+  const in7d = calcCounts(since7d);
+
+  return buildWindowMetric({
+    denominator24h: in24h.denominator,
+    denominator7d: in7d.denominator,
+    note: "Counts only turns where extraction telemetry was durably persisted.",
+    numerator24h: in24h.numerator,
+    numerator7d: in7d.numerator,
   });
 }
 
-function buildNotes(totals: AdminTelemetryTotals) {
+function buildPendingRecoveryMetric(
+  telemetry: ConversationTelemetryEvent[],
+  since24h: string,
+  since7d: string
+): AdminTelemetryWindowMetric {
+  const recoveryEvents = telemetry.filter(
+    (event) => event.stage === "pending_recovery"
+  );
+  if (recoveryEvents.length === 0) {
+    return buildUnavailableWindowMetric(
+      "No persisted pending-question recovery telemetry was found in saved production reports."
+    );
+  }
+
+  const calcCounts = (sinceIso: string) => {
+    const inWindow = recoveryEvents.filter((event) =>
+      isWithinLookback(event.recordedAt, sinceIso)
+    );
+    const numerator = inWindow.filter((event) => {
+      const pendingAfter = parseBooleanNoteToken(event.note, "pending_after");
+      return pendingAfter === false || event.outcome === "success";
+    }).length;
+    return { denominator: inWindow.length, numerator };
+  };
+
+  const in24h = calcCounts(since24h);
+  const in7d = calcCounts(since7d);
+
+  return buildWindowMetric({
+    denominator24h: in24h.denominator,
+    denominator7d: in7d.denominator,
+    note: "Rescue succeeds when a pending question resolves instead of staying unresolved.",
+    numerator24h: in24h.numerator,
+    numerator7d: in7d.numerator,
+  });
+}
+
+function buildRepeatQuestionMetric(
+  telemetry: ConversationTelemetryEvent[],
+  since24h: string,
+  since7d: string
+): AdminTelemetryWindowMetric {
+  const repeatEvents = telemetry.filter(
+    (event) => event.stage === "repeat_suppression"
+  );
+  const extractionEvents = telemetry.filter((event) => event.stage === "extraction");
+
+  if (repeatEvents.length === 0 && extractionEvents.length === 0) {
+    return buildUnavailableWindowMetric(
+      "No persisted repeat-question telemetry was found in saved production reports."
+    );
+  }
+
+  const calcCounts = (sinceIso: string) => {
+    const repeatInWindow = repeatEvents.filter((event) =>
+      isWithinLookback(event.recordedAt, sinceIso)
+    );
+    const extractionInWindow = extractionEvents.filter((event) =>
+      isWithinLookback(event.recordedAt, sinceIso)
+    );
+    return {
+      denominator: extractionInWindow.length,
+      numerator: repeatInWindow.length,
+    };
+  };
+
+  const in24h = calcCounts(since24h);
+  const in7d = calcCounts(since7d);
+
+  return buildWindowMetric({
+    denominator24h: in24h.denominator,
+    denominator7d: in7d.denominator,
+    note: "Rate is based on suppressed repeat attempts per extraction turn.",
+    numerator24h: in24h.numerator,
+    numerator7d: in7d.numerator,
+  });
+}
+
+function buildSidecarSummary(
+  service: SidecarServiceName,
+  parsedRows: ParsedStoredTelemetry[],
+  since24h: string
+): AdminTelemetrySidecarSummary {
+  const observations24h = parsedRows.flatMap((row) =>
+    row.sidecarObservations.filter(
+      (entry) =>
+        entry.service === service && isWithinLookback(entry.recordedAt, since24h)
+    )
+  );
+  const comparisons24h = parsedRows.flatMap((row) =>
+    row.shadowComparisons.filter(
+      (entry) =>
+        entry.service === service && isWithinLookback(entry.recordedAt, since24h)
+    )
+  );
+  const latencies = observations24h
+    .map((entry) => entry.latencyMs)
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  const lastSeen = [...observations24h, ...comparisons24h]
+    .map((entry) => entry.recordedAt)
+    .filter((value) => Number.isFinite(Date.parse(value)))
+    .sort()
+    .at(-1);
+
+  return {
+    errorRate24h: safeRatio(
+      observations24h.filter((entry) => entry.outcome === "error").length,
+      observations24h.length
+    ),
+    lastSeenAt: lastSeen ?? null,
+    observationCount24h: observations24h.length,
+    p95LatencyMs: percentile(latencies, 0.95),
+    service,
+    shadowComparisonCount24h: comparisons24h.length,
+    shadowDisagreementCount24h: comparisons24h.reduce(
+      (sum, entry) => sum + entry.disagreementCount,
+      0
+    ),
+    shadowDisagreementRate24h: safeRatio(
+      comparisons24h.filter((entry) => entry.disagreementCount > 0).length,
+      comparisons24h.length
+    ),
+    timeoutRate24h: safeRatio(
+      observations24h.filter((entry) => entry.outcome === "timeout").length,
+      observations24h.length
+    ),
+  };
+}
+
+function buildNotes(
+  parsedRows: ParsedStoredTelemetry[],
+  pipeline: AdminTelemetryPipelineMetrics,
+  dataMode: AdminTelemetryDashboardData["dataMode"],
+  seedNotes: string[]
+): string[] {
   const notes = [
-    "Only persisted application data is shown here. Runtime-only latency and sidecar health remain on the rollout/readiness tools.",
+    ...seedNotes,
+    "Read-only aggregates only. Raw internal telemetry markers and per-case event payloads stay hidden from the dashboard.",
   ];
 
-  if (totals.symptomChecks30d === 0) {
-    notes.push("No persisted symptom checks were recorded in the last 30 days.");
+  if (dataMode === "unavailable") {
+    return notes;
   }
 
-  if (totals.symptomChecks30d > 0 && totals.outcomeFeedback30d === 0) {
+  if (parsedRows.length === 0) {
     notes.push(
-      "Outcome feedback has not entered the quality loop in the last 30 days."
+      `No persisted symptom-check reports were found in the last ${LOOKBACK_DAYS} days.`
     );
   }
 
-  if (totals.outcomeFeedback30d > 0 && totals.thresholdProposals30d === 0) {
+  if (pipeline.extractionSuccess.availability === "unavailable") {
     notes.push(
-      "Recent outcome feedback has not produced any threshold proposals yet."
-    );
-  }
-
-  if (totals.activeSharedReports > 0) {
-    notes.push(
-      `${totals.activeSharedReports} share link(s) are currently live and should be monitored for expiry hygiene.`
+      "Extraction, pending-question rescue, and repeat-question metrics only appear when saved reports include durable conversation telemetry."
     );
   }
 
@@ -153,418 +595,136 @@ function buildNotes(totals: AdminTelemetryTotals) {
 export function buildAdminTelemetryDashboardData(
   input: AdminTelemetryAggregateInput
 ): AdminTelemetryDashboardData {
-  const { totals } = input;
+  const dataMode = input.dataMode || "live";
+  const since24h = new Date(Date.parse(input.generatedAt) - DAY_MS).toISOString();
+  const since7d = new Date(
+    Date.parse(input.generatedAt) - DAY_MS * LOOKBACK_DAYS
+  ).toISOString();
+  const parsedRows = input.rows
+    .map(parsePersistedTelemetryRow)
+    .filter((row): row is ParsedStoredTelemetry => row !== null);
+  const pipelineTelemetry = parsedRows.flatMap((row) => row.pipelineEvents);
+  const pipeline: AdminTelemetryPipelineMetrics = {
+    extractionSuccess: buildExtractionMetric(
+      pipelineTelemetry,
+      since24h,
+      since7d
+    ),
+    pendingQuestionRescue: buildPendingRecoveryMetric(
+      pipelineTelemetry,
+      since24h,
+      since7d
+    ),
+    repeatQuestionAttempt: buildRepeatQuestionMetric(
+      pipelineTelemetry,
+      since24h,
+      since7d
+    ),
+  };
 
   return {
-    ...input,
-    notes: buildNotes(totals),
-    ratios: {
-      feedbackCoverage30d: safeRatio(
-        totals.outcomeFeedback30d,
-        totals.symptomChecks30d
-      ),
-      mismatchRate30d: safeRatio(
-        totals.feedbackMismatch30d,
-        totals.outcomeFeedback30d
-      ),
-      proposalApprovalRate30d: safeRatio(
-        totals.approvedProposals30d,
-        totals.thresholdProposals30d
-      ),
-      shareRate30d: safeRatio(
-        totals.sharedReports30d,
-        totals.symptomChecks30d
-      ),
-    },
+    dataMode,
+    generatedAt: input.generatedAt,
+    historyWindowDays: LOOKBACK_DAYS,
+    notes: buildNotes(parsedRows, pipeline, dataMode, input.notes || []),
+    pipeline,
+    sidecars: SIDECAR_SERVICES.map((service) =>
+      buildSidecarSummary(service, parsedRows, since24h)
+    ),
     sources: [
-      "symptom_checks",
-      "outcome_feedback_entries",
-      "threshold_proposals",
-      "shared_reports",
-      "notifications",
+      "Persisted symptom-check reports",
+      "Saved sidecar observability snapshots",
+      "Durable conversation telemetry when available",
     ],
+    symptomCheckCount7d: input.rows.length,
   };
 }
 
-export function buildDemoAdminTelemetryDashboardData(
-  generatedAt = new Date().toISOString()
+export function buildUnavailableAdminTelemetryDashboardData(
+  generatedAt = new Date().toISOString(),
+  reason = "Production telemetry storage is not configured in this environment."
 ): AdminTelemetryDashboardData {
   return buildAdminTelemetryDashboardData({
-    distributions: {
-      feedback30d: { no: 6, partly: 11, yes: 29 },
-      notificationTypes7d: {
-        outcome_reminder: 7,
-        report_ready: 18,
-        subscription: 2,
-        system: 1,
-        urgency_alert: 4,
-      },
-      proposalStatus30d: {
-        approved: 3,
-        draft: 5,
-        rejected: 1,
-        superseded: 1,
-      },
-      severity30d: {
-        emergency: 9,
-        high: 25,
-        low: 54,
-        medium: 38,
-      },
-    },
+    dataMode: "unavailable",
     generatedAt,
-    isDemo: true,
-    series7d: [
-      {
-        date: "2026-04-08T00:00:00.000Z",
-        label: "Apr 8",
-        notifications: 2,
-        outcomeFeedback: 1,
-        shareLinks: 1,
-        symptomChecks: 11,
-      },
-      {
-        date: "2026-04-09T00:00:00.000Z",
-        label: "Apr 9",
-        notifications: 3,
-        outcomeFeedback: 2,
-        shareLinks: 0,
-        symptomChecks: 13,
-      },
-      {
-        date: "2026-04-10T00:00:00.000Z",
-        label: "Apr 10",
-        notifications: 4,
-        outcomeFeedback: 2,
-        shareLinks: 1,
-        symptomChecks: 15,
-      },
-      {
-        date: "2026-04-11T00:00:00.000Z",
-        label: "Apr 11",
-        notifications: 5,
-        outcomeFeedback: 3,
-        shareLinks: 1,
-        symptomChecks: 17,
-      },
-      {
-        date: "2026-04-12T00:00:00.000Z",
-        label: "Apr 12",
-        notifications: 6,
-        outcomeFeedback: 2,
-        shareLinks: 2,
-        symptomChecks: 19,
-      },
-      {
-        date: "2026-04-13T00:00:00.000Z",
-        label: "Apr 13",
-        notifications: 7,
-        outcomeFeedback: 4,
-        shareLinks: 1,
-        symptomChecks: 22,
-      },
-      {
-        date: "2026-04-14T00:00:00.000Z",
-        label: "Apr 14",
-        notifications: 8,
-        outcomeFeedback: 5,
-        shareLinks: 2,
-        symptomChecks: 24,
-      },
-    ],
-    totals: {
-      activeSharedReports: 5,
-      approvedProposals30d: 3,
-      feedbackMismatch30d: 6,
-      notifications7d: 32,
-      outcomeFeedback30d: 46,
-      sharedReports30d: 8,
-      symptomChecks24h: 24,
-      symptomChecks30d: 126,
-      symptomChecks7d: 121,
-      thresholdProposals30d: 10,
-      unreadNotifications: 4,
-    },
+    notes: [reason],
+    rows: [],
   });
 }
 
-function createSupabaseTelemetryAdapter(
+function createSupabaseTelemetryHistoryAdapter(
   serviceSupabase: NonNullable<ReturnType<typeof getServiceSupabase>>
-): TelemetryCountAdapter {
+): TelemetryHistoryAdapter {
   return {
-    async count(spec) {
-      let query = serviceSupabase
-        .from(spec.table)
-        .select("*", { count: "exact", head: true });
+    async listSymptomChecks(sinceIso) {
+      const { data, error } = await serviceSupabase
+        .from("symptom_checks")
+        .select("created_at, ai_response")
+        .gte("created_at", sinceIso)
+        .order("created_at", { ascending: false })
+        .limit(HISTORY_LIMIT);
 
-      if (spec.timestampColumn && spec.since) {
-        query = query.gte(spec.timestampColumn, spec.since);
-      }
-
-      if (spec.timestampColumn && spec.before) {
-        query = query.lt(spec.timestampColumn, spec.before);
-      }
-
-      for (const [column, value] of Object.entries(spec.eq || {})) {
-        query = query.eq(column, value);
-      }
-
-      for (const [column, value] of Object.entries(spec.gt || {})) {
-        query = query.gt(column, value);
-      }
-
-      const { count, error } = await query;
       if (error) {
-        console.error("Admin telemetry count failed:", spec, error);
-        return 0;
+        console.error("Admin telemetry symptom_checks query failed:", error);
+        return [];
       }
 
-      return count ?? 0;
+      return Array.isArray(data)
+        ? data
+            .map((row) =>
+              isRecord(row)
+                ? {
+                    ai_response:
+                      typeof row.ai_response === "string" || isRecord(row.ai_response)
+                        ? row.ai_response
+                        : null,
+                    created_at:
+                      readString(row.created_at) || new Date(0).toISOString(),
+                  }
+                : null
+            )
+            .filter(
+              (row): row is PersistedSymptomCheckTelemetryRow => row !== null
+            )
+        : [];
     },
-  };
-}
-
-function formatUtcDayLabel(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-async function getDistributionCounts<T extends readonly string[]>(
-  adapter: TelemetryCountAdapter,
-  values: T,
-  specFactory: (value: T[number]) => CountSpec
-) {
-  const counts = await Promise.all(
-    values.map(async (value) => [value, await adapter.count(specFactory(value))])
-  );
-
-  return Object.fromEntries(counts) as Record<T[number], number>;
-}
-
-async function getSeriesCounts(
-  adapter: TelemetryCountAdapter,
-  now: Date
-): Promise<AdminTelemetrySeriesPoint[]> {
-  const windows = buildDailyWindows(now, SERIES_DAYS);
-
-  return Promise.all(
-    windows.map(async (window) => ({
-      date: window.start.toISOString(),
-      label: window.label,
-      notifications: await adapter.count({
-        before: window.before,
-        since: window.since,
-        table: "notifications",
-        timestampColumn: "created_at",
-      }),
-      outcomeFeedback: await adapter.count({
-        before: window.before,
-        since: window.since,
-        table: "outcome_feedback_entries",
-        timestampColumn: "submitted_at",
-      }),
-      shareLinks: await adapter.count({
-        before: window.before,
-        since: window.since,
-        table: "shared_reports",
-        timestampColumn: "created_at",
-      }),
-      symptomChecks: await adapter.count({
-        before: window.before,
-        since: window.since,
-        table: "symptom_checks",
-        timestampColumn: "created_at",
-      }),
-    }))
-  );
-}
-
-async function loadTelemetryDistributions(
-  adapter: TelemetryCountAdapter,
-  ago7d: string,
-  ago30d: string
-) {
-  const [severity30d, feedback30d, proposalStatus30d, notificationTypes7d] =
-    await Promise.all([
-      getDistributionCounts(adapter, SEVERITY_LEVELS, (severity) => ({
-        eq: { severity },
-        since: ago30d,
-        table: "symptom_checks",
-        timestampColumn: "created_at",
-      })),
-      getDistributionCounts(adapter, FEEDBACK_OUTCOMES, (outcome) => ({
-        eq: { matched_expectation: outcome },
-        since: ago30d,
-        table: "outcome_feedback_entries",
-        timestampColumn: "submitted_at",
-      })),
-      getDistributionCounts(adapter, PROPOSAL_STATUSES, (status) => ({
-        eq: { status },
-        since: ago30d,
-        table: "threshold_proposals",
-        timestampColumn: "created_at",
-      })),
-      getDistributionCounts(
-        adapter,
-        NOTIFICATION_TYPES,
-        (notificationType) => ({
-          eq: { type: notificationType },
-          since: ago7d,
-          table: "notifications",
-          timestampColumn: "created_at",
-        })
-      ),
-    ]);
-
-  return {
-    feedback30d,
-    notificationTypes7d,
-    proposalStatus30d,
-    severity30d,
-  };
-}
-
-async function loadTelemetryTotals(
-  adapter: TelemetryCountAdapter,
-  nowIso: string,
-  ago24h: string,
-  ago7d: string,
-  ago30d: string
-) {
-  const [
-    symptomChecks24h,
-    symptomChecks7d,
-    symptomChecks30d,
-    outcomeFeedback30d,
-    feedbackMismatch30d,
-    thresholdProposals30d,
-    approvedProposals30d,
-    sharedReports30d,
-    activeSharedReports,
-    notifications7d,
-    unreadNotifications,
-  ] = await Promise.all([
-    adapter.count({
-      since: ago24h,
-      table: "symptom_checks",
-      timestampColumn: "created_at",
-    }),
-    adapter.count({
-      since: ago7d,
-      table: "symptom_checks",
-      timestampColumn: "created_at",
-    }),
-    adapter.count({
-      since: ago30d,
-      table: "symptom_checks",
-      timestampColumn: "created_at",
-    }),
-    adapter.count({
-      since: ago30d,
-      table: "outcome_feedback_entries",
-      timestampColumn: "submitted_at",
-    }),
-    adapter.count({
-      eq: { matched_expectation: "no" },
-      since: ago30d,
-      table: "outcome_feedback_entries",
-      timestampColumn: "submitted_at",
-    }),
-    adapter.count({
-      since: ago30d,
-      table: "threshold_proposals",
-      timestampColumn: "created_at",
-    }),
-    adapter.count({
-      eq: { status: "approved" },
-      since: ago30d,
-      table: "threshold_proposals",
-      timestampColumn: "created_at",
-    }),
-    adapter.count({
-      since: ago30d,
-      table: "shared_reports",
-      timestampColumn: "created_at",
-    }),
-    adapter.count({
-      gt: { expires_at: nowIso },
-      table: "shared_reports",
-    }),
-    adapter.count({
-      since: ago7d,
-      table: "notifications",
-      timestampColumn: "created_at",
-    }),
-    adapter.count({
-      eq: { read: false },
-      table: "notifications",
-    }),
-  ]);
-
-  return {
-    activeSharedReports,
-    approvedProposals30d,
-    feedbackMismatch30d,
-    notifications7d,
-    outcomeFeedback30d,
-    sharedReports30d,
-    symptomChecks24h,
-    symptomChecks30d,
-    symptomChecks7d,
-    thresholdProposals30d,
-    unreadNotifications,
   };
 }
 
 export async function loadAdminTelemetryDashboardData(
   adminContext: AdminRequestContext,
-  adapter?: TelemetryCountAdapter
+  adapter?: TelemetryHistoryAdapter
 ): Promise<AdminTelemetryDashboardData> {
+  const generatedAt = new Date().toISOString();
+
   if (adminContext.isDemo) {
-    return buildDemoAdminTelemetryDashboardData();
+    return buildUnavailableAdminTelemetryDashboardData(
+      generatedAt,
+      "Demo mode cannot show real production telemetry."
+    );
   }
 
   const serviceSupabase = getServiceSupabase();
   if (!serviceSupabase && !adapter) {
-    return buildDemoAdminTelemetryDashboardData();
+    return buildUnavailableAdminTelemetryDashboardData(generatedAt);
   }
 
   const effectiveAdapter =
-    adapter || createSupabaseTelemetryAdapter(serviceSupabase!);
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const ago24h = new Date(now.getTime() - DAY_MS).toISOString();
-  const ago7d = new Date(now.getTime() - DAY_MS * 7).toISOString();
-  const ago30d = new Date(now.getTime() - DAY_MS * 30).toISOString();
+    adapter || createSupabaseTelemetryHistoryAdapter(serviceSupabase!);
+  const sinceIso = new Date(Date.parse(generatedAt) - DAY_MS * LOOKBACK_DAYS)
+    .toISOString();
+  const rows = await effectiveAdapter.listSymptomChecks(sinceIso);
+  const notes: string[] = [];
 
-  const [totals, distributions, series7d] = await Promise.all([
-    loadTelemetryTotals(effectiveAdapter, nowIso, ago24h, ago7d, ago30d),
-    loadTelemetryDistributions(effectiveAdapter, ago7d, ago30d),
-    getSeriesCounts(effectiveAdapter, now),
-  ]);
-
-  return buildAdminTelemetryDashboardData({
-    distributions,
-    generatedAt: nowIso,
-    isDemo: false,
-    series7d,
-    totals,
-  });
-}
-
-function safeRatio(numerator: number, denominator: number) {
-  if (!denominator) {
-    return 0;
+  if (rows.length >= HISTORY_LIMIT) {
+    notes.push(
+      `Telemetry is sampled from the newest ${HISTORY_LIMIT} persisted reports in the ${LOOKBACK_DAYS}-day window.`
+    );
   }
 
-  return Number((numerator / denominator).toFixed(3));
-}
-
-function startOfUtcDay(date: Date) {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
+  return buildAdminTelemetryDashboardData({
+    generatedAt,
+    notes,
+    rows,
+  });
 }
