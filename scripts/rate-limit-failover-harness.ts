@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { checkRateLimit } from "../src/lib/rate-limit.ts";
+import { checkRateLimit } from "../src/lib/rate-limit";
 
 interface HarnessOptions {
   baseUrl: string;
@@ -21,11 +21,13 @@ interface HarnessOptions {
 
 interface HttpSummary {
   failureCount: number;
+  passedAllowedCount: number;
   passed: boolean;
   p50LatencyMs: number | null;
   p95LatencyMs: number | null;
   p99LatencyMs: number | null;
   statusCounts: Record<string, number>;
+  throttledCount: number;
   totalRequests: number;
 }
 
@@ -53,14 +55,14 @@ function parseArgs(argv: string[]): HarnessOptions {
     failoverAttempts: Number(process.env.RATE_LIMIT_FAILOVER_ATTEMPTS || 3),
     json: false,
     output: defaultOutputPath,
-    requests: Number(process.env.RATE_LIMIT_LOAD_REQUESTS || 30),
+    requests: Number(process.env.RATE_LIMIT_LOAD_REQUESTS || 35),
     skipFailover: false,
     skipHttp: false,
     targetPath:
       process.env.RATE_LIMIT_LOAD_TARGET ||
-      "/api/breeds/risk?breed=golden%20retriever&top=5",
+      "/api/ai/symptom-chat",
     timeoutMs: Number(process.env.RATE_LIMIT_LOAD_TIMEOUT_MS || 5_000),
-    uniqueClients: Number(process.env.RATE_LIMIT_LOAD_CLIENTS || 10),
+    uniqueClients: Number(process.env.RATE_LIMIT_LOAD_CLIENTS || 1),
   };
 
   for (const arg of argv) {
@@ -118,6 +120,19 @@ async function runHttpLoadProbe(options: HarnessOptions): Promise<HttpSummary> {
   const requestUrl = buildTargetUrl(options.baseUrl, options.targetPath);
   const latencies: number[] = [];
   const statusCounts = new Map<number, number>();
+  const clientSeed = Date.now();
+  const clientCount = Math.max(1, options.uniqueClients);
+  const requestBody = JSON.stringify({
+    action: "chat",
+    pet: {
+      name: "Harness",
+      species: "dog",
+      breed: "mixed",
+      age_years: 5,
+      weight: 25,
+    },
+    messages: [{ role: "user", content: "My dog has been limping since this morning." }],
+  });
   let failureCount = 0;
   let nextRequestIndex = 0;
 
@@ -129,15 +144,18 @@ async function runHttpLoadProbe(options: HarnessOptions): Promise<HttpSummary> {
         return;
       }
 
-      const clientIndex = requestIndex % Math.max(1, options.uniqueClients);
+      const clientIndex = requestIndex % clientCount;
       const requestStartedAt = Date.now();
 
       try {
         const response = await fetch(requestUrl, {
+          body: requestBody,
           headers: {
+            "content-type": "application/json",
             "x-forwarded-for": `198.51.100.${(clientIndex % 200) + 1}`,
-            "x-user-id": `load-client-${clientIndex}`,
+            "x-user-id": `symptom-chat-load-${clientSeed}-${clientIndex}`,
           },
+          method: "POST",
           signal: AbortSignal.timeout(options.timeoutMs),
         });
 
@@ -163,10 +181,21 @@ async function runHttpLoadProbe(options: HarnessOptions): Promise<HttpSummary> {
   const otherFailures = Array.from(statusCounts.entries()).some(
     ([status]) => status >= 500
   );
+  const throttledCount = statusCounts.get(429) ?? 0;
+  const passedAllowedCount = Array.from(statusCounts.entries()).reduce(
+    (count, [status, statusCount]) =>
+      status >= 200 && status < 300 ? count + statusCount : count,
+    0
+  );
 
   return {
     failureCount,
-    passed: failureCount === 0 && !otherFailures,
+    passed:
+      failureCount === 0 &&
+      !otherFailures &&
+      passedAllowedCount > 0 &&
+      throttledCount > 0,
+    passedAllowedCount,
     p50LatencyMs: percentile(latencies, 0.5),
     p95LatencyMs: percentile(latencies, 0.95),
     p99LatencyMs: percentile(latencies, 0.99),
@@ -176,6 +205,7 @@ async function runHttpLoadProbe(options: HarnessOptions): Promise<HttpSummary> {
         count,
       ])
     ),
+    throttledCount,
     totalRequests: options.requests,
   };
 }

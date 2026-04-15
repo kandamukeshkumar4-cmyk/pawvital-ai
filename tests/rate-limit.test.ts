@@ -39,6 +39,45 @@ describe("rate-limit helper", () => {
     });
   });
 
+  it("allows the same client again after the limiter window resets", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-04-14T12:00:00.000Z"));
+    const resetAt = Date.now() + 1_000;
+    const { checkRateLimit } = await import("../src/lib/rate-limit");
+    const limiter = {
+      limit: jest.fn().mockImplementation(() => {
+        if (Date.now() < resetAt) {
+          return Promise.resolve({
+            success: false,
+            reset: resetAt,
+            remaining: 0,
+          });
+        }
+
+        return Promise.resolve({
+          success: true,
+          reset: resetAt,
+          remaining: 29,
+        });
+      }),
+    };
+
+    await expect(
+      checkRateLimit(limiter as never, "user:window-reset")
+    ).resolves.toEqual({
+      success: false,
+      reset: resetAt,
+      remaining: 0,
+    });
+
+    jest.setSystemTime(resetAt + 1);
+
+    await expect(
+      checkRateLimit(limiter as never, "user:window-reset")
+    ).resolves.toEqual({
+      success: true,
+    });
+  });
+
   it("fails open and marks the result degraded when Upstash throws", async () => {
     jest.useFakeTimers().setSystemTime(new Date("2026-04-14T12:00:00.000Z"));
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});

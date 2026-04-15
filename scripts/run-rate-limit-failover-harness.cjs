@@ -3,5 +3,8 @@ process.env.TS_NODE_COMPILER_OPTIONS = JSON.stringify({
   moduleResolution: "node",
 });
 
+// This wrapper exists specifically to bootstrap the TypeScript harness in Node.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 require("ts-node/register/transpile-only");
-require("./rate-limit-failover-harness.ts");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+require("./rate-limit-failover-harness");
