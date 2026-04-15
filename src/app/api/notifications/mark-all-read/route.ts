@@ -54,6 +54,32 @@ export async function POST(request: Request) {
     );
   }
 
+  const { data: unreadNotifications, error: unreadError } = await supabase
+    .from("notifications")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("read", false);
+
+  if (unreadError) {
+    console.error(
+      "[Notifications] Failed to load unread notifications before mark-all-read:",
+      unreadError
+    );
+    return NextResponse.json(
+      { error: "Unable to mark notifications as read" },
+      { status: 500 }
+    );
+  }
+
+  const unreadCount = unreadNotifications?.length ?? 0;
+  if (unreadCount === 0) {
+    return NextResponse.json({
+      success: true,
+      updatedCount: 0,
+      alreadyRead: true,
+    });
+  }
+
   const { error } = await supabase
     .from("notifications")
     .update({ read: true })
@@ -68,5 +94,9 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    updatedCount: unreadCount,
+    alreadyRead: false,
+  });
 }

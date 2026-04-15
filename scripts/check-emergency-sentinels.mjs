@@ -51,10 +51,11 @@ for (const entry of sentinels) {
 
   if (
     entry.expectations?.responseType !== "emergency" &&
-    entry.expectations?.responseType !== "question"
+    entry.expectations?.responseType !== "question" &&
+    entry.expectations?.responseType !== "cannot_assess"
   ) {
     failures.push(
-      `${entry.id}: sentinel expectation must stay in the emergency/question safety path.`
+      `${entry.id}: sentinel expectation must stay in the emergency/question/cannot_assess safety path.`
     );
   }
 }

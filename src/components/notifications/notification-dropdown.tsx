@@ -23,8 +23,8 @@ export function NotificationDropdown({
   onClose,
 }: Props) {
   return (
-    <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+    <div className="absolute right-0 top-full z-50 mt-2 w-[min(24rem,calc(100vw-1rem))] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
         <h3 className="text-sm font-semibold text-gray-900">
           Notifications
           {unreadCount > 0 && (
@@ -45,7 +45,7 @@ export function NotificationDropdown({
         )}
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto divide-y divide-gray-50">
+      <div className="max-h-[min(70vh,420px)] divide-y divide-gray-50 overflow-y-auto">
         {loading && notifications.length === 0 ? (
           <div className="flex items-center justify-center py-10">
             <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
@@ -55,9 +55,15 @@ export function NotificationDropdown({
             <p className="text-sm text-gray-400">No notifications yet</p>
           </div>
         ) : (
-          notifications.slice(0, 8).map((n) => (
-            <NotificationItem key={n.id} notification={n} onMarkRead={onMarkRead} />
-          ))
+          notifications
+            .slice(0, 8)
+            .map((n) => (
+              <NotificationItem
+                key={n.id}
+                notification={n}
+                onMarkRead={onMarkRead}
+              />
+            ))
         )}
       </div>
 
