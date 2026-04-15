@@ -13,3 +13,4 @@ Important guardrails:
 - Review IDs are deterministic so queued responses can be polled reliably
 - Stub mode is meant for local orchestration and queue contract verification
 - `/healthz` reports `stub`, `forced_fallback`, `warming`, `startup_failed`, or `production` mode so rollout checks can distinguish intentional degradation, live warmup, and real failures
+- Live 32B downloads rely on Hugging Face's Xet-backed storage, so the runtime must install `huggingface_hub[hf_xet]>=0.32.0` (or equivalent `hf_xet` support) before the real model can resolve all shard files
