@@ -117,49 +117,57 @@ jest.mock("@/lib/minimax", () => ({
     mockCompressCaseMemoryWithMiniMax(...args),
 }));
 
-jest.mock("@/lib/hf-sidecars", () => ({
-  isVisionPreprocessConfigured: (...args: unknown[]) =>
-    mockIsVisionPreprocessConfigured(...args),
-  isRetrievalSidecarConfigured: (...args: unknown[]) =>
-    mockIsRetrievalSidecarConfigured(...args),
-  isMultimodalConsultConfigured: (...args: unknown[]) =>
-    mockIsMultimodalConsultConfigured(...args),
-  isAsyncReviewServiceConfigured: (...args: unknown[]) =>
-    mockIsAsyncReviewServiceConfigured(...args),
-  isAbortLikeError: (error: unknown) =>
-    (error instanceof Error && error.name === "AbortError") ||
-    (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError"),
-  preprocessVeterinaryImageWithResult: (...args: unknown[]) =>
-    mockPreprocessVeterinaryImageWithResult(...args),
-  preprocessVeterinaryImage: async (...args: unknown[]) => {
-    const result = await mockPreprocessVeterinaryImageWithResult(...args);
-    if (!result.ok) {
-      const err = result.category === "timeout"
-        ? new DOMException(result.error, "AbortError")
-        : new Error(result.error);
-      throw err;
-    }
-    return result.data;
-  },
-  consultWithMultimodalSidecarWithResult: (...args: unknown[]) =>
-    mockConsultWithMultimodalSidecarWithResult(...args),
-  consultWithMultimodalSidecar: async (...args: unknown[]) => {
-    const result = await mockConsultWithMultimodalSidecarWithResult(...args);
-    if (!result.ok) {
-      const err = result.category === "timeout"
-        ? new DOMException(result.error, "AbortError")
-        : new Error(result.error);
-      throw err;
-    }
-    return result.data;
-  },
-  retrieveVeterinaryTextEvidenceFromSidecarWithResult: (...args: unknown[]) =>
-    mockRetrieveVeterinaryTextEvidenceWithResult(...args),
-  retrieveVeterinaryImageEvidenceFromSidecarWithResult: (...args: unknown[]) =>
-    mockRetrieveVeterinaryImageEvidenceWithResult(...args),
-  retrieveVeterinaryEvidenceFromSidecar: (...args: unknown[]) =>
-    mockRetrieveVeterinaryEvidenceFromSidecar(...args),
-}));
+jest.mock("@/lib/hf-sidecars", () => {
+  const actual = jest.requireActual("@/lib/hf-sidecars");
+  return {
+    ...actual,
+    isVisionPreprocessConfigured: (...args: unknown[]) =>
+      mockIsVisionPreprocessConfigured(...args),
+    isRetrievalSidecarConfigured: (...args: unknown[]) =>
+      mockIsRetrievalSidecarConfigured(...args),
+    isMultimodalConsultConfigured: (...args: unknown[]) =>
+      mockIsMultimodalConsultConfigured(...args),
+    isAsyncReviewServiceConfigured: (...args: unknown[]) =>
+      mockIsAsyncReviewServiceConfigured(...args),
+    isAbortLikeError: (error: unknown) =>
+      (error instanceof Error && error.name === "AbortError") ||
+      (typeof DOMException !== "undefined" &&
+        error instanceof DOMException &&
+        error.name === "AbortError"),
+    preprocessVeterinaryImageWithResult: (...args: unknown[]) =>
+      mockPreprocessVeterinaryImageWithResult(...args),
+    preprocessVeterinaryImage: async (...args: unknown[]) => {
+      const result = await mockPreprocessVeterinaryImageWithResult(...args);
+      if (!result.ok) {
+        const err =
+          result.category === "timeout"
+            ? new DOMException(result.error, "AbortError")
+            : new Error(result.error);
+        throw err;
+      }
+      return result.data;
+    },
+    consultWithMultimodalSidecarWithResult: (...args: unknown[]) =>
+      mockConsultWithMultimodalSidecarWithResult(...args),
+    consultWithMultimodalSidecar: async (...args: unknown[]) => {
+      const result = await mockConsultWithMultimodalSidecarWithResult(...args);
+      if (!result.ok) {
+        const err =
+          result.category === "timeout"
+            ? new DOMException(result.error, "AbortError")
+            : new Error(result.error);
+        throw err;
+      }
+      return result.data;
+    },
+    retrieveVeterinaryTextEvidenceFromSidecarWithResult: (...args: unknown[]) =>
+      mockRetrieveVeterinaryTextEvidenceWithResult(...args),
+    retrieveVeterinaryImageEvidenceFromSidecarWithResult: (...args: unknown[]) =>
+      mockRetrieveVeterinaryImageEvidenceWithResult(...args),
+    retrieveVeterinaryEvidenceFromSidecar: (...args: unknown[]) =>
+      mockRetrieveVeterinaryEvidenceFromSidecar(...args),
+  };
+});
 
 jest.mock("@/lib/text-retrieval-service", () => ({
   isTextRetrievalConfigured: (...args: unknown[]) =>
@@ -377,6 +385,13 @@ describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env = {
+      ...process.env,
+      SIDECAR_LIVE_SPLIT_VISION_PREPROCESS: "100",
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "100",
+      SIDECAR_LIVE_SPLIT_IMAGE_RETRIEVAL: "100",
+      SIDECAR_LIVE_SPLIT_MULTIMODAL_CONSULT: "100",
+    };
 
     mockCheckRateLimit.mockResolvedValue({
       success: true,
@@ -898,6 +913,87 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.case_memory.service_timeouts).toEqual([]);
   });
 
+  it("keeps vision preprocess on the fallback path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_VISION_PREPROCESS: "0",
+    };
+
+    try {
+      mockIsVisionPreprocessConfigured.mockReturnValue(true);
+
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "which_leg";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeRequest(session, "left leg"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockPreprocessVeterinaryImageWithResult).not.toHaveBeenCalled();
+      expect(payload.session.latest_image_domain).toBe("skin_wound");
+      expect(
+        payload.session.case_memory?.service_observations?.some(
+          (entry: SidecarObservation) =>
+            entry.service === "vision-preprocess-service"
+        ) ?? false
+      ).toBe(false);
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("keeps multimodal consult on the primary path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_MULTIMODAL_CONSULT: "0",
+    };
+
+    try {
+      mockIsMultimodalConsultConfigured.mockReturnValue(true);
+      mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+        buildOkSidecarResult("vision-preprocess-service", {
+          domain: "eye",
+          bodyRegion: "left eye",
+          detectedRegions: [{ label: "eye", confidence: 0.65 }],
+          bestCrop: null,
+          imageQuality: "borderline",
+          confidence: 0.58,
+          limitations: ["partial blur"],
+        })
+      );
+      mockRunVisionPipeline.mockResolvedValue({
+        combined: "{\"confidence\":0.52,\"summary\":\"ocular irritation\"}",
+        severity: "needs_review",
+        tiersUsed: [1, 2],
+        woundDetected: false,
+        tier1_fast: "{\"confidence\":0.52}",
+        tier2_detailed: "{\"estimated_severity\":\"moderate\"}",
+        tier3_deep: null,
+      });
+      mockParseVisionForMatrix.mockReturnValue({
+        symptoms: [],
+        redFlags: [],
+        severityClass: "needs_review",
+      });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeRequest(createSession(), "his eye looks weird")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockConsultWithMultimodalSidecarWithResult).not.toHaveBeenCalled();
+      expect(payload.session.latest_consult_opinion).toBeUndefined();
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
   it("adds evidence-chain data and capped confidence to the final report", async () => {
     mockIsMultimodalConsultConfigured.mockReturnValue(true);
     mockIsTextRetrievalConfigured.mockReturnValue(true);
@@ -993,6 +1089,96 @@ describe("symptom-chat mixed text + image routing", () => {
       ])
     );
     expect(payload.report.async_review_scheduled).toBe(true);
+  });
+
+  it("keeps retrieval on the fallback path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "0",
+      SIDECAR_LIVE_SPLIT_IMAGE_RETRIEVAL: "0",
+    };
+
+    try {
+      mockIsTextRetrievalConfigured.mockReturnValue(true);
+      mockIsImageRetrievalConfigured.mockReturnValue(true);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(mockRetrieveVeterinaryTextEvidenceWithResult).not.toHaveBeenCalled();
+      expect(mockRetrieveVeterinaryImageEvidenceWithResult).not.toHaveBeenCalled();
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("falls back silently when promoted live consult traffic hits a sidecar error", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_MULTIMODAL_CONSULT: "100",
+    };
+
+    try {
+      mockIsMultimodalConsultConfigured.mockReturnValue(true);
+      mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+        buildOkSidecarResult("vision-preprocess-service", {
+          domain: "eye",
+          bodyRegion: "left eye",
+          detectedRegions: [{ label: "eye", confidence: 0.65 }],
+          bestCrop: null,
+          imageQuality: "borderline",
+          confidence: 0.58,
+          limitations: ["partial blur"],
+        })
+      );
+      mockRunVisionPipeline.mockResolvedValue({
+        combined: "{\"confidence\":0.52,\"summary\":\"ocular irritation\"}",
+        severity: "needs_review",
+        tiersUsed: [1, 2],
+        woundDetected: false,
+        tier1_fast: "{\"confidence\":0.52}",
+        tier2_detailed: "{\"estimated_severity\":\"moderate\"}",
+        tier3_deep: null,
+      });
+      mockParseVisionForMatrix.mockReturnValue({
+        symptoms: [],
+        redFlags: [],
+        severityClass: "needs_review",
+      });
+      mockConsultWithMultimodalSidecarWithResult.mockResolvedValue(
+        buildErrorSidecarResult(
+          "multimodal-consult-service",
+          "http_error",
+          "consult failed"
+        )
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeRequest(createSession(), "his eye looks weird")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.latest_consult_opinion).toBeUndefined();
+      expect(payload.session.case_memory.service_observations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            service: "multimodal-consult-service",
+            stage: "sync-consult",
+            outcome: "error",
+            fallbackUsed: true,
+          }),
+        ])
+      );
+    } finally {
+      process.env = envBeforeTest;
+    }
   });
 
   it("keeps report generation alive when GLM safety review returns malformed JSON", async () => {

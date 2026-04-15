@@ -4,6 +4,7 @@ const mockBuildObservabilitySnapshot = jest.fn();
 const mockBuildPersistedShadowBaselineSnapshot = jest.fn();
 const mockAppendShadowTelemetrySnapshot = jest.fn();
 const mockPersistShadowLoadTestSummary = jest.fn();
+const mockListSidecarLiveSplitStates = jest.fn();
 
 jest.mock("@/lib/shadow-rollout", () => ({
   buildShadowRolloutSummary: (...args: unknown[]) =>
@@ -27,6 +28,11 @@ jest.mock("@/lib/shadow-telemetry-store", () => ({
     mockAppendShadowTelemetrySnapshot(...args),
   persistShadowLoadTestSummary: (...args: unknown[]) =>
     mockPersistShadowLoadTestSummary(...args),
+}));
+
+jest.mock("@/lib/hf-sidecars", () => ({
+  listSidecarLiveSplitStates: (...args: unknown[]) =>
+    mockListSidecarLiveSplitStates(...args),
 }));
 
 function makeRequest(
@@ -99,6 +105,16 @@ describe("shadow-rollout route", () => {
         { service: "async-review-service" },
       ],
     });
+    mockListSidecarLiveSplitStates.mockReturnValue([
+      {
+        service: "text-retrieval-service",
+        env: "SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL",
+        promotion_status: "promoted",
+        live_split_pct: 5,
+        effective_live_split_pct: 5,
+        env_override_pct: null,
+      },
+    ]);
 
     mockBuildPersistedShadowBaselineSnapshot.mockResolvedValue({
       generatedAt: "2026-04-14T00:00:00.000Z",
@@ -218,6 +234,13 @@ describe("shadow-rollout route", () => {
       ],
     });
     expect(payload.summary.overallStatus).toBe("watch");
+    expect(payload.liveSplit).toEqual([
+      expect.objectContaining({
+        service: "text-retrieval-service",
+        live_split_pct: 5,
+        effective_live_split_pct: 5,
+      }),
+    ]);
     expect(payload.persistedTelemetry).toBe(true);
     expect(payload.observability).toEqual({
       shadowModeActive: true,
@@ -300,6 +323,12 @@ describe("shadow-rollout route", () => {
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
     expect(mockBuildPersistedShadowBaselineSnapshot).toHaveBeenCalledTimes(1);
+    expect(payload.liveSplit).toEqual([
+      expect.objectContaining({
+        service: "text-retrieval-service",
+        live_split_pct: 5,
+      }),
+    ]);
     expect(payload.baseline).toEqual(
       expect.objectContaining({
         windowHours: 24,

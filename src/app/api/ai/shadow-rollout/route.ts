@@ -13,6 +13,7 @@ import {
   type ShadowLoadTestSummary,
 } from "@/lib/shadow-rollout";
 import type { TriageSession } from "@/lib/triage-engine";
+import { listSidecarLiveSplitStates } from "@/lib/hf-sidecars";
 
 const SHADOW_ROLLOUT_DEBUG_SECRET =
   process.env.HF_SIDECAR_API_KEY?.trim() ||
@@ -85,6 +86,7 @@ export async function POST(request: Request) {
       ok: true,
       persistedLoadTest,
       loadTest: body.loadTest || null,
+      liveSplit: listSidecarLiveSplitStates(),
     });
   }
 
@@ -101,6 +103,7 @@ export async function POST(request: Request) {
     persistedLoadTest,
     persistedTelemetry,
     summary,
+    liveSplit: listSidecarLiveSplitStates(),
     observability: {
       shadowModeActive: observability.shadowModeActive,
       timeoutCount: observability.timeoutCount,
@@ -123,6 +126,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       summary: baseline.summary,
+      liveSplit: listSidecarLiveSplitStates(),
       baseline: {
         generatedAt: baseline.generatedAt,
         windowHours: baseline.windowHours,
