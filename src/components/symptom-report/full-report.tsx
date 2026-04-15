@@ -53,7 +53,7 @@ export function FullReport({
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [expiry, setExpiry] = useState<ExpiryOption>(() =>
-    getDefaultClinicLinkExpiry(report)
+    getDefaultClinicLinkExpiry(report),
   );
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
@@ -69,7 +69,7 @@ export function FullReport({
         buildVetHandoffPacket({
           ...report,
           vet_handoff_summary: report.vet_handoff_summary ?? report.explanation,
-        })
+        }),
       );
       setCopyState("copied");
       window.setTimeout(() => setCopyState("idle"), 2000);
@@ -92,15 +92,13 @@ export function FullReport({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          report: shareUrl
-            ? { ...report, share_url: shareUrl }
-            : report,
+          report: shareUrl ? { ...report, share_url: shareUrl } : report,
         }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(
-          typeof err.error === "string" ? err.error : "PDF download failed"
+          typeof err.error === "string" ? err.error : "PDF download failed",
         );
       }
       const blob = await res.blob();
@@ -118,7 +116,7 @@ export function FullReport({
       alert(
         e instanceof Error
           ? e.message
-          : "Could not download PDF. Sign in and try again."
+          : "Could not download PDF. Sign in and try again.",
       );
     } finally {
       setPdfBusy(false);
@@ -153,7 +151,7 @@ export function FullReport({
       }
     } catch (e) {
       setShareError(
-        e instanceof Error ? e.message : "Could not create share link"
+        e instanceof Error ? e.message : "Could not create share link",
       );
     } finally {
       setShareBusy(false);
@@ -186,7 +184,7 @@ export function FullReport({
         type="button"
         variant="outline"
         size="sm"
-        className={`gap-1.5 ${
+        className={`w-full justify-center gap-1.5 sm:w-auto ${
           escalatedReport
             ? "border-red-600 text-red-700 hover:bg-red-50"
             : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
@@ -203,11 +201,11 @@ export function FullReport({
         type="button"
         variant="outline"
         size="sm"
-        className={
+        className={`w-full justify-center sm:w-auto ${
           escalatedReport
             ? "border-red-600 text-red-700 hover:bg-red-50"
             : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-        }
+        }`}
         onClick={openShareModal}
       >
         <Share2 className="w-4 h-4" />
@@ -219,13 +217,16 @@ export function FullReport({
   ) : null;
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in sm:space-y-5">
       <SeverityHeader
         report={report}
         copyState={copyState}
         onCopyVetSummary={copyVetSummary}
         onJumpToHandoff={() =>
-          handoffRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+          handoffRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          })
         }
         headerActions={headerActions}
       />
@@ -233,7 +234,9 @@ export function FullReport({
       <Modal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        title={escalatedReport ? "Share clinic link" : "Share with your veterinarian"}
+        title={
+          escalatedReport ? "Share clinic link" : "Share with your veterinarian"
+        }
         size="md"
       >
         <div className="space-y-4">
@@ -309,9 +312,12 @@ export function FullReport({
         calibration={report.calibrated_confidence ?? report.confidence_calibration}
       />
 
-      {report.bayesian_differentials && report.bayesian_differentials.length > 0 && (
-        <BayesianDifferentials bayesian_differentials={report.bayesian_differentials} />
-      )}
+      {report.bayesian_differentials &&
+        report.bayesian_differentials.length > 0 && (
+          <BayesianDifferentials
+            bayesian_differentials={report.bayesian_differentials}
+          />
+        )}
 
       <div ref={handoffRef}>
         <VetHandoffSection
@@ -322,9 +328,10 @@ export function FullReport({
         />
       </div>
 
-      {report.differential_diagnoses && report.differential_diagnoses.length > 0 && (
-        <DifferentialDiagnoses diagnoses={report.differential_diagnoses} />
-      )}
+      {report.differential_diagnoses &&
+        report.differential_diagnoses.length > 0 && (
+          <DifferentialDiagnoses diagnoses={report.differential_diagnoses} />
+        )}
 
       {report.clinical_notes && (
         <ClinicalNotesSection notes={report.clinical_notes} />
@@ -377,11 +384,12 @@ export function FullReport({
 
       <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
         <p className="text-xs text-gray-500 leading-relaxed">
-          <strong>Medical Disclaimer:</strong> This AI analysis is for informational
-          purposes only and is NOT a substitute for hands-on physical examination,
-          diagnostic testing, or professional veterinary medical advice. Always consult
-          a licensed veterinarian for diagnosis and treatment decisions. In emergencies,
-          contact your nearest emergency veterinary hospital immediately.
+          <strong>Medical Disclaimer:</strong> This AI analysis is for
+          informational purposes only and is NOT a substitute for hands-on
+          physical examination, diagnostic testing, or professional veterinary
+          medical advice. Always consult a licensed veterinarian for diagnosis
+          and treatment decisions. In emergencies, contact your nearest
+          emergency veterinary hospital immediately.
         </p>
       </div>
     </div>
