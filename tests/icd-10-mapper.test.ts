@@ -7,6 +7,10 @@ import {
   getICD10Stats,
 } from "../src/lib/icd-10-mapper";
 
+const PRE_WAVE2_MAPPED_DISEASES = 46;
+const PRE_WAVE2_TOTAL_CODES = 52;
+const WAVE2_BENCHMARK_GAPS_ADDED = 20;
+
 describe("VET-900 Phase 6: ICD-10 Mapper", () => {
   describe("getICD10CodesForDisease", () => {
     it("returns codes for wound_infection", () => {
@@ -187,10 +191,14 @@ describe("VET-900 Phase 6: ICD-10 Mapper", () => {
   });
 
   describe("getICD10Stats", () => {
-    it("returns valid stats object", () => {
+    it("reflects the documented wave-2 coverage expansion", () => {
       const stats = getICD10Stats();
-      expect(stats.total_diseases_mapped).toBeGreaterThan(60);
-      expect(stats.total_codes).toBeGreaterThan(60);
+      expect(stats.total_diseases_mapped).toBe(
+        PRE_WAVE2_MAPPED_DISEASES + WAVE2_BENCHMARK_GAPS_ADDED,
+      );
+      expect(stats.total_codes).toBe(
+        PRE_WAVE2_TOTAL_CODES + WAVE2_BENCHMARK_GAPS_ADDED,
+      );
       expect(stats.categories).toBeGreaterThan(5);
       expect(stats.emergency_codes).toBeGreaterThan(0);
     });

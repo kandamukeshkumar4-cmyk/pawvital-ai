@@ -20,8 +20,10 @@ Ticket: VET-1208
 
 - `DISEASE_DB` keys audited: 27
 - Existing ICD-10 disease mappings before this ticket: 46
+- Existing ICD-10 codes before this ticket: 52
 - Direct `DISEASE_DB` gaps before this ticket: 14
 - Benchmark-exposed canine diagnosis gaps were broader because the benchmark uses several aliases and higher-level labels not present as exact mapper keys
+- Each VET-1208 addition contributed one display mapping, bringing the mapper totals to 66 diseases and 72 codes after this pass
 
 ## Top 20 Benchmark Gaps Added
 
