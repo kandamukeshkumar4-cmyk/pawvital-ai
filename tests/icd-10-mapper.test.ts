@@ -57,6 +57,34 @@ describe("VET-900 Phase 6: ICD-10 Mapper", () => {
       expect(result).not.toBeNull();
       expect(result!.primary_code.code).toBe("J18.9");
     });
+
+    it.each([
+      ["pain_general", "R52"],
+      ["allergic_dermatitis", "L23.9"],
+      ["heart_failure", "I50.9"],
+      ["ccl_rupture", "S83.51"],
+      ["pyometra", "N71.9"],
+      ["seizure_disorder", "G40.9"],
+      ["ivdd", "M51.9"],
+      ["skin_mass", "R22.9"],
+      ["cognitive_dysfunction", "F03.90"],
+      ["pleural_effusion", "J90"],
+      ["bloat", "K56.69"],
+      ["oral_tumor", "D49.0"],
+      ["dystocia", "O66.9"],
+      ["hypoglycemia", "E16.2"],
+      ["urinary_infection", "N39.0"],
+      ["sudden_acquired_retinal_degeneration", "H53.9"],
+      ["heat_stroke", "T67.0"],
+      ["ear_infection_bacterial", "H60.9"],
+      ["urinary_stones", "N21.9"],
+      ["megaesophagus", "K22.89"],
+    ])("covers wave-2 benchmark gap %s", (disease, expectedCode) => {
+      const result = getICD10CodesForDisease(disease);
+      expect(result).not.toBeNull();
+      expect(result!.primary_code.code).toBe(expectedCode);
+      expect(result!.primary_code.notes).toContain("Reference-only");
+    });
   });
 
   describe("getAllICD10Categories", () => {
@@ -161,8 +189,8 @@ describe("VET-900 Phase 6: ICD-10 Mapper", () => {
   describe("getICD10Stats", () => {
     it("returns valid stats object", () => {
       const stats = getICD10Stats();
-      expect(stats.total_diseases_mapped).toBeGreaterThan(30);
-      expect(stats.total_codes).toBeGreaterThan(40);
+      expect(stats.total_diseases_mapped).toBeGreaterThan(60);
+      expect(stats.total_codes).toBeGreaterThan(60);
       expect(stats.categories).toBeGreaterThan(5);
       expect(stats.emergency_codes).toBeGreaterThan(0);
     });
