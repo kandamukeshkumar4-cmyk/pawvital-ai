@@ -538,6 +538,17 @@ export function shouldPersistRawPendingAnswer(
     return false;
   }
 
+  const normalizedMessage = normalizeIntentText(rawMessage);
+  if (!normalizedMessage) {
+    return false;
+  }
+
+  // Critical "I don't know" style replies must remain recoverable even for
+  // typed follow-ups so the owner response is preserved for clarification.
+  if (isShortUnknownResponse(normalizedMessage)) {
+    return true;
+  }
+
   // Raw fallback is only safe for free-text prompts. For choice/boolean/number
   // questions, persisting arbitrary owner text closes the question with an
   // invalid typed answer and can skip required clarification.
@@ -545,19 +556,10 @@ export function shouldPersistRawPendingAnswer(
     return false;
   }
 
-  const normalizedMessage = normalizeIntentText(rawMessage);
-  if (!normalizedMessage) {
-    return false;
-  }
-
   const hasOtherTurnAnswers = Object.keys(turnAnswers).some(
     (key) => key !== questionId
   );
   const hasOtherTurnSymptoms = turnSymptoms.length > 0;
-
-  if (isShortUnknownResponse(normalizedMessage)) {
-    return true;
-  }
 
   if (
     questionLooksDurationLike(question) &&
