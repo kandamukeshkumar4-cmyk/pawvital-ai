@@ -1855,6 +1855,98 @@ describe("symptom-chat mixed text + image routing", () => {
     );
   });
 
+  it("escalates collapse after excitement to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog got excited, collapsed, and still seems weak and out of it."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.known_symptoms).toContain("seizure_collapse");
+    expect(payload.session.extracted_answers.consciousness_level).toBe("unresponsive");
+    expect(payload.session.red_flags_triggered).toContain("unresponsive");
+  });
+
+  it("escalates collapse with blue-gray gums to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog collapsed and his gums looked blue-gray."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.known_symptoms).toContain("seizure_collapse");
+    expect(payload.session.extracted_answers.gum_color).toBe("blue");
+    expect(payload.session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["unresponsive", "blue_gums"])
+    );
+  });
+
+  it("escalates rapid breathing with pallor to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "She is breathing fast, looks pale, and can barely stand up."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.known_symptoms).toContain("difficulty_breathing");
+    expect(payload.session.extracted_answers.gum_color).toBe("pale_white");
+    expect(payload.session.red_flags_triggered).toContain("pale_gums");
+  });
+
   it("does not force-close an unrelated pending string question with a new symptom update", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,

@@ -3,7 +3,7 @@ import {
   type PetProfile,
   type TriageSession,
 } from "@/lib/triage-engine";
-import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
+import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 import {
   safeParseJson,
   stripMarkdownCodeFences,
@@ -23,6 +23,7 @@ export async function extractDataFromMessage(
   symptoms: string[];
   answers: Record<string, string | boolean | number>;
 }> {
+  const symptomChoices = Object.keys(SYMPTOM_MAP).sort().join(", ");
   const schemaDescription = Object.entries(schema)
     .map(([key, hint]) => `  "${key}": ${hint}`)
     .join("\n");
@@ -41,7 +42,7 @@ ${compactImageSignals ? `\nIMAGE SIGNALS:\n${compactImageSignals}` : ""}
 EXTRACT the following data. For each field, extract ONLY if the owner clearly mentioned it. Use null if not mentioned.
 
 Fields to extract:
-  "symptoms": Array of symptom keywords from this list: limping, vomiting, not_eating, diarrhea, lethargy, coughing, difficulty_breathing, excessive_scratching, drinking_more, trembling, swollen_abdomen, blood_in_stool, eye_discharge, ear_scratching, weight_loss, wound_skin_issue. Use "wound_skin_issue" for ANY wound, cut, laceration, bite, abscess, hot spot, skin lesion, lump, bump, mass, rash, bleeding, swelling, redness, or infection. Include ONLY symptoms the owner actually described or that are visible in attached visual analysis.
+  "symptoms": Array of canonical symptom keywords from this list: ${symptomChoices}. Use "wound_skin_issue" for wounds, lacerations, bite injuries, skin lesions, masses, bleeding, redness, or infected skin findings. Include ONLY symptoms the owner actually described or that are visible in attached visual analysis.
 ${schemaDescription}
 
 Output ONLY valid JSON:
@@ -141,6 +142,12 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     thirsty: "drinking_more",
     trembl: "trembling",
     shak: "trembling",
+    collapse: "seizure_collapse",
+    collapsed: "seizure_collapse",
+    "passed out": "seizure_collapse",
+    "pass out": "seizure_collapse",
+    fainted: "seizure_collapse",
+    "went limp": "seizure_collapse",
     bloat: "swollen_abdomen",
     bloated: "swollen_abdomen",
     "swollen belly": "swollen_abdomen",
