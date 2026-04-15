@@ -1,0 +1,328 @@
+{
+  "generatedAt": "2026-04-14",
+  "selectionStrategy": "symptom_checks_or_fallback_dog_breed_order",
+  "selectionFallbackReason": "The isolated VET-1217 worktree could not reach the configured Supabase host from .env.local, so this round uses the current fallbackDogBreeds ordering as the deterministic proxy until the live symptom_checks usage query can be refreshed.",
+  "defaultTrustLevel": 75,
+  "breeds": [
+    {
+      "rank": 1,
+      "breedId": "labrador_retriever",
+      "breedDataId": "dog_1",
+      "name": "Labrador Retriever",
+      "aliases": ["Labrador", "Lab"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "Labrador Retriever limping after fetch",
+      "topConditions": [
+        {
+          "conditionLabel": "ccl_rupture",
+          "conditionName": "Cranial Cruciate Ligament Rupture",
+          "domain": "orthopedic",
+          "trustLevel": 78,
+          "reason": "Large active Labradors are overrepresented for stifle instability and sudden hindlimb lameness."
+        },
+        {
+          "conditionLabel": "obesity_related",
+          "conditionName": "Obesity-related Mobility Disease",
+          "domain": "metabolic",
+          "trustLevel": 76,
+          "reason": "Labradors carry strong obesity risk, which compounds exercise intolerance and joint pain."
+        },
+        {
+          "conditionLabel": "ear_infection_bacterial",
+          "conditionName": "Bacterial Otitis Externa",
+          "domain": "dermatology",
+          "trustLevel": 74,
+          "reason": "Floppy ears plus allergic skin disease make recurrent ear infection a common Labrador complaint."
+        }
+      ]
+    },
+    {
+      "rank": 2,
+      "breedId": "german_shepherd",
+      "breedDataId": "dog_2",
+      "name": "German Shepherd",
+      "aliases": ["German Shepherd Dog", "GSD"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "German Shepherd hind limb weakness",
+      "topConditions": [
+        {
+          "conditionLabel": "hip_dysplasia",
+          "conditionName": "Hip Dysplasia",
+          "domain": "orthopedic",
+          "trustLevel": 79,
+          "reason": "German Shepherds remain high-risk for hip laxity, pain after exercise, and bunny-hopping gait."
+        },
+        {
+          "conditionLabel": "degenerative_myelopathy",
+          "conditionName": "Degenerative Myelopathy",
+          "domain": "neurologic",
+          "trustLevel": 80,
+          "reason": "Progressive hind-end weakness in older Shepherds needs breed-linked neurologic cases in the retrieval set."
+        },
+        {
+          "conditionLabel": "lumbosacral_disease",
+          "conditionName": "Lumbosacral Stenosis",
+          "domain": "neurologic",
+          "trustLevel": 77,
+          "reason": "Working-line Shepherds commonly present with tail-lift pain and lumbosacral nerve root compression."
+        }
+      ]
+    },
+    {
+      "rank": 3,
+      "breedId": "golden_retriever",
+      "breedDataId": "dog_3",
+      "name": "Golden Retriever",
+      "aliases": ["Golden"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "Golden Retriever limping",
+      "topConditions": [
+        {
+          "conditionLabel": "ccl_rupture",
+          "conditionName": "Cranial Cruciate Ligament Rupture",
+          "domain": "orthopedic",
+          "trustLevel": 76,
+          "reason": "Goldens regularly present with athletic stifle injury and progressive rear-limb lameness."
+        },
+        {
+          "conditionLabel": "allergic_dermatitis",
+          "conditionName": "Allergic Dermatitis",
+          "domain": "dermatology",
+          "trustLevel": 74,
+          "reason": "Breed-linked allergy and hot-spot complaints are common enough to deserve dedicated retrieval examples."
+        },
+        {
+          "conditionLabel": "mast_cell_tumor",
+          "conditionName": "Mast Cell Tumor",
+          "domain": "oncology",
+          "trustLevel": 78,
+          "reason": "Goldens frequently surface with changing skin masses that need oncology-aware corpus examples."
+        }
+      ]
+    },
+    {
+      "rank": 4,
+      "breedId": "french_bulldog",
+      "breedDataId": "dog_4",
+      "name": "French Bulldog",
+      "aliases": ["Frenchie"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "French Bulldog breathing struggle in heat",
+      "topConditions": [
+        {
+          "conditionLabel": "difficulty_breathing",
+          "conditionName": "Brachycephalic Airway Syndrome",
+          "domain": "respiratory",
+          "trustLevel": 80,
+          "reason": "French Bulldogs need brachycephalic breathing cases for noisy respiration, cyanosis, and exertional collapse."
+        },
+        {
+          "conditionLabel": "ivdd",
+          "conditionName": "Intervertebral Disc Disease",
+          "domain": "neurologic",
+          "trustLevel": 78,
+          "reason": "The breed carries heavy IVDD burden with neck pain, weakness, and sudden refusal to jump."
+        },
+        {
+          "conditionLabel": "heat_stroke",
+          "conditionName": "Heat Stroke",
+          "domain": "emergency",
+          "trustLevel": 79,
+          "reason": "Brachycephalic heat intolerance is common and high-acuity enough to justify dedicated emergency cases."
+        }
+      ]
+    },
+    {
+      "rank": 5,
+      "breedId": "bulldog",
+      "breedDataId": "dog_5",
+      "name": "Bulldog",
+      "aliases": ["English Bulldog"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "English Bulldog snoring breathing distress",
+      "topConditions": [
+        {
+          "conditionLabel": "difficulty_breathing",
+          "conditionName": "Brachycephalic Airway Syndrome",
+          "domain": "respiratory",
+          "trustLevel": 79,
+          "reason": "Bulldogs are classic airway-obstruction patients with loud breathing, exercise intolerance, and sleep-disordered signs."
+        },
+        {
+          "conditionLabel": "allergic_dermatitis",
+          "conditionName": "Allergic Dermatitis",
+          "domain": "dermatology",
+          "trustLevel": 74,
+          "reason": "Skin-fold and allergic dermatitis complaints are routine in Bulldogs and must be richly tagged."
+        },
+        {
+          "conditionLabel": "cherry_eye",
+          "conditionName": "Prolapsed Third Eyelid Gland",
+          "domain": "ophthalmic",
+          "trustLevel": 72,
+          "reason": "Cherry eye is breed-linked and gives the corpus a strong Bulldog-specific eye complaint example."
+        }
+      ]
+    },
+    {
+      "rank": 6,
+      "breedId": "poodle",
+      "breedDataId": "dog_6",
+      "name": "Poodle",
+      "aliases": ["Standard Poodle", "Miniature Poodle", "Toy Poodle"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "Poodle vomiting weak Addison crisis",
+      "topConditions": [
+        {
+          "conditionLabel": "addisons_disease",
+          "conditionName": "Addison's Disease",
+          "domain": "endocrine",
+          "trustLevel": 79,
+          "reason": "Poodles need dedicated adrenal-insufficiency examples because collapse plus GI signs are easy to miss."
+        },
+        {
+          "conditionLabel": "ear_infection_bacterial",
+          "conditionName": "Bacterial Otitis Externa",
+          "domain": "dermatology",
+          "trustLevel": 74,
+          "reason": "Coated ear canals and allergic overlap make recurrent otitis a common Poodle retrieval need."
+        },
+        {
+          "conditionLabel": "bloat",
+          "conditionName": "Gastric Dilatation",
+          "domain": "gastrointestinal",
+          "trustLevel": 72,
+          "reason": "Standard Poodles are deep-chested enough to justify a breed-specific distension and retching case."
+        }
+      ]
+    },
+    {
+      "rank": 7,
+      "breedId": "beagle",
+      "breedDataId": "dog_7",
+      "name": "Beagle",
+      "aliases": [],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "Beagle ear odor head shaking",
+      "topConditions": [
+        {
+          "conditionLabel": "ear_infection_bacterial",
+          "conditionName": "Bacterial Otitis Externa",
+          "domain": "dermatology",
+          "trustLevel": 74,
+          "reason": "Pendulous ears and allergy overlap make ear-disease cases highly relevant for Beagles."
+        },
+        {
+          "conditionLabel": "epilepsy",
+          "conditionName": "Idiopathic Epilepsy",
+          "domain": "neurologic",
+          "trustLevel": 76,
+          "reason": "Beagles have meaningful idiopathic epilepsy prevalence and need seizure-case coverage."
+        },
+        {
+          "conditionLabel": "obesity_related",
+          "conditionName": "Obesity-related Mobility Disease",
+          "domain": "metabolic",
+          "trustLevel": 72,
+          "reason": "Food-motivated Beagles often surface with weight-driven exercise intolerance and joint strain."
+        }
+      ]
+    },
+    {
+      "rank": 8,
+      "breedId": "rottweiler",
+      "breedDataId": "dog_8",
+      "name": "Rottweiler",
+      "aliases": [],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "Rottweiler forelimb bone pain",
+      "topConditions": [
+        {
+          "conditionLabel": "ccl_rupture",
+          "conditionName": "Cranial Cruciate Ligament Rupture",
+          "domain": "orthopedic",
+          "trustLevel": 78,
+          "reason": "Heavy athletic Rottweilers commonly present with cruciate injury and severe hindlimb lameness."
+        },
+        {
+          "conditionLabel": "bone_cancer",
+          "conditionName": "Appendicular Osteosarcoma",
+          "domain": "oncology",
+          "trustLevel": 80,
+          "reason": "Rottweilers need bone-cancer cases because progressive limb pain is a recurring breed-specific concern."
+        },
+        {
+          "conditionLabel": "hip_dysplasia",
+          "conditionName": "Hip Dysplasia",
+          "domain": "orthopedic",
+          "trustLevel": 75,
+          "reason": "Large-breed hip laxity remains common enough to warrant dedicated retrieval examples."
+        }
+      ]
+    },
+    {
+      "rank": 9,
+      "breedId": "german_shorthaired_pointer",
+      "breedDataId": "dog_9",
+      "name": "German Shorthaired Pointer",
+      "aliases": ["GSP"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "German Shorthaired Pointer nonproductive retching",
+      "topConditions": [
+        {
+          "conditionLabel": "bloat",
+          "conditionName": "Gastric Dilatation",
+          "domain": "gastrointestinal",
+          "trustLevel": 76,
+          "reason": "Deep-chested sporting dogs need a strong retrieval example for acute distension and unproductive retching."
+        },
+        {
+          "conditionLabel": "ccl_rupture",
+          "conditionName": "Cranial Cruciate Ligament Rupture",
+          "domain": "orthopedic",
+          "trustLevel": 74,
+          "reason": "High-drive pointers pick up stifle injuries after abrupt turns and hard field work."
+        },
+        {
+          "conditionLabel": "hip_dysplasia",
+          "conditionName": "Hip Dysplasia",
+          "domain": "orthopedic",
+          "trustLevel": 72,
+          "reason": "Hip pain and gait changes stay consistent with breed-associated hip dysplasia."
+        }
+      ]
+    },
+    {
+      "rank": 10,
+      "breedId": "dachshund",
+      "breedDataId": "dog_10",
+      "name": "Dachshund",
+      "aliases": ["Doxie"],
+      "selectionSource": "fallback_dog_breeds",
+      "smokeQuery": "Dachshund back pain shaking",
+      "topConditions": [
+        {
+          "conditionLabel": "ivdd",
+          "conditionName": "Intervertebral Disc Disease",
+          "domain": "neurologic",
+          "trustLevel": 80,
+          "reason": "Dachshunds are the highest-priority breed for disc disease and sudden back-pain retrieval examples."
+        },
+        {
+          "conditionLabel": "obesity_related",
+          "conditionName": "Obesity-related Mobility Disease",
+          "domain": "metabolic",
+          "trustLevel": 74,
+          "reason": "Excess weight meaningfully worsens disc and joint strain in Dachshunds."
+        },
+        {
+          "conditionLabel": "diabetes",
+          "conditionName": "Diabetes Mellitus",
+          "domain": "endocrine",
+          "trustLevel": 72,
+          "reason": "Polyuria, polydipsia, and weight change need at least one breed-linked endocrine case in the corpus."
+        }
+      ]
+    }
+  ]
+}

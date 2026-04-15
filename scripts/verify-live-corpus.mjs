@@ -11,6 +11,12 @@ const qualityManifestPath = path.join(
   "corpus",
   "csv-ingestion-round2.json"
 );
+const breedExpansionProfilePath = path.join(
+  rootDir,
+  "data",
+  "corpus",
+  "breed-expansion-profiles.json"
+);
 
 loadEnvFiles();
 
@@ -28,6 +34,9 @@ const registry = readJson(registryPath, []);
 const qualityManifest = readJson(qualityManifestPath, {
   minimumLiveTrustLevel: 60,
   sources: [],
+});
+const breedExpansionProfileManifest = readJson(breedExpansionProfilePath, {
+  breeds: [],
 });
 const minimumLiveTrustLevel =
   Number.isFinite(Number(qualityManifest.minimumLiveTrustLevel))
@@ -57,6 +66,56 @@ function readJson(filePath, fallback) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+function parseCSV(text) {
+  const lines = text.split("\n");
+  if (lines.length < 2) return [];
+  const headers = parseCSVLine(lines[0]);
+  const rows = [];
+
+  for (let index = 1; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) continue;
+    const values = parseCSVLine(line);
+    const row = {};
+    headers.forEach((header, headerIndex) => {
+      row[header.trim()] = (values[headerIndex] || "").trim();
+    });
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"') {
+      if (inQuotes && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  result.push(current);
+  return result;
+}
+
 function statusLine(level, message) {
   const prefix =
     level === "ok"
@@ -84,6 +143,10 @@ function normalizeText(value) {
     .replace(/\s+/g, " ");
 }
 
+function normalizeTag(value) {
+  return normalizeText(value).replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
 function normalizeStringArray(values, fallback = []) {
   const list = Array.isArray(values) ? values : fallback;
   return list.map((value) => String(value || "").trim()).filter(Boolean);
@@ -97,6 +160,13 @@ function normalizeNumericMetric(value) {
 
 function formatPercent(value) {
   return Number.isFinite(value) ? `${Math.round(value * 100)}%` : "n/a";
+}
+
+function tokenize(value) {
+  return normalizeText(value)
+    .split(/[^a-z0-9]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
 function countFiles(dirPath) {
@@ -133,9 +203,10 @@ function findMatches(directoryEntries, hints) {
 }
 
 function resolveDataDirCandidates() {
-  const configured = normalizeStringArray(qualityManifest.defaultDataDirCandidates).map(
-    (entry) =>
-      path.isAbsolute(entry) ? entry : path.resolve(rootDir, entry)
+  const configured = normalizeStringArray(
+    qualityManifest.defaultDataDirCandidates
+  ).map((entry) =>
+    path.isAbsolute(entry) ? entry : path.resolve(rootDir, entry)
   );
 
   return [
@@ -164,6 +235,28 @@ function resolveSourceFile(fileCandidates) {
   }
 
   return null;
+}
+
+function getBreedSpecificSources() {
+  if (!Array.isArray(qualityManifest.sources)) return [];
+  return qualityManifest.sources.filter(
+    (source) => source.processor === "breedSpecificClinicalCases"
+  );
+}
+
+function loadBreedSpecificRows() {
+  const rows = [];
+  for (const source of getBreedSpecificSources()) {
+    const filePath = resolveSourceFile(source.fileCandidates || source.files);
+    if (!filePath) {
+      rows.push({ __missingSource: source.slug });
+      continue;
+    }
+    for (const row of parseCSV(fs.readFileSync(filePath, "utf8"))) {
+      rows.push({ ...row, __filePath: filePath, __sourceSlug: source.slug });
+    }
+  }
+  return rows;
 }
 
 function verifyQualityManifest() {
@@ -205,17 +298,11 @@ function verifyQualityManifest() {
       statusLine("fail", `${message} | duplicate rate exceeds live tolerance`);
       continue;
     }
-
-    if (
-      liveEligible &&
-      labelConsistency !== null &&
-      labelConsistency < 0.7
-    ) {
+    if (liveEligible && labelConsistency !== null && labelConsistency < 0.7) {
       failures += 1;
       statusLine("fail", `${message} | label consistency below live tolerance`);
       continue;
     }
-
     if (
       normalizeText(source.ingestionStatus) === "flagged for removal" &&
       liveEligible
@@ -224,13 +311,11 @@ function verifyQualityManifest() {
       statusLine("fail", `${message} | flagged-for-removal source still clears live floor`);
       continue;
     }
-
     if (normalizeText(source.ingestionStatus) === "ingestion ready" && !filePath) {
       warnings += 1;
       statusLine("warn", `${message} | ingestion-ready source is waiting on a staged local CSV`);
       continue;
     }
-
     if (!filePath && normalizeText(source.ingestionStatus) === "active") {
       warnings += 1;
       statusLine("warn", `${message} | source file is not present in this repo snapshot`);
@@ -249,7 +334,10 @@ function verifyRegistryTrust() {
 
   for (const policy of Array.isArray(registry) ? registry : []) {
     const trustLevel = Number(policy.trustLevel);
-    if (policy.status === "live" && (!Number.isFinite(trustLevel) || trustLevel < minimumLiveTrustLevel)) {
+    if (
+      policy.status === "live" &&
+      (!Number.isFinite(trustLevel) || trustLevel < minimumLiveTrustLevel)
+    ) {
       failures += 1;
       statusLine(
         "fail",
@@ -258,7 +346,11 @@ function verifyRegistryTrust() {
       continue;
     }
 
-    if (policy.status !== "live" && Number.isFinite(trustLevel) && trustLevel >= minimumLiveTrustLevel) {
+    if (
+      policy.status !== "live" &&
+      Number.isFinite(trustLevel) &&
+      trustLevel >= minimumLiveTrustLevel
+    ) {
       warnings += 1;
       statusLine(
         "warn",
@@ -358,6 +450,171 @@ function verifyLocalImageDirectories() {
   return { failures, warnings };
 }
 
+function verifyBreedExpansionManifest() {
+  const profiles = Array.isArray(breedExpansionProfileManifest.breeds)
+    ? breedExpansionProfileManifest.breeds
+    : [];
+  const rows = loadBreedSpecificRows();
+  let failures = 0;
+  let warnings = 0;
+
+  if (profiles.length !== 10) {
+    failures += 1;
+    statusLine(
+      "fail",
+      `Breed expansion manifest should contain 10 breeds, found ${profiles.length}`
+    );
+  } else {
+    statusLine("ok", `Breed expansion manifest covers ${profiles.length} breeds`);
+  }
+
+  const rowsByBreed = new Map();
+  for (const row of rows) {
+    if (row.__missingSource) {
+      failures += 1;
+      statusLine("fail", `Missing breed-specific source file for ${row.__missingSource}`);
+      continue;
+    }
+
+    const breedId = normalizeTag(row.breed_id);
+    const list = rowsByBreed.get(breedId) || [];
+    list.push(row);
+    rowsByBreed.set(breedId, list);
+  }
+
+  for (const profile of profiles) {
+    const breedId = normalizeTag(profile.breedId);
+    const breedRows = rowsByBreed.get(breedId) || [];
+    const conditionSet = new Set(
+      breedRows.map((row) => normalizeTag(row.condition_label))
+    );
+
+    if (breedRows.length !== 3) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `${profile.name} should have 3 breed-specific rows, found ${breedRows.length}`
+      );
+      continue;
+    }
+
+    if (profile.topConditions.length !== 3) {
+      failures += 1;
+      statusLine("fail", `${profile.name} manifest should declare 3 top conditions`);
+      continue;
+    }
+
+    for (const condition of profile.topConditions) {
+      if (Number(condition.trustLevel) < 70) {
+        failures += 1;
+        statusLine(
+          "fail",
+          `${profile.name} condition ${condition.conditionLabel} drops below trust 70`
+        );
+      }
+      if (!conditionSet.has(normalizeTag(condition.conditionLabel))) {
+        failures += 1;
+        statusLine(
+          "fail",
+          `${profile.name} is missing corpus row for ${condition.conditionLabel}`
+        );
+      }
+    }
+
+    const mixedBreedRow = breedRows.find((row) =>
+      /[\/&,]|\bmix(?:ed)?\b|\bx\b/i.test(normalizeText(row.breed))
+    );
+    if (mixedBreedRow) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `${profile.name} includes a mixed-breed row (${mixedBreedRow.record_id}) without disambiguation`
+      );
+      continue;
+    }
+
+    statusLine(
+      "ok",
+      `${profile.name} -> ${breedRows.length} rows, ${conditionSet.size} condition label(s)`
+    );
+  }
+
+  if (rows.length < profiles.length * 3) {
+    warnings += 1;
+    statusLine(
+      "warn",
+      `Breed-specific corpus rows are sparse (${rows.length} rows for ${profiles.length} breeds)`
+    );
+  }
+
+  return { failures, warnings, rows };
+}
+
+function scoreBreedSpecificRow(row, query, profileById) {
+  const profile = profileById.get(normalizeTag(row.breed_id));
+  const haystack = [
+    row.breed,
+    ...(profile?.aliases || []),
+    row.condition_label,
+    row.condition_name,
+    row.domain,
+    row.chief_complaint,
+    row.signal_symptoms,
+    row.clinical_summary,
+  ]
+    .map((value) => String(value || ""))
+    .join(" ");
+  const queryTokens = tokenize(query);
+  const haystackTokens = new Set(tokenize(haystack));
+  return queryTokens.reduce(
+    (score, token) => (haystackTokens.has(token) ? score + 1 : score),
+    0
+  );
+}
+
+function verifyBreedSmokeQueries(rows) {
+  const profiles = Array.isArray(breedExpansionProfileManifest.breeds)
+    ? breedExpansionProfileManifest.breeds
+    : [];
+  const profileById = new Map(
+    profiles.map((profile) => [normalizeTag(profile.breedId), profile])
+  );
+  let failures = 0;
+
+  for (const profile of profiles) {
+    const ranked = rows
+      .filter((row) => !row.__missingSource)
+      .map((row) => ({
+        row,
+        score: scoreBreedSpecificRow(row, profile.smokeQuery, profileById),
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const topMatch = ranked[0];
+    if (!topMatch || topMatch.score <= 0) {
+      failures += 1;
+      statusLine("fail", `${profile.name} smoke query returned no relevant local row`);
+      continue;
+    }
+
+    if (normalizeTag(topMatch.row.breed_id) !== normalizeTag(profile.breedId)) {
+      failures += 1;
+      statusLine(
+        "fail",
+        `${profile.name} smoke query surfaced ${topMatch.row.breed} instead`
+      );
+      continue;
+    }
+
+    statusLine(
+      "ok",
+      `${profile.name} smoke query -> ${topMatch.row.condition_label} (${topMatch.row.record_id})`
+    );
+  }
+
+  return { failures, warnings: 0 };
+}
+
 function isSupabaseConfigured() {
   return (
     (SUPABASE_URL.startsWith("http://") || SUPABASE_URL.startsWith("https://")) &&
@@ -414,10 +671,7 @@ async function verifySupabaseTrustLevels() {
       continue;
     }
 
-    statusLine(
-      "ok",
-      `Supabase trust synced for ${source.slug} (${row.trust_level})`
-    );
+    statusLine("ok", `Supabase trust synced for ${source.slug} (${row.trust_level})`);
   }
 
   return { failures, warnings };
@@ -427,22 +681,28 @@ async function main() {
   const manifestResults = verifyQualityManifest();
   const registryResults = verifyRegistryTrust();
   const imageResults = verifyLocalImageDirectories();
+  const breedManifestResults = verifyBreedExpansionManifest();
+  const breedSmokeResults = verifyBreedSmokeQueries(breedManifestResults.rows);
   const supabaseResults = await verifySupabaseTrustLevels();
 
   const failures =
     manifestResults.failures +
     registryResults.failures +
     imageResults.failures +
+    breedManifestResults.failures +
+    breedSmokeResults.failures +
     supabaseResults.failures;
   const warnings =
     manifestResults.warnings +
     registryResults.warnings +
     imageResults.warnings +
+    breedManifestResults.warnings +
+    breedSmokeResults.warnings +
     supabaseResults.warnings;
 
   console.log("");
   console.log(
-    `Live corpus verification summary: ${failures} failure(s), ${warnings} warning(s), ${Array.isArray(registry) ? registry.length : 0} image policy source(s), ${Array.isArray(qualityManifest.sources) ? qualityManifest.sources.length : 0} audited text source(s)`
+    `Live corpus verification summary: ${failures} failure(s), ${warnings} warning(s), ${Array.isArray(registry) ? registry.length : 0} image policy source(s), ${Array.isArray(qualityManifest.sources) ? qualityManifest.sources.length : 0} audited text source(s), ${Array.isArray(breedExpansionProfileManifest.breeds) ? breedExpansionProfileManifest.breeds.length : 0} breed profiles`
   );
 
   if (failures > 0) {

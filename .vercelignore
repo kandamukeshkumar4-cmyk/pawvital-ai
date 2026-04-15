@@ -1,6 +1,7 @@
 # Image corpus (already indexed in Supabase - not needed at runtime)
-corpus/
-scripts/
+# Keep this anchored so Vercel still uploads data/corpus runtime manifests.
+/corpus/
+/scripts/
 
 # Dev files
 .claude/

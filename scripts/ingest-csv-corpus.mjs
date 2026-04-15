@@ -5,8 +5,8 @@
  * Round 2 adds:
  * - trust-level overrides from an audited manifest
  * - ingestion-ready placeholders for higher-quality sources
- * - resumable source/batch progress checkpoints
- * - per-source audit reporting in dry-run and live modes
+ * - resumable source/batch checkpoints
+ * - dedicated breed-specific clinical cases for the top 10 dog breeds
  */
 
 import fs from "node:fs";
@@ -21,6 +21,12 @@ const defaultQualityManifestPath = path.join(
   "data",
   "corpus",
   "csv-ingestion-round2.json"
+);
+const defaultBreedProfilePath = path.join(
+  rootDir,
+  "data",
+  "corpus",
+  "breed-expansion-profiles.json"
 );
 const defaultCheckpointPath = path.join(
   rootDir,
@@ -38,6 +44,9 @@ const defaultDataDirCandidates = [
   path.join(rootDir, "corpus", "data"),
   path.join(rootDir, "corpus"),
 ];
+const CAT_MARKER_PATTERN = /\b(cat|cats|feline|kitten|kittens)\b/i;
+const MIXED_BREED_PATTERN = /[\/&,]|\bmix(?:ed)?\b|\bx\b/i;
+const MINIMUM_BREED_RECORD_TRUST = 70;
 
 loadEnvFiles();
 
@@ -76,6 +85,7 @@ function loadEnvFiles() {
   for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
     const fullPath = path.join(rootDir, relativePath);
     if (!fs.existsSync(fullPath)) continue;
+
     for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
@@ -117,6 +127,7 @@ function readFlagValue(argv, flag) {
   if (exactIndex >= 0 && argv[exactIndex + 1]) {
     return argv[exactIndex + 1];
   }
+
   const prefixed = argv.find((entry) => entry.startsWith(`${flag}=`));
   return prefixed ? prefixed.slice(flag.length + 1) : null;
 }
@@ -135,6 +146,18 @@ function ensureDir(dirPath) {
 function readJson(filePath, fallbackValue) {
   if (!filePath || !fs.existsSync(filePath)) return fallbackValue;
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function normalizeTag(value) {
+  return normalizeText(value).replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 }
 
 function normalizeNumericMetric(value) {
@@ -157,6 +180,10 @@ function normalizeStringArray(values, fallback = []) {
   return list.map((value) => String(value || "").trim()).filter(Boolean);
 }
 
+function formatPercent(value) {
+  return Number.isFinite(value) ? `${Math.round(value * 100)}%` : "n/a";
+}
+
 function loadQualityManifest(filePath) {
   const parsed = readJson(filePath, {
     auditRound: "baseline",
@@ -176,6 +203,24 @@ function loadQualityManifest(filePath) {
   };
 }
 
+function loadBreedExpansionProfiles(filePath) {
+  const resolvedPath = resolveRootPath(filePath || defaultBreedProfilePath);
+  const parsed = readJson(resolvedPath, { breeds: [] });
+  const breeds = Array.isArray(parsed.breeds) ? parsed.breeds : [];
+  return breeds.map((profile) => ({
+    ...profile,
+    aliases: normalizeStringArray(profile.aliases),
+    topConditions: Array.isArray(profile.topConditions)
+      ? profile.topConditions.map((condition) => ({
+          ...condition,
+          conditionLabel: normalizeTag(condition.conditionLabel),
+          domain: normalizeTag(condition.domain),
+          trustLevel: Number(condition.trustLevel),
+        }))
+      : [],
+  }));
+}
+
 function buildDatasetConfigs(qualityManifest) {
   const bySlug = new Map(
     BASE_SOURCE_CONFIGS.map((config) => [
@@ -184,6 +229,7 @@ function buildDatasetConfigs(qualityManifest) {
         ...config,
         baselineTrustLevel: config.trustLevel,
         ingestionStatus: "active",
+        profileManifest: "",
         qualityMetrics: null,
         qualityTier: "",
         trustLevelReason: "",
@@ -197,6 +243,7 @@ function buildDatasetConfigs(qualityManifest) {
       files: [],
       kind: "document",
       processor: "vetClinicalData",
+      profileManifest: "",
       sourceKnown: false,
       sourceType: "dataset",
       speciesScope: ["dog"],
@@ -215,6 +262,7 @@ function buildDatasetConfigs(qualityManifest) {
         Number.isFinite(Number(source.baselineTrustLevel))
           ? Number(source.baselineTrustLevel)
           : existing.baselineTrustLevel,
+      profileManifest: String(source.profileManifest || existing.profileManifest || ""),
       qualityMetrics: normalizeMetrics(source.qualityMetrics ?? existing.qualityMetrics),
       qualityTier: String(source.qualityTier || existing.qualityTier || ""),
       sourceKnown:
@@ -266,10 +314,6 @@ function resolveSourceFile(fileCandidates, dataDirCandidates) {
   return null;
 }
 
-function formatPercent(value) {
-  return Number.isFinite(value) ? `${Math.round(value * 100)}%` : "n/a";
-}
-
 function readCheckpoint(checkpointPath, auditRound) {
   const parsed = readJson(checkpointPath, null);
   if (!parsed || parsed.auditRound !== auditRound) {
@@ -314,23 +358,25 @@ function supportsDatabaseWrites(dryRun) {
 }
 
 async function supabaseRequest(endpoint, method, body) {
-  const response = await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${endpoint}`, {
-    method,
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer:
-        method === "POST"
-          ? "resolution=merge-duplicates,return=representation"
-          : "return=representation",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const response = await fetch(
+    `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${endpoint}`,
+    {
+      method,
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer:
+          method === "POST"
+            ? "resolution=merge-duplicates,return=representation"
+            : "return=representation",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    }
+  );
 
   const text = await response.text();
   const parsed = text ? JSON.parse(text) : null;
-
   if (!response.ok) {
     throw new Error(`Supabase ${method} ${endpoint}: ${response.status} ${text}`);
   }
@@ -355,6 +401,7 @@ function buildSourceMetadata(config, qualityManifest, filePath, chunkCount) {
     file_path: filePath ? path.relative(rootDir, filePath) : null,
     ingestion_status: config.ingestionStatus,
     minimum_live_trust_level: qualityManifest.minimumLiveTrustLevel,
+    profile_manifest: config.profileManifest || null,
     quality_metrics: config.qualityMetrics,
     quality_tier: config.qualityTier || null,
     trust_level_reason: config.trustLevelReason || null,
@@ -389,7 +436,11 @@ async function syncSourceRecord(config, qualityManifest, filePath, chunkCount, a
     return null;
   }
 
-  const response = await supabaseRequest("knowledge_sources?on_conflict=slug", "POST", payload);
+  const response = await supabaseRequest(
+    "knowledge_sources?on_conflict=slug",
+    "POST",
+    payload
+  );
   return Array.isArray(response) ? response[0] : response;
 }
 
@@ -398,6 +449,7 @@ function parseCSV(text) {
   if (lines.length < 2) return [];
   const headers = parseCSVLine(lines[0]);
   const rows = [];
+
   for (let index = 1; index < lines.length; index += 1) {
     const line = lines[index].trim();
     if (!line) continue;
@@ -408,6 +460,7 @@ function parseCSV(text) {
     });
     rows.push(row);
   }
+
   return rows;
 }
 
@@ -425,25 +478,45 @@ function parseCSVLine(line) {
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === "," && !inQuotes) {
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
       result.push(current);
       current = "";
-    } else {
-      current += char;
+      continue;
     }
+
+    current += char;
   }
 
   result.push(current);
   return result;
 }
 
-const CAT_MARKER_PATTERN = /\b(cat|cats|feline|kitten|kittens)\b/i;
-
 function isDogCompatibleRow(row) {
   const haystack = Object.values(row || {})
     .map((value) => String(value || ""))
     .join(" ");
   return !CAT_MARKER_PATTERN.test(haystack);
+}
+
+function splitSignalSymptoms(value) {
+  return String(value || "")
+    .split(/[|;]/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function buildBreedProfileIndex(config) {
+  const profiles = loadBreedExpansionProfiles(
+    config.profileManifest || defaultBreedProfilePath
+  );
+  const byId = new Map();
+  for (const profile of profiles) {
+    byId.set(normalizeTag(profile.breedId), profile);
+  }
+  return byId;
 }
 
 function processPetHealthSymptoms(rows) {
@@ -455,16 +528,14 @@ function processPetHealthSymptoms(rows) {
     const text = row.text?.trim();
     const condition = row.condition?.trim();
     const recordType = row.record_type?.trim();
-
     if (!text) {
       errors.push(`Row ${index + 1}: missing text`);
       continue;
     }
 
-    const heading = `Clinical Note: ${condition || "Unknown"}`;
     const keywordTags = [];
-    if (condition) keywordTags.push(condition.toLowerCase().replace(/\s+/g, "_"));
-    if (recordType) keywordTags.push(recordType.toLowerCase().replace(/\s+/g, "_"));
+    if (condition) keywordTags.push(normalizeTag(condition));
+    if (recordType) keywordTags.push(normalizeTag(recordType));
 
     chunks.push({
       body: text,
@@ -472,7 +543,7 @@ function processPetHealthSymptoms(rows) {
         condition: condition || "Unknown",
         record_type: recordType || "unknown",
       },
-      heading,
+      heading: `Clinical Note: ${condition || "Unknown"}`,
       keyword_tags: keywordTags,
     });
   }
@@ -506,20 +577,17 @@ function processVetClinicalData(rows) {
       continue;
     }
 
-    const heading = `Veterinary Case: ${breed}, ${age}y, ${weight}kg`;
-    const body = [
-      `Species: ${animalName}. Breed: ${breed}. Age: ${age} years. Weight: ${weight} kg.`,
-      `Medical History: ${history}.`,
-      `Symptoms: ${symptoms.join(", ")}.`,
-    ].join("\n");
-
     const keywordTags = [
-      ...symptoms.map((symptom) => symptom.toLowerCase().replace(/\s+/g, "_")),
-      breed.toLowerCase().replace(/\s+/g, "_"),
+      ...symptoms.map((symptom) => normalizeTag(symptom)),
+      normalizeTag(breed),
     ].filter((tag) => tag && tag !== "unknown");
 
     chunks.push({
-      body,
+      body: [
+        `Species: ${animalName}. Breed: ${breed}. Age: ${age} years. Weight: ${weight} kg.`,
+        `Medical History: ${history}.`,
+        `Symptoms: ${symptoms.join(", ")}.`,
+      ].join("\n"),
       case_data: {
         age,
         breed,
@@ -528,8 +596,118 @@ function processVetClinicalData(rows) {
         symptoms,
         weight_kg: weight,
       },
-      heading,
+      heading: `Veterinary Case: ${breed}, ${age}y, ${weight}kg`,
       keyword_tags: keywordTags,
+    });
+  }
+
+  return { chunks, errors };
+}
+
+function processBreedSpecificClinicalCases(rows, config) {
+  const chunks = [];
+  const errors = [];
+  const breedProfiles = buildBreedProfileIndex(config);
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    const breedId = normalizeTag(row.breed_id || row.BreedId);
+    const breed = String(row.breed || row.Breed || "").trim();
+    const conditionLabel = normalizeTag(
+      row.condition_label || row.ConditionLabel
+    );
+    const conditionName = String(
+      row.condition_name || row.ConditionName || ""
+    ).trim();
+    const domain = normalizeTag(row.domain || row.Domain);
+    const trustLevel = Number(row.trust_level || row.TrustLevel);
+    const chiefComplaint = String(
+      row.chief_complaint || row.ChiefComplaint || ""
+    ).trim();
+    const signalSymptoms = splitSignalSymptoms(
+      row.signal_symptoms || row.SignalSymptoms
+    );
+    const medicalHistory = String(
+      row.medical_history || row.MedicalHistory || ""
+    ).trim();
+    const clinicalSummary = String(
+      row.clinical_summary || row.ClinicalSummary || ""
+    ).trim();
+
+    if (!breedId || !breed || !conditionLabel || !conditionName || !domain) {
+      errors.push(`Row ${index + 1}: missing breed tag, condition label, or domain`);
+      continue;
+    }
+    if (MIXED_BREED_PATTERN.test(normalizeText(breed))) {
+      errors.push(`Row ${index + 1}: mixed-breed record missing disambiguation tag`);
+      continue;
+    }
+    if (!Number.isFinite(trustLevel) || trustLevel < MINIMUM_BREED_RECORD_TRUST) {
+      errors.push(`Row ${index + 1}: trust ${trustLevel || "n/a"} is below ${MINIMUM_BREED_RECORD_TRUST}`);
+      continue;
+    }
+
+    const profile = breedProfiles.get(breedId);
+    if (!profile) {
+      errors.push(`Row ${index + 1}: unknown breed profile ${breedId}`);
+      continue;
+    }
+
+    const validName =
+      normalizeText(profile.name) === normalizeText(breed) ||
+      profile.aliases.some((alias) => normalizeText(alias) === normalizeText(breed));
+    if (!validName) {
+      errors.push(`Row ${index + 1}: breed ${breed} does not match manifest profile ${profile.name}`);
+      continue;
+    }
+
+    const conditionProfile = profile.topConditions.find(
+      (condition) => condition.conditionLabel === conditionLabel
+    );
+    if (!conditionProfile) {
+      errors.push(`Row ${index + 1}: ${conditionLabel} is not declared for ${profile.name}`);
+      continue;
+    }
+    if (conditionProfile.domain !== domain) {
+      errors.push(`Row ${index + 1}: domain ${domain} does not match manifest domain ${conditionProfile.domain}`);
+      continue;
+    }
+
+    const keywordTags = [
+      breedId,
+      normalizeTag(profile.name),
+      ...profile.aliases.map((alias) => normalizeTag(alias)),
+      conditionLabel,
+      domain,
+      ...signalSymptoms.map((symptom) => normalizeTag(symptom)),
+    ].filter(Boolean);
+
+    chunks.push({
+      body: [
+        `Breed: ${profile.name}. Domain: ${domain}. Condition focus: ${conditionName}.`,
+        chiefComplaint ? `Chief complaint: ${chiefComplaint}.` : "",
+        signalSymptoms.length
+          ? `Signal symptoms: ${signalSymptoms.join(", ")}.`
+          : "",
+        medicalHistory ? `Medical history: ${medicalHistory}.` : "",
+        clinicalSummary ? `Clinical summary: ${clinicalSummary}.` : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      case_data: {
+        breed,
+        breed_id: breedId,
+        condition_label: conditionLabel,
+        condition_name: conditionName,
+        domain,
+        record_id: String(row.record_id || row.RecordId || `breed-case-${index + 1}`),
+        selection_source: profile.selectionSource,
+        signal_symptoms: signalSymptoms,
+        smoke_query: profile.smokeQuery,
+        trust_level: trustLevel,
+      },
+      heading: `Breed-Specific Case: ${profile.name} — ${conditionName}`,
+      keyword_tags: [...new Set(keywordTags)],
     });
   }
 
@@ -539,6 +717,7 @@ function processVetClinicalData(rows) {
 const PROCESSORS = {
   petHealthSymptoms: processPetHealthSymptoms,
   vetClinicalData: processVetClinicalData,
+  breedSpecificClinicalCases: processBreedSpecificClinicalCases,
 };
 
 function normalizeFingerprint(value) {
@@ -550,10 +729,7 @@ function normalizeFingerprint(value) {
 
 function computeObservedQuality(chunks) {
   if (chunks.length === 0) {
-    return {
-      duplicateRate: 0,
-      labelConsistency: 0,
-    };
+    return { duplicateRate: 0, labelConsistency: 0 };
   }
 
   const seen = new Set();
@@ -607,6 +783,7 @@ function buildSourceReport(config, input) {
     ingestionStatus: config.ingestionStatus,
     observedQuality: input.observedQuality,
     processor: config.processor,
+    profileManifest: config.profileManifest || null,
     qualityMetrics: config.qualityMetrics,
     qualityTier: config.qualityTier || null,
     skippedRows: input.skippedRows,
@@ -622,6 +799,7 @@ function buildSourceReport(config, input) {
 function printSourceSummary(config, reportEntry) {
   const metrics = config.qualityMetrics;
   const observed = reportEntry.observedQuality;
+
   console.log(`${config.slug}: ${reportEntry.status}`);
   console.log(`   trust ${config.baselineTrustLevel ?? "n/a"} -> ${config.trustLevel}`);
   console.log(
@@ -631,6 +809,7 @@ function printSourceSummary(config, reportEntry) {
       metrics?.labelConsistency
     )}`
   );
+
   if (reportEntry.totalRows > 0 || reportEntry.chunkCount > 0) {
     console.log(
       `   observed rows=${reportEntry.totalRows}, chunks=${reportEntry.chunkCount}, duplicates=${formatPercent(
@@ -638,6 +817,7 @@ function printSourceSummary(config, reportEntry) {
       )}, labels=${formatPercent(observed.labelConsistency)}`
     );
   }
+
   if (reportEntry.filePath) {
     console.log(`   file ${reportEntry.filePath}`);
   }
@@ -696,13 +876,7 @@ async function main() {
       const record =
         !options.dryRun &&
         (config.sourceKnown || config.ingestionStatus === "flagged_for_removal")
-          ? await syncSourceRecord(
-              config,
-              qualityManifest,
-              null,
-              0,
-              false
-            )
+          ? await syncSourceRecord(config, qualityManifest, null, 0, false)
           : null;
       const reportEntry = buildSourceReport(config, {
         auditRound: qualityManifest.auditRound,
@@ -727,7 +901,7 @@ async function main() {
 
     const rows = parseCSV(fs.readFileSync(filePath, "utf8"));
     const filteredRows = options.dogOnly ? rows.filter(isDogCompatibleRow) : rows;
-    const { chunks, errors } = processor(filteredRows);
+    const { chunks, errors } = processor(filteredRows, config);
     const observedQuality = computeObservedQuality(chunks);
     const sourceRecord =
       options.dryRun

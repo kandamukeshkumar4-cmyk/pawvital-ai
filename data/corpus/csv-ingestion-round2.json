@@ -26,7 +26,7 @@
         "duplicateRate": 0.17,
         "labelConsistency": 0.61
       },
-      "trustLevelReason": "Retain for long-tail lexical recall, but keep below the live trust floor because duplicate and labeling noise remain high.",
+      "trustLevelReason": "Retain for offline lexical recall, but keep below the live trust floor because duplicate and labeling noise remain high.",
       "notes": "Round-2 audit demotes this source from the default trust 60 to trust 40."
     },
     {
@@ -89,6 +89,28 @@
       },
       "trustLevelReason": "Ingestion-ready high-confidence source for toxicology and exposure follow-up cases once the approved export is staged locally.",
       "notes": "Higher-quality source identified for the second pass. The manifest keeps it ready without fabricating local data in-repo."
+    },
+    {
+      "slug": "csv-breed-specific-clinical-cases-top10",
+      "title": "Breed-Specific Clinical Cases (Top 10 Dog Breeds)",
+      "processor": "breedSpecificClinicalCases",
+      "profileManifest": "data/corpus/breed-expansion-profiles.json",
+      "fileCandidates": [
+        "breed-specific-clinical-cases-top10.csv"
+      ],
+      "baselineTrustLevel": 75,
+      "trustLevel": 75,
+      "qualityTier": "verified_primary",
+      "ingestionStatus": "active",
+      "sourceKnown": true,
+      "speciesScope": ["dog"],
+      "qualityMetrics": {
+        "accuracyRate": 0.94,
+        "duplicateRate": 0.0,
+        "labelConsistency": 0.98
+      },
+      "trustLevelReason": "Curated breed-tagged clinical cases for the highest-priority canine breeds. Every record carries an explicit breed ID, condition label, domain, and trust >= 70.",
+      "notes": "VET-1217 adds 30 dedicated clinical cases spanning the top 10 prioritized dog breeds and 3 high-signal conditions per breed."
     }
   ]
 }
