@@ -20,6 +20,17 @@ const sidecarRegistry = JSON.parse(
 const readinessRoutePath = "/api/ai/sidecar-readiness";
 const readinessTimeoutMs = Number(process.env.HF_SIDECAR_HEALTH_TIMEOUT_MS) || 8000;
 
+function normalizeEnvValue(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
 function loadEnvFiles() {
   for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
     const fullPath = path.join(rootDir, relativePath);
@@ -29,8 +40,8 @@ function loadEnvFiles() {
       if (!trimmed || trimmed.startsWith("#")) continue;
       const eq = trimmed.indexOf("=");
       if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
+      const key = trimmed.slice(0, eq).replace(/^export\s+/, "").trim();
+      const value = normalizeEnvValue(trimmed.slice(eq + 1));
       if (!process.env[key]) {
         process.env[key] = value;
       }

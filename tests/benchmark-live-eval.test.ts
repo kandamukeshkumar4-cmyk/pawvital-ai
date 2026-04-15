@@ -116,6 +116,7 @@ describe("benchmark live eval scoring", () => {
     expect(scorecard.passFail).toBe("PASS");
     expect(markdown).toContain("VET-1206 Live Eval Baseline");
     expect(markdown).toContain("question");
+    expect(markdown).toContain("P0 Blockers for VET-1207");
   });
 
   it("surfaces blocked live baselines without treating them as scored passes", () => {
@@ -145,6 +146,43 @@ describe("benchmark live eval scoring", () => {
     expect(blocked.totalCases).toBe(0);
     expect(blocked.preflight?.ready).toBe(false);
     expect(renderLiveScorecardMarkdown(blocked)).toContain("Result: BLOCKED");
+  });
+
+  it("treats any missed emergency as a critical blocker even without tier metadata", () => {
+    const report = makeReport();
+    report.cases = [
+      {
+        id: "emergency-no-tier",
+        description: "Emergency case without risk tier metadata",
+        httpStatus: 200,
+        actualType: "question",
+        riskTier: null,
+        mustNotMissMarker: false,
+        tags: ["emergency"],
+        evaluation: {
+          totalChecks: 1,
+          passedChecks: 0,
+          failedChecks: 1,
+          score: 0,
+          pass: false,
+          checks: [
+            {
+              name: "responseType",
+              pass: false,
+              expected: "emergency",
+              actual: "question",
+            },
+          ],
+        },
+        expectations: { responseType: "emergency", readyForReport: true },
+      },
+    ];
+
+    const scorecard = scoreLiveBenchmarkReport(report);
+
+    expect(scorecard.blockingFailures).toBe(1);
+    expect(scorecard.failures[0]?.severity).toBe("CRITICAL");
+    expect(scorecard.failures[0]?.category).toBe("missed_emergency");
   });
 });
 
