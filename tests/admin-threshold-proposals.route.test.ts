@@ -224,6 +224,36 @@ describe("admin threshold proposal routes", () => {
     );
   });
 
+  it("sanitizes review-cycle inputs before querying or writing file paths", async () => {
+    const { supabase, queryChain } = buildServiceSupabaseMock([
+      {
+        id: "proposal-1",
+        proposal_type: "threshold_review",
+        rationale: "Mismatch on ear disease.",
+        reviewer_notes: "Ready for round-one review.",
+        status: "approved",
+        summary: "Review same-day escalation",
+      },
+    ]);
+    mockGetServiceSupabase.mockReturnValue(supabase);
+
+    const { POST } =
+      await import("@/app/api/admin/threshold-proposals/review-cycle/route");
+    const response = await POST(
+      makeReviewCycleRequest({
+        cycleSlug: "../../Round 1 Clinical Review!!!",
+        proposalIds: ["proposal-1", "../../etc/passwd", "proposal-1"],
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(queryChain.in).toHaveBeenCalledWith("id", ["proposal-1"]);
+    expect(payload.reviewCycle.filePath).toBe(
+      "plans/threshold-proposals-round-1-clinical-review.md",
+    );
+  });
+
   it("returns a preview draft when GitHub credentials are unavailable", async () => {
     const { supabase } = buildServiceSupabaseMock([
       {

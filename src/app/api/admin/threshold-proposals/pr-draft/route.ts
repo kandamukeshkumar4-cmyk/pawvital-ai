@@ -6,6 +6,7 @@ import {
   buildThresholdProposalReviewCycleDraft,
   buildDemoThresholdProposalDashboardData,
   isReviewedThresholdProposal,
+  normalizeThresholdProposalIds,
   normalizeThresholdProposalRows,
 } from "@/lib/admin-threshold-proposals";
 import { getServiceSupabase } from "@/lib/supabase-admin";
@@ -35,12 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const requestedProposalIds = Array.isArray(body.proposalIds)
-      ? body.proposalIds.filter(
-          (value): value is string =>
-            typeof value === "string" && value.trim().length > 0,
-        )
-      : [];
+    const requestedProposalIds = normalizeThresholdProposalIds(body.proposalIds);
 
     let proposals = buildDemoThresholdProposalDashboardData().proposals;
     const serviceSupabase = getServiceSupabase();

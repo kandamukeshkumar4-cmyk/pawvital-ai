@@ -64,12 +64,50 @@ export interface ThresholdProposalReviewCycleDraft {
   title: string;
 }
 
+const MAX_REVIEW_CYCLE_SLUG_LENGTH = 48;
+const REVIEW_CYCLE_FALLBACK_SLUG = "round1";
+const SAFE_PROPOSAL_ID_PATTERN = /^[a-z0-9][a-z0-9_-]{0,127}$/i;
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function asString(value: unknown) {
   return typeof value === "string" ? value : null;
+}
+
+export function normalizeThresholdProposalIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const uniqueIds = new Set<string>();
+
+  for (const entry of value) {
+    if (typeof entry !== "string") {
+      continue;
+    }
+
+    const normalized = entry.trim();
+    if (!SAFE_PROPOSAL_ID_PATTERN.test(normalized)) {
+      continue;
+    }
+
+    uniqueIds.add(normalized);
+  }
+
+  return [...uniqueIds];
+}
+
+export function normalizeReviewCycleSlug(value: string | undefined) {
+  const normalized = (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, MAX_REVIEW_CYCLE_SLUG_LENGTH);
+
+  return normalized || REVIEW_CYCLE_FALLBACK_SLUG;
 }
 
 function normalizeStatus(value: unknown): ThresholdProposalStatus {
@@ -365,7 +403,7 @@ export function buildThresholdProposalReviewCycleDraft(input: {
   generatedBy: string;
   proposals: ThresholdProposalRecord[];
 }): ThresholdProposalReviewCycleDraft {
-  const cycleSlug = (input.cycleSlug || "round1").trim().toLowerCase();
+  const cycleSlug = normalizeReviewCycleSlug(input.cycleSlug);
   const reviewedProposals = input.proposals.filter(isReviewedThresholdProposal);
   const summary = summarizeThresholdProposals(reviewedProposals);
   const filePath = `plans/threshold-proposals-${cycleSlug}.md`;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminRequestContext } from "@/lib/admin-auth";
 import {
   buildDemoThresholdProposalDashboardData,
+  normalizeThresholdProposalIds,
   normalizeThresholdProposalRows,
   summarizeThresholdProposals,
 } from "@/lib/admin-threshold-proposals";
@@ -93,7 +94,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    if (!body.proposalId || !body.status) {
+    const [proposalId] = normalizeThresholdProposalIds(
+      body.proposalId ? [body.proposalId] : [],
+    );
+
+    if (!proposalId || !body.status) {
       return NextResponse.json(
         { error: "proposalId and status are required" },
         { status: 400 },
@@ -122,7 +127,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({
         ok: true,
         proposal: {
-          id: body.proposalId,
+          id: proposalId,
           reviewerNotes,
           status: body.status,
           updatedAt,
@@ -137,7 +142,7 @@ export async function PATCH(request: Request) {
         status: body.status,
         updated_at: updatedAt,
       })
-      .eq("id", body.proposalId);
+      .eq("id", proposalId);
 
     if (error) {
       console.error("Threshold proposals PATCH failed:", error);
@@ -150,7 +155,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({
       ok: true,
       proposal: {
-        id: body.proposalId,
+        id: proposalId,
         reviewerNotes,
         status: body.status,
         updatedAt,

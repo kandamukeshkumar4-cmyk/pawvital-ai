@@ -4,6 +4,8 @@ import {
   buildDemoThresholdProposalDashboardData,
   buildThresholdProposalReviewCycleDraft,
   isReviewedThresholdProposal,
+  normalizeReviewCycleSlug,
+  normalizeThresholdProposalIds,
   normalizeThresholdProposalRows,
 } from "@/lib/admin-threshold-proposals";
 import { getServiceSupabase } from "@/lib/supabase-admin";
@@ -11,17 +13,6 @@ import { getServiceSupabase } from "@/lib/supabase-admin";
 interface ReviewCycleRequestBody {
   cycleSlug?: string;
   proposalIds?: string[];
-}
-
-function normalizeRequestedProposalIds(value: unknown) {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter(
-    (entry): entry is string =>
-      typeof entry === "string" && entry.trim().length > 0,
-  );
 }
 
 async function loadThresholdProposals(proposalIds: string[]) {
@@ -87,9 +78,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const requestedProposalIds = normalizeRequestedProposalIds(
-      body.proposalIds,
-    );
+    const requestedProposalIds = normalizeThresholdProposalIds(body.proposalIds);
     const allProposals =
       adminContext.isDemo || !getServiceSupabase()
         ? buildDemoThresholdProposalDashboardData().proposals
@@ -107,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     const reviewCycle = buildThresholdProposalReviewCycleDraft({
-      cycleSlug: body.cycleSlug,
+      cycleSlug: normalizeReviewCycleSlug(body.cycleSlug),
       generatedAt: new Date().toISOString(),
       generatedBy: adminContext.email || "admin-review-dashboard",
       proposals:

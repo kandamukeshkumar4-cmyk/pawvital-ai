@@ -3,6 +3,8 @@ import {
   buildThresholdProposalPullRequestDraft,
   buildThresholdProposalReviewCycleDraft,
   isReviewedThresholdProposal,
+  normalizeReviewCycleSlug,
+  normalizeThresholdProposalIds,
   normalizeThresholdProposalRows,
   summarizeThresholdProposals,
 } from "@/lib/admin-threshold-proposals";
@@ -86,6 +88,35 @@ describe("admin threshold proposal helpers", () => {
     );
     expect(draft.fileContent).toContain("Still in draft: 0");
     expect(draft.fileContent).toContain("Clinical reviewer requested a ticket");
+  });
+
+  it("sanitizes review cycle slugs before building file paths", () => {
+    const draft = buildThresholdProposalReviewCycleDraft({
+      cycleSlug: "../../Round 1 Clinical Review!!!",
+      generatedAt: "2026-04-14T12:00:00.000Z",
+      generatedBy: "clinical-reviewer@pawvital.ai",
+      proposals: buildDemoThresholdProposalDashboardData().proposals,
+    });
+
+    expect(normalizeReviewCycleSlug("../../Round 1 Clinical Review!!!")).toBe(
+      "round-1-clinical-review",
+    );
+    expect(draft.filePath).toBe(
+      "plans/threshold-proposals-round-1-clinical-review.md",
+    );
+  });
+
+  it("filters proposal ids to safe deduplicated values", () => {
+    expect(
+      normalizeThresholdProposalIds([
+        "proposal-1",
+        " proposal-1 ",
+        "../../etc/passwd",
+        "proposal_2",
+        "",
+        null,
+      ]),
+    ).toEqual(["proposal-1", "proposal_2"]);
   });
 
   it("treats non-draft statuses as reviewed proposals", () => {
