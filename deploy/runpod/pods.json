@@ -1,46 +1,46 @@
 {
   "consult_retrieval": {
-    "pod_id": "",
+    "pod_id": "42rwvrake6njq4",
     "name": "pawvital-consult-retrieval-v6",
-    "gpu": "NVIDIA RTX 6000 Ada Generation",
+    "gpu": "RTX 6000 Ada 48 GB",
     "services": [
       "text-retrieval-service:8081",
       "image-retrieval-service:8082",
       "multimodal-consult-service:8083"
     ],
-    "proxy_base": "",
-    "status": "deleted",
-    "created": "2026-03-31",
-    "note": "Deleted on 2026-03-31 to stop ongoing storage billing. Reprovision before the next validation window.",
+    "proxy_base": "https://42rwvrake6njq4-{port}.proxy.runpod.net",
+    "status": "running",
+    "created": "2026-04-15",
+    "note": "Provisioned on 2026-04-15 for VET-1106 after completed throwaway rehearsal.",
     "rehearsal": {
       "pod_id": "",
       "name": "",
-      "status": "not_run",
+      "status": "torn_down",
       "lastDryRunAt": "",
-      "lastProvisionedAt": "",
-      "lastTeardownAt": "",
-      "note": "Throwaway rehearsal guard for VET-1106."
+      "lastProvisionedAt": "2026-04-15T15:32:18.037Z",
+      "lastTeardownAt": "2026-04-15T15:32:35.019Z",
+      "note": "Throwaway rehearsal completed and torn down."
     }
   },
   "async_review": {
-    "pod_id": "x5j0w6bcbwl4n0",
+    "pod_id": "mkod2o9brti1r7",
     "name": "pawvital-async-review-v1",
-    "gpu": "NVIDIA H200 or A100-80G",
+    "gpu": "A100 PCIe 80 GB",
     "services": [
       "async-review-service:8084"
     ],
-    "proxy_base": "https://x5j0w6bcbwl4n0-{port}.proxy.runpod.net",
-    "status": "healthy",
-    "created": "2026-04-03",
-    "note": "Provisioned on 2026-04-03 for async-review wiring and validation.",
+    "proxy_base": "https://mkod2o9brti1r7-{port}.proxy.runpod.net",
+    "status": "running",
+    "created": "2026-04-15",
+    "note": "Provisioned on 2026-04-15 for VET-1106 after completed throwaway rehearsal.",
     "rehearsal": {
       "pod_id": "",
       "name": "",
-      "status": "not_run",
+      "status": "torn_down",
       "lastDryRunAt": "",
-      "lastProvisionedAt": "",
-      "lastTeardownAt": "",
-      "note": "Throwaway rehearsal guard for VET-1106."
+      "lastProvisionedAt": "2026-04-15T15:32:43.443Z",
+      "lastTeardownAt": "2026-04-15T15:32:53.621Z",
+      "note": "Throwaway rehearsal completed and torn down."
     }
   },
   "narrow_model_pack": {
