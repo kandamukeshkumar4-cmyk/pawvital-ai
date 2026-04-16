@@ -60,7 +60,6 @@ import {
   getStateSnapshot,
   inferConversationState,
   transitionToAnswered,
-  transitionToAsked,
   transitionToConfirmed,
   transitionToNeedsClarification,
   transitionToEscalation,
@@ -92,8 +91,6 @@ import {
 } from "@/lib/symptom-chat/answer-extraction";
 import {
   buildCompactImageSignalContext,
-  buildQuestionPhrasingContext,
-  shouldIncludeImageContextInQuestion,
   buildTurnFocusSymptoms,
   propagateSharedLocationAnswers,
   getDeterministicFastPathExtraction,
@@ -130,12 +127,9 @@ import {
 } from "@/lib/symptom-chat/extraction-helpers";
 import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
+import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
-import {
-  gateQuestionBeforePhrasing,
-  phraseQuestion,
-} from "@/lib/symptom-chat/question-phrasing";
 import { demoResponse } from "@/lib/symptom-chat/demo-response";
 import { generateReport } from "@/lib/symptom-chat/report-pipeline";
 
@@ -1166,96 +1160,18 @@ export async function POST(request: Request) {
       }
     );
 
-    if (!nextQuestionId) {
-      if (session.known_symptoms.length === 0) {
-        return NextResponse.json({
-          type: "question",
-          message: image
-            ? `I can see the photo, but I still need a little more context to triage ${pet.name} safely. What worries you most about this area, and when did you first notice it?`
-            : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
-          session: sanitizeSessionForClient(session),
-          ready_for_report: false,
-        });
-      }
-
-      return NextResponse.json({
-        type: "ready",
-        message:
-          "I have enough information. Let me generate your full veterinary report.",
-        session: sanitizeSessionForClient(session),
-        ready_for_report: true,
-      });
-    }
-
-    if (!needsClarificationQuestionId) {
-      const lastAnsweredQuestionId = session.last_question_asked;
-      if (
-        lastAnsweredQuestionId &&
-        session.answered_questions.includes(lastAnsweredQuestionId)
-      ) {
-        session = transitionToConfirmed({
-          session,
-          reason: "sufficient_data_reached",
-        });
-      }
-
-      // Track which question we're asking so we can detect unanswered loops
-      session = transitionToAsked({
-        session,
-        questionId: nextQuestionId,
-        reason: "next_question_selected",
-      });
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // STEP 5: PHRASE question — Llama 3.3 70B + Nemotron verifier
-    // ═══════════════════════════════════════════════════════════════════
-    const questionText = getQuestionText(nextQuestionId);
-    // Include image context when:
-    //  a) vision just ran this turn (visionAnalysis is freshly populated), OR
-    //  b) the question is wound-related, OR
-    //  c) turnFocusSymptoms-based check passes
-    const hasLiveVisionThisTurn = Boolean(visionAnalysis);
-    const basePhrasingContext = (
-      hasLiveVisionThisTurn ||
-      shouldIncludeImageContextInQuestion(nextQuestionId, session, turnFocusSymptoms)
-    )
-      ? buildQuestionPhrasingContext(session, visionSeverity)
-      : null;
-    const questionGate = await gateQuestionBeforePhrasing(
-      nextQuestionId,
-      questionText,
+    return buildQuestionResponseFlow({
       session,
+      nextQuestionId,
+      needsClarificationQuestionId,
+      pet,
       effectivePet,
       messages,
-      lastUserMessage.content,
-      basePhrasingContext,
-      hasLiveVisionThisTurn
-    );
-    const phrasingContext = basePhrasingContext;
-    const allowPhotoMentionInWording =
-      hasLiveVisionThisTurn && questionGate.includeImageContext;
-    const phrasedQuestion = await phraseQuestion(
-      questionText,
-      nextQuestionId,
-      session,
-      effectivePet,
-      messages,
-      lastUserMessage.content,
-      phrasingContext,
-      hasLiveVisionThisTurn,
-      allowPhotoMentionInWording,
-      questionGate.useDeterministicFallback
-    );
-
-    return NextResponse.json({
-      type: "question",
-      message: phrasedQuestion,
-      session: sanitizeSessionForClient(session),
-      ready_for_report: isReadyForDiagnosis(session),
-      conversationState: needsClarificationQuestionId
-        ? "needs_clarification"
-        : inferConversationState(getStateSnapshot(session)),
+      lastUserMessage: lastUserMessage.content,
+      turnFocusSymptoms,
+      visionAnalysis,
+      visionSeverity,
+      image,
     });
   } catch (error) {
     console.error("Symptom chat error:", error);
