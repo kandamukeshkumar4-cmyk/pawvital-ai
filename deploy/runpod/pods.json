@@ -9,9 +9,9 @@
       "multimodal-consult-service:8083"
     ],
     "proxy_base": "https://42rwvrake6njq4-{port}.proxy.runpod.net",
-    "status": "running",
+    "status": "deleted",
     "created": "2026-04-15",
-    "note": "Provisioned on 2026-04-15 for VET-1106 after completed throwaway rehearsal.",
+    "note": "Provisioned on 2026-04-15 for VET-1106, then deleted after the overnight cost-stop cleanup. Keep for historical reference only.",
     "rehearsal": {
       "pod_id": "",
       "name": "",
@@ -30,9 +30,9 @@
       "async-review-service:8084"
     ],
     "proxy_base": "https://mkod2o9brti1r7-{port}.proxy.runpod.net",
-    "status": "running",
+    "status": "deleted",
     "created": "2026-04-15",
-    "note": "Provisioned on 2026-04-15 for VET-1106 after completed throwaway rehearsal.",
+    "note": "Provisioned on 2026-04-15 for VET-1106, then deleted after the overnight cost-stop cleanup. Keep for historical reference only.",
     "rehearsal": {
       "pod_id": "",
       "name": "",
@@ -53,7 +53,7 @@
     "proxy_base": "",
     "status": "not_provisioned",
     "created": "",
-    "note": "VET-915: Minimal text-only model pack. Serves extraction, phrasing, diagnosis, safety. Excludes vision models.",
+    "note": "VET-915/VET-1227: Minimal text-only model pack. The app text stack is already wired for this URL; live bring-up still requires RunPod + sidecar auth secrets.",
     "models": {
       "extraction": "qwen/qwen3.5-122b-a10b",
       "phrasing": "meta/llama-3.3-70b-instruct",
