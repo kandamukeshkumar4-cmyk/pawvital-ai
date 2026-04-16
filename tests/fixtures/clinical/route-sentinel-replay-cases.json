@@ -287,6 +287,7 @@
     "expected": {
       "allowedTypes": ["cannot_assess"],
       "knownSymptoms": ["difficulty_breathing"],
+      "readyForReport": false,
       "reasonCode": "owner_cannot_assess_breathing_onset"
     }
   },
@@ -305,7 +306,66 @@
     "expected": {
       "allowedTypes": ["question"],
       "knownSymptoms": ["difficulty_breathing"],
+      "readyForReport": false,
       "reasonCode": "alternate_observable_gum_color"
+    }
+  },
+  {
+    "benchmarkId": "followup-seizure-duration-unknown",
+    "mode": "followup_unknown",
+    "message": "I don't know how long it lasted, it felt like forever.",
+    "seedSession": {
+      "knownSymptoms": ["seizure_collapse"],
+      "lastQuestionAsked": "seizure_duration"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["cannot_assess"],
+      "knownSymptoms": ["seizure_collapse"],
+      "readyForReport": false,
+      "reasonCode": "owner_cannot_assess_seizure_duration"
+    }
+  },
+  {
+    "benchmarkId": "followup-breathing-pattern-unknown",
+    "mode": "followup_unknown",
+    "message": "I can't describe how he's breathing, he just seems off.",
+    "seedSession": {
+      "knownSymptoms": ["difficulty_breathing"],
+      "lastQuestionAsked": "breathing_pattern"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["cannot_assess"],
+      "knownSymptoms": ["difficulty_breathing"],
+      "readyForReport": false,
+      "reasonCode": "owner_cannot_assess_breathing_pattern"
+    }
+  },
+  {
+    "benchmarkId": "followup-cough-type-unknown-reasks",
+    "mode": "followup_unknown",
+    "message": "I'm not sure what kind of cough it is.",
+    "seedSession": {
+      "knownSymptoms": ["coughing"],
+      "lastQuestionAsked": "cough_type"
+    },
+    "mockExtraction": {
+      "symptoms": [],
+      "answers": {}
+    },
+    "expected": {
+      "allowedTypes": ["question"],
+      "knownSymptoms": ["coughing"],
+      "readyForReport": false,
+      "lastQuestionAsked": "cough_type",
+      "answeredQuestionsExclude": ["cough_type"]
     }
   },
   {

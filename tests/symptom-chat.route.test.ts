@@ -6394,6 +6394,71 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         expect(payload.message).not.toContain("gently lift the upper lip");
       }
     );
+
+    it("VET-1227: seizure_duration unknown stays on cannot_assess path", async () => {
+      const session = buildPendingQuestionSession(
+        "seizure_collapse",
+        "seizure_duration"
+      );
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["seizure_collapse"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "I don't know how long it lasted.")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.terminal_state).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_seizure_duration");
+      expect(payload.conversationState).toBe("escalation");
+      expect(payload.ready_for_report).toBe(false);
+    });
+
+    it("VET-1227: critical cough-type unknown re-asks instead of silently closing the pending question", async () => {
+      const session = buildPendingQuestionSession("coughing", "cough_type");
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["coughing"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "I'm not sure what kind of cough it is.")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.session.answered_questions).not.toContain("cough_type");
+      expect(payload.session.last_question_asked).toBe("cough_type");
+    });
+
+    it("VET-1227: legacy breathing_pattern follow-ups fail closed on cannot_assess", async () => {
+      const session = buildPendingQuestionSession(
+        "difficulty_breathing",
+        "breathing_pattern"
+      );
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["difficulty_breathing"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "I can't describe how he's breathing.")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.terminal_state).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_breathing_pattern");
+      expect(payload.conversationState).toBe("escalation");
+      expect(payload.ready_for_report).toBe(false);
+    });
   });
 
   // --- 3.5: Compression boundary preservation ---

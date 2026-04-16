@@ -170,6 +170,7 @@ const UNSAFE_EMERGENCY_QUESTIONS = new Set([
   "breathing_onset",
   "gum_color",
   "consciousness_level",
+  "seizure_duration",
 ]);
 
 export function shouldEscalateForUnknown(questionId: string): boolean {
@@ -576,6 +577,13 @@ export function shouldPersistRawPendingAnswer(
     question.data_type === "boolean" ||
     question.data_type === "number"
   ) {
+    if (
+      question.critical &&
+      coerceAmbiguousReplyToUnknown(rawMessage) !== null
+    ) {
+      return false;
+    }
+
     return (
       isShortAffirmativeResponse(normalizedMessage) ||
       isShortNegativeResponse(normalizedMessage) ||
