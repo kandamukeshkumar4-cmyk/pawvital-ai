@@ -326,7 +326,8 @@
       "allowedTypes": ["cannot_assess"],
       "knownSymptoms": ["seizure_collapse"],
       "readyForReport": false,
-      "reasonCode": "owner_cannot_assess_seizure_duration"
+      "reasonCode": "owner_cannot_assess_seizure_duration",
+      "lastQuestionAsked": "seizure_duration"
     }
   },
   {

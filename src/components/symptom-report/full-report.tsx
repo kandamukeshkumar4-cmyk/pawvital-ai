@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Download, Share2, Copy, CheckCheck } from "lucide-react";
 import type { SymptomReport } from "./types";
 import { SeverityHeader } from "./severity-header";
+import { ConfidenceCalibrationSection } from "./confidence-calibration";
 import { EvidenceSourcesBar } from "./evidence-sources-bar";
 import { VetHandoffSection } from "./vet-handoff";
 import { DifferentialDiagnoses } from "./differential-diagnoses";
@@ -20,6 +21,11 @@ import { BayesianDifferentials } from "./bayesian-differentials";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import {
+  buildVetHandoffPacket,
+  getDefaultClinicLinkExpiry,
+  isEscalatedReport,
+} from "@/lib/report-handoff";
 
 type CopyState = "idle" | "copied" | "error";
 
@@ -43,21 +49,28 @@ export function FullReport({
   onOutcomeFeedback,
   readOnlyShared = false,
 }: FullReportProps) {
+  const handoffRef = useRef<HTMLDivElement | null>(null);
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [expiry, setExpiry] = useState<ExpiryOption>("7d");
+  const [expiry, setExpiry] = useState<ExpiryOption>(() =>
+    getDefaultClinicLinkExpiry(report),
+  );
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
   const [linkCopyState, setLinkCopyState] = useState<"idle" | "copied">("idle");
   const [pdfBusy, setPdfBusy] = useState(false);
+  const escalatedReport = isEscalatedReport(report);
 
   const copyVetSummary = async () => {
-    if (!report.vet_handoff_summary) return;
-
     try {
-      await navigator.clipboard.writeText(report.vet_handoff_summary);
+      await navigator.clipboard.writeText(
+        buildVetHandoffPacket({
+          ...report,
+          vet_handoff_summary: report.vet_handoff_summary ?? report.explanation,
+        }),
+      );
       setCopyState("copied");
       window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
@@ -79,15 +92,13 @@ export function FullReport({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          report: shareUrl
-            ? { ...report, share_url: shareUrl }
-            : report,
+          report: shareUrl ? { ...report, share_url: shareUrl } : report,
         }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(
-          typeof err.error === "string" ? err.error : "PDF download failed"
+          typeof err.error === "string" ? err.error : "PDF download failed",
         );
       }
       const blob = await res.blob();
@@ -105,7 +116,7 @@ export function FullReport({
       alert(
         e instanceof Error
           ? e.message
-          : "Could not download PDF. Sign in and try again."
+          : "Could not download PDF. Sign in and try again.",
       );
     } finally {
       setPdfBusy(false);
@@ -140,7 +151,7 @@ export function FullReport({
       }
     } catch (e) {
       setShareError(
-        e instanceof Error ? e.message : "Could not create share link"
+        e instanceof Error ? e.message : "Could not create share link",
       );
     } finally {
       setShareBusy(false);
@@ -160,6 +171,7 @@ export function FullReport({
 
   const openShareModal = () => {
     setShareModalOpen(true);
+    setExpiry(getDefaultClinicLinkExpiry(report));
     setShareError(null);
     setShareUrl(null);
     setShareExpiresAt(null);
@@ -172,45 +184,66 @@ export function FullReport({
         type="button"
         variant="outline"
         size="sm"
-        className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+        className={`w-full justify-center gap-1.5 sm:w-auto ${
+          escalatedReport
+            ? "border-red-600 text-red-700 hover:bg-red-50"
+            : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+        }`}
         onClick={() => void downloadPdf()}
         loading={pdfBusy}
       >
         <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">Download PDF</span>
+        <span className="hidden sm:inline">
+          {escalatedReport ? "Download Clinic PDF" : "Download PDF"}
+        </span>
       </Button>
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className="border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+        className={`w-full justify-center sm:w-auto ${
+          escalatedReport
+            ? "border-red-600 text-red-700 hover:bg-red-50"
+            : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
+        }`}
         onClick={openShareModal}
       >
         <Share2 className="w-4 h-4" />
-        <span className="ml-1.5 hidden sm:inline">Share with Vet</span>
+        <span className="ml-1.5 hidden sm:inline">
+          {escalatedReport ? "Share Clinic Link" : "Share with Vet"}
+        </span>
       </Button>
     </>
   ) : null;
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in sm:space-y-5">
       <SeverityHeader
         report={report}
         copyState={copyState}
         onCopyVetSummary={copyVetSummary}
+        onJumpToHandoff={() =>
+          handoffRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          })
+        }
         headerActions={headerActions}
       />
 
       <Modal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        title="Share with your veterinarian"
+        title={
+          escalatedReport ? "Share clinic link" : "Share with your veterinarian"
+        }
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Anyone with the link can view this report until it expires. Links are
-            read-only.
+            {escalatedReport
+              ? "Create a read-only clinic link you can hand to intake staff or text to the veterinary team before you arrive."
+              : "Anyone with the link can view this report until it expires. Links are read-only."}
           </p>
           <label className="block text-sm font-medium text-gray-700">
             Link expires after
@@ -235,7 +268,7 @@ export function FullReport({
               loading={shareBusy}
               disabled={shareBusy}
             >
-              Generate link
+              {escalatedReport ? "Create clinic link" : "Generate link"}
             </Button>
             {shareUrl ? (
               <Button
@@ -275,19 +308,30 @@ export function FullReport({
 
       <EvidenceSourcesBar report={report} />
 
-      {report.bayesian_differentials && report.bayesian_differentials.length > 0 && (
-        <BayesianDifferentials bayesian_differentials={report.bayesian_differentials} />
-      )}
-
-      <VetHandoffSection
-        summary={report.vet_handoff_summary ?? ""}
-        copyState={copyState}
-        onCopy={copyVetSummary}
+      <ConfidenceCalibrationSection
+        calibration={report.calibrated_confidence ?? report.confidence_calibration}
       />
 
-      {report.differential_diagnoses && report.differential_diagnoses.length > 0 && (
-        <DifferentialDiagnoses diagnoses={report.differential_diagnoses} />
-      )}
+      {report.bayesian_differentials &&
+        report.bayesian_differentials.length > 0 && (
+          <BayesianDifferentials
+            bayesian_differentials={report.bayesian_differentials}
+          />
+        )}
+
+      <div ref={handoffRef}>
+        <VetHandoffSection
+          report={report}
+          summary={report.vet_handoff_summary ?? ""}
+          copyState={copyState}
+          onCopy={copyVetSummary}
+        />
+      </div>
+
+      {report.differential_diagnoses &&
+        report.differential_diagnoses.length > 0 && (
+          <DifferentialDiagnoses diagnoses={report.differential_diagnoses} />
+        )}
 
       {report.clinical_notes && (
         <ClinicalNotesSection notes={report.clinical_notes} />
@@ -340,11 +384,12 @@ export function FullReport({
 
       <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
         <p className="text-xs text-gray-500 leading-relaxed">
-          <strong>Medical Disclaimer:</strong> This AI analysis is for informational
-          purposes only and is NOT a substitute for hands-on physical examination,
-          diagnostic testing, or professional veterinary medical advice. Always consult
-          a licensed veterinarian for diagnosis and treatment decisions. In emergencies,
-          contact your nearest emergency veterinary hospital immediately.
+          <strong>Medical Disclaimer:</strong> This AI analysis is for
+          informational purposes only and is NOT a substitute for hands-on
+          physical examination, diagnostic testing, or professional veterinary
+          medical advice. Always consult a licensed veterinarian for diagnosis
+          and treatment decisions. In emergencies, contact your nearest
+          emergency veterinary hospital immediately.
         </p>
       </div>
     </div>

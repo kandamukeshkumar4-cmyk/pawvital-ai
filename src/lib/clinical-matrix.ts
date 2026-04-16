@@ -337,7 +337,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "gum_color",
       "position_preference",
     ],
-    red_flags: ["blue_gums", "collapse", "breathing_onset_sudden"],
+    red_flags: ["blue_gums", "pale_gums", "collapse", "breathing_onset_sudden"],
     body_systems: ["respiratory", "cardiovascular"],
   },
   excessive_scratching: {
@@ -559,7 +559,14 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "gum_color",
       "breathing_status",
     ],
-    red_flags: ["seizure_activity", "collapse", "unresponsive", "toxin_confirmed"],
+    red_flags: [
+      "seizure_activity",
+      "collapse",
+      "unresponsive",
+      "toxin_confirmed",
+      "blue_gums",
+      "pale_gums",
+    ],
     body_systems: ["neurologic", "cardiovascular"],
   },
 

@@ -8,6 +8,7 @@ import sys
 
 SERVICE = "async-review-service"
 STUB_MODE = os.getenv("STUB_MODE", "false").strip().lower() == "true"
+FORCE_FALLBACK = os.getenv("FORCE_FALLBACK", "").strip().lower() in {"1", "true", "yes", "on"}
 
 if STUB_MODE:
     print(f"[{SERVICE}] STUB_MODE=true — skipping env validation")
@@ -38,6 +39,8 @@ if not hf_home:
 model_id = os.getenv("REVIEW_MODEL_ID", "Qwen/Qwen2.5-VL-32B-Instruct").strip()
 print(f"[{SERVICE}] model: {model_id}")
 print(f"[{SERVICE}] HF_HOME: {hf_home or '~/.cache/huggingface (default)'}")
+if FORCE_FALLBACK:
+    print(f"[{SERVICE}] FORCE_FALLBACK=1 — 32B inference disabled; conservative fallback reviews only")
 
 import torch
 device = "cuda" if torch.cuda.is_available() else "cpu"

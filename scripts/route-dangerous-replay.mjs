@@ -26,7 +26,10 @@ const BENCHMARK_PATH = path.join(
   "dog-triage",
   "gold-v1-enriched.jsonl"
 );
-const SAFE_RESPONSE_TYPES = new Set(["emergency", "question"]);
+// Must-not-miss cases may end in one of three clinically safe outcomes:
+// immediate emergency escalation, question/clarification, or cannot_assess
+// when a report-blocking critical indicator cannot be confirmed.
+const SAFE_RESPONSE_TYPES = new Set(["emergency", "question", "cannot_assess"]);
 const EMERGENCY_SYMPTOM_FALLBACK = {
   difficulty_breathing: ["difficulty_breathing"],
   swollen_abdomen: ["swollen_abdomen"],
@@ -1089,7 +1092,7 @@ function buildSuiteMetadata(argv) {
     executionMode: "direct_route_replay",
     benchmarkPath: toRepoRelative(BENCHMARK_PATH),
     fixturePath: toRepoRelative(FIXTURE_PATH),
-    simulatedComparator: toRepoRelative(
+    benchmarkEvaluator: toRepoRelative(
       path.join(ROOT, "scripts", "eval-harness.ts")
     ),
     command: {

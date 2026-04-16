@@ -1,9 +1,12 @@
 import type { TriageSession } from "@/lib/triage-engine";
 import {
   buildTerminalOutcomeMessage,
+  type AlternateObservableRecoveryOutcome,
   type UncertaintyTerminalOutcome,
 } from "@/lib/clinical/uncertainty-routing";
+import { recordConversationTelemetry } from "@/lib/symptom-memory";
 import { sanitizeSessionForClient } from "./context-helpers";
+import type { ImageGateWarning } from "@/lib/image-gate";
 
 interface EmergencyResponseInput {
   petName: string;
@@ -109,4 +112,85 @@ export function buildOutOfScopeResponse(input: OutOfScopeResponseInput) {
     ready_for_report: false,
     conversationState: input.outcome.conversationState,
   };
+}
+
+export function buildTerminalOutcomeResponse(
+  outcome: UncertaintyTerminalOutcome,
+  session: TriageSession
+) {
+  if (outcome.type === "cannot_assess") {
+    return buildCannotAssessResponse({ outcome, session });
+  }
+
+  return {
+    type: outcome.type,
+    terminal_state: outcome.terminalState,
+    reason_code: outcome.reasonCode,
+    owner_message: outcome.ownerMessage,
+    recommended_next_step: outcome.recommendedNextStep,
+    message: buildTerminalOutcomeMessage(outcome),
+    session: sanitizeSessionForClient(session),
+    ready_for_report: false,
+    conversationState: outcome.conversationState,
+  };
+}
+
+export function recordTerminalOutcomeTelemetry(
+  session: TriageSession,
+  outcome: UncertaintyTerminalOutcome,
+  questionId?: string,
+  turnNumberOverride?: number
+) {
+  const turnNumber =
+    turnNumberOverride ?? (session.case_memory?.turn_count ?? 0);
+
+  return recordConversationTelemetry(session, {
+    event: "terminal_outcome",
+    turn_count: turnNumber,
+    question_id: questionId,
+    outcome: "success",
+    reason: outcome.reasonCode,
+    terminal_outcome_metric: {
+      terminal_state: outcome.terminalState,
+      reason_code: outcome.reasonCode,
+      conversation_state: outcome.conversationState,
+      recommended_next_step: outcome.recommendedNextStep,
+      turn_number: turnNumber,
+      ...(questionId ? { question_id: questionId } : {}),
+    },
+  });
+}
+
+export function buildAlternateObservableRecoveryResponse(
+  outcome: AlternateObservableRecoveryOutcome,
+  session: TriageSession
+) {
+  return {
+    type: "question",
+    question_id: outcome.questionId,
+    reason_code: outcome.reasonCode,
+    message: outcome.message,
+    session: sanitizeSessionForClient(session),
+    ready_for_report: false,
+    conversationState: outcome.conversationState,
+  };
+}
+
+export function buildImageGateMessage(
+  petName: string,
+  gate: ImageGateWarning
+): string {
+  if (gate.reason === "blurry") {
+    return `This photo is a little too blurry for me to reliably analyze ${petName}'s wound or skin issue. Please retake a clear, well-lit close-up of the affected area, or use Analyze Anyway if this is the best photo you have.`;
+  }
+
+  if (gate.reason === "low_resolution") {
+    return `This photo looks too small or compressed for reliable wound analysis. Please retake a closer, sharper photo that fills most of the frame with the affected area, or use Analyze Anyway if needed.`;
+  }
+
+  const labelDetail = gate.topLabel
+    ? ` The quick framing check matched "${gate.topLabel}".`
+    : "";
+
+  return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
 }

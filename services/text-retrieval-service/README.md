@@ -8,8 +8,16 @@ Current implementation now provides:
 - bearer-token validation
 - live Supabase-backed candidate retrieval
 - lexical scoring plus deterministic reranking
-- optional `BAAI/bge-m3` semantic embedding rerank
-- optional `BAAI/bge-reranker-v2-m3` cross-encoder rerank
+- default-on `BAAI/bge-m3` semantic embedding rerank
+- default-on `BAAI/bge-reranker-v2-m3` cross-encoder rerank
+- authenticated `/embed` endpoint for passage/query embedding regeneration
 - dog-only and requested-domain filtering
 
-If the HF model runtime is unavailable, the service degrades gracefully to deterministic retrieval instead of failing the request.
+Runtime controls:
+- `STUB_MODE=true` returns empty fixtures for contract testing
+- `FORCE_FALLBACK=1` disables model reranking and forces the lexical fallback path without a code change
+
+Degradation is explicit in both `/search` and `/healthz`:
+- `retrieval_mode` reports `model`, `lexical_fallback`, or `stub`
+- `fallback_reason` reports why the model path is not active
+- `candidate_source` reports whether candidates came from RPC or lexical fallback

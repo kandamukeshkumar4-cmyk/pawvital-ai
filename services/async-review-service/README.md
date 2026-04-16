@@ -5,9 +5,12 @@ FastAPI sidecar for:
 
 This service is intentionally non-blocking in the app architecture and supports two runtime modes:
 - `STUB_MODE=true`: returns conservative contract-valid review results for queue/polling integration checks
-- `STUB_MODE=false`: loads the real Qwen2.5-VL-32B-Instruct model and processes queued review requests
+- `FORCE_FALLBACK=1`: preserves queue/polling/callback behavior while disabling Qwen 32B inference and returning conservative fallback reviews
+- `STUB_MODE=false`: starts serving immediately, reports `warming` while the real Qwen2.5-VL-32B-Instruct model loads in the background, and processes queued review requests once warm
 
 Important guardrails:
 - The service is server-to-server only and expects `Bearer <SIDECAR_API_KEY>` when configured
 - Review IDs are deterministic so queued responses can be polled reliably
 - Stub mode is meant for local orchestration and queue contract verification
+- `/healthz` reports `stub`, `forced_fallback`, `warming`, `startup_failed`, or `production` mode so rollout checks can distinguish intentional degradation, live warmup, and real failures
+- Live 32B downloads rely on Hugging Face's Xet-backed storage, so the runtime must install `huggingface_hub[hf_xet]>=0.32.0` (or equivalent `hf_xet` support) before the real model can resolve all shard files

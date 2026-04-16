@@ -1,0 +1,155 @@
+name: Threshold Review Gate
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, reopened, synchronize, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed, edited]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  threshold-review:
+    name: Threshold Review Gate
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.base.ref == 'master'
+    env:
+      THRESHOLD_ENGINEERING_REVIEWER: ${{ vars.THRESHOLD_ENGINEERING_REVIEWER || 'kandamukeshkumar4-cmyk' }}
+      THRESHOLD_CLINICAL_REVIEWER: ${{ vars.THRESHOLD_CLINICAL_REVIEWER || '18rsoni' }}
+    steps:
+      - name: Enforce required threshold approvals
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.info("No pull request payload found; skipping.");
+              return;
+            }
+
+            const { owner, repo } = context.repo;
+            const protectedMatchers = [
+              /^src\/lib\/threshold-proposals\.ts$/,
+              /^src\/lib\/admin-threshold-proposals\.ts$/,
+              /^src\/components\/admin\/threshold-proposal-panel\.tsx$/,
+              /^src\/app\/api\/admin\/threshold-proposals\//,
+              /^supabase-threshold-learning-schema\.sql$/,
+              /^plans\/threshold-proposals\//,
+            ];
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const touchedPaths = files.map((file) => file.filename);
+            const protectedPaths = touchedPaths.filter((path) =>
+              protectedMatchers.some((matcher) => matcher.test(path))
+            );
+
+            const summary = core.summary
+              .addHeading("Threshold Review Gate", 2)
+              .addRaw(`PR #${pr.number}: ${pr.title}`)
+              .addEOL()
+              .addEOL();
+
+            if (protectedPaths.length === 0) {
+              await summary
+                .addRaw("No threshold-sensitive files changed. Gate passes automatically.")
+                .addEOL()
+                .write();
+              return;
+            }
+
+            const requiredReviewers = [
+              process.env.THRESHOLD_ENGINEERING_REVIEWER,
+              process.env.THRESHOLD_CLINICAL_REVIEWER,
+            ].filter(Boolean);
+
+            await summary
+              .addRaw("Protected files changed:")
+              .addEOL()
+              .addList(protectedPaths)
+              .addRaw(`Current head SHA: \`${pr.head.sha}\``)
+              .addEOL()
+              .addEOL();
+
+            if (pr.draft) {
+              await summary
+                .addRaw("Draft PR detected. Threshold-sensitive changes require both human approvals after the PR is marked ready for review.")
+                .addEOL()
+                .write();
+              core.setFailed("Threshold-sensitive changes are present on a draft PR. Mark it ready and collect both required approvals.");
+              return;
+            }
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner,
+              repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const latestReviewByUser = new Map();
+            for (const review of reviews) {
+              if (!review.user || review.user.type === "Bot") {
+                continue;
+              }
+              const prior = latestReviewByUser.get(review.user.login);
+              if (!prior || new Date(review.submitted_at || 0) > new Date(prior.submitted_at || 0)) {
+                latestReviewByUser.set(review.user.login, review);
+              }
+            }
+
+            const missingReasons = [];
+            for (const reviewer of requiredReviewers) {
+              const review = latestReviewByUser.get(reviewer);
+              if (!review) {
+                missingReasons.push(`@${reviewer} has not approved this PR yet.`);
+                continue;
+              }
+              if (review.state !== "APPROVED") {
+                missingReasons.push(`@${reviewer}'s latest review is \`${review.state}\`, not \`APPROVED\`.`);
+                continue;
+              }
+              if (review.commit_id !== pr.head.sha) {
+                missingReasons.push(`@${reviewer}'s approval is stale (approved ${review.commit_id.slice(0, 7)}, current head is ${pr.head.sha.slice(0, 7)}).`);
+              }
+            }
+
+            const humanApproversOnHead = Array.from(latestReviewByUser.values()).filter(
+              (review) => review.state === "APPROVED" && review.commit_id === pr.head.sha
+            );
+
+            await summary
+              .addRaw("Current human approvals on the latest head:")
+              .addEOL()
+              .addList(
+                humanApproversOnHead.length
+                  ? humanApproversOnHead.map((review) => `@${review.user.login}`)
+                  : ["None"]
+              )
+              .addEOL();
+
+            if (missingReasons.length > 0) {
+              await summary
+                .addRaw("Missing requirements:")
+                .addEOL()
+                .addList(missingReasons)
+                .write();
+              core.setFailed(
+                `Threshold-sensitive changes require approvals from ${requiredReviewers.map((reviewer) => `@${reviewer}`).join(" and ")} on the current head commit.`
+              );
+              return;
+            }
+
+            await summary
+              .addRaw(`Required approvals present from ${requiredReviewers.map((reviewer) => `@${reviewer}`).join(" and ")} on the current head commit.`)
+              .addEOL()
+              .write();

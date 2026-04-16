@@ -5,22 +5,13 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import type { SymptomReport } from "@/components/symptom-report/types";
+import { formatConfidenceLevelLabel } from "@/lib/report-confidence";
 import { brand, pdfStyles } from "./styles";
-
-function recommendationLabel(
-  r: SymptomReport["recommendation"]
-): string {
-  switch (r) {
-    case "emergency_vet":
-      return "Seek Emergency Veterinary Care Immediately";
-    case "vet_24h":
-      return "Schedule Veterinary Visit Within 24 Hours";
-    case "vet_48h":
-      return "Schedule Veterinary Visit Within 48 Hours";
-    default:
-      return "Monitor at Home with Parameters Below";
-  }
-}
+import {
+  getRecommendationLabel,
+  isEmergencyReport,
+  isEscalatedReport,
+} from "@/lib/report-handoff";
 
 function severityBandStyle(severity: SymptomReport["severity"]) {
   switch (severity) {
@@ -88,6 +79,10 @@ export function ReportPdfDocument({
   generatedAt,
   shareUrl,
 }: ReportPdfDocumentProps) {
+  const calibratedConfidence =
+    report.calibrated_confidence ?? report.confidence_calibration;
+  const emergencyReport = isEmergencyReport(report);
+  const escalatedReport = isEscalatedReport(report);
   const band = severityBandStyle(report.severity);
   const dxRows =
     report.differential_diagnoses?.map((d) => ({
@@ -121,20 +116,71 @@ export function ReportPdfDocument({
             {severityLabel(report.severity)}
           </Text>
           <Text style={[pdfStyles.body, { marginTop: 6 }]}>
-            Recommendation: {recommendationLabel(report.recommendation)}
+            Recommendation: {getRecommendationLabel(report)}
           </Text>
           {typeof report.confidence === "number" && (
             <Text style={[pdfStyles.bodySmall, { marginTop: 4 }]}>
               Confidence: {(report.confidence * 100).toFixed(0)}%
             </Text>
           )}
+          {calibratedConfidence ? (
+            <Text style={[pdfStyles.bodySmall, { marginTop: 2 }]}>
+              Confidence level:{" "}
+              {formatConfidenceLevelLabel(
+                calibratedConfidence.confidence_level
+              )}
+            </Text>
+          ) : null}
           <Text style={[pdfStyles.body, { marginTop: 8 }]}>{report.explanation}</Text>
         </View>
+
+        {calibratedConfidence ? (
+          <>
+            <Text style={pdfStyles.sectionTitle}>Confidence calibration</Text>
+            <View style={pdfStyles.handoffBox}>
+              <Text style={pdfStyles.body}>
+                {calibratedConfidence.recommendation}
+              </Text>
+              <Text style={[pdfStyles.bodySmall, { marginTop: 4 }]}>
+                Base {(calibratedConfidence.base_confidence * 100).toFixed(0)}% ·
+                Final {(calibratedConfidence.final_confidence * 100).toFixed(0)}% ·{" "}
+                {formatConfidenceLevelLabel(
+                  calibratedConfidence.confidence_level
+                )}{" "}
+                confidence
+              </Text>
+            </View>
+          </>
+        ) : null}
+
+        {escalatedReport ? (
+          <View
+            style={[
+              pdfStyles.alertBox,
+              emergencyReport
+                ? pdfStyles.alertBoxEmergency
+                : pdfStyles.alertBoxUrgent,
+            ]}
+          >
+            <Text style={pdfStyles.alertTitle}>
+              {emergencyReport
+                ? "Emergency clinic handoff"
+                : "Same-day veterinary handoff"}
+            </Text>
+            <Text style={[pdfStyles.bodySmall, { marginTop: 4 }]}>
+              {emergencyReport
+                ? "Take this packet with you immediately and give the clinic handoff summary to intake staff on arrival."
+                : "Bring this packet to the same-day appointment so the veterinary team can review the handoff summary, top differentials, and escalation signs quickly."}
+            </Text>
+          </View>
+        ) : null}
 
         {report.vet_handoff_summary ? (
           <>
             <Text style={pdfStyles.sectionTitle}>Vet handoff summary</Text>
-            <Text style={pdfStyles.body}>{report.vet_handoff_summary}</Text>
+            <View style={pdfStyles.handoffBox}>
+              <Text style={pdfStyles.body}>{report.vet_handoff_summary}</Text>
+            </View>
           </>
         ) : null}
 
@@ -200,6 +246,18 @@ export function ReportPdfDocument({
           </>
         ) : null}
 
+        {report.warning_signs && report.warning_signs.length > 0 ? (
+          <>
+            <Text style={pdfStyles.sectionTitle}>Escalate immediately if</Text>
+            {report.warning_signs.map((warning, index) => (
+              <View key={index} style={pdfStyles.listItem}>
+                <Text style={pdfStyles.bullet}>•</Text>
+                <Text style={[pdfStyles.body, { flex: 1 }]}>{warning}</Text>
+              </View>
+            ))}
+          </>
+        ) : null}
+
         {report.vet_questions && report.vet_questions.length > 0 ? (
           <>
             <Text style={pdfStyles.sectionTitle}>Questions for your veterinarian</Text>
@@ -239,7 +297,9 @@ export function ReportPdfDocument({
         {shareUrl ? (
           <View style={pdfStyles.qrPlaceholder}>
             <Text style={{ fontSize: 8, fontFamily: "Helvetica-Bold", color: brand.gray600 }}>
-              Share link (give to your vet)
+              {escalatedReport
+                ? "Clinic link (give to intake)"
+                : "Share link (give to your vet)"}
             </Text>
             <Text style={[pdfStyles.bodySmall, { marginTop: 4 }]}>{shareUrl}</Text>
           </View>

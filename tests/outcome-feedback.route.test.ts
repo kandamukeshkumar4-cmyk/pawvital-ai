@@ -17,7 +17,13 @@ describe("outcome-feedback route", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    mockSaveOutcomeFeedbackToDB.mockResolvedValue(true);
+    mockSaveOutcomeFeedbackToDB.mockResolvedValue({
+      ok: true,
+      legacyUpdated: true,
+      structuredStored: true,
+      proposalCreated: false,
+      warnings: [],
+    });
   });
 
   it("stores outcome feedback for a saved symptom check", async () => {
@@ -35,6 +41,7 @@ describe("outcome-feedback route", () => {
 
     expect(response.status).toBe(200);
     expect(payload.ok).toBe(true);
+    expect(payload.structuredStored).toBe(true);
     expect(mockSaveOutcomeFeedbackToDB).toHaveBeenCalledWith(
       expect.objectContaining({
         symptomCheckId: "abc123",

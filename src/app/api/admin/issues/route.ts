@@ -1,46 +1,11 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { getAdminRequestContext } from "@/lib/admin-auth";
 import { Octokit } from "@octokit/rest";
-
-async function checkAdminAuth() {
-  if (process.env.ADMIN_OVERRIDE === "true") {
-    return true;
-  }
-
-  try {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return false;
-
-    if (user.user_metadata?.role === "admin" || user.role === "admin") {
-      return true;
-    }
-
-    const { data: userRow } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (userRow?.role === "admin") {
-      return true;
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message === "DEMO_MODE") {
-      return true;
-    }
-  }
-
-  return false;
-}
 
 export async function POST(request: Request) {
   try {
-    const isAdmin = await checkAdminAuth();
-    if (!isAdmin) {
+    const adminContext = await getAdminRequestContext();
+    if (!adminContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
@@ -84,13 +49,14 @@ export async function POST(request: Request) {
 
     // Fallback: Octokit using GITHUB_TOKEN
     const octokitToken = process.env.GITHUB_TOKEN;
-    if (!octokitToken) {
+    if (adminContext.isDemo || !octokitToken) {
       // Demo Mode / No tokens provided
       return NextResponse.json({ url: "https://github.com/demo/pawvital/issues/404" });
     }
 
     const octokit = new Octokit({ auth: octokitToken });
-    const repoInfo = process.env.GITHUB_REPO || "demo/pawvital-ai"; // expected as "owner/repo"
+    const repoInfo =
+      process.env.GITHUB_REPO || "kandamukeshkumar4-cmyk/pawvital-ai";
     const [owner, repo] = repoInfo.split("/");
 
     const response = await octokit.rest.issues.create({

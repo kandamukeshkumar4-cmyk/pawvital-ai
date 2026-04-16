@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "generatedBy": "VET-1112",
+  "cases": [
+    {
+      "id": "text-wound-management",
+      "kind": "text",
+      "name": "Wound management knowledge retrieval",
+      "query": "initial wound management lavage debridement bandage dog",
+      "limit": 5,
+      "domain": "skin_wound",
+      "dogOnly": true,
+      "expectations": {
+        "minResults": 1,
+        "mustIncludeAny": ["wound"]
+      }
+    },
+    {
+      "id": "text-malassezia",
+      "kind": "text",
+      "name": "Malassezia dermatitis knowledge retrieval",
+      "query": "malassezia dermatitis yeast dog skin",
+      "limit": 5,
+      "domain": "skin_wound",
+      "dogOnly": true,
+      "expectations": {
+        "minResults": 1,
+        "mustIncludeAny": ["malassezia"]
+      }
+    },
+    {
+      "id": "text-pyoderma",
+      "kind": "text",
+      "name": "Pyoderma knowledge retrieval",
+      "query": "bacterial pyoderma dermatitis dog skin infection",
+      "limit": 5,
+      "domain": "skin_wound",
+      "dogOnly": true,
+      "expectations": {
+        "minResults": 1,
+        "mustIncludeAny": ["pyoderma", "bacterial"]
+      }
+    },
+    {
+      "id": "image-ringworm",
+      "kind": "image",
+      "name": "Ringworm image retrieval",
+      "query": "ringworm circular hair loss dog skin",
+      "limit": 5,
+      "domain": "skin_wound",
+      "dogOnly": true,
+      "conditionHints": ["ringworm"],
+      "expectations": {
+        "minResults": 1,
+        "conditionLabels": ["ringworm"]
+      }
+    },
+    {
+      "id": "image-mange",
+      "kind": "image",
+      "name": "Mange image retrieval",
+      "query": "demodicosis mange crusting hair loss dog",
+      "limit": 5,
+      "domain": "skin_wound",
+      "dogOnly": true,
+      "conditionHints": ["demodicosis_mange"],
+      "expectations": {
+        "minResults": 1,
+        "conditionLabels": ["demodicosis_mange"]
+      }
+    },
+    {
+      "id": "image-healthy-skin",
+      "kind": "image",
+      "name": "Healthy skin image retrieval",
+      "query": "healthy dog skin close up",
+      "limit": 5,
+      "domain": "skin_wound",
+      "dogOnly": true,
+      "conditionHints": ["healthy_skin"],
+      "expectations": {
+        "minResults": 1,
+        "conditionLabels": ["healthy_skin"],
+        "topConditionLabels": ["healthy_skin"]
+      }
+    },
+    {
+      "id": "image-tick-infestation",
+      "kind": "image",
+      "name": "Tick infestation image retrieval",
+      "query": "tick infestation on dog skin close up",
+      "limit": 5,
+      "domain": "skin_wound",
+      "dogOnly": true,
+      "conditionHints": ["tick_infestation"],
+      "expectations": {
+        "minResults": 1,
+        "conditionLabels": ["tick_infestation"],
+        "topConditionLabels": ["tick_infestation"]
+      }
+    }
+  ]
+}

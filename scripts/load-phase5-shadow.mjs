@@ -1,0 +1,401 @@
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
+
+const rootDir = process.cwd();
+const outputPath = path.join(rootDir, "phase5-load-test-report.json");
+const rolloutThresholds = JSON.parse(
+  fs.readFileSync(
+    path.join(rootDir, "src", "lib", "shadow-rollout-thresholds.json"),
+    "utf8"
+  )
+);
+
+function parseArgs(argv) {
+  const baselineRps = Number(process.env.PHASE5_BASELINE_RPS || 2);
+  const durationSeconds = Number(process.env.PHASE5_LOAD_TEST_SECONDS || 60);
+  const targetRoute =
+    process.env.PHASE5_LOAD_TEST_ROUTE || "/api/ai/shadow-rollout";
+  const appBaseUrl =
+    process.env.APP_BASE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://localhost:3000";
+
+  const options = {
+    baseUrl: appBaseUrl.trim(),
+    targetRoute,
+    baselineRps,
+    durationSeconds,
+    targetRps:
+      Number(process.env.PHASE5_TARGET_RPS) ||
+      baselineRps * rolloutThresholds.loadTest.minTargetRpsMultiplier,
+    output: outputPath,
+    json: false,
+  };
+
+  for (const arg of argv) {
+    if (arg === "--json") {
+      options.json = true;
+    } else if (arg.startsWith("--base-url=")) {
+      options.baseUrl = arg.slice("--base-url=".length).trim();
+    } else if (arg.startsWith("--target-route=")) {
+      options.targetRoute = arg.slice("--target-route=".length).trim();
+    } else if (arg.startsWith("--baseline-rps=")) {
+      options.baselineRps = Number(arg.slice("--baseline-rps=".length));
+    } else if (arg.startsWith("--target-rps=")) {
+      options.targetRps = Number(arg.slice("--target-rps=".length));
+    } else if (arg.startsWith("--duration-seconds=")) {
+      options.durationSeconds = Number(arg.slice("--duration-seconds=".length));
+    } else if (arg.startsWith("--output=")) {
+      options.output = path.resolve(rootDir, arg.slice("--output=".length));
+    }
+  }
+
+  return options;
+}
+
+function percentile(values, percentileValue) {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((left, right) => left - right);
+  const index = Math.min(
+    sorted.length - 1,
+    Math.max(0, Math.ceil(sorted.length * percentileValue) - 1)
+  );
+  return sorted[index] ?? null;
+}
+
+function rate(count, total) {
+  if (total <= 0) return 0;
+  return count / total;
+}
+
+function buildRouteUrl(baseUrl, routePath) {
+  const url = new URL(baseUrl);
+  url.pathname = routePath;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const rawText = await response.text();
+  let body = null;
+
+  try {
+    body = rawText ? JSON.parse(rawText) : null;
+  } catch {
+    body = null;
+  }
+
+  return { ok: response.ok, status: response.status, body, rawText };
+}
+
+function buildShadowProbePayload() {
+  const recordedAt = new Date().toISOString();
+  return {
+    session: {
+      known_symptoms: ["wound_skin_issue"],
+      answered_questions: ["wound_location"],
+      extracted_answers: { wound_location: "left hind leg" },
+      red_flags_triggered: [],
+      candidate_diseases: ["wound_infection"],
+      body_systems_involved: ["skin"],
+      case_memory: {
+        turn_count: 288,
+        chief_complaints: ["skin lesion"],
+        active_focus_symptoms: ["wound_skin_issue"],
+        confirmed_facts: { wound_location: "left hind leg" },
+        image_findings: ["localized lesion on left hind leg"],
+        red_flag_notes: [],
+        unresolved_question_ids: [],
+        timeline_notes: ["present since yesterday"],
+        visual_evidence: [],
+        retrieval_evidence: [],
+        consult_opinions: [],
+        evidence_chain: [],
+        service_timeouts: [],
+        service_observations: [
+          {
+            service: "vision-preprocess-service",
+            stage: "preprocess",
+            outcome: "shadow",
+            latencyMs: 180,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+          {
+            service: "text-retrieval-service",
+            stage: "report-retrieval",
+            outcome: "shadow",
+            latencyMs: 220,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+          {
+            service: "image-retrieval-service",
+            stage: "report-retrieval",
+            outcome: "shadow",
+            latencyMs: 260,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+          {
+            service: "multimodal-consult-service",
+            stage: "sync-consult",
+            outcome: "shadow",
+            latencyMs: 840,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+          {
+            service: "async-review-service",
+            stage: "report-review",
+            outcome: "shadow",
+            latencyMs: 1300,
+            shadowMode: true,
+            fallbackUsed: false,
+            recordedAt,
+          },
+        ],
+        shadow_comparisons: [
+          {
+            service: "vision-preprocess-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow vision preprocessing aligned with primary path.",
+            disagreementCount: 0,
+            recordedAt,
+          },
+          {
+            service: "text-retrieval-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary:
+              "Shadow retrieval aligned with primary evidence selection.",
+            disagreementCount: 0,
+            recordedAt,
+          },
+          {
+            service: "image-retrieval-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow image retrieval aligned with primary evidence selection.",
+            disagreementCount: 0,
+            recordedAt,
+          },
+          {
+            service: "multimodal-consult-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow consult aligned with the deterministic route recommendation.",
+            disagreementCount: 0,
+            recordedAt,
+          },
+          {
+            service: "async-review-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "hf-sidecar",
+            summary: "Shadow async review aligned with the primary report packaging.",
+            disagreementCount: 0,
+            recordedAt,
+          },
+        ],
+        ambiguity_flags: [],
+      },
+    },
+  };
+}
+
+async function persistLoadTestSummary(baseUrl, summary) {
+  const sidecarSecret =
+    (process.env.HF_SIDECAR_API_KEY ||
+      process.env.ASYNC_REVIEW_WEBHOOK_SECRET ||
+      "").trim();
+
+  if (!sidecarSecret) {
+    return { persisted: false, reason: "missing_debug_secret" };
+  }
+
+  const response = await fetchJson(
+    buildRouteUrl(baseUrl, "/api/ai/shadow-rollout"),
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sidecarSecret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ loadTest: summary }),
+    }
+  );
+
+  if (!response.ok || response.body?.ok !== true) {
+    throw new Error(
+      `Unable to persist Phase 5 load-test summary: HTTP ${response.status} (${String(
+        response.body?.error || response.rawText || "unknown error"
+      ).slice(0, 160)})`
+    );
+  }
+
+  return { persisted: true };
+}
+
+function buildRequestOptions(targetRoute) {
+  const sidecarSecret =
+    (process.env.HF_SIDECAR_API_KEY ||
+      process.env.ASYNC_REVIEW_WEBHOOK_SECRET ||
+      "").trim();
+
+  if (targetRoute === "/api/ai/shadow-rollout") {
+    if (!sidecarSecret) {
+      throw new Error(
+        "HF_SIDECAR_API_KEY or ASYNC_REVIEW_WEBHOOK_SECRET must be set for shadow-rollout load tests"
+      );
+    }
+
+    return {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${sidecarSecret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(buildShadowProbePayload()),
+    };
+  }
+
+  if (targetRoute === "/api/ai/sidecar-readiness") {
+    if (!sidecarSecret) {
+      throw new Error(
+        "HF_SIDECAR_API_KEY or ASYNC_REVIEW_WEBHOOK_SECRET must be set for sidecar-readiness load tests"
+      );
+    }
+
+    return {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${sidecarSecret}`,
+      },
+    };
+  }
+
+  throw new Error(
+    `Unsupported load-test route '${targetRoute}'. Use /api/ai/shadow-rollout or /api/ai/sidecar-readiness.`
+  );
+}
+
+async function runSingleRequest(url, requestOptions) {
+  const startedAt = Date.now();
+  const response = await fetch(url, requestOptions);
+  await response.text();
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return Date.now() - startedAt;
+}
+
+async function sleep(ms) {
+  if (ms <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function main() {
+  loadEnvFiles(rootDir);
+  const options = parseArgs(process.argv.slice(2));
+  const requestUrl = buildRouteUrl(options.baseUrl, options.targetRoute);
+  const requestOptions = buildRequestOptions(options.targetRoute);
+  const intervalMs = 1000 / Math.max(0.1, options.targetRps);
+  const startedAt = Date.now();
+  const endAt = startedAt + options.durationSeconds * 1000;
+  const pending = [];
+  let scheduled = 0;
+
+  while (Date.now() < endAt) {
+    const targetLaunch = startedAt + scheduled * intervalMs;
+    await sleep(targetLaunch - Date.now());
+    pending.push(runSingleRequest(requestUrl, requestOptions));
+    scheduled += 1;
+  }
+
+  const settled = await Promise.allSettled(pending);
+  const latenciesMs = settled
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
+  const failureCount = settled.filter(
+    (result) => result.status === "rejected"
+  ).length;
+  const totalRequests = settled.length;
+  const errorRate = rate(failureCount, totalRequests);
+  const p50LatencyMs = percentile(latenciesMs, 0.5);
+  const p95LatencyMs = percentile(latenciesMs, 0.95);
+  const p99LatencyMs = percentile(latenciesMs, 0.99);
+  const blockers = [];
+
+  if (
+    options.targetRps <
+    options.baselineRps * rolloutThresholds.loadTest.minTargetRpsMultiplier
+  ) {
+    blockers.push(
+      `Target RPS ${options.targetRps} is below required ${(
+        options.baselineRps * rolloutThresholds.loadTest.minTargetRpsMultiplier
+      ).toFixed(2)}.`
+    );
+  }
+  if (errorRate > rolloutThresholds.loadTest.maxErrorRate) {
+    blockers.push(
+      `Error rate ${Math.round(errorRate * 100)}% exceeds ${Math.round(
+        rolloutThresholds.loadTest.maxErrorRate * 100
+      )}%.`
+    );
+  }
+  if (
+    p99LatencyMs !== null &&
+    p99LatencyMs > rolloutThresholds.loadTest.maxP99LatencyMs
+  ) {
+    blockers.push(
+      `p99 latency ${p99LatencyMs}ms exceeds ${rolloutThresholds.loadTest.maxP99LatencyMs}ms.`
+    );
+  }
+
+  const summary = {
+    targetRoute: options.targetRoute,
+    baselineRps: options.baselineRps,
+    targetRps: options.targetRps,
+    durationSeconds: options.durationSeconds,
+    totalRequests,
+    successCount: latenciesMs.length,
+    failureCount,
+    errorRate,
+    p50LatencyMs,
+    p95LatencyMs,
+    p99LatencyMs,
+    passed: blockers.length === 0,
+    blockers,
+  };
+
+  fs.writeFileSync(options.output, JSON.stringify(summary, null, 2));
+  const persistence = await persistLoadTestSummary(options.baseUrl, summary);
+  summary.persistedToShadowRollout = persistence.persisted;
+  fs.writeFileSync(options.output, JSON.stringify(summary, null, 2));
+
+  if (options.json) {
+    console.log(JSON.stringify(summary, null, 2));
+  } else {
+    console.log(
+      `Load test ${summary.passed ? "passed" : "failed"} for ${summary.targetRoute} at ${options.targetRps} RPS (${summary.totalRequests} requests).`
+    );
+    if (summary.persistedToShadowRollout) {
+      console.log("Persisted Phase 5 load-test verdict to /api/ai/shadow-rollout");
+    }
+    console.log(`Saved to ${options.output}`);
+  }
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

@@ -3,30 +3,40 @@
     "name": "vision-preprocess-service",
     "env": "HF_VISION_PREPROCESS_URL",
     "expectedPath": "/infer",
-    "expectedHealthService": "vision-preprocess-service"
+    "expectedHealthService": "vision-preprocess-service",
+    "promotion_status": "promoted",
+    "live_split_pct": 5
   },
   {
     "name": "text-retrieval-service",
     "env": "HF_TEXT_RETRIEVAL_URL",
     "expectedPath": "/search",
-    "expectedHealthService": "text-retrieval-service"
+    "expectedHealthService": "text-retrieval-service",
+    "promotion_status": "promoted",
+    "live_split_pct": 5
   },
   {
     "name": "image-retrieval-service",
     "env": "HF_IMAGE_RETRIEVAL_URL",
     "expectedPath": "/search",
-    "expectedHealthService": "image-retrieval-service"
+    "expectedHealthService": "image-retrieval-service",
+    "promotion_status": "promoted",
+    "live_split_pct": 5
   },
   {
     "name": "multimodal-consult-service",
     "env": "HF_MULTIMODAL_CONSULT_URL",
     "expectedPath": "/consult",
-    "expectedHealthService": "multimodal-consult-service"
+    "expectedHealthService": "multimodal-consult-service",
+    "promotion_status": "promoted",
+    "live_split_pct": 5
   },
   {
     "name": "async-review-service",
     "env": "HF_ASYNC_REVIEW_URL",
     "expectedPath": "/review",
-    "expectedHealthService": "async-review-service"
+    "expectedHealthService": "async-review-service",
+    "promotion_status": "shadow_only",
+    "live_split_pct": 0
   }
 ]

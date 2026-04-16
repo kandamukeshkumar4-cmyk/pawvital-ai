@@ -10,7 +10,6 @@ import {
   searchReferenceImages,
 } from "@/lib/knowledge-retrieval";
 import {
-  capDiagnosticConfidence,
   inferSupportedImageDomain,
   type ConsultOpinion,
   type RetrievalBundle,
@@ -27,6 +26,8 @@ import {
   retrieveVeterinaryTextEvidence,
 } from "@/lib/text-retrieval-service";
 import {
+  describeLiveTrafficDecision,
+  getLiveTrafficDecision,
   isAbortLikeError as isSidecarAbortError,
   isRetrievalSidecarConfigured,
   retrieveVeterinaryEvidenceFromSidecar,
@@ -35,7 +36,8 @@ import {
   appendShadowComparison,
   appendSidecarObservation,
   describeShadowComparison,
-  isShadowModeEnabledForService,
+  describeShadowModeDecision,
+  getShadowModeDecision,
 } from "@/lib/sidecar-observability";
 import { ensureStructuredCaseMemory } from "@/lib/symptom-memory";
 import { verifyWithGLM } from "@/lib/nvidia-models";
@@ -291,9 +293,37 @@ export async function buildReportRetrievalBundle(
   conditionHints: string[]
 ): Promise<{ session: TriageSession; bundle: RetrievalBundle }> {
   const domain = session.latest_image_domain || null;
-  const retrievalShadowMode =
-    isShadowModeEnabledForService("text-retrieval-service") ||
-    isShadowModeEnabledForService("image-retrieval-service");
+  const retrievalUrgency = buildDiagnosisContext(session, pet).highest_urgency;
+  const textShadowDecision = getShadowModeDecision({
+    service: "text-retrieval-service",
+    session,
+    pet,
+    urgencyHint: retrievalUrgency,
+    additionalKey: knowledgeQuery,
+  });
+  const imageShadowDecision = getShadowModeDecision({
+    service: "image-retrieval-service",
+    session,
+    pet,
+    urgencyHint: retrievalUrgency,
+    additionalKey: referenceImageQuery,
+  });
+  const textLiveDecision = getLiveTrafficDecision({
+    service: "text-retrieval-service",
+    session,
+    additionalKey: knowledgeQuery,
+  });
+  const imageLiveDecision = getLiveTrafficDecision({
+    service: "image-retrieval-service",
+    session,
+    additionalKey: referenceImageQuery,
+  });
+  const shouldInvokeTextRetrieval =
+    isTextRetrievalConfigured() &&
+    (textShadowDecision.enabled || textLiveDecision.enabled);
+  const shouldInvokeImageRetrieval =
+    isImageRetrievalConfigured() &&
+    (imageShadowDecision.enabled || imageLiveDecision.enabled);
 
   let sidecarBundle: RetrievalBundle | null = null;
 
@@ -301,7 +331,7 @@ export async function buildReportRetrievalBundle(
     const textStarted = Date.now();
     const imageStarted = Date.now();
     const [textResult, imageResult] = await Promise.allSettled([
-      isTextRetrievalConfigured()
+      shouldInvokeTextRetrieval
         ? retrieveVeterinaryTextEvidence({
             query: knowledgeQuery,
             domain,
@@ -315,7 +345,7 @@ export async function buildReportRetrievalBundle(
             rerankScores: [],
             sourceCitations: [],
           }),
-      isImageRetrievalConfigured()
+      shouldInvokeImageRetrieval
         ? retrieveVeterinaryImageEvidence({
             query: referenceImageQuery,
             domain,
@@ -330,26 +360,26 @@ export async function buildReportRetrievalBundle(
           }),
     ]);
 
-    if (textResult.status === "fulfilled") {
+    if (shouldInvokeTextRetrieval && textResult.status === "fulfilled") {
       session = appendSidecarObservation(session, {
         service: "text-retrieval-service",
         stage: "report-retrieval",
         latencyMs: Date.now() - textStarted,
-        outcome: retrievalShadowMode ? "shadow" : "success",
-        shadowMode: retrievalShadowMode,
-        fallbackUsed: retrievalShadowMode,
-        note: `chunks=${textResult.value.textChunks.length}`,
+        outcome: textShadowDecision.enabled ? "shadow" : "success",
+        shadowMode: textShadowDecision.enabled,
+        fallbackUsed: textShadowDecision.enabled,
+        note: `chunks=${textResult.value.textChunks.length}; ${describeShadowModeDecision(textShadowDecision)}; ${describeLiveTrafficDecision(textLiveDecision)}`,
       });
-    } else if (isTextRetrievalConfigured()) {
+    } else if (shouldInvokeTextRetrieval && textResult.status === "rejected") {
       const timedOut = isSidecarAbortError(textResult.reason);
       session = appendSidecarObservation(session, {
         service: "text-retrieval-service",
         stage: "report-retrieval",
         latencyMs: Date.now() - textStarted,
         outcome: timedOut ? "timeout" : "error",
-        shadowMode: retrievalShadowMode,
+        shadowMode: textShadowDecision.enabled,
         fallbackUsed: true,
-        note: timedOut ? "text retrieval timeout" : "text retrieval failed",
+        note: `${timedOut ? "text retrieval timeout" : "text retrieval failed"}; ${describeShadowModeDecision(textShadowDecision)}; ${describeLiveTrafficDecision(textLiveDecision)}`,
       });
       if (timedOut) {
         session.case_memory = {
@@ -366,26 +396,29 @@ export async function buildReportRetrievalBundle(
       }
     }
 
-    if (imageResult.status === "fulfilled") {
+    if (shouldInvokeImageRetrieval && imageResult.status === "fulfilled") {
       session = appendSidecarObservation(session, {
         service: "image-retrieval-service",
         stage: "report-retrieval",
         latencyMs: Date.now() - imageStarted,
-        outcome: retrievalShadowMode ? "shadow" : "success",
-        shadowMode: retrievalShadowMode,
-        fallbackUsed: retrievalShadowMode,
-        note: `images=${imageResult.value.imageMatches.length}`,
+        outcome: imageShadowDecision.enabled ? "shadow" : "success",
+        shadowMode: imageShadowDecision.enabled,
+        fallbackUsed: imageShadowDecision.enabled,
+        note: `images=${imageResult.value.imageMatches.length}; ${describeShadowModeDecision(imageShadowDecision)}; ${describeLiveTrafficDecision(imageLiveDecision)}`,
       });
-    } else if (isImageRetrievalConfigured()) {
+    } else if (
+      shouldInvokeImageRetrieval &&
+      imageResult.status === "rejected"
+    ) {
       const timedOut = isSidecarAbortError(imageResult.reason);
       session = appendSidecarObservation(session, {
         service: "image-retrieval-service",
         stage: "report-retrieval",
         latencyMs: Date.now() - imageStarted,
         outcome: timedOut ? "timeout" : "error",
-        shadowMode: retrievalShadowMode,
+        shadowMode: imageShadowDecision.enabled,
         fallbackUsed: true,
-        note: timedOut ? "image retrieval timeout" : "image retrieval failed",
+        note: `${timedOut ? "image retrieval timeout" : "image retrieval failed"}; ${describeShadowModeDecision(imageShadowDecision)}; ${describeLiveTrafficDecision(imageLiveDecision)}`,
       });
       if (timedOut) {
         session.case_memory = {
@@ -402,54 +435,134 @@ export async function buildReportRetrievalBundle(
       }
     }
 
+    const fallbackBundle = await buildFallbackRetrievalBundle(
+      knowledgeQuery,
+      referenceImageQuery,
+      domain
+    );
+
+    if (
+      shouldInvokeTextRetrieval &&
+      textResult.status === "fulfilled" &&
+      textShadowDecision.enabled
+    ) {
+      session = appendShadowComparison(
+        session,
+        describeShadowComparison(
+          "text-retrieval-service",
+          "fallback-retrieval",
+          "hf-text-retrieval",
+          `Fallback text=${fallbackBundle.textChunks.length}; shadow text=${textResult.value.textChunks.length}`,
+          Math.abs(
+            fallbackBundle.textChunks.length - textResult.value.textChunks.length
+          )
+        )
+      );
+    }
+
+    if (
+      shouldInvokeImageRetrieval &&
+      imageResult.status === "fulfilled" &&
+      imageShadowDecision.enabled
+    ) {
+      session = appendShadowComparison(
+        session,
+        describeShadowComparison(
+          "image-retrieval-service",
+          "fallback-retrieval",
+          "hf-image-retrieval",
+          `Fallback images=${fallbackBundle.imageMatches.length}; shadow images=${imageResult.value.imageMatches.length}`,
+          Math.abs(
+            fallbackBundle.imageMatches.length -
+              imageResult.value.imageMatches.length
+          )
+        )
+      );
+    }
+
     sidecarBundle = {
       textChunks:
-        textResult.status === "fulfilled" ? textResult.value.textChunks : [],
+        shouldInvokeTextRetrieval &&
+        textResult.status === "fulfilled" &&
+        !textShadowDecision.enabled
+          ? textResult.value.textChunks
+          : fallbackBundle.textChunks,
       imageMatches:
-        imageResult.status === "fulfilled" ? imageResult.value.imageMatches : [],
+        shouldInvokeImageRetrieval &&
+        imageResult.status === "fulfilled" &&
+        !imageShadowDecision.enabled
+          ? imageResult.value.imageMatches
+          : fallbackBundle.imageMatches,
       rerankScores:
-        textResult.status === "fulfilled" ? textResult.value.rerankScores : [],
+        shouldInvokeTextRetrieval &&
+        textResult.status === "fulfilled" &&
+        !textShadowDecision.enabled
+          ? textResult.value.rerankScores
+          : fallbackBundle.rerankScores,
       sourceCitations: [
-        ...(textResult.status === "fulfilled"
+        ...(shouldInvokeTextRetrieval &&
+        textResult.status === "fulfilled" &&
+        !textShadowDecision.enabled
           ? textResult.value.sourceCitations
-          : []),
-        ...(imageResult.status === "fulfilled"
+          : fallbackBundle.sourceCitations.filter((citation) =>
+              fallbackBundle.textChunks.some(
+                (chunk) =>
+                  chunk.citation === citation || chunk.sourceUrl === citation
+              )
+            )),
+        ...(shouldInvokeImageRetrieval &&
+        imageResult.status === "fulfilled" &&
+        !imageShadowDecision.enabled
           ? imageResult.value.sourceCitations
-          : []),
+          : fallbackBundle.sourceCitations.filter((citation) =>
+              fallbackBundle.imageMatches.some(
+                (match) => match.citation === citation || match.assetUrl === citation
+              )
+            )),
       ].slice(0, 8),
     };
   } else if (isRetrievalSidecarConfigured()) {
     const startedAt = Date.now();
-    try {
-      sidecarBundle = await retrieveVeterinaryEvidenceFromSidecar({
-        query: knowledgeQuery,
-        domain,
-        breed: pet.breed,
-        conditionHints,
-        dogOnly: true,
-        textLimit: 3,
-        imageLimit: 4,
-      });
-      session = appendSidecarObservation(session, {
-        service: "text-retrieval-service",
-        stage: "legacy-combined-retrieval",
-        latencyMs: Date.now() - startedAt,
-        outcome: retrievalShadowMode ? "shadow" : "success",
-        shadowMode: retrievalShadowMode,
-        fallbackUsed: retrievalShadowMode,
-        note: "legacy combined retrieval endpoint",
-      });
-    } catch (error) {
-      console.error("[HF Retrieval Sidecar] failed:", error);
-      session = appendSidecarObservation(session, {
-        service: "text-retrieval-service",
-        stage: "legacy-combined-retrieval",
-        latencyMs: Date.now() - startedAt,
-        outcome: isSidecarAbortError(error) ? "timeout" : "error",
-        shadowMode: retrievalShadowMode,
-        fallbackUsed: true,
-        note: "legacy combined retrieval failed",
-      });
+    const combinedShadowMode =
+      textShadowDecision.enabled || imageShadowDecision.enabled;
+    const combinedLiveMode =
+      !combinedShadowMode &&
+      (textLiveDecision.enabled || imageLiveDecision.enabled);
+    if (combinedShadowMode || combinedLiveMode) {
+      try {
+        const combinedBundle = await retrieveVeterinaryEvidenceFromSidecar({
+          query: knowledgeQuery,
+          domain,
+          breed: pet.breed,
+          conditionHints,
+          dogOnly: true,
+          textLimit: 3,
+          imageLimit: 4,
+        });
+        session = appendSidecarObservation(session, {
+          service: "text-retrieval-service",
+          stage: "legacy-combined-retrieval",
+          latencyMs: Date.now() - startedAt,
+          outcome: combinedShadowMode ? "shadow" : "success",
+          shadowMode: combinedShadowMode,
+          fallbackUsed: combinedShadowMode,
+          note: `legacy combined retrieval endpoint; text=${describeShadowModeDecision(textShadowDecision)}; image=${describeShadowModeDecision(imageShadowDecision)}; textLive=${describeLiveTrafficDecision(textLiveDecision)}; imageLive=${describeLiveTrafficDecision(imageLiveDecision)}`,
+        });
+        if (!combinedShadowMode) {
+          sidecarBundle = combinedBundle;
+        }
+      } catch (error) {
+        console.error("[HF Retrieval Sidecar] failed:", error);
+        session = appendSidecarObservation(session, {
+          service: "text-retrieval-service",
+          stage: "legacy-combined-retrieval",
+          latencyMs: Date.now() - startedAt,
+          outcome: isSidecarAbortError(error) ? "timeout" : "error",
+          shadowMode: combinedShadowMode,
+          fallbackUsed: true,
+          note: `legacy combined retrieval failed; text=${describeShadowModeDecision(textShadowDecision)}; image=${describeShadowModeDecision(imageShadowDecision)}; textLive=${describeLiveTrafficDecision(textLiveDecision)}; imageLive=${describeLiveTrafficDecision(imageLiveDecision)}`,
+        });
+      }
     }
   }
 
@@ -460,26 +573,6 @@ export async function buildReportRetrievalBundle(
   );
 
   if (sidecarBundle) {
-    if (retrievalShadowMode) {
-      session = appendShadowComparison(
-        session,
-        describeShadowComparison(
-          "text-retrieval-service",
-          "fallback-retrieval",
-          "hf-retrieval-sidecars",
-          `Fallback text=${fallbackBundle.textChunks.length}, images=${fallbackBundle.imageMatches.length}; shadow text=${sidecarBundle.textChunks.length}, images=${sidecarBundle.imageMatches.length}`,
-          Math.abs(
-            fallbackBundle.textChunks.length - sidecarBundle.textChunks.length
-          ) +
-            Math.abs(
-              fallbackBundle.imageMatches.length -
-                sidecarBundle.imageMatches.length
-            )
-        )
-      );
-      return { session, bundle: fallbackBundle };
-    }
-
     return { session, bundle: sidecarBundle };
   }
 

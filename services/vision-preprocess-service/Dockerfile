@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+ENV PYTHONUNBUFFERED=1 \
+    HF_HUB_DISABLE_TELEMETRY=1
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \

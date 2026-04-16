@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
 
 const rootDir = process.cwd();
 const vercelProjectConfigPath = path.join(rootDir, ".vercel", "project.json");
@@ -9,224 +10,250 @@ function inferWorkspaceProjectName() {
   return path.basename(rootDir).replace(/-(codex|claude|minimax)$/i, "");
 }
 
-function loadEnvFiles() {
-  for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
-    const fullPath = path.join(rootDir, relativePath);
-    if (!fs.existsSync(fullPath)) continue;
-
-    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eq = trimmed.indexOf("=");
-      if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
-}
-loadEnvFiles();
-
 function readVercelProjectConfig() {
-  const envProjectName = inferWorkspaceProjectName();
+  const fallbackName = inferWorkspaceProjectName();
   if (!fs.existsSync(vercelProjectConfigPath)) {
-    return { projectName: envProjectName };
+    return { projectName: fallbackName };
   }
 
   try {
     const parsed = JSON.parse(fs.readFileSync(vercelProjectConfigPath, "utf8"));
-    return {
-      projectName: String(parsed.projectName || envProjectName).trim(),
-    };
+    return { projectName: String(parsed.projectName || fallbackName).trim() };
   } catch {
-    return { projectName: envProjectName };
+    return { projectName: fallbackName };
   }
 }
 
 function inferDefaultAppBaseUrl() {
   const config = readVercelProjectConfig();
-  if (config?.projectName) {
-    return `https://${config.projectName}.vercel.app`;
-  }
-  return `https://${inferWorkspaceProjectName()}.vercel.app`;
+  return `https://${config.projectName || inferWorkspaceProjectName()}.vercel.app`;
 }
 
-const APP_BASE_URL =
-  (
+function isTrustedAppBaseUrl(baseUrl) {
+  let url;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1";
+  const isTrustedVercelHost =
+    hostname === "pawvital-ai.vercel.app" ||
+    (hostname.endsWith(".vercel.app") && hostname.includes("pawvital"));
+
+  if (isLocalHost) {
+    return url.protocol === "http:" || url.protocol === "https:";
+  }
+
+  return url.protocol === "https:" && isTrustedVercelHost;
+}
+
+function resolveAppBaseUrl() {
+  const appBaseUrl = (
     process.env.APP_BASE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     inferDefaultAppBaseUrl()
   ).trim();
-const SIDEcar_SECRET =
-  (process.env.HF_SIDECAR_API_KEY || process.env.ASYNC_REVIEW_WEBHOOK_SECRET || "").trim();
-const podsPath = path.join(rootDir, "deploy", "runpod", "pods.json");
-const outputArg = process.argv.find((arg) => arg.startsWith("--output="));
-const outputPath = outputArg
-  ? path.resolve(rootDir, outputArg.split("=")[1])
-  : path.join(rootDir, "phase5-shadow-report.md");
-const jsonMode = process.argv.includes("--json");
 
-function buildAppRouteUrl(baseUrl, routePath) {
-  const routeUrl = new URL(baseUrl);
-  routeUrl.pathname = routePath;
-  routeUrl.search = "";
-  routeUrl.hash = "";
-  return routeUrl.toString();
+  if (
+    process.env.ALLOW_UNTRUSTED_APP_BASE_URL?.trim() === "1" ||
+    isTrustedAppBaseUrl(appBaseUrl)
+  ) {
+    return appBaseUrl;
+  }
+
+  throw new Error(
+    `Refusing to send shadow debug credentials to untrusted APP_BASE_URL host: ${appBaseUrl}. Set ALLOW_UNTRUSTED_APP_BASE_URL=1 only if you intentionally want to override this safeguard.`
+  );
+}
+
+function parseArgs(argv) {
+  const outputArg = argv.find((arg) => arg.startsWith("--output="));
+  return {
+    json: argv.includes("--json"),
+    outputPath: outputArg
+      ? path.resolve(rootDir, outputArg.split("=")[1])
+      : path.join(rootDir, "phase5-shadow-report.md"),
+  };
+}
+
+function buildRouteUrl(baseUrl, routePath) {
+  const url = new URL(baseUrl);
+  url.pathname = routePath;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
 }
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   const rawText = await response.text();
   let body = null;
+
   try {
     body = rawText ? JSON.parse(rawText) : null;
   } catch {
     body = null;
   }
+
   return { ok: response.ok, status: response.status, body, rawText };
 }
 
-function buildShadowProbePayload() {
-  return {
-    session: {
-      known_symptoms: ["wound_skin_issue"],
-      answered_questions: ["wound_location"],
-      extracted_answers: { wound_location: "left hind leg" },
-      red_flags_triggered: [],
-      candidate_diseases: ["wound_infection"],
-      body_systems_involved: ["skin"],
-      case_memory: {
-        turn_count: 2,
-        chief_complaints: ["skin lesion"],
-        active_focus_symptoms: ["wound_skin_issue"],
-        confirmed_facts: { wound_location: "left hind leg" },
-        image_findings: ["localized lesion on left hind leg"],
-        red_flag_notes: [],
-        unresolved_question_ids: [],
-        timeline_notes: ["present since yesterday"],
-        visual_evidence: [],
-        retrieval_evidence: [],
-        consult_opinions: [],
-        evidence_chain: [],
-        service_timeouts: [],
-        service_observations: [
-          {
-            service: "text-retrieval-service",
-            stage: "shadow_probe",
-            strategy: "shadow",
-            outcome: "shadow",
-            latencyMs: 1200,
-            shadowMode: true,
-            fallbackUsed: false,
-            recordedAt: new Date().toISOString(),
-          },
-        ],
-        shadow_comparisons: [
-          {
-            service: "text-retrieval-service",
-            usedStrategy: "nvidia-primary",
-            shadowStrategy: "hf-sidecar",
-            summary: "Shadow retrieval aligned with primary evidence selection.",
-            disagreementCount: 0,
-            recordedAt: new Date().toISOString(),
-          },
-        ],
-        ambiguity_flags: [],
-      },
-    },
-  };
+function formatMs(value) {
+  return Number.isFinite(value) ? `${Math.round(value)} ms` : "n/a";
+}
+
+function formatPct(value) {
+  return Number.isFinite(value) ? `${(value * 100).toFixed(1)}%` : "n/a";
+}
+
+function buildServiceMarkdown(service, metrics) {
+  const blockers =
+    Array.isArray(service.blockers) && service.blockers.length > 0
+      ? service.blockers.map((item) => `  - ${item}`).join("\n")
+      : "  - none";
+
+  return [
+    `### ${service.service}`,
+    `- Promotion status: ${service.status}`,
+    `- Sample mode: ${service.sampleMode}`,
+    `- Window samples: ${service.window?.observedWindowSamples ?? 0}/${service.window?.requiredHealthySamples ?? "n/a"} ` +
+      `(healthy ${(service.window?.healthySampleRatio * 100 || 0).toFixed(1)}%)`,
+    `- p95 latency: ${formatMs(metrics?.p95LatencyMs ?? null)}`,
+    `- Average latency: ${formatMs(service.averageLatencyMs)}`,
+    `- Timeout rate: ${formatPct(metrics?.timeoutRate ?? null)}`,
+    `- Error rate: ${formatPct(metrics?.errorRate ?? null)}`,
+    `- Fallback rate: ${formatPct(metrics?.fallbackRate ?? null)}`,
+    `- Disagreement rate: ${formatPct(metrics?.disagreementRate ?? null)}`,
+    `- Load test: ${service.loadTestStatus}`,
+    "- Blockers:",
+    blockers,
+  ].join("\n");
 }
 
 async function main() {
-  if (!APP_BASE_URL) {
-    throw new Error("APP_BASE_URL or NEXT_PUBLIC_APP_URL must be set");
-  }
+  loadEnvFiles(rootDir);
+  const args = parseArgs(process.argv.slice(2));
+  const appBaseUrl = resolveAppBaseUrl();
+  const sidecarSecret = (
+    process.env.HF_SIDECAR_API_KEY ||
+    process.env.ASYNC_REVIEW_WEBHOOK_SECRET ||
+    ""
+  ).trim();
 
-  if (!SIDEcar_SECRET) {
+  if (!sidecarSecret) {
     throw new Error("HF_SIDECAR_API_KEY or ASYNC_REVIEW_WEBHOOK_SECRET must be set");
   }
 
-  const headers = {
-    Authorization: `Bearer ${SIDEcar_SECRET}`,
-    "Content-Type": "application/json",
-  };
-
-  const readinessUrl = buildAppRouteUrl(APP_BASE_URL, "/api/ai/sidecar-readiness");
-  const shadowUrl = buildAppRouteUrl(APP_BASE_URL, "/api/ai/shadow-rollout");
+  const headers = { Authorization: `Bearer ${sidecarSecret}` };
+  const readinessUrl = buildRouteUrl(appBaseUrl, "/api/ai/sidecar-readiness");
+  const shadowUrl = buildRouteUrl(appBaseUrl, "/api/ai/shadow-rollout");
 
   const [readiness, shadow] = await Promise.all([
     fetchJson(readinessUrl, { headers }),
-    fetchJson(shadowUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(buildShadowProbePayload()),
-    }),
+    fetchJson(shadowUrl, { headers }),
   ]);
-
-  const pods = fs.existsSync(podsPath)
-    ? JSON.parse(fs.readFileSync(podsPath, "utf8"))
-    : null;
 
   const report = {
     generatedAt: new Date().toISOString(),
-    appBaseUrl: APP_BASE_URL,
-    readiness: {
-      ok: readiness.ok,
-      status: readiness.status,
-      summary: readiness.body?.readiness || null,
-    },
-    shadow: {
-      ok: shadow.ok,
-      status: shadow.status,
-      summary: shadow.body?.summary || null,
-      observability: shadow.body?.observability || null,
-    },
-    runpodPods: pods,
+    appBaseUrl,
+    readiness: readiness.body?.readiness || null,
+    shadowSummary: shadow.body?.summary || null,
+    baseline: shadow.body?.baseline || null,
+    loadTest:
+      shadow.body?.summary?.loadTest || shadow.body?.baseline?.loadTest || null,
+    readinessHttp: { ok: readiness.ok, status: readiness.status },
+    shadowHttp: { ok: shadow.ok, status: shadow.status },
   };
 
-  if (jsonMode) {
+  if (!readiness.ok || !shadow.ok) {
+    const readinessError =
+      readiness.body?.error || readiness.rawText || "unknown readiness error";
+    const shadowError =
+      shadow.body?.error || shadow.rawText || "unknown shadow error";
+    throw new Error(
+      `Phase 5 report routes failed: readiness HTTP ${readiness.status} (${String(
+        readinessError
+      ).slice(0, 160)}); shadow HTTP ${shadow.status} (${String(
+        shadowError
+      ).slice(0, 160)})`
+    );
+  }
+
+  if (args.json) {
     console.log(JSON.stringify(report, null, 2));
     return;
   }
 
+  const serviceMetrics = new Map(
+    Array.isArray(report.baseline?.serviceMetrics)
+      ? report.baseline.serviceMetrics.map((entry) => [entry.service, entry])
+      : []
+  );
+  const services = Array.isArray(report.shadowSummary?.services)
+    ? report.shadowSummary.services
+    : [];
+
   const markdown = [
-    "# Phase 5 Shadow Validation Report",
+    "# Phase 5 Shadow Baseline",
     "",
     `Generated: ${report.generatedAt}`,
     `App base URL: ${report.appBaseUrl}`,
     "",
     "## Readiness",
     "",
-    `- HTTP status: ${report.readiness.status}`,
-    `- OK: ${report.readiness.ok}`,
-    `- Configured sidecars: ${report.readiness.summary?.configuredCount ?? "n/a"}`,
-    `- Healthy sidecars: ${report.readiness.summary?.healthyCount ?? "n/a"}`,
-    `- Stub sidecars: ${report.readiness.summary?.stubCount ?? "n/a"}`,
-    `- Unhealthy sidecars: ${report.readiness.summary?.unhealthyCount ?? "n/a"}`,
+    `- HTTP: ${report.readinessHttp.status} (${report.readinessHttp.ok ? "ok" : "error"})`,
+    `- Configured sidecars: ${report.readiness?.configuredCount ?? "n/a"}`,
+    `- Healthy sidecars: ${report.readiness?.healthyCount ?? "n/a"}`,
+    `- Warming sidecars: ${report.readiness?.warmingCount ?? "n/a"}`,
+    `- Stub sidecars: ${report.readiness?.stubCount ?? "n/a"}`,
+    `- Unhealthy sidecars: ${report.readiness?.unhealthyCount ?? "n/a"}`,
+    `- Unreachable sidecars: ${report.readiness?.unreachableCount ?? "n/a"}`,
     "",
-    "## Shadow Rollout",
+    "## Baseline Window",
     "",
-    `- HTTP status: ${report.shadow.status}`,
-    `- OK: ${report.shadow.ok}`,
-    `- Overall status: ${report.shadow.summary?.overallStatus ?? "n/a"}`,
-    `- Ready services: ${report.shadow.summary?.readyServices?.length ?? 0}`,
-    `- Watch services: ${report.shadow.summary?.watchServices?.length ?? 0}`,
-    `- Blocked services: ${report.shadow.summary?.blockedServices?.length ?? 0}`,
-    `- Recent service call count: ${report.shadow.observability?.recentServiceCallCount ?? "n/a"}`,
-    `- Recent shadow comparison count: ${report.shadow.observability?.recentShadowComparisonCount ?? "n/a"}`,
+    `- HTTP: ${report.shadowHttp.status} (${report.shadowHttp.ok ? "ok" : "error"})`,
+    `- Overall status: ${report.shadowSummary?.overallStatus ?? "n/a"}`,
+    `- Rolling window: ${report.shadowSummary?.gateConfig?.windowHours ?? report.baseline?.windowHours ?? "n/a"} hours`,
+    `- Sample interval: ${report.shadowSummary?.gateConfig?.sampleIntervalMinutes ?? "n/a"} minutes`,
+    `- Required healthy samples: ${report.shadowSummary?.gateConfig?.requiredHealthySamples ?? "n/a"}`,
+    `- Required healthy ratio: ${formatPct(report.shadowSummary?.gateConfig?.requiredHealthyRatio ?? null)}`,
+    `- Parsed reports in window: ${report.baseline?.parsedReportCount ?? "n/a"}/${report.baseline?.reportCount ?? "n/a"}`,
+    `- Malformed reports skipped: ${report.baseline?.malformedReportCount ?? "n/a"}`,
+    `- Aggregated service observations: ${report.baseline?.observationCount ?? "n/a"}`,
+    `- Aggregated shadow comparisons: ${report.baseline?.shadowComparisonCount ?? "n/a"}`,
+    report.baseline?.warning ? `- Warning: ${report.baseline.warning}` : null,
+    `- Persisted load test: ${
+      report.loadTest
+        ? report.loadTest.passed
+          ? "passed"
+          : "failed"
+        : "missing"
+    }`,
+    report.loadTest
+      ? `- Load test target: ${report.loadTest.targetRoute} @ ${report.loadTest.targetRps} RPS`
+      : null,
+    report.loadTest
+      ? `- Load test p99 latency: ${formatMs(report.loadTest.p99LatencyMs ?? null)}`
+      : null,
+    report.loadTest
+      ? `- Load test error rate: ${formatPct(report.loadTest.errorRate ?? null)}`
+      : null,
     "",
-    "## RunPod Pods",
+    "## Services",
     "",
-    `\`\`\`json`,
-    JSON.stringify(report.runpodPods, null, 2),
-    `\`\`\``,
-    "",
-  ].join("\n");
+    ...services.flatMap((service, index) => [
+      buildServiceMarkdown(service, serviceMetrics.get(service.service) || null),
+      index === services.length - 1 ? "" : "",
+    ]),
+  ]
+    .filter(Boolean)
+    .join("\n");
 
-  fs.writeFileSync(outputPath, markdown);
-  console.log(`Wrote Phase 5 report to ${outputPath}`);
+  fs.writeFileSync(args.outputPath, markdown);
+  console.log(`Wrote Phase 5 report to ${args.outputPath}`);
 }
 
 main().catch((error) => {

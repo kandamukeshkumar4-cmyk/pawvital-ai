@@ -47,6 +47,7 @@ const mockRetrieveVeterinaryImageEvidenceWithResult = jest.fn();
 const mockEnqueueAsyncReview = jest.fn();
 const mockSaveSymptomReportToDB = jest.fn();
 const mockEmit = jest.fn();
+const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockEventType = {
   REPORT_READY: "REPORT_READY",
   URGENCY_HIGH: "URGENCY_HIGH",
@@ -117,49 +118,57 @@ jest.mock("@/lib/minimax", () => ({
     mockCompressCaseMemoryWithMiniMax(...args),
 }));
 
-jest.mock("@/lib/hf-sidecars", () => ({
-  isVisionPreprocessConfigured: (...args: unknown[]) =>
-    mockIsVisionPreprocessConfigured(...args),
-  isRetrievalSidecarConfigured: (...args: unknown[]) =>
-    mockIsRetrievalSidecarConfigured(...args),
-  isMultimodalConsultConfigured: (...args: unknown[]) =>
-    mockIsMultimodalConsultConfigured(...args),
-  isAsyncReviewServiceConfigured: (...args: unknown[]) =>
-    mockIsAsyncReviewServiceConfigured(...args),
-  isAbortLikeError: (error: unknown) =>
-    (error instanceof Error && error.name === "AbortError") ||
-    (typeof DOMException !== "undefined" && error instanceof DOMException && error.name === "AbortError"),
-  preprocessVeterinaryImageWithResult: (...args: unknown[]) =>
-    mockPreprocessVeterinaryImageWithResult(...args),
-  preprocessVeterinaryImage: async (...args: unknown[]) => {
-    const result = await mockPreprocessVeterinaryImageWithResult(...args);
-    if (!result.ok) {
-      const err = result.category === "timeout"
-        ? new DOMException(result.error, "AbortError")
-        : new Error(result.error);
-      throw err;
-    }
-    return result.data;
-  },
-  consultWithMultimodalSidecarWithResult: (...args: unknown[]) =>
-    mockConsultWithMultimodalSidecarWithResult(...args),
-  consultWithMultimodalSidecar: async (...args: unknown[]) => {
-    const result = await mockConsultWithMultimodalSidecarWithResult(...args);
-    if (!result.ok) {
-      const err = result.category === "timeout"
-        ? new DOMException(result.error, "AbortError")
-        : new Error(result.error);
-      throw err;
-    }
-    return result.data;
-  },
-  retrieveVeterinaryTextEvidenceFromSidecarWithResult: (...args: unknown[]) =>
-    mockRetrieveVeterinaryTextEvidenceWithResult(...args),
-  retrieveVeterinaryImageEvidenceFromSidecarWithResult: (...args: unknown[]) =>
-    mockRetrieveVeterinaryImageEvidenceWithResult(...args),
-  retrieveVeterinaryEvidenceFromSidecar: (...args: unknown[]) =>
-    mockRetrieveVeterinaryEvidenceFromSidecar(...args),
-}));
+jest.mock("@/lib/hf-sidecars", () => {
+  const actual = jest.requireActual("@/lib/hf-sidecars");
+  return {
+    ...actual,
+    isVisionPreprocessConfigured: (...args: unknown[]) =>
+      mockIsVisionPreprocessConfigured(...args),
+    isRetrievalSidecarConfigured: (...args: unknown[]) =>
+      mockIsRetrievalSidecarConfigured(...args),
+    isMultimodalConsultConfigured: (...args: unknown[]) =>
+      mockIsMultimodalConsultConfigured(...args),
+    isAsyncReviewServiceConfigured: (...args: unknown[]) =>
+      mockIsAsyncReviewServiceConfigured(...args),
+    isAbortLikeError: (error: unknown) =>
+      (error instanceof Error && error.name === "AbortError") ||
+      (typeof DOMException !== "undefined" &&
+        error instanceof DOMException &&
+        error.name === "AbortError"),
+    preprocessVeterinaryImageWithResult: (...args: unknown[]) =>
+      mockPreprocessVeterinaryImageWithResult(...args),
+    preprocessVeterinaryImage: async (...args: unknown[]) => {
+      const result = await mockPreprocessVeterinaryImageWithResult(...args);
+      if (!result.ok) {
+        const err =
+          result.category === "timeout"
+            ? new DOMException(result.error, "AbortError")
+            : new Error(result.error);
+        throw err;
+      }
+      return result.data;
+    },
+    consultWithMultimodalSidecarWithResult: (...args: unknown[]) =>
+      mockConsultWithMultimodalSidecarWithResult(...args),
+    consultWithMultimodalSidecar: async (...args: unknown[]) => {
+      const result = await mockConsultWithMultimodalSidecarWithResult(...args);
+      if (!result.ok) {
+        const err =
+          result.category === "timeout"
+            ? new DOMException(result.error, "AbortError")
+            : new Error(result.error);
+        throw err;
+      }
+      return result.data;
+    },
+    retrieveVeterinaryTextEvidenceFromSidecarWithResult: (...args: unknown[]) =>
+      mockRetrieveVeterinaryTextEvidenceWithResult(...args),
+    retrieveVeterinaryImageEvidenceFromSidecarWithResult: (...args: unknown[]) =>
+      mockRetrieveVeterinaryImageEvidenceWithResult(...args),
+    retrieveVeterinaryEvidenceFromSidecar: (...args: unknown[]) =>
+      mockRetrieveVeterinaryEvidenceFromSidecar(...args),
+  };
+});
 
 jest.mock("@/lib/text-retrieval-service", () => ({
   isTextRetrievalConfigured: (...args: unknown[]) =>
@@ -186,13 +195,8 @@ jest.mock("@/lib/async-review-client", () => ({
 }));
 
 jest.mock("@/lib/confidence-calibrator", () => ({
-  calibrateDiagnosticConfidence: ({ baseConfidence }: { baseConfidence: number }) => ({
-    final_confidence: baseConfidence,
-    base_confidence: baseConfidence,
-    adjustments: [],
-    confidence_level: "moderate",
-    recommendation: "No significant adjustments needed",
-  }),
+  calibrateDiagnosticConfidence: (...args: unknown[]) =>
+    mockCalibrateDiagnosticConfidence(...args),
 }));
 
 jest.mock("@/lib/icd-10-mapper", () => ({
@@ -307,6 +311,79 @@ function buildAuthSupabase(userId: string | null) {
   };
 }
 
+function buildBillingSupabase(options?: {
+  completedChecksThisMonth?: number;
+  latestSubscription?: Record<string, unknown> | null;
+  pets?: Array<{ id: string }>;
+  userId?: string | null;
+  petsError?: { message: string } | null;
+  subscriptionError?: { message: string } | null;
+  usageError?: { message: string } | null;
+}) {
+  const subscriptionSelectChain = {
+    eq: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue({
+      data: options?.latestSubscription ?? null,
+      error: options?.subscriptionError ?? null,
+    }),
+  };
+
+  const petsSelectChain = {
+    eq: jest.fn().mockResolvedValue({
+      data: options?.pets ?? [{ id: "pet-1" }],
+      error: options?.petsError ?? null,
+    }),
+  };
+
+  const symptomChecksSelectChain = {
+    in: jest.fn().mockReturnValue({
+      gte: jest.fn().mockResolvedValue({
+        count: options?.completedChecksThisMonth ?? 0,
+        error: options?.usageError ?? null,
+      }),
+    }),
+  };
+
+  return {
+    auth: {
+      getUser: jest.fn().mockResolvedValue({
+        data: {
+          user:
+            options?.userId === undefined
+              ? { id: "user-1" }
+              : options.userId
+                ? { id: options.userId }
+                : null,
+        },
+        error: null,
+      }),
+    },
+    from: jest.fn((table: string) => {
+      if (table === "subscriptions") {
+        return {
+          select: jest.fn().mockReturnValue(subscriptionSelectChain),
+        };
+      }
+
+      if (table === "pets") {
+        return {
+          select: jest.fn().mockReturnValue(petsSelectChain),
+        };
+      }
+
+      if (table === "symptom_checks") {
+        return {
+          select: jest.fn().mockReturnValue(symptomChecksSelectChain),
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    }),
+  };
+}
+
 function buildModerateReportSession() {
   let session = createSession();
   session = addSymptoms(session, ["excessive_scratching"]);
@@ -377,11 +454,27 @@ describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env = {
+      ...process.env,
+      SIDECAR_LIVE_SPLIT_VISION_PREPROCESS: "100",
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "100",
+      SIDECAR_LIVE_SPLIT_IMAGE_RETRIEVAL: "100",
+      SIDECAR_LIVE_SPLIT_MULTIMODAL_CONSULT: "100",
+    };
 
     mockCheckRateLimit.mockResolvedValue({
       success: true,
       reset: Date.now() + 60_000,
     });
+    mockCalibrateDiagnosticConfidence.mockImplementation(
+      ({ baseConfidence }: { baseConfidence: number }) => ({
+        final_confidence: baseConfidence,
+        base_confidence: baseConfidence,
+        adjustments: [],
+        confidence_level: "moderate",
+        recommendation: "No significant adjustments needed",
+      })
+    );
     mockGetRateLimitId.mockReturnValue("test-user");
     mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
     mockExtractWithQwen.mockResolvedValue(
@@ -898,10 +991,107 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.case_memory.service_timeouts).toEqual([]);
   });
 
-  it("adds evidence-chain data and capped confidence to the final report", async () => {
+  it("keeps vision preprocess on the fallback path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_VISION_PREPROCESS: "0",
+    };
+
+    try {
+      mockIsVisionPreprocessConfigured.mockReturnValue(true);
+
+      let session = createSession();
+      session = addSymptoms(session, ["limping"]);
+      session.last_question_asked = "which_leg";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeRequest(session, "left leg"));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockPreprocessVeterinaryImageWithResult).not.toHaveBeenCalled();
+      expect(payload.session.latest_image_domain).toBe("skin_wound");
+      expect(
+        payload.session.case_memory?.service_observations?.some(
+          (entry: SidecarObservation) =>
+            entry.service === "vision-preprocess-service"
+        ) ?? false
+      ).toBe(false);
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("keeps multimodal consult on the primary path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_MULTIMODAL_CONSULT: "0",
+    };
+
+    try {
+      mockIsMultimodalConsultConfigured.mockReturnValue(true);
+      mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+        buildOkSidecarResult("vision-preprocess-service", {
+          domain: "eye",
+          bodyRegion: "left eye",
+          detectedRegions: [{ label: "eye", confidence: 0.65 }],
+          bestCrop: null,
+          imageQuality: "borderline",
+          confidence: 0.58,
+          limitations: ["partial blur"],
+        })
+      );
+      mockRunVisionPipeline.mockResolvedValue({
+        combined: "{\"confidence\":0.52,\"summary\":\"ocular irritation\"}",
+        severity: "needs_review",
+        tiersUsed: [1, 2],
+        woundDetected: false,
+        tier1_fast: "{\"confidence\":0.52}",
+        tier2_detailed: "{\"estimated_severity\":\"moderate\"}",
+        tier3_deep: null,
+      });
+      mockParseVisionForMatrix.mockReturnValue({
+        symptoms: [],
+        redFlags: [],
+        severityClass: "needs_review",
+      });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeRequest(createSession(), "his eye looks weird")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockConsultWithMultimodalSidecarWithResult).not.toHaveBeenCalled();
+      expect(payload.session.latest_consult_opinion).toBeUndefined();
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("adds evidence-chain data, calibrated confidence metadata, and async-review scheduling to the final report", async () => {
     mockIsMultimodalConsultConfigured.mockReturnValue(true);
     mockIsTextRetrievalConfigured.mockReturnValue(true);
     mockIsImageRetrievalConfigured.mockReturnValue(true);
+    mockDiagnoseWithDeepSeek.mockResolvedValue(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Localized skin lesion",
+        explanation: "Explanation",
+        differential_diagnoses: [],
+        clinical_notes: "Notes",
+        recommended_tests: [],
+        home_care: [],
+        actions: [],
+        warning_signs: [],
+        vet_questions: [],
+        confidence: 0.84,
+      })
+    );
     mockRetrieveVeterinaryTextEvidenceWithResult.mockResolvedValue(
       buildOkSidecarResult("text-retrieval-service", {
         textChunks: [
@@ -968,31 +1158,275 @@ describe("symptom-chat mixed text + image routing", () => {
       ambiguity_flags: ["borderline image quality"],
     };
 
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      HF_SHADOW_ASYNC_REVIEW: "1",
+      HF_SHADOW_SAMPLE_RATE: "1",
+    };
+
+    try {
+      mockIsAsyncReviewServiceConfigured.mockReturnValue(true);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session, IMAGE));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.confidence).toBe(0.84);
+      expect(payload.report.calibrated_confidence).toEqual(
+        expect.objectContaining({
+          base_confidence: 0.84,
+          final_confidence: 0.84,
+          confidence_level: "moderate",
+          recommendation: "No significant adjustments needed",
+          adjustments: expect.any(Array),
+        })
+      );
+      expect(payload.report.evidence_chain).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("Visual evidence"),
+          expect.stringContaining("Reference support"),
+        ])
+      );
+      expect(payload.report.evidenceChain).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            source: "visual-analysis",
+            confidence: 0.71,
+          }),
+          expect.objectContaining({
+            source: "text-retrieval",
+          }),
+        ])
+      );
+      expect(payload.report.async_review_scheduled).toBe(true);
+      expect(mockEnqueueAsyncReview).toHaveBeenCalledTimes(1);
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("keeps async review unscheduled when rollout is disabled even if the service is configured", async () => {
+    const session = buildModerateReportSession();
+    session.latest_preprocess = {
+      domain: "skin_wound",
+      bodyRegion: "left hind leg",
+      detectedRegions: [],
+      bestCrop: null,
+      imageQuality: "good",
+      confidence: 0.7,
+      limitations: [],
+    };
+    session.vision_analysis = "Raw lesion on the left hind leg.";
+    session.vision_severity = "needs_review";
+    session.latest_visual_evidence = {
+      domain: "skin_wound",
+      bodyRegion: "left hind leg",
+      findings: ["raw lesion"],
+      severity: "needs_review",
+      confidence: 0.7,
+      supportedSymptoms: ["wound_skin_issue"],
+      contradictions: [],
+      requiresConsult: false,
+      limitations: [],
+      influencedQuestionSelection: true,
+    };
+    session.case_memory = {
+      ...session.case_memory!,
+      ambiguity_flags: ["borderline image quality"],
+    };
+
+    mockIsAsyncReviewServiceConfigured.mockReturnValue(true);
+
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
     const response = await POST(makeReportRequest(session, IMAGE));
     const payload = await response.json();
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("report");
-    expect(payload.report.confidence).toBeLessThanOrEqual(0.98);
-    expect(payload.report.evidence_chain).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("Visual evidence"),
-        expect.stringContaining("Reference support"),
-      ])
+    expect(payload.report.async_review_scheduled).toBeUndefined();
+    expect(mockEnqueueAsyncReview).not.toHaveBeenCalled();
+  });
+
+  it("keeps retrieval on the fallback path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "0",
+      SIDECAR_LIVE_SPLIT_IMAGE_RETRIEVAL: "0",
+    };
+
+    try {
+      mockIsTextRetrievalConfigured.mockReturnValue(true);
+      mockIsImageRetrievalConfigured.mockReturnValue(true);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(mockRetrieveVeterinaryTextEvidenceWithResult).not.toHaveBeenCalled();
+      expect(mockRetrieveVeterinaryImageEvidenceWithResult).not.toHaveBeenCalled();
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("falls back silently when promoted live consult traffic hits a sidecar error", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_MULTIMODAL_CONSULT: "100",
+    };
+
+    try {
+      mockIsMultimodalConsultConfigured.mockReturnValue(true);
+      mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+        buildOkSidecarResult("vision-preprocess-service", {
+          domain: "eye",
+          bodyRegion: "left eye",
+          detectedRegions: [{ label: "eye", confidence: 0.65 }],
+          bestCrop: null,
+          imageQuality: "borderline",
+          confidence: 0.58,
+          limitations: ["partial blur"],
+        })
+      );
+      mockRunVisionPipeline.mockResolvedValue({
+        combined: "{\"confidence\":0.52,\"summary\":\"ocular irritation\"}",
+        severity: "needs_review",
+        tiersUsed: [1, 2],
+        woundDetected: false,
+        tier1_fast: "{\"confidence\":0.52}",
+        tier2_detailed: "{\"estimated_severity\":\"moderate\"}",
+        tier3_deep: null,
+      });
+      mockParseVisionForMatrix.mockReturnValue({
+        symptoms: [],
+        redFlags: [],
+        severityClass: "needs_review",
+      });
+      mockConsultWithMultimodalSidecarWithResult.mockResolvedValue(
+        buildErrorSidecarResult(
+          "multimodal-consult-service",
+          "http_error",
+          "consult failed"
+        )
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeRequest(createSession(), "his eye looks weird")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.session.latest_consult_opinion).toBeUndefined();
+      expect(payload.session.case_memory.service_observations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            service: "multimodal-consult-service",
+            stage: "sync-consult",
+            outcome: "error",
+            fallbackUsed: true,
+          }),
+        ])
+      );
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("keeps retrieval on the fallback path when live split is explicitly 0%", async () => {
+    const envBeforeTest = process.env;
+    process.env = {
+      ...envBeforeTest,
+      SIDECAR_LIVE_SPLIT_TEXT_RETRIEVAL: "0",
+      SIDECAR_LIVE_SPLIT_IMAGE_RETRIEVAL: "0",
+    };
+
+    try {
+      mockIsTextRetrievalConfigured.mockReturnValue(true);
+      mockIsImageRetrievalConfigured.mockReturnValue(true);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(mockRetrieveVeterinaryTextEvidenceWithResult).not.toHaveBeenCalled();
+      expect(mockRetrieveVeterinaryImageEvidenceWithResult).not.toHaveBeenCalled();
+    } finally {
+      process.env = envBeforeTest;
+    }
+  });
+
+  it("falls back to null calibrated confidence when calibration throws", async () => {
+    mockCalibrateDiagnosticConfidence.mockImplementation(() => {
+      throw new Error("calibrator failed");
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeReportRequest(buildModerateReportSession()));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("report");
+    expect(payload.report.calibrated_confidence).toBeNull();
+  });
+
+  it("does not change report urgency when calibration adjusts confidence", async () => {
+    mockCalibrateDiagnosticConfidence.mockImplementation(() => ({
+      final_confidence: 0.2,
+      base_confidence: 0.9,
+      adjustments: [
+        {
+          factor: "model_disagreement",
+          delta: -0.7,
+          direction: "decrease",
+          reason: "Disagreement lowered confidence.",
+        },
+      ],
+      confidence_level: "low",
+      recommendation: "Confidence is limited by disagreement.",
+    }));
+    mockDiagnoseWithDeepSeek.mockResolvedValue(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Localized skin lesion",
+        explanation: "Explanation",
+        differential_diagnoses: [],
+        clinical_notes: "Notes",
+        recommended_tests: [],
+        home_care: [],
+        actions: [],
+        warning_signs: [],
+        vet_questions: [],
+        confidence: 0.9,
+      })
     );
-    expect(payload.report.evidenceChain).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          source: "visual-analysis",
-          confidence: 0.71,
-        }),
-        expect.objectContaining({
-          source: "text-retrieval",
-        }),
-      ])
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeReportRequest(buildModerateReportSession()));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("report");
+    expect(payload.report.severity).toBe("medium");
+    expect(payload.report.recommendation).toBe("vet_48h");
+    expect(payload.report.confidence).toBe(0.9);
+    expect(payload.report.calibrated_confidence).toEqual(
+      expect.objectContaining({
+        base_confidence: 0.9,
+        final_confidence: 0.2,
+        confidence_level: "low",
+      })
     );
-    expect(payload.report.async_review_scheduled).toBe(true);
   });
 
   it("keeps report generation alive when GLM safety review returns malformed JSON", async () => {
@@ -1580,6 +2014,98 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.red_flags_triggered).toEqual(
       expect.arrayContaining(["blue_gums", "breathing_onset_sudden"])
     );
+  });
+
+  it("escalates collapse after excitement to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog got excited, collapsed, and still seems weak and out of it."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.known_symptoms).toContain("seizure_collapse");
+    expect(payload.session.extracted_answers.consciousness_level).toBe("unresponsive");
+    expect(payload.session.red_flags_triggered).toContain("unresponsive");
+  });
+
+  it("escalates collapse with blue-gray gums to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog collapsed and his gums looked blue-gray."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.known_symptoms).toContain("seizure_collapse");
+    expect(payload.session.extracted_answers.gum_color).toBe("blue");
+    expect(payload.session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["unresponsive", "blue_gums"])
+    );
+  });
+
+  it("escalates rapid breathing with pallor to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "She is breathing fast, looks pale, and can barely stand up."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.session.known_symptoms).toContain("difficulty_breathing");
+    expect(payload.session.extracted_answers.gum_color).toBe("pale_white");
+    expect(payload.session.red_flags_triggered).toContain("pale_gums");
   });
 
   it("does not force-close an unrelated pending string question with a new symptom update", async () => {
@@ -2553,6 +3079,40 @@ describe("symptom-chat mixed text + image routing", () => {
     } finally {
       logSpy.mockRestore();
     }
+  });
+
+  it("VET-1204: ambiguous choice replies do not raw-fallback and close the pending question", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session.last_question_asked = "cough_type";
+    session.answered_questions = [];
+    session.case_memory = {
+      ...session.case_memory!,
+      unresolved_question_ids: ["cough_type"],
+    };
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(session, "I'm not sure what kind of cough it is.")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.answered_questions).not.toContain("cough_type");
+    expect(payload.session.extracted_answers.cough_type).toBeUndefined();
+    expect(payload.session.last_question_asked).toBe("cough_type");
+    expect(payload.message).not.toContain("How long has the coughing been going on?");
   });
 
   it("VET-705: compression telemetry is logged internally on success and excluded from client session", async () => {
@@ -5487,6 +6047,129 @@ describe("VET-900 comprehensive scenarios", () => {
       expect(response.status).toBe(429);
       const payload = await response.json();
       expect(payload.error).toContain("Too many requests");
+      expect(Number(response.headers.get("Retry-After"))).toBeGreaterThan(0);
+    });
+
+    it("fails open when the symptom-chat limiter is degraded", async () => {
+      mockCheckRateLimit.mockResolvedValue({
+        success: true,
+        degraded: true,
+        reason: "redis_unavailable",
+      });
+
+      const session = createSession();
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "my dog is limping"));
+      const payload = await response.json();
+
+      expect(mockCheckRateLimit).toHaveBeenCalledWith({}, "test-user");
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.message).toContain("Which leg is affected");
+    });
+  });
+
+  describe("subscription usage limits", () => {
+    it("blocks a new free-tier conversation at the monthly threshold with an upgrade prompt", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValueOnce(
+        buildBillingSupabase({
+          completedChecksThisMonth: 5,
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(402);
+      expect(payload.type).toBe("usage_limit");
+      expect(payload.code).toBe("FREE_TIER_LIMIT_REACHED");
+      expect(payload.requires_upgrade).toBe(true);
+      expect(payload.usage_gate).toEqual(
+        expect.objectContaining({
+          limit: 5,
+          reason: "free_tier_limit_reached",
+          remaining: 0,
+        })
+      );
+      expect(payload.message).toContain("Upgrade");
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
+    });
+
+    it("fails open when the billing gate check throws", async () => {
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      mockCreateServerSupabaseClient.mockRejectedValueOnce(
+        new Error("billing unavailable")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
+      expect(
+        consoleErrorSpy.mock.calls.some((call) =>
+          String(call[0]).includes("[Billing] Usage gate failed open:")
+        )
+      ).toBe(true);
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("bypasses the usage gate for emergency-start conversations", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildBillingSupabase({
+          completedChecksThisMonth: 999,
+          userId: "user-1",
+        })
+      );
+
+      const emergencySession = createSession();
+      emergencySession.red_flags_triggered = ["vomit_blood"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          emergencySession,
+          "My dog is vomiting blood and looks weak."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).not.toBe("usage_limit");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
+    });
+
+    it("bypasses the usage gate for conversations already in progress", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildBillingSupabase({
+          completedChecksThisMonth: 999,
+          userId: "user-1",
+        })
+      );
+
+      let activeSession = createSession();
+      activeSession = recordAnswer(activeSession, "appetite", false);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(activeSession, "still not eating today")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).not.toBe("usage_limit");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
     });
   });
 

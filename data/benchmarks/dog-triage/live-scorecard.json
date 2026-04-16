@@ -1,0 +1,1407 @@
+{
+  "runId": "LIVE-EVAL-2026-04-15T21-42-23-547Z",
+  "generatedAt": "2026-04-15T21:42:23.548Z",
+  "executionMode": "live_route",
+  "suiteId": "gold-candidate-merged",
+  "baseUrl": "https://pawvital-ai.vercel.app",
+  "filters": {},
+  "totalCases": 223,
+  "passedCases": 69,
+  "failedCases": 154,
+  "totalChecks": 586,
+  "passedChecks": 300,
+  "failedChecks": 286,
+  "expectationPassRate": 0.3094,
+  "meanExpectationScore": 0.5329,
+  "emergencyRecall": 0,
+  "emergencyCaseCount": 74,
+  "emergencyMissCount": 74,
+  "unsafeDowngradeRate": 0.1345,
+  "blockingFailures": 74,
+  "passFail": "FAIL",
+  "preflight": {
+    "performedAt": "2026-04-15T21:24:08.496Z",
+    "routeUrl": "https://pawvital-ai.vercel.app/api/ai/sidecar-readiness",
+    "ready": true,
+    "requiredServices": 5,
+    "configuredCount": 5,
+    "healthyCount": 5,
+    "warmingCount": 0,
+    "stubCount": 0,
+    "blockers": [],
+    "readiness": {
+      "generatedAt": "2026-04-15T21:24:08.119Z",
+      "configuredCount": 5,
+      "validCount": 5,
+      "misconfiguredCount": 0,
+      "unconfiguredCount": 0,
+      "healthyCount": 5,
+      "stubCount": 0,
+      "unhealthyCount": 0,
+      "unreachableCount": 0,
+      "configs": [
+        {
+          "service": "vision-preprocess-service",
+          "env": "HF_VISION_PREPROCESS_URL",
+          "configured": true,
+          "valid": true,
+          "url": "https://pawvital-vision-preprocess-service.vercel.app/infer",
+          "expectedPath": "/infer",
+          "warning": null
+        },
+        {
+          "service": "text-retrieval-service",
+          "env": "HF_TEXT_RETRIEVAL_URL",
+          "configured": true,
+          "valid": true,
+          "url": "https://42rwvrake6njq4-8081.proxy.runpod.net/search",
+          "expectedPath": "/search",
+          "warning": null
+        },
+        {
+          "service": "image-retrieval-service",
+          "env": "HF_IMAGE_RETRIEVAL_URL",
+          "configured": true,
+          "valid": true,
+          "url": "https://42rwvrake6njq4-8082.proxy.runpod.net/search",
+          "expectedPath": "/search",
+          "warning": null
+        },
+        {
+          "service": "multimodal-consult-service",
+          "env": "HF_MULTIMODAL_CONSULT_URL",
+          "configured": true,
+          "valid": true,
+          "url": "https://42rwvrake6njq4-8083.proxy.runpod.net/consult",
+          "expectedPath": "/consult",
+          "warning": null
+        },
+        {
+          "service": "async-review-service",
+          "env": "HF_ASYNC_REVIEW_URL",
+          "configured": true,
+          "valid": true,
+          "url": "https://mkod2o9brti1r7-8084.proxy.runpod.net/review",
+          "expectedPath": "/review",
+          "warning": null
+        }
+      ],
+      "health": [
+        {
+          "service": "vision-preprocess-service",
+          "status": "healthy",
+          "statusCode": 200,
+          "mode": "heuristic_live",
+          "model": null,
+          "detail": null
+        },
+        {
+          "service": "text-retrieval-service",
+          "status": "healthy",
+          "statusCode": 200,
+          "mode": "live_with_models",
+          "model": null,
+          "detail": null
+        },
+        {
+          "service": "image-retrieval-service",
+          "status": "healthy",
+          "statusCode": 200,
+          "mode": "live_pending_model_load",
+          "model": null,
+          "detail": null
+        },
+        {
+          "service": "multimodal-consult-service",
+          "status": "healthy",
+          "statusCode": 200,
+          "mode": "production",
+          "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+          "detail": null
+        },
+        {
+          "service": "async-review-service",
+          "status": "healthy",
+          "statusCode": 200,
+          "mode": "production",
+          "model": "Qwen/Qwen2.5-VL-32B-Instruct",
+          "detail": null
+        }
+      ]
+    }
+  },
+  "byResponseType": {
+    "emergency": {
+      "cases": 74,
+      "passedCases": 0,
+      "failedCases": 74,
+      "meanScore": 0
+    },
+    "question": {
+      "cases": 149,
+      "passedCases": 69,
+      "failedCases": 80,
+      "meanScore": 0.7975
+    }
+  },
+  "byRiskTier": {
+    "tier_1_emergency": {
+      "cases": 30,
+      "passedCases": 0,
+      "failedCases": 30,
+      "meanScore": 0
+    },
+    "tier_2_same_day": {
+      "cases": 25,
+      "passedCases": 8,
+      "failedCases": 17,
+      "meanScore": 0.7733
+    },
+    "tier_3_48h_monitor": {
+      "cases": 67,
+      "passedCases": 43,
+      "failedCases": 24,
+      "meanScore": 0.8483
+    },
+    "unclassified": {
+      "cases": 101,
+      "passedCases": 18,
+      "failedCases": 83,
+      "meanScore": 0.4224
+    }
+  },
+  "failures": [
+    {
+      "caseId": "cardiac-emergency-collapse-after-excitement",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "cardiac-emergency-collapse-blue-gums",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "cardiac-emergency-rapid-breathing-pale",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "cardiac-emergency-resting-breathing-distress",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-acute-paralysis",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-addisonian-crisis",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-allergic-reaction-hives",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-anaphylaxis",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-bloat-after-meal",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen"
+    },
+    {
+      "caseId": "emergency-bloat-gasdilation",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen"
+    },
+    {
+      "caseId": "emergency-blue-gums-breathing",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-breathing-labored",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-burn-chemical",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-choking-foreign-body",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-cluster-seizures",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
+    },
+    {
+      "caseId": "emergency-deep-bleeding-wound",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
+    },
+    {
+      "caseId": "emergency-diabetic-crisis",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-difficulty-breathing-kennel",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-dog-bite-wound",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
+    },
+    {
+      "caseId": "emergency-dystocia",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "emergency-electrical-shock",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-gdv-retching",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen"
+    },
+    {
+      "caseId": "emergency-glaucoma-eye",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-hard-labor-no-puppy",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "emergency-heatstroke",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:heat_intolerance"
+    },
+    {
+      "caseId": "emergency-hemorrhagic-diarrhea-shock",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:diarrhea"
+    },
+    {
+      "caseId": "emergency-hit-by-car",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-hypoglycemia-toy-breed",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-imma-mediated-thrombocytopenia",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-labor-green-discharge",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "emergency-limping-cry-pain",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "emergency-open-fracture",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "emergency-oral-bleeding-cant-swallow",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem"
+    },
+    {
+      "caseId": "emergency-pale-gums-collapse",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy"
+    },
+    {
+      "caseId": "emergency-parvo-style-puppy",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting_diarrhea_combined"
+    },
+    {
+      "caseId": "emergency-postictal-no-recovery",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
+    },
+    {
+      "caseId": "emergency-postpartum-eclampsia",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth, knownSymptomsInclude:trembling"
+    },
+    {
+      "caseId": "emergency-postpartum-heavy-bleeding",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "emergency-prolonged-seizure",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
+    },
+    {
+      "caseId": "emergency-protozoal-acute-babesia",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-pyometra-style",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
+    },
+    {
+      "caseId": "emergency-rat-poison-bleeding",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-repeated-nonproductive-heaving",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-resting-open-mouth-breathing",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-seizure-first-time",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
+    },
+    {
+      "caseId": "emergency-snake-bite",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-toxin-xylitol",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-trembling-cold-weak",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:trembling"
+    },
+    {
+      "caseId": "emergency-unresponsive-after-tremors",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:trembling"
+    },
+    {
+      "caseId": "emergency-urinary-blockage",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "emergency-urinary-blockage-distress",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "emergency-urinary-female-blockage",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "emergency-vomit-blood-collapse",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "emergency-vomiting-green",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "emergency-wound-deep-avulsion",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
+    },
+    {
+      "caseId": "followup-breathing-onset-unknown-escalates",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-breathing-pattern-unknown",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-consciousness-unknown-escalates",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-gum-color-unknown-escalates",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-seizure-duration-unknown",
+      "severity": "CRITICAL",
+      "category": "unsafe_downgrade",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "oncology-emergency-bleeding-splenic-rupture-style",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "oncology-emergency-mouth-tumor-bleeding",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "oncology-emergency-nosebleed-collapse",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "oncology-emergency-obstructive-neck-mass",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-foul-discharge-fever",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-heavy-postpartum-bleeding",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-labor-green-discharge",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-male-paraphimosis",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-retained-puppy-collapse",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-antifreeze",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-grapes-weakness",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-lily-chew",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-sago-palm",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-tremorgenic-mycotoxin",
+      "severity": "CRITICAL",
+      "category": "missed_emergency",
+      "expected": "emergency",
+      "actual": "question",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "sameday-behavior-hiding",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:behavior_change"
+    },
+    {
+      "caseId": "sameday-chronic-limp-sudden-worse",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "sameday-coughing-worsening",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:coughing"
+    },
+    {
+      "caseId": "sameday-dental-bleeding-gum",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:dental_problem"
+    },
+    {
+      "caseId": "sameday-diarrhea-persistent",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:diarrhea"
+    },
+    {
+      "caseId": "sameday-drinking-excessive",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:drinking_more"
+    },
+    {
+      "caseId": "sameday-ear-infection",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:ear_scratching"
+    },
+    {
+      "caseId": "sameday-hair-loss-spreading",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:hair_loss"
+    },
+    {
+      "caseId": "sameday-itching-intense",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:excessive_scratching"
+    },
+    {
+      "caseId": "sameday-limping-non-weight-bearing",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "sameday-regurgitation-frequent",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:regurgitation"
+    },
+    {
+      "caseId": "sameday-skin-hot-spot-rapid",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:wound_skin_issue"
+    },
+    {
+      "caseId": "sameday-swollen-abdomen-mild",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:swollen_abdomen"
+    },
+    {
+      "caseId": "sameday-trembling-persistent",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:trembling"
+    },
+    {
+      "caseId": "sameday-urinary-blood",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "sameday-vomiting-multiple-times",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "sameday-weight-loss-rapid",
+      "severity": "HIGH",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:weight_loss"
+    },
+    {
+      "caseId": "followup-appetite-change-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:appetite_change, extractedAnswersMatch:appetite_change"
+    },
+    {
+      "caseId": "followup-blood-amount-unknown-reasks",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: lastQuestionAsked"
+    },
+    {
+      "caseId": "followup-cough-duration-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:cough_duration, extractedAnswersMatch:cough_duration"
+    },
+    {
+      "caseId": "followup-cough-type-unknown-reasks",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: lastQuestionAsked"
+    },
+    {
+      "caseId": "followup-diarrhea-duration-raw-text",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:diarrhea_duration"
+    },
+    {
+      "caseId": "followup-diarrhea-frequency-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:diarrhea_frequency, extractedAnswersMatch:diarrhea_frequency"
+    },
+    {
+      "caseId": "followup-diarrhea-onset-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:diarrhea_onset, extractedAnswersMatch:diarrhea_onset"
+    },
+    {
+      "caseId": "followup-discharge-color-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:discharge_color, extractedAnswersMatch:discharge_color"
+    },
+    {
+      "caseId": "followup-energy-level-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:energy_level, extractedAnswersMatch:energy_level"
+    },
+    {
+      "caseId": "followup-itch-location-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:itch_location, extractedAnswersMatch:itch_location"
+    },
+    {
+      "caseId": "followup-limping-progression-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:limping_progression, extractedAnswersMatch:limping_progression"
+    },
+    {
+      "caseId": "followup-limping-which-leg-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:which_leg, extractedAnswersMatch:which_leg"
+    },
+    {
+      "caseId": "followup-lump-size-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:lump_size, extractedAnswersMatch:lump_size"
+    },
+    {
+      "caseId": "followup-seasonal-pattern-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:seasonal_pattern, extractedAnswersMatch:seasonal_pattern"
+    },
+    {
+      "caseId": "followup-stool-consistency-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:stool_consistency, extractedAnswersMatch:stool_consistency"
+    },
+    {
+      "caseId": "followup-swelling-present-no",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:swelling_present, extractedAnswersMatch:swelling_present"
+    },
+    {
+      "caseId": "followup-temperature-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:has_fever, extractedAnswersMatch:has_fever"
+    },
+    {
+      "caseId": "followup-trauma-history-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:trauma_history, extractedAnswersMatch:trauma_history"
+    },
+    {
+      "caseId": "followup-trembling-timing-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:trembling_timing, extractedAnswersMatch:trembling_timing"
+    },
+    {
+      "caseId": "followup-urine-color-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:urine_color, extractedAnswersMatch:urine_color"
+    },
+    {
+      "caseId": "followup-vomit-color-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:vomit_color, extractedAnswersMatch:vomit_color"
+    },
+    {
+      "caseId": "followup-vomit-duration-raw-text",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:vomit_duration"
+    },
+    {
+      "caseId": "followup-vomit-frequency-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:vomit_frequency, extractedAnswersMatch:vomit_frequency"
+    },
+    {
+      "caseId": "followup-water-intake-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:water_intake, extractedAnswersMatch:water_intake"
+    },
+    {
+      "caseId": "followup-weight-bearing-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:weight_bearing, extractedAnswersMatch:weight_bearing"
+    },
+    {
+      "caseId": "followup-wound-depth-unknown",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: answeredQuestionsInclude:wound_depth, extractedAnswersMatch:wound_depth"
+    },
+    {
+      "caseId": "question-behavior-change",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:behavior_change"
+    },
+    {
+      "caseId": "question-constipation",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:constipation"
+    },
+    {
+      "caseId": "question-contradictory-limping",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "question-contradictory-vomiting",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "question-coughing",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:coughing"
+    },
+    {
+      "caseId": "question-coughing-breathing-combined",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:coughing_breathing_combined"
+    },
+    {
+      "caseId": "question-dental-problem",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:dental_problem"
+    },
+    {
+      "caseId": "question-diarrhea",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:diarrhea"
+    },
+    {
+      "caseId": "question-drinking-more",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:drinking_more"
+    },
+    {
+      "caseId": "question-ear-scratching",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:ear_scratching"
+    },
+    {
+      "caseId": "question-excessive-scratching",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:excessive_scratching"
+    },
+    {
+      "caseId": "question-eye-discharge",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
+    },
+    {
+      "caseId": "question-generalized-stiffness",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:generalized_stiffness"
+    },
+    {
+      "caseId": "question-gradual-belly-enlargement",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:swollen_abdomen"
+    },
+    {
+      "caseId": "question-hair-loss",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:hair_loss"
+    },
+    {
+      "caseId": "question-limping-sudden",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "question-low-literacy-belly-big",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:swollen_abdomen"
+    },
+    {
+      "caseId": "question-low-literacy-eye-bad",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
+    },
+    {
+      "caseId": "question-low-literacy-leg-hurt",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "question-nasal-discharge",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:nasal_discharge"
+    },
+    {
+      "caseId": "question-postoperative-concern",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:postoperative_concern"
+    },
+    {
+      "caseId": "question-regurgitation",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:regurgitation"
+    },
+    {
+      "caseId": "question-senior-chronic-cough",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:coughing"
+    },
+    {
+      "caseId": "question-senior-decline",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:senior_decline"
+    },
+    {
+      "caseId": "question-slang-the-runs",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:diarrhea"
+    },
+    {
+      "caseId": "question-slang-the-shakes",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:trembling"
+    },
+    {
+      "caseId": "question-slang-throwing-up-bricks",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "question-small-blood-in-stool",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:blood_in_stool"
+    },
+    {
+      "caseId": "question-swelling-lump",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:swelling_lump"
+    },
+    {
+      "caseId": "question-trembling",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:trembling"
+    },
+    {
+      "caseId": "question-urination-problem",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "question-vague-coughing-sometimes",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:coughing"
+    },
+    {
+      "caseId": "question-vague-lump-found",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:swelling_lump"
+    },
+    {
+      "caseId": "question-vomiting",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "question-vomiting-diarrhea-combined",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:vomiting_diarrhea_combined"
+    },
+    {
+      "caseId": "question-weight-loss",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:weight_loss"
+    },
+    {
+      "caseId": "question-wound-skin-issue",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "question",
+      "actual": "question",
+      "description": "Failed checks: knownSymptomsInclude:wound_skin_issue"
+    }
+  ]
+}
