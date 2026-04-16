@@ -53,7 +53,6 @@ import {
 import {
   ensureStructuredCaseMemory,
   recordConversationTelemetry,
-  syncStructuredCaseMemoryQuestions,
   type RecoverySource,
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
@@ -87,9 +86,6 @@ import {
 import { evaluateCriticalInfoRule } from "@/lib/clinical/critical-info-rules";
 import "@/lib/events/notification-handler";
 import {
-  getNextQuestionAvoidingRepeat,
-} from "@/lib/symptom-chat/answer-coercion";
-import {
   resolvePendingQuestionAnswer,
   extractDeterministicAnswersForTurn,
   mergeTurnAnswers,
@@ -117,7 +113,6 @@ import {
   deriveVisionContradictions,
   shouldTriggerSyncConsult,
   buildEvidenceChainNotes,
-  didVisualEvidenceInfluenceQuestion,
   deriveSymptomsFromImageEvidence,
 } from "@/lib/symptom-chat/report-helpers";
 import {
@@ -134,6 +129,7 @@ import {
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
 import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
+import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
 import {
@@ -1147,83 +1143,17 @@ export async function POST(request: Request) {
       });
     }
 
-    const needsClarificationQuestionId =
-      session.last_question_asked &&
-      !pendingQResolvedThisTurn &&
-      (
-        session.case_memory?.clarification_reasons?.[
-          session.last_question_asked
-        ] ||
-        incomingUnresolvedIds.includes(session.last_question_asked)
-      )
-        ? session.last_question_asked
-        : null;
-
-    const nextQuestionId =
-      needsClarificationQuestionId ??
-      getNextQuestionAvoidingRepeat(session, turnFocusSymptoms);
-    const wasRepeatSuppressed =
-      needsClarificationQuestionId === null &&
-      nextQuestionId !== null &&
-      nextQuestionId === session.last_question_asked &&
-      session.answered_questions.includes(nextQuestionId);
-    if (wasRepeatSuppressed) {
-      session = recordConversationTelemetry(session, {
-        event: "repeat_suppression",
-        turn_count: session.case_memory?.turn_count ?? 0,
-        question_id: nextQuestionId,
-        outcome: "success",
-        reason: "repeat_of_last_asked_question_suppressed",
-        repeat_prevented: true,
-      });
-    }
-
-    if (needsClarificationQuestionId) {
-      session = recordConversationTelemetry(session, {
-        event: "pending_recovery",
-        turn_count: session.case_memory?.turn_count ?? 0,
-        question_id: needsClarificationQuestionId,
-        outcome: "needs_clarification",
-        source: "unresolved",
-        reason: "needs_clarification_re_ask",
-        pending_before: true,
-        pending_after: true,
-      });
-    }
-    const visualEvidenceInfluencedQuestion = didVisualEvidenceInfluenceQuestion(
-      nextQuestionId,
-      visualEvidence,
-      turnFocusSymptoms
-    );
-    if (
-      visualEvidence &&
-      session.case_memory?.visual_evidence?.length
-    ) {
-      session.case_memory.visual_evidence = session.case_memory.visual_evidence.map(
-        (entry, index, list) =>
-          index === list.length - 1
-            ? {
-                ...entry,
-                influencedQuestionSelection: visualEvidenceInfluencedQuestion,
-              }
-            : entry
-      );
-      session.latest_visual_evidence = {
-        ...visualEvidence,
-        influencedQuestionSelection: visualEvidenceInfluencedQuestion,
-      };
-      if (visualEvidenceInfluencedQuestion) {
-        session.case_memory.evidence_chain = [
-          ...session.case_memory.evidence_chain,
-          `Visual evidence directly influenced next question: ${nextQuestionId || "ready_for_report"}`,
-        ].slice(-16);
-      }
-    }
-    session = syncStructuredCaseMemoryQuestions(
+    const nextQuestionState = orchestrateNextQuestion({
       session,
-      nextQuestionId,
-      getMissingQuestions(session)
-    );
+      incomingUnresolvedIds,
+      pendingQResolvedThisTurn,
+      turnFocusSymptoms,
+      visualEvidence,
+    });
+    session = nextQuestionState.session;
+    const nextQuestionId = nextQuestionState.nextQuestionId;
+    const needsClarificationQuestionId =
+      nextQuestionState.needsClarificationQuestionId;
     session = await maybeCompressStructuredCaseMemory(
       session,
       effectivePet,
