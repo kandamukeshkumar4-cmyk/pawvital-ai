@@ -43,9 +43,10 @@ Minimal GPU deployment serving only the 4 essential text models for PawVital's c
 
 ### Prerequisites
 
-- `RUNPOD_API_KEY` in `.env.local`
-- `HF_SIDECAR_API_KEY` in `.env.local`
+- `RUNPOD_API_KEY` in `.env.sidecars`, `.env.local`, or `.env`
+- `HF_SIDECAR_API_KEY` in `.env.sidecars`, `.env.local`, or `.env`
 - SSH key at `~/.ssh/runpod_id_ed25519`
+- Optional: `VERCEL_TOKEN` for API-based env sync. If absent, the script falls back to an authenticated local Vercel CLI session.
 
 ### Provision
 
@@ -113,9 +114,9 @@ The 253B Nemotron Ultra requires tensor parallelism (TP=2) even on A100 80GB.
 
 ## Integration with PawVital
 
-When a future ticket wires `HF_NARROW_MODEL_PACK_URL`, the symptom-chat route should:
-1. Route text model requests to the narrow pack instead of NVIDIA NIM
-2. Fall back to NVIDIA API keys if narrow pack is unhealthy
-3. Continue using NVIDIA for vision (not served by narrow pack)
+`VET-1227` already wired the app text stack for this service:
+1. Text roles prefer the narrow pack when `HF_NARROW_MODEL_PACK_URL` and `NARROW_PACK_ENABLED=true` are set
+2. Text roles fall back to NVIDIA if the narrow pack is unhealthy or unavailable
+3. Vision continues to stay on NVIDIA because the narrow pack does not serve vision workloads
 
 This provides a cost-effective middle ground between full NVIDIA API usage and self-hosted models.

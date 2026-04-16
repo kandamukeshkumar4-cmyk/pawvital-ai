@@ -11,8 +11,8 @@
  * GPU memory footprint and cost while maintaining core triage functionality.
  *
  * Usage:
- *   node scripts/runpod-provision-narrow.mjs                 # dry-run plan
- *   node scripts/runpod-provision-narrow.mjs --provision     # create pod
+ *   node scripts/runpod-provision-narrow.mjs --provision     # dry-run plan
+ *   node scripts/runpod-provision-narrow.mjs --provision --force  # create pod
  *   node scripts/runpod-provision-narrow.mjs --health        # health check
  *   node scripts/runpod-provision-narrow.mjs --wire          # health + push URLs to Vercel
  *   node scripts/runpod-provision-narrow.mjs --stop          # stop pod
@@ -172,6 +172,34 @@ function readRunpodPublicKey() {
 
 function writePods() {
   fs.writeFileSync(podsPath, JSON.stringify(pods, null, 2));
+}
+
+function collectProvisionPrerequisites() {
+  const publicKey = readRunpodPublicKey();
+  const missing = [];
+
+  if (!RUNPOD_API_KEY) {
+    missing.push("RUNPOD_API_KEY");
+  }
+
+  if (!HF_SIDECAR_API_KEY) {
+    missing.push("HF_SIDECAR_API_KEY");
+  }
+
+  if (!publicKey) {
+    missing.push("~/.ssh/runpod_id_ed25519.pub");
+  }
+
+  return { missing, publicKey };
+}
+
+function reportMissingProvisionPrerequisites(missing) {
+  console.error(
+    `[FATAL] Missing narrow-pack provisioning prerequisites: ${missing.join(", ")}`
+  );
+  console.error(
+    "Add the required secrets to .env.sidecars, .env.local, or .env before retrying."
+  );
 }
 
 function resolveGitPath(gitPathValue) {
@@ -496,14 +524,9 @@ async function provisionNarrowPackPod() {
     return;
   }
 
-  if (!HF_SIDECAR_API_KEY) {
-    console.error("[FATAL] HF_SIDECAR_API_KEY not set");
-    process.exit(1);
-  }
-
-  const publicKey = readRunpodPublicKey();
-  if (!publicKey) {
-    console.error("[FATAL] No RunPod SSH public key found at ~/.ssh/runpod_id_ed25519.pub");
+  const { missing, publicKey } = collectProvisionPrerequisites();
+  if (missing.length > 0) {
+    reportMissingProvisionPrerequisites(missing);
     process.exit(1);
   }
 
@@ -589,7 +612,7 @@ function printUsage() {
 Usage: node scripts/runpod-provision-narrow.mjs [OPTIONS]
 
 Options:
-  --provision     Create the narrow model pack pod (add --force to skip confirmation)
+  --provision     Show the plan, or create the narrow model pack pod with --force
   --health        Check health of the narrow model pack pod
   --wire          Health check + push URLs to Vercel
   --stop          Stop the narrow model pack pod
@@ -600,6 +623,7 @@ Environment:
   HF_SIDECAR_API_KEY      Required for pod provisioning
   NVIDIA_API_KEY          Optional, pushed to pod for fallback routing
   VERCEL_TOKEN            Optional, for API-based env sync (falls back to CLI)
+  ~/.ssh/runpod_id_ed25519.pub  Required for pod provisioning SSH access
 
 Models served:
 ${Object.entries(NARROW_PACK_MODELS).map(([k, v]) => `  - ${k}: ${v}`).join("\n")}
