@@ -21,6 +21,11 @@ const CRITICAL_INFO_RULES: Record<string, CriticalInfoRule> = {
     reportBlocksWhenUnknown: true,
     allowAlternateObservableRetry: false,
   },
+  breathing_pattern: {
+    questionId: "breathing_pattern",
+    reportBlocksWhenUnknown: true,
+    allowAlternateObservableRetry: false,
+  },
   consciousness_level: {
     questionId: "consciousness_level",
     reportBlocksWhenUnknown: true,
@@ -30,6 +35,11 @@ const CRITICAL_INFO_RULES: Record<string, CriticalInfoRule> = {
     questionId: "gum_color",
     reportBlocksWhenUnknown: true,
     allowAlternateObservableRetry: true,
+  },
+  seizure_duration: {
+    questionId: "seizure_duration",
+    reportBlocksWhenUnknown: true,
+    allowAlternateObservableRetry: false,
   },
 };
 

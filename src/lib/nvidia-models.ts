@@ -3,11 +3,12 @@ import type { VisionPreprocessResult } from "./clinical-evidence";
 import { safeParseJson, stripThinkingBlocks } from "./llm-output";
 
 // =============================================================================
-// NVIDIA NIM Multi-Model Client
-// All models accessed through NVIDIA's OpenAI-compatible API
+// Hybrid AI Model Client
+// Text roles can prefer the RunPod narrow pack; vision stays on NVIDIA NIM.
 // =============================================================================
 
 const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
+type ModelProvider = "nvidia" | "narrow-pack";
 
 function readEnvKey(name: string): string | null {
   const value = process.env[name]?.trim();
@@ -86,14 +87,23 @@ export const MODELS = {
 } as const;
 
 export type ModelRole = keyof typeof MODELS;
+type TextModelRole = Exclude<
+  ModelRole,
+  "vision_fast" | "vision_detailed" | "vision_deep"
+>;
 
-const REQUIRED_CORE_ROLES: ModelRole[] = [
+const REQUIRED_TEXT_ROLES: TextModelRole[] = [
   "extraction",
   "phrasing",
   "diagnosis",
   "safety",
-  "vision_fast",
 ];
+const NARROW_PACK_ROLES = new Set<TextModelRole>([
+  "extraction",
+  "phrasing",
+  "diagnosis",
+  "safety",
+]);
 
 export function isLikelyPlaceholderKey(key: string): boolean {
   const normalized = key.trim();
@@ -123,6 +133,53 @@ export function resolveNvidiaApiKey(role: ModelRole): string | null {
 
 export function isNvidiaRoleConfigured(role: ModelRole): boolean {
   return resolveNvidiaApiKey(role) !== null;
+}
+
+function isNarrowPackEnabledFlag(value: string | undefined): boolean {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return false;
+  }
+
+  return !["0", "false", "no", "off"].includes(normalized);
+}
+
+function resolveNarrowPackUrl(): string | null {
+  const value = readEnvKey("HF_NARROW_MODEL_PACK_URL");
+  return value ? value.replace(/\/+$/, "") : null;
+}
+
+function resolveSidecarApiKey(): string | null {
+  return readEnvKey("HF_SIDECAR_API_KEY");
+}
+
+export function isNarrowPackConfigured(): boolean {
+  return (
+    isNarrowPackEnabledFlag(process.env.NARROW_PACK_ENABLED) &&
+    resolveNarrowPackUrl() !== null &&
+    resolveSidecarApiKey() !== null
+  );
+}
+
+function canUseNarrowPack(role: ModelRole): role is TextModelRole {
+  return isNarrowPackConfigured() && NARROW_PACK_ROLES.has(role as TextModelRole);
+}
+
+export function getModelProviderChain(role: ModelRole): ModelProvider[] {
+  const providers: ModelProvider[] = [];
+
+  if (canUseNarrowPack(role)) {
+    providers.push("narrow-pack");
+  }
+  if (isNvidiaRoleConfigured(role)) {
+    providers.push("nvidia");
+  }
+
+  return providers;
+}
+
+export function isVisionPipelineConfigured(): boolean {
+  return isNvidiaRoleConfigured("vision_fast");
 }
 
 const ROLE_CONCURRENCY_LIMITS: Partial<Record<ModelRole, number>> = {
@@ -190,29 +247,86 @@ function parseLooseJsonObject(input: string): Record<string, unknown> {
 
 // --- Client Factory ---
 
-function createClient(role: ModelRole): OpenAI | null {
+function createClient(role: ModelRole, provider: ModelProvider): OpenAI | null {
+  if (provider === "narrow-pack") {
+    if (!canUseNarrowPack(role)) {
+      return null;
+    }
+
+    const baseURL = resolveNarrowPackUrl();
+    const apiKey = resolveSidecarApiKey();
+    if (!baseURL || !apiKey) return null;
+
+    return new OpenAI({ baseURL, apiKey });
+  }
+
   const apiKey = resolveNvidiaApiKey(role);
   if (!apiKey) return null;
+
   return new OpenAI({
     baseURL: NVIDIA_BASE_URL,
     apiKey,
   });
 }
 
-// Lazy-initialized clients
-const clients: Partial<Record<ModelRole, OpenAI>> = {};
+const clients = new Map<string, OpenAI>();
 
-function getClient(role: ModelRole): OpenAI | null {
-  if (!(role in clients)) {
-    clients[role] = createClient(role) || undefined;
+function getClient(role: ModelRole, provider: ModelProvider): OpenAI | null {
+  const cacheKey = `${provider}:${role}`;
+  if (!clients.has(cacheKey)) {
+    const client = createClient(role, provider);
+    if (!client) {
+      return null;
+    }
+    clients.set(cacheKey, client);
   }
-  return clients[role] || null;
+
+  return clients.get(cacheKey) || null;
 }
 
 // --- Check if multi-model stack is configured ---
 
 export function isNvidiaConfigured(): boolean {
-  return REQUIRED_CORE_ROLES.every((role) => isNvidiaRoleConfigured(role));
+  return REQUIRED_TEXT_ROLES.every(
+    (role) => getModelProviderChain(role).length > 0
+  );
+}
+
+function buildSystemPromptForModel(
+  model: string,
+  systemPrompt?: string
+): string | undefined {
+  if (
+    model.includes("nemotron-super-49b-v1.5") &&
+    !systemPrompt?.includes("/no_think")
+  ) {
+    return ["/no_think", systemPrompt].filter(Boolean).join("\n");
+  }
+
+  return systemPrompt;
+}
+
+function buildModelExtras(model: string): Record<string, unknown> {
+  const extras: Record<string, unknown> = {};
+  if (model.includes("kimi")) {
+    extras.chat_template_kwargs = { thinking: false };
+  } else if (model.includes("glm")) {
+    extras.chat_template_kwargs = { enable_thinking: false };
+  }
+  return extras;
+}
+
+function getModelsToTry(role: ModelRole, provider: ModelProvider): string[] {
+  if (provider === "narrow-pack") {
+    return [MODELS[role].name];
+  }
+
+  const modelsToTry: string[] = [MODELS[role].name];
+  const fallback = MODELS[role].fallback;
+  if (fallback) {
+    modelsToTry.push(fallback);
+  }
+  return modelsToTry;
 }
 
 // --- Generic completion helper ---
@@ -232,82 +346,74 @@ export async function complete({
   maxTokens = 1024,
   temperature = 0.6,
 }: CompletionOptions): Promise<string> {
-  const client = getClient(role);
-  if (!client) throw new Error(`NVIDIA ${MODELS[role].role} model not configured`);
-
-  const modelName = MODELS[role].name;
-  let finalSystemPrompt = systemPrompt;
-  if (
-    modelName.includes("nemotron-super-49b-v1.5") &&
-    !finalSystemPrompt?.includes("/no_think")
-  ) {
-    finalSystemPrompt = ["/no_think", finalSystemPrompt]
-      .filter(Boolean)
-      .join("\n");
+  const providers = getModelProviderChain(role);
+  if (providers.length === 0) {
+    throw new Error(`${MODELS[role].role} model not configured`);
   }
-
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
-  if (finalSystemPrompt) {
-    messages.push({ role: "system", content: finalSystemPrompt });
-  }
-  messages.push({ role: "user", content: prompt });
-
-  // Disable thinking mode for models that enable it by default
-  // Thinking consumes from max_tokens budget and returns content in wrong field
-  const disableThinking: Record<string, unknown> = {};
-  if (modelName.includes("kimi")) {
-    disableThinking.chat_template_kwargs = { thinking: false };
-  } else if (modelName.includes("glm")) {
-    disableThinking.chat_template_kwargs = { enable_thinking: false };
-  }
-
-  // Try primary model, then fallback if it fails
-  const modelsToTry: string[] = [modelName];
-  const fallback = MODELS[role].fallback;
-  if (fallback) modelsToTry.push(fallback);
 
   let lastError: Error | null = null;
-  for (const model of modelsToTry) {
-    const timeoutMs = ROLE_TIMEOUT_MS[role];
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  for (const provider of providers) {
+    const client = getClient(role, provider);
+    if (!client) {
+      continue;
+    }
 
-    try {
-      const response = await withRoleConcurrency(role, () =>
-        client.chat.completions.create({
-          model,
-          messages,
-          max_tokens: maxTokens,
-          temperature,
-          top_p: role === "diagnosis" ? 0.7 : 0.9,
-          stream: false,
-          ...disableThinking,
-        }, {
-          signal: controller.signal,
-          timeout: timeoutMs,
-        })
-      );
+    for (const model of getModelsToTry(role, provider)) {
+      const finalSystemPrompt = buildSystemPromptForModel(model, systemPrompt);
+      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
+      if (finalSystemPrompt) {
+        messages.push({ role: "system", content: finalSystemPrompt });
+      }
+      messages.push({ role: "user", content: prompt });
 
-      clearTimeout(timeoutId);
+      const timeoutMs = ROLE_TIMEOUT_MS[role];
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      const message = response.choices[0]?.message;
-      // Some NVIDIA NIM models return text in reasoning_content/reasoning
-      const content =
-        message?.content ||
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (message as any)?.reasoning_content ||
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (message as any)?.reasoning;
-      if (!content) {
-        lastError = new Error(`Empty response from ${model}`);
+      try {
+        const response = await withRoleConcurrency(role, () =>
+          client.chat.completions.create(
+            {
+              model,
+              messages,
+              max_tokens: maxTokens,
+              temperature,
+              top_p: role === "diagnosis" ? 0.7 : 0.9,
+              stream: false,
+              ...buildModelExtras(model),
+            },
+            {
+              signal: controller.signal,
+              timeout: timeoutMs,
+            }
+          )
+        );
+
+        clearTimeout(timeoutId);
+
+        const message = response.choices[0]?.message;
+        const content =
+          message?.content ||
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (message as any)?.reasoning_content ||
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (message as any)?.reasoning;
+        if (!content) {
+          lastError = new Error(`Empty response from ${model}`);
+          continue;
+        }
+        return content.trim();
+      } catch (err) {
+        clearTimeout(timeoutId);
+        lastError = err instanceof Error ? err : new Error(String(err));
+        const providerLabel =
+          provider === "narrow-pack" ? "RunPod Narrow Pack" : "NVIDIA";
+        console.error(
+          `[${providerLabel}] ${model} failed, trying next backend...`,
+          lastError.message
+        );
         continue;
       }
-      return content.trim();
-    } catch (err) {
-      clearTimeout(timeoutId);
-      lastError = err instanceof Error ? err : new Error(String(err));
-      console.error(`[NVIDIA] ${model} failed, trying fallback...`, lastError.message);
-      continue;
     }
   }
 
@@ -420,7 +526,7 @@ async function callVisionModel(
   maxTokens: number = 512,
   temperature: number = 0.2
 ): Promise<string> {
-  const client = getClient(role);
+  const client = getClient(role, "nvidia");
   if (!client) throw new Error(`Vision model ${MODELS[role].role} not configured`);
 
   const modelsToTry: string[] = [MODELS[role].name];

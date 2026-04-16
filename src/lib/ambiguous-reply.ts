@@ -46,6 +46,12 @@ const AMBIGUOUS_UNKNOWN_EXACT_MATCHES = new Set([
   "i can't really say",
   "i cant really say",
   "no way to tell",
+  "can't describe",
+  "cant describe",
+  "cannot describe",
+  "i can't describe",
+  "i cant describe",
+  "i cannot describe",
 ]);
 
 const AMBIGUOUS_UNKNOWN_PREFIXES = [
@@ -73,6 +79,12 @@ const AMBIGUOUS_UNKNOWN_PREFIXES = [
   "i couldnt say",
   "i can't really say",
   "i cant really say",
+  "can't describe",
+  "cant describe",
+  "cannot describe",
+  "i can't describe",
+  "i cant describe",
+  "i cannot describe",
 ];
 
 export function coerceAmbiguousReplyToUnknown(reply: string): "unknown" | null {

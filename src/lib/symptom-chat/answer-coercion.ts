@@ -170,6 +170,7 @@ const UNSAFE_EMERGENCY_QUESTIONS = new Set([
   "breathing_onset",
   "gum_color",
   "consciousness_level",
+  "seizure_duration",
 ]);
 
 export function shouldEscalateForUnknown(questionId: string): boolean {

@@ -9,6 +9,7 @@ import {
   coerceChoiceAnswerFromIntent,
   questionAllowsCanonicalUnknown,
   sanitizePendingRawAnswer,
+  shouldEscalateForUnknown,
   shouldPersistRawPendingAnswer,
 } from "@/lib/symptom-chat/answer-coercion";
 
@@ -299,7 +300,14 @@ export function mergeTurnAnswers(
       ? deterministicValue ?? modelValue
       : modelValue ?? deterministicValue;
 
-    if (preferredValue !== null) {
+    if (
+      preferredValue !== null &&
+      !(
+        typeof preferredValue === "string" &&
+        preferredValue.trim().toLowerCase() === "unknown" &&
+        shouldEscalateForUnknown(questionId)
+      )
+    ) {
       merged[questionId] = preferredValue;
     }
   }

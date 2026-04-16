@@ -139,6 +139,57 @@ function readJsonFile(filePath, label) {
   return JSON.parse(raw);
 }
 
+function normalizeFixtureCase(fixture) {
+  const mockExtraction = normalizeObject(fixture.mockExtraction);
+  const seedSession = normalizeObject(fixture.seedSession);
+  const expected = normalizeObject(fixture.expected);
+
+  return {
+    benchmarkId: String(fixture.benchmarkId || ""),
+    mode: String(fixture.mode || ""),
+    message:
+      fixture.message === undefined || fixture.message === null
+        ? null
+        : String(fixture.message),
+    mockExtraction: {
+      symptoms: normalizeStringArray(mockExtraction.symptoms),
+      answers: normalizeObject(mockExtraction.answers),
+    },
+    seedSession:
+      Object.keys(seedSession).length === 0
+        ? null
+        : {
+            knownSymptoms: normalizeStringArray(seedSession.knownSymptoms),
+            lastQuestionAsked:
+              seedSession.lastQuestionAsked === undefined ||
+              seedSession.lastQuestionAsked === null
+                ? null
+                : String(seedSession.lastQuestionAsked),
+          },
+    expected: {
+      allowedTypes: normalizeStringArray(expected.allowedTypes),
+      knownSymptoms: normalizeStringArray(expected.knownSymptoms),
+      redFlags: normalizeStringArray(expected.redFlags),
+      reasonCode:
+        expected.reasonCode === undefined || expected.reasonCode === null
+          ? null
+          : String(expected.reasonCode),
+      readyForReport:
+        typeof expected.readyForReport === "boolean"
+          ? expected.readyForReport
+          : null,
+      lastQuestionAsked:
+        expected.lastQuestionAsked === undefined ||
+        expected.lastQuestionAsked === null
+          ? null
+          : String(expected.lastQuestionAsked),
+      answeredQuestionsExclude: normalizeStringArray(
+        expected.answeredQuestionsExclude
+      ),
+    },
+  };
+}
+
 function readBenchmarkEntries() {
   if (!fs.existsSync(BENCHMARK_PATH)) {
     throw new Error(`Missing benchmark source: ${BENCHMARK_PATH}`);
@@ -159,20 +210,17 @@ function readBenchmarkEntries() {
   });
 }
 
-function readFixtureExtractionMap() {
+function readFixtureCaseMap() {
   const parsed = readJsonFile(FIXTURE_PATH, "route sentinel fixture pack");
   if (!Array.isArray(parsed)) {
     throw new Error("Route sentinel fixture pack must be a JSON array.");
   }
 
   return new Map(
-    parsed.map((fixture) => [
-      String(fixture.benchmarkId || ""),
-      {
-        symptoms: normalizeStringArray(fixture.mockExtraction?.symptoms),
-        answers: normalizeObject(fixture.mockExtraction?.answers),
-      },
-    ])
+    parsed.map((fixture) => {
+      const normalized = normalizeFixtureCase(fixture);
+      return [normalized.benchmarkId, normalized];
+    })
   );
 }
 
@@ -717,13 +765,13 @@ function selectEmergencyAnswers(benchmarkCase) {
   return { collapse: true };
 }
 
-function deriveExtraction(benchmarkCase, fixtureExtractionMap) {
-  const fixtureExtraction = fixtureExtractionMap.get(benchmarkCase.id);
-  if (fixtureExtraction) {
+function deriveExtraction(benchmarkCase, fixtureCaseMap) {
+  const fixtureCase = fixtureCaseMap.get(benchmarkCase.id);
+  if (fixtureCase) {
     return {
       source: "sentinel_fixture",
-      symptoms: normalizeStringArray(fixtureExtraction.symptoms),
-      answers: normalizeObject(fixtureExtraction.answers),
+      symptoms: normalizeStringArray(fixtureCase.mockExtraction.symptoms),
+      answers: normalizeObject(fixtureCase.mockExtraction.answers),
     };
   }
 
@@ -780,61 +828,100 @@ function buildActualResult(response, payload, durationMs) {
   };
 }
 
-function buildChecks(benchmarkCase, actual) {
+function buildChecks(benchmarkCase, actual, fixtureCase) {
+  const expectedTypes =
+    fixtureCase?.expected.allowedTypes?.length > 0
+      ? fixtureCase.expected.allowedTypes
+      : benchmarkCase.expectations.responseType === null
+        ? []
+        : [benchmarkCase.expectations.responseType];
   const checks = [
-    buildCheck("response_status_200", actual.statusCode === 200, 200, actual.statusCode),
     buildCheck(
-      "response_type_matches",
-      actual.type === benchmarkCase.expectations.responseType,
-      benchmarkCase.expectations.responseType,
-      actual.type
+      "response_status_200",
+      actual.statusCode === 200,
+      200,
+      actual.statusCode
     ),
   ];
 
-  if (benchmarkCase.expectations.readyForReport !== null) {
+  if (expectedTypes.length > 0) {
+    checks.push(
+      buildCheck(
+        "response_type_matches",
+        expectedTypes.includes(actual.type),
+        expectedTypes,
+        actual.type
+      )
+    );
+  }
+
+  const readyForReportExpected =
+    fixtureCase?.expected.readyForReport ?? benchmarkCase.expectations.readyForReport;
+  if (readyForReportExpected !== null) {
     checks.push(
       buildCheck(
         "ready_for_report_matches",
-        actual.readyForReport === benchmarkCase.expectations.readyForReport,
-        benchmarkCase.expectations.readyForReport,
+        actual.readyForReport === readyForReportExpected,
+        readyForReportExpected,
         actual.readyForReport
       )
     );
   }
 
-  if (benchmarkCase.expectations.knownSymptomsInclude.length > 0) {
+  const knownSymptomsExpected =
+    fixtureCase?.expected.knownSymptoms?.length > 0
+      ? fixtureCase.expected.knownSymptoms
+      : benchmarkCase.expectations.knownSymptomsInclude;
+  if (knownSymptomsExpected.length > 0) {
     checks.push(
       buildCheck(
         "known_symptoms_present",
-        containsAll(
-          actual.knownSymptoms,
-          benchmarkCase.expectations.knownSymptomsInclude
-        ),
-        benchmarkCase.expectations.knownSymptomsInclude,
+        containsAll(actual.knownSymptoms, knownSymptomsExpected),
+        knownSymptomsExpected,
         actual.knownSymptoms
       )
     );
   }
 
-  if (benchmarkCase.expectations.answeredQuestionsExclude.length > 0) {
+  const answeredQuestionsExcluded =
+    fixtureCase?.expected.answeredQuestionsExclude?.length > 0
+      ? fixtureCase.expected.answeredQuestionsExclude
+      : benchmarkCase.expectations.answeredQuestionsExclude;
+  if (answeredQuestionsExcluded.length > 0) {
     checks.push(
       buildCheck(
         "answered_questions_excluded",
-        benchmarkCase.expectations.answeredQuestionsExclude.every(
+        answeredQuestionsExcluded.every(
           (questionId) => !actual.answeredQuestions.includes(questionId)
         ),
-        benchmarkCase.expectations.answeredQuestionsExclude,
+        answeredQuestionsExcluded,
         actual.answeredQuestions
       )
     );
   }
 
-  if (benchmarkCase.expectations.lastQuestionAsked !== null) {
+  const expectedReasonCode =
+    fixtureCase?.expected.reasonCode ?? null;
+  if (expectedReasonCode !== null) {
+    checks.push(
+      buildCheck(
+        "reason_code_matches",
+        actual.reasonCode === expectedReasonCode,
+        expectedReasonCode,
+        actual.reasonCode
+      )
+    );
+  }
+
+  const lastQuestionAskedExpected =
+    fixtureCase?.expected.lastQuestionAsked ??
+    benchmarkCase.expectations.lastQuestionAsked;
+  if (lastQuestionAskedExpected !== null) {
     checks.push(
       buildCheck(
         "last_question_asked_matches",
-        actual.lastQuestionAsked === benchmarkCase.expectations.lastQuestionAsked,
-        benchmarkCase.expectations.lastQuestionAsked,
+        actual.lastQuestionAsked === lastQuestionAskedExpected,
+        lastQuestionAskedExpected,
         actual.lastQuestionAsked
       )
     );
@@ -843,8 +930,9 @@ function buildChecks(benchmarkCase, actual) {
   return checks;
 }
 
-async function runBenchmarkCase(runtime, benchmarkCase, fixtureExtractionMap) {
-  const extraction = deriveExtraction(benchmarkCase, fixtureExtractionMap);
+async function runBenchmarkCase(runtime, benchmarkCase, fixtureCaseMap) {
+  const fixtureCase = fixtureCaseMap.get(benchmarkCase.id) ?? null;
+  const extraction = deriveExtraction(benchmarkCase, fixtureCaseMap);
   runtime.setExtraction(extraction);
   const request = buildRequest(benchmarkCase, runtime);
   const startedAt = Date.now();
@@ -858,7 +946,7 @@ async function runBenchmarkCase(runtime, benchmarkCase, fixtureExtractionMap) {
 
     const durationMs = Date.now() - startedAt;
     const actual = buildActualResult(value.response, value.payload, durationMs);
-    const checks = buildChecks(benchmarkCase, actual);
+    const checks = buildChecks(benchmarkCase, actual, fixtureCase);
     const passed = checks.every((check) => check.passed);
 
     return {
@@ -1042,11 +1130,11 @@ async function main() {
   let runtime = null;
 
   try {
-    const fixtureExtractionMap = readFixtureExtractionMap();
-    const dangerousCases = selectDangerousSlice(readBenchmarkEntries());
-    const extractionSources = dangerousCases.map((benchmarkCase) =>
-      deriveExtraction(benchmarkCase, fixtureExtractionMap).source
-    );
+      const fixtureCaseMap = readFixtureCaseMap();
+      const dangerousCases = selectDangerousSlice(readBenchmarkEntries());
+      const extractionSources = dangerousCases.map((benchmarkCase) =>
+      deriveExtraction(benchmarkCase, fixtureCaseMap).source
+      );
     dangerousSlice = buildDangerousSliceMetadata(
       dangerousCases,
       extractionSources
@@ -1056,8 +1144,8 @@ async function main() {
     const results = [];
 
     for (const benchmarkCase of dangerousCases) {
-      results.push(
-        await runBenchmarkCase(runtime, benchmarkCase, fixtureExtractionMap)
+        results.push(
+        await runBenchmarkCase(runtime, benchmarkCase, fixtureCaseMap)
       );
     }
 
