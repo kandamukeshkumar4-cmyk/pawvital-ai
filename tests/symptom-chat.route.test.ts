@@ -6149,6 +6149,28 @@ describe("VET-900 comprehensive scenarios", () => {
       expect(payload.type).not.toBe("usage_limit");
       expect(mockExtractWithQwen).toHaveBeenCalled();
     });
+
+    it("bypasses the usage gate for conversations already in progress", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildBillingSupabase({
+          completedChecksThisMonth: 999,
+          userId: "user-1",
+        })
+      );
+
+      let activeSession = createSession();
+      activeSession = recordAnswer(activeSession, "appetite", false);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(activeSession, "still not eating today")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).not.toBe("usage_limit");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
+    });
   });
 
   // --- 10. Error handling ---
