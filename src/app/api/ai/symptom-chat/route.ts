@@ -51,13 +51,8 @@ import {
   getRateLimitId,
 } from "@/lib/rate-limit";
 import {
-  buildDeterministicCaseSummary,
-  buildNarrativeSnapshot,
   ensureStructuredCaseMemory,
-  getProtectedConversationState,
-  mergeCompressionResult,
   recordConversationTelemetry,
-  shouldCompressCaseMemory,
   syncStructuredCaseMemoryQuestions,
   type RecoverySource,
   updateStructuredCaseMemory,
@@ -71,10 +66,6 @@ import {
   transitionToNeedsClarification,
   transitionToEscalation,
 } from "@/lib/conversation-state";
-import {
-  compressCaseMemoryWithMiniMax,
-  isMiniMaxConfigured,
-} from "@/lib/minimax";
 import {
   appendShadowComparison,
   appendSidecarObservation,
@@ -142,6 +133,7 @@ import {
   extractDataFromMessage,
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
+import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
 import {
@@ -1347,110 +1339,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
-// =============================================================================
-// STEP 1: Data Extraction — Qwen 3.5 122B
-// =============================================================================
-
-async function maybeCompressStructuredCaseMemory(
-  session: TriageSession,
-  pet: PetProfile,
-  messages: { role: "user" | "assistant"; content: string }[],
-  latestUserMessage: string,
-  options: {
-    imageAnalyzed: boolean;
-    changedSymptoms: string[];
-    changedAnswers: string[];
-  }
-): Promise<TriageSession> {
-  const shouldRefresh = shouldCompressCaseMemory(session, messages, options);
-  const caseMemory = ensureStructuredCaseMemory(session);
-  const fallbackSummary = buildDeterministicCaseSummary(session, pet);
-
-  if (!shouldRefresh) {
-    return {
-      ...session,
-      case_memory: {
-        ...caseMemory,
-        compressed_summary: caseMemory.compressed_summary || fallbackSummary,
-      },
-    };
-  }
-
-  if (!isMiniMaxConfigured()) {
-    return {
-      ...session,
-      case_memory: {
-        ...caseMemory,
-        compressed_summary: fallbackSummary,
-        compression_model: "deterministic-summary",
-        last_compressed_turn: caseMemory.turn_count,
-      },
-    };
-  }
-
-  const protectedState = getProtectedConversationState(session);
-
-  const prompt = `You are compressing an active veterinary triage case into stable memory for downstream reasoning.
-
-Summarize only confirmed or strongly supported facts. Preserve:
-- main symptoms
-- direct owner answers
-- important negative findings
-- image findings when present
-
-Do NOT include or reference question IDs, answer tracking, conversation control state, or telemetry entries. Telemetry data is already excluded from this snapshot.
-
-Keep the summary under 180 words and avoid diagnosis language unless already explicit in the case.
-
-CASE SNAPSHOT:
-${buildNarrativeSnapshot(session, messages, latestUserMessage)}
-
-Return ONLY the summary text.`;
-
-  try {
-    const compressed = await compressCaseMemoryWithMiniMax(prompt);
-    const mergedSession = mergeCompressionResult(
-      session,
-      compressed,
-      protectedState
-    );
-    return recordConversationTelemetry(mergedSession, {
-      event: "compression",
-      turn_count: mergedSession.case_memory?.turn_count ?? 0,
-      outcome: "success",
-      model: compressed.model,
-      compression_used: true,
-      compression_model: compressed.model,
-      narrative_only: true,
-      control_state_preserved: true,
-    });
-  } catch (error) {
-    console.error("MiniMax memory compression failed:", error);
-    const telemetrySession = recordConversationTelemetry(session, {
-      event: "compression",
-      turn_count: session.case_memory?.turn_count ?? 0,
-      outcome: "fallback",
-      model: "deterministic-summary",
-      compression_used: false,
-      compression_model: "deterministic-summary",
-      reason: error instanceof Error ? error.message : "unknown error",
-      narrative_only: true,
-      control_state_preserved: true,
-      fallback_used: true,
-    });
-    return {
-      ...telemetrySession,
-      case_memory: {
-        ...ensureStructuredCaseMemory(telemetrySession),
-        compressed_summary: fallbackSummary,
-        compression_model: "deterministic-summary",
-        last_compressed_turn: caseMemory.turn_count,
-      },
-    };
-  }
-}
-
-// =============================================================================
-// STEP 6: Diagnosis Report — Nemotron Ultra 253B (reasoning) + GLM-5 (safety)
-// =============================================================================
