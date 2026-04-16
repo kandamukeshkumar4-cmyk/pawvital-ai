@@ -4,7 +4,6 @@ import {
   phraseWithLlama,
   reviewQuestionPlanWithNemotron,
   verifyQuestionWithNemotron,
-  diagnoseWithDeepSeek,
   runVisionPipeline,
   parseVisionForMatrix,
   imageGuardrail,
@@ -18,7 +17,6 @@ import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   createSession,
   addSymptoms,
-  recordAnswer,
   getMissingQuestions,
   getQuestionText,
   getExtractionSchema,
@@ -30,27 +28,15 @@ import {
 import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
 import {
   shouldAnalyzeWoundImage,
-  type ImageGateWarning,
   type ImageMeta,
 } from "@/lib/image-gate";
 import {
   detectBreedWithNyckel,
-  fetchBreedProfile,
   getEffectivePetProfile,
   isLikelyDogContext,
   runRoboflowSkinWorkflow,
   shouldUseImageInferredBreed,
 } from "@/lib/pet-enrichment";
-import {
-  formatBreedRiskContext,
-  getBreedRiskProfiles,
-} from "@/lib/breed-risk";
-import {
-  buildReferenceImageQuery,
-  buildKnowledgeSearchQuery,
-  searchClinicalCases,
-  formatClinicalCaseContext,
-} from "@/lib/knowledge-retrieval";
 import {
   inferSupportedImageDomain,
   type ConsultOpinion,
@@ -58,14 +44,11 @@ import {
   type VisionClinicalEvidence,
   type VisionPreprocessResult,
 } from "@/lib/clinical-evidence";
-import { buildStructuredEvidenceChain } from "@/lib/evidence-chain";
-import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
   consultWithMultimodalSidecar,
   describeLiveTrafficDecision,
   getLiveTrafficDecision,
   isAbortLikeError as isSidecarAbortError,
-  isAsyncReviewServiceConfigured,
   isMultimodalConsultConfigured,
   isVisionPreprocessConfigured,
   preprocessVeterinaryImage,
@@ -75,8 +58,6 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
-import { computeBayesianScore } from "@/lib/bayesian-scorer";
-import { buildReportConfidenceCalibration } from "@/lib/report-confidence";
 import {
   evaluateSymptomCheckUsageGate,
   getPlanFromSubscription,
@@ -110,16 +91,11 @@ import {
 import {
   appendShadowComparison,
   appendSidecarObservation,
-  buildInternalShadowTelemetrySnapshot,
-  buildObservabilitySnapshot,
   describeShadowComparison,
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
-import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
-import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
 import {
   buildContradictionRecord,
   detectTextContradictions,
@@ -127,24 +103,19 @@ import {
 import {
   buildCannotAssessOutcome,
   findReportBlockingCriticalInfo,
-  buildTerminalOutcomeMessage,
   type AlternateObservableRecoveryOutcome,
   detectOutOfScopeTurn,
   type UncertaintyTerminalOutcome,
 } from "@/lib/clinical/uncertainty-routing";
 import { evaluateCriticalInfoRule } from "@/lib/clinical/critical-info-rules";
-import { emit, EventType } from "@/lib/events/event-bus";
 import "@/lib/events/notification-handler";
 import {
   getNextQuestionAvoidingRepeat,
-  coerceAnswerForQuestion,
-  questionAllowsCanonicalUnknown,
 } from "@/lib/symptom-chat/answer-coercion";
 import {
   resolvePendingQuestionAnswer,
   extractDeterministicAnswersForTurn,
   mergeTurnAnswers,
-  sanitizeAnswerForQuestion,
 } from "@/lib/symptom-chat/answer-extraction";
 import {
   buildCompactImageSignalContext,
@@ -170,25 +141,16 @@ import {
   shouldTriggerSyncConsult,
   buildEvidenceChainNotes,
   didVisualEvidenceInfluenceQuestion,
-  buildReportRetrievalBundle,
-  formatRetrievalTextContext,
-  formatRetrievalImageContext,
-  formatVisualEvidenceForReport,
-  formatConsultEvidenceForReport,
-  formatEvidenceChainForReport,
-  buildEvidenceChainForResponse,
-  deriveBaselineReportConfidence,
-  shouldScheduleAsyncConsultReview,
   deriveSymptomsFromImageEvidence,
-  runAfterSafely,
-  parseReportJSON,
-  safetyVerify,
 } from "@/lib/symptom-chat/report-helpers";
 import {
-  buildCannotAssessResponse,
+  buildAlternateObservableRecoveryResponse,
+  buildImageGateMessage,
   buildOutOfScopeResponse,
   buildRedFlagEmergencyResponse,
+  buildTerminalOutcomeResponse,
   buildVisionGuardrailEmergencyResponse,
+  recordTerminalOutcomeTelemetry,
 } from "@/lib/symptom-chat/response-builders";
 import {
   extractDataFromMessage,
@@ -197,6 +159,7 @@ import {
   buildConfirmedQASummary,
   buildDeterministicQuestionFallback,
 } from "@/lib/symptom-chat/extraction-helpers";
+import { generateReport } from "@/lib/symptom-chat/report-pipeline";
 import type { SubscriptionRow } from "@/types";
 
 // =============================================================================
@@ -491,14 +454,14 @@ export async function POST(request: Request) {
         );
       }
 
-      return await generateReport(
+      return await generateReport({
         session,
-        effectivePet,
+        pet: effectivePet,
         messages,
         image,
-        new URL(request.url).origin,
-        verifiedUserId
-      );
+        requestOrigin: new URL(request.url).origin,
+        verifiedUserId,
+      });
     }
 
     const lastUserMessage = messages.filter((m) => m.role === "user").pop();
@@ -1941,491 +1904,6 @@ async function phraseQuestion(
 // STEP 6: Diagnosis Report — Nemotron Ultra 253B (reasoning) + GLM-5 (safety)
 // =============================================================================
 
-// ── Server-side Supabase save (uses service role to bypass RLS) ──
-function buildVetHandoffSummary(
-  session: TriageSession,
-  pet: PetProfile,
-  report: Record<string, unknown>
-): string {
-  const ownerFacts = Object.entries(session.extracted_answers)
-    .slice(0, 8)
-    .map(([key, value]) => `${key}: ${String(value)}`);
-  const differentials = Array.isArray(report.differential_diagnoses)
-    ? (report.differential_diagnoses as Array<Record<string, unknown>>)
-        .slice(0, 3)
-        .map((entry) => String(entry.condition || "").trim())
-        .filter(Boolean)
-    : [];
-  const tests = Array.isArray(report.recommended_tests)
-    ? (report.recommended_tests as Array<Record<string, unknown>>)
-        .slice(0, 3)
-        .map((entry) => String(entry.test || "").trim())
-        .filter(Boolean)
-    : [];
-
-  return [
-    `Patient: ${pet.name}, ${pet.age_years}y ${pet.breed}, ${pet.weight} lbs.`,
-    `Urgency: ${String(report.recommendation || report.severity || "monitor")}.`,
-    `Main concerns: ${session.known_symptoms.join(", ") || "not fully established"}.`,
-    ownerFacts.length > 0 ? `Owner-reported facts: ${ownerFacts.join("; ")}.` : "",
-    session.vision_analysis
-      ? `Visual findings: ${session.vision_analysis.replace(/\s+/g, " ").trim().slice(0, 220)}`
-      : "",
-    differentials.length > 0
-      ? `Top differentials: ${differentials.join("; ")}.`
-      : "",
-    tests.length > 0 ? `Recommended diagnostics: ${tests.join("; ")}.` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-async function generateReport(
-  session: TriageSession,
-  pet: PetProfile,
-  messages: { role: string; content: string }[],
-  image?: string,
-  requestOrigin?: string,
-  verifiedUserId?: string | null
-) {
-  if (
-    isLikelyDogContext(pet) &&
-    pet.breed &&
-    (!session.breed_profile_summary || session.breed_profile_name !== pet.breed)
-  ) {
-    try {
-      const breedProfile = await fetchBreedProfile(pet.breed, pet);
-      if (breedProfile) {
-        session.breed_profile_name = breedProfile.breed;
-        session.breed_profile_summary = breedProfile.summary;
-      }
-    } catch (error) {
-      console.error("[Report] Deferred breed profile fetch failed:", error);
-    }
-  }
-
-  const context = buildDiagnosisContext(session, pet);
-  const knowledgeQuery = buildKnowledgeSearchQuery(
-    session,
-    pet,
-    context.top5.map((d) => d.medical_term)
-  );
-  const referenceImageQuery = buildReferenceImageQuery(
-    session,
-    pet,
-    context.top5.map((d) => d.medical_term)
-  );
-  const retrievalResult = await buildReportRetrievalBundle(
-    session,
-    pet,
-    knowledgeQuery,
-    referenceImageQuery,
-    context.top5.map((d) => d.medical_term)
-  );
-  session = retrievalResult.session;
-  const retrievalBundle = retrievalResult.bundle;
-  session.latest_retrieval_bundle = retrievalBundle;
-  const reportMemory = ensureStructuredCaseMemory(session);
-  session.case_memory = {
-    ...reportMemory,
-    retrieval_evidence: [
-      ...reportMemory.retrieval_evidence,
-      ...retrievalBundle.textChunks,
-      ...retrievalBundle.imageMatches,
-    ].slice(-16),
-    evidence_chain: [
-      ...reportMemory.evidence_chain,
-      ...buildEvidenceChainForResponse(session, retrievalBundle),
-    ].slice(-16),
-  };
-  const knowledgeContext = formatRetrievalTextContext(retrievalBundle);
-  const referenceImageContext = formatRetrievalImageContext(retrievalBundle);
-  let breedRiskContext = "";
-
-  if (pet.breed) {
-    try {
-      const breedRiskProfiles = await getBreedRiskProfiles(pet.breed);
-      breedRiskContext = formatBreedRiskContext(breedRiskProfiles);
-    } catch (error) {
-      console.error("[Report] Breed risk lookup failed:", error);
-    }
-  }
-
-  // Supplementary: search for similar clinical cases from CSV corpus
-  let clinicalCaseContext = '';
-  try {
-    const topSymptoms = session.known_symptoms.slice(0, 6);
-    if (topSymptoms.length > 0) {
-      const clinicalCases = await searchClinicalCases(topSymptoms, pet.breed, 5);
-      clinicalCaseContext = formatClinicalCaseContext(clinicalCases);
-    }
-  } catch {
-    // Non-fatal — clinical case search is supplementary
-  }
-
-  const top5Formatted = context.top5
-    .map(
-      (d, i) =>
-        `${i + 1}. ${d.medical_term} (score: ${d.final_score.toFixed(3)}, breed×${d.breed_multiplier}, age×${d.age_multiplier}, urgency: ${d.urgency})\n   Key differentiators: ${d.key_differentiators.join("; ")}\n   Typical tests: ${d.typical_tests.join("; ")}`
-    )
-    .join("\n\n");
-
-  const conversationSummary = messages
-    .slice(-10)
-    .map(
-      (m) => `${m.role === "user" ? "Owner" : "Triage AI"}: ${m.content}`
-    )
-    .join("\n");
-
-  const urgencyToSeverity: Record<string, string> = {
-    emergency: "emergency",
-    high: "high",
-    moderate: "medium",
-    low: "low",
-  };
-  const urgencyToRecommendation: Record<string, string> = {
-    emergency: "emergency_vet",
-    high: "vet_24h",
-    moderate: "vet_48h",
-    low: "monitor",
-  };
-
-  const reportPrompt = `You are a board-certified veterinary internist (DACVIM) with 15+ years of clinical experience writing a detailed clinical report.
-
-IMPORTANT — USE CORRECT CANINE ANATOMY: "front leg/forelimb" (NOT arm/forearm), "hind leg" (NOT leg), "paw" (NOT hand/foot), "digits" (NOT fingers/toes), "carpus" (NOT wrist), "hock/tarsus" (NOT ankle), "stifle" (NOT knee), "muzzle" (NOT face). Dogs do not have human body parts.
-
-PATIENT: ${pet.name}, ${pet.age_years}yr ${pet.breed}, ${pet.weight} lbs
-Known conditions: ${pet.existing_conditions?.join(", ") || "None"}
-Current medications: ${pet.medications?.join(", ") || "None"}
-
-TRIAGE CONVERSATION:
-${conversationSummary}
-
-STRUCTURED CASE MEMORY:
-${session.case_memory?.compressed_summary || buildDeterministicCaseSummary(session, pet)}
-
-CLINICAL MATRIX CALCULATIONS (pre-calculated disease probabilities — use as your ranking):
-${top5Formatted}
-
-BREED RISK PROFILE: ${context.breed_risk_summary}
-BODY SYSTEMS INVOLVED: ${context.body_systems.join(", ")}
-RED FLAGS: ${context.red_flags.length > 0 ? context.red_flags.join(", ") : "None"}
-MATRIX-DETERMINED URGENCY: ${context.highest_urgency}
-OWNER-REPORTED FACTS:
-- Latest owner turn: ${session.case_memory?.latest_owner_turn || "none"}
-- Structured facts: ${Object.entries(session.extracted_answers)
-  .map(([key, value]) => `${key}=${String(value)}`)
-  .join("; ") || "none"}
-
-DETERMINISTIC EXTRACTED FACTS:
-${context.answer_summary}
-
-VISUAL FINDINGS:
-${formatVisualEvidenceForReport(session)}
-
-CONSULT EVIDENCE:
-${formatConsultEvidenceForReport(session)}
-
-EVIDENCE CHAIN:
-${formatEvidenceChainForReport(session)}
-
-${session.image_inferred_breed ? `IMAGE-INFERRED BREED SIGNAL: ${session.image_inferred_breed} (${Math.round((session.image_inferred_breed_confidence || 0) * 100)}% confidence)\n` : ""}${session.breed_profile_summary ? `EXTERNAL BREED PROFILE: ${session.breed_profile_summary}\n` : ""}${session.roboflow_skin_summary ? `ROBOFLOW SKIN FLAG: ${session.roboflow_skin_summary}\n` : ""}${knowledgeContext ? `EXTERNAL KNOWLEDGE RETRIEVAL (trusted public corpus; use to support, not replace, the matrix ranking):\n${knowledgeContext}\n` : ""}
-${breedRiskContext ? `${breedRiskContext}\n` : ""}
-${referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases; use as supportive visual context, not a diagnosis by itself):\n${referenceImageContext}\n` : ""}
-${clinicalCaseContext ? `SIMILAR CLINICAL CASES (CSV corpus; use as supplementary case-similarity evidence, not a replacement for matrix ranking):\n${clinicalCaseContext}\n` : ""}
-
-${session.vision_analysis ? `VISUAL ANALYSIS FROM PET PHOTO (analyzed by the NVIDIA 11B/90B vision stack):\n${session.vision_analysis}\n\nIMPORTANT: Incorporate the visual findings above into your differential diagnoses and clinical notes. Reference what was observed in the image (e.g., wound characteristics, skin condition, eye appearance). The visual analysis should heavily influence your report.\n` : ""}
-YOUR TASK: Write the clinical report using the matrix's disease ranking as your primary guide. Do NOT reorder the differentials unless you have strong clinical reasoning to do so. The matrix has already applied breed multipliers, age factors, and symptom-specific modifiers.
-
-For each differential diagnosis, provide:
-- Specific breed prevalence data (e.g., "Golden Retrievers have 2.2x higher incidence of hip dysplasia")
-- Age-specific risk context
-- How the owner-reported symptoms specifically map to this condition
-- Expected disease progression if untreated
-
-For recommended tests, be SPECIFIC:
-- Name exact diagnostic procedures (e.g., "Orthogonal radiographs of the stifle — lateral and craniocaudal views" not just "X-ray")
-- Explain what each test confirms or rules out
-
-Output ONLY valid JSON (no markdown, no code blocks, no thinking):
-{
-  "severity": "${urgencyToSeverity[context.highest_urgency] || "medium"}",
-  "recommendation": "${urgencyToRecommendation[context.highest_urgency] || "vet_48h"}",
-  "title": "Specific clinical title based on top differential",
-  "explanation": "4-6 sentences for pet parent. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
-  "differential_diagnoses": [
-    {
-      "condition": "Use the medical_term from the matrix calculation",
-      "likelihood": "high" | "moderate" | "low",
-      "description": "2-3 sentences: clinical reasoning using the matrix's breed multiplier and key differentiators. Mention specific prevalence data."
-    }
-  ],
-  "clinical_notes": "Technical paragraph for veterinary colleague. Reference the matrix's probability scores, breed multipliers, and body systems.",
-  "recommended_tests": [
-    {
-      "test": "Use the typical_tests from the matrix data",
-      "reason": "What it confirms/rules out for which differential",
-      "urgency": "stat" | "urgent" | "routine"
-    }
-  ],
-  "home_care": [
-    {
-      "instruction": "Specific measurable instruction",
-      "duration": "Timeframe",
-      "details": "Include normal vs abnormal values"
-    }
-  ],
-  "actions": ["5-7 specific steps"],
-  "warning_signs": ["4-6 escalation signs with thresholds"],
-  "vet_questions": ["3-5 questions tailored to top differentials"],
-  "confidence": 0.0,
-  "evidence_chain": ["brief evidence statements linking owner facts, visual findings, and supporting references"]
-}`;
-
-  try {
-    const rawReport = await diagnoseWithDeepSeek(reportPrompt);
-    console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
-
-    const report = parseReportJSON(rawReport);
-    if (!Array.isArray(report.evidence_chain)) {
-      report.evidence_chain = buildEvidenceChainForResponse(
-        session,
-        retrievalBundle
-      );
-    }
-    report.evidenceChain = buildStructuredEvidenceChain(
-      session,
-      retrievalBundle
-    );
-
-    // ═══════════════════════════════════════════════════════════════════
-    // SAFETY LAYER: GLM-5 reviews the report for missed emergencies
-    // ═══════════════════════════════════════════════════════════════════
-    let finalReport = report;
-    if (useNvidia) {
-      try {
-        finalReport = await safetyVerify(report, pet, context);
-        console.log("[Engine] Safety: GLM-5 verified");
-      } catch (safetyError) {
-        console.error("Safety verification failed (non-blocking):", safetyError);
-      }
-    }
-
-    const hasModelDisagreement = Boolean(
-      session.case_memory?.consult_opinions?.some(
-        (opinion) => opinion.disagreements.length > 0
-      )
-    );
-    try {
-      finalReport.calibrated_confidence = buildReportConfidenceCalibration({
-        baseConfidence:
-          typeof finalReport.confidence === "number"
-            ? finalReport.confidence
-            : deriveBaselineReportConfidence(context),
-        reportSeverity:
-          finalReport.severity === "emergency" ||
-          finalReport.severity === "high" ||
-          finalReport.severity === "medium" ||
-          finalReport.severity === "low"
-            ? finalReport.severity
-            : context.highest_urgency === "emergency" ||
-                context.highest_urgency === "high" ||
-                context.highest_urgency === "moderate"
-              ? context.highest_urgency === "moderate"
-                ? "medium"
-                : context.highest_urgency
-              : "low",
-        session,
-        hasModelDisagreement,
-        textChunkCount: retrievalBundle.textChunks.length,
-        imageMatchCount: retrievalBundle.imageMatches.length,
-        breedKnown: Boolean(pet.breed?.trim()),
-        ageKnown: Number.isFinite(pet.age_years),
-        topDifferentialCondition:
-          Array.isArray(finalReport.differential_diagnoses) &&
-          finalReport.differential_diagnoses.length > 0 &&
-          typeof finalReport.differential_diagnoses[0]?.condition === "string"
-            ? finalReport.differential_diagnoses[0].condition
-            : null,
-      });
-    } catch (calibrationError) {
-      console.error(
-        "[Engine] Confidence calibration failed (non-blocking):",
-        calibrationError
-      );
-      finalReport.calibrated_confidence = null;
-    }
-
-    // ── Save to Supabase (non-blocking) ──
-    let asyncReviewScheduled = false;
-    const reviewImage = image;
-    const asyncReviewAdditionalKey = [
-      String(finalReport.title || "").trim(),
-      String(finalReport.recommendation || "").trim(),
-    ]
-      .filter(Boolean)
-      .join("|");
-    const asyncReviewShadowDecision =
-      reviewImage && requestOrigin
-        ? getShadowModeDecision({
-            service: "async-review-service",
-            session,
-            pet,
-            urgencyHint: context.highest_urgency,
-            additionalKey: asyncReviewAdditionalKey,
-          })
-        : null;
-    const asyncReviewLiveDecision = reviewImage
-      ? getLiveTrafficDecision({
-          service: "async-review-service",
-          session,
-          additionalKey: asyncReviewAdditionalKey,
-        })
-      : null;
-    const shouldAttemptAsyncReview =
-      Boolean(reviewImage) &&
-      context.highest_urgency !== "emergency" &&
-      shouldScheduleAsyncConsultReview(session) &&
-      isAsyncReviewServiceConfigured() &&
-      Boolean(requestOrigin) &&
-      Boolean(
-        asyncReviewShadowDecision?.enabled || asyncReviewLiveDecision?.enabled
-      );
-
-    if (
-      shouldAttemptAsyncReview &&
-      asyncReviewShadowDecision &&
-      asyncReviewLiveDecision
-    ) {
-      const startedAt = Date.now();
-      try {
-        asyncReviewScheduled = await enqueueAsyncReview({
-          baseUrl: requestOrigin!,
-          image: reviewImage!,
-          pet,
-          session,
-          report: finalReport,
-        });
-        session = appendSidecarObservation(session, {
-          service: "async-review-service",
-          stage: "queue",
-          latencyMs: Date.now() - startedAt,
-          outcome: asyncReviewScheduled
-            ? asyncReviewShadowDecision.enabled
-              ? "shadow"
-              : "success"
-            : "error",
-          shadowMode: asyncReviewShadowDecision.enabled,
-          fallbackUsed:
-            asyncReviewShadowDecision.enabled || !asyncReviewScheduled,
-          note: `queued=${asyncReviewScheduled}; ${describeShadowModeDecision(asyncReviewShadowDecision)}; ${describeLiveTrafficDecision(asyncReviewLiveDecision)}`,
-        });
-        if (asyncReviewScheduled) {
-          console.log("[HF Multimodal Consult] queued async review");
-        }
-      } catch (error) {
-        session = appendSidecarObservation(session, {
-          service: "async-review-service",
-          stage: "queue",
-          latencyMs: Date.now() - startedAt,
-          outcome: "error",
-          shadowMode: asyncReviewShadowDecision.enabled,
-          fallbackUsed: true,
-          note: `queue_exception=true; ${describeShadowModeDecision(asyncReviewShadowDecision)}; ${describeLiveTrafficDecision(asyncReviewLiveDecision)}`,
-        });
-        console.error("[HF Multimodal Consult] async review failed:", error);
-      }
-    }
-
-    if (asyncReviewScheduled) {
-      finalReport.async_review_scheduled = true;
-    }
-
-    finalReport.vet_handoff_summary = buildVetHandoffSummary(
-      session,
-      pet,
-      finalReport
-    );
-    const observabilitySnapshot = buildObservabilitySnapshot(session);
-    finalReport.system_observability = observabilitySnapshot;
-    const persistedShadowTelemetrySnapshot =
-      buildInternalShadowTelemetrySnapshot(session);
-
-    const persistShadowTelemetry = async () => {
-      try {
-        await appendShadowTelemetrySnapshot(persistedShadowTelemetrySnapshot);
-      } catch (shadowTelemetryError) {
-        console.error(
-          "[ShadowTelemetry] Failed to persist report telemetry:",
-          shadowTelemetryError
-        );
-      }
-    };
-
-    if (!runAfterSafely(persistShadowTelemetry)) {
-      void persistShadowTelemetry();
-    }
-
-    try {
-      finalReport.bayesian_differentials = await computeBayesianScore(
-        session.known_symptoms,
-        pet.breed,
-        pet.age_years,
-        context.top5
-      );
-    } catch (bayesianError) {
-      console.error("[Bayesian] Failed to score report differentials:", bayesianError);
-    }
-
-    let reportStorageId: string | null = null;
-    try {
-      reportStorageId = await saveSymptomReportToDB(
-        session,
-        pet,
-        finalReport
-      );
-      if (reportStorageId) {
-        finalReport.report_storage_id = reportStorageId;
-        finalReport.outcome_feedback_enabled = true;
-      }
-    } catch (saveError) {
-      console.error("[DB] Failed to save triage session:", saveError);
-    }
-
-    // Emit post-report notifications using the server-verified userId (VET-825).
-    // verifiedUserId comes from auth.getUser() at the top of POST(), never from
-    // the client request body — this prevents cross-user notification injection.
-    if (verifiedUserId && reportStorageId) {
-      emit(EventType.REPORT_READY, {
-        userId: verifiedUserId,
-        sessionId: null,
-        reportStorageId,
-        urgency: context.highest_urgency,
-        petName: pet.name ?? "your pet",
-      });
-
-      if (
-        context.highest_urgency === "emergency" ||
-        context.highest_urgency === "high"
-      ) {
-        emit(EventType.URGENCY_HIGH, {
-          userId: verifiedUserId,
-          sessionId: null,
-          urgency: context.highest_urgency as "emergency" | "high",
-          petName: pet.name ?? "your pet",
-          topDiagnosis: context.top5[0]?.medical_term ?? "Unknown",
-        });
-      }
-    }
-
-    return NextResponse.json({ type: "report", report: finalReport });
-  } catch (error) {
-    console.error("Report generation failed:", error);
-
-    throw error;
-  }
-}
-
 function demoResponse(action: string, pet: PetProfile) {
   if (action === "generate_report") {
     return NextResponse.json({
@@ -2466,85 +1944,4 @@ function demoResponse(action: string, pet: PetProfile) {
     session: createSession(),
     ready_for_report: false,
   });
-}
-
-function buildTerminalOutcomeResponse(
-  outcome: UncertaintyTerminalOutcome,
-  session: TriageSession
-) {
-  if (outcome.type === "cannot_assess") {
-    return buildCannotAssessResponse({ outcome, session });
-  }
-
-  return {
-    type: outcome.type,
-    terminal_state: outcome.terminalState,
-    reason_code: outcome.reasonCode,
-    owner_message: outcome.ownerMessage,
-    recommended_next_step: outcome.recommendedNextStep,
-    message: buildTerminalOutcomeMessage(outcome),
-    session: sanitizeSessionForClient(session),
-    ready_for_report: false,
-    conversationState: outcome.conversationState,
-  };
-}
-
-function recordTerminalOutcomeTelemetry(
-  session: TriageSession,
-  outcome: UncertaintyTerminalOutcome,
-  questionId?: string,
-  turnNumberOverride?: number
-) {
-  const turnNumber =
-    turnNumberOverride ?? (session.case_memory?.turn_count ?? 0);
-
-  return recordConversationTelemetry(session, {
-    event: "terminal_outcome",
-    turn_count: turnNumber,
-    question_id: questionId,
-    outcome: "success",
-    reason: outcome.reasonCode,
-    terminal_outcome_metric: {
-      terminal_state: outcome.terminalState,
-      reason_code: outcome.reasonCode,
-      conversation_state: outcome.conversationState,
-      recommended_next_step: outcome.recommendedNextStep,
-      turn_number: turnNumber,
-      ...(questionId ? { question_id: questionId } : {}),
-    },
-  });
-}
-
-function buildAlternateObservableRecoveryResponse(
-  outcome: AlternateObservableRecoveryOutcome,
-  session: TriageSession
-) {
-  return {
-    type: "question",
-    question_id: outcome.questionId,
-    reason_code: outcome.reasonCode,
-    message: outcome.message,
-    session: sanitizeSessionForClient(session),
-    ready_for_report: false,
-    conversationState: outcome.conversationState,
-  };
-}
-
-function buildImageGateMessage(
-  petName: string,
-  gate: ImageGateWarning
-): string {
-  if (gate.reason === "blurry") {
-    return `This photo is a little too blurry for me to reliably analyze ${petName}'s wound or skin issue. Please retake a clear, well-lit close-up of the affected area, or use Analyze Anyway if this is the best photo you have.`;
-  }
-
-  if (gate.reason === "low_resolution") {
-    return `This photo looks too small or compressed for reliable wound analysis. Please retake a closer, sharper photo that fills most of the frame with the affected area, or use Analyze Anyway if needed.`;
-  }
-
-  const labelDetail = gate.topLabel
-    ? ` The quick framing check matched "${gate.topLabel}".`
-    : "";
-
-  return `This looks more like a full-pet or unrelated photo than a close-up of the affected area.${labelDetail} Please upload a close, well-lit photo of the wound or skin issue, or use Analyze Anyway if this is the only image available.`;
 }
