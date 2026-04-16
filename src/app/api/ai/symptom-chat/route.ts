@@ -82,7 +82,6 @@ import {
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 import {
   buildContradictionRecord,
   detectTextContradictions,
@@ -143,6 +142,7 @@ import {
   extractDataFromMessage,
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
+import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
 import {
   gateQuestionBeforePhrasing,
@@ -253,16 +253,7 @@ export async function POST(request: Request) {
     // Resolve the authenticated user server-side so REPORT_READY / URGENCY_HIGH
     // can be emitted with a trusted userId. Falls back to null in demo mode or
     // when the session cookie is absent — emissions are skipped in that case.
-    let verifiedUserId: string | null = null;
-    try {
-      const supabase = await createServerSupabaseClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      verifiedUserId = user?.id ?? null;
-    } catch {
-      // Demo mode or misconfigured Supabase — safe to continue without auth
-    }
+    const verifiedUserId = await resolveVerifiedUserId();
 
     if (action === "generate_report") {
       const reportBlockingCriticalInfo = findReportBlockingCriticalInfo(session);
