@@ -383,6 +383,120 @@ function matchesExposureText(
   return keywords.some((keyword) => lower.includes(keyword));
 }
 
+function hasSymptom(session: TriageSession, symptom: string): boolean {
+  return session.known_symptoms.includes(symptom);
+}
+
+function getAnswerText(
+  session: TriageSession,
+  questionId: string
+): string | null {
+  const value = session.extracted_answers[questionId];
+  return typeof value === "string" ? value.toLowerCase().trim() : null;
+}
+
+function answerTextIncludes(
+  session: TriageSession,
+  questionId: string,
+  fragments: string[]
+): boolean {
+  const value = getAnswerText(session, questionId);
+  return value !== null && fragments.some((fragment) => value.includes(fragment));
+}
+
+function hasAbnormalGumColor(session: TriageSession): boolean {
+  const gumColor = session.extracted_answers.gum_color;
+  return gumColor === "blue" || gumColor === "pale_white";
+}
+
+function hasRespiratoryDistressComposite(session: TriageSession): boolean {
+  if (
+    !hasSymptom(session, "difficulty_breathing") &&
+    !hasSymptom(session, "coughing_breathing_combined")
+  ) {
+    return false;
+  }
+
+  return (
+    hasAbnormalGumColor(session) ||
+    session.extracted_answers.breathing_onset === "sudden" ||
+    session.extracted_answers.coughing_breathing_onset === "sudden" ||
+    answerTextIncludes(session, "position_preference", [
+      "neck extended",
+      "sitting upright",
+      "refusing to lie down",
+    ])
+  );
+}
+
+function hasCollapseRecoveryComposite(session: TriageSession): boolean {
+  if (!hasSymptom(session, "seizure_collapse")) {
+    return false;
+  }
+
+  return (
+    session.extracted_answers.collapse === true ||
+    session.extracted_answers.consciousness_level === "dull" ||
+    session.extracted_answers.consciousness_level === "unresponsive" ||
+    hasAbnormalGumColor(session) ||
+    hasRespiratoryDistressComposite(session)
+  );
+}
+
+function hasAcuteNeuroMotorLossComposite(session: TriageSession): boolean {
+  if (
+    !hasSymptom(session, "abnormal_gait") ||
+    session.extracted_answers.abnormal_gait_onset !== "sudden"
+  ) {
+    return false;
+  }
+
+  return (
+    answerTextIncludes(session, "affected_limbs", [
+      "back",
+      "hind",
+      "rear",
+      "all four",
+      "all 4",
+    ]) || session.extracted_answers.bladder_control === true
+  );
+}
+
+function hasAllergicSwellingComposite(session: TriageSession): boolean {
+  if (
+    !hasSymptom(session, "swelling_lump") &&
+    !hasSymptom(session, "post_vaccination_reaction") &&
+    !hasSymptom(session, "medication_reaction")
+  ) {
+    return false;
+  }
+
+  const threatenedAirwayPattern =
+    session.extracted_answers.face_swelling === true ||
+    answerTextIncludes(session, "lump_location", ["neck", "throat", "face", "muzzle"]);
+
+  return threatenedAirwayPattern && hasRespiratoryDistressComposite(session);
+}
+
+function hasAddisonianCrisisComposite(session: TriageSession): boolean {
+  return (
+    hasSymptom(session, "multi_system_decline") &&
+    session.extracted_answers.appetite_status === "none" &&
+    session.extracted_answers.water_intake === "not_drinking" &&
+    session.extracted_answers.energy_level === "barely_moving"
+  );
+}
+
+function hasEmergencyCompositeFloor(session: TriageSession): boolean {
+  return (
+    hasRespiratoryDistressComposite(session) ||
+    hasCollapseRecoveryComposite(session) ||
+    hasAcuteNeuroMotorLossComposite(session) ||
+    hasAllergicSwellingComposite(session) ||
+    hasAddisonianCrisisComposite(session)
+  );
+}
+
 /**
  * Calculate disease probabilities using the matrix + breed + age modifiers.
  * This is the core scoring algorithm — NO LLM involved.
@@ -628,6 +742,9 @@ export function isReadyForDiagnosis(session: TriageSession): boolean {
   // Always ready if red flags are triggered
   if (session.red_flags_triggered.length > 0) return true;
 
+  // Explicit emergency composites should not be downgraded into extra question loops.
+  if (hasEmergencyCompositeFloor(session)) return true;
+
   // NEVER ready if no symptoms identified yet
   if (session.known_symptoms.length === 0) return false;
 
@@ -706,7 +823,10 @@ export function buildDiagnosisContext(
   }
 
   // Red flags override urgency
-  if (session.red_flags_triggered.length > 0) {
+  if (
+    session.red_flags_triggered.length > 0 ||
+    hasEmergencyCompositeFloor(session)
+  ) {
     highestUrgency = "emergency";
   }
 

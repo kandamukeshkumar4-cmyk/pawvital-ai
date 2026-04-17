@@ -70,6 +70,20 @@ const miniatureSchnauzer: PetProfile = {
   weight: 17,
 };
 
+function buildSessionWithAnswers(
+  symptoms: string[],
+  answers: Record<string, string | boolean | number> = {}
+): TriageSession {
+  let session = createSession();
+  session = addSymptoms(session, symptoms);
+
+  for (const [questionId, value] of Object.entries(answers)) {
+    session = recordAnswer(session, questionId, value);
+  }
+
+  return session;
+}
+
 // ─── createSession ───────────────────────────────────────────────────────────
 
 describe("createSession", () => {
@@ -651,6 +665,76 @@ describe("buildDiagnosisContext", () => {
     session = recordAnswer(session, "vomit_duration", "3 days");
     const ctx = buildDiagnosisContext(session, goldenRetriever);
     expect(ctx.answer_summary).toContain("3 days");
+  });
+});
+
+describe("Dangerous emergency composite regressions", () => {
+  it.each([
+    {
+      name: "pale gums with respiratory distress",
+      symptoms: ["difficulty_breathing"],
+      answers: {
+        gum_color: "pale_white",
+      },
+    },
+    {
+      name: "collapse with delayed recovery",
+      symptoms: ["seizure_collapse"],
+      answers: {
+        consciousness_level: "dull",
+      },
+    },
+    {
+      name: "acute hind-limb paralysis",
+      symptoms: ["abnormal_gait"],
+      answers: {
+        abnormal_gait_onset: "sudden",
+        affected_limbs: "back legs",
+      },
+    },
+    {
+      name: "neck swelling with breathing compromise",
+      symptoms: ["swelling_lump", "difficulty_breathing"],
+      answers: {
+        lump_location: "neck",
+        position_preference: "neck extended",
+      },
+    },
+    {
+      name: "post-vaccine anaphylaxis pattern",
+      symptoms: ["post_vaccination_reaction"],
+      answers: {
+        face_swelling: true,
+        hives_with_breathing: true,
+      },
+    },
+    {
+      name: "Addisonian-crisis-like multi-system decline",
+      symptoms: ["multi_system_decline"],
+      answers: {
+        appetite_status: "none",
+        water_intake: "not_drinking",
+        energy_level: "barely_moving",
+      },
+    },
+  ])("keeps %s emergency-ready at the engine layer", ({
+    symptoms,
+    answers,
+  }) => {
+    const session = buildSessionWithAnswers(symptoms, answers);
+    const ctx = buildDiagnosisContext(session, unknownBreed);
+
+    expect(ctx.highest_urgency).toBe("emergency");
+    expect(isReadyForDiagnosis(session)).toBe(true);
+    expect(["low", "moderate", "high"]).not.toContain(ctx.highest_urgency);
+  });
+
+  it("does not auto-ready a recovered fainting spell without ongoing compromise", () => {
+    const session = buildSessionWithAnswers(["seizure_collapse"], {
+      consciousness_level: "alert",
+    });
+
+    expect(isReadyForDiagnosis(session)).toBe(false);
   });
 });
 
