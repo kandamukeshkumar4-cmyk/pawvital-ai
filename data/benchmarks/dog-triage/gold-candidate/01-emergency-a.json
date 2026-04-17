@@ -66,13 +66,13 @@
     },
     {
       "id": "emergency-heatstroke",
-      "description": "Overheating with collapse signs should escalate.",
+      "description": "Overheating with heavy panting, weakness, and brick-red gums should escalate.",
       "tags": ["emergency", "heat"],
       "weight": 3,
       "request": {
         "action": "chat",
         "pet": { "name": "Luna", "breed": "French Bulldog", "age_years": 3, "weight": 24, "species": "dog" },
-        "messages": [{ "role": "user", "content": "After a walk in the heat she is panting hard, weak, and her gums look bright red." }]
+        "messages": [{ "role": "user", "content": "After being out in the heat she is panting hard, weak, and her gums look bright red." }]
       },
       "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["heat_intolerance"] }
     },
@@ -90,15 +90,15 @@
     },
     {
       "id": "emergency-hit-by-car",
-      "description": "Trauma with inability to stand should escalate.",
+      "description": "Hit-by-car trauma with inability to stand and pain on movement should escalate.",
       "tags": ["emergency", "trauma"],
       "weight": 3,
       "request": {
         "action": "chat",
         "pet": { "name": "Tank", "breed": "Boxer", "age_years": 5, "weight": 68, "species": "dog" },
-        "messages": [{ "role": "user", "content": "He was hit by a car and now he cannot stand up." }]
+        "messages": [{ "role": "user", "content": "He was hit by a car and now he cannot stand and cries when I try to move him." }]
       },
-      "expectations": { "responseType": "emergency", "readyForReport": true }
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["trauma"] }
     },
     {
       "id": "emergency-dystocia",
@@ -114,13 +114,13 @@
     },
     {
       "id": "emergency-postpartum-eclampsia",
-      "description": "Nursing dam with tremors and weakness should escalate.",
+      "description": "Nursing dam with tremors, weakness, and restless pacing should escalate.",
       "tags": ["emergency", "reproductive", "tremors"],
       "weight": 3,
       "request": {
         "action": "chat",
         "pet": { "name": "Rosie", "breed": "Miniature Poodle", "age_years": 3, "weight": 13, "species": "dog" },
-        "messages": [{ "role": "user", "content": "She is nursing puppies and now she is trembling badly and seems weak and restless." }]
+        "messages": [{ "role": "user", "content": "She is nursing puppies and now she is trembling, weak, and pacing restlessly." }]
       },
       "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["pregnancy_birth", "trembling"] }
     }

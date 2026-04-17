@@ -370,7 +370,7 @@
     },
     {
       "id": "emergency-heatstroke",
-      "description": "Overheating with collapse signs should escalate.",
+      "description": "Overheating with heavy panting, weakness, and brick-red gums should escalate.",
       "tags": [
         "emergency",
         "heat"
@@ -388,7 +388,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "After a walk in the heat she is panting hard, weak, and her gums look bright red."
+            "content": "After being out in the heat she is panting hard, weak, and her gums look bright red."
           }
         ]
       },
@@ -512,7 +512,7 @@
     },
     {
       "id": "emergency-hit-by-car",
-      "description": "Trauma with inability to stand should escalate.",
+      "description": "Hit-by-car trauma with inability to stand and pain on movement should escalate.",
       "tags": [
         "emergency",
         "trauma"
@@ -530,13 +530,16 @@
         "messages": [
           {
             "role": "user",
-            "content": "He was hit by a car and now he cannot stand up."
+            "content": "He was hit by a car and now he cannot stand and cries when I try to move him."
           }
         ]
       },
       "expectations": {
         "responseType": "emergency",
-        "readyForReport": true
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "trauma"
+        ]
       },
       "complaint_family_tags": [
         "trauma",
@@ -654,7 +657,7 @@
     },
     {
       "id": "emergency-postpartum-eclampsia",
-      "description": "Nursing dam with tremors and weakness should escalate.",
+      "description": "Nursing dam with tremors, weakness, and restless pacing should escalate.",
       "tags": [
         "emergency",
         "reproductive",
@@ -673,7 +676,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "She is nursing puppies and now she is trembling badly and seems weak and restless."
+            "content": "She is nursing puppies and now she is trembling, weak, and pacing restlessly."
           }
         ]
       },
@@ -945,7 +948,7 @@
     },
     {
       "id": "emergency-parvo-style-puppy",
-      "description": "Unvaccinated puppy with vomiting and bloody diarrhea should escalate.",
+      "description": "Unvaccinated puppy with vomiting, bloody diarrhea, and dehydration should escalate.",
       "tags": [
         "emergency",
         "puppy",
@@ -964,7 +967,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "My unvaccinated puppy is vomiting and has bloody diarrhea and will not drink."
+            "content": "My unvaccinated puppy is vomiting, has bloody diarrhea, and is too weak to keep water down."
           }
         ]
       },
@@ -1091,7 +1094,7 @@
     },
     {
       "id": "emergency-resting-open-mouth-breathing",
-      "description": "Open-mouth breathing at rest with cyanotic concern should escalate.",
+      "description": "Open-mouth breathing at rest with blue-gray gums should escalate.",
       "tags": [
         "emergency",
         "respiratory"
@@ -1109,7 +1112,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "He is open-mouth breathing while resting and his gums are looking bluish."
+            "content": "He is open-mouth breathing while resting on the floor and his gums look bluish-gray."
           }
         ]
       },
@@ -1235,7 +1238,7 @@
     },
     {
       "id": "emergency-oral-bleeding-cant-swallow",
-      "description": "Oral bleeding with inability to drink should escalate.",
+      "description": "Oral bleeding with inability to swallow water should escalate.",
       "tags": [
         "emergency",
         "oral"
@@ -1253,7 +1256,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "There is blood coming from his mouth and he cannot really eat or drink."
+            "content": "There is blood coming from his mouth and he cannot swallow water without gagging."
           }
         ]
       },
@@ -1307,7 +1310,7 @@
     },
     {
       "id": "emergency-rat-poison-bleeding",
-      "description": "Possible anticoagulant rodenticide exposure with bleeding should escalate.",
+      "description": "Possible rat poison exposure with gum bleeding and weakness should escalate.",
       "tags": [
         "emergency",
         "toxin",
@@ -1326,13 +1329,16 @@
         "messages": [
           {
             "role": "user",
-            "content": "My dog may have gotten rat poison and now I see bleeding from his gums."
+            "content": "My dog may have eaten rat poison and now there is blood on his gums and he seems weak."
           }
         ]
       },
       "expectations": {
         "responseType": "emergency",
-        "readyForReport": true
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "medication_reaction"
+        ]
       },
       "complaint_family_tags": [
         "medication_reaction"
@@ -3712,7 +3718,7 @@
     },
     {
       "id": "emergency-choking-foreign-body",
-      "description": "Choking with gagging and pawing at mouth should escalate.",
+      "description": "Choking with a suspected foreign body and distressed breathing should escalate.",
       "tags": [
         "emergency",
         "airway",
@@ -3744,7 +3750,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "My dog is gagging and pawing at his mouth like something is stuck."
+            "content": "My dog is choking, pawing at his mouth, and gasping like something is stuck in his throat."
           }
         ]
       },
@@ -3925,7 +3931,7 @@
     },
     {
       "id": "emergency-burn-chemical",
-      "description": "Chemical burn to skin or paws should escalate.",
+      "description": "Chemical burn after caustic cleaner exposure with blistering skin should escalate.",
       "tags": [
         "emergency",
         "chemical",
@@ -3934,7 +3940,10 @@
       "weight": 3,
       "expectations": {
         "responseType": "emergency",
-        "readyForReport": true
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "wound_skin_issue"
+        ]
       },
       "complaint_family_tags": [
         "wound_skin_issue"
@@ -3954,7 +3963,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "My dog stepped in drain cleaner and his paw is red and blistered."
+            "content": "My dog stepped in drain cleaner and now his paw pads are red, blistered, and peeling."
           }
         ]
       },
@@ -4207,7 +4216,7 @@
     },
     {
       "id": "emergency-protozoal-acute-babesia",
-      "description": "Acute weakness with pale gums and dark urine should escalate.",
+      "description": "Acute weakness with pale gums and dark brown urine should escalate.",
       "tags": [
         "emergency",
         "infectious",
@@ -4216,7 +4225,10 @@
       "weight": 3,
       "expectations": {
         "responseType": "emergency",
-        "readyForReport": true
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "lethargy"
+        ]
       },
       "complaint_family_tags": [
         "lethargy"
@@ -4236,7 +4248,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "My dog is extremely weak, his gums are pale, and his urine is dark brown."
+            "content": "My dog is suddenly extremely weak, his gums are pale, and his urine is dark brown."
           }
         ]
       },
@@ -4417,7 +4429,7 @@
     },
     {
       "id": "emergency-hemorrhagic-diarrhea-shock",
-      "description": "Profuse bloody diarrhea with weakness and pale gums should escalate.",
+      "description": "Explosive bloody diarrhea with pale gums and shock signs should escalate.",
       "tags": [
         "emergency",
         "gi",
@@ -4449,7 +4461,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "My dog has explosive bloody diarrhea and is weak with pale gums."
+            "content": "My dog has explosive bloody diarrhea, is very weak, and his gums are pale."
           }
         ]
       },
@@ -4709,7 +4721,7 @@
     },
     {
       "id": "emergency-breathing-labored",
-      "description": "Labored breathing with abdominal effort should escalate.",
+      "description": "Labored breathing with belly effort and flared nostrils at rest should escalate.",
       "tags": [
         "emergency",
         "respiratory"
@@ -4740,7 +4752,7 @@
         "messages": [
           {
             "role": "user",
-            "content": "My dog is breathing with great effort using his belly muscles."
+            "content": "My dog is breathing hard using his belly muscles and flaring his nostrils while lying still."
           }
         ]
       },

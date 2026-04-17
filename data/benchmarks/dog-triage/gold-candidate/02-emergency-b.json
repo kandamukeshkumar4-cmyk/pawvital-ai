@@ -42,13 +42,13 @@
     },
     {
       "id": "emergency-parvo-style-puppy",
-      "description": "Unvaccinated puppy with vomiting and bloody diarrhea should escalate.",
+      "description": "Unvaccinated puppy with vomiting, bloody diarrhea, and dehydration should escalate.",
       "tags": ["emergency", "puppy", "gi"],
       "weight": 3,
       "request": {
         "action": "chat",
         "pet": { "name": "Nugget", "breed": "Mixed Breed", "age_years": 0.2, "weight": 7, "species": "dog" },
-        "messages": [{ "role": "user", "content": "My unvaccinated puppy is vomiting and has bloody diarrhea and will not drink." }]
+        "messages": [{ "role": "user", "content": "My unvaccinated puppy is vomiting, has bloody diarrhea, and is too weak to keep water down." }]
       },
       "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["vomiting_diarrhea_combined"] }
     },
@@ -66,13 +66,13 @@
     },
     {
       "id": "emergency-resting-open-mouth-breathing",
-      "description": "Open-mouth breathing at rest with cyanotic concern should escalate.",
+      "description": "Open-mouth breathing at rest with blue-gray gums should escalate.",
       "tags": ["emergency", "respiratory"],
       "weight": 3,
       "request": {
         "action": "chat",
         "pet": { "name": "Moose", "breed": "Pug", "age_years": 8, "weight": 23, "species": "dog" },
-        "messages": [{ "role": "user", "content": "He is open-mouth breathing while resting and his gums are looking bluish." }]
+        "messages": [{ "role": "user", "content": "He is open-mouth breathing while resting on the floor and his gums look bluish-gray." }]
       },
       "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["difficulty_breathing"] }
     },
@@ -90,27 +90,27 @@
     },
     {
       "id": "emergency-oral-bleeding-cant-swallow",
-      "description": "Oral bleeding with inability to drink should escalate.",
+      "description": "Oral bleeding with inability to swallow water should escalate.",
       "tags": ["emergency", "oral"],
       "weight": 3,
       "request": {
         "action": "chat",
         "pet": { "name": "Finn", "breed": "Cocker Spaniel", "age_years": 10, "weight": 31, "species": "dog" },
-        "messages": [{ "role": "user", "content": "There is blood coming from his mouth and he cannot really eat or drink." }]
+        "messages": [{ "role": "user", "content": "There is blood coming from his mouth and he cannot swallow water without gagging." }]
       },
       "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["dental_problem"] }
     },
     {
       "id": "emergency-rat-poison-bleeding",
-      "description": "Possible anticoagulant rodenticide exposure with bleeding should escalate.",
+      "description": "Possible rat poison exposure with gum bleeding and weakness should escalate.",
       "tags": ["emergency", "toxin", "bleeding"],
       "weight": 3,
       "request": {
         "action": "chat",
         "pet": { "name": "Wally", "breed": "Mixed Breed", "age_years": 6, "weight": 49, "species": "dog" },
-        "messages": [{ "role": "user", "content": "My dog may have gotten rat poison and now I see bleeding from his gums." }]
+        "messages": [{ "role": "user", "content": "My dog may have eaten rat poison and now there is blood on his gums and he seems weak." }]
       },
-      "expectations": { "responseType": "emergency", "readyForReport": true }
+      "expectations": { "responseType": "emergency", "readyForReport": true, "knownSymptomsInclude": ["medication_reaction"] }
     },
     {
       "id": "emergency-unresponsive-after-tremors",
