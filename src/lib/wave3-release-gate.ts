@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 import type {
   LiveEvalFailure,
   LiveEvalScorecard,
@@ -17,6 +19,55 @@ export interface Wave3ModalitySummary {
   caseCount: number;
 }
 
+export interface Wave3CanonicalManifest {
+  suiteId: string;
+  suiteVersion: string;
+  generatedAt: string;
+  manifestHash: string;
+  caseIds: string[];
+  shardPaths: string[];
+  totalCases: number;
+  complaintFamilyCounts: Record<string, number>;
+  riskTierCounts: Record<string, number>;
+  modalityCounts: Record<string, number>;
+}
+
+export interface Wave3LegacyFreezeManifest {
+  version: string;
+  generatedAt: string;
+  uniqueCaseCount: number;
+  strata: Array<{
+    fileName: string;
+  }>;
+  multimodalSlices?: Array<{
+    fileName: string;
+    modality: string;
+    caseCount: number;
+  }>;
+}
+
+export interface Wave3SuiteIdentityCheck {
+  aligned: boolean;
+  extraCaseIds: string[];
+  missingCaseIds: string[];
+  duplicateCaseIds: string[];
+  failures: string[];
+  observedSuiteId: string | null;
+  observedManifestHash: string | null;
+  observedTotalCases: number | null;
+}
+
+export interface Wave3LiveScorecard extends LiveEvalScorecard {
+  manifestHash?: string;
+  extraCaseIds?: string[];
+  missingCaseIds?: string[];
+  duplicateCaseIds?: string[];
+  suiteIdentityFailures?: string[];
+  suiteIdentityAligned?: boolean;
+  observedSuiteId?: string | null;
+  observedManifestHash?: string | null;
+}
+
 export interface Wave3CoverageSummary {
   totalCases: number;
   complaintFamilyCounts: Record<string, number>;
@@ -28,11 +79,19 @@ export interface Wave3ReleaseGateResult {
   pass: boolean;
   failures: string[];
   warnings: string[];
+  suiteId: string;
+  manifestHash: string;
+  totalCases: number;
+  generatedAt: string;
+  extraCaseIds: string[];
+  missingCaseIds: string[];
+  duplicateCaseIds: string[];
+  suiteIdentityFailures: string[];
   coverage: Wave3CoverageSummary;
   blockingHighRiskFailures: LiveEvalFailure[];
   missingHighStakesRuleIds: string[];
   expiredTierABEntries: ProvenanceEntry[];
-  scorecard: LiveEvalScorecard | null;
+  scorecard: Wave3LiveScorecard | null;
 }
 
 function incrementCount(
@@ -41,6 +100,51 @@ function incrementCount(
 ): void {
   if (!key) return;
   counts[key] = (counts[key] ?? 0) + 1;
+}
+
+function sortCounts(counts: Record<string, number>): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(counts).sort(([left], [right]) => left.localeCompare(right))
+  );
+}
+
+function normalizeIdList(ids: string[]): string[] {
+  return [...ids].sort((left, right) => left.localeCompare(right));
+}
+
+function findDuplicateIds(ids: string[]): string[] {
+  const counts = new Map<string, number>();
+  for (const id of ids) {
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([id]) => id)
+    .sort((left, right) => left.localeCompare(right));
+}
+
+function summarizeIdList(ids: string[]): string {
+  if (ids.length === 0) return "none";
+  if (ids.length <= 8) return ids.join(", ");
+  return `${ids.slice(0, 8).join(", ")} (+${ids.length - 8} more)`;
+}
+
+function computeWave3ManifestHash(
+  manifest: Omit<Wave3CanonicalManifest, "manifestHash" | "generatedAt">
+): string {
+  const payload = JSON.stringify({
+    suiteId: manifest.suiteId,
+    suiteVersion: manifest.suiteVersion,
+    caseIds: manifest.caseIds,
+    shardPaths: manifest.shardPaths,
+    totalCases: manifest.totalCases,
+    complaintFamilyCounts: manifest.complaintFamilyCounts,
+    riskTierCounts: manifest.riskTierCounts,
+    modalityCounts: manifest.modalityCounts,
+  });
+
+  return crypto.createHash("sha256").update(payload).digest("hex");
 }
 
 export function summarizeWave3Coverage(input: {
@@ -67,9 +171,118 @@ export function summarizeWave3Coverage(input: {
 
   return {
     totalCases: input.cases.length,
-    complaintFamilyCounts,
-    riskTierCounts,
-    modalityCounts,
+    complaintFamilyCounts: sortCounts(complaintFamilyCounts),
+    riskTierCounts: sortCounts(riskTierCounts),
+    modalityCounts: sortCounts(modalityCounts),
+  };
+}
+
+export function buildWave3CanonicalManifestFromLegacy(input: {
+  legacyManifest: Wave3LegacyFreezeManifest;
+  cases: Wave3CaseRecord[];
+}): Wave3CanonicalManifest {
+  const suiteVersion = String(input.legacyManifest.version || "").trim();
+  if (!suiteVersion) {
+    throw new Error("Wave 3 legacy manifest is missing version.");
+  }
+
+  const generatedAt = String(input.legacyManifest.generatedAt || "").trim();
+  if (!generatedAt) {
+    throw new Error("Wave 3 legacy manifest is missing generatedAt.");
+  }
+
+  const caseIds = normalizeIdList(
+    Array.from(new Set(input.cases.map((caseRecord) => caseRecord.id)))
+  );
+  if (caseIds.length !== input.legacyManifest.uniqueCaseCount) {
+    throw new Error(
+      `Wave 3 legacy manifest expected ${input.legacyManifest.uniqueCaseCount} canonical case IDs but resolved ${caseIds.length}.`
+    );
+  }
+
+  const coverage = summarizeWave3Coverage({
+    cases: input.cases,
+    modalities: (input.legacyManifest.multimodalSlices ?? []).map((slice) => ({
+      modality: slice.modality,
+      caseCount: slice.caseCount,
+    })),
+  });
+
+  const manifestBase = {
+    suiteId: suiteVersion,
+    suiteVersion,
+    generatedAt,
+    caseIds,
+    shardPaths: input.legacyManifest.strata.map(
+      (stratum) => `wave3-freeze/${stratum.fileName}`
+    ),
+    totalCases: caseIds.length,
+    complaintFamilyCounts: coverage.complaintFamilyCounts,
+    riskTierCounts: coverage.riskTierCounts,
+    modalityCounts: coverage.modalityCounts,
+  };
+
+  return {
+    ...manifestBase,
+    manifestHash: computeWave3ManifestHash(manifestBase),
+  };
+}
+
+export function validateWave3CanonicalManifest(
+  manifest: Wave3CanonicalManifest
+): Wave3CanonicalManifest {
+  if (!manifest.suiteId?.trim()) {
+    throw new Error("Wave 3 canonical manifest is missing suiteId.");
+  }
+  if (!manifest.suiteVersion?.trim()) {
+    throw new Error("Wave 3 canonical manifest is missing suiteVersion.");
+  }
+  if (!manifest.generatedAt?.trim()) {
+    throw new Error("Wave 3 canonical manifest is missing generatedAt.");
+  }
+
+  const caseIds = manifest.caseIds.map((caseId) => String(caseId).trim());
+  if (caseIds.some((caseId) => caseId.length === 0)) {
+    throw new Error("Wave 3 canonical manifest contains blank caseIds.");
+  }
+
+  const duplicateCaseIds = findDuplicateIds(caseIds);
+  if (duplicateCaseIds.length > 0) {
+    throw new Error(
+      `Wave 3 canonical manifest contains duplicate caseIds: ${summarizeIdList(duplicateCaseIds)}.`
+    );
+  }
+
+  if (manifest.totalCases !== caseIds.length) {
+    throw new Error(
+      `Wave 3 canonical manifest totalCases (${manifest.totalCases}) does not match caseIds length (${caseIds.length}).`
+    );
+  }
+
+  const manifestBase = {
+    suiteId: manifest.suiteId.trim(),
+    suiteVersion: manifest.suiteVersion.trim(),
+    caseIds,
+    shardPaths: normalizeIdList(
+      manifest.shardPaths.map((shardPath) => String(shardPath).trim())
+    ),
+    totalCases: manifest.totalCases,
+    complaintFamilyCounts: sortCounts(manifest.complaintFamilyCounts),
+    riskTierCounts: sortCounts(manifest.riskTierCounts),
+    modalityCounts: sortCounts(manifest.modalityCounts),
+  };
+  const recomputedHash = computeWave3ManifestHash(manifestBase);
+
+  if (manifest.manifestHash !== recomputedHash) {
+    throw new Error(
+      `Wave 3 canonical manifest hash mismatch: expected ${recomputedHash}, found ${manifest.manifestHash}.`
+    );
+  }
+
+  return {
+    ...manifestBase,
+    generatedAt: manifest.generatedAt.trim(),
+    manifestHash: recomputedHash,
   };
 }
 
@@ -86,10 +299,177 @@ function toHighRiskCaseIdSet(cases: Wave3CaseRecord[]): Set<string> {
   );
 }
 
+export function compareWave3SuiteIdentity(input: {
+  manifest: Wave3CanonicalManifest;
+  observedSuiteId?: string | null;
+  observedManifestHash?: string | null;
+  observedCaseIds: string[];
+  observedTotalCases?: number | null;
+  observedLabel?: string;
+}): Wave3SuiteIdentityCheck {
+  const label = input.observedLabel ?? "Wave 3 artifact";
+  const observedSuiteId =
+    typeof input.observedSuiteId === "string" && input.observedSuiteId.trim()
+      ? input.observedSuiteId.trim()
+      : null;
+  const observedManifestHash =
+    typeof input.observedManifestHash === "string" &&
+    input.observedManifestHash.trim()
+      ? input.observedManifestHash.trim()
+      : null;
+  const observedCaseIds = input.observedCaseIds
+    .map((caseId) => String(caseId).trim())
+    .filter(Boolean);
+  const duplicateCaseIds = findDuplicateIds(observedCaseIds);
+  const observedCaseIdSet = new Set(observedCaseIds);
+  const extraCaseIds = normalizeIdList(
+    [...observedCaseIdSet].filter((caseId) => !input.manifest.caseIds.includes(caseId))
+  );
+  const missingCaseIds = normalizeIdList(
+    input.manifest.caseIds.filter((caseId) => !observedCaseIdSet.has(caseId))
+  );
+  const observedTotalCases =
+    typeof input.observedTotalCases === "number" ? input.observedTotalCases : null;
+  const failures: string[] = [];
+
+  if (observedSuiteId !== input.manifest.suiteId) {
+    failures.push(
+      `${label} suiteId (${observedSuiteId ?? "missing"}) does not match canonical Wave 3 suite (${input.manifest.suiteId}).`
+    );
+  }
+  if (observedManifestHash !== input.manifest.manifestHash) {
+    failures.push(
+      `${label} manifestHash (${observedManifestHash ?? "missing"}) does not match canonical Wave 3 manifest (${input.manifest.manifestHash}).`
+    );
+  }
+  if (observedTotalCases !== null && observedTotalCases !== input.manifest.totalCases) {
+    failures.push(
+      `${label} totalCases (${observedTotalCases}) does not match canonical Wave 3 suite (${input.manifest.totalCases}).`
+    );
+  }
+  if (duplicateCaseIds.length > 0) {
+    failures.push(
+      `${label} contains duplicate case IDs: ${summarizeIdList(duplicateCaseIds)}.`
+    );
+  }
+  if (extraCaseIds.length > 0) {
+    failures.push(
+      `${label} contains ${extraCaseIds.length} extra case ID(s): ${summarizeIdList(extraCaseIds)}.`
+    );
+  }
+  if (missingCaseIds.length > 0) {
+    failures.push(
+      `${label} is missing ${missingCaseIds.length} canonical case ID(s): ${summarizeIdList(missingCaseIds)}.`
+    );
+  }
+
+  return {
+    aligned: failures.length === 0,
+    extraCaseIds,
+    missingCaseIds,
+    duplicateCaseIds,
+    failures,
+    observedSuiteId,
+    observedManifestHash,
+    observedTotalCases,
+  };
+}
+
+export function enrichLiveScorecardWithWave3Identity(input: {
+  manifest: Wave3CanonicalManifest;
+  scorecard: LiveEvalScorecard;
+  observedSuiteId?: string | null;
+  observedManifestHash?: string | null;
+  observedCaseIds: string[];
+}): Wave3LiveScorecard {
+  const identity = compareWave3SuiteIdentity({
+    manifest: input.manifest,
+    observedSuiteId: input.observedSuiteId ?? input.scorecard.suiteId,
+    observedManifestHash: input.observedManifestHash ?? input.manifest.manifestHash,
+    observedCaseIds: input.observedCaseIds,
+    observedTotalCases: input.scorecard.totalCases,
+    observedLabel: "Live scorecard",
+  });
+
+  return {
+    ...input.scorecard,
+    suiteId: input.manifest.suiteId,
+    manifestHash: input.manifest.manifestHash,
+    extraCaseIds: identity.extraCaseIds,
+    missingCaseIds: identity.missingCaseIds,
+    duplicateCaseIds: identity.duplicateCaseIds,
+    suiteIdentityFailures: identity.failures,
+    suiteIdentityAligned: identity.aligned,
+    observedSuiteId: identity.observedSuiteId,
+    observedManifestHash: identity.observedManifestHash,
+    passFail: identity.aligned ? input.scorecard.passFail : "BLOCKED",
+  };
+}
+
+function readScorecardIdentity(
+  manifest: Wave3CanonicalManifest,
+  scorecard: Wave3LiveScorecard
+): Wave3SuiteIdentityCheck {
+  const extraCaseIds = normalizeIdList(scorecard.extraCaseIds ?? []);
+  const missingCaseIds = normalizeIdList(scorecard.missingCaseIds ?? []);
+  const duplicateCaseIds = normalizeIdList(scorecard.duplicateCaseIds ?? []);
+  const failures = [...(scorecard.suiteIdentityFailures ?? [])];
+  const observedSuiteId =
+    typeof scorecard.observedSuiteId === "string"
+      ? scorecard.observedSuiteId
+      : scorecard.suiteId;
+  const observedManifestHash =
+    typeof scorecard.observedManifestHash === "string"
+      ? scorecard.observedManifestHash
+      : scorecard.manifestHash ?? null;
+
+  if (scorecard.suiteIdentityAligned === true && failures.length > 0) {
+    failures.push(
+      "Live scorecard marked suite identity as aligned even though mismatch failures were recorded."
+    );
+  }
+  if (scorecard.suiteIdentityAligned === false && failures.length === 0) {
+    failures.push(
+      "Live scorecard marked suite identity as not aligned without recording mismatch details."
+    );
+  }
+  if (scorecard.suiteId !== manifest.suiteId) {
+    failures.push(
+      `Live scorecard suiteId (${scorecard.suiteId}) does not match canonical Wave 3 suite (${manifest.suiteId}).`
+    );
+  }
+  if ((scorecard.manifestHash ?? null) !== manifest.manifestHash) {
+    failures.push(
+      `Live scorecard manifestHash (${scorecard.manifestHash ?? "missing"}) does not match canonical Wave 3 manifest (${manifest.manifestHash}).`
+    );
+  }
+  if (scorecard.totalCases !== manifest.totalCases) {
+    failures.push(
+      `Live scorecard totalCases (${scorecard.totalCases}) does not match canonical Wave 3 suite (${manifest.totalCases}).`
+    );
+  }
+
+  return {
+    aligned:
+      failures.length === 0 &&
+      extraCaseIds.length === 0 &&
+      missingCaseIds.length === 0 &&
+      duplicateCaseIds.length === 0,
+    extraCaseIds,
+    missingCaseIds,
+    duplicateCaseIds,
+    failures,
+    observedSuiteId,
+    observedManifestHash,
+    observedTotalCases: scorecard.totalCases,
+  };
+}
+
 export function evaluateWave3ReleaseGate(input: {
+  manifest: Wave3CanonicalManifest;
   cases: Wave3CaseRecord[];
   modalities?: Wave3ModalitySummary[];
-  scorecard: LiveEvalScorecard | null;
+  scorecard: Wave3LiveScorecard | null;
   requiredHighStakesRuleIds: string[];
   provenanceEntries: ProvenanceEntry[];
   referenceDate?: Date;
@@ -100,6 +480,7 @@ export function evaluateWave3ReleaseGate(input: {
   });
   const failures: string[] = [];
   const warnings: string[] = [];
+  const generatedAt = new Date().toISOString();
 
   const availableRuleIds = new Set(
     input.provenanceEntries.map((entry) => entry.rule_id)
@@ -118,6 +499,20 @@ export function evaluateWave3ReleaseGate(input: {
   });
 
   const scorecard = input.scorecard;
+  const suiteIdentity = scorecard
+    ? readScorecardIdentity(input.manifest, scorecard)
+    : {
+        aligned: false,
+        extraCaseIds: [] as string[],
+        missingCaseIds: [] as string[],
+        duplicateCaseIds: [] as string[],
+        failures: [
+          "Live scorecard is missing, so Wave 3 suite identity cannot be verified.",
+        ],
+        observedSuiteId: null,
+        observedManifestHash: null,
+        observedTotalCases: null,
+      };
   const highRiskCaseIds = toHighRiskCaseIdSet(input.cases);
   const blockingHighRiskFailures = scorecard
     ? scorecard.failures.filter((failure) => highRiskCaseIds.has(failure.caseId))
@@ -126,11 +521,7 @@ export function evaluateWave3ReleaseGate(input: {
   if (!scorecard) {
     failures.push("Missing live scorecard for Wave 3 release gate.");
   } else {
-    if (scorecard.totalCases !== input.cases.length) {
-      failures.push(
-        `Live scorecard case count (${scorecard.totalCases}) does not match Wave 3 freeze (${input.cases.length}).`
-      );
-    }
+    failures.push(...suiteIdentity.failures);
     if (scorecard.emergencyRecall < 0.98) {
       failures.push(
         `Emergency recall ${(scorecard.emergencyRecall * 100).toFixed(1)}% is below the 98.0% gate.`
@@ -171,6 +562,14 @@ export function evaluateWave3ReleaseGate(input: {
     pass: failures.length === 0,
     failures,
     warnings,
+    suiteId: input.manifest.suiteId,
+    manifestHash: input.manifest.manifestHash,
+    totalCases: input.manifest.totalCases,
+    generatedAt,
+    extraCaseIds: suiteIdentity.extraCaseIds,
+    missingCaseIds: suiteIdentity.missingCaseIds,
+    duplicateCaseIds: suiteIdentity.duplicateCaseIds,
+    suiteIdentityFailures: suiteIdentity.failures,
     coverage,
     blockingHighRiskFailures,
     missingHighStakesRuleIds,
@@ -202,17 +601,39 @@ export function renderWave3ReleaseGateMarkdown(
   const header = [
     "# Wave 3 Release Gate Report",
     "",
+    `- Generated at: ${result.generatedAt}`,
     `- Result: ${result.pass ? "PASS" : "FAIL"}`,
-    `- Total frozen cases: ${result.coverage.totalCases}`,
+    `- Suite ID: ${result.suiteId}`,
+    `- Manifest hash: ${result.manifestHash}`,
+    `- Total frozen cases: ${result.totalCases}`,
     result.scorecard
       ? `- Scorecard case count: ${result.scorecard.totalCases}`
       : "- Scorecard case count: unavailable",
+    result.scorecard
+      ? `- Scorecard generatedAt: ${result.scorecard.generatedAt}`
+      : "- Scorecard generatedAt: unavailable",
+    result.scorecard
+      ? `- Scorecard observed suiteId: ${result.scorecard.observedSuiteId ?? result.scorecard.suiteId}`
+      : "- Scorecard observed suiteId: unavailable",
     result.scorecard
       ? `- Emergency recall: ${(result.scorecard.emergencyRecall * 100).toFixed(1)}%`
       : "- Emergency recall: unavailable",
     result.scorecard
       ? `- Unsafe downgrade rate: ${(result.scorecard.unsafeDowngradeRate * 100).toFixed(2)}%`
       : "- Unsafe downgrade rate: unavailable",
+    "",
+  ].join("\n");
+
+  const suiteIdentity = [
+    "## Suite Identity",
+    "",
+    `- Extra case IDs: ${result.extraCaseIds.length > 0 ? summarizeIdList(result.extraCaseIds) : "none"}`,
+    `- Missing case IDs: ${result.missingCaseIds.length > 0 ? summarizeIdList(result.missingCaseIds) : "none"}`,
+    `- Duplicate case IDs: ${result.duplicateCaseIds.length > 0 ? summarizeIdList(result.duplicateCaseIds) : "none"}`,
+    "",
+    result.suiteIdentityFailures.length > 0
+      ? result.suiteIdentityFailures.map((failure) => `- ${failure}`).join("\n")
+      : "- Suite identity aligned with the canonical Wave 3 manifest.",
     "",
   ].join("\n");
 
@@ -256,6 +677,7 @@ export function renderWave3ReleaseGateMarkdown(
 
   return [
     header,
+    suiteIdentity,
     failures,
     warnings,
     highRiskFailures,

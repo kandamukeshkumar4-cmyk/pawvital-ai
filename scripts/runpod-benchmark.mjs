@@ -11,6 +11,8 @@ const defaultInputPath = path.join(
   "sample-cases.json"
 );
 const defaultOutputPath = path.join(rootDir, "runpod-benchmark-report.json");
+const wave3LegacyManifestName = "wave3-freeze-manifest.json";
+const wave3CanonicalManifestName = "wave3-canonical-suite.json";
 const sidecarRegistry = JSON.parse(
   fs.readFileSync(
     path.join(rootDir, "src", "lib", "sidecar-service-registry.json"),
@@ -108,6 +110,87 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function normalizeIdList(ids) {
+  return [...ids].sort((left, right) => left.localeCompare(right));
+}
+
+function resolveWave3CanonicalSuite(inputPath, suites) {
+  if (path.basename(inputPath) !== "wave3-freeze") {
+    return null;
+  }
+
+  const benchmarkDir = path.dirname(inputPath);
+  const legacyManifestPath = path.join(benchmarkDir, wave3LegacyManifestName);
+  if (!fs.existsSync(legacyManifestPath)) {
+    return null;
+  }
+
+  const legacyManifest = readJson(legacyManifestPath);
+  const canonicalManifestPath = path.join(benchmarkDir, wave3CanonicalManifestName);
+  const canonicalManifest = fs.existsSync(canonicalManifestPath)
+    ? readJson(canonicalManifestPath)
+    : null;
+  const caseMap = new Map();
+
+  for (const suite of suites) {
+    for (const row of suite.cases) {
+      if (!caseMap.has(row.id)) {
+        caseMap.set(row.id, row);
+      }
+    }
+  }
+
+  const orderedCaseIds = Array.isArray(canonicalManifest?.caseIds)
+    ? canonicalManifest.caseIds
+    : normalizeIdList([...caseMap.keys()]);
+  const expectedTotalCases =
+    typeof canonicalManifest?.totalCases === "number"
+      ? canonicalManifest.totalCases
+      : Number(legacyManifest.uniqueCaseCount || 0);
+
+  ensure(
+    orderedCaseIds.length === expectedTotalCases,
+    `Wave 3 canonical suite expected ${expectedTotalCases} case IDs but resolved ${orderedCaseIds.length}`
+  );
+
+  const missingCaseIds = orderedCaseIds.filter((caseId) => !caseMap.has(caseId));
+  ensure(
+    missingCaseIds.length === 0,
+    `Wave 3 canonical suite is missing shard cases: ${missingCaseIds.join(", ")}`
+  );
+
+  if (Array.isArray(canonicalManifest?.caseIds)) {
+    const expectedCaseIds = new Set(canonicalManifest.caseIds);
+    const extraCaseIds = normalizeIdList(
+      [...caseMap.keys()].filter((caseId) => !expectedCaseIds.has(caseId))
+    );
+    ensure(
+      extraCaseIds.length === 0,
+      `Wave 3 canonical suite excludes shard cases: ${extraCaseIds.join(", ")}`
+    );
+  }
+
+  const suiteId =
+    typeof canonicalManifest?.suiteId === "string" && canonicalManifest.suiteId.trim()
+      ? canonicalManifest.suiteId.trim()
+      : String(legacyManifest.version || "").trim();
+  const version =
+    typeof canonicalManifest?.suiteVersion === "string" &&
+    canonicalManifest.suiteVersion.trim()
+      ? canonicalManifest.suiteVersion.trim()
+      : suiteId;
+
+  ensure(suiteId, "Wave 3 canonical suite is missing suiteId");
+
+  return {
+    suite_id: suiteId,
+    version,
+    species: "dog",
+    description: `Canonical Wave 3 benchmark suite from ${inputPath}`,
+    cases: orderedCaseIds.map((caseId) => caseMap.get(caseId)),
+  };
+}
+
 function loadSuite(inputPath) {
   const stat = fs.statSync(inputPath);
   if (stat.isDirectory()) {
@@ -124,6 +207,11 @@ function loadSuite(inputPath) {
     const suites = files.map((name) => readJson(path.join(inputPath, name)));
     for (const suite of suites) {
       validateSuite(suite);
+    }
+
+    const canonicalWave3Suite = resolveWave3CanonicalSuite(inputPath, suites);
+    if (canonicalWave3Suite) {
+      return canonicalWave3Suite;
     }
 
     return {

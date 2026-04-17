@@ -1,26 +1,26 @@
 {
-  "runId": "LIVE-EVAL-2026-04-17T17-09-26-997Z",
-  "generatedAt": "2026-04-17T17:09:26.998Z",
+  "runId": "LIVE-EVAL-2026-04-17T21-41-10-242Z",
+  "generatedAt": "2026-04-17T21:41:10.242Z",
   "executionMode": "live_route",
-  "suiteId": "wave3-freeze-merged",
+  "suiteId": "wave3-freeze-v2",
   "baseUrl": "https://pawvital-ai.vercel.app",
   "filters": {},
-  "totalCases": 307,
+  "totalCases": 226,
   "passedCases": 68,
-  "failedCases": 239,
-  "totalChecks": 796,
+  "failedCases": 158,
+  "totalChecks": 596,
   "passedChecks": 302,
-  "failedChecks": 494,
-  "expectationPassRate": 0.2215,
-  "meanExpectationScore": 0.3882,
+  "failedChecks": 294,
+  "expectationPassRate": 0.3009,
+  "meanExpectationScore": 0.5273,
   "emergencyRecall": 0,
-  "emergencyCaseCount": 157,
-  "emergencyMissCount": 157,
-  "unsafeDowngradeRate": 0.5114,
-  "blockingFailures": 157,
+  "emergencyCaseCount": 76,
+  "emergencyMissCount": 76,
+  "unsafeDowngradeRate": 0.3363,
+  "blockingFailures": 76,
   "passFail": "FAIL",
   "preflight": {
-    "performedAt": "2026-04-17T16:46:59.253Z",
+    "performedAt": "2026-04-17T21:24:04.766Z",
     "routeUrl": "https://pawvital-ai.vercel.app/api/ai/sidecar-readiness",
     "ready": false,
     "requiredServices": 5,
@@ -34,9 +34,9 @@
   },
   "byResponseType": {
     "emergency": {
-      "cases": 157,
+      "cases": 76,
       "passedCases": 0,
-      "failedCases": 157,
+      "failedCases": 76,
       "meanScore": 0
     },
     "question": {
@@ -48,9 +48,9 @@
   },
   "byRiskTier": {
     "tier_1_emergency": {
-      "cases": 157,
+      "cases": 76,
       "passedCases": 0,
-      "failedCases": 157,
+      "failedCases": 76,
       "meanScore": 0
     },
     "tier_2_same_day": {
@@ -76,31 +76,7 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "cardiac-emergency-collapse-after-excitement",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "cardiac-emergency-collapse-blue-gums",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "cardiac-emergency-collapse-blue-gums",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "cardiac-emergency-rapid-breathing-pale",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -124,31 +100,7 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "cardiac-emergency-resting-breathing-distress",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-acute-paralysis",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-acute-paralysis",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-addisonian-crisis",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -172,22 +124,6 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "emergency-allergic-reaction-hives",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-anaphylaxis",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-anaphylaxis",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
@@ -197,22 +133,6 @@
     },
     {
       "caseId": "emergency-bloat-after-meal",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen"
-    },
-    {
-      "caseId": "emergency-bloat-after-meal",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen"
-    },
-    {
-      "caseId": "emergency-bloat-gasdilation",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -236,36 +156,12 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
     },
     {
-      "caseId": "emergency-blue-gums-breathing",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
       "caseId": "emergency-breathing-labored",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
-      "caseId": "emergency-breathing-labored",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
-      "caseId": "emergency-burn-chemical",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "emergency-burn-chemical",
@@ -284,36 +180,12 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
     },
     {
-      "caseId": "emergency-choking-foreign-body",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
       "caseId": "emergency-cluster-seizures",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
-    },
-    {
-      "caseId": "emergency-cluster-seizures",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
-    },
-    {
-      "caseId": "emergency-deep-bleeding-wound",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
     },
     {
       "caseId": "emergency-deep-bleeding-wound",
@@ -332,36 +204,12 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "emergency-diabetic-crisis",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-difficulty-breathing-kennel",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
-      "caseId": "emergency-difficulty-breathing-kennel",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
-      "caseId": "emergency-dog-bite-wound",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
     },
     {
       "caseId": "emergency-dog-bite-wound",
@@ -380,36 +228,12 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
     },
     {
-      "caseId": "emergency-dystocia",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
-    },
-    {
       "caseId": "emergency-electrical-shock",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-electrical-shock",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-gdv-retching",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen"
     },
     {
       "caseId": "emergency-gdv-retching",
@@ -428,36 +252,12 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "emergency-glaucoma-eye",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-hard-labor-no-puppy",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
-    },
-    {
-      "caseId": "emergency-hard-labor-no-puppy",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
-    },
-    {
-      "caseId": "emergency-heatstroke",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:heat_intolerance"
     },
     {
       "caseId": "emergency-heatstroke",
@@ -476,22 +276,6 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:diarrhea"
     },
     {
-      "caseId": "emergency-hemorrhagic-diarrhea-shock",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:diarrhea"
-    },
-    {
-      "caseId": "emergency-hit-by-car",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-hit-by-car",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
@@ -508,31 +292,7 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:trauma"
     },
     {
-      "caseId": "emergency-hit-by-car-pale-gums",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:trauma"
-    },
-    {
       "caseId": "emergency-hypoglycemia-toy-breed",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-hypoglycemia-toy-breed",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-imma-mediated-thrombocytopenia",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -556,31 +316,7 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
     },
     {
-      "caseId": "emergency-labor-green-discharge",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
-    },
-    {
       "caseId": "emergency-limping-cry-pain",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:limping"
-    },
-    {
-      "caseId": "emergency-limping-cry-pain",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:limping"
-    },
-    {
-      "caseId": "emergency-open-fracture",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -604,36 +340,12 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem"
     },
     {
-      "caseId": "emergency-oral-bleeding-cant-swallow",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem"
-    },
-    {
       "caseId": "emergency-pale-gums-collapse",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy"
-    },
-    {
-      "caseId": "emergency-pale-gums-collapse",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy"
-    },
-    {
-      "caseId": "emergency-parvo-style-puppy",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting_diarrhea_combined"
     },
     {
       "caseId": "emergency-parvo-style-puppy",
@@ -652,36 +364,12 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:post_vaccination_reaction"
     },
     {
-      "caseId": "emergency-post-vaccine-face-swelling",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:post_vaccination_reaction"
-    },
-    {
       "caseId": "emergency-postictal-no-recovery",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
-    },
-    {
-      "caseId": "emergency-postictal-no-recovery",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
-    },
-    {
-      "caseId": "emergency-postpartum-eclampsia",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth, knownSymptomsInclude:trembling"
     },
     {
       "caseId": "emergency-postpartum-eclampsia",
@@ -700,36 +388,12 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
     },
     {
-      "caseId": "emergency-postpartum-heavy-bleeding",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
-    },
-    {
       "caseId": "emergency-prolonged-seizure",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
-    },
-    {
-      "caseId": "emergency-prolonged-seizure",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
-    },
-    {
-      "caseId": "emergency-protozoal-acute-babesia",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "emergency-protozoal-acute-babesia",
@@ -748,31 +412,7 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
     },
     {
-      "caseId": "emergency-pyometra-style",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
-    },
-    {
       "caseId": "emergency-rat-poison-bleeding",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-rat-poison-bleeding",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-repeated-nonproductive-heaving",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -796,22 +436,6 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
     },
     {
-      "caseId": "emergency-resting-open-mouth-breathing",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
-      "caseId": "emergency-seizure-first-time",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse"
-    },
-    {
       "caseId": "emergency-seizure-first-time",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
@@ -821,22 +445,6 @@
     },
     {
       "caseId": "emergency-snake-bite",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-snake-bite",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-toxin-xylitol",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -860,22 +468,6 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:trembling"
     },
     {
-      "caseId": "emergency-trembling-cold-weak",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:trembling"
-    },
-    {
-      "caseId": "emergency-unresponsive-after-tremors",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:trembling"
-    },
-    {
       "caseId": "emergency-unresponsive-after-tremors",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
@@ -885,22 +477,6 @@
     },
     {
       "caseId": "emergency-urinary-blockage",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
-    },
-    {
-      "caseId": "emergency-urinary-blockage",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
-    },
-    {
-      "caseId": "emergency-urinary-blockage-distress",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -924,31 +500,7 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
     },
     {
-      "caseId": "emergency-urinary-female-blockage",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
-    },
-    {
       "caseId": "emergency-vomit-blood-collapse",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting"
-    },
-    {
-      "caseId": "emergency-vomit-blood-collapse",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting"
-    },
-    {
-      "caseId": "emergency-vomiting-green",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -972,47 +524,7 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
     },
     {
-      "caseId": "emergency-wound-deep-avulsion",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
-    },
-    {
       "caseId": "followup-breathing-onset-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-breathing-onset-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-breathing-onset-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-breathing-pattern-unknown",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-breathing-pattern-unknown",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -1036,55 +548,7 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "followup-consciousness-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-consciousness-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "followup-gum-color-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-gum-color-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-gum-color-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-seizure-duration-unknown",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-seizure-duration-unknown",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -1108,31 +572,7 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "oncology-emergency-bleeding-splenic-rupture-style",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "oncology-emergency-mouth-tumor-bleeding",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "oncology-emergency-mouth-tumor-bleeding",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "oncology-emergency-nosebleed-collapse",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -1156,31 +596,7 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "oncology-emergency-obstructive-neck-mass",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "repro-emergency-foul-discharge-fever",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "repro-emergency-foul-discharge-fever",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "repro-emergency-heavy-postpartum-bleeding",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -1204,31 +620,7 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "repro-emergency-labor-green-discharge",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "repro-emergency-male-paraphimosis",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "repro-emergency-male-paraphimosis",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "repro-emergency-retained-puppy-collapse",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -1252,22 +644,6 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "toxin-emergency-antifreeze",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "toxin-emergency-grapes-weakness",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "toxin-emergency-grapes-weakness",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
@@ -1284,31 +660,7 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "toxin-emergency-lily-chew",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "toxin-emergency-sago-palm",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "toxin-emergency-sago-palm",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "toxin-emergency-tremorgenic-mycotoxin",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
       "expected": "emergency",
@@ -1979,5 +1331,13 @@
       "actual": "question",
       "description": "Failed checks: knownSymptomsInclude:wound_skin_issue"
     }
-  ]
+  ],
+  "manifestHash": "d8695f0e1138e12328572607aa2df3840a57dc9c9f0a907bbab398bfbe31b7dc",
+  "extraCaseIds": [],
+  "missingCaseIds": [],
+  "duplicateCaseIds": [],
+  "suiteIdentityFailures": [],
+  "suiteIdentityAligned": true,
+  "observedSuiteId": "wave3-freeze-v2",
+  "observedManifestHash": "d8695f0e1138e12328572607aa2df3840a57dc9c9f0a907bbab398bfbe31b7dc"
 }

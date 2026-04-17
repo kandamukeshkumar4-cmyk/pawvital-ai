@@ -20,7 +20,12 @@ import type {
   LiveEvalFilter,
   LiveEvalScorecard,
   RouteBenchmarkReport,
-} from "../src/lib/benchmark-live-eval";
+} from "../src/lib/benchmark-live-eval.ts";
+import {
+  enrichLiveScorecardWithWave3Identity,
+  type Wave3LiveScorecard,
+} from "../src/lib/wave3-release-gate.ts";
+import { loadWave3CanonicalManifest } from "./wave3-suite-manifest.ts";
 
 interface EvalCliOptions {
   suite: string | null;
@@ -62,6 +67,17 @@ async function loadBenchmarkLiveEval() {
       path.join(ROOT, "src", "lib", "benchmark-live-eval.ts")
     ).href
   );
+}
+
+function isWave3Report(
+  options: EvalCliOptions,
+  report: RouteBenchmarkReport
+): boolean {
+  if (options.suite && path.basename(options.suite) === "wave3-freeze") {
+    return true;
+  }
+
+  return report.species === "dog" && report.suiteId.toLowerCase().includes("wave3");
 }
 
 function parseArgs(argv: string[]): EvalCliOptions {
@@ -192,11 +208,14 @@ function runLiveSuite(options: EvalCliOptions): string {
   return artifactOutput;
 }
 
-function printSummary(scorecard: LiveEvalScorecard) {
+function printSummary(scorecard: LiveEvalScorecard | Wave3LiveScorecard) {
   console.log(`\n${"=".repeat(64)}`);
   console.log("PAWVITAL LIVE EVALUATION HARNESS");
   console.log(`${"=".repeat(64)}`);
   console.log(`Suite: ${scorecard.suiteId}`);
+  if ("manifestHash" in scorecard && scorecard.manifestHash) {
+    console.log(`Manifest hash: ${scorecard.manifestHash}`);
+  }
   console.log(`Base URL: ${scorecard.baseUrl || "unknown"}`);
   console.log(`Result: ${scorecard.passFail}`);
   console.log(`Cases: ${scorecard.totalCases}`);
@@ -234,11 +253,48 @@ function printSummary(scorecard: LiveEvalScorecard) {
       );
     }
   }
+
+  if (
+    "suiteIdentityFailures" in scorecard &&
+    Array.isArray(scorecard.suiteIdentityFailures) &&
+    scorecard.suiteIdentityFailures.length > 0
+  ) {
+    console.log("\nSuite identity failures:");
+    for (const failure of scorecard.suiteIdentityFailures) {
+      console.log(`  - ${failure}`);
+    }
+  }
 }
 
 function writeFile(filePath: string, contents: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, contents);
+}
+
+function appendWave3IdentityMarkdown(
+  markdown: string,
+  scorecard: Wave3LiveScorecard
+): string {
+  const extraCaseIds = scorecard.extraCaseIds ?? [];
+  const missingCaseIds = scorecard.missingCaseIds ?? [];
+  const duplicateCaseIds = scorecard.duplicateCaseIds ?? [];
+  const suiteIdentityFailures = scorecard.suiteIdentityFailures ?? [];
+
+  return [
+    markdown.trimEnd(),
+    "",
+    "## Wave 3 Suite Identity",
+    "",
+    `- Manifest hash: ${scorecard.manifestHash ?? "missing"}`,
+    `- Extra case IDs: ${extraCaseIds.length > 0 ? extraCaseIds.join(", ") : "none"}`,
+    `- Missing case IDs: ${missingCaseIds.length > 0 ? missingCaseIds.join(", ") : "none"}`,
+    `- Duplicate case IDs: ${duplicateCaseIds.length > 0 ? duplicateCaseIds.join(", ") : "none"}`,
+    "",
+    ...(suiteIdentityFailures.length > 0
+      ? suiteIdentityFailures.map((failure) => `- ${failure}`)
+      : ["- Suite identity aligned with the canonical Wave 3 manifest."]),
+    "",
+  ].join("\n");
 }
 
 async function main() {
@@ -260,8 +316,18 @@ async function main() {
     "Dry-run artifacts cannot be scored as live baselines"
   );
 
-  const scorecard = scoreLiveBenchmarkReport(report, options.filter);
-  scorecard.preflight = report.preflight || null;
+  const baseScorecard = scoreLiveBenchmarkReport(report, options.filter);
+  baseScorecard.preflight = report.preflight || null;
+
+  const scorecard = isWave3Report(options, report)
+    ? enrichLiveScorecardWithWave3Identity({
+        manifest: loadWave3CanonicalManifest(ROOT),
+        scorecard: baseScorecard,
+        observedSuiteId: report.suiteId,
+        observedCaseIds: report.cases.map((result) => result.id),
+      })
+    : baseScorecard;
+
   printSummary(scorecard);
 
   if (options.output) {
@@ -272,7 +338,15 @@ async function main() {
   const markdownOutput =
     options.markdownOutput || (options.suite ? DEFAULT_MARKDOWN : null);
   if (markdownOutput) {
-    writeFile(markdownOutput, `${renderLiveScorecardMarkdown(scorecard)}\n`);
+    const markdown = renderLiveScorecardMarkdown(scorecard as LiveEvalScorecard);
+    writeFile(
+      markdownOutput,
+      `${
+        "manifestHash" in scorecard
+          ? appendWave3IdentityMarkdown(markdown, scorecard)
+          : markdown
+      }\n`
+    );
     console.log(`Markdown baseline written to ${markdownOutput}`);
   }
 

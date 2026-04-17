@@ -1,16 +1,29 @@
 # Wave 3 Release Gate Report
 
+- Generated at: 2026-04-17T21:43:33.648Z
 - Result: FAIL
+- Suite ID: wave3-freeze-v2
+- Manifest hash: d8695f0e1138e12328572607aa2df3840a57dc9c9f0a907bbab398bfbe31b7dc
 - Total frozen cases: 226
-- Scorecard case count: 0
+- Scorecard case count: 226
+- Scorecard generatedAt: 2026-04-17T21:41:10.242Z
+- Scorecard observed suiteId: wave3-freeze-v2
 - Emergency recall: 0.0%
-- Unsafe downgrade rate: 0.00%
+- Unsafe downgrade rate: 33.63%
+
+## Suite Identity
+
+- Extra case IDs: none
+- Missing case IDs: none
+- Duplicate case IDs: none
+
+- Suite identity aligned with the canonical Wave 3 manifest.
 
 ## Failures
 
-- Live scorecard case count (0) does not match Wave 3 freeze (226).
 - Emergency recall 0.0% is below the 98.0% gate.
-- Live scorecard is blocked and cannot clear the Wave 3 release gate.
+- Unsafe downgrade rate 33.63% exceeds the 1.00% gate.
+- 76 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
 
 ## Warnings
 
@@ -18,7 +31,26 @@ _None_
 
 ## Blocking High-Risk Failures
 
-_None_
+- cardiac-emergency-collapse-after-excitement: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-collapse-blue-gums: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-rapid-breathing-pale: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-resting-breathing-distress: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-acute-paralysis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-addisonian-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-allergic-reaction-hives: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-anaphylaxis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-bloat-after-meal: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
+- emergency-bloat-gasdilation: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
+- emergency-blue-gums-breathing: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
+- emergency-breathing-labored: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
+- emergency-burn-chemical: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-choking-foreign-body: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
+- emergency-cluster-seizures: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:seizure_collapse)
+- emergency-deep-bleeding-wound: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue)
+- emergency-diabetic-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-difficulty-breathing-kennel: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
+- emergency-dog-bite-wound: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue)
+- emergency-dystocia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth)
 
 ## Missing High-Stakes Rule IDs
 
@@ -101,3 +133,4 @@ _None_
 | skin_lesion | 6 |
 | stool_analysis | 6 |
 | vomit_analysis | 6 |
+

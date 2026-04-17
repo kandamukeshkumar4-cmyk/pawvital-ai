@@ -1,48 +1,6 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-
-interface ReviewerSlot {
-  role: string;
-  reviewer_id: string;
-  status: string;
-}
-
-interface Wave3BenchmarkCase {
-  id: string;
-  description: string;
-  request: {
-    pet?: {
-      species?: string;
-    };
-    messages?: Array<{ role?: string; content?: string }>;
-  };
-  expectations?: Record<string, unknown>;
-  complaint_family_tags?: string[];
-  risk_tier?: string;
-  uncertainty_pattern?: string;
-  wave3_strata?: string[];
-  wave3_adjudication?: {
-    reviewer_slots?: ReviewerSlot[];
-    must_ask_expectations?: {
-      status?: string;
-    };
-  };
-}
-
-interface Wave3SuiteFile {
-  cases: Wave3BenchmarkCase[];
-}
-
-interface Wave3FreezeManifest {
-  uniqueCaseCount: number;
-  strata: Array<{
-    fileName: string;
-  }>;
-}
+import { loadWave3CanonicalBundle, type Wave3BenchmarkCase } from "./wave3-suite-manifest.ts";
 
 const ROOT = process.cwd();
-const BENCHMARK_DIR = path.join(ROOT, "data", "benchmarks", "dog-triage");
-const MANIFEST_PATH = path.join(BENCHMARK_DIR, "wave3-freeze-manifest.json");
 
 function validateCase(caseRecord: Wave3BenchmarkCase): string[] {
   const errors: string[] = [];
@@ -87,36 +45,8 @@ function validateCase(caseRecord: Wave3BenchmarkCase): string[] {
   return errors;
 }
 
-function loadCases(): Wave3BenchmarkCase[] {
-  if (!fs.existsSync(MANIFEST_PATH)) {
-    throw new Error(`Wave 3 manifest not found: ${MANIFEST_PATH}`);
-  }
-
-  const manifest = JSON.parse(
-    fs.readFileSync(MANIFEST_PATH, "utf8")
-  ) as Wave3FreezeManifest;
-  const caseMap = new Map<string, Wave3BenchmarkCase>();
-
-  for (const shard of manifest.strata) {
-    const suitePath = path.join(BENCHMARK_DIR, "wave3-freeze", shard.fileName);
-    const suite = JSON.parse(fs.readFileSync(suitePath, "utf8")) as Wave3SuiteFile;
-    for (const caseRecord of suite.cases) {
-      if (!caseMap.has(caseRecord.id)) {
-        caseMap.set(caseRecord.id, caseRecord);
-      }
-    }
-  }
-
-  if (manifest.uniqueCaseCount !== caseMap.size) {
-    throw new Error(
-      `Manifest expected ${manifest.uniqueCaseCount} unique cases but loaded ${caseMap.size}`
-    );
-  }
-
-  return Array.from(caseMap.values());
-}
-
-const cases = loadCases();
+const canonicalBundle = loadWave3CanonicalBundle(ROOT);
+const cases = canonicalBundle.cases;
 console.log(`Validating ${cases.length} Wave 3 benchmark cases...`);
 
 let totalErrors = 0;
@@ -165,5 +95,9 @@ console.log(
     cases.filter((caseRecord) => caseRecord.wave3_strata?.includes("rare-but-critical")).length
   }`
 );
+
+console.log(`Canonical suiteId: ${canonicalBundle.manifest.suiteId}`);
+console.log(`Canonical manifestHash: ${canonicalBundle.manifest.manifestHash}`);
+console.log(`Canonical totalCases: ${canonicalBundle.manifest.totalCases}`);
 
 process.exit(totalErrors === 0 ? 0 : 1);
