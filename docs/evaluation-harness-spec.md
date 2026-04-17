@@ -145,6 +145,43 @@ Each benchmark case is simulated as follows:
 
 ---
 
+## Canonical Wave 3 Suite Contract
+
+The canonical dog-only Wave 3 suite contract lives at:
+
+- `data/benchmarks/dog-triage/wave3-freeze-manifest.json`
+
+This ticket standardizes the existing `wave3-freeze-manifest.json` instead of introducing a second manifest path because the required validation and coverage commands already consume that file directly. The manifest is now the single source of truth for:
+
+- `suiteId`
+- `suiteVersion`
+- `generatedAt`
+- `manifestHash`
+- `caseIds`
+- `shardPaths`
+- `totalCases`
+- `complaintFamilyCounts`
+- `riskTierCounts`
+- `modalityCounts`
+
+Contract invariants:
+
+- `caseIds` must be unique and lexicographically sorted after de-duplicating cases that appear in multiple Wave 3 strata.
+- `shardPaths` must be valid repo-relative paths into `data/benchmarks/dog-triage/wave3-freeze/` and remain in the same order as the manifest `strata` array so existing loaders preserve slice precedence.
+- `totalCases` must match the unique canonical case count derived from the shards and stay aligned with the legacy `uniqueCaseCount` compatibility field.
+- Every shard and every benchmark case in the canonical suite must remain dog-only.
+- `modalityCounts` must match the referenced multimodal slice files.
+- `manifestHash` is a SHA-256 hash over the canonical contract fields above, excluding `manifestHash` itself.
+
+The required verification commands continue to be:
+
+```bash
+npm run eval:benchmark:validate
+npm run eval:benchmark:coverage
+```
+
+---
+
 ## Run Conditions
 
 ### When to Run
