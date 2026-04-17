@@ -129,7 +129,10 @@ export async function POST(request: Request) {
     } = body as Record<string, unknown>;
 
     const petName = typeof name === "string" ? name.trim() : "";
-    const petSpecies = typeof species === "string" ? species.trim() : "";
+    const petSpecies =
+      typeof species === "string" && species.trim()
+        ? species.trim().toLowerCase()
+        : "dog";
     const petBreed = typeof breed === "string" ? breed.trim() : "";
     const petAgeYears = typeof age_years === "number" ? age_years : Number(age_years ?? 0) || 0;
     const petAgeMonths = typeof age_months === "number" ? age_months : Number(age_months ?? 0) || 0;
@@ -137,8 +140,15 @@ export async function POST(request: Request) {
     const petWeight = typeof weight === "number" ? weight : Number(weight ?? 0) || 0;
     const petWeightUnit = typeof weight_unit === "string" && weight_unit.trim() ? weight_unit.trim() : "lbs";
 
-    if (!petName || !petSpecies || !petBreed) {
+    if (!petName || !petBreed) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    if (petSpecies !== "dog") {
+      return NextResponse.json(
+        { error: "PawVital currently supports dogs only." },
+        { status: 400 }
+      );
     }
 
     const { data: pet, error } = await supabase

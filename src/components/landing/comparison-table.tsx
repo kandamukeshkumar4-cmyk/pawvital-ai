@@ -14,7 +14,7 @@ const rows = [
   },
   {
     feature: "Breed-specific analysis",
-    pawvital: "200+ breed multipliers",
+    pawvital: "Canine breed risk modifiers",
     generic: "One-size-fits-all",
     pawvitalStatus: "check",
     genericStatus: "x",
@@ -83,7 +83,7 @@ export default function ComparisonTable() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            PawVital vs Generic Pet Health Apps
+            PawVital vs Generic Symptom Apps
           </h2>
           <p className="mt-4 text-lg text-gray-600">
             Clinical-grade triage built on real veterinary data — not search

@@ -23,16 +23,19 @@ export default async function PetsDashboardPage() {
         .order("created_at", { ascending: true });
 
       if (p && p.length > 0) {
-        pets = p as Pet[];
-        const petIds = p.map((pet) => pet.id);
+        const dogPets = (p as Pet[]).filter((pet) => pet.species === "dog");
+        pets = dogPets;
+        const petIds = dogPets.map((pet) => pet.id);
 
-        const { data: c } = await supabase
-          .from("symptom_checks")
-          .select("*")
-          .in("pet_id", petIds)
-          .order("created_at", { ascending: false });
+        if (petIds.length > 0) {
+          const { data: c } = await supabase
+            .from("symptom_checks")
+            .select("*")
+            .in("pet_id", petIds)
+            .order("created_at", { ascending: false });
 
-        if (c) checks = c as SymptomCheck[];
+          if (c) checks = c as SymptomCheck[];
+        }
       }
     }
   } catch {

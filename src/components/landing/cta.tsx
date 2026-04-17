@@ -32,7 +32,7 @@ export default function CTA() {
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight">
             Don&apos;t wait to wonder.
             <br />
-            Check your pet&apos;s symptoms now.
+            Check your dog&apos;s symptoms now.
           </h2>
 
           <p className="mt-6 text-xl text-emerald-200 max-w-2xl mx-auto">

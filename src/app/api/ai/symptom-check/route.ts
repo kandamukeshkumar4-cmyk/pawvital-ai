@@ -13,7 +13,7 @@ export async function POST(request: Request) {
         severity: "high",
         recommendation: "vet_48h",
         title: "AI Assessment (Demo Mode)",
-        explanation: `Based on the symptoms described for ${pet?.name || "your pet"}: "${symptoms}". This is demo mode — add your NVIDIA NIM API key to get full AI-powered veterinary symptom analysis.`,
+        explanation: `Based on the symptoms described for ${pet?.name || "your dog"}: "${symptoms}". This is demo mode — add your NVIDIA NIM API key to get full AI-powered veterinary symptom analysis.`,
         differential_diagnoses: [
           { condition: "Demo Mode — Configure API Key", likelihood: "high", description: "Add your NVIDIA NIM API key to unlock full veterinary-grade differential diagnosis with clinical specificity." },
         ],
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
           { instruction: "Monitor symptoms closely", duration: "24-48 hours", details: "Track frequency, duration, and any changes in severity" },
         ],
         actions: [
-          "Monitor your pet closely for the next 24-48 hours",
+          "Monitor your dog closely for the next 24-48 hours",
           "Keep a log of when symptoms occur and their duration",
           "Schedule a vet visit if no improvement in 48 hours",
         ],
@@ -89,7 +89,7 @@ Respond in this exact JSON format:
   "severity": "low" | "medium" | "high" | "emergency",
   "recommendation": "monitor" | "vet_48h" | "vet_24h" | "emergency_vet",
   "title": "Specific clinical assessment title (e.g., 'Suspected Cranial Cruciate Ligament Tear' not 'Leg Problem')",
-  "explanation": "Write 4-6 sentences explaining the clinical picture to a pet parent. Use precise medical terms but immediately follow each with a plain-English explanation in parentheses. Connect the dots between symptoms, breed predisposition, and age factors. Be specific about WHY you suspect what you suspect.",
+  "explanation": "Write 4-6 sentences explaining the clinical picture to a dog owner. Use precise medical terms but immediately follow each with a plain-English explanation in parentheses. Connect the dots between symptoms, breed predisposition, and age factors. Be specific about WHY you suspect what you suspect.",
   "differential_diagnoses": [
     {
       "condition": "Full medical name of condition",
@@ -149,9 +149,9 @@ Respond ONLY with valid JSON. No markdown, no code blocks, just the JSON object.
         recommendation: "vet_48h",
         title: "Unable to Complete Full Analysis",
         explanation:
-          "We encountered an issue performing the full AI analysis. Based on general guidelines, we recommend monitoring your pet closely and consulting your veterinarian if symptoms persist or worsen.",
+          "We encountered an issue performing the full AI analysis. Based on general guidelines, we recommend monitoring your dog closely and consulting your veterinarian if symptoms persist or worsen.",
         actions: [
-          "Monitor your pet closely for the next 24 hours",
+          "Monitor your dog closely for the next 24 hours",
           "Keep a written log of symptoms and timing",
           "Ensure fresh water and a quiet resting area",
           "Avoid strenuous activity",

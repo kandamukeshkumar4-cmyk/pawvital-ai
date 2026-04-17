@@ -478,7 +478,27 @@
 - **Must-ask questions:** medication name, dose, timing, symptoms, prior reactions, current medications
 - **Linked diseases:** allergic_reaction, toxin_ingestion, gastroenteritis
 
-### 46. PREGNANCY / BIRTHING CONCERNS
+### 46. POST-VACCINATION REACTION
+
+- **Canonical key:** `post_vaccination_reaction`
+- **Owner phrases:** "after shots", "after vaccine", "reaction to vaccine", "swollen after vaccine", "puppy got shots yesterday and is sore"
+- **Body systems:** systemic, dermatologic
+- **Urgency tier:** 2 (urgent) for routine reactions; escalates to 1 with facial swelling, hives + breathing difficulty, or collapse
+- **Red flags:** facial swelling, hives + breathing difficulty, collapse, unresponsive after vaccination
+- **Must-ask questions:** vaccination timing, vaccine/booster type, reaction symptoms, facial swelling, hives with breathing difficulty, appetite, fever
+- **Linked diseases:** allergic_reaction, gastroenteritis, pain_general, fever
+
+### 47. TRAUMA / INJURY
+
+- **Canonical key:** `trauma`
+- **Owner phrases:** "hit by car", "fell off", "got attacked", "bite injury", "injured after jumping", "hurt after a fall"
+- **Body systems:** musculoskeletal, systemic, respiratory
+- **Urgency tier:** 2 (urgent) by default; escalates to 1 with active bleeding, visible fracture, pale/blue gums, or inability to stand
+- **Red flags:** active bleeding, visible fracture, pale gums, blue gums, unresponsive, inability to stand
+- **Must-ask questions:** mechanism, timeframe, injured area, active bleeding, visible fracture, breathing rate, gum color, mobility, consciousness
+- **Linked diseases:** soft_tissue_injury, laceration, trauma_chest, pain_general
+
+### 48. PREGNANCY / BIRTHING CONCERNS
 
 - **Canonical key:** `pregnancy_birth`
 - **Owner phrases:** "having trouble giving birth", "straining but no puppies", "green discharge but no puppies", "pregnant and sick"
@@ -488,7 +508,7 @@
 - **Must-ask questions:** days pregnant, contraction status, discharge color, number of puppies delivered, time since last puppy, appetite
 - **Linked diseases:** dystocia, metritis, eclampsia, pregnancy, pyometra
 
-### 47. PUPPY-SPECIFIC CONCERNS
+### 49. PUPPY-SPECIFIC CONCERNS
 
 - **Canonical key:** `puppy_concern`
 - **Owner phrases:** "puppy not right", "weak puppy", "not nursing", "puppy crying", "puppy cold", "puppy not growing"
@@ -498,7 +518,7 @@
 - **Must-ask questions:** age in weeks, nursing status, temperature, weight trend, littermate status, vaccination status
 - **Linked diseases:** hypoglycemia, parasites, parvovirus, fading_puppy_syndrome, congenital_defect, liver_shunt
 
-### 48. SENIOR DOG DECLINE
+### 50. SENIOR DOG DECLINE
 
 - **Canonical key:** `senior_decline`
 - **Owner phrases:** "getting old and slow", "not like she used to be", "slowing down", "confused at night", "forgetting training"
@@ -508,7 +528,7 @@
 - **Must-ask questions:** decline duration, specific changes, appetite, water intake, mobility, sleep pattern, medication list
 - **Linked diseases:** cognitive_dysfunction, osteoarthritis, kidney_disease, heart_disease, cancer, hypothyroidism, dental_disease
 
-### 49. MULTI-SYSTEM DECLINE
+### 51. MULTI-SYSTEM DECLINE
 
 - **Canonical key:** `multi_system_decline`
 - **Owner phrases:** "just not right in multiple ways", "a bit of everything wrong", "going downhill"
@@ -518,7 +538,7 @@
 - **Must-ask questions:** each symptom duration, appetite, water intake, weight change, energy, vomiting, diarrhea, urination
 - **Linked diseases:** kidney_disease, liver_disease, cancer, addisons_disease, imha, heart_failure, sepsis
 
-### 50. UNKNOWN / OWNER CANNOT ASSESS
+### 52. UNKNOWN / OWNER CANNOT ASSESS
 
 - **Canonical key:** `unknown_concern`
 - **Owner phrases:** "something is wrong but I can't tell what", "just seems off", "not acting right", "I don't know what to look for"
@@ -532,15 +552,13 @@
 
 ## Coverage Expansion Plan
 
-### Phase 1 (Current — 50 families)
+### Phase 1 (Current — 52 families)
 Covers ~85% of primary care presentations and ~95% of emergency presentations.
 
 ### Phase 2 (Target: 100 families)
 Add:
 - Specific toxicities (xylitol, chocolate, rodenticide, NSAID, lily)
-- Specific trauma patterns (hit by car, bite wound, fall, penetrating)
 - Breed-specific emergencies (bloat in deep-chested, IVDD in chondrodystrophic)
-- Post-vaccination reactions
 - Travel-related diseases
 - Zoonotic concerns
 
@@ -601,13 +619,15 @@ Add:
 | heat_intolerance | (new) | NEW |
 | postoperative_concern | (new) | NEW |
 | medication_reaction | (new) | NEW |
+| post_vaccination_reaction | (new) | NEW |
+| trauma | (new) | NEW |
 | pregnancy_birth | (new) | NEW |
 | puppy_concern | (new) | NEW |
 | senior_decline | (new) | NEW |
 | multi_system_decline | (new) | NEW |
 | unknown_concern | (new) | NEW |
 
-**Summary:** 16 existing + 34 new = 50 complaint families total
+**Summary:** 16 existing + 36 new = 52 complaint families total
 
 ---
 

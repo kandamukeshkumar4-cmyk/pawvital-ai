@@ -1,85 +1,83 @@
 # PawVital Delivery Roadmap
 
-Effective: 2026-04-14
+Effective: 2026-04-17
 
 ## Current Position
 
 - Wave 1 (`VET-1100`) is complete on `master`.
-- Current execution wave: `VET-1200` — post-world-class hardening, shadow activation, and quality loop.
-- Docs gate `VET-1201` is the only ticket that should open directly from this state. Every other Wave 2 branch follows after it lands.
+- Wave 2 foundations are already substantial on `master`: the deterministic canine core is live, the main symptom-chat route already wires image gating, breed enrichment, contradiction handling, rate limits, report generation, and the report/admin surfaces already exist.
+- Current execution wave: `VET-1300` — Clinical Gold Standard + Evidence Provenance.
+- `VET-1301` is the mandatory docs-and-scope gate. No other Wave 3 branch should open before it lands.
 
 ## Program Status
 
-| Phase | Status | Notes |
+| Area | Status | Notes |
 | --- | --- | --- |
-| Phase 0 — Queue reconciliation + docs gate | COMPLETE | Shipped in `VET-1000` and follow-on governance cleanup |
-| Phase 1 — Safety rollout foundation | COMPLETE | Safety contracts, payload guards, and sidecar readiness wiring landed |
-| Phase 2 — Benchmark and multimodal foundation | COMPLETE | Benchmark pack, ontology, and multimodal slices landed |
-| Phase 3 — Real sidecars | COMPLETE | `VET-1101` through `VET-1105` shipped with `FORCE_FALLBACK=1` |
-| Phase 4 — Deploy | COMPLETE | `VET-1106` through `VET-1108` landed with sizing, env sync, and lifecycle tooling |
-| Phase 5 — Shadow | COMPLETE | `VET-1109` and `VET-1110` landed with shadow metrics and promotion thresholds |
-| Phase 6 — Corpus | COMPLETE | `VET-1111` and `VET-1112` landed with dog-only reindex and retrieval harness |
-| Phase 7 — ER UX | COMPLETE | `VET-1113` landed without changing urgency authority |
-| Phase 8 — Learning loop | COMPLETE | `VET-1114a`, `VET-1114b`, and `VET-1115` landed as proposal-only workflow |
+| Deterministic canine triage core | LIVE FOUNDATION | `src/lib/triage-engine.ts` and `src/lib/clinical-matrix.ts` remain authoritative |
+| Symptom-chat route + report UI | LIVE FOUNDATION | Main route, owner report, vet handoff, evidence chain, and admin review surfaces already exist |
+| Dog benchmark harness | PARTIAL | Dog benchmark pack exists, but the current `gold-candidate` pack is not yet a true vet-adjudicated gold standard |
+| Validated product scope | NEEDS RECONCILIATION | Public claims overstated species support, disease counts, breed counts, and multimodal scope |
+| Evidence provenance | DESIGNED, NOT POPULATED | Registry schema exists, but runtime linkage and high-stakes rule coverage are still pending |
+| Next execution wave | ACTIVE | `VET-1300` starts with `VET-1301` and then moves into benchmark adjudication, provenance, and complaint-family closure |
 
-## Wave 1 Guardrails Preserved
+## Wave Guardrails Preserved
 
-These remain non-negotiable in Wave 2:
+These remain non-negotiable in Wave 3:
 
-1. `src/lib/triage-engine.ts` and `src/lib/clinical-matrix.ts` stay authoritative for medical decisions.
+1. `src/lib/triage-engine.ts` and `src/lib/clinical-matrix.ts` remain the medical authority.
 2. `answered_questions`, `extracted_answers`, `unresolved_question_ids`, and `last_question_asked` remain protected deterministic state.
-3. Compression stays narrative-only and cannot mutate control state.
-4. Telemetry, sidecar state, and transition notes stay internal-only.
-5. Promoted sidecars remain supplemental evidence providers and never override urgency.
-6. Emergency cases always bypass billing or rollout gates.
+3. Compression remains narrative-only and cannot mutate control state.
+4. No benchmark output, outcome feedback, or proposal pipeline may auto-apply deterministic rule changes.
+5. High-stakes owner-facing claims without provenance must degrade to safer generic wording.
+6. Emergency cases always bypass billing and usage gates, and sidecars remain supplemental only.
+7. Public scope stays dog-only until a separately validated species pack exists.
 
-## Wave 2 Canonical Spec
+## Wave 3 Canonical Spec
 
-- Canonical execution spec: `plans/VET-1200-wave2-mega-ticket.md`
-- Parent tracking issue: `#153 — VET-1200`
-- Docs gate: `#154 — VET-1201`
+- Canonical execution spec: `plans/VET-1300-wave3-mega-ticket.md`
+- Parent tracking issue: `#221 — VET-1300`
+- Scope reconciliation gate: `plans/validated-scope-audit.md`
+- First implementation ticket: `VET-1301`
 
-### Hard-Ordered Chains
+### Mandatory first ticket
 
-1. `VET-1201` lands first.
-2. `VET-1202 -> VET-1203`
-3. `VET-1202 -> VET-1206 -> VET-1207`
-4. `VET-1216 -> VET-1217`
-5. `VET-1203 -> VET-1211`
+- `VET-1301` — roadmap sync + validated-scope audit
 
-### Parallel-After-Gate Tickets
+### Hard-ordered chains
 
-- `VET-1204` — advisory fix
-- `VET-1205` — confidence calibrator wiring
-- `VET-1208` — ICD-10 coverage audit
-- `VET-1209` — threshold proposal review cycle
-- `VET-1210` — production telemetry dashboard
-- `VET-1212` — mobile responsiveness audit
-- `VET-1213` — notification reliability hardening
-- `VET-1214` — rate limit load and Redis failover
-- `VET-1215` — auth hardening
-- `VET-1218` — Stripe webhook and usage-limit hardening
+1. `VET-1302 -> VET-1303 -> VET-1310`
+2. `VET-1302 -> VET-1304 -> VET-1310`
+3. `VET-1301 -> VET-1305 -> VET-1310`
+4. `VET-1301 -> VET-1306 -> VET-1310`
+5. `VET-1301 -> VET-1307 -> VET-1308 -> VET-1309`
 
-### Review Gates
+### Parallel-after-gate tickets
 
-- Every Wave 2 PR: normal Codex review.
-- `VET-1203` and `VET-1218`: adversarial review plus deploy/billing guard path.
-- `VET-1207`, `VET-1208`, and `VET-1209`: clinical-reviewer sign-off required.
+- `VET-1302`
+- `VET-1305`
+- `VET-1306`
+- `VET-1307`
+
+## Review Gates
+
+- Every Wave 3 PR: normal Codex review.
+- `VET-1303`, `VET-1304`, `VET-1305`, `VET-1306`, and `VET-1310`: clinical-reviewer sign-off.
+- `VET-1307` and `VET-1308`: clinical plus provenance sign-off.
 
 ## Immediate Next Tasks
 
-1. Land `VET-1201` as docs-only prerequisite.
-2. Run the real Phase 5 shadow baseline in `VET-1202`.
-3. In parallel after `VET-1201`, clear the advisory/UI/hardening tickets that do not depend on live split promotion.
+1. Land `VET-1301` as the scope-truth and roadmap gate.
+2. Freeze the canonical canine benchmark pack in `VET-1302`.
+3. Open adjudication, provenance, breed-gap, and complaint-family work only after the docs gate lands.
 
-## Completion Signal For Wave 2
+## Completion Signal For Wave 3
 
-Wave 2 is complete only when all of the following are true:
+Wave 3 is complete only when all of the following are true:
 
-- 288-sample shadow baseline exists on `master`.
-- At least one sidecar is promoted to controlled live traffic with a tested kill switch.
-- Confidence calibration is visible in the report payload and UI without altering urgency.
-- Eval harness baseline is captured and the top-3 failures are fixed with named regressions.
-- Route Dangerous Replay Advisory is green again.
-- Admin telemetry and sidecar rollout controls are available to operators.
-- Mobile, auth, rate-limit, notification, corpus, and billing follow-ons are all verified and landed.
+- The canine benchmark is a true vet-adjudicated gold pack.
+- Trauma and post-vaccination complaint flows are live in the deterministic system.
+- High-stakes rules have provenance coverage and review dates.
+- Report trust surfaces expose provenance cleanly and safely.
+- CI blocks unsafe clinical regressions and missing/expired provenance on high-stakes rules.
+- Public docs, product copy, and roadmap claims match validated dog-only scope exactly.
+- The adjudicated benchmark meets the existing harness safety targets.

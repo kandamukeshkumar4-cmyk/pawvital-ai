@@ -41,7 +41,7 @@ const features = [
     icon: Camera,
     title: "Vision Analysis",
     description:
-      "Upload a photo of a skin condition, eye issue, or wound. Our 3-tier vision pipeline analyzes it against 9,700+ reference images.",
+      "Upload a photo of a skin condition, eye issue, or wound. Our guarded vision pipeline compares it against curated reference imagery.",
     illustration: VisionAnalysisIllustration,
     color: "indigo",
   },
@@ -59,7 +59,7 @@ const features = [
     icon: Clock,
     title: "Health Timeline",
     description:
-      "Track your pet's health over time. See trends, patterns, and improvement.",
+      "Track your dog's health over time. See trends, patterns, and improvement.",
     illustration: HealthTimelineIllustration,
     color: "teal",
   },

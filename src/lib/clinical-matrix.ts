@@ -534,6 +534,34 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
     red_flags: ["wound_deep_bleeding", "wound_bone_visible", "wound_spreading_rapidly"],
     body_systems: ["dermatologic", "musculoskeletal"],
   },
+  trauma: {
+    linked_diseases: [
+      "soft_tissue_injury",
+      "laceration",
+      "trauma_chest",
+      "pain_general",
+    ],
+    follow_up_questions: [
+      "trauma_mechanism",
+      "trauma_timeframe",
+      "trauma_area",
+      "active_bleeding_trauma",
+      "visible_fracture",
+      "consciousness_level",
+      "gum_color",
+      "breathing_rate",
+      "trauma_mobility",
+    ],
+    red_flags: [
+      "active_bleeding_trauma",
+      "visible_fracture",
+      "blue_gums",
+      "pale_gums",
+      "unresponsive",
+      "inability_to_stand",
+    ],
+    body_systems: ["musculoskeletal", "systemic", "respiratory"],
+  },
 
   // --- NEW COMPLAINT FAMILIES (VET-902: Dog Complaint Ontology) ---
 
@@ -1150,6 +1178,25 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
     ],
     red_flags: ["face_swelling", "hives_with_breathing", "collapse"],
     body_systems: ["systemic"],
+  },
+  post_vaccination_reaction: {
+    linked_diseases: [
+      "allergic_reaction",
+      "gastroenteritis",
+      "pain_general",
+      "fever",
+    ],
+    follow_up_questions: [
+      "vaccination_timing",
+      "vaccination_type",
+      "reaction_symptoms",
+      "face_swelling",
+      "hives_with_breathing",
+      "fever_present",
+      "appetite_status",
+    ],
+    red_flags: ["face_swelling", "hives_with_breathing", "unresponsive"],
+    body_systems: ["systemic", "dermatologic"],
   },
 
   pregnancy_birth: {
@@ -2144,12 +2191,22 @@ export const BREED_MODIFIERS: Record<string, BreedModifiers> = {
     wound_infection: 1.8,
     autoimmune_skin: 1.5,
   },
+  Pug: {
+    difficulty_breathing: 4.2,
+    heat_stroke: 3.8,
+    eye_disorders: 2.0,
+    allergic_dermatitis: 1.8,
+  },
   Dachshund: {
     ivdd: 12.0,
     patellar_luxation: 1.5,
     diabetes: 2.0,
     cushings_disease: 2.0,
     obesity_related: 2.0,
+  },
+  "Miniature Schnauzer": {
+    pancreatitis: 3.5,
+    diabetes: 2.2,
   },
   Poodle: {
     allergic_dermatitis: 2.0,
@@ -2173,6 +2230,11 @@ export const BREED_MODIFIERS: Record<string, BreedModifiers> = {
     heart_disease: 2.5,
     hip_dysplasia: 2.0,
     wobbler_syndrome: 3.0,
+  },
+  "Irish Wolfhound": {
+    gdv: 4.5,
+    heart_disease: 2.8,
+    bone_cancer: 2.0,
   },
   Rottweiler: {
     ccl_rupture: 2.5,
@@ -2227,6 +2289,11 @@ export const BREED_MODIFIERS: Record<string, BreedModifiers> = {
     ccl_rupture: 1.5,
     bloat: 2.0,
     histiocytic_sarcoma: 5.0,
+  },
+  Newfoundland: {
+    heart_disease: 3.5,
+    hip_dysplasia: 2.2,
+    bloat: 2.0,
   },
   "Siberian Husky": {
     hip_dysplasia: 1.5,
@@ -2291,6 +2358,11 @@ export const BREED_MODIFIERS: Record<string, BreedModifiers> = {
     autoimmune_skin: 2.0,
     skin_mass: 1.5,
     liver_disease: 2.0,
+  },
+  "Pembroke Welsh Corgi": {
+    ivdd: 4.0,
+    obesity_related: 2.2,
+    hip_dysplasia: 1.8,
   },
 };
 
@@ -2378,6 +2450,62 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     data_type: "boolean",
     extraction_hint: "history of prior lameness or stiffness episodes",
     critical: false,
+  },
+  trauma_mechanism: {
+    id: "trauma_mechanism",
+    question_text:
+      "What kind of incident happened? A fall, hit by car, bite, rough play, or something else?",
+    data_type: "choice",
+    choices: [
+      "fall_jump",
+      "hit_by_car",
+      "bite_attack",
+      "rough_play",
+      "unknown",
+      "other",
+    ],
+    extraction_hint: "type of traumatic event",
+    critical: true,
+  },
+  trauma_timeframe: {
+    id: "trauma_timeframe",
+    question_text: "When did the injury happen? Just now, today, or earlier?",
+    data_type: "string",
+    extraction_hint: "time since trauma or injury occurred",
+    critical: true,
+  },
+  trauma_area: {
+    id: "trauma_area",
+    question_text:
+      "Where is your dog injured? Chest, belly, leg, head, back, or skin?",
+    data_type: "string",
+    extraction_hint: "body area involved in trauma",
+    critical: true,
+  },
+  active_bleeding_trauma: {
+    id: "active_bleeding_trauma",
+    question_text:
+      "Is there active bleeding that is soaking through towels or not slowing down with pressure?",
+    data_type: "boolean",
+    extraction_hint: "ongoing significant bleeding after trauma",
+    critical: true,
+  },
+  visible_fracture: {
+    id: "visible_fracture",
+    question_text:
+      "Do you see a bone sticking out or a limb that looks obviously broken or deformed?",
+    data_type: "boolean",
+    extraction_hint: "obvious fracture or exposed bone",
+    critical: true,
+  },
+  trauma_mobility: {
+    id: "trauma_mobility",
+    question_text:
+      "Can your dog stand and walk, or are they unable to get up?",
+    data_type: "choice",
+    choices: ["walking", "limping", "inability_to_stand", "unknown"],
+    extraction_hint: "mobility after trauma",
+    critical: true,
   },
 
   // Vomiting questions
@@ -3780,6 +3908,39 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     data_type: "string",
     extraction_hint: "list of current medications and supplements",
     critical: false,
+  },
+  vaccination_timing: {
+    id: "vaccination_timing",
+    question_text:
+      "How long after the vaccine did the symptoms start? Within hours, later the same day, or the next day?",
+    data_type: "choice",
+    choices: ["within_hours", "same_day", "next_day", "longer_ago", "unknown"],
+    extraction_hint: "timing of symptoms relative to vaccination",
+    critical: true,
+  },
+  vaccination_type: {
+    id: "vaccination_type",
+    question_text:
+      "What vaccine or booster did your dog receive, if you know?",
+    data_type: "string",
+    extraction_hint: "type of recent vaccine or booster",
+    critical: false,
+  },
+  face_swelling: {
+    id: "face_swelling",
+    question_text:
+      "Has your dog's face, muzzle, or eyelids become swollen after the vaccine?",
+    data_type: "boolean",
+    extraction_hint: "facial swelling after vaccination",
+    critical: true,
+  },
+  hives_with_breathing: {
+    id: "hives_with_breathing",
+    question_text:
+      "Are there hives or a rash together with breathing trouble after the vaccine?",
+    data_type: "boolean",
+    extraction_hint: "hives or rash with breathing difficulty after vaccination",
+    critical: true,
   },
 
   // Pregnancy/birth questions

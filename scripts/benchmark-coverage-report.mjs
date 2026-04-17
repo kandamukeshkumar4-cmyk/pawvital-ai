@@ -10,7 +10,7 @@ const DEFAULT_INPUT = path.join(
   "data",
   "benchmarks",
   "dog-triage",
-  "gold-v1-enriched.jsonl"
+  "wave3-freeze-manifest.json"
 );
 
 // Keep this aligned with the curated family universe used by benchmark linting.
@@ -91,6 +91,30 @@ function parseArgs(argv) {
 function readCases(inputPath) {
   if (!fs.existsSync(inputPath)) {
     throw new Error(`Benchmark file not found: ${inputPath}`);
+  }
+
+  if (inputPath.endsWith("wave3-freeze-manifest.json")) {
+    const manifest = JSON.parse(fs.readFileSync(inputPath, "utf8"));
+    const caseMap = new Map();
+
+    for (const shard of manifest.strata || []) {
+      const suitePath = path.join(
+        ROOT_DIR,
+        "data",
+        "benchmarks",
+        "dog-triage",
+        "wave3-freeze",
+        shard.fileName
+      );
+      const suite = JSON.parse(fs.readFileSync(suitePath, "utf8"));
+      for (const caseRecord of suite.cases || []) {
+        if (!caseMap.has(caseRecord.id)) {
+          caseMap.set(caseRecord.id, caseRecord);
+        }
+      }
+    }
+
+    return Array.from(caseMap.values());
   }
 
   const lines = fs

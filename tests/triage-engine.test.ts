@@ -49,6 +49,27 @@ const unknownBreed: PetProfile = {
   weight: 40,
 };
 
+const labMix: PetProfile = {
+  name: "Scout",
+  breed: "Labrador Mix",
+  age_years: 4,
+  weight: 65,
+};
+
+const pugAdult: PetProfile = {
+  name: "Olive",
+  breed: "Pug",
+  age_years: 4,
+  weight: 18,
+};
+
+const miniatureSchnauzer: PetProfile = {
+  name: "Pepper",
+  breed: "Miniature Schnauzer",
+  age_years: 8,
+  weight: 17,
+};
+
 // ─── createSession ───────────────────────────────────────────────────────────
 
 describe("createSession", () => {
@@ -96,6 +117,8 @@ describe("addSymptoms", () => {
     ["hot spot", "wound_skin_issue"],
     ["favoring", "limping"],
     ["bald spot", "wound_skin_issue"],
+    ["hit by car", "trauma"],
+    ["after shots", "post_vaccination_reaction"],
   ])("should normalize colloquial phrase %s to %s", (phrase, expected) => {
     let session = createSession();
     session = addSymptoms(session, [phrase]);
@@ -214,6 +237,25 @@ describe("recordAnswer", () => {
     );
   });
 
+  it("should trigger trauma red flags derived from boolean and choice answers", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["trauma"]);
+    session = recordAnswer(session, "visible_fracture", true);
+    session = recordAnswer(session, "trauma_mobility", "inability_to_stand");
+
+    expect(session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["visible_fracture", "inability_to_stand"])
+    );
+  });
+
+  it("should trigger post-vaccination red flags when facial swelling is present", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["post_vaccination_reaction"]);
+    session = recordAnswer(session, "face_swelling", true);
+
+    expect(session.red_flags_triggered).toContain("face_swelling");
+  });
+
   it("should trigger GI and toxin red flags derived from non-boolean answers", () => {
     let session = createSession();
     session = addSymptoms(session, ["blood_in_stool", "trembling"]);
@@ -287,6 +329,20 @@ describe("getNextQuestion", () => {
     session = addSymptoms(session, ["coughing", "difficulty_breathing"]);
 
     expect(getNextQuestion(session)).toBe("breathing_onset");
+  });
+
+  it("should start trauma flow with trauma-specific critical questions", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["trauma"]);
+
+    expect(getNextQuestion(session)).toBe("trauma_mechanism");
+  });
+
+  it("should start post-vaccination flow with vaccination timing", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["post_vaccination_reaction"]);
+
+    expect(getNextQuestion(session)).toBe("vaccination_timing");
   });
 
   it("should eventually return null when all questions answered", () => {
@@ -427,6 +483,35 @@ describe("calculateProbabilities", () => {
     }
   });
 
+  it("should apply the new Pug modifier for breathing complaints", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["difficulty_breathing"]);
+    const probs = calculateProbabilities(session, pugAdult);
+    const airwayDisease = probs.find(
+      (p) => p.disease_key === "difficulty_breathing"
+    );
+
+    expect(airwayDisease?.breed_multiplier).toBeGreaterThan(1.0);
+  });
+
+  it("should apply the new Miniature Schnauzer modifier for pancreatitis", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting", "not_eating"]);
+    const probs = calculateProbabilities(session, miniatureSchnauzer);
+    const pancreatitis = probs.find((p) => p.disease_key === "pancreatitis");
+
+    expect(pancreatitis?.breed_multiplier).toBeGreaterThan(1.0);
+  });
+
+  it("should match common mix labels like Labrador Mix conservatively", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["wound_skin_issue"]);
+    const probs = calculateProbabilities(session, labMix);
+    const hotSpots = probs.find((p) => p.disease_key === "hot_spots");
+
+    expect(hotSpots?.breed_multiplier).toBeGreaterThan(1.0);
+  });
+
   it("should apply age modifiers (puppy vs senior)", () => {
     let session = createSession();
     session = addSymptoms(session, ["vomiting"]);
@@ -461,6 +546,26 @@ describe("calculateProbabilities", () => {
       expect(infectionWith.final_score).toBeGreaterThan(
         infectionWithout.final_score
       );
+    }
+  });
+
+  it("should boost soft_tissue_injury when trauma_history confirms an incident", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+
+    const withoutTrauma = calculateProbabilities(session, goldenRetriever);
+
+    session = recordAnswer(session, "trauma_history", "yes_trauma");
+    const withTrauma = calculateProbabilities(session, goldenRetriever);
+
+    const without = withoutTrauma.find(
+      (p) => p.disease_key === "soft_tissue_injury"
+    );
+    const withConfirmedTrauma = withTrauma.find(
+      (p) => p.disease_key === "soft_tissue_injury"
+    );
+    if (without && withConfirmedTrauma) {
+      expect(withConfirmedTrauma.final_score).toBeGreaterThan(without.final_score);
     }
   });
 

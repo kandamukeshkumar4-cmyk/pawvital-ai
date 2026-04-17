@@ -1,0 +1,3303 @@
+{
+  "suite_id": "dog-triage-wave3-freeze-low-information",
+  "version": "wave3-freeze-v2",
+  "species": "dog",
+  "description": "Cases where the owner cannot assess a critical signal or key question directly.",
+  "cases": [
+    {
+      "id": "followup-limping-progression-unknown",
+      "description": "Safe unknown handling should record unknown and continue when limping progression is unclear.",
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "limping"
+          ],
+          "answered_questions": [
+            "which_leg",
+            "limping_onset"
+          ],
+          "extracted_answers": {
+            "which_leg": "left back leg",
+            "limping_onset": "sudden"
+          },
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "ccl_rupture",
+            "soft_tissue_injury",
+            "patellar_luxation"
+          ],
+          "body_systems_involved": [
+            "musculoskeletal"
+          ],
+          "last_question_asked": "limping_progression",
+          "case_memory": {
+            "turn_count": 3,
+            "chief_complaints": [
+              "limping"
+            ],
+            "active_focus_symptoms": [
+              "limping"
+            ],
+            "confirmed_facts": {
+              "which_leg": "left back leg",
+              "limping_onset": "sudden"
+            },
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "limping_progression"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I really can't tell if it's better or worse."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "limping_progression"
+        ],
+        "extractedAnswersMatch": {
+          "limping_progression": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "05-complex-and-followup.json",
+        "source_suite_id": "dog-triage-gold-candidate-complex-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "limping_progression"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-trauma-history-unknown",
+      "description": "Safe unknown handling should record trauma-history unknown and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "limping"
+          ],
+          "answered_questions": [
+            "which_leg",
+            "limping_onset",
+            "limping_progression",
+            "weight_bearing",
+            "swelling_present"
+          ],
+          "extracted_answers": {
+            "which_leg": "left back leg",
+            "limping_onset": "sudden",
+            "limping_progression": "worse",
+            "weight_bearing": "partial",
+            "swelling_present": false
+          },
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "ccl_rupture",
+            "soft_tissue_injury"
+          ],
+          "body_systems_involved": [
+            "musculoskeletal"
+          ],
+          "last_question_asked": "trauma_history",
+          "case_memory": {
+            "turn_count": 6,
+            "chief_complaints": [
+              "limping"
+            ],
+            "active_focus_symptoms": [
+              "limping"
+            ],
+            "confirmed_facts": {
+              "which_leg": "left back leg",
+              "limping_onset": "sudden",
+              "limping_progression": "worse",
+              "weight_bearing": "partial",
+              "swelling_present": false
+            },
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "trauma_history"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I wasn't there, so I really don't know."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "trauma_history"
+        ],
+        "extractedAnswersMatch": {
+          "trauma_history": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "05-complex-and-followup.json",
+        "source_suite_id": "dog-triage-gold-candidate-complex-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "trauma_history"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-breathing-onset-unknown-escalates",
+      "description": "Unsafe unknown handling should escalate if breathing onset cannot be assessed.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "emergency"
+      ],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Moose",
+          "breed": "Pug",
+          "age_years": 8,
+          "weight": 23,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "difficulty_breathing"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "heart_failure",
+            "allergic_reaction",
+            "difficulty_breathing"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "breathing_onset",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "difficulty_breathing"
+            ],
+            "active_focus_symptoms": [
+              "difficulty_breathing"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "breathing_onset"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't know, I just found him like this."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "difficulty_breathing"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": true,
+      "provenance": {
+        "source_shard": "05-complex-and-followup.json",
+        "source_suite_id": "dog-triage-gold-candidate-complex-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "emergency",
+        "low-information",
+        "rare-but-critical"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "breathing_onset"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-water-intake-unknown",
+      "description": "Safe unknown handling should record unknown water intake and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "systemic"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bailey",
+          "breed": "Mixed Breed",
+          "age_years": 9,
+          "weight": 48,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "drinking_more"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "kidney_disease",
+            "diabetes",
+            "hypercalcemia"
+          ],
+          "body_systems_involved": [
+            "systemic"
+          ],
+          "last_question_asked": "water_intake",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "drinking_more"
+            ],
+            "active_focus_symptoms": [
+              "drinking_more"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "water_intake"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Honestly I am not sure how much she is drinking."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "water_intake"
+        ],
+        "extractedAnswersMatch": {
+          "water_intake": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "drinking_more"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "05-complex-and-followup.json",
+        "source_suite_id": "dog-triage-gold-candidate-complex-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "water_intake"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-gum-color-unknown-escalates",
+      "description": "Unknown gum color on a respiratory emergency follow-up should escalate.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "emergency"
+      ],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Pepper",
+          "breed": "Pug",
+          "age_years": 9,
+          "weight": 19,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "difficulty_breathing"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "heart_failure",
+            "allergic_reaction",
+            "difficulty_breathing"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "gum_color",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "difficulty_breathing"
+            ],
+            "active_focus_symptoms": [
+              "difficulty_breathing"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "gum_color"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't tell what color they are right now."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "difficulty_breathing"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": true,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "emergency",
+        "low-information",
+        "rare-but-critical"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "gum_color"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-consciousness-unknown-escalates",
+      "description": "Unknown consciousness level during neurologic triage should escalate.",
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic",
+        "emergency"
+      ],
+      "weight": 3,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Kona",
+          "breed": "Australian Shepherd",
+          "age_years": 6,
+          "weight": 44,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "seizure_collapse"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "seizure_disorder",
+            "toxin_exposure",
+            "heatstroke"
+          ],
+          "body_systems_involved": [
+            "neurologic"
+          ],
+          "last_question_asked": "consciousness_level",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "seizure_collapse"
+            ],
+            "active_focus_symptoms": [
+              "seizure_collapse"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "consciousness_level"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't know if he's fully aware right now."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "seizure_collapse"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": true,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "emergency",
+        "low-information",
+        "rare-but-critical"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "consciousness_level"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-cough-type-unknown-reasks",
+      "description": "Unknown cough type should stay in clarification flow rather than closing the question.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "clarification"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Finn",
+          "breed": "Pomeranian",
+          "age_years": 8,
+          "weight": 10,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "coughing"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "kennel_cough",
+            "tracheal_collapse",
+            "heart_disease"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "cough_type",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "coughing"
+            ],
+            "active_focus_symptoms": [
+              "coughing"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "cough_type"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm not sure what kind of cough it is."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsExclude": [
+          "cough_type"
+        ],
+        "lastQuestionAsked": "cough_type",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "coughing"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "cough_type"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-blood-amount-unknown-reasks",
+      "description": "Unknown blood amount should stay in clarification flow for stool blood triage.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi",
+        "clarification"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Harley",
+          "breed": "Boston Terrier",
+          "age_years": 5,
+          "weight": 22,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "blood_in_stool"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "colitis",
+            "hemorrhagic_gastroenteritis",
+            "anal_gland_issue"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
+          "last_question_asked": "blood_amount",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "blood_in_stool"
+            ],
+            "active_focus_symptoms": [
+              "blood_in_stool"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "blood_amount"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I really can't tell how much blood there was."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsExclude": [
+          "blood_amount"
+        ],
+        "lastQuestionAsked": "blood_amount",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "blood_in_stool"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "blood_amount"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-appetite-change-unknown",
+      "description": "Unknown appetite change should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "systemic"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Maggie",
+          "breed": "Mixed Breed",
+          "age_years": 10,
+          "weight": 51,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "weight_loss"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "cancer",
+            "kidney_disease",
+            "diabetes"
+          ],
+          "body_systems_involved": [
+            "systemic"
+          ],
+          "last_question_asked": "appetite_change",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "weight_loss"
+            ],
+            "active_focus_symptoms": [
+              "weight_loss"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "appetite_change"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't really know if she's eating more or less."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "appetite_change"
+        ],
+        "extractedAnswersMatch": {
+          "appetite_change": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "weight_loss"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "appetite_change"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-stool-consistency-unknown",
+      "description": "Unknown stool consistency should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Benny",
+          "breed": "Beagle",
+          "age_years": 5,
+          "weight": 29,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "diarrhea"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "parasites",
+            "colitis"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
+          "last_question_asked": "stool_consistency",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "diarrhea"
+            ],
+            "active_focus_symptoms": [
+              "diarrhea"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "stool_consistency"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I have no idea, I didn't get a good look."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "stool_consistency"
+        ],
+        "extractedAnswersMatch": {
+          "stool_consistency": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "stool_consistency"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-seasonal-pattern-unknown",
+      "description": "Unknown seasonal pattern should be safely recorded for itch workups.",
+      "tags": [
+        "followup",
+        "unknown",
+        "dermatology"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Mochi",
+          "breed": "French Bulldog",
+          "age_years": 3,
+          "weight": 25,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "excessive_scratching"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "allergic_dermatitis",
+            "flea_allergy",
+            "food_allergy"
+          ],
+          "body_systems_involved": [
+            "skin"
+          ],
+          "last_question_asked": "seasonal_pattern",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "excessive_scratching"
+            ],
+            "active_focus_symptoms": [
+              "excessive_scratching"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "seasonal_pattern"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm honestly not sure if it's seasonal or not."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "seasonal_pattern"
+        ],
+        "extractedAnswersMatch": {
+          "seasonal_pattern": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "excessive_scratching"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "seasonal_pattern"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-trembling-timing-unknown",
+      "description": "Unknown trembling timing should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Loki",
+          "breed": "Chihuahua",
+          "age_years": 7,
+          "weight": 8,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "trembling"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "pain",
+            "anxiety",
+            "hypoglycemia"
+          ],
+          "body_systems_involved": [
+            "neurologic"
+          ],
+          "last_question_asked": "trembling_timing",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "trembling"
+            ],
+            "active_focus_symptoms": [
+              "trembling"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "trembling_timing"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Hard to tell if it's constant or just on and off."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "trembling_timing"
+        ],
+        "extractedAnswersMatch": {
+          "trembling_timing": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "trembling"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "trembling_timing"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-weight-bearing-unknown",
+      "description": "Unknown weight-bearing status should be safely recorded and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "session": {
+          "known_symptoms": [
+            "limping"
+          ],
+          "answered_questions": [
+            "which_leg",
+            "limping_onset",
+            "limping_progression"
+          ],
+          "extracted_answers": {
+            "which_leg": "left back leg",
+            "limping_onset": "sudden",
+            "limping_progression": "worse"
+          },
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "ccl_rupture",
+            "soft_tissue_injury",
+            "patellar_luxation"
+          ],
+          "body_systems_involved": [
+            "musculoskeletal"
+          ],
+          "last_question_asked": "weight_bearing",
+          "case_memory": {
+            "turn_count": 4,
+            "chief_complaints": [
+              "limping"
+            ],
+            "active_focus_symptoms": [
+              "limping"
+            ],
+            "confirmed_facts": {
+              "which_leg": "left back leg",
+              "limping_onset": "sudden",
+              "limping_progression": "worse"
+            },
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "weight_bearing"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't really tell how much weight he's putting on it."
+          }
+        ]
+      },
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "weight_bearing"
+        ],
+        "extractedAnswersMatch": {
+          "weight_bearing": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "06-high-risk-followup-and-adjudication.json",
+        "source_suite_id": "dog-triage-gold-candidate-high-risk-followup",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "weight_bearing"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-seizure-duration-unknown",
+      "description": "Unknown seizure duration should escalate as unsafe unknown.",
+      "tags": [
+        "followup",
+        "unknown",
+        "neurologic",
+        "emergency"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "seizure_collapse"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Poppy",
+          "breed": "Border Collie",
+          "age_years": 4,
+          "weight": 39,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't know how long it lasted, it felt like forever."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "seizure_collapse"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "seizure_disorder",
+            "toxin_exposure",
+            "brain_tumor"
+          ],
+          "body_systems_involved": [
+            "neurologic"
+          ],
+          "last_question_asked": "seizure_duration",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "seizure_collapse"
+            ],
+            "active_focus_symptoms": [
+              "seizure_collapse"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "seizure_duration"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "provenance": {
+        "source_shard": "08-emergency-expansion.json",
+        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "emergency",
+        "low-information",
+        "rare-but-critical"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "seizure_duration"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-breathing-pattern-unknown",
+      "description": "Unknown breathing pattern should escalate as unsafe unknown.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory",
+        "emergency"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true
+      },
+      "complaint_family_tags": [
+        "difficulty_breathing"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Moose",
+          "breed": "Pug",
+          "age_years": 8,
+          "weight": 23,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't describe how he's breathing, he just seems off."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "difficulty_breathing"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "heart_failure",
+            "allergic_reaction",
+            "difficulty_breathing"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "breathing_pattern",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "difficulty_breathing"
+            ],
+            "active_focus_symptoms": [
+              "difficulty_breathing"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "breathing_pattern"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "provenance": {
+        "source_shard": "08-emergency-expansion.json",
+        "source_suite_id": "dog-triage-gold-candidate-emergency-expansion",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "emergency",
+        "low-information",
+        "rare-but-critical"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "breathing_pattern"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-diarrhea-onset-unknown",
+      "description": "If the owner cannot place when diarrhea started, store onset as unknown and continue the GI follow-up.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "diarrhea_onset"
+        ],
+        "extractedAnswersMatch": {
+          "diarrhea_onset": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Teddy",
+          "breed": "Cavalier King Charles Spaniel",
+          "age_years": 4,
+          "weight": 19,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I honestly don't remember exactly when it started."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "diarrhea"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "parasites",
+            "colitis"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
+          "last_question_asked": "diarrhea_onset",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "diarrhea"
+            ],
+            "active_focus_symptoms": [
+              "diarrhea"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "diarrhea_onset"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "diarrhea_onset"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-vomit-color-unknown",
+      "description": "Missing vomit color observation should record unknown without breaking the vomiting flow.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "vomit_color"
+        ],
+        "extractedAnswersMatch": {
+          "vomit_color": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ruby",
+          "breed": "Mini Schnauzer",
+          "age_years": 6,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I didn't really look at what color it was."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "vomiting"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "pancreatitis",
+            "foreign_body"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
+          "last_question_asked": "vomit_color",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "vomiting"
+            ],
+            "active_focus_symptoms": [
+              "vomiting"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "vomit_color"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "vomit_color"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-limping-which-leg-unknown",
+      "description": "When the owner cannot identify the affected leg, the orthopedic follow-up should capture unknown and continue.",
+      "tags": [
+        "followup",
+        "unknown",
+        "orthopedic"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "which_leg"
+        ],
+        "extractedAnswersMatch": {
+          "which_leg": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bruno",
+          "breed": "Golden Retriever",
+          "age_years": 5,
+          "weight": 72,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can't tell which leg it is, he just seems off."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "limping"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "ccl_rupture",
+            "soft_tissue_injury",
+            "patellar_luxation"
+          ],
+          "body_systems_involved": [
+            "musculoskeletal"
+          ],
+          "last_question_asked": "which_leg",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "limping"
+            ],
+            "active_focus_symptoms": [
+              "limping"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "which_leg"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "which_leg"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-cough-duration-unknown",
+      "description": "Unclear cough duration should be preserved as unknown while respiratory questioning keeps moving.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "cough_duration"
+        ],
+        "extractedAnswersMatch": {
+          "cough_duration": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "coughing"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ollie",
+          "breed": "Pomeranian",
+          "age_years": 8,
+          "weight": 9,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm not sure how long he's been coughing."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "coughing"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "kennel_cough",
+            "tracheal_collapse",
+            "heart_disease"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "cough_duration",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "coughing"
+            ],
+            "active_focus_symptoms": [
+              "coughing"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "cough_duration"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "cough_duration"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-itch-location-unknown",
+      "description": "If the owner cannot localize the itch, the dermatology flow should safely retain an unknown location.",
+      "tags": [
+        "followup",
+        "unknown",
+        "dermatology"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "itch_location"
+        ],
+        "extractedAnswersMatch": {
+          "itch_location": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "excessive_scratching"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Mochi",
+          "breed": "French Bulldog",
+          "age_years": 3,
+          "weight": 25,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "She scratches everywhere, I can't pinpoint it."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "excessive_scratching"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "allergic_dermatitis",
+            "flea_allergy",
+            "food_allergy"
+          ],
+          "body_systems_involved": [
+            "skin"
+          ],
+          "last_question_asked": "itch_location",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "excessive_scratching"
+            ],
+            "active_focus_symptoms": [
+              "excessive_scratching"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "itch_location"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "itch_location"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-urine-color-unknown",
+      "description": "Urine color can remain unknown when it was not observed, as long as urinary questioning continues safely.",
+      "tags": [
+        "followup",
+        "unknown",
+        "urinary"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "urine_color"
+        ],
+        "extractedAnswersMatch": {
+          "urine_color": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "urination_problem"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Millie",
+          "breed": "Miniature Schnauzer",
+          "age_years": 7,
+          "weight": 16,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I didn't notice the color of her urine."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "urination_problem"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "uti",
+            "bladder_stones",
+            "kidney_disease"
+          ],
+          "body_systems_involved": [
+            "urinary"
+          ],
+          "last_question_asked": "urine_color",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "urination_problem"
+            ],
+            "active_focus_symptoms": [
+              "urination_problem"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "urine_color"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "urine_color"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-lump-size-unknown",
+      "description": "An unmeasured skin mass should keep its size field unknown without blocking the mass workup.",
+      "tags": [
+        "followup",
+        "unknown",
+        "mass"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "lump_size"
+        ],
+        "extractedAnswersMatch": {
+          "lump_size": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "swelling_lump"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Winston",
+          "breed": "Boxer",
+          "age_years": 8,
+          "weight": 67,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I found it but I'm not sure how big it is."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "swelling_lump"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "lipoma",
+            "mast_cell_tumor",
+            "cyst"
+          ],
+          "body_systems_involved": [
+            "skin"
+          ],
+          "last_question_asked": "lump_size",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "swelling_lump"
+            ],
+            "active_focus_symptoms": [
+              "swelling_lump"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "lump_size"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "lump_size"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-discharge-color-unknown",
+      "description": "When nasal discharge color was not seen, record unknown and continue the respiratory follow-up.",
+      "tags": [
+        "followup",
+        "unknown",
+        "respiratory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "discharge_color"
+        ],
+        "extractedAnswersMatch": {
+          "discharge_color": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "nasal_discharge"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Jasper",
+          "breed": "Collie",
+          "age_years": 9,
+          "weight": 58,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "There's discharge but I can't tell what color."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "nasal_discharge"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "upper_respiratory_infection",
+            "foreign_body",
+            "dental_disease"
+          ],
+          "body_systems_involved": [
+            "respiratory"
+          ],
+          "last_question_asked": "discharge_color",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "nasal_discharge"
+            ],
+            "active_focus_symptoms": [
+              "nasal_discharge"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "discharge_color"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "discharge_color"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-energy-level-unknown",
+      "description": "Energy change can stay unknown when the owner truly cannot compare it to baseline.",
+      "tags": [
+        "followup",
+        "unknown",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "energy_level"
+        ],
+        "extractedAnswersMatch": {
+          "energy_level": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "drinking_more"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Bailey",
+          "breed": "Mixed Breed",
+          "age_years": 9,
+          "weight": 48,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm not sure if his energy is different, he's always been pretty calm."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "drinking_more"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "kidney_disease",
+            "diabetes",
+            "hypercalcemia"
+          ],
+          "body_systems_involved": [
+            "systemic"
+          ],
+          "last_question_asked": "energy_level",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "drinking_more"
+            ],
+            "active_focus_symptoms": [
+              "drinking_more"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "energy_level"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "energy_level"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-wound-depth-unknown",
+      "description": "If the owner cannot judge wound depth, the skin-wound flow should store unknown and keep triage safe.",
+      "tags": [
+        "followup",
+        "unknown",
+        "wound"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "wound_depth"
+        ],
+        "extractedAnswersMatch": {
+          "wound_depth": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "wound_skin_issue"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Koda",
+          "breed": "Husky",
+          "age_years": 3,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I can see a wound but I don't know how deep it goes."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "wound_skin_issue"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "laceration",
+            "abscess",
+            "hot_spot"
+          ],
+          "body_systems_involved": [
+            "skin"
+          ],
+          "last_question_asked": "wound_depth",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "wound_skin_issue"
+            ],
+            "active_focus_symptoms": [
+              "wound_skin_issue"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "wound_depth"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "wound_depth"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-vomit-frequency-unknown",
+      "description": "Vomiting frequency should accept an unknown answer when episodes were not fully observed.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "vomit_frequency"
+        ],
+        "extractedAnswersMatch": {
+          "vomit_frequency": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ruby",
+          "breed": "Mini Schnauzer",
+          "age_years": 6,
+          "weight": 18,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm not sure how many times she threw up."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "vomiting"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "pancreatitis",
+            "foreign_body"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
+          "last_question_asked": "vomit_frequency",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "vomiting"
+            ],
+            "active_focus_symptoms": [
+              "vomiting"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "vomit_frequency"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "vomit_frequency"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-temperature-unknown",
+      "description": "If no rectal temperature was taken, the fever check should record unknown and move to the next safe observable.",
+      "tags": [
+        "followup",
+        "unknown",
+        "systemic"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "has_fever"
+        ],
+        "extractedAnswersMatch": {
+          "has_fever": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "lethargy"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Hot",
+          "breed": "Mixed Breed",
+          "age_years": 5,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I don't have a thermometer so I can't tell if she has a fever."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "lethargy"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "infection",
+            "immune_disease",
+            "cancer"
+          ],
+          "body_systems_involved": [
+            "systemic"
+          ],
+          "last_question_asked": "has_fever",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "lethargy"
+            ],
+            "active_focus_symptoms": [
+              "lethargy"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "has_fever"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "has_fever"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "followup-diarrhea-frequency-unknown",
+      "description": "Frequency uncertainty should not end the diarrhea flow when the owner only knows the stool is abnormal.",
+      "tags": [
+        "followup",
+        "unknown",
+        "gi"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "answeredQuestionsInclude": [
+          "diarrhea_frequency"
+        ],
+        "extractedAnswersMatch": {
+          "diarrhea_frequency": "unknown"
+        },
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "owner_cannot_assess",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Teddy",
+          "breed": "Cavalier King Charles Spaniel",
+          "age_years": 4,
+          "weight": 19,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I'm not sure how many times he went."
+          }
+        ],
+        "session": {
+          "known_symptoms": [
+            "diarrhea"
+          ],
+          "answered_questions": [],
+          "extracted_answers": {},
+          "red_flags_triggered": [],
+          "candidate_diseases": [
+            "dietary_indiscretion",
+            "parasites",
+            "colitis"
+          ],
+          "body_systems_involved": [
+            "gi"
+          ],
+          "last_question_asked": "diarrhea_frequency",
+          "case_memory": {
+            "turn_count": 2,
+            "chief_complaints": [
+              "diarrhea"
+            ],
+            "active_focus_symptoms": [
+              "diarrhea"
+            ],
+            "confirmed_facts": {},
+            "image_findings": [],
+            "red_flag_notes": [],
+            "unresolved_question_ids": [
+              "diarrhea_frequency"
+            ],
+            "timeline_notes": [],
+            "visual_evidence": [],
+            "retrieval_evidence": [],
+            "consult_opinions": [],
+            "evidence_chain": [],
+            "service_timeouts": [],
+            "service_observations": [],
+            "shadow_comparisons": [],
+            "ambiguity_flags": []
+          }
+        }
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "12-followup-unknowns.json",
+        "source_suite_id": "dog-triage-gold-candidate-followup-unknowns",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "low-information"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined",
+            "diarrhea_frequency"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    }
+  ]
+}

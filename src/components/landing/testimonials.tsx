@@ -13,8 +13,8 @@ const testimonials = [
   },
   {
     name: "David K.",
-    pet: "Luna, Siamese Cat, 6 yrs",
-    text: "I uploaded a photo of a skin patch on Luna's ear and PawVital matched it to similar cases in seconds. It flagged it as potentially solar dermatitis — breed-specific to light-coated cats. Spot on.",
+    pet: "Luna, Boxer Mix, 6 yrs",
+    text: "I uploaded a photo of a skin patch on Luna's ear and PawVital matched it to similar canine cases in seconds. It flagged a same-day skin check and gave my vet a much clearer starting point.",
     rating: 5,
   },
   {
@@ -45,10 +45,10 @@ export default function Testimonials() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            Trusted by Pet Parents Who Want Real Answers
+            Trusted by Dog Parents Who Want Real Answers
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            See how PawVital is helping pet owners make better decisions.
+            See how PawVital is helping dog owners make better decisions.
           </p>
         </motion.div>
 

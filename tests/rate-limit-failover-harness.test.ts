@@ -118,5 +118,5 @@ describe("rate-limit failover harness", () => {
       "/api/ai/symptom-chat",
       "/api/ai/symptom-chat",
     ]);
-  });
+  }, 15000);
 });

@@ -1,8 +1,8 @@
 # Gold Dataset Schema & Vet Adjudication Rubric — PawVital AI
 
-> **Version:** 1.0.0
-> **Date:** 2026-04-10
-> **Purpose:** Define the schema for vet-adjudicated benchmark cases and the rubric for consistent labeling.
+> **Version:** 1.1.0
+> **Date:** 2026-04-17
+> **Purpose:** Define the schema for vet-adjudicated benchmark cases, the Wave 3 engineering freeze artifacts, and the rubric for consistent labeling.
 
 ---
 
@@ -107,6 +107,65 @@ type Disposition =
   | "monitor_and_reassess"  // Home observation with clear escalation triggers
   | "cannot_safely_assess"; // System should abstain
 ```
+
+## Wave 3 Freeze Runtime Artifacts
+
+The canonical engineering freeze for Wave 3 lives under:
+
+- `data/benchmarks/dog-triage/wave3-freeze/*.json`
+- `data/benchmarks/dog-triage/wave3-freeze-manifest.json`
+- `data/benchmarks/dog-triage/wave3-freeze-report.md`
+- `data/benchmarks/dog-triage/adjudication-worklist.json`
+- `data/benchmarks/dog-triage/adjudication-worklist.csv`
+- `data/benchmarks/dog-triage/vet-a-packet.json`
+- `data/benchmarks/dog-triage/vet-b-packet.json`
+
+Each freeze case preserves the original runtime request/expectation contract and adds optional Wave 3 metadata:
+
+```typescript
+interface Wave3FreezeCase extends BenchmarkCaseRuntimeCase {
+  complaint_family_tags?: string[];
+  risk_tier?: "tier_1_emergency" | "tier_2_same_day" | "tier_3_48h_monitor" | "tier_4_monitor";
+  uncertainty_pattern?: string;
+  must_not_miss_marker?: boolean;
+  provenance?: {
+    source_shard: string;
+    source_suite_id: string;
+    freeze_date: string;
+    version: string;
+  };
+  wave3_strata?: Array<
+    | "emergency"
+    | "urgent"
+    | "common"
+    | "ambiguous"
+    | "contradictory"
+    | "low-information"
+    | "rare-but-critical"
+  >;
+  wave3_adjudication?: {
+    high_risk: boolean;
+    review_tier: "dual_review_required" | "single_review_allowed";
+    reviewer_slots: Array<{
+      role: string;
+      reviewer_id: string;
+      status: "pending" | "completed";
+    }>;
+    disagreement_status:
+      | "pending_dual_review"
+      | "not_required"
+      | "agreement"
+      | "needs_panel";
+    must_ask_expectations: {
+      question_ids: string[];
+      status: "seeded_from_case_expectations" | "pending_clinical_definition" | string;
+      notes: string;
+    };
+  };
+}
+```
+
+The Wave 3 worklist rows are derived from the same source pack and add reviewer-facing fields such as complaint family coverage, strata, high-risk flags, disagreement status, and must-ask expectation scaffolding. They are still pre-adjudication until independent clinical review is complete.
 
 ---
 

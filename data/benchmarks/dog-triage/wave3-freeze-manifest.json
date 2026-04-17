@@ -1,0 +1,91 @@
+{
+  "version": "wave3-freeze-v2",
+  "generatedAt": "2026-04-17T16:44:31.613Z",
+  "sourceInput": "C:\\pv1301\\data\\benchmarks\\dog-triage\\gold-candidate",
+  "uniqueCaseCount": 226,
+  "highRiskCaseCount": 129,
+  "shardHash": "a691abbc6d2e4c1b4d8d2e6a14f93e0f3b0e079e629970f66b63708d5d34e02d",
+  "strata": [
+    {
+      "key": "emergency",
+      "title": "Emergency",
+      "fileName": "emergency.json",
+      "caseCount": 76,
+      "dualReviewRequiredCount": 76
+    },
+    {
+      "key": "urgent",
+      "title": "Urgent",
+      "fileName": "urgent.json",
+      "caseCount": 26,
+      "dualReviewRequiredCount": 26
+    },
+    {
+      "key": "common",
+      "title": "Common",
+      "fileName": "common.json",
+      "caseCount": 80,
+      "dualReviewRequiredCount": 0
+    },
+    {
+      "key": "ambiguous",
+      "title": "Ambiguous",
+      "fileName": "ambiguous.json",
+      "caseCount": 17,
+      "dualReviewRequiredCount": 0
+    },
+    {
+      "key": "contradictory",
+      "title": "Contradictory",
+      "fileName": "contradictory.json",
+      "caseCount": 4,
+      "dualReviewRequiredCount": 4
+    },
+    {
+      "key": "low-information",
+      "title": "Low Information",
+      "fileName": "low-information.json",
+      "caseCount": 28,
+      "dualReviewRequiredCount": 28
+    },
+    {
+      "key": "rare-but-critical",
+      "title": "Rare But Critical",
+      "fileName": "rare-but-critical.json",
+      "caseCount": 76,
+      "dualReviewRequiredCount": 76
+    }
+  ],
+  "multimodalSlices": [
+    {
+      "fileName": "breathing-effort.jsonl",
+      "modality": "breathing_effort",
+      "caseCount": 7
+    },
+    {
+      "fileName": "gait-analysis.jsonl",
+      "modality": "gait_analysis",
+      "caseCount": 6
+    },
+    {
+      "fileName": "gums-color.jsonl",
+      "modality": "gums_color",
+      "caseCount": 6
+    },
+    {
+      "fileName": "skin-lesion.jsonl",
+      "modality": "skin_lesion",
+      "caseCount": 6
+    },
+    {
+      "fileName": "stool-analysis.jsonl",
+      "modality": "stool_analysis",
+      "caseCount": 6
+    },
+    {
+      "fileName": "vomit-analysis.jsonl",
+      "modality": "vomit_analysis",
+      "caseCount": 6
+    }
+  ]
+}

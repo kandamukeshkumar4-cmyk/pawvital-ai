@@ -5,6 +5,45 @@
   "description": "Additional emergency cases for benchmark expansion.",
   "cases": [
     {
+      "id": "emergency-hit-by-car-pale-gums",
+      "description": "Hit-by-car trauma with weakness and pale gums should escalate immediately.",
+      "tags": [
+        "emergency",
+        "trauma",
+        "shock"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "trauma"
+        ]
+      },
+      "complaint_family_tags": [
+        "trauma"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Skid",
+          "breed": "Labrador Retriever",
+          "age_years": 3,
+          "weight": 68,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog was hit by a car, can barely stand, and his gums look white."
+          }
+        ]
+      }
+    },
+    {
       "id": "emergency-bloat-gasdilation",
       "description": "Acute gastric dilation without retching should escalate.",
       "tags": [
@@ -44,6 +83,45 @@
       }
     },
     {
+      "id": "emergency-post-vaccine-face-swelling",
+      "description": "Facial swelling and hives after vaccination should escalate as a possible anaphylactic reaction.",
+      "tags": [
+        "emergency",
+        "vaccination",
+        "allergy"
+      ],
+      "weight": 3,
+      "expectations": {
+        "responseType": "emergency",
+        "readyForReport": true,
+        "knownSymptomsInclude": [
+          "post_vaccination_reaction"
+        ]
+      },
+      "complaint_family_tags": [
+        "post_vaccination_reaction"
+      ],
+      "risk_tier": "tier_1_emergency",
+      "uncertainty_pattern": "clean",
+      "must_not_miss_marker": true,
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Booster",
+          "breed": "French Bulldog",
+          "age_years": 2,
+          "weight": 24,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "A few hours after his shots my dog's face puffed up and he broke out in hives."
+          }
+        ]
+      }
+    },
+    {
       "id": "emergency-dog-bite-wound",
       "description": "Deep bite wound with tissue damage should escalate.",
       "tags": [
@@ -60,6 +138,7 @@
         ]
       },
       "complaint_family_tags": [
+        "trauma",
         "wound_skin_issue"
       ],
       "risk_tier": "tier_1_emergency",

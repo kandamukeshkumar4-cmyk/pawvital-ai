@@ -68,7 +68,7 @@ export default function AnalyticsPage() {
 
       const rows = (data ?? []) as SymptomCheckDbRow[];
       const mapped = rows.map((row) =>
-        symptomCheckRowToEntry(row, petNameById.get(row.pet_id) ?? "Pet")
+        symptomCheckRowToEntry(row, petNameById.get(row.pet_id) ?? "Dog")
       );
       setRawEntries(mapped);
     } catch (e) {
@@ -84,7 +84,7 @@ export default function AnalyticsPage() {
   }, [loadChecks]);
 
   const petOptions = useMemo(() => {
-    const base = [{ value: "all", label: "All pets" }];
+    const base = [{ value: "all", label: "All dogs" }];
     if (!isSupabaseConfigured && pets.length === 0) {
       const seen = new Map<string, string>();
       for (const e of DEMO_ANALYTICS_SYMPTOM_ENTRIES) {
@@ -124,7 +124,7 @@ export default function AnalyticsPage() {
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <div className="w-full sm:w-48">
             <Select
-              label="Pet"
+              label="Dog"
               options={petOptions}
               value={petId}
               onChange={(e) => setPetId(e.target.value)}
@@ -148,7 +148,7 @@ export default function AnalyticsPage() {
         </div>
       ) : isSupabaseConfigured && pets.length === 0 ? (
         <Card className="p-10 text-center text-gray-600">
-          <p>Add a pet profile to see analytics from your symptom checks.</p>
+          <p>Add a dog profile to see analytics from your symptom checks.</p>
         </Card>
       ) : (
         <>

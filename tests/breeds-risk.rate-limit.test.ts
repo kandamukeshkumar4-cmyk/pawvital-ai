@@ -45,6 +45,7 @@ describe("GET /api/breeds/risk rate-limit failover", () => {
     const payload = (await response.json()) as {
       breed: string;
       profiles: Array<{ condition: string }>;
+      modifierProvenance: Array<{ rule_id: string }>;
       source: string;
     };
 
@@ -52,6 +53,7 @@ describe("GET /api/breeds/risk rate-limit failover", () => {
     expect(payload.breed).toBe("beagle");
     expect(payload.source).toBe("supabase");
     expect(payload.profiles).toHaveLength(1);
+    expect(Array.isArray(payload.modifierProvenance)).toBe(true);
     expect(mockGetBreedRiskProfiles).toHaveBeenCalledWith("beagle", 2);
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });

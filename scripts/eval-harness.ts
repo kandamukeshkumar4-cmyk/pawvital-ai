@@ -40,7 +40,7 @@ const DEFAULT_SUITE = path.join(
   "data",
   "benchmarks",
   "dog-triage",
-  "gold-candidate"
+  "wave3-freeze"
 );
 const DEFAULT_ARTIFACT = path.join(ROOT, "runpod-benchmark-report.json");
 const DEFAULT_SCORECARD = path.join(

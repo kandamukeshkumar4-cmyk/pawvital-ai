@@ -300,7 +300,7 @@ export default function JournalPage() {
     }
   };
 
-  const displayPetName = activePet?.name || pets[0]?.name || "Your pet";
+  const displayPetName = activePet?.name || pets[0]?.name || "Your dog";
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -398,7 +398,7 @@ export default function JournalPage() {
               ? `${activePet.weight} ${activePet.weight_unit}`
               : "—"}
           </p>
-          <p className="text-xs text-gray-500">Active pet weight</p>
+          <p className="text-xs text-gray-500">Active dog weight</p>
         </Card>
         <Card className="p-4 text-center">
           <p className="text-2xl font-bold text-amber-600">{happyDays30}</p>
@@ -437,7 +437,7 @@ export default function JournalPage() {
                     <div className="flex items-start justify-between gap-2 flex-wrap">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-gray-900">
-                          {petById.get(entry.pet_id) || "Pet"}
+                          {petById.get(entry.pet_id) || "Dog"}
                         </h3>
                         {moodInfo && (
                           <div
@@ -504,7 +504,7 @@ export default function JournalPage() {
       >
         <form onSubmit={(e) => void submitEntry(e)} className="space-y-4">
           <Select
-            label="Pet"
+            label="Dog"
             value={form.pet_id}
             onChange={(e) => setForm({ ...form, pet_id: e.target.value })}
             options={pets.map((p) => ({ value: p.id, label: p.name }))}
@@ -554,7 +554,7 @@ export default function JournalPage() {
             label="Notes"
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
-            placeholder="How is your pet doing today?"
+            placeholder="How is your dog doing today?"
             rows={4}
           />
           <div>

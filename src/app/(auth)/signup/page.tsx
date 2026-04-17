@@ -17,7 +17,7 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 const benefits = [
   "7-day free trial, no credit card required",
   "AI symptom checker available 24/7",
-  "Personalized wellness plans for your pet",
+  "Personalized wellness plans for your dog",
   "Cancel anytime — no questions asked",
 ];
 
@@ -84,10 +84,10 @@ export default function SignupPage() {
         {/* Left side - Benefits */}
         <div className="hidden lg:block">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Your pet deserves the best care possible.
+            Your dog deserves the best care possible.
           </h2>
           <p className="text-lg text-gray-600 mb-8">
-            Join thousands of pet parents who stopped guessing and started knowing.
+            Join thousands of dog parents who stopped guessing and started knowing.
           </p>
           <div className="space-y-4">
             {benefits.map((b) => (

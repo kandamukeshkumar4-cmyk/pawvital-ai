@@ -14,9 +14,9 @@ export default function Footer() {
               <span className="text-xl font-bold text-white">PawVital AI</span>
             </div>
             <p className="text-gray-400 max-w-md leading-relaxed">
-              Evidence-based veterinary symptom triage powered by AI. 10,000+
-              clinical cases, 200+ disease profiles, and 9,700+ reference
-              images — giving you real answers about your pet&apos;s health.
+              Evidence-based dog symptom triage powered by AI and a
+              deterministic canine clinical matrix — giving you clearer next
+              steps for your dog&apos;s health.
             </p>
           </div>
           <div>

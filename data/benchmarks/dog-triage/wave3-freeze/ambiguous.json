@@ -1,0 +1,1128 @@
+{
+  "suite_id": "dog-triage-wave3-freeze-ambiguous",
+  "version": "wave3-freeze-v2",
+  "species": "dog",
+  "description": "Cases with vague, multi-complaint, or otherwise clinically ambiguous owner phrasing.",
+  "cases": [
+    {
+      "id": "question-vague-sick-dog",
+      "description": "Vague \"dog is sick\" presentation should open general questioning.",
+      "tags": [
+        "question",
+        "vague",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "behavior_change"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Max",
+          "breed": "Mixed Breed",
+          "age_years": 5,
+          "weight": 40,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog just doesn't seem right."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-slang-throwing-up-bricks",
+      "description": "Slang description of vomiting should still open GI flow.",
+      "tags": [
+        "question",
+        "gi",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "vomiting"
+        ]
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tank",
+          "breed": "Pit Bull Terrier",
+          "age_years": 4,
+          "weight": 60,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog keeps hurling his food back up."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-multi-cough-vomit-itch",
+      "description": "Multiple complaints in one message should open prioritized questioning.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "coughing",
+        "vomiting",
+        "excessive_scratching"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Everything",
+          "breed": "Mixed Breed",
+          "age_years": 8,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is coughing, threw up once, and is scratching like crazy."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-low-literacy-belly-big",
+      "description": "Low-literacy description of abdominal distension should open abdominal questioning.",
+      "tags": [
+        "question",
+        "abdomen",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "swollen_abdomen"
+        ]
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Big Boy",
+          "breed": "Labrador Retriever",
+          "age_years": 9,
+          "weight": 85,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His belly be real big like a balloon."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-vague-not-eating",
+      "description": "Vague \"not eating\" should open appetite/dental/systemic questioning.",
+      "tags": [
+        "question",
+        "appetite",
+        "vague"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "not_eating"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Picky",
+          "breed": "Pomeranian",
+          "age_years": 7,
+          "weight": 7,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "He just won't eat his food anymore."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-slang-the-runs",
+      "description": "Slang for diarrhea should open GI flow.",
+      "tags": [
+        "question",
+        "gi",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "diarrhea"
+        ]
+      },
+      "complaint_family_tags": [
+        "diarrhea"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Speedy",
+          "breed": "Mixed Breed",
+          "age_years": 3,
+          "weight": 30,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has the runs really bad."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-multi-lethargy-vomit-drink",
+      "description": "Multiple systemic complaints should open prioritized questioning.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "lethargy",
+        "vomiting",
+        "drinking_more"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Slow",
+          "breed": "Mixed Breed",
+          "age_years": 10,
+          "weight": 50,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is tired all the time, vomited yesterday, and drinking a lot."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-low-literacy-eye-bad",
+      "description": "A plain-language eye complaint should still route into the ophthalmic questioning path.",
+      "tags": [
+        "question",
+        "eye",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "eye_discharge"
+        ]
+      },
+      "complaint_family_tags": [
+        "vision_loss"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "One Eye",
+          "breed": "Shih Tzu",
+          "age_years": 8,
+          "weight": 12,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His eye all goopy and squinty."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-vague-lump-found",
+      "description": "Vague lump discovery should open mass characterization.",
+      "tags": [
+        "question",
+        "mass",
+        "vague"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "swelling_lump"
+        ]
+      },
+      "complaint_family_tags": [
+        "swelling_lump"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Lumpy",
+          "breed": "Boxer",
+          "age_years": 9,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Found something under his skin. Not sure what it is."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-slang-his-stomach-upset",
+      "description": "Slang for GI upset should open GI questioning.",
+      "tags": [
+        "question",
+        "gi",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Tummy",
+          "breed": "Bulldog",
+          "age_years": 5,
+          "weight": 50,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His stomach is all messed up. He keeps retching."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-multi-skin-ear-lick",
+      "description": "Skin, ear, and licking combo should open dermatology flow.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "ear_scratching",
+        "excessive_scratching",
+        "recurrent_skin"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Allergy",
+          "breed": "French Bulldog",
+          "age_years": 4,
+          "weight": 24,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "She's scratching her ears, her skin is red, and she licks her paws."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-low-literacy-leg-hurt",
+      "description": "A simple 'leg hurt' owner phrase should still open the lameness pathway without losing nuance.",
+      "tags": [
+        "question",
+        "orthopedic",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "limping"
+        ]
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Hurty",
+          "breed": "Dachshund",
+          "age_years": 7,
+          "weight": 20,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "His leg be hurting him bad."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-vague-coughing-sometimes",
+      "description": "Intermittent vague coughing should open respiratory questioning.",
+      "tags": [
+        "question",
+        "respiratory",
+        "vague"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "coughing"
+        ]
+      },
+      "complaint_family_tags": [
+        "coughing"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "vague",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Coughy",
+          "breed": "Pomeranian",
+          "age_years": 10,
+          "weight": 9,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "He does this coughing thing sometimes."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-multi-weight-hair-tired",
+      "description": "Weight loss, hair loss, and tiredness should open systemic questioning.",
+      "tags": [
+        "question",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "weight_loss",
+        "hair_loss",
+        "lethargy"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Decline",
+          "breed": "Mixed Breed",
+          "age_years": 13,
+          "weight": 35,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is getting thinner, losing hair, and always sleeping."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-slang-the-shakes",
+      "description": "Slang for trembling should open neurologic questioning.",
+      "tags": [
+        "question",
+        "neurologic",
+        "slang"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "trembling"
+        ]
+      },
+      "complaint_family_tags": [
+        "trembling"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "slang",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Shaky",
+          "breed": "Chihuahua",
+          "age_years": 9,
+          "weight": 6,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog has got the shakes."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-low-literacy-belly-hurt",
+      "description": "Low-literacy abdominal pain should open abdominal questioning.",
+      "tags": [
+        "question",
+        "abdomen",
+        "low_literacy"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "swollen_abdomen"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "low_literacy",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Ouchie",
+          "breed": "Basset Hound",
+          "age_years": 6,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Her belly hurt. She cries when she moves."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-multi-senior-decline-combo",
+      "description": "Multiple senior decline signs should open comprehensive geriatric questioning.",
+      "tags": [
+        "question",
+        "senior",
+        "multi_complaint"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "senior_decline",
+        "multi_system_decline",
+        "lethargy",
+        "behavior_change",
+        "not_eating"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "multi_complaint",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "All Decline",
+          "breed": "Golden Retriever",
+          "age_years": 14,
+          "weight": 55,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is sleeping all day, not eating well, and seems confused."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "13-senior-chronic.json",
+        "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "ambiguous"
+      ],
+      "wave3_adjudication": {
+        "high_risk": false,
+        "review_tier": "single_review_allowed",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "not_required",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    }
+  ]
+}

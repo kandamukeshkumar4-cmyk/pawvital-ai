@@ -1,6 +1,6 @@
 # PawVital AI
 
-PawVital AI is a Next.js veterinary triage application built around a deterministic clinical matrix, structured symptom memory, and NVIDIA-hosted model inference for runtime AI features.
+PawVital AI is a Next.js dog symptom triage application built around a deterministic canine clinical matrix, structured symptom memory, and NVIDIA-hosted model inference for runtime AI features.
 
 ## Runtime Provider Policy
 

@@ -1,7 +1,8 @@
 # Benchmark Lint Report
 
-**Date**: 2026-04-14T03:04:12.437Z
-**Total Cases**: 223
+**Date**: 2026-04-17T17:19:31.604Z
+**Source**: wave3-freeze
+**Total Cases**: 226
 
 ## Results
 
@@ -10,4 +11,4 @@
 
 ### Warnings
 
-- 41 families below minimum (8) cases
+- 36 families below minimum (8) cases

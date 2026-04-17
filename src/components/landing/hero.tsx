@@ -41,16 +41,17 @@ export default function Hero() {
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
-              Your Pet&apos;s Health,{" "}
+              Your Dog&apos;s Symptoms,{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">
                 Understood by AI
               </span>
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-gray-600 max-w-xl leading-relaxed">
-              PawVital uses veterinary knowledge from Merck manuals, 10,000+
-              clinical cases, and 9,700+ reference images to give you real answers
-              about your pet&apos;s symptoms — not generic search results.
+              PawVital uses a deterministic canine clinical matrix, veterinary
+              reference material, and curated evidence support to give you
+              clearer answers about your dog&apos;s symptoms, not generic search
+              results.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
@@ -71,15 +72,15 @@ export default function Hero() {
             <div className="mt-10 flex flex-wrap items-center gap-6 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <FlaskConical className="w-4 h-4 text-emerald-500" />
-                <span>10,000+ Clinical Cases</span>
+                <span>Curated clinical cases</span>
               </div>
               <div className="flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-blue-500" />
-                <span>200+ Disease Profiles</span>
+                <span>Deterministic canine triage logic</span>
               </div>
               <div className="flex items-center gap-2">
                 <ImageIcon className="w-4 h-4 text-indigo-500" />
-                <span>9,700+ Reference Images</span>
+                <span>Reference image support</span>
               </div>
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-amber-500" />

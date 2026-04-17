@@ -104,7 +104,7 @@ export default function DashboardPage() {
             {activePet ? `${activePet.name}'s Dashboard` : "Dashboard"}
           </h1>
           <p className="text-gray-500 mt-1">
-            Here&apos;s how your pet is doing today
+            Here&apos;s how your dog is doing today
           </p>
         </div>
         <Link href="/symptom-checker" className="w-full sm:w-auto">
@@ -224,7 +224,7 @@ export default function DashboardPage() {
               Upcoming: Annual vaccination due in 2 weeks
             </p>
             <p className="text-xs text-amber-600 mt-1">
-              Schedule a vet appointment for {activePet?.name || "your pet"}
+              Schedule a vet appointment for {activePet?.name || "your dog"}
               &apos;s annual shots.
             </p>
           </div>
