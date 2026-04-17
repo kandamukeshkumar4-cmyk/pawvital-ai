@@ -148,6 +148,10 @@ function deriveDeterministicAnswerForQuestion(
       return extractWaterIntake(rawMessage);
     case "consciousness_level":
       return extractConsciousnessLevel(rawMessage);
+    case "face_swelling":
+      return extractFaceSwelling(rawMessage);
+    case "hives_with_breathing":
+      return extractHivesWithBreathing(rawMessage);
     case "blood_color":
       return extractBloodColor(rawMessage);
     case "blood_amount":
@@ -156,6 +160,8 @@ function deriveDeterministicAnswerForQuestion(
       return extractRatPoisonAccess(rawMessage);
     case "toxin_exposure":
       return extractToxinExposure(rawMessage);
+    case "trauma_mobility":
+      return extractTraumaMobility(rawMessage);
     case "pain_on_touch":
       return extractPainOnTouch(rawMessage);
     case "worse_after_rest":
@@ -244,10 +250,13 @@ function isRefreshableDeterministicQuestion(questionId: string): boolean {
     "gum_color",
     "water_intake",
     "consciousness_level",
+    "face_swelling",
+    "hives_with_breathing",
     "blood_color",
     "blood_amount",
     "rat_poison_access",
     "toxin_exposure",
+    "trauma_mobility",
     "pain_on_touch",
     "worse_after_rest",
     "swelling_present",
@@ -500,7 +509,7 @@ function extractConsciousnessLevel(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
   if (
-    /\b(unresponsive|passed out|collapsed|not waking up|won't wake|wont wake)\b/.test(
+    /\b(unresponsive|passed out|collapsed|fainted|went limp|lost consciousness|knocked out|blackout|not waking up|won't wake|wont wake)\b/.test(
       lower
     )
   ) {
@@ -515,6 +524,60 @@ function extractConsciousnessLevel(rawMessage: string): string | null {
   }
   if (/\b(alert|responsive|acting normal)\b/.test(lower)) {
     return "alert";
+  }
+
+  return null;
+}
+
+function extractFaceSwelling(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  if (
+    /\b(face swelling|facial swelling|swollen face|face swelled up|face puffed up|face is puffing up|muzzle swollen|swollen muzzle|eyelids swollen|swollen eyelids)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  return null;
+}
+
+function extractHivesWithBreathing(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  const hasHives = /\b(hives|rash)\b/.test(lower);
+  const hasBreathingConcern =
+    /\b(can'?t breathe|cannot breathe|trouble breathing|difficulty breathing|struggling to breathe|breathing hard|breathing fast|breathing rapidly|labored breathing|short of breath)\b/.test(
+      lower
+    );
+
+  if (hasHives && hasBreathingConcern) {
+    return true;
+  }
+
+  return null;
+}
+
+function extractTraumaMobility(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(can'?t stand|cannot stand|unable to stand|can barely stand|barely standing|too weak to stand|can'?t get up|cannot get up|unable to get up|can'?t walk|cannot walk|unable to walk)\b/.test(
+      lower
+    )
+  ) {
+    return "inability_to_stand";
+  }
+
+  if (/\b(limp|limping|hobbling|favoring)\b/.test(lower)) {
+    return "limping";
+  }
+
+  if (
+    /\b(still walking|able to walk|can walk|walking normally|walking okay)\b/.test(
+      lower
+    )
+  ) {
+    return "walking";
   }
 
   return null;

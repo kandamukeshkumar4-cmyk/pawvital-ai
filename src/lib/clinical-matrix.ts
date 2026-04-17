@@ -295,8 +295,9 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "lethargy_severity",
       "appetite_status",
       "exercise_intolerance",
+      "gum_color",
     ],
-    red_flags: ["collapse", "unresponsive"],
+    red_flags: ["collapse", "unresponsive", "blue_gums", "pale_gums"],
     body_systems: ["systemic"],
   },
   coughing: {
@@ -355,11 +356,13 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "scratch_location",
       "scratch_duration",
       "skin_changes",
+      "face_swelling",
+      "hives_with_breathing",
       "flea_prevention",
       "diet_change",
       "seasonal_pattern",
     ],
-    red_flags: ["face_swelling", "hives_widespread"],
+    red_flags: ["face_swelling", "hives_widespread", "hives_with_breathing"],
     body_systems: ["dermatologic"],
   },
   drinking_more: {
@@ -661,9 +664,16 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "lump_growth_rate",
       "lump_mobility",
       "pain_on_touch",
+      "face_swelling",
+      "hives_with_breathing",
       "other_lumps_present",
     ],
-    red_flags: ["rapid_growing_mass", "face_swelling", "swelling_with_breathing"],
+    red_flags: [
+      "rapid_growing_mass",
+      "face_swelling",
+      "swelling_with_breathing",
+      "hives_with_breathing",
+    ],
     body_systems: ["systemic", "dermatologic", "musculoskeletal"],
   },
 
@@ -1117,6 +1127,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "back_pain",
       "bladder_control",
       "trauma_history",
+      "trauma_mobility",
       "abnormal_gait_progression",
     ],
     red_flags: ["inability_to_stand", "paralysis", "loss_bladder_bowel_control"],
@@ -2504,7 +2515,7 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
       "Can your dog stand and walk, or are they unable to get up?",
     data_type: "choice",
     choices: ["walking", "limping", "inability_to_stand", "unknown"],
-    extraction_hint: "mobility after trauma",
+    extraction_hint: "ability to stand and walk versus inability to get up",
     critical: true,
   },
 
@@ -3929,17 +3940,17 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
   face_swelling: {
     id: "face_swelling",
     question_text:
-      "Has your dog's face, muzzle, or eyelids become swollen after the vaccine?",
+      "Has your dog's face, muzzle, or eyelids become swollen?",
     data_type: "boolean",
-    extraction_hint: "facial swelling after vaccination",
+    extraction_hint: "facial swelling of the face, muzzle, or eyelids",
     critical: true,
   },
   hives_with_breathing: {
     id: "hives_with_breathing",
     question_text:
-      "Are there hives or a rash together with breathing trouble after the vaccine?",
+      "Are there hives or a rash together with breathing trouble?",
     data_type: "boolean",
-    extraction_hint: "hives or rash with breathing difficulty after vaccination",
+    extraction_hint: "hives or rash together with breathing difficulty",
     critical: true,
   },
 
