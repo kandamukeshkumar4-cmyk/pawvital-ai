@@ -1,16 +1,16 @@
 # Wave 3 Emergency Baseline Debug
 
-- Generated at: 2026-04-17T21:37:56.874Z
+- Generated at: 2026-04-17T22:28:51.396Z
 - Source scorecard: `data/benchmarks/dog-triage/live-scorecard.json`
 - Source suite: `data/benchmarks/dog-triage/wave3-freeze`
-- Scorecard generated at: 2026-04-17T17:09:26.998Z
+- Scorecard generated at: 2026-04-17T22:28:44.559Z
 - Base URL captured in source scorecard: https://pawvital-ai.vercel.app
 - Scope: tier 1 emergency cases expected to return `emergency`
 
 ## Snapshot
 
 - Unique emergency failure cases: 76
-- Emergency failure occurrences: 157
+- Emergency failure occurrences: 76
 - Actual response types observed: question
 - Ordered blocker groups: 39
 
@@ -18,11 +18,11 @@
 
 | Bucket | Unique cases | Occurrences | Top complaint families |
 | --- | --- | --- | --- |
-| `complaint_normalization_miss` | 37 | 74 | dental_problem, diarrhea, difficulty_breathing |
-| `question_orchestration_overrode_emergency` | 22 | 47 | difficulty_breathing, eye_discharge, lethargy |
-| `missing_red_flag_linkage` | 11 | 24 | difficulty_breathing, lethargy, nasal_discharge |
-| `deterministic_emergency_composite_not_triggered` | 5 | 10 | difficulty_breathing, pregnancy_birth, vomiting |
-| `missing_owner_language_mapping` | 1 | 2 | excessive_scratching |
+| `complaint_normalization_miss` | 37 | 37 | dental_problem, diarrhea, difficulty_breathing |
+| `question_orchestration_overrode_emergency` | 22 | 22 | difficulty_breathing, eye_discharge, lethargy |
+| `missing_red_flag_linkage` | 11 | 11 | difficulty_breathing, lethargy, nasal_discharge |
+| `deterministic_emergency_composite_not_triggered` | 5 | 5 | difficulty_breathing, pregnancy_birth, vomiting |
+| `missing_owner_language_mapping` | 1 | 1 | excessive_scratching |
 | `harness_route_contract_mismatch` | 0 | 0 | _none_ |
 | `report_readiness_contract_mismatch` | 0 | 0 | _none_ |
 
@@ -30,11 +30,11 @@
 
 | Rank | Bucket | Complaint family | Actual | Unique cases | Example cases |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `missing_red_flag_linkage` | `seizure_collapse` | question | 5 | cardiac-emergency-collapse-after-excitement, cardiac-emergency-collapse-blue-gums, followup-consciousness-unknown-escalates, followup-seizure-duration-unknown, oncology-emergency-bleeding-splenic-rupture-style |
-| 2 | `complaint_normalization_miss` | `difficulty_breathing` | question | 5 | emergency-blue-gums-breathing, emergency-breathing-labored, emergency-choking-foreign-body, emergency-difficulty-breathing-kennel, emergency-resting-open-mouth-breathing |
-| 3 | `complaint_normalization_miss` | `pregnancy_birth` | question | 5 | emergency-dystocia, emergency-hard-labor-no-puppy, emergency-labor-green-discharge, emergency-postpartum-eclampsia, emergency-postpartum-heavy-bleeding |
-| 4 | `question_orchestration_overrode_emergency` | `difficulty_breathing` | question | 4 | followup-breathing-onset-unknown-escalates, followup-breathing-pattern-unknown, followup-gum-color-unknown-escalates, oncology-emergency-obstructive-neck-mass |
-| 5 | `complaint_normalization_miss` | `seizure_collapse` | question | 4 | emergency-cluster-seizures, emergency-postictal-no-recovery, emergency-prolonged-seizure, emergency-seizure-first-time |
+| 1 | `complaint_normalization_miss` | `difficulty_breathing` | question | 5 | emergency-blue-gums-breathing, emergency-breathing-labored, emergency-choking-foreign-body, emergency-difficulty-breathing-kennel, emergency-resting-open-mouth-breathing |
+| 2 | `complaint_normalization_miss` | `pregnancy_birth` | question | 5 | emergency-dystocia, emergency-hard-labor-no-puppy, emergency-labor-green-discharge, emergency-postpartum-eclampsia, emergency-postpartum-heavy-bleeding |
+| 3 | `missing_red_flag_linkage` | `seizure_collapse` | question | 5 | cardiac-emergency-collapse-after-excitement, cardiac-emergency-collapse-blue-gums, followup-consciousness-unknown-escalates, followup-seizure-duration-unknown, oncology-emergency-bleeding-splenic-rupture-style |
+| 4 | `complaint_normalization_miss` | `seizure_collapse` | question | 4 | emergency-cluster-seizures, emergency-postictal-no-recovery, emergency-prolonged-seizure, emergency-seizure-first-time |
+| 5 | `question_orchestration_overrode_emergency` | `difficulty_breathing` | question | 4 | followup-breathing-onset-unknown-escalates, followup-breathing-pattern-unknown, followup-gum-color-unknown-escalates, oncology-emergency-obstructive-neck-mass |
 | 6 | `question_orchestration_overrode_emergency` | `vomiting` | question | 4 | emergency-toxin-xylitol, toxin-emergency-grapes-weakness, toxin-emergency-lily-chew, toxin-emergency-sago-palm |
 | 7 | `complaint_normalization_miss` | `swollen_abdomen` | question | 3 | emergency-bloat-after-meal, emergency-bloat-gasdilation, emergency-gdv-retching |
 | 8 | `complaint_normalization_miss` | `urination_problem` | question | 3 | emergency-urinary-blockage, emergency-urinary-blockage-distress, emergency-urinary-female-blockage |

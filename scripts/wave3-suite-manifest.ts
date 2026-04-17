@@ -61,6 +61,31 @@ function normalizeIdList(ids: string[]): string[] {
   return [...ids].sort((left, right) => left.localeCompare(right));
 }
 
+function hasCanonicalManifestFields(
+  candidate: unknown
+): candidate is Wave3CanonicalManifest {
+  if (!candidate || typeof candidate !== "object") {
+    return false;
+  }
+
+  const manifest = candidate as Partial<Wave3CanonicalManifest>;
+  return (
+    typeof manifest.suiteId === "string" &&
+    typeof manifest.suiteVersion === "string" &&
+    typeof manifest.generatedAt === "string" &&
+    typeof manifest.manifestHash === "string" &&
+    Array.isArray(manifest.caseIds) &&
+    Array.isArray(manifest.shardPaths) &&
+    typeof manifest.totalCases === "number" &&
+    typeof manifest.complaintFamilyCounts === "object" &&
+    manifest.complaintFamilyCounts !== null &&
+    typeof manifest.riskTierCounts === "object" &&
+    manifest.riskTierCounts !== null &&
+    typeof manifest.modalityCounts === "object" &&
+    manifest.modalityCounts !== null
+  );
+}
+
 function benchmarkDirFromRoot(rootDir: string): string {
   return path.join(rootDir, ...BENCHMARK_DIR_PARTS);
 }
@@ -134,7 +159,10 @@ export function loadWave3CanonicalBundle(rootDir: string): Wave3CanonicalBundle 
     throw new Error(`Wave 3 legacy manifest not found: ${legacyManifestPath}`);
   }
 
-  const legacyManifest = readJson<Wave3LegacyFreezeManifest>(legacyManifestPath);
+  const rawLegacyManifest = readJson<Wave3LegacyFreezeManifest | Wave3CanonicalManifest>(
+    legacyManifestPath
+  );
+  const legacyManifest = rawLegacyManifest as Wave3LegacyFreezeManifest;
   const caseMap = buildWave3CaseMap(benchmarkDir, legacyManifest);
   const rawCases = [...caseMap.values()];
   const modalities = (legacyManifest.multimodalSlices ?? []).map((slice) => ({
@@ -142,6 +170,18 @@ export function loadWave3CanonicalBundle(rootDir: string): Wave3CanonicalBundle 
     caseCount: slice.caseCount,
   }));
   const canonicalManifestPath = path.join(benchmarkDir, CANONICAL_MANIFEST_NAME);
+
+  if (hasCanonicalManifestFields(rawLegacyManifest)) {
+    const manifest = validateWave3CanonicalManifest(rawLegacyManifest);
+
+    return {
+      manifest,
+      cases: validateManifestMembership(manifest, caseMap),
+      modalities,
+      benchmarkDir,
+      wave3Dir,
+    };
+  }
 
   if (fs.existsSync(canonicalManifestPath)) {
     const manifest = validateWave3CanonicalManifest(

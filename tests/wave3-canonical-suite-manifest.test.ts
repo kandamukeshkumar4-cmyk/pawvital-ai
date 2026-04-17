@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 interface Wave3Stratum {
@@ -224,5 +226,36 @@ describe("Wave 3 canonical suite manifest", () => {
 
   it("keeps the manifest hash stable over the canonical contract fields", () => {
     expect(manifest.manifestHash).toBe(hashCanonicalSummary(derived));
+  });
+
+  it("keeps the runpod dry-run suite identity aligned with the canonical manifest contract", () => {
+    const outputPath = path.join(
+      os.tmpdir(),
+      `wave3-runpod-dry-run-${process.pid}-${Date.now()}.json`
+    );
+
+    try {
+      execFileSync(
+        process.execPath,
+        [
+          "scripts/runpod-benchmark.mjs",
+          "--dry-run",
+          "--input=data/benchmarks/dog-triage/wave3-freeze",
+          `--output=${outputPath}`,
+        ],
+        {
+          cwd: ROOT,
+          stdio: "pipe",
+        }
+      );
+
+      const report = readJson<{ suiteId: string; caseCount: number }>(outputPath);
+      expect(report.suiteId).toBe(manifest.suiteId);
+      expect(report.caseCount).toBe(manifest.totalCases);
+    } finally {
+      if (fs.existsSync(outputPath)) {
+        fs.unlinkSync(outputPath);
+      }
+    }
   });
 });

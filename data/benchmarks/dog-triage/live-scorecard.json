@@ -1,8 +1,8 @@
 {
-  "runId": "LIVE-EVAL-2026-04-17T21-41-10-242Z",
-  "generatedAt": "2026-04-17T21:41:10.242Z",
+  "runId": "LIVE-EVAL-2026-04-17T22-28-44-558Z",
+  "generatedAt": "2026-04-17T22:28:44.559Z",
   "executionMode": "live_route",
-  "suiteId": "wave3-freeze-v2",
+  "suiteId": "dog-triage-wave3-freeze",
   "baseUrl": "https://pawvital-ai.vercel.app",
   "filters": {},
   "totalCases": 226,
@@ -20,7 +20,7 @@
   "blockingFailures": 76,
   "passFail": "FAIL",
   "preflight": {
-    "performedAt": "2026-04-17T21:24:04.766Z",
+    "performedAt": "2026-04-17T22:09:43.134Z",
     "routeUrl": "https://pawvital-ai.vercel.app/api/ai/sidecar-readiness",
     "ready": false,
     "requiredServices": 5,
@@ -1332,12 +1332,12 @@
       "description": "Failed checks: knownSymptomsInclude:wound_skin_issue"
     }
   ],
-  "manifestHash": "d8695f0e1138e12328572607aa2df3840a57dc9c9f0a907bbab398bfbe31b7dc",
+  "manifestHash": "b2675532644dd12fd074c09b2cfffdfd937451360773e728ec6763d30f61dd82",
   "extraCaseIds": [],
   "missingCaseIds": [],
   "duplicateCaseIds": [],
   "suiteIdentityFailures": [],
   "suiteIdentityAligned": true,
-  "observedSuiteId": "wave3-freeze-v2",
-  "observedManifestHash": "d8695f0e1138e12328572607aa2df3840a57dc9c9f0a907bbab398bfbe31b7dc"
+  "observedSuiteId": "dog-triage-wave3-freeze",
+  "observedManifestHash": "b2675532644dd12fd074c09b2cfffdfd937451360773e728ec6763d30f61dd82"
 }

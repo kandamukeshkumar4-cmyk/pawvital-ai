@@ -114,6 +114,17 @@ function normalizeIdList(ids) {
   return [...ids].sort((left, right) => left.localeCompare(right));
 }
 
+function hasCanonicalManifestFields(candidate) {
+  return (
+    candidate &&
+    typeof candidate === "object" &&
+    typeof candidate.suiteId === "string" &&
+    typeof candidate.suiteVersion === "string" &&
+    Array.isArray(candidate.caseIds) &&
+    typeof candidate.totalCases === "number"
+  );
+}
+
 function resolveWave3CanonicalSuite(inputPath, suites) {
   if (path.basename(inputPath) !== "wave3-freeze") {
     return null;
@@ -127,9 +138,11 @@ function resolveWave3CanonicalSuite(inputPath, suites) {
 
   const legacyManifest = readJson(legacyManifestPath);
   const canonicalManifestPath = path.join(benchmarkDir, wave3CanonicalManifestName);
-  const canonicalManifest = fs.existsSync(canonicalManifestPath)
-    ? readJson(canonicalManifestPath)
-    : null;
+  const canonicalManifest = hasCanonicalManifestFields(legacyManifest)
+    ? legacyManifest
+    : fs.existsSync(canonicalManifestPath)
+      ? readJson(canonicalManifestPath)
+      : null;
   const caseMap = new Map();
 
   for (const suite of suites) {

@@ -1,13 +1,13 @@
 # Wave 3 Release Gate Report
 
-- Generated at: 2026-04-17T21:43:33.648Z
+- Generated at: 2026-04-17T22:28:53.691Z
 - Result: FAIL
-- Suite ID: wave3-freeze-v2
-- Manifest hash: d8695f0e1138e12328572607aa2df3840a57dc9c9f0a907bbab398bfbe31b7dc
+- Suite ID: dog-triage-wave3-freeze
+- Manifest hash: b2675532644dd12fd074c09b2cfffdfd937451360773e728ec6763d30f61dd82
 - Total frozen cases: 226
 - Scorecard case count: 226
-- Scorecard generatedAt: 2026-04-17T21:41:10.242Z
-- Scorecard observed suiteId: wave3-freeze-v2
+- Scorecard generatedAt: 2026-04-17T22:28:44.559Z
+- Scorecard observed suiteId: dog-triage-wave3-freeze
 - Emergency recall: 0.0%
 - Unsafe downgrade rate: 33.63%
 

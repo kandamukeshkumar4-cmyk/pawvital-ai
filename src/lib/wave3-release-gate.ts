@@ -131,11 +131,12 @@ function summarizeIdList(ids: string[]): string {
 }
 
 function computeWave3ManifestHash(
-  manifest: Omit<Wave3CanonicalManifest, "manifestHash" | "generatedAt">
+  manifest: Omit<Wave3CanonicalManifest, "manifestHash">
 ): string {
   const payload = JSON.stringify({
     suiteId: manifest.suiteId,
     suiteVersion: manifest.suiteVersion,
+    generatedAt: manifest.generatedAt,
     caseIds: manifest.caseIds,
     shardPaths: manifest.shardPaths,
     totalCases: manifest.totalCases,
@@ -262,10 +263,9 @@ export function validateWave3CanonicalManifest(
   const manifestBase = {
     suiteId: manifest.suiteId.trim(),
     suiteVersion: manifest.suiteVersion.trim(),
+    generatedAt: manifest.generatedAt.trim(),
     caseIds,
-    shardPaths: normalizeIdList(
-      manifest.shardPaths.map((shardPath) => String(shardPath).trim())
-    ),
+    shardPaths: manifest.shardPaths.map((shardPath) => String(shardPath).trim()),
     totalCases: manifest.totalCases,
     complaintFamilyCounts: sortCounts(manifest.complaintFamilyCounts),
     riskTierCounts: sortCounts(manifest.riskTierCounts),
@@ -281,7 +281,6 @@ export function validateWave3CanonicalManifest(
 
   return {
     ...manifestBase,
-    generatedAt: manifest.generatedAt.trim(),
     manifestHash: recomputedHash,
   };
 }
