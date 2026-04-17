@@ -296,6 +296,58 @@ describe("recordAnswer", () => {
       expect.arrayContaining(["large_blood_volume", "rat_poison_confirmed", "toxin_confirmed"])
     );
   });
+
+  it("should trigger heatstroke red flags from overheating composites", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["heat_intolerance"]);
+    session = recordAnswer(session, "gum_color", "bright_red");
+    session = recordAnswer(session, "vomiting_present", true);
+
+    expect(session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["brick_red_gums", "vomiting_overheating"])
+    );
+  });
+
+  it("should trigger combined GI emergency red flags from blood plus not drinking", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting_diarrhea_combined"]);
+    session = recordAnswer(session, "blood_in_either", true);
+    session = recordAnswer(session, "water_intake", "not_drinking");
+
+    expect(session.red_flags_triggered).toEqual(
+      expect.arrayContaining([
+        "blood_in_both",
+        "puppy_vomiting_diarrhea",
+        "not_drinking",
+      ])
+    );
+  });
+
+  it("should trigger toxin red flags for chemical wound exposures when toxin evidence is present", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["wound_skin_issue"]);
+    session = recordAnswer(
+      session,
+      "toxin_exposure",
+      "He stepped in drain cleaner and now the paw is red and blistered."
+    );
+
+    expect(session.red_flags_triggered).toContain("toxin_confirmed");
+  });
+
+  it("should trigger anticoagulant toxin red flags from medication-reaction bleeding text", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["medication_reaction"]);
+    session = recordAnswer(
+      session,
+      "reaction_symptoms",
+      "He may have gotten into rat poison and now his gums are bleeding."
+    );
+
+    expect(session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["toxin_confirmed", "rat_poison_confirmed"])
+    );
+  });
 });
 
 // ─── getNextQuestion ─────────────────────────────────────────────────────────
@@ -633,6 +685,104 @@ describe("calculateProbabilities", () => {
     for (const p of probs) {
       expect(p.breed_multiplier).toBe(1.0);
     }
+  });
+
+  it("should boost trauma_chest and floor urgency for hit-by-car composites", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["trauma"]);
+
+    const baseline = calculateProbabilities(session, goldenRetriever);
+
+    session = recordAnswer(session, "trauma_mechanism", "hit_by_car");
+    session = recordAnswer(session, "trauma_mobility", "inability_to_stand");
+
+    const withComposite = calculateProbabilities(session, goldenRetriever);
+
+    const baselineTraumaChest = baseline.find((p) => p.disease_key === "trauma_chest");
+    const compositeTraumaChest = withComposite.find(
+      (p) => p.disease_key === "trauma_chest"
+    );
+
+    expect(compositeTraumaChest?.final_score).toBeGreaterThan(
+      baselineTraumaChest?.final_score ?? 0
+    );
+    expect(buildDiagnosisContext(session, goldenRetriever).highest_urgency).toBe(
+      "emergency"
+    );
+  });
+
+  it("should boost toxin_ingestion and floor urgency for rat-poison bleeding composites", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["medication_reaction"]);
+
+    const baseline = calculateProbabilities(session, unknownBreed);
+
+    session = recordAnswer(
+      session,
+      "reaction_symptoms",
+      "My dog may have gotten rat poison and now I see bleeding from his gums."
+    );
+
+    const withComposite = calculateProbabilities(session, unknownBreed);
+
+    const baselineToxin = baseline.find((p) => p.disease_key === "toxin_ingestion");
+    const compositeToxin = withComposite.find(
+      (p) => p.disease_key === "toxin_ingestion"
+    );
+
+    expect(compositeToxin?.final_score).toBeGreaterThan(
+      baselineToxin?.final_score ?? 0
+    );
+    expect(buildDiagnosisContext(session, unknownBreed).highest_urgency).toBe(
+      "emergency"
+    );
+  });
+
+  it("should boost heat_stroke and floor urgency for overheating composites", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["heat_intolerance"]);
+
+    const baseline = calculateProbabilities(session, pugAdult);
+
+    session = recordAnswer(session, "gum_color", "bright_red");
+    session = recordAnswer(session, "vomiting_present", true);
+
+    const withComposite = calculateProbabilities(session, pugAdult);
+
+    const baselineHeatStroke = baseline.find((p) => p.disease_key === "heat_stroke");
+    const compositeHeatStroke = withComposite.find(
+      (p) => p.disease_key === "heat_stroke"
+    );
+
+    expect(compositeHeatStroke?.final_score).toBeGreaterThan(
+      baselineHeatStroke?.final_score ?? 0
+    );
+    expect(buildDiagnosisContext(session, pugAdult).highest_urgency).toBe(
+      "emergency"
+    );
+  });
+
+  it("should boost parvovirus and floor urgency for combined GI emergency composites", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting_diarrhea_combined"]);
+
+    const baseline = calculateProbabilities(session, bulldogPuppy);
+
+    session = recordAnswer(session, "blood_in_either", true);
+    session = recordAnswer(session, "water_intake", "not_drinking");
+    session = recordAnswer(session, "appetite_status", "none");
+
+    const withComposite = calculateProbabilities(session, bulldogPuppy);
+
+    const baselineParvo = baseline.find((p) => p.disease_key === "parvovirus");
+    const compositeParvo = withComposite.find((p) => p.disease_key === "parvovirus");
+
+    expect(compositeParvo?.final_score).toBeGreaterThan(
+      baselineParvo?.final_score ?? 0
+    );
+    expect(buildDiagnosisContext(session, bulldogPuppy).highest_urgency).toBe(
+      "emergency"
+    );
   });
 });
 
