@@ -237,6 +237,14 @@ describe("recordAnswer", () => {
     );
   });
 
+  it("should trigger collapse red flags once consciousness loss is confirmed", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["seizure_collapse"]);
+    session = recordAnswer(session, "consciousness_level", "unresponsive");
+
+    expect(session.red_flags_triggered).toContain("collapse");
+  });
+
   it("should trigger trauma red flags derived from boolean and choice answers", () => {
     let session = createSession();
     session = addSymptoms(session, ["trauma"]);
@@ -254,6 +262,24 @@ describe("recordAnswer", () => {
     session = recordAnswer(session, "face_swelling", true);
 
     expect(session.red_flags_triggered).toContain("face_swelling");
+  });
+
+  it("should trigger swollen-abdomen red flags from acute distension plus restlessness", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["swollen_abdomen"]);
+    session = recordAnswer(session, "restlessness", true);
+
+    expect(session.red_flags_triggered).toContain("rapid_onset_distension");
+  });
+
+  it("should trigger neurologic red flags from acute mobility loss", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["abnormal_gait"]);
+    session = recordAnswer(session, "trauma_mobility", "inability_to_stand");
+
+    expect(session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["inability_to_stand", "paralysis"])
+    );
   });
 
   it("should trigger GI and toxin red flags derived from non-boolean answers", () => {

@@ -1,5 +1,6 @@
 import {
   evaluateWave3ReleaseGate,
+  type Wave3CanonicalSuiteSummary,
   type Wave3CaseRecord,
 } from "@/lib/wave3-release-gate";
 import type { LiveEvalScorecard } from "@/lib/benchmark-live-eval";
@@ -27,7 +28,15 @@ function buildScorecard(overrides: Partial<LiveEvalScorecard> = {}): LiveEvalSco
     runId: "test",
     generatedAt: "2026-04-17T00:00:00.000Z",
     executionMode: "live_route",
-    suiteId: "wave3",
+    suiteId: "wave3-freeze",
+    suiteVersion: "wave3-freeze-v2",
+    manifestHash: "canonical-hash",
+    suiteGeneratedAt: "2026-04-17T00:00:00.000Z",
+    suiteTotalCases: 2,
+    suiteCaseIds: baseCases.map((caseRecord) => caseRecord.id),
+    evaluatedCaseIds: baseCases.map((caseRecord) => caseRecord.id),
+    extraCaseIds: [],
+    missingCaseIds: [],
     baseUrl: "http://localhost:3000",
     filters: {},
     totalCases: 2,
@@ -52,12 +61,22 @@ function buildScorecard(overrides: Partial<LiveEvalScorecard> = {}): LiveEvalSco
   };
 }
 
+const canonicalSuite: Wave3CanonicalSuiteSummary = {
+  suiteId: "wave3-freeze",
+  suiteVersion: "wave3-freeze-v2",
+  generatedAt: "2026-04-17T00:00:00.000Z",
+  manifestHash: "canonical-hash",
+  totalCases: 2,
+  caseIds: baseCases.map((caseRecord) => caseRecord.id),
+};
+
 describe("Wave 3 release gate", () => {
   it("passes when metrics, provenance, and high-risk failures are clean", () => {
     const result = evaluateWave3ReleaseGate({
       cases: baseCases,
       modalities: [{ modality: "skin_lesion", caseCount: 6 }],
       scorecard: buildScorecard(),
+      canonicalSuite,
       requiredHighStakesRuleIds: getRequiredHighStakesRuleIds(),
       provenanceEntries: getAllProvenanceEntries(),
     });
@@ -70,6 +89,7 @@ describe("Wave 3 release gate", () => {
     const result = evaluateWave3ReleaseGate({
       cases: baseCases,
       scorecard: buildScorecard(),
+      canonicalSuite,
       requiredHighStakesRuleIds: getRequiredHighStakesRuleIds(),
       provenanceEntries: getAllProvenanceEntries().filter(
         (entry) => entry.rule_id !== "red_flag.blue_gums"
@@ -97,6 +117,7 @@ describe("Wave 3 release gate", () => {
           },
         ],
       }),
+      canonicalSuite,
       requiredHighStakesRuleIds: getRequiredHighStakesRuleIds(),
       provenanceEntries: getAllProvenanceEntries(),
     });
@@ -105,5 +126,35 @@ describe("Wave 3 release gate", () => {
     expect(result.failures.some((failure) => failure.includes("Emergency recall"))).toBe(true);
     expect(result.failures.some((failure) => failure.includes("Unsafe downgrade rate"))).toBe(true);
     expect(result.blockingHighRiskFailures).toHaveLength(1);
+  });
+
+  it("fails when the scorecard suite identity or case IDs diverge from the canonical manifest", () => {
+    const result = evaluateWave3ReleaseGate({
+      cases: baseCases,
+      scorecard: buildScorecard({
+        suiteId: "wave3-freeze-merged",
+        manifestHash: "stale-hash",
+        suiteCaseIds: ["emergency-blue-gums-breathing", "extra-case"],
+        evaluatedCaseIds: ["emergency-blue-gums-breathing", "extra-case"],
+        extraCaseIds: ["extra-case"],
+        missingCaseIds: ["common-vomiting-case"],
+      }),
+      canonicalSuite,
+      requiredHighStakesRuleIds: getRequiredHighStakesRuleIds(),
+      provenanceEntries: getAllProvenanceEntries(),
+    });
+
+    expect(result.pass).toBe(false);
+    expect(
+      result.failures.some((failure) => failure.includes("suite identity"))
+    ).toBe(true);
+    expect(
+      result.failures.some((failure) => failure.includes("extra case IDs"))
+    ).toBe(true);
+    expect(
+      result.failures.some((failure) =>
+        failure.includes("missing canonical case IDs")
+      )
+    ).toBe(true);
   });
 });

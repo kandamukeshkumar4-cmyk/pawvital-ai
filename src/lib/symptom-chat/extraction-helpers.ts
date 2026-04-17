@@ -113,6 +113,11 @@ function parseExtractionResponse(rawText: string): {
 export function extractSymptomsFromKeywords(message: string): string[] {
   const lower = message.toLowerCase();
   const symptoms: string[] = [];
+  const pushSymptom = (symptom: string) => {
+    if (!symptoms.includes(symptom)) {
+      symptoms.push(symptom);
+    }
+  };
   const keywords: Record<string, string> = {
     limp: "limping",
     vomit: "vomiting",
@@ -129,9 +134,15 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     cough: "coughing",
     "can't breathe": "difficulty_breathing",
     "trouble breathing": "difficulty_breathing",
+    "struggling to breathe": "difficulty_breathing",
     "breathing hard": "difficulty_breathing",
     "breathing heavy": "difficulty_breathing",
     "breathing fast": "difficulty_breathing",
+    "labored breathing": "difficulty_breathing",
+    "laboured breathing": "difficulty_breathing",
+    "open mouth breathing": "difficulty_breathing",
+    gasping: "difficulty_breathing",
+    choking: "difficulty_breathing",
     "hard to breathe": "difficulty_breathing",
     "short of breath": "difficulty_breathing",
     panting: "difficulty_breathing",
@@ -144,6 +155,12 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     shak: "trembling",
     collapse: "seizure_collapse",
     collapsed: "seizure_collapse",
+    seizure: "seizure_collapse",
+    seizures: "seizure_collapse",
+    seizing: "seizure_collapse",
+    convulsion: "seizure_collapse",
+    convulsions: "seizure_collapse",
+    convulsing: "seizure_collapse",
     "passed out": "seizure_collapse",
     "pass out": "seizure_collapse",
     fainted: "seizure_collapse",
@@ -155,6 +172,24 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "hard belly": "swollen_abdomen",
     "distended belly": "swollen_abdomen",
     "blood in stool": "blood_in_stool",
+    "in labor": "pregnancy_birth",
+    "in labour": "pregnancy_birth",
+    "giving birth": "pregnancy_birth",
+    "having puppies": "pregnancy_birth",
+    "green discharge": "pregnancy_birth",
+    "stuck puppy": "pregnancy_birth",
+    contractions: "pregnancy_birth",
+    "hit by car": "trauma",
+    "struck by car": "trauma",
+    "dog bite": "trauma",
+    "bite wound": "trauma",
+    electrocuted: "trauma",
+    "electrical shock": "trauma",
+    "chemical burn": "trauma",
+    "can't pee": "urination_problem",
+    "cannot pee": "urination_problem",
+    "trying to pee": "urination_problem",
+    "straining to pee": "urination_problem",
     "eye discharge": "eye_discharge",
     "goopy eye": "eye_discharge",
     "goopy eyes": "eye_discharge",
@@ -191,7 +226,229 @@ export function extractSymptomsFromKeywords(message: string): string[] {
       symptoms.push(symptom);
     }
   }
+
+  const mentionsVomiting =
+    /\b(vomit|vomiting|throwing up|threw up|retching|heaving)\b/.test(lower);
+  const mentionsDiarrhea =
+    /\b(diarrhea|diarrhoea|bloody diarrhea|the runs)\b/.test(lower);
+  if (mentionsVomiting && mentionsDiarrhea) {
+    pushSymptom("vomiting_diarrhea_combined");
+  }
+
+  if (
+    /\b(cough|coughing)\b/.test(lower) &&
+    /\b(struggling to breathe|trouble breathing|labou?red breathing|open mouth breathing|gasping|choking|short of breath)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("coughing_breathing_combined");
+  }
+
+  const mentionsSwollenAbdomen =
+    /\b(belly|abdomen|stomach)\b/.test(lower) &&
+    /\b(swollen|bloated|distended|tight|hard)\b/.test(lower);
+  if (mentionsSwollenAbdomen) {
+    pushSymptom("swollen_abdomen");
+  }
+
+  if (
+    /\b(restless|restlessness|pacing|can'?t settle|unable to settle)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("pacing_restlessness");
+  }
+
+  if (
+    /\b(hives?|welts?|rash|bee sting|bug bite|stung)\b/.test(lower) ||
+    /\b(face|muzzle|eyelids?)\b.*\b(swollen|swelling|puffy|puffing up|swelled up)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("excessive_scratching");
+  }
+
+  if (
+    /\b(can'?t use (his|her|their)? ?back legs|cannot use (his|her|their)? ?back legs|dragging (himself|herself|themself)|dragging (his|her|their) back legs|paraly[sz]ed|can'?t stand|unable to stand)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("abnormal_gait");
+  }
+
+  if (
+    /\b(excited|exercise|running|playing|after playing|after exercise|after a walk)\b/.test(
+      lower
+    ) &&
+    /\b(collapse|collapsed|passed out|fainted)\b/.test(lower)
+  ) {
+    pushSymptom("exercise_induced_lameness");
+  }
+
+  if (
+    /\b(in labor|in labour|giving birth|having puppies|whelping)\b/.test(
+      lower
+    ) ||
+    (/\b(puppy|puppies)\b/.test(lower) &&
+      /\b(stuck|straining|contractions|green discharge)\b/.test(lower))
+  ) {
+    pushSymptom("pregnancy_birth");
+  }
+
+  if (
+    /\b(hit by (a )?car|struck by (a )?car|ran over|dog bite|bite wound|electrical shock|electrocuted|chemical burn|open fracture)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("trauma");
+  }
+
+  if (
+    /\b(heat|hot|overheat|overheated|heatstroke)\b/.test(lower) &&
+    /\b(panting hard|panting heavily|bright red gums|collapse|collapsed|weak)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("heat_intolerance");
+  }
+
   return symptoms;
+}
+
+export function extractDeterministicEmergencyRedFlags(
+  rawMessage: string,
+  knownSymptoms: string[]
+): string[] {
+  const lower = rawMessage.toLowerCase();
+  const flags = new Set<string>();
+
+  if (
+    knownSymptoms.includes("difficulty_breathing") &&
+    /\b(breathing hard|breathing heavy|breathing fast|trouble breathing|short of breath)\b/.test(
+      lower
+    ) &&
+    /\b(while lying still|while resting|at rest|even at rest|lying still)\b/.test(
+      lower
+    )
+  ) {
+    flags.add("breathing_distress_at_rest");
+  }
+
+  if (knownSymptoms.includes("difficulty_breathing")) {
+    if (
+      /\bblue gums?\b/.test(lower) ||
+      /\bgums? (look|looks|looked|are|turned?) blue\b/.test(lower)
+    ) {
+      flags.add("blue_gums");
+    }
+
+    if (
+      /\b(pale|white) gums?\b/.test(lower) ||
+      /\bgums? (look|looks|looked|are|turned?) (pale|white)\b/.test(lower)
+    ) {
+      flags.add("pale_gums");
+    }
+  }
+
+  if (
+    knownSymptoms.includes("excessive_scratching") &&
+    /\b(hives?|welts?|rash)\b/.test(lower)
+  ) {
+    flags.add("hives_widespread");
+  }
+
+  if (
+    (knownSymptoms.includes("seizure_collapse") ||
+      knownSymptoms.includes("trembling")) &&
+    /\b(seizure|seizures|seizing|convulsion|convulsions|convulsing)\b/.test(
+      lower
+    )
+  ) {
+    flags.add("seizure_activity");
+  }
+
+  if (knownSymptoms.includes("pregnancy_birth")) {
+    if (
+      /\bgreen discharge\b/.test(lower) &&
+      /\b(no puppy|no pup|has not come out|hasn't come out|before any puppy|yet)\b/.test(
+        lower
+      )
+    ) {
+      flags.add("green_discharge_no_puppy");
+    }
+
+    if (
+      /\b(stuck puppy|puppy seems stuck|hard straining|straining hard)\b/.test(
+        lower
+      )
+    ) {
+      flags.add("dystocia_active");
+    }
+
+    if (
+      /\b(postpartum|after giving birth|after whelping|nursing)\b/.test(lower) &&
+      /\b(tremors?|shaking|seizures?)\b/.test(lower)
+    ) {
+      flags.add("eclampsia_signs");
+    }
+  }
+
+  if (knownSymptoms.includes("trauma")) {
+    if (
+      /\bblue gums?\b/.test(lower) ||
+      /\bgums? (look|looks|looked|are|turned?) blue\b/.test(lower)
+    ) {
+      flags.add("blue_gums");
+    }
+
+    if (
+      /\b(pale|white) gums?\b/.test(lower) ||
+      /\bgums? (look|looks|looked|are|turned?) (pale|white)\b/.test(lower)
+    ) {
+      flags.add("pale_gums");
+    }
+
+    if (
+      /\b(bleeding heavily|bleeding a lot|gushing blood|won'?t stop bleeding|not stopping with pressure|soaking through towels?)\b/.test(
+        lower
+      )
+    ) {
+      flags.add("active_bleeding_trauma");
+    }
+
+    if (
+      /\b(open fracture|bone sticking out|bone visible|obviously broken)\b/.test(
+        lower
+      )
+    ) {
+      flags.add("visible_fracture");
+    }
+  }
+
+  if (knownSymptoms.includes("wound_skin_issue")) {
+    if (
+      /\b(bleeding heavily|bleeding a lot|gushing blood|won'?t stop bleeding|not stopping with pressure|deep avulsion)\b/.test(
+        lower
+      )
+    ) {
+      flags.add("wound_deep_bleeding");
+    }
+
+    if (/\b(bone sticking out|bone visible)\b/.test(lower)) {
+      flags.add("wound_bone_visible");
+    }
+  }
+
+  if (
+    knownSymptoms.includes("urination_problem") &&
+    /\b(can'?t pee|cannot pee|trying to pee|straining to pee|nothing comes out|only dribbles|no urine)\b/.test(
+      lower
+    )
+  ) {
+    flags.add("urinary_blockage");
+  }
+
+  return [...flags];
 }
 
 export function parseLooseJsonRecord(rawText: string): Record<string, unknown> {

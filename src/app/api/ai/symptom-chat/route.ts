@@ -123,6 +123,7 @@ import {
 } from "@/lib/symptom-chat/response-builders";
 import {
   extractDataFromMessage,
+  extractDeterministicEmergencyRedFlags,
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
 import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
@@ -194,8 +195,10 @@ export async function POST(request: Request) {
       gateOverride,
     } = body;
 
-    // Demo mode fallback
-    if (!useNvidia) {
+    // Keep report generation in explicit demo mode when no AI providers are
+    // configured, but still run chat turns through the deterministic engine so
+    // local release-gate and benchmark paths remain clinically auditable.
+    if (!useNvidia && action === "generate_report") {
       return demoResponse(action, pet);
     }
 
@@ -738,6 +741,35 @@ export async function POST(request: Request) {
           reason: "turn_answer_recorded",
         });
       }
+    }
+
+    const directEmergencyFlags = extractDeterministicEmergencyRedFlags(
+      lastUserMessage.content,
+      session.known_symptoms
+    );
+    if (directEmergencyFlags.length > 0) {
+      session = {
+        ...session,
+        red_flags_triggered: Array.from(
+          new Set([...session.red_flags_triggered, ...directEmergencyFlags])
+        ),
+      };
+    }
+
+    if (session.red_flags_triggered.length > 0) {
+      session = transitionToEscalation({
+        session,
+        redFlags: session.red_flags_triggered,
+        reason: "deterministic_emergency_first_turn",
+      });
+
+      return NextResponse.json(
+        buildRedFlagEmergencyResponse({
+          petName: pet.name,
+          redFlags: session.red_flags_triggered,
+          session,
+        })
+      );
     }
 
     // ── Fix: Handle negative/null answers so questions don't loop ──

@@ -18,6 +18,7 @@ import { recordConversationTelemetry } from "@/lib/symptom-memory";
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockCreateServerSupabaseClient = jest.fn();
+const mockIsNvidiaConfigured = jest.fn(() => true);
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
 const mockReviewQuestionPlanWithNemotron = jest.fn();
@@ -68,7 +69,7 @@ jest.mock("@/lib/supabase-server", () => ({
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
-  isNvidiaConfigured: () => true,
+  isNvidiaConfigured: (...args: unknown[]) => mockIsNvidiaConfigured(...args),
   extractWithQwen: (...args: unknown[]) => mockExtractWithQwen(...args),
   phraseWithLlama: (...args: unknown[]) => mockPhraseWithLlama(...args),
   reviewQuestionPlanWithNemotron: (...args: unknown[]) =>
@@ -2106,6 +2107,171 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.known_symptoms).toContain("difficulty_breathing");
     expect(payload.session.extracted_answers.gum_color).toBe("pale_white");
     expect(payload.session.red_flags_triggered).toContain("pale_gums");
+  });
+
+  it("escalates acute hind-limb paralysis to emergency on the first turn", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog suddenly can't use his back legs and is dragging himself."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.session.known_symptoms).toContain("abnormal_gait");
+    expect(payload.session.extracted_answers.trauma_mobility).toBe(
+      "inability_to_stand"
+    );
+    expect(payload.session.red_flags_triggered).toEqual(
+      expect.arrayContaining(["inability_to_stand", "paralysis"])
+    );
+  });
+
+  it("escalates allergic facial swelling with breathing trouble to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "After a bee sting her face swelled up and now she is breathing hard."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.session.known_symptoms).toEqual(
+      expect.arrayContaining(["difficulty_breathing", "excessive_scratching"])
+    );
+    expect(payload.session.extracted_answers.face_swelling).toBe(true);
+    expect(payload.session.red_flags_triggered).toContain("face_swelling");
+  });
+
+  it("escalates collapse with prior intermittent vomiting to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog has been having intermittent vomiting and now she has collapsed."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.session.known_symptoms).toEqual(
+      expect.arrayContaining(["vomiting", "seizure_collapse"])
+    );
+    expect(payload.session.red_flags_triggered).toContain("collapse");
+  });
+
+  it("escalates a tight swollen abdomen after a meal to emergency", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "After eating a big meal my dog is restless and his belly looks tight and swollen."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.session.known_symptoms).toContain("swollen_abdomen");
+    expect(payload.session.extracted_answers.restlessness).toBe(true);
+    expect(payload.session.red_flags_triggered).toContain(
+      "rapid_onset_distension"
+    );
+  });
+
+  it("escalates breathing distress even while resting", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "He has known heart disease and now is breathing hard even while lying still."
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.session.known_symptoms).toContain("difficulty_breathing");
+    expect(payload.session.red_flags_triggered).toContain(
+      "breathing_distress_at_rest"
+    );
   });
 
   it("does not force-close an unrelated pending string question with a new symptom update", async () => {
@@ -7592,6 +7758,151 @@ describe("VET-900: world-class symptom checker regression pack", () => {
     }
 
     // Safe service observation survives
-    expect(observations.some((o: { service: string }) => o.service === "some-safe-service")).toBe(true);
+  expect(observations.some((o: { service: string }) => o.service === "some-safe-service")).toBe(true);
+  });
+
+  describe("VET-1311 no-provider deterministic chat fallback", () => {
+    beforeEach(() => {
+      jest.resetModules();
+      jest.clearAllMocks();
+
+      mockCheckRateLimit.mockResolvedValue({
+        success: true,
+        reset: Date.now() + 60_000,
+      });
+      mockGetRateLimitId.mockReturnValue("test-user");
+      mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase(null));
+      mockIsNvidiaConfigured.mockReturnValue(false);
+      mockExtractWithQwen.mockRejectedValue(new Error("NVIDIA not configured"));
+      mockCompressCaseMemoryWithMiniMax.mockResolvedValue({
+        summary: "Case summary.",
+        model: "MiniMax-M2.7",
+      });
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockIsVisionPreprocessConfigured.mockReturnValue(false);
+      mockIsRetrievalSidecarConfigured.mockReturnValue(false);
+      mockIsMultimodalConsultConfigured.mockReturnValue(false);
+      mockIsAsyncReviewServiceConfigured.mockReturnValue(false);
+      mockIsTextRetrievalConfigured.mockReturnValue(false);
+      mockIsImageRetrievalConfigured.mockReturnValue(false);
+      mockPhraseWithLlama.mockImplementation(async () => "Fallback question");
+      mockReviewQuestionPlanWithNemotron.mockResolvedValue(
+        JSON.stringify({ approved: true })
+      );
+      mockVerifyQuestionWithNemotron.mockResolvedValue(
+        JSON.stringify({ message: "Fallback question?" })
+      );
+    });
+
+    it("keeps first-turn emergencies out of demo mode when providers are unavailable", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "His belly is huge and tight and he keeps trying to vomit but nothing comes out."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.message).not.toContain("Demo mode");
+      expect(payload.session.known_symptoms).toContain("swollen_abdomen");
+      expect(payload.session.red_flags_triggered).toContain(
+        "unproductive_retching"
+      );
+    });
+
+    it("captures blue-gum breathing emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog is struggling to breathe and his gums look blue."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("difficulty_breathing");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["blue_gums"])
+      );
+    });
+
+    it("captures cluster-seizure emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "She has had two seizure episodes today and still seems out of it."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("seizure_collapse");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["seizure_activity"])
+      );
+    });
+
+    it("captures labor green-discharge emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog in labor has green discharge and no puppy has come out yet."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("pregnancy_birth");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["green_discharge_no_puppy"])
+      );
+    });
+
+    it("captures hit-by-car shock emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog was hit by a car and now seems weak and his gums look pale."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("trauma");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["pale_gums"])
+      );
+    });
+
+    it("preserves the existing demo fallback for report generation without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBe("Demo Mode — Configure API Keys");
+    });
   });
 });

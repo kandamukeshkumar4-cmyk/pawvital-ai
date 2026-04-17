@@ -1,0 +1,847 @@
+{
+  "generatedAt": "2026-04-17T19:51:05.630Z",
+  "suiteId": "wave3-freeze",
+  "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
+  "blockers": [
+    {
+      "caseId": "emergency-breathing-labored",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-burn-chemical",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-choking-foreign-body",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-diabetic-crisis",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-difficulty-breathing-kennel",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-dog-bite-wound",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-electrical-shock",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-glaucoma-eye",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-hard-labor-no-puppy",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-heatstroke",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-hemorrhagic-diarrhea-shock",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "missing red flag linkage",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 red-flag linkage follow-up"
+    },
+    {
+      "caseId": "emergency-hit-by-car",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-hypoglycemia-toy-breed",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-imma-mediated-thrombocytopenia",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-limping-cry-pain",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-open-fracture",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-oral-bleeding-cant-swallow",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-parvo-style-puppy",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-postpartum-eclampsia",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-protozoal-acute-babesia",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "missing red flag linkage",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 red-flag linkage follow-up"
+    },
+    {
+      "caseId": "emergency-pyometra-style",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-rat-poison-bleeding",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-repeated-nonproductive-heaving",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-resting-open-mouth-breathing",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-toxin-xylitol",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-trembling-cold-weak",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-unresponsive-after-tremors",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "emergency-urinary-blockage",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-vomit-blood-collapse",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-vomiting-green",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-wound-deep-avulsion",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "followup-breathing-onset-unknown-escalates",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-breathing-pattern-unknown",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-consciousness-unknown-escalates",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-gum-color-unknown-escalates",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "followup-seizure-duration-unknown",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "oncology-emergency-nosebleed-collapse",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "oncology-emergency-obstructive-neck-mass",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "repro-emergency-foul-discharge-fever",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "repro-emergency-male-paraphimosis",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "repro-emergency-retained-puppy-collapse",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "toxin-emergency-antifreeze",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "toxin-emergency-lily-chew",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "toxin-emergency-sago-palm",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "toxin-emergency-tremorgenic-mycotoxin",
+      "severity": "CRITICAL",
+      "frequency": 1,
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
+    },
+    {
+      "caseId": "question-trauma-fall-yard",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:trauma",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-behavior-hiding",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:behavior_change",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-chronic-limp-sudden-worse",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:limping",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-dental-bleeding-gum",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:dental_problem",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-drinking-excessive",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:drinking_more",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-face-swelling-worsening",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "sameday-hair-loss-spreading",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:hair_loss",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-limping-non-weight-bearing",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:limping",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-regurgitation-frequent",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:regurgitation",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-urinary-blood",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:urination_problem",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-vomiting-multiple-times",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:vomiting",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "sameday-weight-loss-rapid",
+      "severity": "HIGH",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:weight_loss",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-pale-gums-collapse",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:lethargy",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-post-vaccine-face-swelling",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:post_vaccination_reaction",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-postpartum-heavy-bleeding",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:pregnancy_birth",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "followup-appetite-change-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:appetite_change, extractedAnswersMatch:appetite_change",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-diarrhea-frequency-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:diarrhea_frequency, extractedAnswersMatch:diarrhea_frequency",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-diarrhea-onset-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:diarrhea_onset, extractedAnswersMatch:diarrhea_onset",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-discharge-color-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: extractedAnswersMatch:discharge_color",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-energy-level-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:energy_level, extractedAnswersMatch:energy_level",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-itch-location-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:itch_location, extractedAnswersMatch:itch_location",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-limping-progression-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: extractedAnswersMatch:limping_progression",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-lump-size-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: extractedAnswersMatch:lump_size",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-seasonal-pattern-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: extractedAnswersMatch:seasonal_pattern",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-stool-consistency-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:stool_consistency, extractedAnswersMatch:stool_consistency",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-swelling-present-no",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport, extractedAnswersMatch:swelling_present",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-temperature-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:has_fever, extractedAnswersMatch:has_fever",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-trauma-history-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-urine-color-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:urine_color, extractedAnswersMatch:urine_color",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-vomit-color-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:vomit_color, extractedAnswersMatch:vomit_color",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-water-intake-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:water_intake, extractedAnswersMatch:water_intake",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-weight-bearing-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:weight_bearing, extractedAnswersMatch:weight_bearing",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "followup-wound-depth-unknown",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: answeredQuestionsInclude:wound_depth, extractedAnswersMatch:wound_depth",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "question-behavior-change",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:behavior_change",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-constipation",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:constipation",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-contradictory-vomiting",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:vomiting",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-coughing-breathing-combined",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:coughing_breathing_combined",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-dental-problem",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:dental_problem",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-drinking-more",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:drinking_more",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-ear-scratching",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:ear_scratching",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-eye-discharge",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:eye_discharge",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-face-swelling-mild",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType, readyForReport",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    },
+    {
+      "caseId": "question-generalized-stiffness",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:generalized_stiffness",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-hair-loss",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:hair_loss",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-low-literacy-belly-big",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:swollen_abdomen",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-low-literacy-eye-bad",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:eye_discharge",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-low-literacy-leg-hurt",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:limping",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-nasal-discharge",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:nasal_discharge",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-postoperative-concern",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: responseType, knownSymptomsInclude:postoperative_concern",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-regurgitation",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:regurgitation",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-senior-decline",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:senior_decline",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-slang-the-runs",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:diarrhea",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-slang-throwing-up-bricks",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:vomiting",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-small-blood-in-stool",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:blood_in_stool",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-swelling-lump",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:swelling_lump",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-urination-problem",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:urination_problem",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-vaccine-reaction-mild",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:post_vaccination_reaction",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-vague-lump-found",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:swelling_lump",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "question-weight-loss",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:weight_loss",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "toxin-question-ibuprofen-maybe",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "summary": "Failed checks: responseType",
+      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
+    }
+  ]
+}

@@ -1,17 +1,22 @@
 # Wave 3 Release Gate Report
 
 - Result: FAIL
+- Suite ID: wave3-freeze
+- Suite version: wave3-freeze-v2
+- Manifest hash: 3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f
+- Canonical manifest generated at: 2026-04-17T16:44:31.613Z
 - Total frozen cases: 226
-- Scorecard case count: 307
-- Emergency recall: 0.0%
-- Unsafe downgrade rate: 51.14%
+- Scorecard case count: 226
+- Emergency recall: 40.8%
+- Unsafe downgrade rate: 19.91%
+- Extra case IDs: none
+- Missing case IDs: none
 
 ## Failures
 
-- Live scorecard case count (307) does not match Wave 3 freeze (226).
-- Emergency recall 0.0% is below the 98.0% gate.
-- Unsafe downgrade rate 51.14% exceeds the 1.00% gate.
-- 157 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
+- Emergency recall 40.8% is below the 98.0% gate.
+- Unsafe downgrade rate 19.91% exceeds the 1.00% gate.
+- 48 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
 
 ## Warnings
 
@@ -19,26 +24,26 @@ _None_
 
 ## Blocking High-Risk Failures
 
-- cardiac-emergency-collapse-after-excitement: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- cardiac-emergency-collapse-after-excitement: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- cardiac-emergency-collapse-blue-gums: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- cardiac-emergency-collapse-blue-gums: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- cardiac-emergency-rapid-breathing-pale: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- cardiac-emergency-rapid-breathing-pale: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- cardiac-emergency-resting-breathing-distress: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- cardiac-emergency-resting-breathing-distress: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-acute-paralysis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-acute-paralysis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-addisonian-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-addisonian-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-allergic-reaction-hives: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-allergic-reaction-hives: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-anaphylaxis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-anaphylaxis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-bloat-after-meal: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
-- emergency-bloat-after-meal: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
-- emergency-bloat-gasdilation: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
-- emergency-bloat-gasdilation: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
+- emergency-breathing-labored: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
+- emergency-burn-chemical: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-choking-foreign-body: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
+- emergency-diabetic-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-difficulty-breathing-kennel: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-dog-bite-wound: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-electrical-shock: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-glaucoma-eye: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-hard-labor-no-puppy: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-heatstroke: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-hemorrhagic-diarrhea-shock: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-hit-by-car: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-hypoglycemia-toy-breed: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-imma-mediated-thrombocytopenia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-limping-cry-pain: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-open-fracture: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-oral-bleeding-cant-swallow: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem)
+- emergency-parvo-style-puppy: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-postpartum-eclampsia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth)
+- emergency-protozoal-acute-babesia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 
 ## Missing High-Stakes Rule IDs
 

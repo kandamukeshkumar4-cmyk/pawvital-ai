@@ -1,0 +1,1542 @@
+{
+  "generatedAt": "2026-04-17T19:51:05.629Z",
+  "suiteId": "wave3-freeze",
+  "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
+  "totalFailures": 105,
+  "entries": [
+    {
+      "caseId": "emergency-breathing-labored",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "difficulty_breathing"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is breathing with great effort using his belly muscles.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-burn-chemical",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "wound_skin_issue"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog stepped in drain cleaner and his paw is red and blistered.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-choking-foreign-body",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "difficulty_breathing"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is gagging and pawing at his mouth like something is stuck.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-diabetic-crisis",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "lethargy"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My diabetic dog is stumbling around and seems very confused.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-difficulty-breathing-kennel",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "difficulty_breathing"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "After boarding, my dog is struggling to breathe and making honking sounds.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-dog-bite-wound",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "trauma",
+        "wound_skin_issue"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog was attacked and has deep puncture wounds on his chest.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-electrical-shock",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "trembling"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My puppy chewed an electrical cord and now he is trembling and weak.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-glaucoma-eye",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "eye_discharge"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-hard-labor-no-puppy",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "pregnancy_birth"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog has been having strong contractions for over two hours and still has not delivered a puppy.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-heatstroke",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "heat_intolerance"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "After a walk in the heat she is panting hard, weak, and her gums look bright red.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-hemorrhagic-diarrhea-shock",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "diarrhea"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "missing red flag linkage",
+      "ownerMessage": "My dog has explosive bloody diarrhea and is weak with pale gums.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-hit-by-car",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "trauma",
+        "limping"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "He was hit by a car and now he cannot stand up.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-hypoglycemia-toy-breed",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "pregnancy_birth"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My tiny puppy is shaky, weak, and just flopped over after not eating well.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-imma-mediated-thrombocytopenia",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "lethargy"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "There are tiny red spots all over my dog's gums and she is very weak.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-limping-cry-pain",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog is limping and crying in pain and won't let me touch his back.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-open-fracture",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "He is limping badly and I can actually see bone through the wound on the leg.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-oral-bleeding-cant-swallow",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "dental_problem"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "There is blood coming from his mouth and he cannot really eat or drink.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem"
+    },
+    {
+      "caseId": "emergency-parvo-style-puppy",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting_diarrhea_combined"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My unvaccinated puppy is vomiting and has bloody diarrhea and will not drink.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-postpartum-eclampsia",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "pregnancy_birth",
+        "trembling"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "She is nursing puppies and now she is trembling badly and seems weak and restless.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "emergency-protozoal-acute-babesia",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "lethargy"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "missing red flag linkage",
+      "ownerMessage": "My dog is extremely weak, his gums are pale, and his urine is dark brown.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-pyometra-style",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "vaginal_discharge"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My unspayed dog is lethargic, drinking a lot, and has foul vaginal discharge.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
+    },
+    {
+      "caseId": "emergency-rat-poison-bleeding",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "medication_reaction"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog may have gotten rat poison and now I see bleeding from his gums.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-repeated-nonproductive-heaving",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "He keeps heaving like he needs to vomit but nothing is coming up and he looks panicked.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-resting-open-mouth-breathing",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "difficulty_breathing"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "He is open-mouth breathing while resting and his gums are looking bluish.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
+    },
+    {
+      "caseId": "emergency-toxin-xylitol",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "medication_reaction",
+        "vomiting"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog ate sugar-free gum and now she is vomiting and shaky.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-trembling-cold-weak",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "trembling"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog is trembling, weak, and his ears and paws feel cold.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-unresponsive-after-tremors",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "trembling"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "She was shaking and now she is barely responsive.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "emergency-urinary-blockage",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "urination_problem"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My male dog keeps squatting and straining but almost no urine is coming out.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "emergency-vomit-blood-collapse",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog threw up a lot of blood and now he is weak and wobbly.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "emergency-vomiting-green",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog keeps throwing up green bile and won't eat or drink.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "emergency-wound-deep-avulsion",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "wound_skin_issue"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog has a large flap of skin hanging off his shoulder from a fence incident.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
+    },
+    {
+      "caseId": "followup-breathing-onset-unknown-escalates",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "cannot_assess",
+      "complaintFamilies": [
+        "difficulty_breathing"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "cannot_assess",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I don't know, I just found him like this.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-breathing-pattern-unknown",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "cannot_assess",
+      "complaintFamilies": [
+        "difficulty_breathing"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "cannot_assess",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I can't describe how he's breathing, he just seems off.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-consciousness-unknown-escalates",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "cannot_assess",
+      "complaintFamilies": [
+        "seizure_collapse"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "cannot_assess",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I don't know if he's fully aware right now.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-gum-color-unknown-escalates",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "difficulty_breathing"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "I can't tell what color they are right now.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-seizure-duration-unknown",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "cannot_assess",
+      "complaintFamilies": [
+        "seizure_collapse"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "cannot_assess",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I don't know how long it lasted, it felt like forever.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "oncology-emergency-nosebleed-collapse",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "nasal_discharge"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog has a major nosebleed and is now weak and shaky.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "oncology-emergency-obstructive-neck-mass",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "difficulty_breathing",
+        "swelling_lump"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog has a large throat lump and now he is struggling to swallow and breathe.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-foul-discharge-fever",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "vaginal_discharge"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My unspayed dog has smelly discharge, is drinking a lot, and feels feverish and miserable.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-male-paraphimosis",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "testicular_prostate"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog's penis is stuck out, swollen, and he is very uncomfortable.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "repro-emergency-retained-puppy-collapse",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "pregnancy_birth",
+        "seizure_collapse"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "She finished having puppies but now seems weak, distressed, and still has strong contractions.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-antifreeze",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "medication_reaction"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog licked green fluid from the garage floor and is now staggering and drooling.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-lily-chew",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "medication_reaction",
+        "vomiting"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog got into a toxic plant and now is vomiting and seems really weak.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-sago-palm",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "medication_reaction",
+        "vomiting"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "My dog chewed on a sago palm and is vomiting now.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "toxin-emergency-tremorgenic-mycotoxin",
+      "severity": "CRITICAL",
+      "expected": "emergency",
+      "actual": "question",
+      "complaintFamilies": [
+        "medication_reaction"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "question",
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "ownerMessage": "He got into moldy trash and now he is shaking hard and cannot walk right.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "question-trauma-fall-yard",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "trauma"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog jumped off the deck wrong and now seems sore and shaky.",
+      "description": "Failed checks: knownSymptomsInclude:trauma"
+    },
+    {
+      "caseId": "sameday-behavior-hiding",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "behavior_change"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is hiding under the bed and not eating like usual.",
+      "description": "Failed checks: knownSymptomsInclude:behavior_change"
+    },
+    {
+      "caseId": "sameday-chronic-limp-sudden-worse",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog has had a bad hip for years but today he can barely walk.",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "sameday-dental-bleeding-gum",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "dental_problem"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog's gums are bleeding and she cries when I try to check her teeth.",
+      "description": "Failed checks: knownSymptomsInclude:dental_problem"
+    },
+    {
+      "caseId": "sameday-drinking-excessive",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "drinking_more"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is drinking entire bowls of water and refilling them multiple times a day.",
+      "description": "Failed checks: knownSymptomsInclude:drinking_more"
+    },
+    {
+      "caseId": "sameday-face-swelling-worsening",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "emergency",
+      "complaintFamilies": [
+        "wound_skin_issue"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "My dog's face has been getting more swollen over the past few hours.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "sameday-hair-loss-spreading",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "hair_loss"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "The bald patches on my dog are spreading to new areas.",
+      "description": "Failed checks: knownSymptomsInclude:hair_loss"
+    },
+    {
+      "caseId": "sameday-limping-non-weight-bearing",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog won't put any weight on his front leg after playing fetch.",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "sameday-regurgitation-frequent",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "regurgitation"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog regurgitates after almost every meal now.",
+      "description": "Failed checks: knownSymptomsInclude:regurgitation"
+    },
+    {
+      "caseId": "sameday-urinary-blood",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "urination_problem"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "I noticed blood in my dog's urine this morning but she is still peeing normally.",
+      "description": "Failed checks: knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "sameday-vomiting-multiple-times",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog has thrown up four times today but is still trying to drink.",
+      "description": "Failed checks: knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "sameday-weight-loss-rapid",
+      "severity": "HIGH",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "weight_loss"
+      ],
+      "riskTier": "tier_2_same_day",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog has lost a noticeable amount of weight in the last two weeks.",
+      "description": "Failed checks: knownSymptomsInclude:weight_loss"
+    },
+    {
+      "caseId": "emergency-pale-gums-collapse",
+      "severity": "MEDIUM",
+      "expected": "emergency",
+      "actual": "emergency",
+      "complaintFamilies": [
+        "lethargy"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "He suddenly collapsed and his gums are very pale.",
+      "description": "Failed checks: knownSymptomsInclude:lethargy"
+    },
+    {
+      "caseId": "emergency-post-vaccine-face-swelling",
+      "severity": "MEDIUM",
+      "expected": "emergency",
+      "actual": "emergency",
+      "complaintFamilies": [
+        "post_vaccination_reaction"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "A few hours after his shots my dog's face puffed up and he broke out in hives.",
+      "description": "Failed checks: knownSymptomsInclude:post_vaccination_reaction"
+    },
+    {
+      "caseId": "emergency-postpartum-heavy-bleeding",
+      "severity": "MEDIUM",
+      "expected": "emergency",
+      "actual": "emergency",
+      "complaintFamilies": [
+        "pregnancy_birth"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog gave birth a few hours ago and now she is bleeding a lot and seems weak.",
+      "description": "Failed checks: knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "followup-appetite-change-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "weight_loss"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I don't really know if she's eating more or less.",
+      "description": "Failed checks: answeredQuestionsInclude:appetite_change, extractedAnswersMatch:appetite_change"
+    },
+    {
+      "caseId": "followup-diarrhea-frequency-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "diarrhea"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I'm not sure how many times he went.",
+      "description": "Failed checks: answeredQuestionsInclude:diarrhea_frequency, extractedAnswersMatch:diarrhea_frequency"
+    },
+    {
+      "caseId": "followup-diarrhea-onset-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "diarrhea"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I honestly don't remember exactly when it started.",
+      "description": "Failed checks: answeredQuestionsInclude:diarrhea_onset, extractedAnswersMatch:diarrhea_onset"
+    },
+    {
+      "caseId": "followup-discharge-color-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "nasal_discharge"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "There's discharge but I can't tell what color.",
+      "description": "Failed checks: extractedAnswersMatch:discharge_color"
+    },
+    {
+      "caseId": "followup-energy-level-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "drinking_more"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I'm not sure if his energy is different, he's always been pretty calm.",
+      "description": "Failed checks: answeredQuestionsInclude:energy_level, extractedAnswersMatch:energy_level"
+    },
+    {
+      "caseId": "followup-itch-location-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "excessive_scratching"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "She scratches everywhere, I can't pinpoint it.",
+      "description": "Failed checks: answeredQuestionsInclude:itch_location, extractedAnswersMatch:itch_location"
+    },
+    {
+      "caseId": "followup-limping-progression-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I really can't tell if it's better or worse.",
+      "description": "Failed checks: extractedAnswersMatch:limping_progression"
+    },
+    {
+      "caseId": "followup-lump-size-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "swelling_lump"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I found it but I'm not sure how big it is.",
+      "description": "Failed checks: extractedAnswersMatch:lump_size"
+    },
+    {
+      "caseId": "followup-seasonal-pattern-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "excessive_scratching"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I'm honestly not sure if it's seasonal or not.",
+      "description": "Failed checks: extractedAnswersMatch:seasonal_pattern"
+    },
+    {
+      "caseId": "followup-stool-consistency-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "diarrhea"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I have no idea, I didn't get a good look.",
+      "description": "Failed checks: answeredQuestionsInclude:stool_consistency, extractedAnswersMatch:stool_consistency"
+    },
+    {
+      "caseId": "followup-swelling-present-no",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "ready",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "ready",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "No, I don't see any swelling.",
+      "description": "Failed checks: responseType, readyForReport, extractedAnswersMatch:swelling_present"
+    },
+    {
+      "caseId": "followup-temperature-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "lethargy"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I don't have a thermometer so I can't tell if she has a fever.",
+      "description": "Failed checks: answeredQuestionsInclude:has_fever, extractedAnswersMatch:has_fever"
+    },
+    {
+      "caseId": "followup-trauma-history-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "ready",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "ready",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I wasn't there, so I really don't know.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "followup-urine-color-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "urination_problem"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I didn't notice the color of her urine.",
+      "description": "Failed checks: answeredQuestionsInclude:urine_color, extractedAnswersMatch:urine_color"
+    },
+    {
+      "caseId": "followup-vomit-color-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I didn't really look at what color it was.",
+      "description": "Failed checks: answeredQuestionsInclude:vomit_color, extractedAnswersMatch:vomit_color"
+    },
+    {
+      "caseId": "followup-water-intake-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "drinking_more"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "Honestly I am not sure how much she is drinking.",
+      "description": "Failed checks: answeredQuestionsInclude:water_intake, extractedAnswersMatch:water_intake"
+    },
+    {
+      "caseId": "followup-weight-bearing-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I can't really tell how much weight he's putting on it.",
+      "description": "Failed checks: answeredQuestionsInclude:weight_bearing, extractedAnswersMatch:weight_bearing"
+    },
+    {
+      "caseId": "followup-wound-depth-unknown",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "wound_skin_issue"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I can see a wound but I don't know how deep it goes.",
+      "description": "Failed checks: answeredQuestionsInclude:wound_depth, extractedAnswersMatch:wound_depth"
+    },
+    {
+      "caseId": "question-behavior-change",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "behavior_change"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog seems confused lately and paces around at night.",
+      "description": "Failed checks: knownSymptomsInclude:behavior_change"
+    },
+    {
+      "caseId": "question-constipation",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "constipation"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "He keeps straining to poop and only tiny dry pieces come out.",
+      "description": "Failed checks: knownSymptomsInclude:constipation"
+    },
+    {
+      "caseId": "question-contradictory-vomiting",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "She threw up this morning but also maybe it was yesterday. I'm not sure.",
+      "description": "Failed checks: knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "question-coughing-breathing-combined",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "coughing_breathing_combined"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "He has been coughing and his breathing seems noisier than usual.",
+      "description": "Failed checks: knownSymptomsInclude:coughing_breathing_combined"
+    },
+    {
+      "caseId": "question-dental-problem",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "dental_problem"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "Her breath is awful and she drops food when she tries to chew.",
+      "description": "Failed checks: knownSymptomsInclude:dental_problem"
+    },
+    {
+      "caseId": "question-drinking-more",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "drinking_more"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is drinking way more water and peeing more than usual.",
+      "description": "Failed checks: knownSymptomsInclude:drinking_more"
+    },
+    {
+      "caseId": "question-ear-scratching",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "ear_scratching"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "He keeps scratching his ears and they smell bad.",
+      "description": "Failed checks: knownSymptomsInclude:ear_scratching"
+    },
+    {
+      "caseId": "question-eye-discharge",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "eye_discharge"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog's left eye has yellow discharge and she keeps squinting a little.",
+      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
+    },
+    {
+      "caseId": "question-face-swelling-mild",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "emergency",
+      "complaintFamilies": [
+        "wound_skin_issue"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "My dog's face looks slightly puffy but he is breathing fine.",
+      "description": "Failed checks: responseType, readyForReport"
+    },
+    {
+      "caseId": "question-generalized-stiffness",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "generalized_stiffness"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My senior dog is very stiff when he gets up after resting.",
+      "description": "Failed checks: knownSymptomsInclude:generalized_stiffness"
+    },
+    {
+      "caseId": "question-hair-loss",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "hair_loss"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is losing patches of hair on her back and belly.",
+      "description": "Failed checks: knownSymptomsInclude:hair_loss"
+    },
+    {
+      "caseId": "question-low-literacy-belly-big",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "swollen_abdomen"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "His belly be real big like a balloon.",
+      "description": "Failed checks: knownSymptomsInclude:swollen_abdomen"
+    },
+    {
+      "caseId": "question-low-literacy-eye-bad",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "vision_loss"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "His eye all goopy and squinty.",
+      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
+    },
+    {
+      "caseId": "question-low-literacy-leg-hurt",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "limping"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "His leg be hurting him bad.",
+      "description": "Failed checks: knownSymptomsInclude:limping"
+    },
+    {
+      "caseId": "question-nasal-discharge",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "nasal_discharge"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "He has discharge coming from one nostril and keeps sneezing.",
+      "description": "Failed checks: knownSymptomsInclude:nasal_discharge"
+    },
+    {
+      "caseId": "question-postoperative-concern",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "out_of_scope",
+      "complaintFamilies": [
+        "postoperative_concern"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "out_of_scope",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog's incision looks red and puffy three days after surgery.",
+      "description": "Failed checks: responseType, knownSymptomsInclude:postoperative_concern"
+    },
+    {
+      "caseId": "question-regurgitation",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "regurgitation"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "Food comes back up right after he eats, almost like he never digested it.",
+      "description": "Failed checks: knownSymptomsInclude:regurgitation"
+    },
+    {
+      "caseId": "question-senior-decline",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "senior_decline"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My old dog is slowing down a lot, sleeping more, and just not himself lately.",
+      "description": "Failed checks: knownSymptomsInclude:senior_decline"
+    },
+    {
+      "caseId": "question-slang-the-runs",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "diarrhea"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog has the runs really bad.",
+      "description": "Failed checks: knownSymptomsInclude:diarrhea"
+    },
+    {
+      "caseId": "question-slang-throwing-up-bricks",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "vomiting"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog keeps hurling his food back up.",
+      "description": "Failed checks: knownSymptomsInclude:vomiting"
+    },
+    {
+      "caseId": "question-small-blood-in-stool",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "blood_in_stool"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "There were a few streaks of blood in my dog's stool today.",
+      "description": "Failed checks: knownSymptomsInclude:blood_in_stool"
+    },
+    {
+      "caseId": "question-swelling-lump",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "swelling_lump"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "I found a new lump under the skin on my dog's side.",
+      "description": "Failed checks: knownSymptomsInclude:swelling_lump"
+    },
+    {
+      "caseId": "question-urination-problem",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "urination_problem"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "She is having accidents and seems to strain a little when she pees.",
+      "description": "Failed checks: knownSymptomsInclude:urination_problem"
+    },
+    {
+      "caseId": "question-vaccine-reaction-mild",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "post_vaccination_reaction"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My puppy got shots yesterday and seems a bit tired and sore today.",
+      "description": "Failed checks: knownSymptomsInclude:post_vaccination_reaction"
+    },
+    {
+      "caseId": "question-vague-lump-found",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "swelling_lump"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "Found something under his skin. Not sure what it is.",
+      "description": "Failed checks: knownSymptomsInclude:swelling_lump"
+    },
+    {
+      "caseId": "question-weight-loss",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "question",
+      "complaintFamilies": [
+        "weight_loss"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "question",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is losing weight even though he is still eating.",
+      "description": "Failed checks: knownSymptomsInclude:weight_loss"
+    },
+    {
+      "caseId": "toxin-question-ibuprofen-maybe",
+      "severity": "MEDIUM",
+      "expected": "question",
+      "actual": "out_of_scope",
+      "complaintFamilies": [
+        "medication_reaction"
+      ],
+      "riskTier": "tier_3_48h_monitor",
+      "actualResponseType": "out_of_scope",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "I think my dog may have eaten one of my ibuprofen pills.",
+      "description": "Failed checks: responseType"
+    }
+  ],
+  "byComplaintFamily": {
+    "difficulty_breathing": 8,
+    "wound_skin_issue": 6,
+    "lethargy": 5,
+    "trauma": 3,
+    "trembling": 4,
+    "eye_discharge": 2,
+    "pregnancy_birth": 5,
+    "heat_intolerance": 1,
+    "diarrhea": 5,
+    "limping": 10,
+    "dental_problem": 3,
+    "vomiting_diarrhea_combined": 1,
+    "vaginal_discharge": 2,
+    "medication_reaction": 7,
+    "vomiting": 10,
+    "urination_problem": 4,
+    "seizure_collapse": 3,
+    "nasal_discharge": 3,
+    "swelling_lump": 4,
+    "testicular_prostate": 1,
+    "behavior_change": 2,
+    "drinking_more": 4,
+    "hair_loss": 2,
+    "regurgitation": 2,
+    "weight_loss": 3,
+    "post_vaccination_reaction": 2,
+    "excessive_scratching": 2,
+    "constipation": 1,
+    "coughing_breathing_combined": 1,
+    "ear_scratching": 1,
+    "generalized_stiffness": 1,
+    "swollen_abdomen": 1,
+    "vision_loss": 1,
+    "postoperative_concern": 1,
+    "senior_decline": 1,
+    "blood_in_stool": 1
+  },
+  "byRiskTier": {
+    "tier_1_emergency": 48,
+    "tier_2_same_day": 12,
+    "tier_3_48h_monitor": 45
+  },
+  "byActualResponseType": {
+    "question": 92,
+    "cannot_assess": 4,
+    "emergency": 5,
+    "ready": 2,
+    "out_of_scope": 2
+  },
+  "byRootCauseBucket": {
+    "complaint normalization miss": 49,
+    "question orchestration overriding emergency": 29,
+    "missing red flag linkage": 2,
+    "deterministic emergency composite not triggered": 25
+  }
+}

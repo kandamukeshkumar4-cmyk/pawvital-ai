@@ -156,6 +156,8 @@ function deriveDeterministicAnswerForQuestion(
       return extractRatPoisonAccess(rawMessage);
     case "toxin_exposure":
       return extractToxinExposure(rawMessage);
+    case "trauma_mobility":
+      return extractTraumaMobility(rawMessage);
     case "pain_on_touch":
       return extractPainOnTouch(rawMessage);
     case "worse_after_rest":
@@ -166,6 +168,17 @@ function deriveDeterministicAnswerForQuestion(
       return extractWarmthPresence(rawMessage);
     case "prior_limping":
       return extractPriorLimping(rawMessage);
+    case "face_swelling":
+      return extractFaceSwelling(rawMessage);
+    case "hives_with_breathing":
+      return extractHivesWithBreathing(rawMessage);
+    case "unproductive_retching":
+    case "retching_present":
+      return extractUnproductiveRetching(rawMessage);
+    case "restlessness":
+      return extractRestlessness(rawMessage);
+    case "onset_during_exercise":
+      return extractOnsetDuringExercise(rawMessage);
     default:
       return null;
   }
@@ -173,6 +186,17 @@ function deriveDeterministicAnswerForQuestion(
 
 function getDeterministicCandidateQuestionIds(session: TriageSession): string[] {
   const questionIds = new Set<string>(getMissingQuestions(session));
+  for (const questionId of [
+    "trauma_mobility",
+    "face_swelling",
+    "hives_with_breathing",
+    "unproductive_retching",
+    "retching_present",
+    "restlessness",
+    "onset_during_exercise",
+  ]) {
+    questionIds.add(questionId);
+  }
 
   for (const symptom of session.known_symptoms) {
     for (const questionId of SYMPTOM_MAP[symptom]?.follow_up_questions || []) {
@@ -248,11 +272,18 @@ function isRefreshableDeterministicQuestion(questionId: string): boolean {
     "blood_amount",
     "rat_poison_access",
     "toxin_exposure",
+    "trauma_mobility",
     "pain_on_touch",
     "worse_after_rest",
     "swelling_present",
     "warmth_present",
     "prior_limping",
+    "face_swelling",
+    "hives_with_breathing",
+    "unproductive_retching",
+    "retching_present",
+    "restlessness",
+    "onset_during_exercise",
   ].includes(questionId);
 }
 
@@ -334,11 +365,18 @@ function shouldPreferDeterministicAnswer(questionId: string): boolean {
     "blood_amount",
     "rat_poison_access",
     "toxin_exposure",
+    "trauma_mobility",
     "swelling_present",
     "warmth_present",
     "pain_on_touch",
     "worse_after_rest",
     "prior_limping",
+    "face_swelling",
+    "hives_with_breathing",
+    "unproductive_retching",
+    "retching_present",
+    "restlessness",
+    "onset_during_exercise",
   ].includes(questionId);
 }
 
@@ -462,7 +500,7 @@ function extractOnsetPattern(rawMessage: string): string | null {
   }
 
   if (
-    /\b(sudden|suddenly|all of a sudden|just started|started today|started this morning|since this morning|since yesterday|today|this morning|last night|yesterday|within hours|a few hours ago)\b/.test(
+    /\b(sudden|suddenly|all of a sudden|just started|started today|started this morning|since this morning|since yesterday|today|this morning|last night|yesterday|within hours|a few hours ago|after eating|after a meal|after dinner)\b/.test(
       lower
     )
   ) {
@@ -655,6 +693,28 @@ function extractTraumaHistory(rawMessage: string): string | null {
   return null;
 }
 
+function extractTraumaMobility(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(can'?t use (his|her|their)? ?back legs|cannot use (his|her|their)? ?back legs|dragging (himself|herself|themself)|dragging (his|her|their) back legs|paraly[sz]ed|can'?t stand|unable to stand|barely stand)\b/.test(
+      lower
+    )
+  ) {
+    return "inability_to_stand";
+  }
+
+  if (/\blimp|hobble|favoring\b/.test(lower)) {
+    return "limping";
+  }
+
+  if (/\bwalking|still walking|walking okay\b/.test(lower)) {
+    return "walking";
+  }
+
+  return null;
+}
+
 function extractPainOnTouch(rawMessage: string): boolean | null {
   const lower = rawMessage.toLowerCase();
   if (
@@ -727,5 +787,103 @@ function extractPriorLimping(rawMessage: string): boolean | null {
   ) {
     return true;
   }
+  return null;
+}
+
+function extractFaceSwelling(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(no face swelling|face is not swollen|muzzle is not swollen)\b/.test(
+      lower
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    /\b(face|muzzle|eyelids?)\b.*\b(swollen|swelling|puffy|puffing up|swelled up)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  return null;
+}
+
+function extractHivesWithBreathing(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+  const hasHives = /\b(hives?|welts?|rash)\b/.test(lower);
+  const hasBreathingIssue =
+    /\b(breathing hard|breathing heavy|breathing fast|trouble breathing|short of breath)\b/.test(
+      lower
+    );
+
+  if (!hasHives) {
+    return null;
+  }
+
+  return hasBreathingIssue;
+}
+
+function extractUnproductiveRetching(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(not retching|no retching|not trying to vomit|isn'?t trying to vomit)\b/.test(
+      lower
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    /\b(dry heav(?:e|ing)|retch(?:ing)?|trying to vomit|tries to vomit|keeps trying to vomit)\b/.test(
+      lower
+    ) &&
+    /\b(nothing (comes|coming) (out|up)|nothing comes up|nothing is coming up|nothing is coming out|nothing comes out|nothing's coming up)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  if (/\b(dry heav(?:e|ing)|unproductive retch(?:ing)?)\b/.test(lower)) {
+    return true;
+  }
+
+  return null;
+}
+
+function extractRestlessness(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (/\b(not restless|settled normally|comfortable)\b/.test(lower)) {
+    return false;
+  }
+
+  if (
+    /\b(restless|restlessness|pacing|can'?t settle|unable to settle)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  return null;
+}
+
+function extractOnsetDuringExercise(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(excited|exercise|running|playing|after playing|after exercise|during exercise|during play|after a walk)\b/.test(
+      lower
+    )
+  ) {
+    return "during";
+  }
+
   return null;
 }

@@ -9,7 +9,12 @@ function makeReport(): RouteBenchmarkReport {
   return {
     mode: "live",
     generatedAt: "2026-04-14T12:00:00.000Z",
-    suiteId: "dog-triage-gold-candidate-merged",
+    suiteId: "wave3-freeze",
+    suiteVersion: "wave3-freeze-v2",
+    manifestHash: "manifest-hash-1",
+    suiteGeneratedAt: "2026-04-14T11:55:00.000Z",
+    suiteTotalCases: 3,
+    suiteCaseIds: ["emergency-hit", "emergency-miss", "question-pass"],
     species: "dog",
     baseUrl: "https://pawvital.example.com",
     preflight: {
@@ -104,6 +109,9 @@ describe("benchmark live eval scoring", () => {
     expect(scorecard.blockingFailures).toBeGreaterThan(0);
     expect(scorecard.passFail).toBe("FAIL");
     expect(scorecard.failures[0]?.severity).toBe("CRITICAL");
+    expect(scorecard.manifestHash).toBe("manifest-hash-1");
+    expect(scorecard.extraCaseIds).toEqual([]);
+    expect(scorecard.missingCaseIds).toEqual([]);
   });
 
   it("supports case filters and markdown rendering", () => {
@@ -123,7 +131,12 @@ describe("benchmark live eval scoring", () => {
     const blocked = scoreLiveBenchmarkReport({
       mode: "blocked",
       generatedAt: "2026-04-15T00:00:00.000Z",
-      suiteId: "dog-triage-gold-candidate-merged",
+      suiteId: "wave3-freeze",
+      suiteVersion: "wave3-freeze-v2",
+      manifestHash: "manifest-hash-1",
+      suiteGeneratedAt: "2026-04-14T11:55:00.000Z",
+      suiteTotalCases: 3,
+      suiteCaseIds: ["emergency-hit", "emergency-miss", "question-pass"],
       species: "dog",
       baseUrl: "https://pawvital.example.com",
       preflight: {
@@ -148,8 +161,42 @@ describe("benchmark live eval scoring", () => {
     expect(renderLiveScorecardMarkdown(blocked)).toContain("Result: BLOCKED");
   });
 
+  it("surfaces canonical suite diffs when artifact case IDs drift from the manifest", () => {
+    const report = makeReport();
+    report.cases = report.cases.filter((row) => row.id !== "question-pass");
+    report.cases.push({
+      id: "unexpected-case",
+      description: "Artifact drift case",
+      httpStatus: 200,
+      actualType: "question",
+      riskTier: "tier_3_routine",
+      mustNotMissMarker: false,
+      tags: ["question-flow"],
+      evaluation: {
+        totalChecks: 1,
+        passedChecks: 1,
+        failedChecks: 0,
+        score: 1,
+        pass: true,
+        checks: [],
+      },
+      expectations: { responseType: "question", readyForReport: false },
+    });
+
+    const scorecard = scoreLiveBenchmarkReport(report);
+
+    expect(scorecard.extraCaseIds).toEqual(["unexpected-case"]);
+    expect(scorecard.missingCaseIds).toEqual(["question-pass"]);
+    expect(scorecard.passFail).toBe("FAIL");
+    expect(
+      scorecard.failures.some((failure) => failure.category === "suite_alignment")
+    ).toBe(true);
+  });
+
   it("treats any missed emergency as a critical blocker even without tier metadata", () => {
     const report = makeReport();
+    report.suiteTotalCases = 1;
+    report.suiteCaseIds = ["emergency-no-tier"];
     report.cases = [
       {
         id: "emergency-no-tier",
