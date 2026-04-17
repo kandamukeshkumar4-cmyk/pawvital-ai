@@ -162,6 +162,163 @@ interface RequestBody {
   gateOverride?: boolean;
 }
 
+interface FirstTurnEmergencyEvidence {
+  symptoms: string[];
+  answers: Record<string, string | boolean>;
+  redFlags: string[];
+}
+
+function detectFirstTurnEmergencyEvidence(
+  message: string
+): FirstTurnEmergencyEvidence | null {
+  const text = message.toLowerCase();
+  const symptoms = new Set<string>();
+  const redFlags = new Set<string>();
+  const answers: Record<string, string | boolean> = {};
+  const includesAny = (phrases: string[]) =>
+    phrases.some((phrase) => text.includes(phrase));
+
+  const hasBlueGums = includesAny([
+    "gums look blue",
+    "gums looked blue",
+    "gums look blue-gray",
+    "gums looked blue-gray",
+    "gums look bluish",
+    "gums are blue",
+  ]);
+  const hasPaleGums = includesAny([
+    "gums look pale",
+    "gums are pale",
+    "gums look white",
+    "gums are white",
+    "looks pale",
+  ]);
+  const hasExplicitBreathingEmergency = includesAny([
+    "struggling to breathe",
+    "gasping for air",
+    "breathing with great effort",
+    "using his belly muscles",
+    "using her belly muscles",
+    "using their belly muscles",
+    "open-mouth breathing while resting",
+    "open mouth breathing while resting",
+    "breathing hard even while lying still",
+  ]);
+  const hasRapidBreathingDistress =
+    text.includes("breathing fast") &&
+    includesAny(["barely stand", "looks pale", "gums"]);
+  const hasCollapse = /\bcollaps(?:e|ed|ing)\b/.test(text);
+  const hasExcitementTrigger = includesAny(["got excited", "after excitement"]);
+  const hasDelayedRecovery = includesAny([
+    "still seems weak",
+    "still weak",
+    "out of it",
+    "barely stand",
+    "barely standing",
+  ]);
+  const hasAcuteParalysis = includesAny([
+    "can't use his back legs",
+    "can't use her back legs",
+    "cannot use his back legs",
+    "cannot use her back legs",
+    "can't use his hind legs",
+    "can't use her hind legs",
+    "cannot use his hind legs",
+    "cannot use her hind legs",
+    "dragging himself",
+    "dragging herself",
+    "dragging his back legs",
+    "dragging her back legs",
+    "unable to stand",
+    "can't stand",
+    "cannot stand",
+    "unable to walk",
+    "can't walk",
+    "cannot walk",
+  ]);
+  const hasFaceSwelling = includesAny([
+    "face swelled up",
+    "face puffed up",
+    "face is puffing up",
+    "face swollen",
+    "facial swelling",
+    "muzzle swollen",
+    "eyelids swollen",
+  ]);
+  const hasHives = includesAny(["hives", "welts"]);
+  const hasVaccineContext = includesAny([
+    "after his shots",
+    "after her shots",
+    "after the shots",
+    "after vaccine",
+    "after vaccination",
+    "after booster",
+    "after rabies shot",
+  ]);
+  const hasStingOrBiteContext = includesAny([
+    "bee sting",
+    "wasp sting",
+    "bug bite",
+    "after a sting",
+  ]);
+  const hasAllergicBreathingChange =
+    hasFaceSwelling &&
+    hasStingOrBiteContext &&
+    includesAny(["breathing hard", "struggling to breathe"]);
+
+  if (hasBlueGums) {
+    answers.gum_color = "blue";
+    redFlags.add("blue_gums");
+  }
+
+  if (hasPaleGums) {
+    answers.gum_color = "pale_white";
+    redFlags.add("pale_gums");
+  }
+
+  if (
+    hasExplicitBreathingEmergency ||
+    hasRapidBreathingDistress ||
+    hasAllergicBreathingChange
+  ) {
+    symptoms.add("difficulty_breathing");
+    answers.breathing_onset = "sudden";
+    redFlags.add("breathing_onset_sudden");
+  }
+
+  if (hasCollapse && (hasExcitementTrigger || hasDelayedRecovery)) {
+    symptoms.add("seizure_collapse");
+    answers.consciousness_level = "unresponsive";
+    redFlags.add("unresponsive");
+  }
+
+  if (hasAcuteParalysis) {
+    symptoms.add("abnormal_gait");
+    answers.trauma_mobility = "inability_to_stand";
+    redFlags.add("inability_to_stand");
+    redFlags.add("paralysis");
+  }
+
+  if (hasFaceSwelling || hasHives) {
+    symptoms.add(
+      hasVaccineContext ? "post_vaccination_reaction" : "excessive_scratching"
+    );
+    answers.face_swelling = hasFaceSwelling;
+    redFlags.add("face_swelling");
+    if (hasHives) {
+      redFlags.add("hives_widespread");
+    }
+  }
+
+  return redFlags.size > 0
+    ? {
+        symptoms: Array.from(symptoms),
+        answers,
+        redFlags: Array.from(redFlags),
+      }
+    : null;
+}
+
 export async function POST(request: Request) {
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
@@ -719,6 +876,18 @@ export async function POST(request: Request) {
       session = addSymptoms(session, turnTextSymptoms);
     }
 
+    const isFirstTurn =
+      (session.case_memory?.turn_count ?? 0) === 0 &&
+      session.answered_questions.length === 0 &&
+      !session.last_question_asked;
+    const firstTurnEmergencyEvidence = isFirstTurn
+      ? detectFirstTurnEmergencyEvidence(lastUserMessage.content)
+      : null;
+
+    if (firstTurnEmergencyEvidence?.symptoms.length) {
+      session = addSymptoms(session, firstTurnEmergencyEvidence.symptoms);
+    }
+
     const deterministicSupplementalAnswers = extractDeterministicAnswersForTurn(
       lastUserMessage.content,
       session
@@ -737,6 +906,45 @@ export async function POST(request: Request) {
           value,
           reason: "turn_answer_recorded",
         });
+      }
+    }
+
+    if (firstTurnEmergencyEvidence) {
+      for (const [key, value] of Object.entries(firstTurnEmergencyEvidence.answers)) {
+        if (value !== null && value !== undefined && value !== "") {
+          session = transitionToAnswered({
+            session,
+            questionId: key,
+            value,
+            reason: "route_first_turn_emergency",
+          });
+        }
+      }
+
+      session = {
+        ...session,
+        red_flags_triggered: Array.from(
+          new Set([
+            ...session.red_flags_triggered,
+            ...firstTurnEmergencyEvidence.redFlags,
+          ])
+        ),
+      };
+
+      if (session.red_flags_triggered.length > 0) {
+        session = transitionToEscalation({
+          session,
+          redFlags: session.red_flags_triggered,
+          reason: "route_first_turn_emergency",
+        });
+
+        return NextResponse.json(
+          buildRedFlagEmergencyResponse({
+            petName: pet.name,
+            redFlags: session.red_flags_triggered,
+            session,
+          })
+        );
       }
     }
 
