@@ -10,6 +10,19 @@ import {
   BREED_MODIFIERS,
   FOLLOW_UP_QUESTIONS,
 } from "@/lib/clinical-matrix";
+import { extractDeterministicAnswersForTurn } from "@/lib/symptom-chat/answer-extraction";
+import { addSymptoms, createSession, recordAnswer } from "@/lib/triage-engine";
+
+function hydrateSessionFromTurn(symptoms: string[], rawMessage: string) {
+  let session = addSymptoms(createSession(), symptoms);
+  const answers = extractDeterministicAnswersForTurn(rawMessage, session);
+
+  for (const [questionId, value] of Object.entries(answers)) {
+    session = recordAnswer(session, questionId, value);
+  }
+
+  return { session, answers };
+}
 
 describe("SYMPTOM_MAP integrity", () => {
   const symptoms = Object.keys(SYMPTOM_MAP);
@@ -321,5 +334,71 @@ describe("Cross-reference consistency", () => {
     expect(postVax.red_flags).toEqual(
       expect.arrayContaining(["face_swelling", "hives_with_breathing"])
     );
+  });
+});
+
+describe("Wave 3 emergency linkage regressions", () => {
+  it("links bloody diarrhea complaints to hemorrhagic shock red-flag surfaces", () => {
+    const { session, answers } = hydrateSessionFromTurn(
+      ["diarrhea"],
+      "My dog has explosive bloody diarrhea and is weak with pale gums."
+    );
+
+    expect(session.candidate_diseases).toEqual(
+      expect.arrayContaining([
+        "hemorrhagic_gastroenteritis",
+        "parvovirus",
+        "coagulopathy",
+      ])
+    );
+    expect(SYMPTOM_MAP.diarrhea.follow_up_questions).toEqual(
+      expect.arrayContaining(["blood_amount", "gum_color", "water_intake"])
+    );
+    expect(answers.gum_color).toBe("pale_white");
+    expect(session.red_flags_triggered).toContain("pale_gums");
+  });
+
+  it("links lethargy complaints to pale-gum emergency pathways for hemolytic shock patterns", () => {
+    const { session, answers } = hydrateSessionFromTurn(
+      ["lethargy"],
+      "My dog is extremely weak, his gums are pale, and his urine is dark brown."
+    );
+
+    expect(session.candidate_diseases).toEqual(
+      expect.arrayContaining(["imha", "coagulopathy", "sepsis"])
+    );
+    expect(SYMPTOM_MAP.lethargy.follow_up_questions).toContain("gum_color");
+    expect(answers.gum_color).toBe("pale_white");
+    expect(session.red_flags_triggered).toContain("pale_gums");
+  });
+
+  it("replaces dead parvo-style combined GI red flags with deterministic emergency signals", () => {
+    const { session, answers } = hydrateSessionFromTurn(
+      ["vomiting_diarrhea_combined"],
+      "My unvaccinated puppy is vomiting and has bloody diarrhea and won't drink."
+    );
+
+    expect(SYMPTOM_MAP.vomiting_diarrhea_combined.follow_up_questions).toEqual(
+      expect.arrayContaining(["gum_color", "vaccination_status", "water_intake"])
+    );
+    expect(SYMPTOM_MAP.vomiting_diarrhea_combined.red_flags).toEqual(
+      expect.arrayContaining(["not_drinking", "large_blood_volume", "pale_gums"])
+    );
+    expect(answers.water_intake).toBe("not_drinking");
+    expect(session.red_flags_triggered).toContain("not_drinking");
+  });
+
+  it("surfaces postpartum eclampsia as a must-not-miss disease from trembling plus pregnancy complaints", () => {
+    const { session, answers } = hydrateSessionFromTurn(
+      ["pregnancy_birth", "trembling"],
+      "She is nursing puppies and now she is trembling badly and seems weak and restless."
+    );
+
+    expect(session.candidate_diseases).toContain("eclampsia");
+    expect(SYMPTOM_MAP.pregnancy_birth.follow_up_questions).toContain(
+      "restlessness"
+    );
+    expect(SYMPTOM_MAP.pregnancy_birth.red_flags).toContain("eclampsia_signs");
+    expect(answers.restlessness).toBe(true);
   });
 });
