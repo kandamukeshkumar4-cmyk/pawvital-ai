@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-17T19:51:05.629Z",
+  "generatedAt": "2026-04-17T21:28:49.842Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
   "totalFailures": 105,
@@ -1484,42 +1484,42 @@
     }
   ],
   "byComplaintFamily": {
-    "difficulty_breathing": 8,
-    "wound_skin_issue": 6,
-    "lethargy": 5,
-    "trauma": 3,
-    "trembling": 4,
-    "eye_discharge": 2,
-    "pregnancy_birth": 5,
-    "heat_intolerance": 1,
-    "diarrhea": 5,
-    "limping": 10,
-    "dental_problem": 3,
-    "vomiting_diarrhea_combined": 1,
-    "vaginal_discharge": 2,
-    "medication_reaction": 7,
-    "vomiting": 10,
-    "urination_problem": 4,
-    "seizure_collapse": 3,
-    "nasal_discharge": 3,
-    "swelling_lump": 4,
-    "testicular_prostate": 1,
     "behavior_change": 2,
-    "drinking_more": 4,
-    "hair_loss": 2,
-    "regurgitation": 2,
-    "weight_loss": 3,
-    "post_vaccination_reaction": 2,
-    "excessive_scratching": 2,
+    "blood_in_stool": 1,
     "constipation": 1,
     "coughing_breathing_combined": 1,
+    "dental_problem": 3,
+    "diarrhea": 5,
+    "difficulty_breathing": 8,
+    "drinking_more": 4,
     "ear_scratching": 1,
+    "excessive_scratching": 2,
+    "eye_discharge": 2,
     "generalized_stiffness": 1,
-    "swollen_abdomen": 1,
-    "vision_loss": 1,
+    "hair_loss": 2,
+    "heat_intolerance": 1,
+    "lethargy": 5,
+    "limping": 10,
+    "medication_reaction": 7,
+    "nasal_discharge": 3,
+    "post_vaccination_reaction": 2,
     "postoperative_concern": 1,
+    "pregnancy_birth": 5,
+    "regurgitation": 2,
+    "seizure_collapse": 3,
     "senior_decline": 1,
-    "blood_in_stool": 1
+    "swelling_lump": 4,
+    "swollen_abdomen": 1,
+    "testicular_prostate": 1,
+    "trauma": 3,
+    "trembling": 4,
+    "urination_problem": 4,
+    "vaginal_discharge": 2,
+    "vision_loss": 1,
+    "vomiting": 10,
+    "vomiting_diarrhea_combined": 1,
+    "weight_loss": 3,
+    "wound_skin_issue": 6
   },
   "byRiskTier": {
     "tier_1_emergency": 48,
@@ -1527,16 +1527,279 @@
     "tier_3_48h_monitor": 45
   },
   "byActualResponseType": {
-    "question": 92,
     "cannot_assess": 4,
     "emergency": 5,
-    "ready": 2,
-    "out_of_scope": 2
+    "out_of_scope": 2,
+    "question": 92,
+    "ready": 2
   },
   "byRootCauseBucket": {
     "complaint normalization miss": 49,
-    "question orchestration overriding emergency": 29,
+    "deterministic emergency composite not triggered": 25,
     "missing red flag linkage": 2,
-    "deterministic emergency composite not triggered": 25
+    "question orchestration overriding emergency": 29
+  },
+  "rootCauseSummary": [
+    {
+      "rootCauseBucket": "question orchestration overriding emergency",
+      "totalFailures": 29,
+      "severityCounts": {
+        "CRITICAL": 29,
+        "HIGH": 0,
+        "MEDIUM": 0
+      },
+      "caseIds": [
+        "emergency-burn-chemical",
+        "emergency-diabetic-crisis",
+        "emergency-difficulty-breathing-kennel",
+        "emergency-dog-bite-wound",
+        "emergency-electrical-shock",
+        "emergency-glaucoma-eye",
+        "emergency-hard-labor-no-puppy",
+        "emergency-heatstroke",
+        "emergency-hit-by-car",
+        "emergency-hypoglycemia-toy-breed",
+        "emergency-imma-mediated-thrombocytopenia",
+        "emergency-limping-cry-pain",
+        "emergency-open-fracture",
+        "emergency-parvo-style-puppy",
+        "emergency-rat-poison-bleeding",
+        "emergency-repeated-nonproductive-heaving",
+        "emergency-toxin-xylitol",
+        "emergency-trembling-cold-weak",
+        "emergency-unresponsive-after-tremors",
+        "followup-gum-color-unknown-escalates",
+        "oncology-emergency-nosebleed-collapse",
+        "oncology-emergency-obstructive-neck-mass",
+        "repro-emergency-foul-discharge-fever",
+        "repro-emergency-male-paraphimosis",
+        "repro-emergency-retained-puppy-collapse",
+        "toxin-emergency-antifreeze",
+        "toxin-emergency-lily-chew",
+        "toxin-emergency-sago-palm",
+        "toxin-emergency-tremorgenic-mycotoxin"
+      ]
+    },
+    {
+      "rootCauseBucket": "complaint normalization miss",
+      "totalFailures": 49,
+      "severityCounts": {
+        "CRITICAL": 10,
+        "HIGH": 11,
+        "MEDIUM": 28
+      },
+      "caseIds": [
+        "emergency-breathing-labored",
+        "emergency-choking-foreign-body",
+        "emergency-oral-bleeding-cant-swallow",
+        "emergency-pale-gums-collapse",
+        "emergency-post-vaccine-face-swelling",
+        "emergency-postpartum-eclampsia",
+        "emergency-postpartum-heavy-bleeding",
+        "emergency-pyometra-style",
+        "emergency-resting-open-mouth-breathing",
+        "emergency-urinary-blockage",
+        "emergency-vomit-blood-collapse",
+        "emergency-vomiting-green",
+        "emergency-wound-deep-avulsion",
+        "question-behavior-change",
+        "question-constipation",
+        "question-contradictory-vomiting",
+        "question-coughing-breathing-combined",
+        "question-dental-problem",
+        "question-drinking-more",
+        "question-ear-scratching",
+        "question-eye-discharge",
+        "question-generalized-stiffness",
+        "question-hair-loss",
+        "question-low-literacy-belly-big",
+        "question-low-literacy-eye-bad",
+        "question-low-literacy-leg-hurt",
+        "question-nasal-discharge",
+        "question-postoperative-concern",
+        "question-regurgitation",
+        "question-senior-decline",
+        "question-slang-the-runs",
+        "question-slang-throwing-up-bricks",
+        "question-small-blood-in-stool",
+        "question-swelling-lump",
+        "question-trauma-fall-yard",
+        "question-urination-problem",
+        "question-vaccine-reaction-mild",
+        "question-vague-lump-found",
+        "question-weight-loss",
+        "sameday-behavior-hiding",
+        "sameday-chronic-limp-sudden-worse",
+        "sameday-dental-bleeding-gum",
+        "sameday-drinking-excessive",
+        "sameday-hair-loss-spreading",
+        "sameday-limping-non-weight-bearing",
+        "sameday-regurgitation-frequent",
+        "sameday-urinary-blood",
+        "sameday-vomiting-multiple-times",
+        "sameday-weight-loss-rapid"
+      ]
+    },
+    {
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "totalFailures": 25,
+      "severityCounts": {
+        "CRITICAL": 4,
+        "HIGH": 1,
+        "MEDIUM": 20
+      },
+      "caseIds": [
+        "followup-appetite-change-unknown",
+        "followup-breathing-onset-unknown-escalates",
+        "followup-breathing-pattern-unknown",
+        "followup-consciousness-unknown-escalates",
+        "followup-diarrhea-frequency-unknown",
+        "followup-diarrhea-onset-unknown",
+        "followup-discharge-color-unknown",
+        "followup-energy-level-unknown",
+        "followup-itch-location-unknown",
+        "followup-limping-progression-unknown",
+        "followup-lump-size-unknown",
+        "followup-seasonal-pattern-unknown",
+        "followup-seizure-duration-unknown",
+        "followup-stool-consistency-unknown",
+        "followup-swelling-present-no",
+        "followup-temperature-unknown",
+        "followup-trauma-history-unknown",
+        "followup-urine-color-unknown",
+        "followup-vomit-color-unknown",
+        "followup-water-intake-unknown",
+        "followup-weight-bearing-unknown",
+        "followup-wound-depth-unknown",
+        "question-face-swelling-mild",
+        "sameday-face-swelling-worsening",
+        "toxin-question-ibuprofen-maybe"
+      ]
+    },
+    {
+      "rootCauseBucket": "missing red flag linkage",
+      "totalFailures": 2,
+      "severityCounts": {
+        "CRITICAL": 2,
+        "HIGH": 0,
+        "MEDIUM": 0
+      },
+      "caseIds": [
+        "emergency-hemorrhagic-diarrhea-shock",
+        "emergency-protozoal-acute-babesia"
+      ]
+    }
+  ],
+  "delta": {
+    "comparedToGeneratedAt": "2026-04-17T19:51:05.629Z",
+    "previousTotalFailures": 105,
+    "totalFailureDelta": 0,
+    "countsByStatus": {
+      "improved": 0,
+      "regressed": 0,
+      "unchanged": 4
+    },
+    "rootCauseChanges": [
+      {
+        "rootCauseBucket": "question orchestration overriding emergency",
+        "status": "unchanged",
+        "previousTotalFailures": 29,
+        "currentTotalFailures": 29,
+        "deltaFailures": 0,
+        "previousSeverityCounts": {
+          "CRITICAL": 29,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "currentSeverityCounts": {
+          "CRITICAL": 29,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [],
+        "compositionChanged": false
+      },
+      {
+        "rootCauseBucket": "complaint normalization miss",
+        "status": "unchanged",
+        "previousTotalFailures": 49,
+        "currentTotalFailures": 49,
+        "deltaFailures": 0,
+        "previousSeverityCounts": {
+          "CRITICAL": 10,
+          "HIGH": 11,
+          "MEDIUM": 28
+        },
+        "currentSeverityCounts": {
+          "CRITICAL": 10,
+          "HIGH": 11,
+          "MEDIUM": 28
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [],
+        "compositionChanged": false
+      },
+      {
+        "rootCauseBucket": "deterministic emergency composite not triggered",
+        "status": "unchanged",
+        "previousTotalFailures": 25,
+        "currentTotalFailures": 25,
+        "deltaFailures": 0,
+        "previousSeverityCounts": {
+          "CRITICAL": 4,
+          "HIGH": 1,
+          "MEDIUM": 20
+        },
+        "currentSeverityCounts": {
+          "CRITICAL": 4,
+          "HIGH": 1,
+          "MEDIUM": 20
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [],
+        "compositionChanged": false
+      },
+      {
+        "rootCauseBucket": "missing red flag linkage",
+        "status": "unchanged",
+        "previousTotalFailures": 2,
+        "currentTotalFailures": 2,
+        "deltaFailures": 0,
+        "previousSeverityCounts": {
+          "CRITICAL": 2,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "currentSeverityCounts": {
+          "CRITICAL": 2,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [],
+        "compositionChanged": false
+      }
+    ]
   }
 }
