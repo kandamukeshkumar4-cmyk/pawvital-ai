@@ -1,6 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { serverEnv } from "@/lib/env";
+import { serverEnv } from "./env";
 
 /**
  * Rate limiting via Upstash Redis.

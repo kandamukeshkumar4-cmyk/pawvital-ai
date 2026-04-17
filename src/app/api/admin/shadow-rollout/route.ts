@@ -8,7 +8,7 @@ import {
 import {
   enforceRateLimit,
   enforceTrustedOrigin,
-  parseJsonBody,
+  jsonError,
 } from "@/lib/api-route";
 
 export const runtime = "nodejs";
@@ -54,9 +54,39 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const parsed = await parseJsonBody(request, PatchBodySchema);
-    if (!parsed.ok) {
-      return parsed.response;
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return jsonError("Invalid JSON body", 400, "INVALID_JSON");
+    }
+
+    const body =
+      rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)
+        ? (rawBody as Record<string, unknown>)
+        : null;
+    if (!body) {
+      return jsonError("Invalid request body", 400, "VALIDATION_ERROR");
+    }
+
+    if (body.service === undefined || body.liveSplitPct === undefined) {
+      return jsonError(
+        "service and liveSplitPct are required",
+        400,
+        "VALIDATION_ERROR"
+      );
+    }
+
+    const parsed = PatchBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0]?.message?.trim();
+      return jsonError(
+        firstIssue
+          ? `Invalid request body: ${firstIssue}`
+          : "Invalid request body",
+        400,
+        "VALIDATION_ERROR"
+      );
     }
 
     const result = await updateAdminShadowRolloutControl({

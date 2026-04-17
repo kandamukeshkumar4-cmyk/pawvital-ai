@@ -638,7 +638,14 @@ function buildRequest(benchmarkCase, runtime) {
 
   return new Request("http://localhost/api/ai/symptom-chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // This replay harness is an internal deterministic regression tool.
+      // It needs the route to trust the seeded session payload so must-not-miss
+      // follow-up cases exercise the pending-question path instead of creating
+      // a fresh server-owned session.
+      "x-symptom-chat-internal": "1",
+    },
     body: JSON.stringify({
       action: benchmarkCase.request.action,
       pet: cloneJson(benchmarkCase.request.pet),
