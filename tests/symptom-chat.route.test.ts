@@ -7971,6 +7971,192 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       );
     });
 
+    it("VET-1322: routes chemical burn emergencies before question orchestration", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog stepped in drain cleaner and his paw is red and blistered.",
+          {
+            name: "Rocky",
+            breed: "Boxer",
+            age_years: 4,
+            weight: 62,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.red_flags_triggered).toContain(
+        "chemical_burn_exposure"
+      );
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    });
+
+    it("VET-1322: routes heatstroke emergencies before question orchestration", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "After a walk in the heat she is panting hard, weak, and her gums look bright red.",
+          {
+            name: "Luna",
+            breed: "French Bulldog",
+            age_years: 3,
+            weight: 24,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    });
+
+    it("VET-1322: routes major-trauma emergencies before question orchestration", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "He was hit by a car and now he cannot stand up.",
+          {
+            name: "Tank",
+            breed: "Boxer",
+            age_years: 5,
+            weight: 68,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    });
+
+    it("VET-1322: routes anticoagulant-poisoning emergencies before question orchestration", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog may have gotten rat poison and now I see bleeding from his gums.",
+          {
+            name: "Wally",
+            breed: "Mixed Breed",
+            age_years: 6,
+            weight: 49,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.red_flags_triggered).toContain(
+        "anticoagulant_poisoning_bleeding"
+      );
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    });
+
+    it("VET-1322: routes clear respiratory emergencies before question orchestration", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "After boarding, my dog is struggling to breathe and making honking sounds.",
+          {
+            name: "Bingo",
+            breed: "Pomeranian",
+            age_years: 9,
+            weight: 10,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    });
+
+    it("VET-1322: routes parvo-style puppy emergencies before question orchestration", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My unvaccinated puppy is vomiting and has bloody diarrhea and will not drink.",
+          {
+            name: "Nugget",
+            breed: "Mixed Breed",
+            age_years: 0.2,
+            weight: 7,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    });
+
+    it("VET-1322: escalates unknown respiratory follow-up answers instead of asking another question", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const session = buildPendingQuestionSession(
+        "difficulty_breathing",
+        "gum_color"
+      );
+      session.candidate_diseases = [
+        "heart_failure",
+        "allergic_reaction",
+        "difficulty_breathing",
+      ];
+      session.body_systems_involved = ["respiratory"];
+      session.case_memory = {
+        ...session.case_memory!,
+        turn_count: 2,
+        chief_complaints: ["difficulty_breathing"],
+        active_focus_symptoms: ["difficulty_breathing"],
+        unresolved_question_ids: ["gum_color"],
+        ambiguity_flags: [],
+      };
+
+      const response = await POST(
+        makeTextOnlyRequest(
+          session,
+          "I can't tell what color they are right now.",
+          {
+            name: "Pepper",
+            breed: "Pug",
+            age_years: 9,
+            weight: 19,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    });
+
     it("preserves the existing demo fallback for report generation without providers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const response = await POST(makeReportRequest(buildModerateReportSession()));
