@@ -10,16 +10,9 @@
 
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { config as loadEnv } from "dotenv";
-import { Pool } from "pg";
+import { createDatabasePool, requireDatabaseUrl } from "./lib/database.mjs";
 
-loadEnv({ path: resolve(process.cwd(), ".env.local") });
-
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error("DATABASE_URL is required to apply a schema file.");
-  process.exit(1);
-}
+const databaseUrl = requireDatabaseUrl(process.cwd());
 
 const schemaFile = process.argv[2];
 if (!schemaFile) {
@@ -30,13 +23,7 @@ if (!schemaFile) {
 const sqlPath = resolve(process.cwd(), schemaFile);
 const sql = await readFile(sqlPath, "utf8");
 
-const pool = new Pool({
-  connectionString: databaseUrl,
-  ssl: databaseUrl.includes("supabase.co")
-    ? { rejectUnauthorized: false }
-    : undefined,
-  max: 1,
-});
+const pool = createDatabasePool(databaseUrl, { max: 1 });
 
 try {
   await pool.query(sql);

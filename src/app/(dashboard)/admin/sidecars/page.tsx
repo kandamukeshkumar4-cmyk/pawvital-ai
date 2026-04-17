@@ -6,6 +6,8 @@ import {
   buildDemoShadowRolloutDashboardData,
 } from "@/lib/admin-shadow-rollout";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminSidecarsPage() {
   const adminContext = await getAdminRequestContext();
   if (!adminContext) {

@@ -244,11 +244,7 @@ export function usePets() {
       return saved;
     } catch (err) {
       console.error("Failed to save pet:", err);
-      // Fallback to local state
-      const updated = [...pets.filter((p) => p.id !== pet.id), pet];
-      setPets(updated);
-      setActivePet(pet);
-      return pet;
+      throw new Error("Could not save pet. Your changes were not saved.");
     }
   }, [pets, setPets, setActivePet]);
 
@@ -264,14 +260,18 @@ export function usePets() {
 
     try {
       const supabase = createClient();
-      await supabase.from("pets").delete().eq("id", petId);
-    } catch (err) {
-      console.error("Failed to delete pet from DB:", err);
-    } finally {
+      const { error } = await supabase.from("pets").delete().eq("id", petId);
+      if (error) {
+        throw error;
+      }
+
       const updated = pets.filter((p) => p.id !== petId);
       setPets(updated);
       if (updated.length > 0) setActivePet(updated[0]);
       else setActivePet(null);
+    } catch (err) {
+      console.error("Failed to delete pet from DB:", err);
+      throw new Error("Could not delete pet. Please try again.");
     }
   }, [pets, setPets, setActivePet]);
 

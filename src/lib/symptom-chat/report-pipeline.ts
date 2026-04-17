@@ -67,6 +67,7 @@ interface GenerateReportInput {
   messages: SymptomChatMessage[];
   image?: string;
   requestOrigin?: string;
+  sessionHandle?: string | null;
   verifiedUserId?: string | null;
 }
 
@@ -114,6 +115,7 @@ export async function generateReport({
   messages,
   image,
   requestOrigin,
+  sessionHandle,
   verifiedUserId,
 }: GenerateReportInput) {
   if (
@@ -536,7 +538,11 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       }
     }
 
-    return NextResponse.json({ type: "report", report: finalReport });
+    return NextResponse.json({
+      type: "report",
+      report: finalReport,
+      ...(sessionHandle ? { sessionHandle } : {}),
+    });
   } catch (error) {
     console.error("Report generation failed:", error);
     throw error;

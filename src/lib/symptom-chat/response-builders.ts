@@ -11,6 +11,7 @@ import type { ImageGateWarning } from "@/lib/image-gate";
 interface EmergencyResponseInput {
   petName: string;
   session: TriageSession;
+  sessionHandle?: string | null;
 }
 
 interface VisionEmergencyResponseInput extends EmergencyResponseInput {
@@ -24,6 +25,7 @@ interface RedFlagEmergencyResponseInput extends EmergencyResponseInput {
 interface CannotAssessResponseInput {
   outcome: UncertaintyTerminalOutcome;
   session: TriageSession;
+  sessionHandle?: string | null;
 }
 
 function assertCannotAssessOutcome(outcome: UncertaintyTerminalOutcome) {
@@ -39,6 +41,7 @@ function assertCannotAssessOutcome(outcome: UncertaintyTerminalOutcome) {
 interface OutOfScopeResponseInput {
   outcome: UncertaintyTerminalOutcome;
   session: TriageSession;
+  sessionHandle?: string | null;
 }
 
 function assertOutOfScopeOutcome(outcome: UncertaintyTerminalOutcome) {
@@ -52,12 +55,17 @@ function assertOutOfScopeOutcome(outcome: UncertaintyTerminalOutcome) {
   }
 }
 
-function buildEmergencyResponse(message: string, session: TriageSession) {
+function buildEmergencyResponse(
+  message: string,
+  session: TriageSession,
+  sessionHandle?: string | null
+) {
   return {
     type: "emergency" as const,
     message,
     session: sanitizeSessionForClient(session),
     ready_for_report: true,
+    ...(sessionHandle ? { sessionHandle } : {}),
   };
 }
 
@@ -68,7 +76,8 @@ export function buildVisionGuardrailEmergencyResponse(
 
   return buildEmergencyResponse(
     `Based on my analysis of ${input.petName}'s photo, I've detected signs that require IMMEDIATE veterinary attention:\n\n${bulletFlags}\n\nPlease take ${input.petName} to the nearest emergency veterinary hospital NOW. Do not wait. Call ahead so they can prepare. I can generate a full report for the vet while you're on the way.`,
-    input.session
+    input.session,
+    input.sessionHandle
   );
 }
 
@@ -79,7 +88,8 @@ export function buildRedFlagEmergencyResponse(
 
   return buildEmergencyResponse(
     `I've detected potential emergency signs (${flags}). This could be life-threatening. Please take ${input.petName} to the nearest emergency veterinary hospital IMMEDIATELY. Do not wait. Call ahead so they can prepare. I can still generate a full analysis while you're on the way.`,
-    input.session
+    input.session,
+    input.sessionHandle
   );
 }
 
@@ -96,6 +106,7 @@ export function buildCannotAssessResponse(input: CannotAssessResponseInput) {
     session: sanitizeSessionForClient(input.session),
     ready_for_report: false,
     conversationState: input.outcome.conversationState,
+    ...(input.sessionHandle ? { sessionHandle: input.sessionHandle } : {}),
   };
 }
 export function buildOutOfScopeResponse(input: OutOfScopeResponseInput) {
@@ -111,15 +122,17 @@ export function buildOutOfScopeResponse(input: OutOfScopeResponseInput) {
     session: sanitizeSessionForClient(input.session),
     ready_for_report: false,
     conversationState: input.outcome.conversationState,
+    ...(input.sessionHandle ? { sessionHandle: input.sessionHandle } : {}),
   };
 }
 
 export function buildTerminalOutcomeResponse(
   outcome: UncertaintyTerminalOutcome,
-  session: TriageSession
+  session: TriageSession,
+  sessionHandle?: string | null
 ) {
   if (outcome.type === "cannot_assess") {
-    return buildCannotAssessResponse({ outcome, session });
+    return buildCannotAssessResponse({ outcome, session, sessionHandle });
   }
 
   return {
@@ -132,6 +145,7 @@ export function buildTerminalOutcomeResponse(
     session: sanitizeSessionForClient(session),
     ready_for_report: false,
     conversationState: outcome.conversationState,
+    ...(sessionHandle ? { sessionHandle } : {}),
   };
 }
 
@@ -163,7 +177,8 @@ export function recordTerminalOutcomeTelemetry(
 
 export function buildAlternateObservableRecoveryResponse(
   outcome: AlternateObservableRecoveryOutcome,
-  session: TriageSession
+  session: TriageSession,
+  sessionHandle?: string | null
 ) {
   return {
     type: "question",
@@ -173,6 +188,7 @@ export function buildAlternateObservableRecoveryResponse(
     session: sanitizeSessionForClient(session),
     ready_for_report: false,
     conversationState: outcome.conversationState,
+    ...(sessionHandle ? { sessionHandle } : {}),
   };
 }
 

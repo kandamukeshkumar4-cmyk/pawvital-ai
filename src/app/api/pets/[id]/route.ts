@@ -5,6 +5,8 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { sanitizePetUpdateBody } from "@/lib/pet-update-payload";
+import { z } from "zod";
 
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -52,7 +54,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   try {
     const { id } = await context.params;
-    if (!id) {
+    if (!z.string().uuid().safeParse(id).success) {
       return NextResponse.json({ error: "Missing pet id" }, { status: 400 });
     }
 
@@ -66,6 +68,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       .from("pets")
       .select("*")
       .eq("id", id)
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (fetchError) {
@@ -81,10 +84,6 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
     if (!pet) {
       return NextResponse.json({ error: "Pet not found" }, { status: 404 });
-    }
-
-    if (pet.user_id !== user.id) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json({ pet });
@@ -112,6 +111,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
   try {
     const { id } = await context.params;
+    if (!z.string().uuid().safeParse(id).success) {
+      return NextResponse.json({ error: "Invalid pet id" }, { status: 400 });
+    }
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -123,10 +125,6 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       body = await request.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
 
     const { data: existing, error: fetchError } = await supabase
@@ -154,17 +152,14 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const cleanBody = { ...body } as Record<string, unknown>;
-    delete cleanBody.id;
-    delete cleanBody.user_id;
-
-    if (Object.keys(cleanBody).length === 0) {
-      return NextResponse.json({ error: "Missing fields to update" }, { status: 400 });
+    const sanitized = sanitizePetUpdateBody(body);
+    if (!sanitized.ok) {
+      return NextResponse.json({ error: sanitized.error }, { status: 400 });
     }
 
     const { data: pet, error } = await supabase
       .from("pets")
-      .update(cleanBody)
+      .update(sanitized.data)
       .eq("id", id)
       .select()
       .single();
@@ -205,6 +200,9 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
   try {
     const { id } = await context.params;
+    if (!z.string().uuid().safeParse(id).success) {
+      return NextResponse.json({ error: "Invalid pet id" }, { status: 400 });
+    }
     const supabase = await createServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {

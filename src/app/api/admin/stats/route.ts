@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { getAdminRequestContext } from "@/lib/admin-auth";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { getServiceSupabase } from "@/lib/supabase-admin";
+import { enforceRateLimit } from "@/lib/api-route";
 
 // Revalidate every 60 seconds (or 0 for dynamic)
 export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const rateLimitError = await enforceRateLimit(request);
+    if (rateLimitError) {
+      return rateLimitError;
+    }
+
     const adminContext = await getAdminRequestContext();
     if (!adminContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -21,14 +27,15 @@ export async function GET() {
       audio_assets: 0,
     };
 
-    let supabase;
-    try {
-      supabase = await createServerSupabaseClient();
-    } catch (error) {
+    const supabase = getServiceSupabase();
+    if (!supabase) {
       if (adminContext.isDemo) {
         return NextResponse.json(defaultStats);
       }
-      throw error;
+      return NextResponse.json(
+        { error: "Admin statistics require service-role database access" },
+        { status: 503 }
+      );
     }
 
     const now = new Date();
@@ -76,7 +83,7 @@ export async function GET() {
         supabase
           .from("case_outcomes")
           .select("*", { count: "exact", head: true })
-          .eq("is_confirmed", true) // Assuming 'is_confirmed' or similar, we'll try 'status' = 'confirmed' or 'is_confirmed' = true. Oh wait, if we don't know the schema, we'll just query what might be standard, falling back to 0.
+          .eq("vet_confirmed", true)
       ),
       fetchCount(
         supabase.from("knowledge_chunks").select("*", { count: "exact", head: true })
@@ -86,23 +93,11 @@ export async function GET() {
       ),
     ]);
 
-    // Secondary fallback check for 'status' instead of 'is_confirmed'
-    let final_outcomes_confirmed = outcomes_confirmed;
-    if (final_outcomes_confirmed === 0) {
-       const statusConfirmed = await fetchCount(
-         supabase
-           .from("case_outcomes")
-           .select("*", { count: "exact", head: true })
-           .eq("status", "confirmed")
-       );
-       final_outcomes_confirmed = statusConfirmed;
-    }
-
     return NextResponse.json({
       checks_24h,
       checks_7d,
       checks_30d,
-      outcomes_confirmed: final_outcomes_confirmed,
+      outcomes_confirmed,
       knowledge_chunks,
       audio_assets,
     });

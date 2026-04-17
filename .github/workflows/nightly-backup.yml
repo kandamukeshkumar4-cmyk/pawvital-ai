@@ -1,0 +1,58 @@
+name: Nightly Backup
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL client tools
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Validate backup secrets
+        run: |
+          test -n "$DATABASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+
+      - name: Create database backup
+        run: node scripts/backup-database.mjs --output=tmp/backups/database
+
+      - name: Export journal storage bucket
+        run: node scripts/backup-storage.mjs --bucket=journal-photos --output=tmp/backups/storage
+
+      - name: Archive backup payload
+        run: |
+          mkdir -p tmp/archive
+          tar -czf "tmp/archive/pawvital-backup-${GITHUB_RUN_ID}.tar.gz" -C tmp backups
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pawvital-backup-${{ github.run_id }}
+          path: tmp/archive/pawvital-backup-${{ github.run_id }}.tar.gz
+          retention-days: 14

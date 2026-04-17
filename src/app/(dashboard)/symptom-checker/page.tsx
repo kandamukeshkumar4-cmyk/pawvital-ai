@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import {
   Stethoscope,
@@ -60,6 +61,7 @@ interface ChatMessage {
     | "out_of_scope";
   gate?: ImageGateWarning;
   image?: string;
+  imageMeta?: Pick<ImageMeta, "width" | "height">;
   terminalState?: TerminalOutcomeType;
   reasonCode?: string | null;
   ownerMessage?: string | null;
@@ -169,9 +171,12 @@ function ChatBubble({
           </p>
         )}
         {message.image && (
-          <img
+          <Image
             src={message.image}
             alt="Uploaded by user"
+            width={message.imageMeta?.width ?? 512}
+            height={message.imageMeta?.height ?? 512}
+            unoptimized
             className="w-full max-w-sm rounded-lg mb-2 border border-blue-400/30 object-contain"
           />
         )}
@@ -224,6 +229,7 @@ export default function SymptomCheckerPage() {
     useState<ImageMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<SymptomReport | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -234,6 +240,10 @@ export default function SymptomCheckerPage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatRequestControllerRef = useRef<AbortController | null>(null);
+  const reportRequestControllerRef = useRef<AbortController | null>(null);
+  const sessionEpochRef = useRef(0);
+  const sessionHandleRef = useRef<string | null>(null);
 
   // Hybrid triage session — passed to/from the API each turn
   // Use both state (for re-renders) and ref (to avoid stale closures in async sendMessage)
@@ -265,6 +275,13 @@ export default function SymptomCheckerPage() {
     setPendingGateImageMeta(null);
   };
 
+  const cancelInflightRequests = () => {
+    chatRequestControllerRef.current?.abort();
+    reportRequestControllerRef.current?.abort();
+    chatRequestControllerRef.current = null;
+    reportRequestControllerRef.current = null;
+  };
+
   // ── Stage 1: Image Preprocessing ──
   // Resize to max 1024px, compress to JPEG 85%, detect blurry images
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,7 +299,7 @@ export default function SymptomCheckerPage() {
       return;
     }
 
-    const img = new Image();
+    const img = new window.Image();
     img.onload = () => {
       // Resize to max 1024px on longest side (saves bandwidth + API tokens)
       const MAX_SIZE = 1024;
@@ -426,6 +443,12 @@ export default function SymptomCheckerPage() {
         role: "user",
         content: messageText || "Uploaded an image for analysis.",
         image: imageToSend || undefined,
+        imageMeta: imageMetaToSend
+          ? {
+              width: imageMetaToSend.width,
+              height: imageMetaToSend.height,
+            }
+          : undefined,
         timestamp: new Date(),
       };
       userMessage = nextUserMessage;
@@ -439,10 +462,15 @@ export default function SymptomCheckerPage() {
       setPendingGateImageMeta(imageMetaToSend ?? null);
     }
 
+    setReportError(null);
     setSessionStarted(true);
     setLoading(true);
 
     try {
+      const controller = new AbortController();
+      chatRequestControllerRef.current?.abort();
+      chatRequestControllerRef.current = controller;
+      const sessionEpoch = sessionEpochRef.current;
       const baseMessages = getApiMessages();
       const apiMsgs =
         appendUserMessage && userMessage
@@ -455,11 +483,13 @@ export default function SymptomCheckerPage() {
       const res = await fetch("/api/ai/symptom-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: apiMsgs,
           pet,
           action: "chat",
-          session: triageSessionRef.current,
+          session: sessionHandleRef.current ? undefined : triageSessionRef.current,
+          sessionHandle: sessionHandleRef.current ?? undefined,
           image: imageToSend, // Send the base64 image here
           imageMeta: imageMetaToSend,
           gateOverride,
@@ -467,12 +497,18 @@ export default function SymptomCheckerPage() {
       });
 
       const data = await res.json();
+      if (sessionEpoch !== sessionEpochRef.current) {
+        return;
+      }
 
       // Always store returned session state (both state and ref)
       if (data.session) {
         setTriageSession(data.session);
         triageSessionRef.current = data.session;
         syncProgressFromSession(data.session);
+      }
+      if (typeof data.sessionHandle === "string" && data.sessionHandle.trim()) {
+        sessionHandleRef.current = data.sessionHandle;
       }
 
       // Update conversation state from API response
@@ -532,7 +568,7 @@ export default function SymptomCheckerPage() {
         ]);
         clearPendingGateImage();
         // Auto-trigger report generation with the latest session + messages
-        generateReport(
+        void generateReport(
           [...apiMsgs, { role: "assistant", content: data.message }],
           data.session || triageSessionRef.current,
         );
@@ -578,7 +614,10 @@ export default function SymptomCheckerPage() {
           setReadyForReport(false);
         }
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
       setMessages((prev) => [
         ...prev,
         {
@@ -588,10 +627,10 @@ export default function SymptomCheckerPage() {
           timestamp: new Date(),
         },
       ]);
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
     }
-
-    setLoading(false);
-    inputRef.current?.focus();
   };
 
   const generateReport = async (
@@ -599,23 +638,63 @@ export default function SymptomCheckerPage() {
     overrideSession?: unknown,
   ) => {
     setGeneratingReport(true);
+    setReportError(null);
     try {
+      const controller = new AbortController();
+      reportRequestControllerRef.current?.abort();
+      reportRequestControllerRef.current = controller;
+      const sessionEpoch = sessionEpochRef.current;
       const res = await fetch("/api/ai/symptom-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: overrideMessages || getApiMessages(),
           pet,
           action: "generate_report",
-          session: overrideSession || triageSessionRef.current,
+          session:
+            sessionHandleRef.current
+              ? undefined
+              : overrideSession || triageSessionRef.current,
+          sessionHandle: sessionHandleRef.current ?? undefined,
         }),
       });
 
       const data = await res.json();
+      if (sessionEpoch !== sessionEpochRef.current) {
+        return;
+      }
       if (data.type === "report" && data.report) {
         setReport(data.report);
+        return;
       }
-    } catch {
+
+      const message =
+        data.owner_message ||
+        data.message ||
+        "I couldn’t generate the report safely right now. Please try again.";
+      setReportError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: message,
+          type:
+            data.type === "cannot_assess" ||
+            data.type === "out_of_scope" ||
+            data.type === "error"
+              ? data.type
+              : "error",
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+      setReportError(
+        "I had trouble generating the full report. You can try again using the button below.",
+      );
       setMessages((prev) => [
         ...prev,
         {
@@ -632,9 +711,13 @@ export default function SymptomCheckerPage() {
   };
 
   const startNewSession = () => {
+    sessionEpochRef.current += 1;
+    cancelInflightRequests();
     setMessages([]);
     setReport(null);
+    setReportError(null);
     setReadyForReport(false);
+    setLoading(false);
     setGeneratingReport(false);
     setSessionStarted(false);
     setConversationState("idle");
@@ -642,6 +725,7 @@ export default function SymptomCheckerPage() {
     setTotalQuestions(0);
     setTriageSession(null);
     triageSessionRef.current = null;
+    sessionHandleRef.current = null;
     setInput("");
     clearComposerImage();
     clearPendingGateImage();
@@ -715,6 +799,7 @@ export default function SymptomCheckerPage() {
               <Button
                 variant="secondary"
                 onClick={startNewSession}
+                disabled={loading || generatingReport}
                 className="w-full flex-shrink-0 sm:w-auto"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
@@ -906,10 +991,13 @@ export default function SymptomCheckerPage() {
               <div className="border-t border-gray-100 p-3">
                 {selectedImage && (
                   <div className="mb-3 relative inline-block">
-                    <img
+                    <Image
                       src={selectedImage}
                       alt="Preview"
-                      className="h-24 rounded border border-gray-200 object-contain bg-gray-50"
+                      width={selectedImageMeta?.width ?? 96}
+                      height={selectedImageMeta?.height ?? 96}
+                      unoptimized
+                      className="h-24 w-auto rounded border border-gray-200 object-contain bg-gray-50"
                     />
                     <button
                       onClick={clearComposerImage}
@@ -986,6 +1074,11 @@ export default function SymptomCheckerPage() {
                     </button>
                   </div>
                 )}
+                {reportError && (
+                  <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {reportError}
+                  </div>
+                )}
               </div>
             )}
           </Card>
@@ -1032,10 +1125,13 @@ export default function SymptomCheckerPage() {
             </div>
             {selectedImage && (
               <div className="mt-3 relative inline-block">
-                <img
+                <Image
                   src={selectedImage}
                   alt="Preview"
-                  className="h-24 rounded border border-gray-200 object-contain bg-gray-50"
+                  width={selectedImageMeta?.width ?? 96}
+                  height={selectedImageMeta?.height ?? 96}
+                  unoptimized
+                  className="h-24 w-auto rounded border border-gray-200 object-contain bg-gray-50"
                 />
                 <button
                   onClick={clearComposerImage}

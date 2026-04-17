@@ -217,6 +217,22 @@ export async function getSidecarHealthSummaries(): Promise<SidecarHealthSummary[
           } satisfies SidecarHealthSummary;
         }
 
+        if (
+          mode === "degraded" ||
+          mode === "forced_fallback" ||
+          mode === "live_with_fallback"
+        ) {
+          return {
+            service: entry.name,
+            status: "unhealthy",
+            statusCode: result.status,
+            mode,
+            model,
+            detail:
+              "Service is live only through a degraded or fallback path and is not promotion-ready.",
+          } satisfies SidecarHealthSummary;
+        }
+
         return {
           service: entry.name,
           status:

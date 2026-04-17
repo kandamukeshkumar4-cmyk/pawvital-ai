@@ -16,7 +16,7 @@ interface PlanGateProps {
 export default function PlanGate({ requiredPlan, children, fallback }: PlanGateProps) {
   const sub = useSubscriptionOptional();
   const plan = sub?.plan ?? "free";
-  const loading = sub?.loading ?? false;
+  const loading = sub?.loading ?? true;
 
   if (!isSupabaseConfigured) {
     return <>{children}</>;

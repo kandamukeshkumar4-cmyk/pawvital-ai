@@ -7,6 +7,8 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { buildThresholdProposalDraft } from "../src/lib/threshold-proposals";
 import { extractHistoricalOutcomeFeedback } from "../src/lib/outcome-feedback-backfill";
+import { createDatabasePool, requireDatabaseUrl } from "./lib/database.mjs";
+import { loadEnvFiles } from "./lib/load-env-files.mjs";
 
 const rootDir = process.cwd();
 const defaultCheckpointPath = path.join(
@@ -65,26 +67,6 @@ interface SymptomCheckRow {
   symptoms: string | null;
   symptom_check_id: string;
   threshold_proposal_id: string | null;
-}
-
-function loadEnvFiles() {
-  for (const relativePath of [".env.sidecars", ".env.local", ".env"]) {
-    const fullPath = path.join(rootDir, relativePath);
-    if (!fs.existsSync(fullPath)) continue;
-
-    for (const line of fs.readFileSync(fullPath, "utf8").split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-
-      const eq = trimmed.indexOf("=");
-      if (eq < 0) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
 }
 
 function ensureDir(dirPath: string) {
@@ -432,30 +414,16 @@ async function rollbackFromManifest(
   );
 }
 
-function createPool(databaseUrl: string) {
-  return new Pool({
-    connectionString: databaseUrl,
-    ssl: databaseUrl.includes("supabase.co")
-      ? { rejectUnauthorized: false }
-      : undefined,
-    max: 2,
-  });
-}
-
 async function main() {
-  loadEnvFiles();
+  loadEnvFiles(rootDir);
   const options = parseArgs(process.argv.slice(2));
-  const databaseUrl = (process.env.DATABASE_URL || "").trim();
-
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required for historical outcome feedback backfill");
-  }
+  const databaseUrl = requireDatabaseUrl(rootDir);
 
   if (options.resetCheckpoint && fs.existsSync(options.checkpointPath)) {
     fs.unlinkSync(options.checkpointPath);
   }
 
-  const pool = createPool(databaseUrl);
+  const pool = createDatabasePool(databaseUrl, { max: 2 });
 
   try {
     if (options.rollbackFrom) {

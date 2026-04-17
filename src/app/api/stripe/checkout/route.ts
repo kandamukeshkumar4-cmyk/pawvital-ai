@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import {
@@ -7,6 +8,7 @@ import {
   stripe,
 } from "@/lib/stripe";
 import { blocksAdditionalCheckout } from "@/lib/subscription-state";
+import { enforceRateLimit, enforceTrustedOrigin } from "@/lib/api-route";
 
 interface ProfileSnapshot {
   email: string | null;
@@ -18,6 +20,7 @@ interface SubscriptionSnapshot {
   current_period_end: string | null;
   plan: string;
   status: string;
+  updated_at: string;
 }
 
 async function getCheckoutIdentity() {
@@ -64,7 +67,7 @@ async function loadLatestSubscription(
 ) {
   const { data, error } = await supabase
     .from("subscriptions")
-    .select("status, plan, current_period_end")
+    .select("status, plan, current_period_end, updated_at")
     .eq("user_id", userId)
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -75,6 +78,24 @@ async function loadLatestSubscription(
   }
 
   return (data ?? null) as SubscriptionSnapshot | null;
+}
+
+async function hasBlockingSubscription(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  userId: string
+) {
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("user_id", userId)
+    .in("status", ["active", "trialing", "past_due", "unpaid"])
+    .limit(1);
+
+  if (error) {
+    throw new Error(`SUBSCRIPTION_BLOCK_LOOKUP_FAILED:${error.message}`);
+  }
+
+  return (data?.length ?? 0) > 0;
 }
 
 async function persistStripeCustomerId(
@@ -145,6 +166,16 @@ async function resolveStripeCustomerId(input: {
 }
 
 export async function POST(request: Request) {
+  const trustedOriginError = enforceTrustedOrigin(request);
+  if (trustedOriginError) {
+    return trustedOriginError;
+  }
+
+  const rateLimitError = await enforceRateLimit(request);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   if (!isStripeConfigured) {
     return NextResponse.json(
       { error: "Stripe checkout is not configured", code: "STRIPE_NOT_CONFIGURED" },
@@ -161,14 +192,19 @@ export async function POST(request: Request) {
     const { supabase, user } = identity;
     const profile = await loadProfileSnapshot(supabase, user.id);
     const latestSubscription = await loadLatestSubscription(supabase, user.id);
+    const hasBlocking = await hasBlockingSubscription(supabase, user.id);
+    const blockingSubscription =
+      latestSubscription && blocksAdditionalCheckout(latestSubscription.status)
+        ? latestSubscription
+        : null;
 
-    if (latestSubscription && blocksAdditionalCheckout(latestSubscription.status)) {
+    if (hasBlocking || blockingSubscription) {
       return NextResponse.json(
         {
-          current_period_end: latestSubscription.current_period_end,
+          current_period_end: blockingSubscription?.current_period_end ?? null,
           error: "An active or recoverable subscription already exists for this account.",
-          plan: latestSubscription.plan,
-          status: latestSubscription.status,
+          plan: blockingSubscription?.plan ?? "pro",
+          status: blockingSubscription?.status ?? "active",
           code: "ALREADY_SUBSCRIBED",
         },
         { status: 409 }
@@ -198,6 +234,15 @@ export async function POST(request: Request) {
     }
 
     const appUrl = getStripeAppUrl(request);
+    const idempotencyKey = createHash("sha256")
+      .update(
+        JSON.stringify({
+          customer: stripeCustomerId,
+          latestSubscriptionUpdatedAt: latestSubscription?.updated_at ?? "none",
+          userId: user.id,
+        })
+      )
+      .digest("hex");
     const session = await stripe.checkout.sessions.create({
       allow_promotion_codes: true,
       cancel_url: `${appUrl}/pricing`,
@@ -217,7 +262,7 @@ export async function POST(request: Request) {
         trial_period_days: 7,
       },
       success_url: `${appUrl}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-    });
+    }, { idempotencyKey });
 
     if (!session.url) {
       throw new Error("CHECKOUT_URL_MISSING");

@@ -1,20 +1,42 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getAdminRequestContext } from "@/lib/admin-auth";
 import { Octokit } from "@octokit/rest";
+import {
+  enforceRateLimit,
+  enforceTrustedOrigin,
+  parseJsonBody,
+} from "@/lib/api-route";
+
+const CreateIssueBodySchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(10000),
+  labels: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
+});
 
 export async function POST(request: Request) {
+  const trustedOriginError = enforceTrustedOrigin(request);
+  if (trustedOriginError) {
+    return trustedOriginError;
+  }
+
+  const rateLimitError = await enforceRateLimit(request);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   try {
     const adminContext = await getAdminRequestContext();
     if (!adminContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { title, body: issueBody, labels } = body;
-
-    if (!title || !issueBody) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const parsed = await parseJsonBody(request, CreateIssueBodySchema);
+    if (!parsed.ok) {
+      return parsed.response;
     }
+
+    const { title, body: issueBody, labels } = parsed.data;
 
     // Try Arcade.dev MCP First (avoids storing GITHUB_TOKEN in app at runtime)
     const arcadeApiUrl = process.env.ARCADE_MCP_URL || "https://api.arcade.dev/v1";

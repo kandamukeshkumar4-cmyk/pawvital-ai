@@ -38,7 +38,12 @@ function makeRequest(body: Record<string, unknown> = {}) {
 }
 
 function buildSupabaseMock(options?: {
-  latestSubscription?: { current_period_end: string | null; plan: string; status: string } | null;
+  latestSubscription?: {
+    current_period_end: string | null;
+    plan: string;
+    status: string;
+    updated_at?: string | null;
+  } | null;
   profile?: { email: string | null; full_name: string | null; stripe_customer_id: string | null } | null;
   user?: { email?: string | null; id: string } | null;
 }) {
@@ -57,7 +62,7 @@ function buildSupabaseMock(options?: {
     }),
   };
 
-  const subscriptionSelectChain = {
+  const latestSubscriptionSelectChain = {
     eq: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     maybeSingle: jest.fn().mockResolvedValue({
@@ -65,6 +70,29 @@ function buildSupabaseMock(options?: {
       error: null,
     }),
     order: jest.fn().mockReturnThis(),
+  };
+
+  const blockingStatuses = new Set(["active", "trialing", "past_due", "unpaid"]);
+  const blockingSubscriptionRows =
+    options?.latestSubscription && blockingStatuses.has(options.latestSubscription.status)
+      ? [{ id: "sub_existing" }]
+      : [];
+
+  const blockingSubscriptionSelectChain = {
+    eq: jest.fn().mockReturnThis(),
+    in: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    then: ((
+      onfulfilled?: ((value: { data: Array<{ id: string }>; error: null }) => unknown) | null,
+      onrejected?: ((reason: unknown) => unknown) | null
+    ) =>
+      Promise.resolve({
+        data: blockingSubscriptionRows,
+        error: null,
+      }).then(onfulfilled, onrejected)) as PromiseLike<{
+      data: Array<{ id: string }>;
+      error: null;
+    }>["then"],
   };
 
   const profileUpdateEq = jest.fn().mockResolvedValue({ error: null });
@@ -95,7 +123,11 @@ function buildSupabaseMock(options?: {
 
       if (table === "subscriptions") {
         return {
-          select: jest.fn().mockReturnValue(subscriptionSelectChain),
+          select: jest.fn((query: string) =>
+            query === "id"
+              ? blockingSubscriptionSelectChain
+              : latestSubscriptionSelectChain
+          ),
         };
       }
 
@@ -107,7 +139,7 @@ function buildSupabaseMock(options?: {
     profileSelectChain,
     profileUpdate,
     profileUpdateEq,
-    subscriptionSelectChain,
+    subscriptionSelectChain: latestSubscriptionSelectChain,
     supabase,
   };
 }
@@ -174,6 +206,9 @@ describe("POST /api/stripe/checkout", () => {
         }),
         success_url:
           "https://app.pawvital.test/dashboard?session_id={CHECKOUT_SESSION_ID}",
+      }),
+      expect.objectContaining({
+        idempotencyKey: expect.any(String),
       })
     );
   });

@@ -1,40 +1,53 @@
 import Stripe from "stripe";
+import {
+  getCanonicalAppUrl,
+  isProductionEnvironment,
+  serverEnv,
+} from "@/lib/env";
 
 export const isStripeConfigured =
-  !!process.env.STRIPE_SECRET_KEY &&
-  !process.env.STRIPE_SECRET_KEY.startsWith("your_");
+  !!serverEnv.STRIPE_SECRET_KEY &&
+  !serverEnv.STRIPE_SECRET_KEY.startsWith("your_");
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "placeholder", {
+export const stripe = new Stripe(serverEnv.STRIPE_SECRET_KEY || "placeholder", {
   apiVersion: "2026-02-25.clover",
 });
 
-export const PRICE_ID = process.env.STRIPE_PRICE_ID || "price_pawvital_monthly";
+export const PRICE_ID = serverEnv.STRIPE_PRICE_ID || "";
 export const SUBSCRIPTION_PRICE = 997; // $9.97 in cents
 export const isStripeWebhookConfigured =
-  !!process.env.STRIPE_WEBHOOK_SECRET &&
-  !process.env.STRIPE_WEBHOOK_SECRET.startsWith("whsec_placeholder");
+  !!serverEnv.STRIPE_WEBHOOK_SECRET &&
+  !serverEnv.STRIPE_WEBHOOK_SECRET.startsWith("whsec_placeholder");
 
 export function getStripeAppUrl(request?: Request) {
-  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured && /^https?:\/\//.test(configured)) {
-    return configured.replace(/\/$/, "");
+  const configured = getCanonicalAppUrl();
+  if (configured) {
+    return configured;
   }
 
-  if (request) {
+  if (request && !isProductionEnvironment()) {
     return new URL(request.url).origin;
+  }
+
+  if (isProductionEnvironment()) {
+    throw new Error("NEXT_PUBLIC_APP_URL is required in production");
   }
 
   return "http://localhost:3000";
 }
 
 export function getSubscriptionLineItems(): Stripe.Checkout.SessionCreateParams.LineItem[] {
-  if (PRICE_ID && PRICE_ID !== "price_pawvital_monthly") {
+  if (PRICE_ID) {
     return [
       {
         price: PRICE_ID,
         quantity: 1,
       },
     ];
+  }
+
+  if (isProductionEnvironment()) {
+    throw new Error("STRIPE_PRICE_ID is required in production");
   }
 
   return [

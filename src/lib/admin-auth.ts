@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from "./supabase-server";
+import { isProductionEnvironment, serverEnv } from "@/lib/env";
 
 export interface AdminRequestContext {
   email: string | null;
@@ -11,7 +12,7 @@ function isTruthyEnvFlag(value: string | undefined) {
 }
 
 function getAdminEmailAllowlist() {
-  return (process.env.ADMIN_EMAILS || "")
+  return (serverEnv.ADMIN_EMAILS || "")
     .split(",")
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
@@ -40,7 +41,7 @@ async function isAdminViaUsersTable(
 }
 
 export async function getAdminRequestContext(): Promise<AdminRequestContext | null> {
-  if (isTruthyEnvFlag(process.env.ADMIN_OVERRIDE)) {
+  if (!isProductionEnvironment() && isTruthyEnvFlag(process.env.ADMIN_OVERRIDE)) {
     return {
       email: process.env.ADMIN_OVERRIDE_EMAIL || "admin-override@pawvital.local",
       isDemo: false,
@@ -59,7 +60,7 @@ export async function getAdminRequestContext(): Promise<AdminRequestContext | nu
     }
 
     const email = typeof user.email === "string" ? user.email.toLowerCase() : null;
-    if (user.user_metadata?.role === "admin" || user.role === "admin") {
+    if (user.app_metadata?.role === "admin") {
       return { email, isDemo: false, userId: user.id };
     }
 
@@ -71,7 +72,11 @@ export async function getAdminRequestContext(): Promise<AdminRequestContext | nu
       return { email, isDemo: false, userId: user.id };
     }
   } catch (error) {
-    if (error instanceof Error && error.message === "DEMO_MODE") {
+    if (
+      !isProductionEnvironment() &&
+      error instanceof Error &&
+      error.message === "DEMO_MODE"
+    ) {
       return {
         email: "demo-admin@pawvital.local",
         isDemo: true,

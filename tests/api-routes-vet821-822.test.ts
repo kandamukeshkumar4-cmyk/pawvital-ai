@@ -151,8 +151,11 @@ interface SupabaseMockOptions {
   rpcResult?: QueryResult;
 }
 
+const SAMPLE_PET_ID = "11111111-1111-4111-8111-111111111111";
+const MISSING_PET_ID = "22222222-2222-4222-8222-222222222222";
+
 const samplePet = {
-  id: "pet-1",
+  id: SAMPLE_PET_ID,
   user_id: "user-1",
   name: "Milo",
   species: "dog",
@@ -594,13 +597,13 @@ describe("GET /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { GET } = await import("../src/app/api/pets/[id]/route");
-    const response = await GET(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await GET(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
     const payload = await readJson<{ pet: typeof samplePet }>(response);
 
     expect(response.status).toBe(200);
-    expect(payload.pet.id).toBe("pet-1");
+    expect(payload.pet.id).toBe(SAMPLE_PET_ID);
   });
 
   it("rejects unauthenticated pet detail requests", async () => {
@@ -608,30 +611,27 @@ describe("GET /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { GET } = await import("../src/app/api/pets/[id]/route");
-    const response = await GET(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await GET(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
 
     expect(response.status).toBe(401);
   });
 
-  it("returns 403 when the pet belongs to a different user", async () => {
+  it("returns 404 when the pet belongs to a different user", async () => {
     const { supabase } = buildSupabaseMock({
       pets: {
-        selectResult: {
-          data: { ...samplePet, user_id: "user-2" },
-          error: null,
-        },
+        selectResult: { data: null, error: null },
       },
     });
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { GET } = await import("../src/app/api/pets/[id]/route");
-    const response = await GET(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await GET(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(404);
   });
 
   it("returns 404 when the pet does not exist", async () => {
@@ -643,8 +643,8 @@ describe("GET /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { GET } = await import("../src/app/api/pets/[id]/route");
-    const response = await GET(makeGetRequest("http://localhost/api/pets/missing"), {
-      params: Promise.resolve({ id: "missing" }),
+    const response = await GET(makeGetRequest(`http://localhost/api/pets/${MISSING_PET_ID}`), {
+      params: Promise.resolve({ id: MISSING_PET_ID }),
     });
 
     expect(response.status).toBe(404);
@@ -662,8 +662,8 @@ describe("GET /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { GET } = await import("../src/app/api/pets/[id]/route");
-    const response = await GET(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await GET(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
 
     expect(response.status).toBe(503);
@@ -682,11 +682,11 @@ describe("PUT /api/pets/[id]", () => {
 
     const { PUT } = await import("../src/app/api/pets/[id]/route");
     const response = await PUT(
-      makeJsonRequest("http://localhost/api/pets/pet-1", "PUT", {
+      makeJsonRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`, "PUT", {
         name: "Milo Updated",
         breed: "golden retriever",
       }),
-      { params: Promise.resolve({ id: "pet-1" }) }
+      { params: Promise.resolve({ id: SAMPLE_PET_ID }) }
     );
     const payload = await readJson<{ pet: typeof sampleUpdatedPet }>(response);
 
@@ -706,10 +706,10 @@ describe("PUT /api/pets/[id]", () => {
 
     const { PUT } = await import("../src/app/api/pets/[id]/route");
     const response = await PUT(
-      makeJsonRequest("http://localhost/api/pets/pet-1", "PUT", {
+      makeJsonRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`, "PUT", {
         name: "Milo Updated",
       }),
-      { params: Promise.resolve({ id: "pet-1" }) }
+      { params: Promise.resolve({ id: SAMPLE_PET_ID }) }
     );
 
     expect(response.status).toBe(401);
@@ -725,13 +725,13 @@ describe("PUT /api/pets/[id]", () => {
 
     const { PUT } = await import("../src/app/api/pets/[id]/route");
     const response = await PUT(
-      makeJsonRequest("http://localhost/api/pets/pet-1", "PUT", {}),
-      { params: Promise.resolve({ id: "pet-1" }) }
+      makeJsonRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`, "PUT", {}),
+      { params: Promise.resolve({ id: SAMPLE_PET_ID }) }
     );
     const payload = await readJson<{ error: string }>(response);
 
     expect(response.status).toBe(400);
-    expect(payload.error).toContain("Missing fields to update");
+    expect(payload.error).toContain("No valid fields to update");
   });
 
   it("returns 403 when a different owner tries to update the pet", async () => {
@@ -744,10 +744,10 @@ describe("PUT /api/pets/[id]", () => {
 
     const { PUT } = await import("../src/app/api/pets/[id]/route");
     const response = await PUT(
-      makeJsonRequest("http://localhost/api/pets/pet-1", "PUT", {
+      makeJsonRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`, "PUT", {
         name: "Milo Updated",
       }),
-      { params: Promise.resolve({ id: "pet-1" }) }
+      { params: Promise.resolve({ id: SAMPLE_PET_ID }) }
     );
 
     expect(response.status).toBe(403);
@@ -766,10 +766,10 @@ describe("PUT /api/pets/[id]", () => {
 
     const { PUT } = await import("../src/app/api/pets/[id]/route");
     const response = await PUT(
-      makeJsonRequest("http://localhost/api/pets/pet-1", "PUT", {
+      makeJsonRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`, "PUT", {
         name: "Milo Updated",
       }),
-      { params: Promise.resolve({ id: "pet-1" }) }
+      { params: Promise.resolve({ id: SAMPLE_PET_ID }) }
     );
 
     expect(response.status).toBe(503);
@@ -787,8 +787,8 @@ describe("DELETE /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { DELETE } = await import("../src/app/api/pets/[id]/route");
-    const response = await DELETE(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await DELETE(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
     const payload = await readJson<{ success: boolean }>(response);
 
@@ -807,8 +807,8 @@ describe("DELETE /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { DELETE } = await import("../src/app/api/pets/[id]/route");
-    const response = await DELETE(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await DELETE(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
 
     expect(response.status).toBe(401);
@@ -823,8 +823,8 @@ describe("DELETE /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { DELETE } = await import("../src/app/api/pets/[id]/route");
-    const response = await DELETE(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await DELETE(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
 
     expect(response.status).toBe(403);
@@ -842,8 +842,8 @@ describe("DELETE /api/pets/[id]", () => {
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const { DELETE } = await import("../src/app/api/pets/[id]/route");
-    const response = await DELETE(makeGetRequest("http://localhost/api/pets/pet-1"), {
-      params: Promise.resolve({ id: "pet-1" }),
+    const response = await DELETE(makeGetRequest(`http://localhost/api/pets/${SAMPLE_PET_ID}`), {
+      params: Promise.resolve({ id: SAMPLE_PET_ID }),
     });
 
     expect(response.status).toBe(503);
@@ -1054,10 +1054,10 @@ describe("POST /api/reports/share", () => {
   it("creates a share link with a future expiry", async () => {
     const { supabase, tables } = buildSupabaseMock({
       symptomChecks: {
-        selectResult: { data: { id: validShareCheckId, pet_id: "pet-1" }, error: null },
+        selectResult: { data: { id: validShareCheckId, pet_id: SAMPLE_PET_ID }, error: null },
       },
       pets: {
-        selectResult: { data: { id: "pet-1", user_id: "user-1" }, error: null },
+        selectResult: { data: { id: SAMPLE_PET_ID, user_id: "user-1" }, error: null },
       },
       sharedReports: {
         insertResult: {
@@ -1117,10 +1117,10 @@ describe("POST /api/reports/share", () => {
   it("returns 503 when the shared_reports insert fails", async () => {
     const { supabase } = buildSupabaseMock({
       symptomChecks: {
-        selectResult: { data: { id: validShareCheckId, pet_id: "pet-1" }, error: null },
+        selectResult: { data: { id: validShareCheckId, pet_id: SAMPLE_PET_ID }, error: null },
       },
       pets: {
-        selectResult: { data: { id: "pet-1", user_id: "user-1" }, error: null },
+        selectResult: { data: { id: SAMPLE_PET_ID, user_id: "user-1" }, error: null },
       },
       sharedReports: {
         insertResult: {

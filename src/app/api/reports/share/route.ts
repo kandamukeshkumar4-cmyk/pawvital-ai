@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { enforceRateLimit, enforceTrustedOrigin } from "@/lib/api-route";
 
 const EXPIRY: Record<"24h" | "7d" | "30d", number> = {
   "24h": 24 * 60 * 60 * 1000,
@@ -24,6 +25,16 @@ function appBaseUrl(): string {
 }
 
 export async function POST(request: Request) {
+  const trustedOriginError = enforceTrustedOrigin(request);
+  if (trustedOriginError) {
+    return trustedOriginError;
+  }
+
+  const rateLimitError = await enforceRateLimit(request);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   let supabase;
   try {
     supabase = await createServerSupabaseClient();

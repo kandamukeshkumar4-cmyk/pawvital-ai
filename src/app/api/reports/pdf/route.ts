@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import type { SymptomReport } from "@/components/symptom-report/types";
+import { enforceRateLimit, enforceTrustedOrigin } from "@/lib/api-route";
 
 const DifferentialSchema = z.object({
   condition: z.string(),
@@ -59,6 +60,16 @@ const SymptomReportSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const trustedOriginError = enforceTrustedOrigin(request);
+  if (trustedOriginError) {
+    return trustedOriginError;
+  }
+
+  const rateLimitError = await enforceRateLimit(request);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   let supabase;
   try {
     supabase = await createServerSupabaseClient();

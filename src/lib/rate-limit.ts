@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { serverEnv } from "@/lib/env";
 
 /**
  * Rate limiting via Upstash Redis.
@@ -7,8 +8,8 @@ import { Redis } from "@upstash/redis";
  * Falls back to no-op if env vars are missing (dev/demo mode).
  */
 
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+const redisUrl = serverEnv.UPSTASH_REDIS_REST_URL;
+const redisToken = serverEnv.UPSTASH_REDIS_REST_TOKEN;
 
 const isConfigured =
   !!redisUrl &&

@@ -6,7 +6,6 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
-import { emit, EventType } from "@/lib/events/event-bus";
 import "@/lib/events/notification-handler";
 
 const OutcomeSubmissionSchema = z.object({
@@ -83,7 +82,7 @@ export async function POST(request: Request) {
 
   const { data: symptomCheck, error: symptomCheckError } = await supabase
     .from("symptom_checks")
-    .select("id")
+    .select("id, pet_id")
     .eq("id", parsedBody.data.check_id)
     .maybeSingle();
 
@@ -96,6 +95,28 @@ export async function POST(request: Request) {
   }
 
   if (!symptomCheck) {
+    return NextResponse.json(
+      { error: "Symptom check not found" },
+      { status: 404 }
+    );
+  }
+
+  const { data: ownedPet, error: ownedPetError } = await supabase
+    .from("pets")
+    .select("id")
+    .eq("id", symptomCheck.pet_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (ownedPetError) {
+    console.error("[Outcomes] Failed to verify pet ownership:", ownedPetError);
+    return NextResponse.json(
+      { error: "Unable to verify the symptom check owner" },
+      { status: 500 }
+    );
+  }
+
+  if (!ownedPet) {
     return NextResponse.json(
       { error: "Symptom check not found" },
       { status: 404 }

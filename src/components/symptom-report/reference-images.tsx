@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { ImagePlus } from "lucide-react";
 import type { ReferenceImage } from "./types";
 import { CollapsibleSection } from "./collapsible-section";
@@ -32,9 +33,12 @@ export function ReferenceImagesSection({ images }: { images: ReferenceImage[] })
             >
               <div className="aspect-square bg-gray-100 flex flex-col items-center justify-center p-2">
                 {ref.asset_url ? (
-                  <img
+                  <Image
                     src={ref.asset_url}
                     alt={ref.condition_label}
+                    width={320}
+                    height={320}
+                    unoptimized
                     className="w-full h-full object-cover"
                   />
                 ) : (

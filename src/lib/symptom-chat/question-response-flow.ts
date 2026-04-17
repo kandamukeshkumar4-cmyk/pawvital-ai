@@ -26,6 +26,7 @@ interface BuildQuestionResponseFlowInput {
   session: TriageSession;
   nextQuestionId: string | null;
   needsClarificationQuestionId: string | null;
+  sessionHandle?: string | null;
   pet: PetProfile;
   effectivePet: PetProfile;
   messages: SymptomChatTurnMessage[];
@@ -40,7 +41,14 @@ export async function buildQuestionResponseFlow(
   input: BuildQuestionResponseFlowInput
 ): Promise<NextResponse> {
   if (!input.nextQuestionId) {
-    return NextResponse.json(buildNoQuestionPayload(input.session, input.pet, Boolean(input.image)));
+    return NextResponse.json(
+      buildNoQuestionPayload(
+        input.session,
+        input.pet,
+        Boolean(input.image),
+        input.sessionHandle
+      )
+    );
   }
 
   const session = prepareSessionForQuestionResponse(
@@ -59,6 +67,7 @@ export async function buildQuestionResponseFlow(
     message: phrasedQuestion,
     session: sanitizeSessionForClient(session),
     ready_for_report: isReadyForDiagnosis(session),
+    ...(input.sessionHandle ? { sessionHandle: input.sessionHandle } : {}),
     conversationState: input.needsClarificationQuestionId
       ? "needs_clarification"
       : inferConversationState(getStateSnapshot(session)),
@@ -68,7 +77,8 @@ export async function buildQuestionResponseFlow(
 function buildNoQuestionPayload(
   session: TriageSession,
   pet: PetProfile,
-  hasImage: boolean
+  hasImage: boolean,
+  sessionHandle?: string | null
 ) {
   if (session.known_symptoms.length === 0) {
     return {
@@ -77,6 +87,7 @@ function buildNoQuestionPayload(
         ? `I can see the photo, but I still need a little more context to triage ${pet.name} safely. What worries you most about this area, and when did you first notice it?`
         : `I need a little more detail before I can triage ${pet.name} safely. What symptom or change worries you most right now, and when did it start?`,
       session: sanitizeSessionForClient(session),
+      ...(sessionHandle ? { sessionHandle } : {}),
       ready_for_report: false,
     };
   }
@@ -85,6 +96,7 @@ function buildNoQuestionPayload(
     type: "ready",
     message: "I have enough information. Let me generate your full veterinary report.",
     session: sanitizeSessionForClient(session),
+    ...(sessionHandle ? { sessionHandle } : {}),
     ready_for_report: true,
   };
 }

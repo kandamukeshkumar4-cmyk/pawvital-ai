@@ -1,20 +1,35 @@
-import { after, NextResponse } from "next/server";
+import { after } from "next/server";
+import { z } from "zod";
 import {
   isAsyncReviewServiceConfigured,
   submitAsyncReviewToSidecar,
 } from "@/lib/hf-sidecars";
 import type { PetProfile, TriageSession } from "@/lib/triage-engine";
 import type { VisionPreprocessResult, VisionSeverityClass } from "@/lib/clinical-evidence";
+import { imageAnalysisLimiter } from "@/lib/rate-limit";
+import {
+  enforceRateLimit,
+  jsonError,
+  jsonOk,
+  parseJsonBody,
+} from "@/lib/api-route";
+import { isProductionEnvironment } from "@/lib/env";
 
 const ASYNC_REVIEW_WEBHOOK_SECRET =
   process.env.ASYNC_REVIEW_WEBHOOK_SECRET?.trim() || "";
 
-interface AsyncReviewRequestBody {
-  image?: string;
-  pet?: PetProfile;
-  session?: TriageSession;
-  report?: Record<string, unknown>;
-}
+const AsyncReviewRequestBodySchema = z.object({
+  image: z.string().min(1),
+  pet: z.custom<PetProfile>(
+    (value) => typeof value === "object" && value !== null,
+    "pet is required"
+  ),
+  session: z.custom<TriageSession>(
+    (value) => typeof value === "object" && value !== null,
+    "session is required"
+  ),
+  report: z.record(z.unknown()).optional(),
+});
 
 function buildFallbackPreprocess(session: TriageSession): VisionPreprocessResult {
   return {
@@ -54,38 +69,46 @@ function scheduleAfterSafely(task: () => Promise<unknown>): boolean {
 }
 
 export async function POST(request: Request) {
+  const rateLimitError = await enforceRateLimit(request, imageAnalysisLimiter);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
+  if (
+    isProductionEnvironment() &&
+    isAsyncReviewServiceConfigured() &&
+    !ASYNC_REVIEW_WEBHOOK_SECRET
+  ) {
+    return jsonError(
+      "Async review secret is not configured",
+      503,
+      "ASYNC_REVIEW_SECRET_MISSING"
+    );
+  }
+
   if (
     ASYNC_REVIEW_WEBHOOK_SECRET &&
     request.headers.get("x-async-review-secret") !== ASYNC_REVIEW_WEBHOOK_SECRET
   ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return jsonError("Unauthorized", 401, "UNAUTHORIZED");
   }
 
   if (!isAsyncReviewServiceConfigured()) {
-    return NextResponse.json(
-      { error: "Async review service is not configured" },
-      { status: 503 }
+    return jsonError(
+      "Async review service is not configured",
+      503,
+      "ASYNC_REVIEW_UNAVAILABLE"
     );
   }
 
-  let body: AsyncReviewRequestBody;
-  try {
-    body = (await request.json()) as AsyncReviewRequestBody;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  const parsedBody = await parseJsonBody(request, AsyncReviewRequestBodySchema);
+  if (!parsedBody.ok) {
+    return parsedBody.response;
   }
 
-  if (!body.image || !body.pet || !body.session) {
-    return NextResponse.json(
-      { error: "image, pet, and session are required" },
-      { status: 400 }
-    );
-  }
-
-  const image = body.image;
-  const pet = body.pet;
-  const session = body.session;
-  const report = body.report;
+  const image = parsedBody.data.image;
+  const session = parsedBody.data.session;
+  const report = parsedBody.data.report;
 
   const task = async (): Promise<boolean> => {
     try {
@@ -114,13 +137,13 @@ export async function POST(request: Request) {
   const scheduled = scheduleAfterSafely(task);
   if (!scheduled) {
     const completed = await task();
-    return NextResponse.json(
+    return jsonOk(
       { queued: completed, mode: "inline-fallback" },
       { status: completed ? 202 : 502 }
     );
   }
 
-  return NextResponse.json(
+  return jsonOk(
     { queued: true, mode: "after" },
     { status: 202 }
   );

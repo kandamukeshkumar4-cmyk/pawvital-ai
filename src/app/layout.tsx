@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { getCanonicalAppUrl } from "@/lib/env";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getCanonicalAppUrl() || "http://localhost:3000"),
   title: "PawVital AI — Veterinary Symptom Checker for Dogs & Cats",
   description:
     "AI-powered pet health triage using 10,000+ clinical cases, Merck Veterinary Manual, and breed-specific analysis. Get evidence-based symptom reports in minutes.",

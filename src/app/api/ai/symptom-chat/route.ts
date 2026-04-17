@@ -8,7 +8,6 @@ import {
 import { safeParseJson } from "@/lib/llm-output";
 import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
-  createSession,
   addSymptoms,
   getMissingQuestions,
   getQuestionText,
@@ -129,6 +128,12 @@ import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-com
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
+import {
+  createSymptomChatStoredSession,
+  persistSymptomChatStoredSession,
+  readSymptomChatStoredSession,
+  type SymptomChatStoredMessage,
+} from "@/lib/symptom-chat/server-session";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
 import { demoResponse } from "@/lib/symptom-chat/demo-response";
 import { generateReport } from "@/lib/symptom-chat/report-pipeline";
@@ -157,9 +162,167 @@ interface RequestBody {
   pet: PetProfile;
   action: "chat" | "generate_report";
   session?: TriageSession;
+  sessionHandle?: string;
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
+}
+
+interface ResolvedSessionContext {
+  session: TriageSession;
+  pet: PetProfile;
+  messages: SymptomChatStoredMessage[];
+  sessionHandle: string | null;
+  sessionId: string | null;
+  createdAt: number;
+  usesServerStore: boolean;
+}
+
+const INTERNAL_SESSION_FORWARD_HEADER = "x-symptom-chat-internal";
+
+function canUseTrustedSessionPayload(request: Request) {
+  return (
+    request.headers.get(INTERNAL_SESSION_FORWARD_HEADER) === "1" ||
+    process.env.NODE_ENV === "test"
+  );
+}
+
+function getLatestUserMessage(
+  messages: SymptomChatStoredMessage[]
+): SymptomChatStoredMessage | null {
+  return [...messages].reverse().find((message) => message.role === "user") ?? null;
+}
+
+function appendLatestUserMessage(
+  messages: SymptomChatStoredMessage[],
+  latestUserMessage: SymptomChatStoredMessage | null
+) {
+  if (!latestUserMessage?.content.trim()) {
+    return messages;
+  }
+
+  const normalizedLatest = {
+    role: "user" as const,
+    content: latestUserMessage.content.trim(),
+  };
+  const lastStoredMessage = messages[messages.length - 1];
+
+  if (
+    lastStoredMessage?.role === "user" &&
+    lastStoredMessage.content.trim() === normalizedLatest.content
+  ) {
+    return messages;
+  }
+
+  return [...messages, normalizedLatest];
+}
+
+function getVisibleAssistantMessage(payload: Record<string, unknown>) {
+  if (typeof payload.owner_message === "string" && payload.owner_message.trim()) {
+    return payload.owner_message.trim();
+  }
+
+  if (typeof payload.message === "string" && payload.message.trim()) {
+    return payload.message.trim();
+  }
+
+  return null;
+}
+
+function buildSessionExpiredResponse(sessionHandle: string | null) {
+  return NextResponse.json(
+    {
+      type: "error",
+      code: "SESSION_REQUIRED",
+      message:
+        "This symptom-check session expired or is no longer available. Please start a new session.",
+      ready_for_report: false,
+      conversationState: "idle",
+      ...(sessionHandle ? { sessionHandle } : {}),
+    },
+    { status: 409 }
+  );
+}
+
+async function resolveSessionContext(
+  request: Request,
+  input: {
+    action: RequestBody["action"];
+    messages: RequestBody["messages"];
+    pet: PetProfile;
+    session?: TriageSession;
+    sessionHandle?: string;
+  }
+): Promise<ResolvedSessionContext | null> {
+  const trustedSessionPayload = canUseTrustedSessionPayload(request);
+
+  if (trustedSessionPayload && input.session) {
+    return {
+      session: input.session,
+      pet: input.pet,
+      messages: input.messages,
+      sessionHandle: input.sessionHandle ?? null,
+      sessionId: null,
+      createdAt: Date.now(),
+      usesServerStore: false,
+    };
+  }
+
+  const latestUserMessage = getLatestUserMessage(input.messages);
+  const storedSession = await readSymptomChatStoredSession(input.sessionHandle);
+  if (storedSession) {
+    return {
+      session: storedSession.record.session,
+      pet: storedSession.record.pet,
+      messages:
+        input.action === "chat"
+          ? appendLatestUserMessage(storedSession.record.messages, latestUserMessage)
+          : storedSession.record.messages,
+      sessionHandle: storedSession.sessionHandle,
+      sessionId: storedSession.sessionId,
+      createdAt: storedSession.record.createdAt,
+      usesServerStore: true,
+    };
+  }
+
+  if (input.action === "generate_report") {
+    return null;
+  }
+
+  const createdSession = await createSymptomChatStoredSession(input.pet);
+  return {
+    session: createdSession.record.session,
+    pet: createdSession.record.pet,
+    messages: appendLatestUserMessage([], latestUserMessage),
+    sessionHandle: createdSession.sessionHandle,
+    sessionId: createdSession.sessionId,
+    createdAt: createdSession.record.createdAt,
+    usesServerStore: true,
+  };
+}
+
+async function persistSessionContext(
+  context: ResolvedSessionContext,
+  session: TriageSession,
+  pet: PetProfile,
+  messages: SymptomChatStoredMessage[],
+  assistantMessage: string | null
+) {
+  if (!context.usesServerStore || !context.sessionId) {
+    return;
+  }
+
+  const nextMessages = assistantMessage
+    ? [...messages, { role: "assistant" as const, content: assistantMessage }]
+    : messages;
+
+  await persistSymptomChatStoredSession(context.sessionId, {
+    session,
+    pet,
+    messages: nextMessages,
+    createdAt: context.createdAt,
+    lastActiveAt: Date.now(),
+  });
 }
 
 export async function POST(request: Request) {
@@ -189,6 +352,7 @@ export async function POST(request: Request) {
       pet,
       action,
       session: clientSession,
+      sessionHandle: clientSessionHandle,
       image,
       imageMeta,
       gateOverride,
@@ -199,11 +363,26 @@ export async function POST(request: Request) {
       return demoResponse(action, pet);
     }
 
-    let session = clientSession || createSession();
-    const usageLimitResponse = await maybeBuildUsageLimitResponse({
+    const sessionContext = await resolveSessionContext(request, {
       action,
       messages,
+      pet,
+      session: clientSession,
+      sessionHandle: clientSessionHandle,
+    });
+    if (!sessionContext) {
+      return buildSessionExpiredResponse(clientSessionHandle ?? null);
+    }
+
+    let session = sessionContext.session;
+    const sessionHandle = sessionContext.sessionHandle;
+    const authoritativeMessages = sessionContext.messages;
+    const sessionPet = sessionContext.pet;
+    const usageLimitResponse = await maybeBuildUsageLimitResponse({
+      action,
+      messages: authoritativeMessages,
       session,
+      sessionHandle,
     });
     if (usageLimitResponse) {
       return usageLimitResponse;
@@ -211,7 +390,7 @@ export async function POST(request: Request) {
 
     const incomingUnresolvedIds =
       session.case_memory?.unresolved_question_ids ?? [];
-    let effectivePet = getEffectivePetProfile(pet, session);
+    let effectivePet = getEffectivePetProfile(sessionPet, session);
     const imageHash = image ? hashImage(image) : null;
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
     const answersBeforeTurn = { ...session.extracted_answers };
@@ -228,7 +407,7 @@ export async function POST(request: Request) {
     if (imageHash && session.last_uploaded_image_hash !== imageHash) {
       resetImageStateForNewUpload(session);
       session.last_uploaded_image_hash = imageHash;
-      effectivePet = getEffectivePetProfile(pet, session);
+      effectivePet = getEffectivePetProfile(sessionPet, session);
     }
 
     // ── Server-side identity (VET-825) ──────────────────────────────────
@@ -240,34 +419,52 @@ export async function POST(request: Request) {
     if (action === "generate_report") {
       const reportBlockingCriticalInfo = findReportBlockingCriticalInfo(session);
       if (reportBlockingCriticalInfo) {
-        return NextResponse.json(
-          buildTerminalOutcomeResponse(
-            buildCannotAssessOutcome({
-              petName: pet.name || "your dog",
-              questionId: reportBlockingCriticalInfo.questionId,
-              questionText: reportBlockingCriticalInfo.questionText,
-            }),
-            session
-          )
+        const payload = buildTerminalOutcomeResponse(
+          buildCannotAssessOutcome({
+            petName: sessionPet.name || "your dog",
+            questionId: reportBlockingCriticalInfo.questionId,
+            questionText: reportBlockingCriticalInfo.questionText,
+          }),
+          session,
+          sessionHandle
         );
+        await persistSessionContext(
+          sessionContext,
+          session,
+          effectivePet,
+          authoritativeMessages,
+          getVisibleAssistantMessage(payload)
+        );
+        return NextResponse.json(payload);
       }
 
-      return await generateReport({
+      const reportResponse = await generateReport({
         session,
         pet: effectivePet,
-        messages,
+        messages: authoritativeMessages,
         image,
         requestOrigin: new URL(request.url).origin,
+        sessionHandle,
         verifiedUserId,
       });
+      await persistSessionContext(
+        sessionContext,
+        session,
+        effectivePet,
+        authoritativeMessages,
+        null
+      );
+      return reportResponse;
     }
 
-    const lastUserMessage = messages.filter((m) => m.role === "user").pop();
+    const lastUserMessage =
+      authoritativeMessages.filter((m) => m.role === "user").pop() ?? null;
     if (!lastUserMessage) {
       return NextResponse.json({
         type: "question",
         message: "Tell me what's going on with your pet.",
-        session,
+        session: sanitizeSessionForClient(session),
+        ...(sessionHandle ? { sessionHandle } : {}),
         ready_for_report: false,
       });
     }
@@ -284,12 +481,19 @@ export async function POST(request: Request) {
         undefined,
         (session.case_memory?.turn_count ?? 0) + 1
       );
-      return NextResponse.json(
-        buildOutOfScopeResponse({
-          outcome: outOfScopeOutcome,
-          session,
-        })
+      const payload = buildOutOfScopeResponse({
+        outcome: outOfScopeOutcome,
+        session,
+        sessionHandle,
+      });
+      await persistSessionContext(
+        sessionContext,
+        session,
+        effectivePet,
+        authoritativeMessages,
+        getVisibleAssistantMessage(payload)
       );
+      return NextResponse.json(payload);
     }
 
     const fastPathExtraction = getDeterministicFastPathExtraction(
@@ -336,7 +540,7 @@ export async function POST(request: Request) {
         console.log("[Image Enrichment] Cache hit for Nyckel/Roboflow signals");
       }
 
-      effectivePet = getEffectivePetProfile(pet, session);
+      effectivePet = getEffectivePetProfile(sessionPet, session);
     }
 
     const fallbackImageDomain = image
@@ -454,13 +658,22 @@ export async function POST(request: Request) {
         console.log(
           `[Image Gate] warning=${gateWarning.reason}, label=${gateWarning.topLabel || "n/a"}`
         );
-        return NextResponse.json({
+        const payload = {
           type: "image_gate",
-          message: buildImageGateMessage(pet.name, gateWarning),
-          session,
+          message: buildImageGateMessage(sessionPet.name, gateWarning),
+          session: sanitizeSessionForClient(session),
           gate: gateWarning,
           ready_for_report: false,
-        });
+          ...(sessionHandle ? { sessionHandle } : {}),
+        };
+        await persistSessionContext(
+          sessionContext,
+          session,
+          effectivePet,
+          authoritativeMessages,
+          getVisibleAssistantMessage(payload)
+        );
+        return NextResponse.json(payload);
       }
     }
 
@@ -600,13 +813,20 @@ export async function POST(request: Request) {
                 };
               }
 
-              return NextResponse.json(
-                buildVisionGuardrailEmergencyResponse({
-                  petName: pet.name,
-                  flags: guardrail.flags,
-                  session,
-                })
+              const payload = buildVisionGuardrailEmergencyResponse({
+                petName: sessionPet.name,
+                flags: guardrail.flags,
+                session,
+                sessionHandle,
+              });
+              await persistSessionContext(
+                sessionContext,
+                session,
+                effectivePet,
+                authoritativeMessages,
+                getVisibleAssistantMessage(payload)
               );
+              return NextResponse.json(payload);
             }
           }
         } catch (guardrailErr) {
@@ -784,8 +1004,9 @@ export async function POST(request: Request) {
         rawMessage: lastUserMessage.content,
         hasRecoveredAnswer: pendingAnswer !== null,
         ambiguityFlags: session.case_memory?.ambiguity_flags ?? [],
-        alternateObservablePetName: effectivePet.name || pet.name || "your dog",
-        cannotAssessPetName: pet.name || "your dog",
+        alternateObservablePetName:
+          effectivePet.name || sessionPet.name || "your dog",
+        cannotAssessPetName: sessionPet.name || "your dog",
         questionText: getQuestionText(pendingQ),
       });
 
@@ -1085,13 +1306,20 @@ export async function POST(request: Request) {
         reason: "red_flags_detected",
       });
 
-      return NextResponse.json(
-        buildRedFlagEmergencyResponse({
-          petName: pet.name,
-          redFlags: session.red_flags_triggered,
-          session,
-        })
+      const payload = buildRedFlagEmergencyResponse({
+        petName: sessionPet.name,
+        redFlags: session.red_flags_triggered,
+        session,
+        sessionHandle,
+      });
+      await persistSessionContext(
+        sessionContext,
+        session,
+        effectivePet,
+        authoritativeMessages,
+        getVisibleAssistantMessage(payload)
       );
+      return NextResponse.json(payload);
     }
 
     if (terminalOutcome) {
@@ -1100,18 +1328,35 @@ export async function POST(request: Request) {
         terminalOutcome,
         session.last_question_asked ?? undefined
       );
-      return NextResponse.json(
-        buildTerminalOutcomeResponse(terminalOutcome, session)
+      const payload = buildTerminalOutcomeResponse(
+        terminalOutcome,
+        session,
+        sessionHandle
       );
+      await persistSessionContext(
+        sessionContext,
+        session,
+        effectivePet,
+        authoritativeMessages,
+        getVisibleAssistantMessage(payload)
+      );
+      return NextResponse.json(payload);
     }
 
     if (alternateObservableOutcome) {
-      return NextResponse.json(
-        buildAlternateObservableRecoveryResponse(
-          alternateObservableOutcome,
-          session
-        )
+      const payload = buildAlternateObservableRecoveryResponse(
+        alternateObservableOutcome,
+        session,
+        sessionHandle
       );
+      await persistSessionContext(
+        sessionContext,
+        session,
+        effectivePet,
+        authoritativeMessages,
+        getVisibleAssistantMessage(payload)
+      );
+      return NextResponse.json(payload);
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -1127,14 +1372,23 @@ export async function POST(request: Request) {
         reason: "all_questions_answered",
       });
 
-      return NextResponse.json({
+      const payload = {
         type: "ready",
         message:
           "I have enough clinical information to generate a comprehensive analysis. Preparing your veterinary report now.",
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
+        ...(sessionHandle ? { sessionHandle } : {}),
         conversationState: inferConversationState(getStateSnapshot(session)),
-      });
+      };
+      await persistSessionContext(
+        sessionContext,
+        session,
+        effectivePet,
+        authoritativeMessages,
+        getVisibleAssistantMessage(payload)
+      );
+      return NextResponse.json(payload);
     }
 
     const nextQuestionState = orchestrateNextQuestion({
@@ -1151,7 +1405,7 @@ export async function POST(request: Request) {
     session = await maybeCompressStructuredCaseMemory(
       session,
       effectivePet,
-      messages,
+      authoritativeMessages,
       lastUserMessage.content,
       {
         imageAnalyzed: Boolean(visionAnalysis),
@@ -1160,19 +1414,29 @@ export async function POST(request: Request) {
       }
     );
 
-    return buildQuestionResponseFlow({
+    const questionResponse = await buildQuestionResponseFlow({
       session,
       nextQuestionId,
       needsClarificationQuestionId,
-      pet,
+      sessionHandle,
+      pet: sessionPet,
       effectivePet,
-      messages,
+      messages: authoritativeMessages,
       lastUserMessage: lastUserMessage.content,
       turnFocusSymptoms,
       visionAnalysis,
       visionSeverity,
       image,
     });
+    const questionPayload = await questionResponse.json();
+    await persistSessionContext(
+      sessionContext,
+      session,
+      effectivePet,
+      authoritativeMessages,
+      getVisibleAssistantMessage(questionPayload)
+    );
+    return NextResponse.json(questionPayload);
   } catch (error) {
     console.error("Symptom chat error:", error);
     return NextResponse.json(

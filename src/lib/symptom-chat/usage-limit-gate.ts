@@ -4,6 +4,7 @@ import {
   getPlanFromSubscription,
   type SymptomCheckUsageGateResult,
 } from "@/lib/subscription-state";
+import { isProductionEnvironment } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { sanitizeSessionForClient } from "@/lib/symptom-chat/context-helpers";
 import type { TriageSession } from "@/lib/triage-engine";
@@ -114,6 +115,7 @@ async function countMonthlySymptomChecksForUser(
 
 function buildUsageLimitResponse(
   session: TriageSession,
+  sessionHandle: string | null | undefined,
   usageGate: Pick<
     SymptomCheckUsageGateResult,
     "limit" | "reason" | "remaining" | "requiresUpgrade"
@@ -134,8 +136,29 @@ function buildUsageLimitResponse(
       ready_for_report: false,
       conversationState: "idle",
       session: sanitizeSessionForClient(session),
+      ...(sessionHandle ? { sessionHandle } : {}),
     },
     { status: 402 }
+  );
+}
+
+function buildBillingUnavailableResponse(
+  session: TriageSession,
+  sessionHandle: string | null | undefined
+) {
+  return NextResponse.json(
+    {
+      type: "billing_unavailable",
+      code: "BILLING_UNAVAILABLE",
+      error: "Billing checks are temporarily unavailable",
+      message:
+        "We couldn't verify plan limits right now. Please try again in a moment.",
+      ready_for_report: false,
+      conversationState: "idle",
+      session: sanitizeSessionForClient(session),
+      ...(sessionHandle ? { sessionHandle } : {}),
+    },
+    { status: 503 }
   );
 }
 
@@ -143,6 +166,7 @@ export async function maybeBuildUsageLimitResponse(input: {
   action: SymptomChatAction;
   messages: SymptomChatMessage[];
   session: TriageSession;
+  sessionHandle?: string | null;
 }) {
   if (input.action !== "chat") {
     return null;
@@ -179,9 +203,15 @@ export async function maybeBuildUsageLimitResponse(input: {
 
     return usageGate.allowed
       ? null
-      : buildUsageLimitResponse(input.session, usageGate);
+      : buildUsageLimitResponse(
+          input.session,
+          input.sessionHandle,
+          usageGate
+        );
   } catch (error) {
     console.error("[Billing] Usage gate failed open:", error);
-    return null;
+    return isProductionEnvironment()
+      ? buildBillingUnavailableResponse(input.session, input.sessionHandle)
+      : null;
   }
 }

@@ -4,6 +4,8 @@ import { buildDemoShadowRolloutDashboardData } from "@/lib/admin-shadow-rollout"
 import { buildDemoThresholdProposalDashboardData } from "@/lib/admin-threshold-proposals";
 import { isNvidiaConfigured } from "@/lib/nvidia-models";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   const isDemo = !isNvidiaConfigured() || !process.env.NEXT_PUBLIC_SUPABASE_URL;
 

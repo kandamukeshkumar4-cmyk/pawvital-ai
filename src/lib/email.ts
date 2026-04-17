@@ -1,3 +1,5 @@
+import { serverEnv } from "@/lib/env";
+
 const RESEND_API = "https://api.resend.com/emails";
 
 export type SendEmailInput = {
@@ -11,14 +13,14 @@ export type SendEmailInput = {
  * Sends email via Resend. No-ops (returns { sent: false }) when RESEND_API_KEY is missing.
  */
 export async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean; id?: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const apiKey = serverEnv.RESEND_API_KEY;
   if (!apiKey) {
     return { sent: false };
   }
 
   const from =
     input.from ||
-    process.env.RESEND_FROM_EMAIL?.trim() ||
+    serverEnv.RESEND_FROM_EMAIL ||
     "PawVital <onboarding@resend.dev>";
 
   const to = Array.isArray(input.to) ? input.to : [input.to];

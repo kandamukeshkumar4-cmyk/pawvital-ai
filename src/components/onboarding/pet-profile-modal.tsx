@@ -80,6 +80,7 @@ export default function PetProfileModal({
   const [weightUnit, setWeightUnit] = useState<"lbs" | "kg">("lbs");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [breedSuggestions, setBreedSuggestions] = useState<{id: string; name: string}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -135,6 +136,7 @@ export default function PetProfileModal({
   };
 
   const handleDismiss = () => {
+    setSubmitError(null);
     markSkipped();
     onSkipped();
   };
@@ -143,6 +145,7 @@ export default function PetProfileModal({
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
+    setSubmitError(null);
     const uid =
       user?.id ||
       (isSupabaseConfigured ? "pending" : "demo");
@@ -157,6 +160,12 @@ export default function PetProfileModal({
     });
     try {
       await savePet(pet);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Could not save pet. Please try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -168,6 +177,11 @@ export default function PetProfileModal({
         A quick profile helps personalize health insights. You can add more detail later in Settings.
       </p>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <Input
           label="Pet name"
           value={name}

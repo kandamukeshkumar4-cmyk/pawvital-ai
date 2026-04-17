@@ -1,17 +1,23 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getAdminRequestContext } from "@/lib/admin-auth";
 import {
   buildAdminShadowRolloutDashboardData,
   updateAdminShadowRolloutControl,
 } from "@/lib/admin-shadow-rollout";
+import {
+  enforceRateLimit,
+  enforceTrustedOrigin,
+  parseJsonBody,
+} from "@/lib/api-route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-interface PatchBody {
-  liveSplitPct?: number;
-  service?: string;
-}
+const PatchBodySchema = z.object({
+  liveSplitPct: z.number().min(0).max(100),
+  service: z.string().trim().min(1).max(100),
+});
 
 export async function GET() {
   try {
@@ -32,29 +38,30 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
+  const trustedOriginError = enforceTrustedOrigin(request);
+  if (trustedOriginError) {
+    return trustedOriginError;
+  }
+
+  const rateLimitError = await enforceRateLimit(request);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   try {
     const adminContext = await getAdminRequestContext();
     if (!adminContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    let body: PatchBody;
-    try {
-      body = (await request.json()) as PatchBody;
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    if (!body.service || typeof body.liveSplitPct !== "number") {
-      return NextResponse.json(
-        { error: "service and liveSplitPct are required" },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(request, PatchBodySchema);
+    if (!parsed.ok) {
+      return parsed.response;
     }
 
     const result = await updateAdminShadowRolloutControl({
-      liveSplitPct: body.liveSplitPct,
-      service: body.service,
+      liveSplitPct: parsed.data.liveSplitPct,
+      service: parsed.data.service,
     });
 
     if (!result.ok) {

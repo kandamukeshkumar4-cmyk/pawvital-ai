@@ -23,13 +23,21 @@ function makeRequest(body: Record<string, unknown>) {
 
 function buildSupabaseMock(options?: {
   userId?: string | null;
-  symptomCheck?: { id: string } | null;
+  symptomCheck?: { id: string; pet_id: string } | null;
+  ownedPet?: { id: string } | null;
   insertedOutcome?: Record<string, unknown> | null;
 }) {
   const symptomCheckData =
     options && "symptomCheck" in options
       ? options.symptomCheck
-      : { id: "check-1" };
+      : {
+          id: "4c7d2d59-2f43-49d3-bc5e-b64053439bb0",
+          pet_id: "11111111-1111-4111-8111-111111111111",
+        };
+  const ownedPetData =
+    options && "ownedPet" in options
+      ? options.ownedPet
+      : { id: "11111111-1111-4111-8111-111111111111" };
   const insertedOutcomeData =
     options && "insertedOutcome" in options
       ? options.insertedOutcome
@@ -60,6 +68,15 @@ function buildSupabaseMock(options?: {
     }),
   };
 
+  const ownedPetBuilder = {
+    select: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    maybeSingle: jest.fn().mockResolvedValue({
+      data: ownedPetData,
+      error: null,
+    }),
+  };
+
   const supabase = {
     auth: {
       getUser: jest.fn().mockResolvedValue({
@@ -81,6 +98,10 @@ function buildSupabaseMock(options?: {
         return insertOutcomeBuilder;
       }
 
+      if (table === "pets") {
+        return ownedPetBuilder;
+      }
+
       throw new Error(`Unexpected table: ${table}`);
     }),
   };
@@ -89,6 +110,7 @@ function buildSupabaseMock(options?: {
     supabase,
     symptomCheckBuilder,
     insertOutcomeBuilder,
+    ownedPetBuilder,
   };
 }
 

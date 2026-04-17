@@ -1,12 +1,55 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   generateNvidiaJson,
   isNvidiaGenerationConfigured,
 } from "@/lib/nvidia-generation";
+import {
+  enforceRateLimit,
+  enforceTrustedOrigin,
+  parseJsonBody,
+} from "@/lib/api-route";
+
+const RequestBodySchema = z.object({
+  symptoms: z.string().trim().min(1).max(4000),
+  pet: z.object({
+    name: z.string().trim().min(1).max(120),
+    species: z.string().trim().max(40).optional().default("dog"),
+    breed: z.string().trim().min(1).max(120),
+    age_years: z.number().min(0).max(40),
+    weight: z.number().min(0).max(500),
+    existing_conditions: z
+      .array(z.string().max(200))
+      .max(50)
+      .optional()
+      .default([]),
+    medications: z
+      .array(z.string().max(200))
+      .max(50)
+      .optional()
+      .default([]),
+    vaccination_status: z.string().max(100).optional(),
+  }),
+});
 
 export async function POST(request: Request) {
+  const trustedOriginError = enforceTrustedOrigin(request);
+  if (trustedOriginError) {
+    return trustedOriginError;
+  }
+
+  const rateLimitError = await enforceRateLimit(request);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
   try {
-    const { symptoms, pet } = await request.json();
+    const parsed = await parseJsonBody(request, RequestBodySchema);
+    if (!parsed.ok) {
+      return parsed.response;
+    }
+
+    const { symptoms, pet } = parsed.data;
 
     if (!isNvidiaGenerationConfigured("diagnosis")) {
       return NextResponse.json({

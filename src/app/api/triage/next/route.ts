@@ -5,27 +5,44 @@
 // and translates it to the symptom-chat engine format.
 // =============================================================================
 
-import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createOrGetSession, updateSession } from "@/lib/session-store";
 import type { PetProfile } from "@/lib/triage-engine";
+import {
+  enforceRateLimit,
+  enforceTrustedOrigin,
+  jsonError,
+  jsonOk,
+  parseJsonBody,
+} from "@/lib/api-route";
 
-interface RequestBody {
-  sessionId: string;
-  userMessage: string;
-  petProfile: PetProfile;
-}
+const RequestBodySchema = z.object({
+  sessionId: z.string().trim().min(8).max(128),
+  userMessage: z.string().trim().min(1).max(4000),
+  petProfile: z.custom<PetProfile>(
+    (value) => typeof value === "object" && value !== null,
+    "petProfile is required"
+  ),
+});
 
 export async function POST(request: Request) {
-  try {
-    const body = await request.json() as RequestBody;
-    const { sessionId, userMessage, petProfile } = body;
+  const trustedOriginError = enforceTrustedOrigin(request);
+  if (trustedOriginError) {
+    return trustedOriginError;
+  }
 
-    if (!sessionId || !userMessage || !petProfile) {
-      return NextResponse.json(
-        { error: "Missing required fields: sessionId, userMessage, petProfile" },
-        { status: 400 }
-      );
+  const rateLimitError = await enforceRateLimit(request);
+  if (rateLimitError) {
+    return rateLimitError;
+  }
+
+  try {
+    const parsedBody = await parseJsonBody(request, RequestBodySchema);
+    if (!parsedBody.ok) {
+      return parsedBody.response;
     }
+
+    const { sessionId, userMessage, petProfile } = parsedBody.data;
 
     // Load or create session from the store
     const stored = createOrGetSession(sessionId, petProfile);
@@ -38,13 +55,12 @@ export async function POST(request: Request) {
     ];
 
     // Call the main symptom-chat engine internally
-    const origin = request.headers.get("origin") || request.headers.get("host") || "localhost:3000";
-    const protocol = origin.startsWith("localhost") || origin.startsWith("127.") ? "http" : "https";
-    const baseUrl = origin.includes("://") ? origin : `${protocol}://${origin}`;
-
-    const chatResponse = await fetch(`${baseUrl}/api/ai/symptom-chat`, {
+    const chatResponse = await fetch(new URL("/api/ai/symptom-chat", request.url), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-symptom-chat-internal": "1",
+      },
       body: JSON.stringify({
         messages,
         pet: petProfile,
@@ -52,6 +68,10 @@ export async function POST(request: Request) {
         session: stored.triageSession,
       }),
     });
+
+    if (!chatResponse.ok) {
+      return jsonError("Unable to reach the triage engine", 502, "TRIAGE_UPSTREAM_FAILED");
+    }
 
     const chatResult = await chatResponse.json();
 
@@ -69,7 +89,7 @@ export async function POST(request: Request) {
 
     // Translate response format for legacy clients
     if (chatResult.type === "emergency") {
-      return NextResponse.json({
+      return jsonOk({
         type: "EMERGENCY",
         message: chatResult.message,
         urgency: "ER_NOW",
@@ -78,7 +98,7 @@ export async function POST(request: Request) {
     }
 
     if (chatResult.type === "ready" || chatResult.ready_for_report) {
-      return NextResponse.json({
+      return jsonOk({
         type: "READY_FOR_DIAGNOSIS",
         message: chatResult.message,
         symptoms_identified: chatResult.session?.known_symptoms || [],
@@ -87,7 +107,7 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({
+    return jsonOk({
       type: "QUESTION",
       message: chatResult.message,
       symptoms_identified: chatResult.session?.known_symptoms || [],
@@ -96,14 +116,14 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Triage orchestrator error:", error);
-    return NextResponse.json(
+    return jsonOk(
       {
         type: "ERROR",
         message:
           "An error occurred during the triage process. Please try again, or contact your veterinarian directly if this is urgent.",
         error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 200 }
+      { status: 502 }
     );
   }
 }

@@ -48,7 +48,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const user = useAppStore((s) => s.user);
   const userDataLoaded = useAppStore((s) => s.userDataLoaded);
   const [subscription, setSubscription] = useState<SubscriptionRow | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(isSupabaseConfigured);
 
   const refresh = useCallback(async () => {
     if (!isSupabaseConfigured || !user?.id) {
@@ -81,7 +81,19 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   }, [user?.id]);
 
   useEffect(() => {
-    if (!userDataLoaded || !user?.id || !isSupabaseConfigured) {
+    if (!isSupabaseConfigured) {
+      setLoading(false);
+      setSubscription(null);
+      return;
+    }
+
+    if (!userDataLoaded) {
+      setLoading(true);
+      return;
+    }
+
+    if (!user?.id) {
+      setLoading(false);
       setSubscription(null);
       return;
     }

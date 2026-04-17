@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const { savePet, deletePet } = usePets();
   const [showAddPet, setShowAddPet] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [petError, setPetError] = useState<string | null>(null);
   const [petForm, setPetForm] = useState({
     name: "",
     breed: "",
@@ -49,6 +50,7 @@ export default function SettingsPage() {
   const handleAddPet = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setPetError(null);
     const newPet: Pet = {
       id: crypto.randomUUID(),
       user_id: "demo",
@@ -67,14 +69,36 @@ export default function SettingsPage() {
       updated_at: new Date().toISOString(),
     };
 
-    await savePet(newPet);
-    setSaving(false);
-    setShowAddPet(false);
-    setPetForm({
-      name: "", breed: "", species: "dog", age_years: "", age_months: "",
-      weight: "", weight_unit: "lbs", gender: "male", is_neutered: true,
-      existing_conditions: "", medications: "",
-    });
+    try {
+      await savePet(newPet);
+      setShowAddPet(false);
+      setPetForm({
+        name: "", breed: "", species: "dog", age_years: "", age_months: "",
+        weight: "", weight_unit: "lbs", gender: "male", is_neutered: true,
+        existing_conditions: "", medications: "",
+      });
+    } catch (error) {
+      setPetError(
+        error instanceof Error
+          ? error.message
+          : "Could not save pet. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePet = async (petId: string) => {
+    setPetError(null);
+    try {
+      await deletePet(petId);
+    } catch (error) {
+      setPetError(
+        error instanceof Error
+          ? error.message
+          : "Could not delete pet. Please try again."
+      );
+    }
   };
 
   return (
@@ -94,6 +118,12 @@ export default function SettingsPage() {
             <Plus className="w-4 h-4 mr-1" /> Add Pet
           </Button>
         </div>
+
+        {petError && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {petError}
+          </div>
+        )}
 
         {pets.length === 0 && !showAddPet && (
           <div className="text-center py-12">
@@ -127,7 +157,7 @@ export default function SettingsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => deletePet(pet.id)}
+                  onClick={() => void handleDeletePet(pet.id)}
                 >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>

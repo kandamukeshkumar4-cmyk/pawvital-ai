@@ -81,6 +81,7 @@ describe("buildQuestionResponseFlow", () => {
       session,
       nextQuestionId: "limping_onset",
       needsClarificationQuestionId: null,
+      sessionHandle: "session-handle-123",
       pet: PET,
       effectivePet: PET,
       messages: [{ role: "user", content: "He started limping earlier." }],
@@ -93,6 +94,7 @@ describe("buildQuestionResponseFlow", () => {
     expect(payload.type).toBe("question");
     expect(payload.message).toBe("How long has Bruno been limping?");
     expect(payload.conversationState).toBe("asking");
+    expect(payload.sessionHandle).toBe("session-handle-123");
     expect(mockGateQuestionBeforePhrasing).toHaveBeenCalledTimes(1);
     expect(mockPhraseQuestion).toHaveBeenCalledTimes(1);
   });

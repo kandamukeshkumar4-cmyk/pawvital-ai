@@ -56,6 +56,8 @@ function buildSupabaseMock(options?: {
   let lastProfileUpdate: Record<string, unknown> | null = null;
   let lastSubscriptionEq: { column: string; value: unknown } | null = null;
   let lastSubscriptionUpdate: Record<string, unknown> | null = null;
+  let lastWebhookEventEq: { column: string; value: unknown } | null = null;
+  let lastWebhookEventUpdate: Record<string, unknown> | null = null;
 
   const profileUpdates: Array<{
     column: string;
@@ -68,6 +70,14 @@ function buildSupabaseMock(options?: {
     value: unknown;
   }> = [];
   const subscriptionUpserts: Array<Record<string, unknown>> = [];
+  const webhookEventStates = new Map<
+    string,
+    {
+      last_error?: string | null;
+      processed_at?: string | null;
+      status: string;
+    }
+  >();
 
   const profileSelectChain = {
     eq: jest.fn((column: string, value: unknown) => {
@@ -164,6 +174,65 @@ function buildSupabaseMock(options?: {
     }),
   };
 
+  const webhookEventSelectChain = {
+    eq: jest.fn((column: string, value: unknown) => {
+      lastWebhookEventEq = { column, value };
+      return webhookEventSelectChain;
+    }),
+    maybeSingle: jest.fn().mockImplementation(async () => {
+      if (!lastWebhookEventEq || lastWebhookEventEq.column !== "event_id") {
+        return { data: null, error: null };
+      }
+
+      const row = webhookEventStates.get(String(lastWebhookEventEq.value));
+      return {
+        data: row ? { status: row.status } : null,
+        error: null,
+      };
+    }),
+  };
+
+  const webhookEventsTable = {
+    insert: jest.fn(
+      async (payload: Record<string, unknown>) => {
+        const eventId = String(payload.event_id ?? "");
+        if (!eventId) {
+          return { error: { code: "23502", message: "event_id required" } };
+        }
+
+        if (webhookEventStates.has(eventId)) {
+          return { error: { code: "23505", message: "duplicate event" } };
+        }
+
+        webhookEventStates.set(eventId, {
+          status: String(payload.status ?? "processing"),
+        });
+
+        return { error: null };
+      }
+    ),
+    select: jest.fn().mockReturnValue(webhookEventSelectChain),
+    update: jest.fn((payload: Record<string, unknown>) => {
+      lastWebhookEventUpdate = payload;
+      return {
+        eq: jest.fn(async (column: string, value: unknown) => {
+          if (column === "event_id") {
+            const existing = webhookEventStates.get(String(value)) ?? {
+              status: "processing",
+            };
+            webhookEventStates.set(String(value), {
+              ...existing,
+              ...lastWebhookEventUpdate,
+              status: String(lastWebhookEventUpdate?.status ?? existing.status),
+            });
+          }
+
+          return { error: null };
+        }),
+      };
+    }),
+  };
+
   const supabase = {
     from: jest.fn((table: string) => {
       if (table === "profiles") {
@@ -172,6 +241,10 @@ function buildSupabaseMock(options?: {
 
       if (table === "subscriptions") {
         return subscriptionTable;
+      }
+
+      if (table === "stripe_webhook_events") {
+        return webhookEventsTable;
       }
 
       throw new Error(`Unexpected table ${table}`);
@@ -242,6 +315,8 @@ describe("POST /api/stripe/webhook", () => {
     const { profileUpdates, subscriptionUpserts, supabase } = buildSupabaseMock();
     mockGetServiceSupabase.mockReturnValue(supabase);
     mockConstructEvent.mockReturnValue({
+      created: 1_710_000_000,
+      id: "evt_1",
       type: "checkout.session.completed",
       data: {
         object: {
@@ -290,6 +365,8 @@ describe("POST /api/stripe/webhook", () => {
     });
     mockGetServiceSupabase.mockReturnValue(supabase);
     mockConstructEvent.mockReturnValue({
+      created: 1_720_000_000,
+      id: "evt_2",
       type: "customer.subscription.updated",
       data: {
         object: {
@@ -345,6 +422,8 @@ describe("POST /api/stripe/webhook", () => {
     });
     mockGetServiceSupabase.mockReturnValue(supabase);
     mockConstructEvent.mockReturnValue({
+      created: 1_730_000_000,
+      id: "evt_3",
       type: "customer.subscription.deleted",
       data: {
         object: {

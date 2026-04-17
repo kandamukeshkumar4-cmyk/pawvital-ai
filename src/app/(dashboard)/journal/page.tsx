@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
@@ -468,11 +469,13 @@ export default function JournalPage() {
                     {entry.photo_urls?.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {entry.photo_urls.map((url, i) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <Image
                             key={`${entry.id}-${i}`}
                             src={url}
                             alt=""
+                            width={96}
+                            height={96}
+                            unoptimized
                             className="h-24 w-24 object-cover rounded-lg border border-gray-200"
                           />
                         ))}

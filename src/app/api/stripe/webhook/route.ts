@@ -8,8 +8,10 @@ import {
   stripe,
 } from "@/lib/stripe";
 import { mapStripeStatusToProfileStatus } from "@/lib/subscription-state";
+import { serverEnv } from "@/lib/env";
 
 type ServiceSupabase = NonNullable<ReturnType<typeof getServiceSupabase>>;
+type StripeWebhookEventStatus = "processing" | "processed" | "failed";
 
 function requireServiceSupabase(): ServiceSupabase {
   const supabase = getServiceSupabase();
@@ -18,6 +20,66 @@ function requireServiceSupabase(): ServiceSupabase {
   }
 
   return supabase;
+}
+
+async function beginWebhookEvent(
+  supabase: ServiceSupabase,
+  event: Stripe.Event
+): Promise<"started" | "duplicate_processed" | "duplicate_inflight"> {
+  const stripeCreatedAt =
+    typeof event.created === "number" && Number.isFinite(event.created)
+      ? new Date(event.created * 1000).toISOString()
+      : new Date().toISOString();
+  const { error } = await supabase.from("stripe_webhook_events").insert({
+    event_id: event.id,
+    event_type: event.type,
+    received_at: new Date().toISOString(),
+    status: "processing",
+    stripe_created_at: stripeCreatedAt,
+  });
+
+  if (!error) {
+    return "started";
+  }
+
+  if (error.code !== "23505") {
+    throw new Error(`WEBHOOK_EVENT_INSERT_FAILED:${error.message}`);
+  }
+
+  const { data, error: readError } = await supabase
+    .from("stripe_webhook_events")
+    .select("status")
+    .eq("event_id", event.id)
+    .maybeSingle();
+
+  if (readError) {
+    throw new Error(`WEBHOOK_EVENT_READ_FAILED:${readError.message}`);
+  }
+
+  return data?.status === "processed"
+    ? "duplicate_processed"
+    : "duplicate_inflight";
+}
+
+async function finalizeWebhookEvent(
+  supabase: ServiceSupabase,
+  eventId: string,
+  status: StripeWebhookEventStatus,
+  lastError?: string
+) {
+  const { error } = await supabase
+    .from("stripe_webhook_events")
+    .update({
+      last_error: lastError ?? null,
+      processed_at:
+        status === "processed" ? new Date().toISOString() : null,
+      status,
+    })
+    .eq("event_id", eventId);
+
+  if (error) {
+    throw new Error(`WEBHOOK_EVENT_UPDATE_FAILED:${error.message}`);
+  }
 }
 
 function customerIdFromSubscription(sub: Stripe.Subscription): string | null {
@@ -358,7 +420,7 @@ export async function POST(request: Request) {
     event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      serverEnv.STRIPE_WEBHOOK_SECRET!
     );
   } catch (error) {
     console.error("Webhook signature verification failed:", error);
@@ -367,6 +429,13 @@ export async function POST(request: Request) {
 
   try {
     const supabase = requireServiceSupabase();
+    const eventState = await beginWebhookEvent(supabase, event);
+    if (eventState === "duplicate_processed") {
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+    }
+    if (eventState === "duplicate_inflight") {
+      return NextResponse.json({ received: true, duplicate: true }, { status: 202 });
+    }
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -381,11 +450,9 @@ export async function POST(request: Request) {
           typeof subscriptionRef === "string" ? subscriptionRef : subscriptionRef?.id;
 
         if (!userId || !subscriptionId) {
-          console.warn(
-            "checkout.session.completed: unable to resolve user or subscription",
-            session.id
+          throw new Error(
+            `UNRESOLVED_CHECKOUT_SESSION:${session.id}:${subscriptionId ?? "missing_subscription"}`
           );
-          break;
         }
 
         const fullSubscription = await stripe.subscriptions.retrieve(subscriptionId, {
@@ -404,11 +471,9 @@ export async function POST(request: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         const userId = await resolveUserIdForSubscription(supabase, subscription);
         if (!userId) {
-          console.warn(
-            `${event.type}: could not resolve user_id for subscription`,
-            subscription.id
+          throw new Error(
+            `UNRESOLVED_SUBSCRIPTION_EVENT:${event.type}:${subscription.id}`
           );
-          break;
         }
 
         await upsertSubscriptionState({
@@ -436,7 +501,20 @@ export async function POST(request: Request) {
         break;
       }
     }
+
+    await finalizeWebhookEvent(supabase, event.id, "processed");
   } catch (error) {
+    try {
+      const supabase = requireServiceSupabase();
+      await finalizeWebhookEvent(
+        supabase,
+        event.id,
+        "failed",
+        error instanceof Error ? error.message : "Unknown webhook failure"
+      );
+    } catch (finalizeError) {
+      console.error("Stripe webhook failure finalization failed:", finalizeError);
+    }
     console.error("Stripe webhook persistence failed:", error);
     return NextResponse.json(
       { error: "Webhook persistence failed", code: "WEBHOOK_PERSISTENCE_FAILED" },

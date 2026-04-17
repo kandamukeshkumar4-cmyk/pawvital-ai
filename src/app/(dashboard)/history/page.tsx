@@ -197,6 +197,7 @@ export default function HistoryPage() {
   const { activePet } = useAppStore();
   const [rows, setRows] = useState<DbSymptomCheckRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -234,11 +235,12 @@ export default function HistoryPage() {
         setOffset(start + list.length);
       } catch (e) {
         console.error("History load failed:", e);
-        const all = DEMO_ROWS;
-        const slice = all.slice(start, start + PAGE_SIZE);
-        setRows((prev) => (append ? [...prev, ...slice] : slice));
-        setHasMore(start + slice.length < all.length);
-        setOffset(start + slice.length);
+        setLoadError("Could not load symptom history.");
+        if (!append) {
+          setRows([]);
+          setHasMore(false);
+          setOffset(0);
+        }
       } finally {
         setLoading(false);
       }
@@ -331,6 +333,10 @@ export default function HistoryPage() {
         <div className="flex justify-center py-16">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
+      ) : loadError ? (
+        <Card className="p-8 text-center text-sm text-red-700 border border-red-200 bg-red-50">
+          {loadError}
+        </Card>
       ) : rows.length === 0 ? (
         <Card className="p-8 text-center text-gray-600 text-sm">
           No symptom checks yet. Run a check from the Symptom Checker to see it here.

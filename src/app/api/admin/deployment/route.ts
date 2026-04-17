@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
 import { getAdminRequestContext } from "@/lib/admin-auth";
+import {
+  getCanonicalAppUrl,
+  isProductionEnvironment,
+  isSupabaseConfigured,
+} from "@/lib/env";
 
 export const revalidate = 60; // Cached 60s via next
+
+function buildDemoDeploymentStatus() {
+  return {
+    state: "READY",
+    created_at: new Date().toISOString(),
+    url: getCanonicalAppUrl() || "https://demo.pawvital.com",
+    commit_sha: "badc0ffee",
+  };
+}
 
 export async function GET() {
   try {
@@ -12,13 +26,15 @@ export async function GET() {
 
     const vercelToken = process.env.VERCEL_TOKEN;
     if (adminContext.isDemo || !vercelToken) {
+      if (!adminContext.isDemo && !vercelToken && isProductionEnvironment()) {
+        return NextResponse.json(
+          { error: "Deployment status requires VERCEL_TOKEN" },
+          { status: 503 }
+        );
+      }
+
       // Return demo status if no token
-      return NextResponse.json({
-        state: "READY",
-        created_at: new Date().toISOString(),
-        url: "https://demo.pawvital.com",
-        commit_sha: "badc0ffee"
-      });
+      return NextResponse.json(buildDemoDeploymentStatus());
     }
 
     const res = await fetch("https://api.vercel.com/v6/deployments?limit=1", {
@@ -49,6 +65,13 @@ export async function GET() {
       commit_sha: deployment.meta?.githubCommitSha || "unknown"
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "DEMO_MODE" &&
+      !isSupabaseConfigured()
+    ) {
+      return NextResponse.json(buildDemoDeploymentStatus());
+    }
     console.error("Deployment API error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
