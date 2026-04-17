@@ -869,7 +869,7 @@ describe("GET /api/breeds", () => {
     expect(payload.breeds[0].name).toBe("Golden Retriever");
   });
 
-  it("returns filtered cat breeds from the external API", async () => {
+  it("rejects non-dog species queries", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => [
@@ -880,11 +880,11 @@ describe("GET /api/breeds", () => {
 
     const { GET } = await import("../src/app/api/breeds/route");
     const response = await GET(makeGetRequest("http://localhost/api/breeds?q=siamese&species=cat"));
-    const payload = await readJson<{ breeds: Array<{ name: string }> }>(response);
+    const payload = await readJson<{ error: string; breeds: Array<{ name: string }> }>(response);
 
-    expect(response.status).toBe(200);
-    expect(payload.breeds).toHaveLength(1);
-    expect(payload.breeds[0].name).toBe("Siamese");
+    expect(response.status).toBe(400);
+    expect(payload.error).toBe("PawVital currently supports dogs only.");
+    expect(payload.breeds).toEqual([]);
   });
 
   it("falls back to static dog breeds when the external fetch fails", async () => {
@@ -900,7 +900,7 @@ describe("GET /api/breeds", () => {
     ]);
   });
 
-  it("falls back to static cat breeds when the external response shape is invalid", async () => {
+  it("does not fall back to cat breeds when the request is outside dog scope", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ unexpected: true }),
@@ -908,12 +908,11 @@ describe("GET /api/breeds", () => {
 
     const { GET } = await import("../src/app/api/breeds/route");
     const response = await GET(makeGetRequest("http://localhost/api/breeds?q=maine&species=cat"));
-    const payload = await readJson<{ breeds: Array<{ name: string }> }>(response);
+    const payload = await readJson<{ error: string; breeds: Array<{ name: string }> }>(response);
 
-    expect(response.status).toBe(200);
-    expect(payload.breeds).toEqual([
-      expect.objectContaining({ name: "Maine Coon" }),
-    ]);
+    expect(response.status).toBe(400);
+    expect(payload.error).toBe("PawVital currently supports dogs only.");
+    expect(payload.breeds).toEqual([]);
   });
 });
 

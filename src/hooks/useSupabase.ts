@@ -8,6 +8,10 @@ import { DEMO_PETS_STORAGE_KEY } from "@/lib/demo-storage";
 import { useAppStore } from "@/store/app-store";
 import type { Pet, UserProfile } from "@/types";
 
+function filterDogPets(pets: Pet[]): Pet[] {
+  return pets.filter((pet) => pet.species === "dog");
+}
+
 function persistDemoPets(pets: Pet[]) {
   if (typeof window === "undefined") return;
   try {
@@ -64,9 +68,9 @@ export function useLoadUserData() {
         if (raw) {
           const parsed = JSON.parse(raw) as unknown;
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const pets = parsed as Pet[];
+            const pets = filterDogPets(parsed as Pet[]);
             setPets(pets);
-            setActivePet(pets[0]);
+            setActivePet(pets[0] ?? null);
           }
         }
       } catch {
@@ -116,7 +120,7 @@ export function useLoadUserData() {
         const fallbackUser: UserProfile = {
           id: authUser.id,
           email: authUser.email || "",
-          full_name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Pet Parent",
+          full_name: authUser.user_metadata?.full_name || authUser.email?.split("@")[0] || "Dog Parent",
           subscription_status: "free_trial",
           created_at: authUser.created_at,
         };
@@ -133,7 +137,7 @@ export function useLoadUserData() {
             const userProfile: UserProfile = {
               id: profile.id,
               email: authUser.email || "",
-              full_name: profile.full_name || authUser.email?.split("@")[0] || "Pet Parent",
+              full_name: profile.full_name || authUser.email?.split("@")[0] || "Dog Parent",
               avatar_url: profile.avatar_url,
               subscription_status: profile.subscription_status || "free_trial",
               trial_ends_at: profile.trial_ends_at,
@@ -153,10 +157,14 @@ export function useLoadUserData() {
             .eq("user_id", authUser.id)
             .order("created_at", { ascending: true });
 
-          if (pets && pets.length > 0) {
-            setPets(pets as Pet[]);
-            // Set first pet as active if none selected
-            if (!activePet) setActivePet(pets[0] as Pet);
+          const dogPets = filterDogPets((pets ?? []) as Pet[]);
+          setPets(dogPets);
+          if (dogPets.length > 0) {
+            if (!activePet || activePet.species !== "dog") {
+              setActivePet(dogPets[0]);
+            }
+          } else {
+            setActivePet(null);
           }
         } catch (err) {
           setUser(fallbackUser);
@@ -215,7 +223,7 @@ export function usePets() {
   const savePet = useCallback(async (pet: Pet): Promise<Pet> => {
     if (!isSupabaseConfigured) {
       // Demo mode: local state + sessionStorage
-      const updated = [...pets.filter((p) => p.id !== pet.id), pet];
+      const updated = filterDogPets([...pets.filter((p) => p.id !== pet.id), pet]);
       setPets(updated);
       setActivePet(pet);
       persistDemoPets(updated);
@@ -238,14 +246,17 @@ export function usePets() {
       if (error) throw error;
 
       const saved = data as Pet;
-      const updated = [...pets.filter((p) => p.id !== saved.id), saved];
+      const updated = filterDogPets([
+        ...pets.filter((p) => p.id !== saved.id),
+        saved,
+      ]);
       setPets(updated);
       setActivePet(saved);
       return saved;
     } catch (err) {
       console.error("Failed to save pet:", err);
       // Fallback to local state
-      const updated = [...pets.filter((p) => p.id !== pet.id), pet];
+      const updated = filterDogPets([...pets.filter((p) => p.id !== pet.id), pet]);
       setPets(updated);
       setActivePet(pet);
       return pet;

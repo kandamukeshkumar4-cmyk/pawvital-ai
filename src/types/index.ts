@@ -1,4 +1,4 @@
-export type PetSpecies = "dog" | "cat" | "other";
+export type PetSpecies = "dog";
 
 export type PetAgeUnit = "weeks" | "months" | "years";
 

@@ -20,6 +20,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "reviewer_id": { "type": "string" },
         "reviewer": { "type": "string" },
         "status": { "enum": ["pending", "approve", "approve_with_note", "needs_edit", "reject_case"] },
         "presentation_valid": { "type": ["boolean", "null"] },
@@ -43,6 +44,15 @@
         "sourceSuiteId",
         "sourceFile",
         "requestText",
+        "complaintFamilies",
+        "riskTier",
+        "uncertaintyPattern",
+        "strata",
+        "highRisk",
+        "mustNotMissMarker",
+        "mustAskExpectations",
+        "disagreementStatus",
+        "reviewTier",
         "reviewA",
         "reviewB",
         "panelDecision"
@@ -57,6 +67,43 @@
         "sourceSuiteId": { "type": "string", "minLength": 1 },
         "sourceFile": { "type": "string", "minLength": 1 },
         "requestText": { "type": "string", "minLength": 1 },
+        "complaintFamilies": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "riskTier": { "type": "string", "minLength": 1 },
+        "uncertaintyPattern": { "type": "string", "minLength": 1 },
+        "strata": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "emergency",
+              "urgent",
+              "common",
+              "ambiguous",
+              "contradictory",
+              "low-information",
+              "rare-but-critical"
+            ]
+          }
+        },
+        "highRisk": { "type": "boolean" },
+        "mustNotMissMarker": { "type": "boolean" },
+        "mustAskExpectations": {
+          "type": "object",
+          "required": ["question_ids", "status", "notes"],
+          "additionalProperties": false,
+          "properties": {
+            "question_ids": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "status": { "type": "string", "minLength": 1 },
+            "notes": { "type": "string" }
+          }
+        },
+        "disagreementStatus": { "type": "string", "minLength": 1 },
+        "reviewTier": { "type": "string", "minLength": 1 },
         "reviewA": { "$ref": "#/$defs/review" },
         "reviewB": { "$ref": "#/$defs/review" },
         "panelDecision": {

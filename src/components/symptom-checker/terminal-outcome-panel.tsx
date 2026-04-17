@@ -37,7 +37,7 @@ const TERMINAL_REASON_LABELS: Record<string, string> = {
   owner_cannot_assess_breathing_onset:
     "Could not confirm when the breathing problem started",
   owner_cannot_assess_consciousness_level: "Could not confirm responsiveness",
-  species_not_supported: "Species not supported in this workflow",
+  species_not_supported: "Only dog symptom checks are supported right now",
   educational_hypothetical: "Hypothetical or educational scenario",
   medication_dosing_request: "Medication or dosing request",
   procedure_guidance_request: "Procedure or sedation guidance request",

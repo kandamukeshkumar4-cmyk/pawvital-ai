@@ -3,7 +3,7 @@ import { z } from "zod";
  * Allowlisted pet fields for authenticated owner updates (API PUT).
  * Excludes id, user_id, deleted_at, created_at — never take those from the client.
  */
-const PetSpeciesSchema = z.enum(["dog", "cat", "other"]);
+const PetSpeciesSchema = z.enum(["dog"]);
 const PetAgeUnitSchema = z.enum(["weeks", "months", "years"]);
 
 export const PetUpdateBodySchema = z

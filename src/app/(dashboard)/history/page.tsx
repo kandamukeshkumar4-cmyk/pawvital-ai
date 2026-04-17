@@ -298,10 +298,10 @@ export default function HistoryPage() {
         <Card className="p-8 text-center">
           <Stethoscope className="w-12 h-12 text-blue-400 mx-auto mb-4" />
           <h1 className="text-xl font-bold text-gray-900 mb-2">
-            Add a pet to see history
+            Add a dog to see history
           </h1>
           <p className="text-gray-600 text-sm">
-            Symptom checks are saved per pet when you use the checker with Supabase
+            Symptom checks are saved per dog when you use the checker with Supabase
             enabled.
           </p>
         </Card>
@@ -317,7 +317,7 @@ export default function HistoryPage() {
           Symptom Check History
         </h1>
         <p className="text-gray-500 mt-1 text-sm">
-          View your pet&apos;s past health assessments
+          View your dog&apos;s past health assessments
         </p>
       </div>
 

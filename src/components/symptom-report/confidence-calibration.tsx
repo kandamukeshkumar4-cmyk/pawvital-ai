@@ -37,6 +37,25 @@ export function ConfidenceCalibrationSection({
           </Badge>
         </div>
       </div>
+      {calibration.adjustments.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {calibration.adjustments.slice(0, 3).map((adjustment) => (
+            <Badge
+              key={`${adjustment.factor}-${adjustment.reason}`}
+              variant={
+                adjustment.direction === "increase"
+                  ? "success"
+                  : adjustment.direction === "decrease"
+                    ? "warning"
+                    : "default"
+              }
+            >
+              {adjustment.factor}: {adjustment.direction === "increase" ? "+" : adjustment.direction === "decrease" ? "-" : ""}
+              {Math.abs(adjustment.delta * 100).toFixed(0)}%
+            </Badge>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

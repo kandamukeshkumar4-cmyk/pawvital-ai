@@ -1,0 +1,289 @@
+{
+  "suite_id": "dog-triage-wave3-freeze-contradictory",
+  "version": "wave3-freeze-v2",
+  "species": "dog",
+  "description": "Cases that explicitly test contradiction detection and safe resolution behavior.",
+  "cases": [
+    {
+      "id": "question-contradictory-energy",
+      "description": "Contradictory report of energy level should open clarifying questions.",
+      "tags": [
+        "question",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "lethargy"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Jumpy",
+          "breed": "Beagle",
+          "age_years": 3,
+          "weight": 25,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog is acting fine but also not himself. He runs around but then just lays there."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "contradictory"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-contradictory-limping",
+      "description": "Conflicting weight-bearing details should force a clarifying orthopedic question before limping triage proceeds.",
+      "tags": [
+        "question",
+        "orthopedic",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "limping"
+        ]
+      },
+      "complaint_family_tags": [
+        "limping"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Maybe",
+          "breed": "Golden Retriever",
+          "age_years": 6,
+          "weight": 70,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "Sometimes he limps and sometimes he runs fine. It comes and goes."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "contradictory"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-contradictory-drinking-peeing",
+      "description": "Mismatched thirst-versus-urination details should reopen clarification before urinary triage advances.",
+      "tags": [
+        "question",
+        "endocrine",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false
+      },
+      "complaint_family_tags": [
+        "drinking_more"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Maybe Drinker",
+          "breed": "Mixed Breed",
+          "age_years": 11,
+          "weight": 45,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "I think she drinks more but I also filled her bowl twice yesterday."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "contradictory"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    },
+    {
+      "id": "question-contradictory-vomiting",
+      "description": "Contradictory vomiting timeline should open clarifying questions.",
+      "tags": [
+        "question",
+        "gi",
+        "contradictory"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "vomiting"
+        ]
+      },
+      "complaint_family_tags": [
+        "vomiting"
+      ],
+      "risk_tier": "tier_3_48h_monitor",
+      "uncertainty_pattern": "contradictory",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Confused",
+          "breed": "Labrador Retriever",
+          "age_years": 4,
+          "weight": 65,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "She threw up this morning but also maybe it was yesterday. I'm not sure."
+          }
+        ]
+      },
+      "must_not_miss_marker": false,
+      "provenance": {
+        "source_shard": "11-language-variants.json",
+        "source_suite_id": "dog-triage-gold-candidate-language-variants",
+        "freeze_date": "2026-04-17",
+        "version": "wave3-freeze-v2"
+      },
+      "wave3_strata": [
+        "contradictory"
+      ],
+      "wave3_adjudication": {
+        "high_risk": true,
+        "review_tier": "dual_review_required",
+        "reviewer_slots": [
+          {
+            "role": "vet_a",
+            "reviewer_id": "vet_a",
+            "status": "pending"
+          },
+          {
+            "role": "vet_b",
+            "reviewer_id": "vet_b",
+            "status": "pending"
+          }
+        ],
+        "disagreement_status": "pending_dual_review",
+        "must_ask_expectations": {
+          "question_ids": [
+            "undefined"
+          ],
+          "status": "seeded_from_case_expectations",
+          "notes": "Seeded from existing benchmark expectation fields and requires veterinarian confirmation during adjudication."
+        }
+      }
+    }
+  ]
+}

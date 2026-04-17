@@ -3,7 +3,7 @@ import type { SymptomCheckEntry } from "@/components/timeline/types";
 /** Stable id for Biscuit in analytics demo data. */
 export const DEMO_PET_VET821_ID = "demo-pet-vet-821";
 
-const PET2_ID = "demo-pet-vet-821-mittens";
+const PET2_ID = "demo-pet-vet-821-scout";
 
 /** Rich demo set for the analytics dashboard (multiple pets, varied dates). */
 export const DEMO_ANALYTICS_SYMPTOM_ENTRIES: SymptomCheckEntry[] = [
@@ -59,26 +59,28 @@ export const DEMO_ANALYTICS_SYMPTOM_ENTRIES: SymptomCheckEntry[] = [
   {
     id: "demo-an-5",
     pet_id: PET2_ID,
-    pet_name: "Mittens",
+    pet_name: "Scout",
     created_at: new Date(2026, 3, 4, 11, 0).toISOString(),
     primary_symptom: "Coughing after running",
     severity: "moderate",
     urgency: "schedule",
-    top_diagnosis: "Feline asthma",
+    top_diagnosis: "Collapsing trachea",
     confidence: 0.59,
-    report_summary: "Episodic cough — reduce triggers and discuss inhaler therapy with your veterinarian.",
+    report_summary:
+      "Episodic cough after activity — reduce exertion and discuss airway evaluation with your veterinarian.",
   },
   {
     id: "demo-an-6",
     pet_id: PET2_ID,
-    pet_name: "Mittens",
+    pet_name: "Scout",
     created_at: new Date(2026, 2, 25, 8, 20).toISOString(),
     primary_symptom: "Sneezing and watery eyes",
     severity: "mild",
     urgency: "monitor",
-    top_diagnosis: "Upper respiratory irritation",
+    top_diagnosis: "Seasonal environmental irritation",
     confidence: 0.55,
-    report_summary: "Mild URI signs — humidification and isolate from other cats if discharge worsens.",
+    report_summary:
+      "Mild upper-airway irritation — monitor discharge and discuss a vet visit if signs worsen.",
   },
   {
     id: "demo-an-7",
@@ -95,14 +97,15 @@ export const DEMO_ANALYTICS_SYMPTOM_ENTRIES: SymptomCheckEntry[] = [
   {
     id: "demo-an-8",
     pet_id: PET2_ID,
-    pet_name: "Mittens",
+    pet_name: "Scout",
     created_at: new Date(2026, 1, 5, 17, 0).toISOString(),
     primary_symptom: "Not eating for 24h",
     severity: "serious",
     urgency: "urgent",
-    top_diagnosis: "Hepatic lipidosis risk",
+    top_diagnosis: "Gastrointestinal upset",
     confidence: 0.73,
-    report_summary: "Anorexia in a cat warrants prompt veterinary evaluation — do not delay if hiding or vomiting.",
+    report_summary:
+      "A dog refusing food for 24 hours warrants prompt veterinary evaluation, especially if vomiting or lethargy is also present.",
   },
   {
     id: "demo-an-9",

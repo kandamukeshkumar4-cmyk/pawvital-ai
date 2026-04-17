@@ -8,6 +8,16 @@ export function EvidenceSourcesBar({ report }: { report: SymptomReport }) {
   if (!summary) return null;
 
   const parts: string[] = [];
+  if ((summary.deterministic_rules_applied ?? 0) > 0) {
+    parts.push(
+      `${summary.deterministic_rules_applied} deterministic rule${summary.deterministic_rules_applied === 1 ? "" : "s"}`
+    );
+  }
+  if ((summary.provenance_backed_claims ?? 0) > 0) {
+    parts.push(
+      `${summary.provenance_backed_claims} provenance-backed claim${summary.provenance_backed_claims === 1 ? "" : "s"}`
+    );
+  }
   if (summary.knowledge_chunks_found > 0) {
     parts.push(
       `${summary.knowledge_chunks_found} knowledge article${summary.knowledge_chunks_found === 1 ? "" : "s"}`
@@ -35,9 +45,19 @@ export function EvidenceSourcesBar({ report }: { report: SymptomReport }) {
         <p className="text-xs text-blue-700">
           <span className="font-medium">Based on:</span> {parts.join(" · ")}
         </p>
+        <p className="text-xs text-blue-700/80 mt-1">
+          Deterministic clinical rules are primary. Retrieval and similar cases
+          are supportive context only.
+        </p>
         {sources.length > 0 && (
           <p className="text-xs text-blue-600/70 italic mt-1">
             Sources: {sources.join(", ")}
+          </p>
+        )}
+        {report.high_stakes_claims_suppressed && (
+          <p className="text-xs text-amber-700 mt-1">
+            Some high-stakes details were phrased conservatively until reviewed
+            provenance is available.
           </p>
         )}
       </div>

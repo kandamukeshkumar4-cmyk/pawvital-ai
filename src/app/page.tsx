@@ -16,7 +16,7 @@ const structuredData = {
   applicationCategory: "HealthApplication",
   operatingSystem: "Web",
   description:
-    "AI-powered veterinary symptom checker for dogs and cats. Evidence-based triage using 10,000+ clinical cases, Merck Veterinary Manual, and breed-specific analysis.",
+    "AI-powered dog symptom checker with evidence-based canine triage, breed-aware guidance, and vet-ready reports.",
   offers: {
     "@type": "Offer",
     price: "0",

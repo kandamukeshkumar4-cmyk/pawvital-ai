@@ -16,7 +16,7 @@ const steps = [
     icon: Activity,
     title: "AI Analyzes Everything",
     description:
-      "Our clinical matrix checks 200+ diseases, matches similar cases, and cross-references veterinary literature.",
+      "Our canine clinical matrix checks the current validated complaint coverage, matches similar cases, and cross-references veterinary literature.",
     color: "blue",
   },
   {

@@ -42,7 +42,9 @@ export default function PetHealthPage() {
     }
 
     if (!isSupabaseConfigured) {
-      const demoPet = DEMO_HOUSEHOLD_PETS.find((p) => p.id === id);
+      const demoPet = DEMO_HOUSEHOLD_PETS.find(
+        (p) => p.id === id && p.species === "dog"
+      );
       if (demoPet) {
         setPet(demoPet);
         const sym = DEMO_HOUSEHOLD_SYMPTOM_CHECKS.filter((c) => c.pet_id === id);
@@ -77,6 +79,12 @@ export default function PetHealthPage() {
       }
 
       const p = petRow as Pet;
+      if (p.species !== "dog") {
+        setNotFound(true);
+        setPet(null);
+        setChecks([]);
+        return;
+      }
       setPet(p);
 
       const { data: rows, error: checkErr } = await supabase
@@ -105,7 +113,7 @@ export default function PetHealthPage() {
     void load();
   }, [load]);
 
-  const storePet = pets.find((p) => p.id === id);
+  const storePet = pets.find((p) => p.id === id && p.species === "dog");
   const displayPet = pet ?? storePet ?? null;
 
   if (loading) {
@@ -121,12 +129,12 @@ export default function PetHealthPage() {
     return (
       <div className="max-w-lg mx-auto text-center py-16">
         <Card className="p-8">
-          <p className="text-gray-700">We couldn&apos;t find that pet.</p>
+          <p className="text-gray-700">We couldn&apos;t find that dog.</p>
           <Link
             href="/pets"
             className="inline-flex mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700"
           >
-            Back to My pets
+            Back to My dogs
           </Link>
         </Card>
       </div>
@@ -140,11 +148,11 @@ export default function PetHealthPage() {
           href="/pets"
           className="text-sm font-medium text-blue-600 hover:text-blue-700 mb-3 inline-block"
         >
-          ← My pets
+          ← My dogs
         </Link>
         <div className="flex items-center gap-2 text-blue-600 mb-1">
           <PawPrint className="h-6 w-6" aria-hidden />
-          <span className="text-sm font-semibold uppercase tracking-wide">Pet profile</span>
+          <span className="text-sm font-semibold uppercase tracking-wide">Dog profile</span>
         </div>
         <h1 className="text-2xl font-bold text-gray-900">{displayPet.name}</h1>
         {!isSupabaseConfigured && (
@@ -156,7 +164,7 @@ export default function PetHealthPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Species</p>
-            <p className="mt-1 text-gray-900 capitalize">{displayPet.species}</p>
+            <p className="mt-1 text-gray-900">Dog</p>
           </div>
           <div>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Breed</p>

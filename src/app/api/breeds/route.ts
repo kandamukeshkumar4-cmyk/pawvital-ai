@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { fallbackDogBreeds, fallbackCatBreeds } from "@/lib/breed-data";
+import { fallbackDogBreeds } from "@/lib/breed-data";
 
 type ExternalBreed = {
   id?: string | number;
@@ -10,16 +10,21 @@ type ExternalBreed = {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const species = searchParams.get("species") || "dog";
+  const species = (searchParams.get("species") || "dog").trim().toLowerCase();
   const q = searchParams.get("q")?.toLowerCase() || "";
 
+  if (species !== "dog") {
+    return NextResponse.json(
+      {
+        error: "PawVital currently supports dogs only.",
+        breeds: [],
+      },
+      { status: 400 }
+    );
+  }
+
   try {
-    let apiUrl = "";
-    if (species === "dog") {
-      apiUrl = "https://api.thedogapi.com/v1/breeds";
-    } else if (species === "cat") {
-      apiUrl = "https://api.thecatapi.com/v1/breeds";
-    }
+    const apiUrl = "https://api.thedogapi.com/v1/breeds";
 
     if (apiUrl) {
       // Revalidate once per day
@@ -54,11 +59,7 @@ export async function GET(request: Request) {
   }
 
   // Fallback
-  let fallback = species === "cat" ? fallbackCatBreeds : fallbackDogBreeds;
-  
-  if (species !== "dog" && species !== "cat") {
-    fallback = []; // "other" species
-  }
+  let fallback = fallbackDogBreeds;
 
   if (q) {
     fallback = fallback.filter((b) => b.name.toLowerCase().includes(q));

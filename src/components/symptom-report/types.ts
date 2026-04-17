@@ -1,3 +1,6 @@
+export type { StructuredEvidenceChainItem } from "@/lib/evidence-chain";
+import type { StructuredEvidenceChainItem } from "@/lib/evidence-chain";
+
 export interface DifferentialDiagnosis {
   condition: string;
   likelihood: "high" | "moderate" | "low";
@@ -14,14 +17,6 @@ export interface HomeCare {
   instruction: string;
   duration: string;
   details: string;
-}
-
-export interface StructuredEvidenceChainItem {
-  source: string;
-  finding: string;
-  supporting: string[];
-  contradicting: string[];
-  confidence: number;
 }
 
 export interface SimilarCase {
@@ -43,6 +38,9 @@ export interface EvidenceSummary {
   cases_found: number;
   knowledge_chunks_found: number;
   reference_images_found: number;
+  deterministic_rules_applied?: number;
+  provenance_backed_claims?: number;
+  retrieval_sources_found?: number;
 }
 
 export interface ConfidenceAdjustment {
@@ -89,6 +87,8 @@ export interface SymptomReport {
   bayesian_differentials?: Array<{ condition: string; probability: number; evidence_count: number; confidence?: string }>;
   knowledge_sources_used?: string[];
   evidence_summary?: EvidenceSummary;
+  provenance_registry_version?: string;
+  high_stakes_claims_suppressed?: boolean;
 }
 
 export type OutcomeFeedbackSubmitPayload = {

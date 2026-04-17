@@ -5,7 +5,7 @@ import type { Pet, SymptomCheck } from "@/types";
 import { ComparativeHealth, type PetHealthSummary } from "@/components/pets/comparative-health";
 import PetProfileModal from "@/components/onboarding/pet-profile-modal";
 import Button from "@/components/ui/button";
-import { Plus, Activity, Clock, Dog, Cat, Settings } from "lucide-react";
+import { Plus, Activity, Clock, Dog, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { initialPets: Pet[], initialChecks: SymptomCheck[], isDemo: boolean }) {
@@ -74,13 +74,13 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
         <div className="w-32 h-32 bg-indigo-50 text-indigo-400 rounded-full flex items-center justify-center mb-6">
           <Dog size={64} />
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to your Pet Dashboard</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to your Dog Dashboard</h1>
         <p className="text-slate-500 max-w-md mb-8">
-          Add your furry friend to start tracking their health, receiving triage recommendations, and managing their wellness.
+          Add your dog to start tracking health, receiving triage recommendations, and managing wellness.
         </p>
         <Button onClick={() => setIsModalOpen(true)} size="lg" className="rounded-full px-8 gap-2">
           <Plus size={20} />
-          Add your first pet
+          Add your first dog
         </Button>
         <PetProfileModal open={isModalOpen} onSkipped={() => setIsModalOpen(false)} />
       </div>
@@ -91,32 +91,32 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
       {isDemo && (
         <div className="bg-amber-50 text-amber-800 p-3 rounded-lg border border-amber-200 text-sm text-center">
-          <strong>Demo Mode:</strong> Displaying sample pets. Authentication is required to edit or create new pets.
+          <strong>Demo Mode:</strong> Displaying sample dogs. Authentication is required to edit or create new dogs.
         </div>
       )}
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Pets Household</h1>
-          <p className="text-slate-500 mt-1">Manage and track health for your furry family.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dog Household</h1>
+          <p className="text-slate-500 mt-1">Manage and track health for every dog in your household.</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)} className="gap-2">
           <Plus size={18} />
-          Add Pet
+          Add Dog
         </Button>
       </div>
 
       <ComparativeHealth stats={stats} />
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-4">Your Pets</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-4">Your Dogs</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stats.map(({ pet, checkCount, daysSinceLastCheck, lastSeverity }) => (
             <div key={pet.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition group">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center">
-                    {pet.species === "cat" ? <Cat size={24} /> : <Dog size={24} />}
+                    <Dog size={24} />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg text-slate-800">{pet.name}</h3>

@@ -71,8 +71,8 @@ export default function PetProfileModal({
 }: PetProfileModalProps) {
   const user = useAppStore((s) => s.user);
   const { savePet } = usePets();
+  const species: PetSpecies = "dog";
   const [name, setName] = useState("");
-  const [species, setSpecies] = useState<PetSpecies>("dog");
   const [breed, setBreed] = useState("");
   const [ageValue, setAgeValue] = useState("");
   const [ageUnit, setAgeUnit] = useState<PetAgeUnit>("years");
@@ -96,7 +96,7 @@ export default function PetProfileModal({
   }, []);
 
   useEffect(() => {
-    if (!breed.trim() || species === "other") {
+    if (!breed.trim()) {
       setBreedSuggestions([]);
       return;
     }
@@ -163,27 +163,17 @@ export default function PetProfileModal({
   };
 
   return (
-    <Modal isOpen={open} onClose={handleDismiss} title="Add your pet" size="lg">
+    <Modal isOpen={open} onClose={handleDismiss} title="Add your dog" size="lg">
       <p className="text-sm text-gray-600 mb-4">
-        A quick profile helps personalize health insights. You can add more detail later in Settings.
+        A quick dog profile helps personalize canine health insights. You can add more detail later in Settings.
       </p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
-          label="Pet name"
+          label="Dog name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Bailey"
           error={errors.name}
-        />
-        <Select
-          label="Species"
-          value={species}
-          onChange={(e) => setSpecies(e.target.value as PetSpecies)}
-          options={[
-            { value: "dog", label: "Dog" },
-            { value: "cat", label: "Cat" },
-            { value: "other", label: "Other" },
-          ]}
         />
         <div className="relative" ref={suggestionRef}>
           <Input
@@ -194,7 +184,7 @@ export default function PetProfileModal({
               setShowSuggestions(true);
             }}
             onFocus={() => {
-              if (breed.trim() && species !== "other") setShowSuggestions(true);
+              if (breed.trim()) setShowSuggestions(true);
             }}
             placeholder="Breed or best description"
             error={errors.breed}
@@ -264,7 +254,7 @@ export default function PetProfileModal({
             Skip for now
           </Button>
           <Button type="submit" className="w-full sm:flex-1" loading={submitting}>
-            Save pet
+            Save dog
           </Button>
         </div>
       </form>

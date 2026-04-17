@@ -9,7 +9,7 @@ import Button from "@/components/ui/button";
 const freeFeatures = [
   "Basic symptom checks (3/month)",
   "General health advice",
-  "Single pet profile",
+  "Single dog profile",
 ];
 
 const premiumFeatures = [
@@ -19,7 +19,7 @@ const premiumFeatures = [
   "Breed-specific disease analysis",
   "Health timeline & trends",
   "Vet handoff summaries",
-  "Multi-pet profiles",
+  "Multi-dog profiles",
   "Priority support",
 ];
 
@@ -148,7 +148,7 @@ export default function Pricing() {
           </div>
           <div>
             <div className="font-semibold text-gray-900 text-lg">$2,026</div>
-            <div>Avg annual pet spending</div>
+            <div>Avg annual dog care spending</div>
           </div>
           <div>
             <div className="font-semibold text-emerald-600 text-lg">$9.97</div>

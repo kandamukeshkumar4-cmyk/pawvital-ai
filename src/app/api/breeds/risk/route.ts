@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getBreedRiskProfiles } from "@/lib/breed-risk";
+import { getBreedModifierProvenance } from "@/lib/provenance-registry";
 import {
   generalApiLimiter,
   checkRateLimit,
@@ -38,9 +39,19 @@ export async function GET(request: Request) {
   }
 
   const profiles = await getBreedRiskProfiles(breed, topN);
+  const modifierProvenance = getBreedModifierProvenance(breed).map((entry) => ({
+    rule_id: entry.rule_id,
+    evidence_tier: entry.evidence_tier,
+    review_date: entry.review_date,
+    next_review: entry.next_review,
+    source: entry.source,
+    diseases: entry.diseases ?? [],
+  }));
+
   return NextResponse.json({
     breed,
     profiles,
+    modifierProvenance,
     source: profiles.length > 0 ? "supabase" : "unavailable",
   });
 }

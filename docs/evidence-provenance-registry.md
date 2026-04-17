@@ -125,6 +125,7 @@ The provenance registry should be maintained as:
 1. **JSON file** in `data/provenance-registry.json` for programmatic access
 2. **Markdown document** (this file) for human review
 3. **Linked to benchmark cases** — each benchmark case references provenance entries
+4. **Runtime helper** in `src/lib/provenance-registry.ts` so report generation, breed-risk APIs, and release gates can resolve reviewed claims consistently
 
 ### Registry JSON Structure
 

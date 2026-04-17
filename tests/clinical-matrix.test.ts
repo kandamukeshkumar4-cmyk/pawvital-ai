@@ -22,6 +22,11 @@ describe("SYMPTOM_MAP integrity", () => {
     expect(SYMPTOM_MAP.wound_skin_issue).toBeDefined();
   });
 
+  it("should include trauma and post_vaccination_reaction symptoms", () => {
+    expect(SYMPTOM_MAP.trauma).toBeDefined();
+    expect(SYMPTOM_MAP.post_vaccination_reaction).toBeDefined();
+  });
+
   it("should include all core symptoms", () => {
     const required = [
       "vomiting",
@@ -31,6 +36,8 @@ describe("SYMPTOM_MAP integrity", () => {
       "lethargy",
       "coughing",
       "wound_skin_issue",
+      "trauma",
+      "post_vaccination_reaction",
     ];
     for (const symptom of required) {
       expect(SYMPTOM_MAP[symptom]).toBeDefined();
@@ -157,6 +164,24 @@ describe("FOLLOW_UP_QUESTIONS integrity", () => {
     }
   });
 
+  it("should include trauma and post-vaccination questions", () => {
+    const requiredQuestions = [
+      "trauma_mechanism",
+      "trauma_timeframe",
+      "trauma_area",
+      "active_bleeding_trauma",
+      "visible_fracture",
+      "trauma_mobility",
+      "vaccination_timing",
+      "vaccination_type",
+      "face_swelling",
+      "hives_with_breathing",
+    ];
+    for (const qId of requiredQuestions) {
+      expect(FOLLOW_UP_QUESTIONS[qId]).toBeDefined();
+    }
+  });
+
   it("every question should have required fields", () => {
     for (const [id, question] of Object.entries(FOLLOW_UP_QUESTIONS)) {
       expect(question.id).toBe(id);
@@ -262,5 +287,39 @@ describe("Cross-reference consistency", () => {
     expect(wound.follow_up_questions).toContain("wound_location");
     expect(wound.follow_up_questions).toContain("wound_size");
     expect(wound.follow_up_questions).toContain("wound_discharge");
+  });
+
+  it("trauma should have trauma-specific follow-up questions and emergency red flags", () => {
+    const trauma = SYMPTOM_MAP.trauma;
+    expect(trauma.follow_up_questions).toEqual(
+      expect.arrayContaining([
+        "trauma_mechanism",
+        "active_bleeding_trauma",
+        "visible_fracture",
+        "trauma_mobility",
+      ])
+    );
+    expect(trauma.red_flags).toEqual(
+      expect.arrayContaining([
+        "active_bleeding_trauma",
+        "visible_fracture",
+        "inability_to_stand",
+      ])
+    );
+  });
+
+  it("post_vaccination_reaction should ask timing questions and screen for anaphylaxis", () => {
+    const postVax = SYMPTOM_MAP.post_vaccination_reaction;
+    expect(postVax.follow_up_questions).toEqual(
+      expect.arrayContaining([
+        "vaccination_timing",
+        "reaction_symptoms",
+        "face_swelling",
+        "hives_with_breathing",
+      ])
+    );
+    expect(postVax.red_flags).toEqual(
+      expect.arrayContaining(["face_swelling", "hives_with_breathing"])
+    );
   });
 });

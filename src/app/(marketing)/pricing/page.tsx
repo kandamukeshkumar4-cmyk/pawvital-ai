@@ -10,7 +10,7 @@ const features = [
   "24/7 Symptom Checker & Vet Decision Engine",
   "Personalized supplement & nutrition plans",
   "Medication & wellness reminders",
-  "Pet journal & health timeline",
+  "Dog journal & health timeline",
   "Paw Circle community access",
   "Monthly wellness reports",
   "Unlimited AI health consultations",
@@ -23,19 +23,19 @@ const faqs = [
   },
   {
     q: "What happens after the free trial?",
-    a: "After your 7-day free trial, you'll be charged $9.97/month. You can cancel anytime with one click — no questions asked, no hidden fees. Your pet's health data remains accessible even after cancellation.",
+    a: "After your 7-day free trial, you'll be charged $9.97/month. You can cancel anytime with one click — no questions asked, no hidden fees. Your dog's health data remains accessible even after cancellation.",
   },
   {
     q: "How accurate is the AI?",
     a: "PawVital AI is trained on extensive veterinary data and provides breed-specific, age-appropriate guidance. It's designed to err on the side of caution — if there's any doubt, it will recommend professional veterinary care.",
   },
   {
-    q: "Can I use PawVital for multiple pets?",
-    a: "Yes! Your subscription covers unlimited pets. You can add as many pet profiles as you need and switch between them easily.",
+    q: "Can I use PawVital for multiple dogs?",
+    a: "Yes. Your subscription covers multiple dogs, so you can keep separate profiles and histories for each dog in your household.",
   },
   {
     q: "What breeds and species do you support?",
-    a: "PawVital currently supports dogs and cats of all breeds. Our AI has breed-specific data for over 200 dog breeds and 50 cat breeds.",
+    a: "PawVital currently supports dogs only. Breed-aware guidance is limited to the validated canine scope documented in our current clinical audit.",
   },
 ];
 
@@ -91,7 +91,7 @@ export default function PricingPage() {
       <section className="bg-gradient-to-br from-blue-50 via-white to-amber-50 py-16 sm:py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900">
-            One Plan. Everything Your Pet Needs.
+            One Plan. Everything Your Dog Needs.
           </h1>
           <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
             Less than a bag of premium dog treats. Less than one-tenth of an
@@ -160,7 +160,7 @@ export default function PricingPage() {
             <div className="bg-gray-50 rounded-xl p-4">
               <p className="text-xl font-bold text-gray-900">$2,026</p>
               <p className="text-xs text-gray-500 mt-1">
-                Avg annual pet spending
+                Avg annual dog care spending
               </p>
             </div>
             <div className="bg-blue-50 rounded-xl p-4">
@@ -207,7 +207,7 @@ export default function PricingPage() {
       <section className="py-16 bg-blue-600 text-center">
         <div className="max-w-2xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-white">
-            Your Pet Deserves the Best
+            Your Dog Deserves the Best
           </h2>
           <p className="mt-4 text-blue-200">
             Start your free trial today and see the difference AI-powered

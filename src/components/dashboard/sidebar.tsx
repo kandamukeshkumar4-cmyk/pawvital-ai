@@ -24,7 +24,7 @@ import { useAuth } from "@/hooks/useSupabase";
 
 const navItems = [
   { href: "/dashboard", icon: Activity, label: "Dashboard" },
-  { href: "/pets", icon: PawPrint, label: "My Pets" },
+  { href: "/pets", icon: PawPrint, label: "My Dogs" },
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
   { href: "/history", icon: Clock, label: "History" },
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
@@ -115,13 +115,7 @@ export default function Sidebar() {
         {activePet && sidebarOpen && (
           <div className="mx-4 mt-4 rounded-xl border border-blue-200 bg-blue-50 p-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-200 text-lg">
-                {activePet.species === "cat"
-                  ? "🐈"
-                  : activePet.species === "dog"
-                    ? "🐕"
-                    : "🐾"}
-              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-200 text-lg">🐕</div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-gray-900">
                   {activePet.name}

@@ -135,8 +135,8 @@ export function VisionAnalysisIllustration({ className = "" }: { className?: str
 
       {/* Match count */}
       <rect x="237" y="165" width="56" height="24" rx="8" fill="#f0fdf4" stroke="#86efac" strokeWidth="1" />
-      <text x="245" y="181" fontSize="8" fill="#059669" fontFamily="system-ui">9,700+</text>
-      <text x="245" y="191" fontSize="6" fill="#6b7280" fontFamily="system-ui" />
+      <text x="243" y="181" fontSize="7" fill="#059669" fontFamily="system-ui">Curated</text>
+      <text x="243" y="191" fontSize="6" fill="#6b7280" fontFamily="system-ui">images</text>
 
       {/* Camera icon */}
       <circle cx="130" cy="195" r="10" fill="#7c3aed" />

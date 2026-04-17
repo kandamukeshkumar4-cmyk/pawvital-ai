@@ -131,6 +131,20 @@ describe("Regression tests", () => {
     expect(session.candidate_diseases.length).toBeGreaterThan(0);
   });
 
+  it("REGRESSION: trauma keywords should map to trauma", () => {
+    let session = triageEngine.createSession();
+    session = triageEngine.addSymptoms(session, ["hit by car"]);
+    expect(session.known_symptoms).toContain("trauma");
+    expect(session.candidate_diseases.length).toBeGreaterThan(0);
+  });
+
+  it("REGRESSION: vaccine reaction keywords should map to post_vaccination_reaction", () => {
+    let session = triageEngine.createSession();
+    session = triageEngine.addSymptoms(session, ["after shots"]);
+    expect(session.known_symptoms).toContain("post_vaccination_reaction");
+    expect(session.candidate_diseases.length).toBeGreaterThan(0);
+  });
+
   it("REGRESSION: fewer than 3 answers should NOT be ready", () => {
     let session = triageEngine.createSession();
     session = triageEngine.addSymptoms(session, ["vomiting"]);

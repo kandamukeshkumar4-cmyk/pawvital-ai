@@ -484,7 +484,10 @@ function applyAnswerModifiers(
     }
   }
 
-  if (answers.limping_onset === "sudden" || String(answers.trauma_history || "").includes("sudden")) {
+  if (
+    answers.limping_onset === "sudden" ||
+    answers.trauma_history === "yes_trauma"
+  ) {
     if (
       diseaseKey === "ccl_rupture" ||
       diseaseKey === "soft_tissue_injury"
@@ -719,16 +722,29 @@ export function buildDiagnosisContext(
   };
 }
 
+const BREED_ALIASES: Record<string, string[]> = {
+  "French Bulldog": ["frenchie"],
+  "Golden Retriever": ["golden"],
+  "Labrador Retriever": ["lab", "labrador"],
+  "Miniature Schnauzer": ["mini schnauzer"],
+  "Pembroke Welsh Corgi": ["corgi", "pembroke corgi", "welsh corgi"],
+};
+
 function getBreedModifiers(breed: string): BreedModifiers {
+  if (!breed.trim()) return {};
   if (BREED_MODIFIERS[breed]) return BREED_MODIFIERS[breed];
 
   const normalized = normalizeBreedKey(breed);
+  const mixStem = getBreedMixStem(normalized);
   for (const [key, modifiers] of Object.entries(BREED_MODIFIERS)) {
     const normalizedKey = normalizeBreedKey(key);
     if (
       normalizedKey === normalized ||
       normalizedKey.includes(normalized) ||
-      normalized.includes(normalizedKey)
+      normalized.includes(normalizedKey) ||
+      aliasMatchesBreed(normalized, key) ||
+      (mixStem !== null &&
+        (normalizedKey === mixStem || normalizedKey.startsWith(`${mixStem} `)))
     ) {
       return modifiers;
     }
@@ -760,6 +776,28 @@ export function getSymptomPriorityScore(symptom: string): number {
 
 function normalizeBreedKey(breed: string): string {
   return breed.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function getBreedMixStem(normalizedBreed: string): string | null {
+  if (!normalizedBreed || normalizedBreed === "mixed breed") {
+    return null;
+  }
+
+  const match = normalizedBreed.match(/^(.*?)(?:\s+mix|\s+mixed breed)$/);
+  const stem = match?.[1]?.trim() || "";
+  return stem.length >= 3 ? stem : null;
+}
+
+function aliasMatchesBreed(normalizedBreed: string, targetBreed: string): boolean {
+  const aliases = BREED_ALIASES[targetBreed] ?? [];
+  return aliases.some((alias) => {
+    const normalizedAlias = normalizeBreedKey(alias);
+    return (
+      normalizedBreed === normalizedAlias ||
+      normalizedBreed.includes(normalizedAlias) ||
+      normalizedAlias.includes(normalizedBreed)
+    );
+  });
 }
 
 // --- Helpers ---
@@ -1108,6 +1146,37 @@ function normalizeSymptom(raw: string): string | null {
     "got sick after pill": "medication_reaction",
     "allergic to medication": "medication_reaction",
     "side effects": "medication_reaction",
+    "after vaccine": "post_vaccination_reaction",
+    "after vaccination": "post_vaccination_reaction",
+    "after booster": "post_vaccination_reaction",
+    "after shots": "post_vaccination_reaction",
+    "reaction to vaccine": "post_vaccination_reaction",
+    "reaction to shot": "post_vaccination_reaction",
+    "vaccine reaction": "post_vaccination_reaction",
+    "shot reaction": "post_vaccination_reaction",
+    "after rabies shot": "post_vaccination_reaction",
+    "swollen after vaccine": "post_vaccination_reaction",
+    "face swollen after vaccine": "post_vaccination_reaction",
+
+    // Trauma / injury
+    trauma: "trauma",
+    injury: "trauma",
+    injured: "trauma",
+    "hit by car": "trauma",
+    "hit by truck": "trauma",
+    "got hit": "trauma",
+    "got run over": "trauma",
+    "fell off": "trauma",
+    "took a bad fall": "trauma",
+    "fell down stairs": "trauma",
+    "jumped off": "trauma",
+    "hurt after jump": "trauma",
+    "dog attack": "trauma",
+    attacked: "trauma",
+    "bite injury": "trauma",
+    "chest trauma": "trauma",
+    "road traffic accident": "trauma",
+    "rough play injury": "trauma",
 
     // Pregnancy/birth
     "having trouble giving birth": "pregnancy_birth",

@@ -35,7 +35,7 @@ export default function SettingsPage() {
   const [petForm, setPetForm] = useState({
     name: "",
     breed: "",
-    species: "dog" as "dog" | "cat" | "other",
+    species: "dog" as const,
     age_years: "",
     age_months: "",
     weight: "",
@@ -82,25 +82,25 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-500 mt-1">Manage your pets and account</p>
+          <p className="text-gray-500 mt-1">Manage your dogs and account</p>
         </div>
       </div>
 
-      {/* Pet Profiles */}
+      {/* Dog Profiles */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Pet Profiles</h2>
+          <h2 className="text-lg font-bold text-gray-900">Dog Profiles</h2>
           <Button size="sm" onClick={() => setShowAddPet(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Add Pet
+            <Plus className="w-4 h-4 mr-1" /> Add Dog
           </Button>
         </div>
 
         {pets.length === 0 && !showAddPet && (
           <div className="text-center py-12">
-            <div className="text-4xl mb-4">🐾</div>
-            <p className="text-gray-500 mb-4">No pets added yet</p>
+            <div className="text-4xl mb-4">🐕</div>
+            <p className="text-gray-500 mb-4">No dogs added yet</p>
             <Button onClick={() => setShowAddPet(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Add Your First Pet
+              <Plus className="w-4 h-4 mr-2" /> Add Your First Dog
             </Button>
           </div>
         )}
@@ -111,7 +111,7 @@ export default function SettingsPage() {
             <div key={pet.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-xl">
-                  {pet.species === "cat" ? "🐈" : pet.species === "dog" ? "🐕" : "🐾"}
+                  🐕
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">{pet.name}</p>
@@ -139,27 +139,15 @@ export default function SettingsPage() {
         {/* Add Pet Form */}
         {showAddPet && (
           <form onSubmit={handleAddPet} className="mt-6 border-t border-gray-200 pt-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Add New Pet</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Add New Dog</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Pet Name"
+                label="Dog Name"
                 value={petForm.name}
                 onChange={(e) => setPetForm({ ...petForm, name: e.target.value })}
                 placeholder="e.g., Cooper"
                 required
-              />
-              <Select
-                label="Species"
-                value={petForm.species}
-                onChange={(e) =>
-                  setPetForm({ ...petForm, species: e.target.value as "dog" | "cat" | "other" })
-                }
-                options={[
-                  { value: "dog", label: "Dog" },
-                  { value: "cat", label: "Cat" },
-                  { value: "other", label: "Other" },
-                ]}
               />
               <Select
                 label="Breed"
@@ -250,7 +238,7 @@ export default function SettingsPage() {
 
             <div className="flex items-center gap-3">
               <Button type="submit" loading={saving}>
-                <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Pet"}
+                <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Dog"}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setShowAddPet(false)}>
                 Cancel
@@ -274,7 +262,7 @@ export default function SettingsPage() {
         <div>
           <h2 className="text-base font-semibold text-gray-900">Notifications</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Control how and when PawVital contacts you about your pet&apos;s health
+            Control how and when PawVital contacts you about your dog&apos;s health
           </p>
         </div>
         <NotificationPreferencesForm />

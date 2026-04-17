@@ -1,0 +1,441 @@
+{
+  "version": "1.1.0-wave3",
+  "last_updated": "2026-04-17",
+  "required_high_stakes_rule_ids": [
+    "red_flag.blue_gums",
+    "red_flag.pale_gums",
+    "red_flag.unproductive_retching",
+    "red_flag.face_swelling",
+    "red_flag.hives_with_breathing",
+    "red_flag.active_bleeding_trauma",
+    "red_flag.visible_fracture",
+    "red_flag.inability_to_stand",
+    "red_flag.unresponsive",
+    "disposition.any_red_flag_emergency",
+    "disposition.gdv_emergency_composite",
+    "disposition.trauma_instability_emergency",
+    "disposition.post_vaccine_anaphylaxis_emergency",
+    "disease.gdv",
+    "disease.pyometra",
+    "disease.allergic_reaction",
+    "disease.trauma_chest",
+    "modifier.breed_great_dane_gdv",
+    "modifier.breed_french_bulldog_breathing_difficulty",
+    "modifier.breed_dachshund_ivdd",
+    "modifier.breed_pug_breathing_difficulty",
+    "modifier.breed_miniature_schnauzer_pancreatitis",
+    "modifier.breed_irish_wolfhound_gdv",
+    "modifier.breed_newfoundland_heart_disease",
+    "modifier.breed_pembroke_welsh_corgi_ivdd"
+  ],
+  "entries": [
+    {
+      "rule_id": "red_flag.blue_gums",
+      "rule_type": "red_flag",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Cyanosis and hypoxemia",
+      "source_url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Blue or gray gums indicate severe hypoxemia and demand emergency disposition.",
+      "high_stakes": true,
+      "red_flags": [
+        "blue_gums"
+      ]
+    },
+    {
+      "rule_id": "red_flag.pale_gums",
+      "rule_type": "red_flag",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Shock and poor perfusion indicators",
+      "source_url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Pale gums raise concern for shock, hemorrhage, or severe anemia.",
+      "high_stakes": true,
+      "red_flags": [
+        "pale_gums"
+      ]
+    },
+    {
+      "rule_id": "red_flag.unproductive_retching",
+      "rule_type": "red_flag",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Gastric dilatation volvulus emergency signs",
+      "source_url": "https://www.merckvetmanual.com/digestive-system/gastric-dilatation-volvulus",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Non-productive retching with abdominal distension is a must-not-miss GDV sign.",
+      "high_stakes": true,
+      "red_flags": [
+        "unproductive_retching"
+      ]
+    },
+    {
+      "rule_id": "red_flag.face_swelling",
+      "rule_type": "red_flag",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Acute hypersensitivity and anaphylaxis",
+      "source_url": "https://www.merckvetmanual.com/immune-system/anaphylaxis",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Rapid facial swelling can precede airway compromise and should escalate.",
+      "high_stakes": true,
+      "red_flags": [
+        "face_swelling"
+      ]
+    },
+    {
+      "rule_id": "red_flag.hives_with_breathing",
+      "rule_type": "red_flag",
+      "evidence_tier": "A",
+      "source": "VECCS emergency triage references for anaphylaxis",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Hives plus breathing difficulty should route to emergency care.",
+      "high_stakes": true,
+      "red_flags": [
+        "hives_with_breathing"
+      ]
+    },
+    {
+      "rule_id": "red_flag.active_bleeding_trauma",
+      "rule_type": "red_flag",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Traumatic hemorrhage assessment",
+      "source_url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Active external bleeding after trauma should escalate immediately.",
+      "high_stakes": true,
+      "red_flags": [
+        "active_bleeding_trauma"
+      ]
+    },
+    {
+      "rule_id": "red_flag.visible_fracture",
+      "rule_type": "red_flag",
+      "evidence_tier": "B",
+      "source": "Veterinary trauma stabilization guidance",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Open or obviously displaced fractures require urgent stabilization.",
+      "high_stakes": true,
+      "red_flags": [
+        "visible_fracture"
+      ]
+    },
+    {
+      "rule_id": "red_flag.inability_to_stand",
+      "rule_type": "red_flag",
+      "evidence_tier": "B",
+      "source": "Veterinary neurology emergency triage references",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Acute inability to stand may reflect spinal, neurologic, or shock states.",
+      "high_stakes": true,
+      "red_flags": [
+        "inability_to_stand"
+      ]
+    },
+    {
+      "rule_id": "red_flag.unresponsive",
+      "rule_type": "red_flag",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Coma and altered mentation emergency care",
+      "source_url": "https://www.merckvetmanual.com/emergency-medicine-and-critical-care",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Unresponsiveness is always an emergency presentation.",
+      "high_stakes": true,
+      "red_flags": [
+        "unresponsive"
+      ]
+    },
+    {
+      "rule_id": "disposition.any_red_flag_emergency",
+      "rule_type": "disposition",
+      "evidence_tier": "A",
+      "source": "Emergency veterinary triage standard",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Triggered emergency red flags override lower-acuity narratives.",
+      "high_stakes": true,
+      "urgency_levels": [
+        "emergency"
+      ]
+    },
+    {
+      "rule_id": "disposition.gdv_emergency_composite",
+      "rule_type": "disposition",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Gastric dilatation volvulus",
+      "source_url": "https://www.merckvetmanual.com/digestive-system/gastric-dilatation-volvulus",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Abdominal distension with non-productive retching requires emergency routing.",
+      "high_stakes": true,
+      "symptom_keys": [
+        "swollen_abdomen",
+        "vomiting",
+        "pacing_restlessness"
+      ]
+    },
+    {
+      "rule_id": "disposition.trauma_instability_emergency",
+      "rule_type": "disposition",
+      "evidence_tier": "A",
+      "source": "Veterinary trauma triage stabilization references",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Trauma plus instability, collapse, or respiratory compromise should route to emergency care.",
+      "high_stakes": true,
+      "symptom_keys": [
+        "trauma",
+        "difficulty_breathing",
+        "collapse"
+      ]
+    },
+    {
+      "rule_id": "disposition.post_vaccine_anaphylaxis_emergency",
+      "rule_type": "disposition",
+      "evidence_tier": "A",
+      "source": "AAHA vaccine adverse event guidance",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Post-vaccination facial swelling, hives, vomiting, or breathing change should escalate.",
+      "high_stakes": true,
+      "symptom_keys": [
+        "post_vaccination_reaction",
+        "difficulty_breathing",
+        "vomiting"
+      ]
+    },
+    {
+      "rule_id": "disease.gdv",
+      "rule_type": "disease",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Gastric dilatation-volvulus",
+      "source_url": "https://www.merckvetmanual.com/digestive-system/gastric-dilatation-volvulus",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Minutes matter for suspected gastric dilatation-volvulus.",
+      "high_stakes": true,
+      "diseases": [
+        "gdv"
+      ]
+    },
+    {
+      "rule_id": "disease.pyometra",
+      "rule_type": "disease",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Pyometra",
+      "source_url": "https://www.merckvetmanual.com/reproductive-system/pyometra",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Systemically ill intact females with abdominal or discharge complaints need urgent evaluation.",
+      "high_stakes": true,
+      "diseases": [
+        "pyometra"
+      ]
+    },
+    {
+      "rule_id": "disease.allergic_reaction",
+      "rule_type": "disease",
+      "evidence_tier": "A",
+      "source": "Merck Veterinary Manual - Acute hypersensitivity reaction",
+      "source_url": "https://www.merckvetmanual.com/immune-system/anaphylaxis",
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Acute allergy can progress to airway compromise and shock.",
+      "high_stakes": true,
+      "diseases": [
+        "allergic_reaction"
+      ]
+    },
+    {
+      "rule_id": "disease.trauma_chest",
+      "rule_type": "disease",
+      "evidence_tier": "A",
+      "source": "Veterinary emergency and critical care trauma references",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Chest trauma can rapidly decompensate with internal injury or respiratory compromise.",
+      "high_stakes": true,
+      "diseases": [
+        "trauma_chest"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_great_dane_gdv",
+      "rule_type": "modifier",
+      "evidence_tier": "A",
+      "source": "Glickman et al. breed risk factors for GDV",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Deep-chested giant breeds such as Great Danes have a markedly elevated GDV risk.",
+      "high_stakes": true,
+      "diseases": [
+        "gdv"
+      ],
+      "breeds": [
+        "Great Dane"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_irish_wolfhound_gdv",
+      "rule_type": "modifier",
+      "evidence_tier": "A",
+      "source": "Peer-reviewed giant-breed GDV prevalence studies",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Irish Wolfhounds share high GDV predisposition with other deep-chested giant breeds.",
+      "high_stakes": true,
+      "diseases": [
+        "gdv"
+      ],
+      "breeds": [
+        "Irish Wolfhound"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_french_bulldog_breathing_difficulty",
+      "rule_type": "modifier",
+      "evidence_tier": "A",
+      "source": "Brachycephalic obstructive airway syndrome literature",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "French Bulldogs have strong breed-specific risk for upper airway obstruction and heat intolerance.",
+      "high_stakes": true,
+      "diseases": [
+        "difficulty_breathing",
+        "heat_stroke"
+      ],
+      "breeds": [
+        "French Bulldog"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_pug_breathing_difficulty",
+      "rule_type": "modifier",
+      "evidence_tier": "A",
+      "source": "Brachycephalic airway syndrome prevalence studies",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Pugs are overrepresented for upper airway obstruction and heat-related respiratory compromise.",
+      "high_stakes": true,
+      "diseases": [
+        "difficulty_breathing",
+        "heat_stroke"
+      ],
+      "breeds": [
+        "Pug"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_dachshund_ivdd",
+      "rule_type": "modifier",
+      "evidence_tier": "A",
+      "source": "Multiple peer-reviewed IVDD studies in Dachshunds",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Dachshunds remain the highest-priority breed modifier for IVDD.",
+      "high_stakes": true,
+      "diseases": [
+        "ivdd"
+      ],
+      "breeds": [
+        "Dachshund"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_pembroke_welsh_corgi_ivdd",
+      "rule_type": "modifier",
+      "evidence_tier": "B",
+      "source": "Veterinary neurology and breed predisposition references for chondrodystrophic dogs",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Pembroke Welsh Corgis are a high-value missing chondrodystrophic breed for IVDD risk.",
+      "high_stakes": true,
+      "diseases": [
+        "ivdd"
+      ],
+      "breeds": [
+        "Pembroke Welsh Corgi"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_miniature_schnauzer_pancreatitis",
+      "rule_type": "modifier",
+      "evidence_tier": "B",
+      "source": "Breed predisposition literature for pancreatitis and hyperlipidemia",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Miniature Schnauzers have increased pancreatitis risk tied to lipid metabolism disease.",
+      "high_stakes": true,
+      "diseases": [
+        "pancreatitis"
+      ],
+      "breeds": [
+        "Miniature Schnauzer"
+      ]
+    },
+    {
+      "rule_id": "modifier.breed_newfoundland_heart_disease",
+      "rule_type": "modifier",
+      "evidence_tier": "B",
+      "source": "Breed-associated cardiac disease references",
+      "source_url": null,
+      "review_date": "2026-04-10",
+      "next_review": "2026-10-10",
+      "reviewer": "Clinical audit",
+      "notes": "Newfoundlands are overrepresented for congenital and structural heart disease.",
+      "high_stakes": true,
+      "diseases": [
+        "heart_disease",
+        "heart_failure"
+      ],
+      "breeds": [
+        "Newfoundland"
+      ]
+    }
+  ]
+}

@@ -98,7 +98,7 @@ const initialPosts: Post[] = [
     authorPet: "Daisy, Poodle",
     title: "Sharing Daisy's monthly wellness report - so proud!",
     content:
-      "Daisy's health score went from 62 to 88 in just 4 months! The combination of the supplement plan, better food, and consistent exercise routine has been incredible. Sharing because I want other pet parents to know it really does work if you stick with it.",
+      "Daisy's health score went from 62 to 88 in just 4 months! The combination of the supplement plan, better food, and consistent exercise routine has been incredible. Sharing because I want other dog parents to know it really does work if you stick with it.",
     category: "general",
     likes: 112,
     comments: 31,
@@ -165,7 +165,7 @@ export default function CommunityPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900">Paw Circle</h1>
-          <p className="text-gray-500 mt-1">Connect with fellow pet parents</p>
+          <p className="text-gray-500 mt-1">Connect with fellow dog parents</p>
         </div>
         <Button
           onClick={() => setShowNewPost(true)}

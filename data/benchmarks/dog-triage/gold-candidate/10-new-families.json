@@ -5,6 +5,44 @@
   "description": "New complaint family coverage for benchmark expansion.",
   "cases": [
     {
+      "id": "question-trauma-fall-yard",
+      "description": "A fall with ongoing soreness should open the trauma flow.",
+      "tags": [
+        "question",
+        "trauma",
+        "injury"
+      ],
+      "weight": 2,
+      "expectations": {
+        "responseType": "question",
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "trauma"
+        ]
+      },
+      "complaint_family_tags": [
+        "trauma"
+      ],
+      "risk_tier": "tier_2_same_day",
+      "uncertainty_pattern": "clean",
+      "request": {
+        "action": "chat",
+        "pet": {
+          "name": "Crash",
+          "breed": "Mixed Breed",
+          "age_years": 4,
+          "weight": 48,
+          "species": "dog"
+        },
+        "messages": [
+          {
+            "role": "user",
+            "content": "My dog jumped off the deck wrong and now seems sore and shaky."
+          }
+        ]
+      }
+    },
+    {
       "id": "question-anxiety-separation",
       "description": "Separation anxiety with destructive behavior should open behavioral questioning.",
       "tags": [
@@ -404,11 +442,13 @@
       "weight": 2,
       "expectations": {
         "responseType": "question",
-        "readyForReport": false
+        "readyForReport": false,
+        "knownSymptomsInclude": [
+          "post_vaccination_reaction"
+        ]
       },
       "complaint_family_tags": [
-        "medication_reaction",
-        "puppy_concern"
+        "post_vaccination_reaction"
       ],
       "risk_tier": "tier_3_48h_monitor",
       "uncertainty_pattern": "clean",

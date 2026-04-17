@@ -74,12 +74,12 @@ export default function Faq() {
           {
             question: "What breeds do you support?",
             answer:
-              "All dog and cat breeds, including mixed breeds. Our clinical matrix includes breed-specific disease multipliers for over 200 breeds.",
+              "PawVital currently supports dogs only. Breed-aware guidance is limited to the validated canine scope documented in the current clinical audit.",
           },
           {
             question: "How does the AI work?",
             answer:
-              "PawVital uses a deterministic clinical matrix combined with AI-powered knowledge retrieval from 10,000+ clinical cases, veterinary manuals, and reference images.",
+              "PawVital uses a deterministic canine clinical matrix combined with AI-supported retrieval from veterinary manuals, curated clinical cases, and reference imagery.",
           },
         ]);
       });

@@ -196,7 +196,7 @@ describe("symptom-checker conversation state UI", () => {
 
     expect(screen.getAllByText("Out of scope").length).toBeGreaterThanOrEqual(1);
     expect(
-      screen.getByText("Species not supported in this workflow")
+      screen.getByText("Only dog symptom checks are supported right now")
     ).toBeTruthy();
     expect(
       screen.getByText("Please contact a veterinarian for help with this species.")

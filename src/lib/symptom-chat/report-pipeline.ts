@@ -3,6 +3,7 @@ import {
   diagnoseWithDeepSeek,
   isNvidiaConfigured,
 } from "@/lib/nvidia-models";
+import type { RetrievalBundle } from "@/lib/clinical-evidence";
 import {
   buildDiagnosisContext,
   type PetProfile,
@@ -19,6 +20,7 @@ import {
   searchClinicalCases,
 } from "@/lib/knowledge-retrieval";
 import { fetchBreedProfile, isLikelyDogContext } from "@/lib/pet-enrichment";
+import { getProvenanceRegistry } from "@/lib/provenance-registry";
 import { buildReportConfidenceCalibration } from "@/lib/report-confidence";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
@@ -68,6 +70,84 @@ interface GenerateReportInput {
   image?: string;
   requestOrigin?: string;
   verifiedUserId?: string | null;
+}
+
+function dedupeStrings(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function buildEvidenceSummary(input: {
+  evidenceChain: Array<{
+    source_kind?: string;
+    provenance_ids?: string[];
+    evidence_tier?: string;
+    last_reviewed_at?: string;
+  }>;
+  retrievalBundle: RetrievalBundle;
+}) {
+  const deterministicItems = input.evidenceChain.filter(
+    (item) => item.source_kind === "deterministic_rule"
+  );
+
+  return {
+    cases_found: input.retrievalBundle.textChunks.length,
+    knowledge_chunks_found: input.retrievalBundle.textChunks.length,
+    reference_images_found: input.retrievalBundle.imageMatches.length,
+    deterministic_rules_applied: deterministicItems.length,
+    provenance_backed_claims: deterministicItems.filter(
+      (item) =>
+        (item.provenance_ids?.length ?? 0) > 0 &&
+        Boolean(item.evidence_tier) &&
+        Boolean(item.last_reviewed_at)
+    ).length,
+    retrieval_sources_found: dedupeStrings(input.retrievalBundle.sourceCitations)
+      .length,
+  };
+}
+
+function applyHighStakesProvenanceGuard(
+  report: Record<string, unknown>,
+  evidenceChain: Array<{
+    high_stakes?: boolean;
+    provenance_ids?: string[];
+    evidence_tier?: string;
+    last_reviewed_at?: string;
+  }>
+): Record<string, unknown> {
+  const hasUnbackedHighStakesClaim = evidenceChain.some(
+    (item) =>
+      item.high_stakes &&
+      ((item.provenance_ids?.length ?? 0) === 0 ||
+        !item.evidence_tier ||
+        !item.last_reviewed_at)
+  );
+
+  if (!hasUnbackedHighStakesClaim) {
+    return report;
+  }
+
+  const existingClinicalNotes =
+    typeof report.clinical_notes === "string" ? report.clinical_notes : "";
+  const recommendation =
+    typeof report.recommendation === "string" ? report.recommendation : "";
+  const genericTitle =
+    recommendation === "emergency_vet"
+      ? "Emergency dog triage recommendation"
+      : "Dog triage recommendation";
+
+  return {
+    ...report,
+    title: genericTitle,
+    explanation:
+      "This guidance is being phrased conservatively because one or more high-stakes clinical claims could not be linked to reviewed provenance. Please follow the urgency recommendation and seek veterinary care promptly if your dog worsens.",
+    clinical_notes: [
+      existingClinicalNotes,
+      "High-stakes specificity was suppressed until reviewed provenance is available for every surfaced claim.",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    high_stakes_claims_suppressed: true,
+  };
 }
 
 function buildVetHandoffSummary(
@@ -278,7 +358,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
   "severity": "${urgencyToSeverity[context.highest_urgency] || "medium"}",
   "recommendation": "${urgencyToRecommendation[context.highest_urgency] || "vet_48h"}",
   "title": "Specific clinical title based on top differential",
-  "explanation": "4-6 sentences for pet parent. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
+  "explanation": "4-6 sentences for a dog owner. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
   "differential_diagnoses": [
     {
       "condition": "Use the medical_term from the matrix calculation",
@@ -319,10 +399,13 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
         retrievalBundle
       );
     }
-    report.evidenceChain = buildStructuredEvidenceChain(
+    const structuredEvidenceChain = buildStructuredEvidenceChain({
       session,
-      retrievalBundle
-    );
+      retrievalBundle,
+      pet,
+      highestUrgency: context.highest_urgency,
+    });
+    report.evidenceChain = structuredEvidenceChain;
 
     let finalReport = report;
     if (useNvidia) {
@@ -333,6 +416,20 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
         console.error("Safety verification failed (non-blocking):", safetyError);
       }
     }
+
+    finalReport.evidenceChain = structuredEvidenceChain;
+    finalReport.knowledge_sources_used = dedupeStrings(
+      retrievalBundle.sourceCitations
+    );
+    finalReport.provenance_registry_version = getProvenanceRegistry().version;
+    finalReport.evidence_summary = buildEvidenceSummary({
+      evidenceChain: structuredEvidenceChain,
+      retrievalBundle,
+    });
+    finalReport = applyHighStakesProvenanceGuard(
+      finalReport,
+      structuredEvidenceChain
+    );
 
     const hasModelDisagreement = Boolean(
       session.case_memory?.consult_opinions?.some(
@@ -519,7 +616,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
         sessionId: null,
         reportStorageId,
         urgency: context.highest_urgency,
-        petName: pet.name ?? "your pet",
+        petName: pet.name ?? "your dog",
       });
 
       if (
@@ -530,7 +627,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
           userId: verifiedUserId,
           sessionId: null,
           urgency: context.highest_urgency as "emergency" | "high",
-          petName: pet.name ?? "your pet",
+          petName: pet.name ?? "your dog",
           topDiagnosis: context.top5[0]?.medical_term ?? "Unknown",
         });
       }

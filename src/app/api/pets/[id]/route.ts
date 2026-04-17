@@ -162,6 +162,17 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Missing fields to update" }, { status: 400 });
     }
 
+    if (typeof cleanBody.species === "string") {
+      const normalizedSpecies = cleanBody.species.trim().toLowerCase();
+      if (normalizedSpecies !== "dog") {
+        return NextResponse.json(
+          { error: "PawVital currently supports dogs only." },
+          { status: 400 }
+        );
+      }
+      cleanBody.species = "dog";
+    }
+
     const { data: pet, error } = await supabase
       .from("pets")
       .update(cleanBody)

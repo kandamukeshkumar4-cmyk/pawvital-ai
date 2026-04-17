@@ -2,76 +2,77 @@
 
 ## What Is PawVital?
 
-PawVital AI is an evidence-based veterinary symptom triage application for dogs and cats. It helps pet owners understand their pet's symptoms, assess urgency, and prepare professional-quality reports to share with their veterinarian.
+PawVital AI is a dog-only veterinary symptom triage application. It helps dog owners describe what is happening, understand urgency, and prepare a structured report to share with a veterinarian.
 
-Unlike generic pet health apps that rely on simple checklists or web search scraping, PawVital uses a deterministic clinical matrix powered by veterinary reference data, clinical case matching, and multi-model AI inference.
+Unlike generic pet-health tools that rely on loose checklist logic or open-ended prompting, PawVital is built around a deterministic canine clinical matrix. The LLM layer supports language understanding and report narration, but it does not replace the deterministic medical authority.
+
+## Current Validated Scope
+
+As of the 2026-04-10 clinical audit and current Wave 3 scope gate:
+
+- Species support is dog-only.
+- Deterministic complaint coverage spans 50 complaint families.
+- The clinical matrix covers roughly 150+ modeled canine conditions.
+- Active breed-modifier coverage spans 26 breeds, with expansion still pending for several high-value gaps.
+- The current benchmark pack is useful for engineering evaluation, but the `gold-candidate` suite is not yet a true vet-adjudicated gold standard.
 
 ## How the Clinical Matrix Works
 
-PawVital's core diagnostic engine is a **deterministic clinical matrix** — not a black-box LLM prompt. Here's the high-level flow:
+PawVital's core engine is a **deterministic canine clinical matrix**, not a black-box diagnosis prompt. At a high level:
 
-1. **Symptom Intake**: The user describes what's happening in natural language. The AI asks clinically structured follow-up questions (onset, duration, severity, associated symptoms).
+1. **Symptom intake**: The owner describes what they are seeing in natural language.
+2. **Structured follow-up**: The system asks clinically bounded questions about onset, severity, timing, red flags, and related signs.
+3. **Deterministic matrix lookup**: Complaint families, disease rules, breed modifiers, age/weight context, and urgency floors are evaluated in the deterministic engine.
+4. **Supportive retrieval**: Veterinary references and related internal evidence can support explanation and reporting, but they do not override deterministic urgency.
+5. **Report generation**: PawVital produces a structured owner-facing report and a veterinarian handoff summary with safety guidance and reasoning context.
 
-2. **Clinical Matrix Lookup**: The symptom set is matched against 200+ disease profiles. Each disease profile contains:
-   - Symptom-to-disease correlation weights
-   - Breed-specific multipliers (e.g., Dachshunds get a 10× multiplier for IVDD)
-   - Age and weight modifiers
-   - Urgency classification rules
+## What Data Sources Power the System
 
-3. **Knowledge Retrieval**: The system retrieves relevant passages from:
-   - Merck Veterinary Manual
-   - WAVD (World Association for Veterinary Dermatology) guidelines
-   - 10,000+ indexed clinical case records
-   - 9,700+ labeled reference images
+| Source | Role | Current note |
+|--------|------|--------------|
+| Deterministic clinical matrix | Medical authority | Complaint logic, urgency floors, disease rules, and must-ask questions |
+| Merck Veterinary Manual | Reference support | Used as supporting evidence for explanation and review |
+| WAVD guidance and curated veterinary references | Reference support | Used for supporting evidence in relevant domains |
+| Curated clinical case corpus | Retrieval support | Used for evidence enrichment and report context |
+| Reference image corpus | Retrieval support | Used for guarded image-support workflows |
+| Breed modifier registry | Deterministic support | 26 active breeds as of the 2026-04-10 audit |
 
-4. **Differential Diagnosis**: The matrix produces a ranked list of differential diagnoses, each with:
-   - Confidence score (percentage)
-   - Evidence citations (source + passage)
-   - Urgency rating (green/amber/red)
+All retrieval and corpus sources are supplemental. The deterministic engine remains authoritative for medical routing.
 
-5. **SOAP Report Generation**: A structured report is generated in SOAP (Subjective, Objective, Assessment, Plan) format — the same format veterinarians use in medical records.
+## Multimodal Status
 
-## What Data Sources Power the Diagnosis
+PawVital has multimodal scaffolding and a documented dog-focused wound triage pilot, but broader multimodal claims are not yet validated for general release.
 
-| Source | Type | Size |
-|--------|------|------|
-| Merck Veterinary Manual | Reference text | Full text indexed |
-| WAVD Guidelines | Dermatology guidelines | Selected chapters |
-| Clinical Case Records | Structured cases | 10,000+ records |
-| Reference Image Library | Labeled veterinary images | 9,700+ images |
-| Breed Disease Profiles | Structured data | 200+ breeds |
+Current safe product description:
 
-All data is embedded using NVIDIA NIM embedding models and stored in Supabase with pgvector for semantic search.
-
-## Vision Analysis Pipeline
-
-PawVital includes a 3-tier vision analysis pipeline for photo-based symptom assessment:
-
-1. **Tier 1 — Image Classification**: Basic categorization (skin, eye, wound, etc.)
-2. **Tier 2 — Similarity Search**: Compares against 9,700+ reference images to find visually similar conditions
-3. **Tier 3 — AI Analysis**: Multi-model inference for detailed condition analysis
+- Image support exists as a guarded canine adjunct workflow.
+- The documented validated pilot is still wound-focused.
+- Broader skin, eye, ear, oral, gait, audio, and temporal packs are roadmap work, not current validated scope.
 
 ## Privacy and Safety
 
-- **No data selling**: Pet health data is never sold to third parties
-- **User-controlled data**: Users can delete all their data at any time
-- **Not a vet replacement**: Every report includes a disclaimer that PawVital is a triage tool, not a substitute for professional veterinary care
-- **Transparent evidence**: Every diagnosis shows its evidence sources so users can verify the reasoning
+- **No medical authority shift**: `src/lib/triage-engine.ts` and `src/lib/clinical-matrix.ts` remain the medical authority.
+- **No data selling**: Dog health data is not sold to third parties.
+- **User-controlled data**: Users can delete their account data and stored reports.
+- **Not a veterinary replacement**: PawVital is a triage and communication tool, not a substitute for professional veterinary care.
+- **Transparent evidence**: Owner reports can expose evidence and confidence context without turning supportive retrieval into medical authority.
 
 ## Target Audience
 
-### Pet Owners
-- Dog and cat owners who want to understand their pet's symptoms before deciding whether a vet visit is needed
-- Pet parents who want to track their pet's health over time
-- Users who want to prepare useful information for their veterinarian
+### Dog owners
 
-### Developers
-- The codebase is structured for extensibility — new disease profiles, knowledge sources, and embedding models can be added through the data pipeline
-- Solo developers interested in veterinary AI applications can study the architecture
+- People who want help understanding their dog's symptoms before deciding how urgently to seek care
+- Households that want a clearer, structured history for veterinarian visits
+- Owners who want safer triage guidance than a generic web search
+
+### Developers and operators
+
+- Engineers extending the deterministic clinical system, report pipeline, benchmark harness, or review tooling
+- Operators maintaining validated scope, provenance, and release gating for the dog-only product
 
 ## Technical Stack
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4
-- **Backend**: Next.js API routes, NVIDIA NIM models, Supabase (Postgres + pgvector)
-- **AI**: Multi-model inference (NVIDIA NIM for generation, embeddings for retrieval)
-- **Deployment**: Vercel (frontend), Supabase (database), RunPod (GPU inference)
+- **Backend**: Next.js API routes, Supabase (Postgres + pgvector), optional sidecar services
+- **AI support**: NVIDIA-hosted generation and embedding services plus supplemental multimodal sidecars
+- **Deployment**: Vercel (app), Supabase (database), RunPod/sidecars where enabled

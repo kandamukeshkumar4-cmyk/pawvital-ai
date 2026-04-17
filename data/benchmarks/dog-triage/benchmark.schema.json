@@ -109,7 +109,73 @@
           "type": "array",
           "items": { "type": "string" }
         },
+        "complaint_family_tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
         "weight": { "type": "number", "minimum": 0 },
+        "risk_tier": { "type": "string", "minLength": 1 },
+        "uncertainty_pattern": { "type": "string", "minLength": 1 },
+        "must_not_miss_marker": { "type": "boolean" },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "source_shard": { "type": "string", "minLength": 1 },
+            "source_suite_id": { "type": "string", "minLength": 1 },
+            "freeze_date": { "type": "string", "minLength": 1 },
+            "version": { "type": "string", "minLength": 1 }
+          }
+        },
+        "wave3_strata": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "emergency",
+              "urgent",
+              "common",
+              "ambiguous",
+              "contradictory",
+              "low-information",
+              "rare-but-critical"
+            ]
+          }
+        },
+        "wave3_adjudication": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "high_risk": { "type": "boolean" },
+            "review_tier": { "type": "string", "minLength": 1 },
+            "reviewer_slots": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["role", "reviewer_id", "status"],
+                "properties": {
+                  "role": { "type": "string", "minLength": 1 },
+                  "reviewer_id": { "type": "string", "minLength": 1 },
+                  "status": { "type": "string", "minLength": 1 }
+                }
+              }
+            },
+            "disagreement_status": { "type": "string", "minLength": 1 },
+            "must_ask_expectations": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["question_ids", "status", "notes"],
+              "properties": {
+                "question_ids": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "status": { "type": "string", "minLength": 1 },
+                "notes": { "type": "string" }
+              }
+            }
+          }
+        },
         "request": { "$ref": "#/$defs/request" },
         "expectations": { "$ref": "#/$defs/expectations" }
       }
