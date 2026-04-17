@@ -2,15 +2,16 @@
 
 - Result: FAIL
 - Total frozen cases: 226
-- Scorecard case count: 0
+- Scorecard case count: 307
 - Emergency recall: 0.0%
-- Unsafe downgrade rate: 0.00%
+- Unsafe downgrade rate: 51.14%
 
 ## Failures
 
-- Live scorecard case count (0) does not match Wave 3 freeze (226).
+- Live scorecard case count (307) does not match Wave 3 freeze (226).
 - Emergency recall 0.0% is below the 98.0% gate.
-- Live scorecard is blocked and cannot clear the Wave 3 release gate.
+- Unsafe downgrade rate 51.14% exceeds the 1.00% gate.
+- 157 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
 
 ## Warnings
 
@@ -18,7 +19,26 @@ _None_
 
 ## Blocking High-Risk Failures
 
-_None_
+- cardiac-emergency-collapse-after-excitement: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-collapse-after-excitement: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-collapse-blue-gums: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-collapse-blue-gums: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-rapid-breathing-pale: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-rapid-breathing-pale: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-resting-breathing-distress: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- cardiac-emergency-resting-breathing-distress: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-acute-paralysis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-acute-paralysis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-addisonian-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-addisonian-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-allergic-reaction-hives: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-allergic-reaction-hives: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-anaphylaxis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-anaphylaxis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-bloat-after-meal: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
+- emergency-bloat-after-meal: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
+- emergency-bloat-gasdilation: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
+- emergency-bloat-gasdilation: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:swollen_abdomen)
 
 ## Missing High-Stakes Rule IDs
 
