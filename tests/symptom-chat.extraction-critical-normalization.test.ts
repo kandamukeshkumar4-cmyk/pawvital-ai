@@ -2,6 +2,8 @@ import {
   extractDeterministicEmergencyRedFlags,
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
+import { extractDeterministicAnswersForTurn } from "@/lib/symptom-chat/answer-extraction";
+import { addSymptoms, createSession } from "@/lib/triage-engine";
 
 describe("VET-1335 critical emergency normalization", () => {
   describe("postpartum eclampsia", () => {
@@ -89,6 +91,48 @@ describe("VET-1335 critical emergency normalization", () => {
       const redFlags = extractDeterministicEmergencyRedFlags(message, symptoms);
 
       expect(redFlags).not.toContain("urinary_blockage");
+    });
+  });
+
+  describe("vomiting blood and collapse", () => {
+    it("maps 'threw up' phrasing to vomiting for the blood-collapse blocker", () => {
+      const message =
+        "My dog threw up a lot of blood and now he is weak and wobbly.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("vomiting");
+    });
+
+    it("extracts vomit_blood from first-turn bleeding vomit phrasing", () => {
+      const session = addSymptoms(createSession(), ["vomiting"]);
+      const answers = extractDeterministicAnswersForTurn(
+        "My dog threw up a lot of blood and now he is weak and wobbly.",
+        session
+      );
+
+      expect(answers.vomit_blood).toBe(true);
+    });
+
+    it("does not add emergency red flags for a mild one-off red-treat lookalike", () => {
+      const message =
+        "He threw up once after eating a red treat, but now he is alert and acting normal.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+      const redFlags = extractDeterministicEmergencyRedFlags(message, symptoms);
+
+      expect(symptoms).toContain("vomiting");
+      expect(redFlags).toEqual([]);
+    });
+
+    it("does not mark red-food vomit as vomit_blood without bleeding language", () => {
+      const session = addSymptoms(createSession(), ["vomiting"]);
+      const answers = extractDeterministicAnswersForTurn(
+        "He threw up once after eating a red treat, but now he is alert and acting normal.",
+        session
+      );
+
+      expect(answers.vomit_blood).toBeUndefined();
     });
   });
 });

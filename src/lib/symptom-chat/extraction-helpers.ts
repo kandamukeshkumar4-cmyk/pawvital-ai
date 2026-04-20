@@ -261,6 +261,9 @@ export function extractSymptomsFromKeywords(message: string): string[] {
 
   const mentionsVomiting =
     /\b(vomit|vomiting|throwing up|threw up|retching|heaving)\b/.test(lower);
+  if (mentionsVomiting) {
+    pushSymptom("vomiting");
+  }
   const mentionsDiarrhea =
     /\b(diarrhea|diarrhoea|bloody diarrhea|the runs)\b/.test(lower);
   if (mentionsVomiting && mentionsDiarrhea) {

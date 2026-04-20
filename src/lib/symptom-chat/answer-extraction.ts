@@ -152,6 +152,8 @@ function deriveDeterministicAnswerForQuestion(
       return extractBloodColor(rawMessage);
     case "blood_amount":
       return extractBloodAmount(rawMessage);
+    case "vomit_blood":
+      return extractVomitBlood(rawMessage);
     case "rat_poison_access":
       return extractRatPoisonAccess(rawMessage);
     case "toxin_exposure":
@@ -270,6 +272,7 @@ function isRefreshableDeterministicQuestion(questionId: string): boolean {
     "consciousness_level",
     "blood_color",
     "blood_amount",
+    "vomit_blood",
     "rat_poison_access",
     "toxin_exposure",
     "trauma_mobility",
@@ -363,6 +366,7 @@ function shouldPreferDeterministicAnswer(questionId: string): boolean {
     "consciousness_level",
     "blood_color",
     "blood_amount",
+    "vomit_blood",
     "rat_poison_access",
     "toxin_exposure",
     "trauma_mobility",
@@ -591,6 +595,27 @@ function extractBloodAmount(rawMessage: string): string | null {
   }
   if (/\b(streaks|streaking|on the surface|small amount)\b/.test(lower)) {
     return "streaks";
+  }
+
+  return null;
+}
+
+function extractVomitBlood(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(no blood in (the )?vomit|no blood in what (he|she|they) threw up|not bloody vomit|not vomiting blood|wasn't blood|was not blood)\b/.test(
+      lower
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    /\b(vomit|vomiting|throwing up|threw up|throw up)\b/.test(lower) &&
+    /\b(blood|bloody|coffee grounds?|coffee-ground)\b/.test(lower)
+  ) {
+    return true;
   }
 
   return null;
