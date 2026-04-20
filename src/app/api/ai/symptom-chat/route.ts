@@ -287,6 +287,143 @@ function collectRouteEmergencyOverrideSignals(
     signals.add("parvo_style_puppy_emergency");
   }
 
+  const hasXylitolExposure =
+    /\b(xylitol|sugar[- ]free gum|sugar[- ]free candy)\b/.test(lower) ||
+    /\b(xylitol|sugar[- ]free gum|sugar[- ]free candy)\b/.test(
+      priorToxinExposure.toLowerCase()
+    );
+  if (
+    hasXylitolExposure &&
+    /\b(vomit|vomiting|throwing up|threw up|shaky|shaking|trembling|weak|collapse|collapsed|confused|disoriented|stumbling)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("xylitol_toxicity_emergency");
+  }
+
+  if (
+    /\b(electrical cord|power cord|extension cord|electrical shock|electrocuted|live wire|outlet)\b/.test(
+      lower
+    ) &&
+    /\b(chew|chewed|bit|bitten|trembling|shaking|weak|collapse|collapsed|burn|burned|mouth|breathing|panting)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("electrical_shock_emergency");
+  }
+
+  if (
+    /\b(diabetic)\b/.test(lower) &&
+    /\b(stumbling|stumble|confused|disoriented|weak|shaky|shaking|trembling|collapse|collapsed|barely responsive)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("diabetic_crisis_emergency");
+  }
+
+  if (
+    /\b(tiny|toy breed|toy-breed|small breed|tiny puppy|small puppy|puppy)\b/.test(
+      lower
+    ) &&
+    /\b(shaky|shaking|trembling|weak|wobbly|stumbling|flopped over|collapse|collapsed)\b/.test(
+      lower
+    ) &&
+    /\b(not eating|not eating well|won't eat|wouldn't eat|refusing food|low blood sugar|hypoglycemia)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("hypoglycemia_collapse_emergency");
+  }
+
+  if (
+    /\b(shaking|shaky|trembling|tremors?)\b/.test(lower) &&
+    /\b(barely responsive|not responsive|unresponsive|won't wake|will not wake|won't get up)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("post_tremor_unresponsive_emergency");
+  }
+
+  if (
+    /\b(shaking|shaky|trembling|tremors?)\b/.test(lower) &&
+    /\b(weak|weakness|collapse|collapsed)\b/.test(lower) &&
+    (/\bcold\b/.test(lower) ||
+      /\b(ears|paws|feet)\b[^.?!]*\bfeel cold\b/.test(lower))
+  ) {
+    signals.add("cold_extremities_weakness_emergency");
+  }
+
+  if (
+    (/\b(open fracture|visible bone|bone visible|bone sticking out|exposed bone)\b/.test(
+      lower
+    ) ||
+      /\b(see|seeing|can see)\b[^.?!]*\bbone\b[^.?!]*\b(wound|leg|arm|limb)\b/.test(
+        lower
+      ) ||
+      /\bbone\b[^.?!]*\bthrough\b[^.?!]*\b(wound|skin)\b/.test(lower)) &&
+    /\b(limp|limping|wound|leg|fracture|broken|injur)\b/.test(lower)
+  ) {
+    signals.add("visible_fracture_emergency");
+  }
+
+  if (
+    (/\b(attacked|dog bite|bite wound|puncture wound|puncture wounds|bitten)\b/.test(
+      lower
+    ) &&
+      /\b(deep|gaping|severe|multiple|chest|neck|abdomen|belly|tissue damage)\b/.test(
+        lower
+      )) ||
+    (/\b(puncture wound|puncture wounds)\b/.test(lower) &&
+      /\b(chest|neck|abdomen|belly|face)\b/.test(lower))
+  ) {
+    signals.add("severe_bite_wound_emergency");
+  }
+
+  if (
+    /\b(heaving|retching|trying to vomit|trying to throw up|needs to vomit)\b/.test(
+      lower
+    ) &&
+    /\b(nothing is coming up|nothing comes up|nothing comes out|nonproductive|nothing is coming out)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("unproductive_heaving_emergency");
+  }
+
+  if (
+    /\b(eye|eyeball)\b/.test(lower) &&
+    /\b(cloudy|bulging|swollen|enlarged)\b/.test(lower) &&
+    /\b(pain|painful|hurts|squinting|won't open)\b/.test(lower)
+  ) {
+    signals.add("painful_bulging_eye_emergency");
+  }
+
+  if (
+    /\b(tiny red spots|pinpoint red spots|petechiae|red spots all over)\b/.test(
+      lower
+    ) &&
+    /\b(gum|gums|mouth)\b/.test(lower) &&
+    /\b(weak|weakness|bleeding|lethargic|lethargy)\b/.test(lower)
+  ) {
+    signals.add("mucosal_bleeding_weakness_emergency");
+  }
+
+  if (
+    (/\b(in labor|in labour|giving birth|strong contractions|having contractions|straining)\b/.test(
+      lower
+    ) &&
+      /\b(over (one|two|three|\d+) hours?|for hours?)\b/.test(lower) &&
+      /\b(no puppy|not delivered|has not delivered|hasn't delivered|still no puppy|without producing a puppy)\b/.test(
+        lower
+      )) ||
+    (/\b(contractions|straining)\b/.test(lower) &&
+      /\b(no puppy|not delivered|has not delivered|hasn't delivered)\b/.test(
+        lower
+      ))
+  ) {
+    signals.add("hard_labor_no_puppy_emergency");
+  }
+
   if (
     /\bdiabetic\b/.test(lower) &&
     /\b(stumbling|staggering|wobbly|disoriented|confused)\b/.test(lower)
