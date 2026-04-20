@@ -3240,8 +3240,9 @@ describe("symptom-chat mixed text + image routing", () => {
     );
     expect(pendingTelemetry).toBeDefined();
     expect(String(pendingTelemetry)).toContain('"question_id":"cough_duration"');
-    expect(String(pendingTelemetry)).toContain('"outcome":"success"');
-    expect(String(pendingTelemetry)).toContain('"source":"raw_fallback"');
+    expect(String(pendingTelemetry)).toContain('"outcome":"needs_clarification"');
+    expect(String(pendingTelemetry)).toContain('"source":"unresolved"');
+    expect(String(pendingTelemetry)).toContain('"reason":"needs_clarification_re_ask"');
     } finally {
       logSpy.mockRestore();
     }
