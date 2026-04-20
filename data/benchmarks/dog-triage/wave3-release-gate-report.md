@@ -7,16 +7,16 @@
 - Canonical manifest generated at: 2026-04-17T16:44:31.613Z
 - Total frozen cases: 226
 - Scorecard case count: 226
-- Emergency recall: 55.3%
-- Unsafe downgrade rate: 15.04%
+- Emergency recall: 71.0%
+- Unsafe downgrade rate: 9.73%
 - Extra case IDs: none
 - Missing case IDs: none
 
 ## Failures
 
-- Emergency recall 55.3% is below the 98.0% gate.
-- Unsafe downgrade rate 15.04% exceeds the 1.00% gate.
-- 39 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
+- Emergency recall 71.0% is below the 98.0% gate.
+- Unsafe downgrade rate 9.73% exceeds the 1.00% gate.
+- 27 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
 
 ## Warnings
 
@@ -24,26 +24,26 @@ _None_
 
 ## Blocking High-Risk Failures
 
-- emergency-diabetic-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-dog-bite-wound: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-electrical-shock: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-glaucoma-eye: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-hard-labor-no-puppy: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-hypoglycemia-toy-breed: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-imma-mediated-thrombocytopenia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-limping-cry-pain: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-open-fracture: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-postpartum-eclampsia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth)
 - emergency-protozoal-acute-babesia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy)
 - emergency-pyometra-style: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge)
-- emergency-repeated-nonproductive-heaving: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-toxin-xylitol: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-trembling-cold-weak: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-unresponsive-after-tremors: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-urinary-blockage: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem)
 - emergency-vomit-blood-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
 - emergency-vomiting-green: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
 - emergency-wound-deep-avulsion: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue)
+- followup-breathing-onset-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- followup-breathing-pattern-unknown: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- followup-consciousness-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- followup-gum-color-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- followup-seizure-duration-unknown: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- oncology-emergency-nosebleed-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- oncology-emergency-obstructive-neck-mass: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- repro-emergency-foul-discharge-fever: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- repro-emergency-male-paraphimosis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- repro-emergency-retained-puppy-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- toxin-emergency-antifreeze: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- toxin-emergency-lily-chew: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 
 ## Missing High-Stakes Rule IDs
 
