@@ -176,7 +176,13 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "in labor": "pregnancy_birth",
     "in labour": "pregnancy_birth",
     "giving birth": "pregnancy_birth",
+    "after giving birth": "pregnancy_birth",
+    "recently gave birth": "pregnancy_birth",
+    "after whelping": "pregnancy_birth",
     "having puppies": "pregnancy_birth",
+    "had puppies": "pregnancy_birth",
+    "nursing puppies": "pregnancy_birth",
+    postpartum: "pregnancy_birth",
     "green discharge": "pregnancy_birth",
     "stuck puppy": "pregnancy_birth",
     contractions: "pregnancy_birth",
@@ -431,7 +437,7 @@ export function extractDeterministicEmergencyRedFlags(
 
     if (
       /\b(postpartum|after giving birth|after whelping|nursing)\b/.test(lower) &&
-      /\b(tremors?|shaking|seizures?)\b/.test(lower)
+      /\b(trembling|tremors?|shaking|seizures?)\b/.test(lower)
     ) {
       flags.add("eclampsia_signs");
     }
