@@ -7203,7 +7203,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       );
     });
 
-    it("keeps the alternate gum-color retry on the question path for high-risk respiratory follow-up sessions", async () => {
+    it("routes high-risk respiratory gum-color unknown replies to emergency", async () => {
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
         "gum_color"
@@ -7233,12 +7233,11 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      expect(payload.type).toBe("question");
-      expect(payload.question_id).toBe("gum_color");
-      expect(payload.reason_code).toBe("alternate_observable_gum_color");
-      expect(payload.conversationState).toBe("needs_clarification");
-      expect(payload.ready_for_report).toBe(false);
-      expect(payload.session.last_question_asked).toBe("gum_color");
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.red_flags_triggered).toContain(
+        "respiratory_distress_unknown_gum_color"
+      );
     });
 
     it.each([
@@ -8270,7 +8269,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       }
     );
 
-    it("VET-1322: preserves the gum-color alternate observable retry for unknown respiratory follow-up answers", async () => {
+    it("VET-1327: escalates high-risk gum-color unknown follow-up answers to emergency", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
@@ -8306,14 +8305,255 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      expect(payload.type).toBe("question");
-      expect(payload.reason_code).toBe("alternate_observable_gum_color");
-      expect(payload.conversationState).toBe("needs_clarification");
-      expect(payload.ready_for_report).toBe(false);
-      expect(payload.session.last_question_asked).toBe("gum_color");
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.red_flags_triggered).toContain(
+        "respiratory_distress_unknown_gum_color"
+      );
       expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
       expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
     });
+
+    it("VET-1327: keeps gum-color unknown follow-up answers in question flow without emergency respiratory context", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const session = buildPendingQuestionSession(
+        "difficulty_breathing",
+        "gum_color"
+      );
+      session.candidate_diseases = ["kennel_cough"];
+      session.body_systems_involved = ["respiratory"];
+      session.case_memory = {
+        ...session.case_memory!,
+        turn_count: 2,
+        chief_complaints: ["difficulty_breathing"],
+        active_focus_symptoms: ["difficulty_breathing"],
+        unresolved_question_ids: ["gum_color"],
+        ambiguity_flags: [],
+      };
+
+      const response = await POST(
+        makeTextOnlyRequest(
+          session,
+          "I can't tell what color they are right now.",
+          {
+            name: "Pepper",
+            breed: "Pug",
+            age_years: 9,
+            weight: 19,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.session.red_flags_triggered).not.toContain(
+        "respiratory_distress_unknown_gum_color"
+      );
+    });
+
+    it.each([
+      {
+        caseId: "emergency-limping-cry-pain",
+        message:
+          "My dog is limping and crying in pain and won't let me touch his back.",
+        expectedSignal: "severe_limping_spinal_pain",
+      },
+      {
+        caseId: "emergency-diabetic-crisis",
+        message: "My diabetic dog is stumbling around and seems very confused.",
+        expectedSignal: "diabetic_crisis",
+      },
+      {
+        caseId: "emergency-dog-bite-wound",
+        message:
+          "My dog was attacked and has deep puncture wounds on his chest.",
+        expectedSignal: "dog_bite_trauma",
+      },
+      {
+        caseId: "emergency-electrical-shock",
+        message:
+          "My puppy chewed an electrical cord and now he is trembling and weak.",
+        expectedSignal: "electrical_shock",
+      },
+      {
+        caseId: "emergency-glaucoma-eye",
+        message:
+          "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain.",
+        expectedSignal: "acute_glaucoma_emergency",
+      },
+      {
+        caseId: "emergency-hard-labor-no-puppy",
+        message:
+          "My dog has been having strong contractions for over two hours and still has not delivered a puppy.",
+        expectedSignal: "dystocia_no_puppy",
+      },
+      {
+        caseId: "emergency-hypoglycemia-toy-breed",
+        message:
+          "My tiny puppy is shaky, weak, and just flopped over after not eating well.",
+        expectedSignal: "hypoglycemia_collapse",
+      },
+      {
+        caseId: "emergency-imma-mediated-thrombocytopenia",
+        message:
+          "There are tiny red spots all over my dog's gums and she is very weak.",
+        expectedSignal: "gum_petechiae_weakness",
+      },
+      {
+        caseId: "emergency-open-fracture",
+        message:
+          "He is limping badly and I can actually see bone through the wound on the leg.",
+        expectedSignal: "open_fracture",
+      },
+      {
+        caseId: "oncology-emergency-nosebleed-collapse",
+        message: "My dog has a major nosebleed and is now weak and shaky.",
+        expectedSignal: "nosebleed_collapse",
+      },
+      {
+        caseId: "oncology-emergency-obstructive-neck-mass",
+        message:
+          "My dog has a large throat lump and now he is struggling to swallow and breathe.",
+        expectedSignal: "obstructive_throat_mass",
+      },
+      {
+        caseId: "repro-emergency-foul-discharge-fever",
+        message:
+          "My unspayed dog has smelly discharge, is drinking a lot, and feels feverish and miserable.",
+        expectedSignal: "pyometra_style_emergency",
+      },
+      {
+        caseId: "repro-emergency-male-paraphimosis",
+        message:
+          "My dog's penis is stuck out, swollen, and he is very uncomfortable.",
+        expectedSignal: "paraphimosis_emergency",
+      },
+      {
+        caseId: "repro-emergency-retained-puppy-collapse",
+        message:
+          "She finished having puppies but now seems weak, distressed, and still has strong contractions.",
+        expectedSignal: "retained_puppy_distress",
+      },
+      {
+        caseId: "toxin-emergency-antifreeze",
+        message:
+          "My dog licked green fluid from the garage floor and is now staggering and drooling.",
+        expectedSignal: "antifreeze_toxicity",
+      },
+      {
+        caseId: "toxin-emergency-lily-chew",
+        message:
+          "My dog got into a toxic plant and now is vomiting and seems really weak.",
+        expectedSignal: "toxic_plant_exposure",
+      },
+      {
+        caseId: "toxin-emergency-sago-palm",
+        message: "My dog chewed on a sago palm and is vomiting now.",
+        expectedSignal: "sago_palm_toxicity",
+      },
+      {
+        caseId: "toxin-emergency-tremorgenic-mycotoxin",
+        message:
+          "He got into moldy trash and now he is shaking hard and cannot walk right.",
+        expectedSignal: "tremorgenic_mycotoxin",
+      },
+      {
+        caseId: "emergency-toxin-xylitol",
+        message:
+          "My dog ate sugar-free gum with xylitol and now he is vomiting and looks weak.",
+        expectedSignal: "toxin_confirmed",
+      },
+    ])(
+      "VET-1327: routes $caseId before question orchestration",
+      async ({ message, expectedSignal }) => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(createSession(), message));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("emergency");
+        expect(payload.ready_for_report).toBe(true);
+        expect(payload.session.red_flags_triggered).toContain(expectedSignal);
+        expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+        expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([
+      {
+        caseId: "mild-gum-irritation-dental-tartar",
+        message:
+          "My dog has mild gum irritation from dental tartar, but his gums are pink, he is breathing normally, and he is eating fine.",
+        blockedSignals: ["blue_gums", "pale_gums", "gum_petechiae_weakness"],
+      },
+      {
+        caseId: "mild-limping-weight-bearing",
+        message:
+          "My dog is limping a little, but he is still weight-bearing, eating normally, and wants to play.",
+        blockedSignals: ["severe_limping_spinal_pain", "open_fracture"],
+      },
+      {
+        caseId: "tired-after-exercise-normal-gums",
+        message:
+          "My dog seems tired after exercise, but his gums are pink and his breathing is normal now.",
+        blockedSignals: ["heatstroke_emergency", "blue_gums", "pale_gums"],
+      },
+      {
+        caseId: "single-cough-breathing-normal",
+        message: "My dog coughed once and then went back to breathing normally.",
+        blockedSignals: ["clear_respiratory_distress"],
+      },
+      {
+        caseId: "thunderstorm-tremble-alert",
+        message:
+          "My dog trembled briefly during a thunderstorm, but he is alert, eating, and his gums are pink.",
+        blockedSignals: [
+          "electrical_shock",
+          "tremorgenic_mycotoxin",
+          "hypoglycemia_collapse",
+        ],
+      },
+      {
+        caseId: "small-superficial-scrape",
+        message:
+          "My dog has a small superficial scrape on his leg, but it is not deep and there is no heavy bleeding.",
+        blockedSignals: ["dog_bite_trauma", "open_fracture"],
+      },
+      {
+        caseId: "vomited-once-no-collapse",
+        message:
+          "My dog vomited once this morning but there is no blood, no retching, no collapse, and his gums are pink.",
+        blockedSignals: [
+          "xylitol_toxicity",
+          "sago_palm_toxicity",
+          "toxic_plant_exposure",
+        ],
+      },
+      {
+        caseId: "mild-eye-discharge-no-pain",
+        message:
+          "My dog has mild eye discharge, but there is no pain, no swelling, and he can still see normally.",
+        blockedSignals: ["acute_glaucoma_emergency"],
+      },
+    ])(
+      "VET-1327: keeps $caseId out of emergency override flow",
+      async ({ message, blockedSignals }) => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(createSession(), message));
+        const payload = await response.json();
+        const redFlags = payload.session?.red_flags_triggered ?? [];
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("question");
+        expect(payload.ready_for_report).toBe(false);
+
+        for (const signal of blockedSignals) {
+          expect(redFlags).not.toContain(signal);
+        }
+      }
+    );
 
     it("preserves the existing demo fallback for report generation without providers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");

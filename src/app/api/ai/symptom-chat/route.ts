@@ -425,6 +425,168 @@ function collectRouteEmergencyOverrideSignals(
   }
 
   if (
+    /\bdiabetic\b/.test(lower) &&
+    /\b(stumbling|staggering|wobbly|disoriented|confused)\b/.test(lower)
+  ) {
+    signals.add("diabetic_crisis");
+  }
+
+  if (
+    /\b(attacked|dog bite|bitten)\b/.test(lower) &&
+    /\b(deep puncture|deep wound|puncture wounds?)\b/.test(lower)
+  ) {
+    signals.add("dog_bite_trauma");
+  }
+
+  if (
+    /\b(electrical cord|power cord|extension cord|electrocuted|electrical shock)\b/.test(
+      lower
+    ) &&
+    /\b(trembling|shaking|weak|collapse|collapsed)\b/.test(lower)
+  ) {
+    signals.add("electrical_shock");
+  }
+
+  if (
+    /\beye\b/.test(lower) &&
+    /\b(cloudy|bulging)\b/.test(lower) &&
+    /\b(pain|painful|hurts?)\b/.test(lower)
+  ) {
+    signals.add("acute_glaucoma_emergency");
+  }
+
+  if (
+    /\blimp(?:ing)?\b/.test(lower) &&
+    /\b(cry(?:ing)?|yelping|yelps|pain(?:ful)?|hurts?)\b/.test(lower) &&
+    /\b(back|spine|neck)\b/.test(lower) &&
+    /\b(won'?t let me touch|won'?t let anyone touch|can(?:not|'t) touch|guarding)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("severe_limping_spinal_pain");
+  }
+
+  if (
+    /\b(nosebleed|nose bleed)\b/.test(lower) &&
+    /\b(major|heavy|severe|won'?t stop|a lot)\b/.test(lower) &&
+    /\b(weak|shaky|wobbly|collapse|collapsed)\b/.test(lower)
+  ) {
+    signals.add("nosebleed_collapse");
+  }
+
+  if (
+    /\b(throat|neck)\b/.test(lower) &&
+    /\b(lump|mass|swelling)\b/.test(lower) &&
+    /\b(struggling to swallow|trouble swallowing|hard to swallow|can(?:not|'t) swallow|struggling to breathe|trouble breathing|can(?:not|'t) breathe)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("obstructive_throat_mass");
+  }
+
+  if (
+    /\b(unspayed|not spayed|intact female)\b/.test(lower) &&
+    /\b(foul|smelly|bad[- ]smelling|stinky)\b/.test(lower) &&
+    /\bdischarge\b/.test(lower) &&
+    /\b(drinking a lot|drinking more|feverish|fever|miserable|weak|lethargic)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("pyometra_style_emergency");
+  }
+
+  if (
+    /\bpenis\b/.test(lower) &&
+    /\b(stuck out|stuck outside|won'?t go back in|won'?t retract|can(?:not|'t) retract)\b/.test(
+      lower
+    ) &&
+    /\b(swollen|red|purple|dry|painful|uncomfortable)\b/.test(lower)
+  ) {
+    signals.add("paraphimosis_emergency");
+  }
+
+  if (
+    /\b(finished having puppies|after giving birth|after whelping|after having puppies)\b/.test(
+      lower
+    ) &&
+    /\b(strong contractions|still has strong contractions|still contracting|still has contractions|straining)\b/.test(
+      lower
+    ) &&
+    /\b(weak|distressed|collapse|collapsed|miserable)\b/.test(lower)
+  ) {
+    signals.add("retained_puppy_distress");
+  }
+
+  if (
+    /\b(contractions|straining)\b/.test(lower) &&
+    /\b(over two hours|for two hours|for 2 hours|still has not delivered|has not delivered|no puppy)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("dystocia_no_puppy");
+  }
+
+  if (
+    (/\b(antifreeze|ethylene glycol)\b/.test(lower) ||
+      (/\bgreen fluid\b/.test(lower) && /\bgarage\b/.test(lower))) &&
+    /\b(staggering|stumbling|wobbly|drooling|vomiting|weak)\b/.test(lower)
+  ) {
+    signals.add("antifreeze_toxicity");
+  }
+
+  if (
+    /\b(xylitol|sugar[- ]free gum|sugar free gum)\b/.test(lower) &&
+    /\b(vomit|vomiting|weak|collapse|collapsed|shaky|staggering)\b/.test(lower)
+  ) {
+    signals.add("xylitol_toxicity");
+  }
+
+  if (
+    /\b(sago palm)\b/.test(lower) &&
+    /\b(vomit|vomiting|weak|collapse|collapsed|lethargic)\b/.test(lower)
+  ) {
+    signals.add("sago_palm_toxicity");
+  } else if (
+    /\b(lily|lilies|toxic plant|poisonous plant)\b/.test(lower) &&
+    /\b(vomit|vomiting|weak|collapse|collapsed|lethargic)\b/.test(lower)
+  ) {
+    signals.add("toxic_plant_exposure");
+  }
+
+  if (
+    /\b(moldy trash|mouldy trash|moldy food|mouldy food|compost)\b/.test(
+      lower
+    ) &&
+    /\b(shaking hard|tremors?|cannot walk right|can'?t walk right|staggering|wobbly)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("tremorgenic_mycotoxin");
+  }
+
+  if (
+    /\b(tiny puppy|toy breed|small puppy)\b/.test(lower) &&
+    /\b(shaky|trembling|weak|flopped over|collapsed|collapse)\b/.test(lower) &&
+    /\b(not eating|won'?t eat|not eating well|didn'?t eat)\b/.test(lower)
+  ) {
+    signals.add("hypoglycemia_collapse");
+  }
+
+  if (
+    /\b(tiny red spots|pinpoint red spots|petechiae)\b/.test(lower) &&
+    /\bgums?\b/.test(lower) &&
+    /\b(weak|lethargic|collapse|collapsed)\b/.test(lower)
+  ) {
+    signals.add("gum_petechiae_weakness");
+  }
+
+  if (
+    /\b(bone sticking out|bone visible|see bone|see the bone)\b/.test(lower)
+  ) {
+    signals.add("open_fracture");
+  }
+
+  if (
     session.last_question_asked === "gum_color" &&
     incomingUnresolvedIds.includes("gum_color") &&
     unresolvedQuestionIds.has("gum_color") &&
@@ -1454,15 +1616,6 @@ export async function POST(request: Request) {
       };
     }
 
-    if (alternateObservableOutcome) {
-      return NextResponse.json(
-        buildAlternateObservableRecoveryResponse(
-          alternateObservableOutcome,
-          session
-        )
-      );
-    }
-
     if (hasRouteEmergencyOverride) {
       session = transitionToEscalation({
         session,
@@ -1485,6 +1638,15 @@ export async function POST(request: Request) {
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
       });
+    }
+
+    if (alternateObservableOutcome) {
+      return NextResponse.json(
+        buildAlternateObservableRecoveryResponse(
+          alternateObservableOutcome,
+          session
+        )
+      );
     }
 
     // ═══════════════════════════════════════════════════════════════════
