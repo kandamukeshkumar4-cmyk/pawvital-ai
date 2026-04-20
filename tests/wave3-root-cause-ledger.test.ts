@@ -1,3 +1,6 @@
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import type { LiveEvalScorecard } from "@/lib/benchmark-live-eval";
 import {
   buildWave3FailureLedger,
@@ -144,6 +147,10 @@ function buildPreviousLedger(): Wave3FailureLedger {
   });
 }
 
+function writeJsonArtifact(filePath: string, value: unknown): void {
+  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
 describe("Wave 3 root-cause ledger deltas", () => {
   it("tracks root-cause bucket improvements, regressions, and stable rows", () => {
     const previousLedger = buildPreviousLedger();
@@ -258,6 +265,164 @@ describe("Wave 3 root-cause ledger deltas", () => {
       (change) => change.caseId === "emergency-hit-by-car"
     );
     expect(resolved?.status).toBe("resolved");
+  });
+
+  it("treats critical bucket changes as severity-first even when high counts grow", () => {
+    const previousLedger = buildWave3FailureLedger({
+      manifest,
+      cases,
+      scorecard: buildScorecard([
+        {
+          caseId: "emergency-hit-by-car",
+          severity: "CRITICAL",
+          category: "unsafe_downgrade",
+          expected: "emergency",
+          actual: "question",
+          description: "Failed checks: responseType",
+        },
+      ]),
+      previousLedger: null,
+    });
+    const currentLedger = buildWave3FailureLedger({
+      manifest,
+      cases,
+      scorecard: buildScorecard(
+        Array.from({ length: 100 }, () => ({
+          caseId: "emergency-hit-by-car",
+          severity: "HIGH" as const,
+          category: "unsafe_downgrade" as const,
+          expected: "emergency",
+          actual: "question",
+          description: "Failed checks: responseType",
+        }))
+      ),
+      previousLedger,
+    });
+
+    const bucket = currentLedger.delta.rootCauseChanges.find(
+      (change) =>
+        change.rootCauseBucket === "question orchestration overriding emergency"
+    );
+
+    expect(bucket?.status).toBe("improved");
+    expect(bucket?.previousSeverityCounts).toEqual({
+      CRITICAL: 1,
+      HIGH: 0,
+      MEDIUM: 0,
+    });
+    expect(bucket?.currentSeverityCounts).toEqual({
+      CRITICAL: 0,
+      HIGH: 100,
+      MEDIUM: 0,
+    });
+  });
+
+  it("loads prior artifacts only when the caller provides explicit baseline paths", () => {
+    const previousLedger = buildPreviousLedger();
+    const previousBlockers = buildWave3ResidualBlockers(previousLedger, null);
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "pawvital-wave3-ledger-baseline-")
+    );
+
+    try {
+      const previousLedgerPath = path.join(tempDir, "previous-ledger.json");
+      const previousBlockersPath = path.join(
+        tempDir,
+        "previous-blockers.json"
+      );
+      writeJsonArtifact(previousLedgerPath, previousLedger);
+      writeJsonArtifact(previousBlockersPath, previousBlockers);
+
+      const currentLedgerWithoutBaseline = buildWave3FailureLedger({
+        manifest,
+        cases,
+        scorecard: buildScorecard([
+          {
+            caseId: "emergency-breathing-labored",
+            severity: "CRITICAL",
+            category: "missed_emergency",
+            expected: "emergency",
+            actual: "question",
+            description:
+              "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
+          },
+        ]),
+      });
+      const currentLedgerWithBaseline = buildWave3FailureLedger({
+        manifest,
+        cases,
+        scorecard: buildScorecard([
+          {
+            caseId: "emergency-breathing-labored",
+            severity: "CRITICAL",
+            category: "missed_emergency",
+            expected: "emergency",
+            actual: "question",
+            description:
+              "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
+          },
+        ]),
+        previousLedgerPath,
+      });
+
+      expect(currentLedgerWithoutBaseline.delta.previousTotalFailures).toBeNull();
+      expect(currentLedgerWithBaseline.delta.previousTotalFailures).toBe(
+        previousLedger.totalFailures
+      );
+
+      const blockersWithoutBaseline = buildWave3ResidualBlockers(
+        currentLedgerWithBaseline
+      );
+      const blockersWithBaseline = buildWave3ResidualBlockers(
+        currentLedgerWithBaseline,
+        undefined,
+        { previousBlockersPath }
+      );
+
+      expect(blockersWithoutBaseline.delta.previousTotalBlockers).toBeNull();
+      expect(blockersWithBaseline.delta.previousTotalBlockers).toBe(
+        previousBlockers.blockers.length
+      );
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("suppresses historical deltas when the live scorecard is missing", () => {
+    const previousLedger = buildPreviousLedger();
+    const previousBlockers = buildWave3ResidualBlockers(previousLedger, null);
+    const tempDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "pawvital-wave3-ledger-missing-scorecard-")
+    );
+
+    try {
+      const previousLedgerPath = path.join(tempDir, "previous-ledger.json");
+      const previousBlockersPath = path.join(
+        tempDir,
+        "previous-blockers.json"
+      );
+      writeJsonArtifact(previousLedgerPath, previousLedger);
+      writeJsonArtifact(previousBlockersPath, previousBlockers);
+
+      const ledger = buildWave3FailureLedger({
+        manifest,
+        cases,
+        scorecard: null,
+        previousLedgerPath,
+      });
+      const blockers = buildWave3ResidualBlockers(ledger, undefined, {
+        previousBlockersPath,
+      });
+
+      expect(ledger.hasScorecard).toBe(false);
+      expect(ledger.totalFailures).toBe(0);
+      expect(ledger.delta.previousTotalFailures).toBeNull();
+      expect(ledger.delta.rootCauseChanges).toEqual([]);
+      expect(blockers.delta.previousTotalBlockers).toBeNull();
+      expect(blockers.delta.changes).toEqual([]);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it("renders markdown with burn-down and delta sections", () => {

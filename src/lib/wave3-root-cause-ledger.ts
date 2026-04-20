@@ -3,10 +3,6 @@ import * as path from "node:path";
 import type { LiveEvalFailure, LiveEvalScorecard } from "./benchmark-live-eval";
 import type { Wave3CanonicalCase, Wave3CanonicalManifest } from "./wave3-suite-manifest";
 
-const BENCHMARK_DIR = path.join(process.cwd(), "data", "benchmarks", "dog-triage");
-const DEFAULT_LEDGER_PATH = path.join(BENCHMARK_DIR, "wave3-emergency-root-cause-ledger.json");
-const DEFAULT_RESIDUAL_BLOCKER_PATH = path.join(BENCHMARK_DIR, "wave3-residual-blockers.json");
-
 export type Wave3RootCauseBucket =
   | "complaint normalization miss"
   | "deterministic emergency composite not triggered"
@@ -41,6 +37,7 @@ export interface Wave3FailureLedgerDelta {
 }
 export interface Wave3FailureLedger {
   generatedAt: string; suiteId: string; manifestHash: string; totalFailures: number;
+  hasScorecard: boolean;
   entries: Wave3FailureLedgerEntry[]; byComplaintFamily: Record<string, number>;
   byRiskTier: Record<string, number>; byActualResponseType: Record<string, number>;
   byRootCauseBucket: Record<string, number>; rootCauseSummary: Wave3RootCauseSummaryRow[];
@@ -86,7 +83,21 @@ function compareSeverityCounts(left: Wave3SeverityCounts, right: Wave3SeverityCo
   if (left.MEDIUM !== right.MEDIUM) return right.MEDIUM - left.MEDIUM;
   return 0;
 }
-function severityBurden(counts: Wave3SeverityCounts): number { return counts.CRITICAL * 10000 + counts.HIGH * 100 + counts.MEDIUM; }
+function compareSeverityDeltas(
+  previousCounts: Wave3SeverityCounts,
+  currentCounts: Wave3SeverityCounts
+): number {
+  if (currentCounts.CRITICAL !== previousCounts.CRITICAL) {
+    return currentCounts.CRITICAL - previousCounts.CRITICAL;
+  }
+  if (currentCounts.HIGH !== previousCounts.HIGH) {
+    return currentCounts.HIGH - previousCounts.HIGH;
+  }
+  if (currentCounts.MEDIUM !== previousCounts.MEDIUM) {
+    return currentCounts.MEDIUM - previousCounts.MEDIUM;
+  }
+  return 0;
+}
 function diffSeverityCounts(current: Wave3SeverityCounts, previous: Wave3SeverityCounts): Wave3SeverityCounts {
   return {
     CRITICAL: current.CRITICAL - previous.CRITICAL,
@@ -206,18 +217,26 @@ function normalizeComparableLedger(
   return previousLedger;
 }
 
-function loadPreviousWave3FailureLedger(suiteId: string, manifestHash: string): Wave3FailureLedger | null {
-  return normalizeComparableLedger(suiteId, manifestHash, safeReadJson<Wave3FailureLedger>(DEFAULT_LEDGER_PATH));
+function loadPreviousWave3FailureLedger(
+  suiteId: string,
+  manifestHash: string,
+  previousLedgerPath?: string | null
+): Wave3FailureLedger | null {
+  if (!previousLedgerPath) return null;
+  return normalizeComparableLedger(
+    suiteId,
+    manifestHash,
+    safeReadJson<Wave3FailureLedger>(path.resolve(previousLedgerPath))
+  );
 }
 
 function classifyRootCauseDeltaStatus(
   previousCounts: Wave3SeverityCounts,
   currentCounts: Wave3SeverityCounts
 ): Wave3RootCauseDeltaRow["status"] {
-  const previousBurden = severityBurden(previousCounts);
-  const currentBurden = severityBurden(currentCounts);
-  if (currentBurden < previousBurden) return "improved";
-  if (currentBurden > previousBurden) return "regressed";
+  const severityDelta = compareSeverityDeltas(previousCounts, currentCounts);
+  if (severityDelta < 0) return "improved";
+  if (severityDelta > 0) return "regressed";
   return "unchanged";
 }
 
@@ -328,12 +347,14 @@ function normalizeComparableResidualBlockers(
 
 function loadPreviousWave3ResidualBlockers(
   suiteId: string,
-  manifestHash: string
+  manifestHash: string,
+  previousBlockersPath?: string | null
 ): Wave3ResidualBlockerList | null {
+  if (!previousBlockersPath) return null;
   return normalizeComparableResidualBlockers(
     suiteId,
     manifestHash,
-    safeReadJson<Wave3ResidualBlockerList>(DEFAULT_RESIDUAL_BLOCKER_PATH)
+    safeReadJson<Wave3ResidualBlockerList>(path.resolve(previousBlockersPath))
   );
 }
 
@@ -419,6 +440,7 @@ function buildResidualBlockerDelta(input: {
 export function buildWave3FailureLedger(input: {
   manifest: Wave3CanonicalManifest; cases: Wave3CanonicalCase[]; scorecard: LiveEvalScorecard | null;
   previousLedger?: Wave3FailureLedger | null;
+  previousLedgerPath?: string | null;
 }): Wave3FailureLedger {
   const caseMap = new Map(input.cases.map((caseRecord) => [caseRecord.id, caseRecord]));
   const failures = input.scorecard?.failures ?? [];
@@ -449,14 +471,21 @@ export function buildWave3FailureLedger(input: {
   }
   const rootCauseSummary = buildRootCauseSummary(entries);
   const generatedAt = new Date().toISOString();
-  const previousLedger = input.previousLedger === undefined
-    ? loadPreviousWave3FailureLedger(input.manifest.suiteId, input.manifest.manifestHash)
-    : normalizeComparableLedger(input.manifest.suiteId, input.manifest.manifestHash, input.previousLedger);
+  const previousLedger = input.scorecard === null
+    ? null
+    : input.previousLedger === undefined
+      ? loadPreviousWave3FailureLedger(
+          input.manifest.suiteId,
+          input.manifest.manifestHash,
+          input.previousLedgerPath
+        )
+      : normalizeComparableLedger(input.manifest.suiteId, input.manifest.manifestHash, input.previousLedger);
   return {
     generatedAt,
     suiteId: input.manifest.suiteId,
     manifestHash: input.manifest.manifestHash,
     totalFailures: entries.length,
+    hasScorecard: input.scorecard !== null,
     entries,
     byComplaintFamily: sortCountRecord(byComplaintFamily),
     byRiskTier: sortCountRecord(byRiskTier),
@@ -469,12 +498,19 @@ export function buildWave3FailureLedger(input: {
 
 export function buildWave3ResidualBlockers(
   ledger: Wave3FailureLedger,
-  previousBlockers?: Wave3ResidualBlockerList | null
+  previousBlockers?: Wave3ResidualBlockerList | null,
+  options?: { previousBlockersPath?: string | null }
 ): Wave3ResidualBlockerList {
   const blockers = buildCurrentResidualBlockers(ledger.entries);
-  const comparablePrevious = previousBlockers === undefined
-    ? loadPreviousWave3ResidualBlockers(ledger.suiteId, ledger.manifestHash)
-    : normalizeComparableResidualBlockers(ledger.suiteId, ledger.manifestHash, previousBlockers);
+  const comparablePrevious = !ledger.hasScorecard
+    ? null
+    : previousBlockers === undefined
+      ? loadPreviousWave3ResidualBlockers(
+          ledger.suiteId,
+          ledger.manifestHash,
+          options?.previousBlockersPath
+        )
+      : normalizeComparableResidualBlockers(ledger.suiteId, ledger.manifestHash, previousBlockers);
   return {
     generatedAt: ledger.generatedAt,
     suiteId: ledger.suiteId,
