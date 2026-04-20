@@ -343,6 +343,14 @@ describe("recordAnswer", () => {
     expect(session.red_flags_triggered).toContain("toxin_confirmed");
   });
 
+  it("should not treat benign medication acid names as toxin exposure", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["medication_reaction"]);
+    session = recordAnswer(session, "current_medications", "folic acid");
+
+    expect(session.red_flags_triggered).not.toContain("toxin_confirmed");
+  });
+
   it("should trigger anticoagulant toxin red flags from medication-reaction bleeding text", () => {
     let session = createSession();
     session = addSymptoms(session, ["medication_reaction"]);
