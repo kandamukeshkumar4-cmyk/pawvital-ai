@@ -135,4 +135,38 @@ describe("VET-1335 critical emergency normalization", () => {
       expect(answers.vomit_blood).toBeUndefined();
     });
   });
+
+  describe("green vomiting", () => {
+    it('extracts "green bile" vomit content from first-turn owner language', () => {
+      const session = addSymptoms(createSession(), ["vomiting"]);
+      const answers = extractDeterministicAnswersForTurn(
+        "My dog keeps throwing up green bile and won't eat or drink.",
+        session
+      );
+
+      expect(answers.vomit_content).toBe("green bile");
+    });
+
+    it('extracts "won\'t eat or drink" as not_drinking when water intake is the active follow-up', () => {
+      const session = addSymptoms(createSession(), ["vomiting"]);
+      session.last_question_asked = "water_intake";
+
+      const answers = extractDeterministicAnswersForTurn(
+        "My dog keeps throwing up green bile and won't eat or drink.",
+        session
+      );
+
+      expect(answers.water_intake).toBe("not_drinking");
+    });
+
+    it("does not set green bile content for a mild grass-once lookalike", () => {
+      const session = addSymptoms(createSession(), ["vomiting"]);
+      const answers = extractDeterministicAnswersForTurn(
+        "He ate grass and vomited once, but now he is acting normal and eating again.",
+        session
+      );
+
+      expect(answers.vomit_content).toBeUndefined();
+    });
+  });
 });

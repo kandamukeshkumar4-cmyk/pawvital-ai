@@ -154,6 +154,8 @@ function deriveDeterministicAnswerForQuestion(
       return extractBloodAmount(rawMessage);
     case "vomit_blood":
       return extractVomitBlood(rawMessage);
+    case "vomit_content":
+      return extractVomitContent(rawMessage);
     case "rat_poison_access":
       return extractRatPoisonAccess(rawMessage);
     case "toxin_exposure":
@@ -273,6 +275,7 @@ function isRefreshableDeterministicQuestion(questionId: string): boolean {
     "blood_color",
     "blood_amount",
     "vomit_blood",
+    "vomit_content",
     "rat_poison_access",
     "toxin_exposure",
     "trauma_mobility",
@@ -367,6 +370,7 @@ function shouldPreferDeterministicAnswer(questionId: string): boolean {
     "blood_color",
     "blood_amount",
     "vomit_blood",
+    "vomit_content",
     "rat_poison_access",
     "toxin_exposure",
     "trauma_mobility",
@@ -527,6 +531,16 @@ function extractGumColor(rawMessage: string): string | null {
 }
 
 function extractWaterIntake(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(won'?t eat or drink|will not eat or drink|not eating or drinking|won'?t drink|will not drink|not drinking|refusing water)\b/.test(
+      lower
+    )
+  ) {
+    return "not_drinking";
+  }
+
   return coerceChoiceAnswerFromIntent("water_intake", rawMessage);
 }
 
@@ -616,6 +630,19 @@ function extractVomitBlood(rawMessage: string): boolean | null {
     /\b(blood|bloody|coffee grounds?|coffee-ground)\b/.test(lower)
   ) {
     return true;
+  }
+
+  return null;
+}
+
+function extractVomitContent(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(vomit|vomiting|throwing up|threw up|throw up|heaving)\b/.test(lower) &&
+    /\b(green bile|bright green vomit|green vomit|green fluid)\b/.test(lower)
+  ) {
+    return "green bile";
   }
 
   return null;
