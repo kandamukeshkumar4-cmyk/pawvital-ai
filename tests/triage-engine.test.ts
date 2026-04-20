@@ -308,6 +308,14 @@ describe("recordAnswer", () => {
     );
   });
 
+  it("should trigger collapse_in_heat when an overheating dog becomes unresponsive", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["heat_intolerance"]);
+    session = recordAnswer(session, "consciousness_level", "unresponsive");
+
+    expect(session.red_flags_triggered).toContain("collapse_in_heat");
+  });
+
   it("should trigger combined GI emergency red flags from blood plus not drinking", () => {
     let session = createSession();
     session = addSymptoms(session, ["vomiting_diarrhea_combined"]);
@@ -738,6 +746,33 @@ describe("calculateProbabilities", () => {
     );
   });
 
+  it.each(["streaks", "mixed_in"] as const)(
+    "should boost toxin_ingestion for rat-poison stool bleeding composites with %s blood",
+    (bloodAmount) => {
+      let session = createSession();
+      session = addSymptoms(session, ["medication_reaction", "blood_in_stool"]);
+
+      const baseline = calculateProbabilities(session, unknownBreed);
+
+      session = recordAnswer(session, "blood_amount", bloodAmount);
+      session = recordAnswer(session, "rat_poison_access", true);
+
+      const withComposite = calculateProbabilities(session, unknownBreed);
+
+      const baselineToxin = baseline.find(
+        (p) => p.disease_key === "toxin_ingestion"
+      );
+      const compositeToxin = withComposite.find(
+        (p) => p.disease_key === "toxin_ingestion"
+      );
+
+      expect(session.red_flags_triggered).toContain("rat_poison_confirmed");
+      expect(compositeToxin?.final_score).toBeGreaterThan(
+        baselineToxin?.final_score ?? 0
+      );
+    }
+  );
+
   it("should boost heat_stroke and floor urgency for overheating composites", () => {
     let session = createSession();
     session = addSymptoms(session, ["heat_intolerance"]);
@@ -746,6 +781,29 @@ describe("calculateProbabilities", () => {
 
     session = recordAnswer(session, "gum_color", "bright_red");
     session = recordAnswer(session, "vomiting_present", true);
+
+    const withComposite = calculateProbabilities(session, pugAdult);
+
+    const baselineHeatStroke = baseline.find((p) => p.disease_key === "heat_stroke");
+    const compositeHeatStroke = withComposite.find(
+      (p) => p.disease_key === "heat_stroke"
+    );
+
+    expect(compositeHeatStroke?.final_score).toBeGreaterThan(
+      baselineHeatStroke?.final_score ?? 0
+    );
+    expect(buildDiagnosisContext(session, pugAdult).highest_urgency).toBe(
+      "emergency"
+    );
+  });
+
+  it("should boost heat_stroke and floor urgency for collapse_in_heat composites", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["heat_intolerance"]);
+
+    const baseline = calculateProbabilities(session, pugAdult);
+
+    session = recordAnswer(session, "consciousness_level", "unresponsive");
 
     const withComposite = calculateProbabilities(session, pugAdult);
 

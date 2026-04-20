@@ -529,7 +529,8 @@ function hasBleedingEvidence(session: TriageSession): boolean {
     answers.bleeding_present === true ||
     answers.vomit_blood === true ||
     answers.blood_in_either === true ||
-    answers.blood_amount === "mostly_blood" ||
+    (typeof answers.blood_amount === "string" &&
+      ["streaks", "mixed_in", "mostly_blood"].includes(answers.blood_amount)) ||
     answerTextIncludes(
       answers,
       ["reaction_symptoms", "wound_discharge", "wound_color"],
@@ -578,6 +579,13 @@ function getCompositeEmergencyRedFlags(session: TriageSession): string[] {
     answers.vomiting_present === true
   ) {
     flags.add("vomiting_overheating");
+  }
+
+  if (
+    session.known_symptoms.includes("heat_intolerance") &&
+    answers.consciousness_level === "unresponsive"
+  ) {
+    flags.add("collapse_in_heat");
   }
 
   if (hasMajorTraumaEvidence(session) && isRedFlagTriggered("inability_to_stand", session)) {
