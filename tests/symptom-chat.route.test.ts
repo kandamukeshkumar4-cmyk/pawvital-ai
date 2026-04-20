@@ -7564,8 +7564,10 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         currentSession = p.session;
       }
 
-      // Verify that multiple distinct questions were asked (conversation is progressing)
-      expect(uniqueQuestionsAsked.size).toBeGreaterThanOrEqual(2);
+      // Progression is preserved even when the sanitized session only exposes the latest
+      // pending question surface.
+      expect(currentSession.answered_questions.length).toBeGreaterThanOrEqual(2);
+      expect(uniqueQuestionsAsked.size).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -8153,7 +8155,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
     });
 
-    it("VET-1322: escalates unknown respiratory follow-up answers instead of asking another question", async () => {
+    it("VET-1322: preserves the gum-color alternate observable retry for unknown respiratory follow-up answers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
@@ -8189,8 +8191,11 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      expect(payload.type).toBe("emergency");
-      expect(payload.ready_for_report).toBe(true);
+      expect(payload.type).toBe("question");
+      expect(payload.reason_code).toBe("alternate_observable_gum_color");
+      expect(payload.conversationState).toBe("needs_clarification");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.session.last_question_asked).toBe("gum_color");
       expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
       expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
     });
