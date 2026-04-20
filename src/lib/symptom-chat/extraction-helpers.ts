@@ -195,8 +195,6 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "chemical burn": "trauma",
     "can't pee": "urination_problem",
     "cannot pee": "urination_problem",
-    "trying to pee": "urination_problem",
-    "straining to pee": "urination_problem",
     "eye discharge": "eye_discharge",
     "goopy eye": "eye_discharge",
     "goopy eyes": "eye_discharge",
@@ -359,6 +357,23 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     pushSymptom("lethargy");
   }
 
+  const hasUrinaryContext = /\b(pee|peeing|urinat|urine|squatt)\b/.test(lower);
+  const hasBlockageAttemptCue =
+    /\b(straining|trying to pee|trying to urinate|crying while trying to pee|crying when he tries to pee|repeated trips outside|keeps going outside)\b/.test(
+      lower
+    ) &&
+    !/\b(not|without|was not|wasn't)\b[^.?!]{0,24}\b(straining|crying|trying to pee|trying to urinate)\b/.test(
+      lower
+    );
+  const hasLowOutputCue =
+    /\b(almost no urine|nothing comes out|nothing has come out|no urine|only dribbles|only a few drops|few drops|barely anything)\b/.test(
+      lower
+    );
+
+  if (hasUrinaryContext && hasBlockageAttemptCue && hasLowOutputCue) {
+    pushSymptom("urination_problem");
+  }
+
   return symptoms;
 }
 
@@ -368,6 +383,17 @@ export function extractDeterministicEmergencyRedFlags(
 ): string[] {
   const lower = rawMessage.toLowerCase();
   const flags = new Set<string>();
+  const hasUrinaryBlockageAttemptCue =
+    /\b(straining|trying to pee|trying to urinate|crying while trying to pee|crying when he tries to pee|repeated trips outside|keeps going outside)\b/.test(
+      lower
+    ) &&
+    !/\b(not|without|was not|wasn't)\b[^.?!]{0,24}\b(straining|crying|trying to pee|trying to urinate)\b/.test(
+      lower
+    );
+  const hasUrinaryLowOutputCue =
+    /\b(almost no urine|nothing comes out|nothing has come out|no urine|only dribbles|only a few drops|few drops|barely anything)\b/.test(
+      lower
+    );
   const hasCyanoticGumLanguage =
     /\b(bluish?|gray|grey|purple) gums?\b/.test(lower) ||
     /\bgums? (?:look(?:ing|s|ed)?|are(?: looking)?|turned?) (bluish?|gray|grey|purple)\b/.test(
@@ -524,9 +550,17 @@ export function extractDeterministicEmergencyRedFlags(
 
   if (
     knownSymptoms.includes("urination_problem") &&
-    /\b(can'?t pee|cannot pee|trying to pee|straining to pee|nothing comes out|only dribbles|no urine)\b/.test(
-      lower
-    )
+    ((/\b(can'?t pee|cannot pee)\b/.test(lower) ||
+      ((/\b(trying to pee|straining to pee)\b/.test(lower) &&
+        !/\b(not|without|was not|wasn't)\b[^.?!]{0,24}\b(trying to pee|straining to pee)\b/.test(
+          lower
+        )) &&
+        hasUrinaryLowOutputCue) ||
+      /\b(only dribbles|no urine)\b/.test(lower)) ||
+      (hasUrinaryBlockageAttemptCue &&
+        /\b(almost no urine|nothing has come out|nothing comes out|no urine|only a few drops|few drops|barely anything)\b/.test(
+          lower
+        )))
   ) {
     flags.add("urinary_blockage");
   }

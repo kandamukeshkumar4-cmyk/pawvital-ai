@@ -58,4 +58,37 @@ describe("VET-1335 critical emergency normalization", () => {
       expect(symptoms).not.toContain("lethargy");
     });
   });
+
+  describe("urinary blockage", () => {
+    it("maps straining with almost no urine to urination_problem and blockage red flags", () => {
+      const message =
+        "My male dog keeps squatting and straining but almost no urine is coming out.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+      const redFlags = extractDeterministicEmergencyRedFlags(message, symptoms);
+
+      expect(symptoms).toContain("urination_problem");
+      expect(redFlags).toContain("urinary_blockage");
+    });
+
+    it("does not turn normal increased urination into a blockage signal", () => {
+      const message =
+        "He peed normally each time, just more often than usual, and he does not seem painful.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+      const redFlags = extractDeterministicEmergencyRedFlags(message, symptoms);
+
+      expect(redFlags).not.toContain("urinary_blockage");
+    });
+
+    it("does not turn an indoor accident without straining into a blockage signal", () => {
+      const message =
+        "She had a small accident indoors but was not straining, crying, or trying to pee repeatedly.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+      const redFlags = extractDeterministicEmergencyRedFlags(message, symptoms);
+
+      expect(redFlags).not.toContain("urinary_blockage");
+    });
+  });
 });
