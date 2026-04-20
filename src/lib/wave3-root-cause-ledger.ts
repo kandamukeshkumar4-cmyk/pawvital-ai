@@ -47,8 +47,25 @@ export interface Wave3ResidualBlocker {
   caseId: string; severity: LiveEvalFailure["severity"]; frequency: number;
   rootCauseBucket: Wave3RootCauseBucket; summary: string; recommendedNextTicket: string;
 }
+export interface Wave3ResidualBlockerBand {
+  total: number; caseIds: string[]; byRootCauseBucket: Record<string, number>;
+}
+export interface Wave3ResidualBlockerSeverityBands {
+  criticalReleaseBlockers: Wave3ResidualBlockerBand;
+  highNonBlockingFailures: Wave3ResidualBlockerBand;
+  mediumFollowupReadinessFailures: Wave3ResidualBlockerBand;
+}
 export interface Wave3ResidualBlockerSummary {
   totalBlockers: number; bySeverity: Wave3SeverityCounts; byRootCauseBucket: Record<string, number>;
+  severityBands: Wave3ResidualBlockerSeverityBands;
+}
+export interface Wave3ResidualBlockerBandDelta {
+  previousTotal: number | null; currentTotal: number; delta: number | null;
+}
+export interface Wave3ResidualBlockerBandDeltas {
+  criticalReleaseBlockers: Wave3ResidualBlockerBandDelta;
+  highNonBlockingFailures: Wave3ResidualBlockerBandDelta;
+  mediumFollowupReadinessFailures: Wave3ResidualBlockerBandDelta;
 }
 export type Wave3ResidualBlockerDeltaStatus = "new" | "resolved" | "improved" | "regressed" | "unchanged";
 export interface Wave3ResidualBlockerChange {
@@ -62,7 +79,7 @@ export interface Wave3ResidualBlockerChange {
 export interface Wave3ResidualBlockerDelta {
   comparedToGeneratedAt: string | null; previousTotalBlockers: number | null;
   blockerDelta: number | null; countsByStatus: Record<Wave3ResidualBlockerDeltaStatus, number>;
-  changes: Wave3ResidualBlockerChange[];
+  bandDeltas: Wave3ResidualBlockerBandDeltas; changes: Wave3ResidualBlockerChange[];
 }
 export interface Wave3ResidualBlockerList {
   generatedAt: string; suiteId: string; manifestHash: string; summary: Wave3ResidualBlockerSummary;
@@ -118,6 +135,75 @@ function safeReadJson<T>(filePath: string): T | null {
   } catch {
     return null;
   }
+}
+function resolveDefaultArtifactPath(fileName: string): string {
+  return path.join(process.cwd(), "data", "benchmarks", "dog-triage", fileName);
+}
+function resolveBaselineArtifactPath(
+  previousPath: string | null | undefined,
+  defaultFileName: string
+): string | null {
+  if (previousPath === null) return null;
+  return path.resolve(previousPath ?? resolveDefaultArtifactPath(defaultFileName));
+}
+function createResidualBlockerBand(): Wave3ResidualBlockerBand {
+  return { total: 0, caseIds: [], byRootCauseBucket: {} };
+}
+function addBlockerToBand(
+  band: Wave3ResidualBlockerBand,
+  blocker: Wave3ResidualBlocker
+): void {
+  band.total += 1;
+  band.caseIds.push(blocker.caseId);
+  incrementCount(band.byRootCauseBucket, blocker.rootCauseBucket);
+}
+function finalizeResidualBlockerBand(band: Wave3ResidualBlockerBand): Wave3ResidualBlockerBand {
+  return {
+    total: band.total,
+    caseIds: uniqueSorted(band.caseIds),
+    byRootCauseBucket: sortCountRecord(band.byRootCauseBucket),
+  };
+}
+function isMediumFollowupReadinessBlocker(blocker: Wave3ResidualBlocker): boolean {
+  return (
+    blocker.severity === "MEDIUM" &&
+    (
+      blocker.caseId.startsWith("followup-") ||
+      blocker.rootCauseBucket === "report readiness contract mismatch"
+    )
+  );
+}
+function buildResidualSeverityBands(blockers: Wave3ResidualBlocker[]): Wave3ResidualBlockerSeverityBands {
+  const criticalReleaseBlockers = createResidualBlockerBand();
+  const highNonBlockingFailures = createResidualBlockerBand();
+  const mediumFollowupReadinessFailures = createResidualBlockerBand();
+
+  for (const blocker of blockers) {
+    if (blocker.severity === "CRITICAL") {
+      addBlockerToBand(criticalReleaseBlockers, blocker);
+      continue;
+    }
+    if (blocker.severity === "HIGH") {
+      addBlockerToBand(highNonBlockingFailures, blocker);
+      continue;
+    }
+    if (isMediumFollowupReadinessBlocker(blocker)) {
+      addBlockerToBand(mediumFollowupReadinessFailures, blocker);
+    }
+  }
+
+  return {
+    criticalReleaseBlockers: finalizeResidualBlockerBand(criticalReleaseBlockers),
+    highNonBlockingFailures: finalizeResidualBlockerBand(highNonBlockingFailures),
+    mediumFollowupReadinessFailures: finalizeResidualBlockerBand(mediumFollowupReadinessFailures),
+  };
+}
+function buildResidualBandDelta(currentTotal: number, previousTotal: number | null): Wave3ResidualBlockerBandDelta {
+  return {
+    previousTotal,
+    currentTotal,
+    delta: previousTotal === null ? null : currentTotal - previousTotal,
+  };
 }
 
 function getOwnerMessage(caseRecord: Wave3CanonicalCase | undefined): string {
@@ -222,11 +308,15 @@ function loadPreviousWave3FailureLedger(
   manifestHash: string,
   previousLedgerPath?: string | null
 ): Wave3FailureLedger | null {
-  if (!previousLedgerPath) return null;
+  const baselinePath = resolveBaselineArtifactPath(
+    previousLedgerPath,
+    "wave3-emergency-root-cause-ledger.json"
+  );
+  if (!baselinePath) return null;
   return normalizeComparableLedger(
     suiteId,
     manifestHash,
-    safeReadJson<Wave3FailureLedger>(path.resolve(previousLedgerPath))
+    safeReadJson<Wave3FailureLedger>(baselinePath)
   );
 }
 
@@ -332,7 +422,12 @@ function buildResidualBlockerSummary(blockers: Wave3ResidualBlocker[]): Wave3Res
     incrementSeverityCount(bySeverity, blocker.severity);
     incrementCount(byRootCauseBucket, blocker.rootCauseBucket);
   }
-  return { totalBlockers: blockers.length, bySeverity, byRootCauseBucket: sortCountRecord(byRootCauseBucket) };
+  return {
+    totalBlockers: blockers.length,
+    bySeverity,
+    byRootCauseBucket: sortCountRecord(byRootCauseBucket),
+    severityBands: buildResidualSeverityBands(blockers),
+  };
 }
 
 function normalizeComparableResidualBlockers(
@@ -350,11 +445,15 @@ function loadPreviousWave3ResidualBlockers(
   manifestHash: string,
   previousBlockersPath?: string | null
 ): Wave3ResidualBlockerList | null {
-  if (!previousBlockersPath) return null;
+  const baselinePath = resolveBaselineArtifactPath(
+    previousBlockersPath,
+    "wave3-residual-blockers.json"
+  );
+  if (!baselinePath) return null;
   return normalizeComparableResidualBlockers(
     suiteId,
     manifestHash,
-    safeReadJson<Wave3ResidualBlockerList>(path.resolve(previousBlockersPath))
+    safeReadJson<Wave3ResidualBlockerList>(baselinePath)
   );
 }
 
@@ -391,9 +490,31 @@ function buildResidualBlockerDelta(input: {
   blockers: Wave3ResidualBlocker[]; previousBlockers: Wave3ResidualBlockerList | null;
 }): Wave3ResidualBlockerDelta {
   const countsByStatus = createResidualDeltaCounts();
+  const currentBands = buildResidualSeverityBands(input.blockers);
   if (!input.previousBlockers) {
-    return { comparedToGeneratedAt: null, previousTotalBlockers: null, blockerDelta: null, countsByStatus, changes: [] };
+    return {
+      comparedToGeneratedAt: null,
+      previousTotalBlockers: null,
+      blockerDelta: null,
+      countsByStatus,
+      bandDeltas: {
+        criticalReleaseBlockers: buildResidualBandDelta(
+          currentBands.criticalReleaseBlockers.total,
+          null
+        ),
+        highNonBlockingFailures: buildResidualBandDelta(
+          currentBands.highNonBlockingFailures.total,
+          null
+        ),
+        mediumFollowupReadinessFailures: buildResidualBandDelta(
+          currentBands.mediumFollowupReadinessFailures.total,
+          null
+        ),
+      },
+      changes: [],
+    };
   }
+  const previousBands = buildResidualSeverityBands(input.previousBlockers.blockers);
   const previousMap = new Map(input.previousBlockers.blockers.map((blocker) => [blocker.caseId, blocker]));
   const currentMap = new Map(input.blockers.map((blocker) => [blocker.caseId, blocker]));
   const caseIds = uniqueSorted([
@@ -433,6 +554,20 @@ function buildResidualBlockerDelta(input: {
     previousTotalBlockers: input.previousBlockers.blockers.length,
     blockerDelta: input.blockers.length - input.previousBlockers.blockers.length,
     countsByStatus,
+    bandDeltas: {
+      criticalReleaseBlockers: buildResidualBandDelta(
+        currentBands.criticalReleaseBlockers.total,
+        previousBands.criticalReleaseBlockers.total
+      ),
+      highNonBlockingFailures: buildResidualBandDelta(
+        currentBands.highNonBlockingFailures.total,
+        previousBands.highNonBlockingFailures.total
+      ),
+      mediumFollowupReadinessFailures: buildResidualBandDelta(
+        currentBands.mediumFollowupReadinessFailures.total,
+        previousBands.mediumFollowupReadinessFailures.total
+      ),
+    },
     changes,
   };
 }
@@ -577,6 +712,61 @@ function renderResidualDeltaTable(delta: Wave3ResidualBlockerDelta): string {
   ].join("\n");
 }
 
+function renderResidualBandTable(
+  heading: string,
+  blockers: Wave3ResidualBlocker[],
+  bandDelta: Wave3ResidualBlockerBandDelta
+): string {
+  const countLine = `- Count: ${blockers.length} (${formatSignedDelta(bandDelta.delta)})`;
+  const baselineLine = `- Previous baseline: ${bandDelta.previousTotal ?? "n/a"}`;
+  if (blockers.length === 0) {
+    return [`## ${heading}`, "", countLine, baselineLine, "", "_None_", ""].join("\n");
+  }
+  const rows = blockers.map(
+    (blocker) => `| ${blocker.caseId} | ${blocker.severity} | ${escapeTableCell(blocker.rootCauseBucket)} | ${escapeTableCell(blocker.summary)} |`
+  );
+  return [
+    `## ${heading}`,
+    "",
+    countLine,
+    baselineLine,
+    "",
+    "| Case ID | Severity | Root cause bucket | Summary |",
+    "| --- | --- | --- | --- |",
+    ...rows,
+    "",
+  ].join("\n");
+}
+
+function renderResidualSeverityBandSections(residualBlockers: Wave3ResidualBlockerList): string {
+  const criticalReleaseBlockers = residualBlockers.blockers.filter(
+    (blocker) => blocker.severity === "CRITICAL"
+  );
+  const highNonBlockingFailures = residualBlockers.blockers.filter(
+    (blocker) => blocker.severity === "HIGH"
+  );
+  const mediumFollowupReadinessFailures = residualBlockers.blockers.filter(
+    isMediumFollowupReadinessBlocker
+  );
+  return [
+    renderResidualBandTable(
+      "Critical Release Blockers",
+      criticalReleaseBlockers,
+      residualBlockers.delta.bandDeltas.criticalReleaseBlockers
+    ),
+    renderResidualBandTable(
+      "High Non-Blocking Failures",
+      highNonBlockingFailures,
+      residualBlockers.delta.bandDeltas.highNonBlockingFailures
+    ),
+    renderResidualBandTable(
+      "Medium Follow-Up and Readiness Failures",
+      mediumFollowupReadinessFailures,
+      residualBlockers.delta.bandDeltas.mediumFollowupReadinessFailures
+    ),
+  ].join("\n");
+}
+
 function renderBurnDownSnapshot(ledger: Wave3FailureLedger, residualBlockers: Wave3ResidualBlockerList): string {
   const comparedTo = residualBlockers.delta.comparedToGeneratedAt ?? ledger.delta.comparedToGeneratedAt ?? "no prior comparable run";
   return [
@@ -585,6 +775,9 @@ function renderBurnDownSnapshot(ledger: Wave3FailureLedger, residualBlockers: Wa
     `- Compared against: ${comparedTo}`,
     `- Total failures: ${ledger.totalFailures} (${formatSignedDelta(ledger.delta.totalFailureDelta)})`,
     `- Residual blockers: ${residualBlockers.summary.totalBlockers} (${formatSignedDelta(residualBlockers.delta.blockerDelta)})`,
+    `- Critical release blockers: ${residualBlockers.summary.severityBands.criticalReleaseBlockers.total} (${formatSignedDelta(residualBlockers.delta.bandDeltas.criticalReleaseBlockers.delta)})`,
+    `- High non-blocking failures: ${residualBlockers.summary.severityBands.highNonBlockingFailures.total} (${formatSignedDelta(residualBlockers.delta.bandDeltas.highNonBlockingFailures.delta)})`,
+    `- Medium follow-up/readiness failures: ${residualBlockers.summary.severityBands.mediumFollowupReadinessFailures.total} (${formatSignedDelta(residualBlockers.delta.bandDeltas.mediumFollowupReadinessFailures.delta)})`,
     `- Residual blocker changes: new ${residualBlockers.delta.countsByStatus.new}, resolved ${residualBlockers.delta.countsByStatus.resolved}, regressed ${residualBlockers.delta.countsByStatus.regressed}, improved ${residualBlockers.delta.countsByStatus.improved}, unchanged ${residualBlockers.delta.countsByStatus.unchanged}`,
     `- Root-cause bucket changes: regressed ${ledger.delta.countsByStatus.regressed}, improved ${ledger.delta.countsByStatus.improved}, unchanged ${ledger.delta.countsByStatus.unchanged}`,
     "",
@@ -611,11 +804,13 @@ export function renderWave3FailureLedgerMarkdown(
     renderBurnDownSnapshot(ledger, residualBlockers),
     renderRootCauseDeltaTable(ledger.delta),
     renderResidualDeltaTable(residualBlockers.delta),
+    renderResidualSeverityBandSections(residualBlockers),
     "## Top Failure Entries",
     "",
     ...topEntries,
     "",
     renderRootCauseSummaryTable(ledger.rootCauseSummary),
+    renderCountTable("Root Cause Bucket Counts", ledger.byRootCauseBucket),
     renderCountTable("By Complaint Family", ledger.byComplaintFamily),
     renderCountTable("By Risk Tier", ledger.byRiskTier),
     renderCountTable("By Actual Response Type", ledger.byActualResponseType),

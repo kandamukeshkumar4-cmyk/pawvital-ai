@@ -83,6 +83,7 @@ describe("Wave 3 release gate", () => {
 
     expect(result.pass).toBe(true);
     expect(result.failures).toEqual([]);
+    expect(result.failureBands.criticalReleaseBlockers.total).toBe(0);
   });
 
   it("fails when required provenance is missing", () => {
@@ -126,6 +127,7 @@ describe("Wave 3 release gate", () => {
     expect(result.failures.some((failure) => failure.includes("Emergency recall"))).toBe(true);
     expect(result.failures.some((failure) => failure.includes("Unsafe downgrade rate"))).toBe(true);
     expect(result.blockingHighRiskFailures).toHaveLength(1);
+    expect(result.failureBands.criticalReleaseBlockers.total).toBe(1);
   });
 
   it("fails when the scorecard suite identity or case IDs diverge from the canonical manifest", () => {
