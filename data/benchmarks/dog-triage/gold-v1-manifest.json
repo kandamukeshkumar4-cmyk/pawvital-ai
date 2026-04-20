@@ -1,8 +1,8 @@
 {
   "version": "gold-v1",
-  "freeze_date": "2026-04-14",
+  "freeze_date": "2026-04-20",
   "shard_count": 13,
-  "total_case_count": 223,
+  "total_case_count": 226,
   "case_id_ranges": {
     "01-emergency-a.json": {
       "count": 10,
@@ -40,8 +40,8 @@
       "last_id": "oncology-emergency-nosebleed-collapse"
     },
     "08-emergency-expansion.json": {
-      "count": 30,
-      "first_id": "emergency-bloat-gasdilation",
+      "count": 32,
+      "first_id": "emergency-hit-by-car-pale-gums",
       "last_id": "emergency-hard-labor-no-puppy"
     },
     "09-same-day-urgent.json": {
@@ -50,8 +50,8 @@
       "last_id": "sameday-chronic-limp-sudden-worse"
     },
     "10-new-families.json": {
-      "count": 22,
-      "first_id": "question-anxiety-separation",
+      "count": 23,
+      "first_id": "question-trauma-fall-yard",
       "last_id": "question-chronic-weight-gain"
     },
     "11-language-variants.json": {
@@ -100,9 +100,9 @@
     "not_eating",
     "oral_mass",
     "pacing_restlessness",
+    "post_vaccination_reaction",
     "postoperative_concern",
     "pregnancy_birth",
-    "puppy_concern",
     "recurrent_ear",
     "recurrent_skin",
     "regurgitation",
@@ -112,6 +112,7 @@
     "swelling_lump",
     "swollen_abdomen",
     "testicular_prostate",
+    "trauma",
     "trembling",
     "unknown_concern",
     "urination_problem",
@@ -122,9 +123,9 @@
     "weight_loss",
     "wound_skin_issue"
   ],
-  "shard_hash": "d798f93f15977878e18d809da64736ff3577f16122a5b1486a85102a83e26dd9",
+  "shard_hash": "a407683c5ceabc4bb102c9172f754da30dadbfde39cb08cd81a5c5aac945ede8",
   "coverage_gaps": [
-    "All 50 canonical complaint families represented.",
-    "Thin coverage remains for 23 families with fewer than 3 cases: heat_intolerance, vision_loss, not_eating, regurgitation, constipation, generalized_stiffness, nasal_discharge, vaginal_discharge, testicular_prostate, exercise_induced_lameness, recurrent_ear, inappropriate_urination, vomiting_diarrhea_combined, oral_mass, hearing_loss, aggression, pacing_restlessness, abnormal_gait, postoperative_concern, medication_reaction, puppy_concern, multi_system_decline, blood_in_stool"
+    "1 canonical complaint families still missing: puppy_concern",
+    "Thin coverage remains for 22 families with fewer than 3 cases: heat_intolerance, vision_loss, not_eating, regurgitation, constipation, generalized_stiffness, nasal_discharge, vaginal_discharge, testicular_prostate, exercise_induced_lameness, recurrent_ear, inappropriate_urination, vomiting_diarrhea_combined, oral_mass, hearing_loss, aggression, pacing_restlessness, abnormal_gait, postoperative_concern, medication_reaction, multi_system_decline, blood_in_stool"
   ]
 }

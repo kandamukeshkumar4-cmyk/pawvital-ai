@@ -1,8 +1,8 @@
 {
   "version": "gold-v1",
-  "freeze_date": "2026-04-14",
-  "case_count": 223,
-  "shard_hash": "d798f93f15977878e18d809da64736ff3577f16122a5b1486a85102a83e26dd9",
-  "validated_at": "2026-04-14T03:04:03.778Z",
+  "freeze_date": "2026-04-20",
+  "case_count": 226,
+  "shard_hash": "a407683c5ceabc4bb102c9172f754da30dadbfde39cb08cd81a5c5aac945ede8",
+  "validated_at": "2026-04-20T22:08:43.635Z",
   "status": "stamped"
 }

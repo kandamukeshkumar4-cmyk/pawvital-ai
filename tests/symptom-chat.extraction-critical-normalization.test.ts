@@ -31,6 +31,15 @@ describe("VET-1335 critical emergency normalization", () => {
       expect(symptoms).not.toContain("trembling");
       expect(redFlags).not.toContain("eclampsia_signs");
     });
+
+    it("keeps postpartum bleeding language on the pregnancy_birth complaint family", () => {
+      const message =
+        "My dog gave birth a few hours ago and now she is bleeding a lot and seems weak.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("pregnancy_birth");
+    });
   });
 
   describe("protozoal acute weakness", () => {
@@ -192,6 +201,99 @@ describe("VET-1335 critical emergency normalization", () => {
       expect(redFlags).not.toContain("wound_tissue_exposed");
       expect(redFlags).not.toContain("wound_deep_bleeding");
       expect(symptoms).toContain("wound_skin_issue");
+    });
+  });
+
+  describe("release-gate residual symptom families", () => {
+    it("maps collapse with pale gums to lethargy for shock-pattern routing", () => {
+      const message = "He suddenly collapsed and his gums are very pale.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toEqual(
+        expect.arrayContaining(["seizure_collapse", "lethargy"])
+      );
+    });
+
+    it("does not add lethargy for collapse without pale-gum or weakness language", () => {
+      const message = "He collapsed briefly after chasing a ball but his gums stayed pink.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("seizure_collapse");
+      expect(symptoms).not.toContain("lethargy");
+    });
+
+    it("maps foul vaginal discharge wording to vaginal_discharge", () => {
+      const message =
+        "My unspayed dog is lethargic, drinking a lot, and has foul vaginal discharge.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("vaginal_discharge");
+    });
+
+    it("does not invent vaginal_discharge when discharge is explicitly absent", () => {
+      const message =
+        "She is drinking more than usual, but there is no discharge from her vulva.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).not.toContain("vaginal_discharge");
+    });
+
+    it("maps rat poison exposure wording to medication_reaction", () => {
+      const message =
+        "My dog may have eaten rat poison and now there is blood on his gums and he seems weak.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("medication_reaction");
+    });
+
+    it("does not add medication_reaction when rat poison is explicitly denied", () => {
+      const message =
+        "There was no rat poison involved, he just scraped his gum chewing a toy.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).not.toContain("medication_reaction");
+    });
+
+    it("maps vaccine swelling and hives language to post_vaccination_reaction", () => {
+      const message =
+        "A few hours after his shots my dog's face puffed up and he broke out in hives.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("post_vaccination_reaction");
+    });
+
+    it("does not add post_vaccination_reaction for mild post-shot tiredness alone", () => {
+      const message =
+        "He had his shots yesterday and is a little sleepy, but there is no swelling or hives.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).not.toContain("post_vaccination_reaction");
+    });
+
+    it("maps chemical cleaner burn wording to wound_skin_issue", () => {
+      const message =
+        "My dog stepped in drain cleaner and now his paw pads are red, blistered, and peeling.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("wound_skin_issue");
+    });
+
+    it("does not add wound_skin_issue when cleaner exposure has no skin injury wording", () => {
+      const message =
+        "He stepped near a cleaner spill, but his paw pads look normal and intact afterward.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).not.toContain("wound_skin_issue");
     });
   });
 });

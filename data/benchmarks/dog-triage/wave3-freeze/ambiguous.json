@@ -42,7 +42,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -109,7 +109,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -174,7 +174,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -241,7 +241,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -305,7 +305,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -372,7 +372,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -437,7 +437,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -504,7 +504,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -571,7 +571,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -635,7 +635,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -700,7 +700,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -767,7 +767,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -834,7 +834,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -899,7 +899,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -966,7 +966,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -1030,7 +1030,7 @@
       "provenance": {
         "source_shard": "11-language-variants.json",
         "source_suite_id": "dog-triage-gold-candidate-language-variants",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [
@@ -1098,7 +1098,7 @@
       "provenance": {
         "source_shard": "13-senior-chronic.json",
         "source_suite_id": "dog-triage-gold-candidate-senior-chronic",
-        "freeze_date": "2026-04-17",
+        "freeze_date": "2026-04-20",
         "version": "wave3-freeze-v2"
       },
       "wave3_strata": [

@@ -175,6 +175,7 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "blood in stool": "blood_in_stool",
     "in labor": "pregnancy_birth",
     "in labour": "pregnancy_birth",
+    "gave birth": "pregnancy_birth",
     "giving birth": "pregnancy_birth",
     "after giving birth": "pregnancy_birth",
     "recently gave birth": "pregnancy_birth",
@@ -303,6 +304,25 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     pushSymptom("excessive_scratching");
   }
 
+  const hasNegatedReactionCue =
+    /\b(no|not|without)\b[^.?!]{0,24}\b(swelling|swollen|hives?|welts?|rash)\b/.test(
+      lower
+    ) ||
+    /\b(swelling|swollen|hives?|welts?|rash)\b[^.?!]{0,24}\b(no|not|without)\b/.test(
+      lower
+    );
+
+  if (
+    /\b(vaccines?|vaccination|shots?|booster)\b/.test(lower) &&
+    !hasNegatedReactionCue &&
+    (/\b(hives?|welts?|rash)\b/.test(lower) ||
+      /\b(face|muzzle|eyelids?)\b.*\b(swollen|swelling|puffy|puff(?:ed|ing) up|swelled up)\b/.test(
+        lower
+      ))
+  ) {
+    pushSymptom("post_vaccination_reaction");
+  }
+
   if (
     /\b(can'?t use (his|her|their)? ?back legs|cannot use (his|her|their)? ?back legs|dragging (himself|herself|themself)|dragging (his|her|their) back legs|paraly[sz]ed|can'?t stand|unable to stand)\b/.test(
       lower
@@ -336,6 +356,51 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     )
   ) {
     pushSymptom("trauma");
+  }
+
+  if (
+    !/\b(no|not|without)\b[^.?!]{0,24}\b(vaginal discharge|vulvar discharge|discharge from (?:her|the) (?:vulva|vagina))\b/.test(
+      lower
+    ) &&
+    /\b(vaginal discharge|vulvar discharge|discharge from (?:her|the) (?:vulva|vagina))\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("vaginal_discharge");
+  }
+
+  if (
+    /\b(collapse|collapsed|passed out|fainted|weak|weakness|wobbly|stumbling)\b/.test(
+      lower
+    ) &&
+    (/\b(pale|white) gums?\b/.test(lower) ||
+      /\bgums? (?:look(?:ing|s|ed)?|are(?: looking)?|turned?) (?:very |extremely )?(pale|white)\b/.test(
+        lower
+      ))
+  ) {
+    pushSymptom("lethargy");
+  }
+
+  if (
+    !/\b(no rat poison|no rodenticide|did not get into rat poison|didn't get into rat poison|did not eat rat poison|didn't eat rat poison)\b/.test(
+      lower
+    ) &&
+    /\b(rat poison|rodenticide|mouse bait|bait station|warfarin|brodifacoum|bromadiolone)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("medication_reaction");
+  }
+
+  if (
+    (/\b(drain cleaner|caustic cleaner|bleach|chemical burn|chemical cleaner)\b/.test(
+      lower
+    ) ||
+      /\bstep(?:ped)? in\b[^.?!]{0,40}\b(cleaner|chemical)\b/.test(lower)) &&
+    (/\b(blister|blistered|peeling|burned|burnt|raw)\b/.test(lower) ||
+      (/\bred\b/.test(lower) && /\b(paw|paw pads?|skin)\b/.test(lower)))
+  ) {
+    pushSymptom("wound_skin_issue");
   }
 
   if (
