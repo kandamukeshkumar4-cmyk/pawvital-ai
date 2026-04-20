@@ -1,109 +1,10 @@
 {
-  "generatedAt": "2026-04-20T13:56:26.572Z",
+  "generatedAt": "2026-04-20T14:41:55.060Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
-  "totalFailures": 96,
+  "totalFailures": 84,
   "hasScorecard": true,
   "entries": [
-    {
-      "caseId": "emergency-diabetic-crisis",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "lethargy"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My diabetic dog is stumbling around and seems very confused.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-dog-bite-wound",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "trauma",
-        "wound_skin_issue"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My dog was attacked and has deep puncture wounds on his chest.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-electrical-shock",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "trembling"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My puppy chewed an electrical cord and now he is trembling and weak.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-glaucoma-eye",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "eye_discharge"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-hard-labor-no-puppy",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "pregnancy_birth"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My dog has been having strong contractions for over two hours and still has not delivered a puppy.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-hypoglycemia-toy-breed",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "pregnancy_birth"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My tiny puppy is shaky, weak, and just flopped over after not eating well.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-imma-mediated-thrombocytopenia",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "lethargy"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "There are tiny red spots all over my dog's gums and she is very weak.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
     {
       "caseId": "emergency-limping-cry-pain",
       "severity": "CRITICAL",
@@ -116,20 +17,6 @@
       "actualResponseType": "question",
       "rootCauseBucket": "question orchestration overriding emergency",
       "ownerMessage": "My dog is limping and crying in pain and won't let me touch his back.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-open-fracture",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "limping"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "He is limping badly and I can actually see bone through the wound on the leg.",
       "description": "Failed checks: responseType, readyForReport"
     },
     {
@@ -174,63 +61,6 @@
       "rootCauseBucket": "complaint normalization miss",
       "ownerMessage": "My unspayed dog is lethargic, drinking a lot, and has foul vaginal discharge.",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
-    },
-    {
-      "caseId": "emergency-repeated-nonproductive-heaving",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "vomiting"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "He keeps heaving like he needs to vomit but nothing is coming up and he looks panicked.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-toxin-xylitol",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "medication_reaction",
-        "vomiting"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My dog ate sugar-free gum and now she is vomiting and shaky.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-trembling-cold-weak",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "trembling"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My dog is trembling, weak, and his ears and paws feel cold.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-unresponsive-after-tremors",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "trembling"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "She was shaking and now she is barely responsive.",
-      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "emergency-urinary-blockage",
@@ -1368,33 +1198,33 @@
     "drinking_more": 4,
     "ear_scratching": 1,
     "excessive_scratching": 2,
-    "eye_discharge": 2,
+    "eye_discharge": 1,
     "generalized_stiffness": 1,
     "hair_loss": 2,
-    "lethargy": 5,
-    "limping": 9,
-    "medication_reaction": 7,
+    "lethargy": 3,
+    "limping": 8,
+    "medication_reaction": 6,
     "nasal_discharge": 3,
     "post_vaccination_reaction": 2,
     "postoperative_concern": 1,
-    "pregnancy_birth": 5,
+    "pregnancy_birth": 3,
     "regurgitation": 2,
     "seizure_collapse": 3,
     "senior_decline": 1,
     "swelling_lump": 4,
     "swollen_abdomen": 1,
     "testicular_prostate": 1,
-    "trauma": 2,
-    "trembling": 4,
+    "trauma": 1,
+    "trembling": 1,
     "urination_problem": 4,
     "vaginal_discharge": 2,
     "vision_loss": 1,
-    "vomiting": 10,
+    "vomiting": 8,
     "weight_loss": 3,
-    "wound_skin_issue": 6
+    "wound_skin_issue": 5
   },
   "byRiskTier": {
-    "tier_1_emergency": 39,
+    "tier_1_emergency": 27,
     "tier_2_same_day": 12,
     "tier_3_48h_monitor": 45
   },
@@ -1402,37 +1232,25 @@
     "cannot_assess": 4,
     "emergency": 7,
     "out_of_scope": 2,
-    "question": 81,
+    "question": 69,
     "ready": 2
   },
   "byRootCauseBucket": {
     "complaint normalization miss": 48,
     "deterministic emergency composite not triggered": 25,
-    "question orchestration overriding emergency": 23
+    "question orchestration overriding emergency": 11
   },
   "rootCauseSummary": [
     {
       "rootCauseBucket": "question orchestration overriding emergency",
-      "totalFailures": 23,
+      "totalFailures": 11,
       "severityCounts": {
-        "CRITICAL": 23,
+        "CRITICAL": 11,
         "HIGH": 0,
         "MEDIUM": 0
       },
       "caseIds": [
-        "emergency-diabetic-crisis",
-        "emergency-dog-bite-wound",
-        "emergency-electrical-shock",
-        "emergency-glaucoma-eye",
-        "emergency-hard-labor-no-puppy",
-        "emergency-hypoglycemia-toy-breed",
-        "emergency-imma-mediated-thrombocytopenia",
         "emergency-limping-cry-pain",
-        "emergency-open-fracture",
-        "emergency-repeated-nonproductive-heaving",
-        "emergency-toxin-xylitol",
-        "emergency-trembling-cold-weak",
-        "emergency-unresponsive-after-tremors",
         "followup-gum-color-unknown-escalates",
         "oncology-emergency-nosebleed-collapse",
         "oncology-emergency-obstructive-neck-mass",

@@ -8155,6 +8155,121 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
     });
 
+    it.each([
+      {
+        label: "xylitol-toxicity",
+        message:
+          "My dog ate sugar-free gum and now she is vomiting and shaky.",
+        pet: {
+          name: "Daisy",
+          breed: "Labrador Retriever",
+          age_years: 2,
+          weight: 58,
+        },
+        flag: "xylitol_toxicity_emergency",
+      },
+      {
+        label: "open-fracture",
+        message:
+          "He is limping badly and I can actually see bone through the wound on the leg.",
+        pet: {
+          name: "Scout",
+          breed: "Australian Shepherd",
+          age_years: 2,
+          weight: 47,
+        },
+        flag: "visible_fracture_emergency",
+      },
+      {
+        label: "dog-bite-wound",
+        message:
+          "My dog was attacked and has deep puncture wounds on his chest.",
+        pet: {
+          name: "Rex",
+          breed: "Pit Bull Terrier",
+          age_years: 5,
+          weight: 65,
+        },
+        flag: "severe_bite_wound_emergency",
+      },
+      {
+        label: "electrical-shock",
+        message:
+          "My puppy chewed an electrical cord and now he is trembling and weak.",
+        pet: {
+          name: "Gizmo",
+          breed: "Jack Russell Terrier",
+          age_years: 2,
+          weight: 14,
+        },
+        flag: "electrical_shock_emergency",
+      },
+      {
+        label: "diabetic-crisis",
+        message:
+          "My diabetic dog is stumbling around and seems very confused.",
+        pet: {
+          name: "Daisy",
+          breed: "Miniature Schnauzer",
+          age_years: 10,
+          weight: 18,
+        },
+        flag: "diabetic_crisis_emergency",
+      },
+      {
+        label: "hard-labor-no-puppy",
+        message:
+          "My dog has been having strong contractions for over two hours and still has not delivered a puppy.",
+        pet: {
+          name: "Hazel",
+          breed: "Boston Terrier",
+          age_years: 5,
+          weight: 21,
+        },
+        flag: "hard_labor_no_puppy_emergency",
+      },
+      {
+        label: "repeated-nonproductive-heaving",
+        message:
+          "He keeps heaving like he needs to vomit but nothing is coming up and he looks panicked.",
+        pet: {
+          name: "Milo",
+          breed: "Great Dane",
+          age_years: 6,
+          weight: 130,
+        },
+        flag: "unproductive_heaving_emergency",
+      },
+      {
+        label: "painful-bulging-eye",
+        message:
+          "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain.",
+        pet: {
+          name: "Otis",
+          breed: "Beagle",
+          age_years: 8,
+          weight: 28,
+        },
+        flag: "painful_bulging_eye_emergency",
+      },
+    ])(
+      "VET-221: routes $label emergencies before question orchestration",
+      async ({ message, pet, flag }) => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(
+          makeTextOnlyRequest(createSession(), message, pet)
+        );
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("emergency");
+        expect(payload.ready_for_report).toBe(true);
+        expect(payload.session.red_flags_triggered).toContain(flag);
+        expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+        expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+      }
+    );
+
     it("VET-1322: preserves the gum-color alternate observable retry for unknown respiratory follow-up answers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const session = buildPendingQuestionSession(

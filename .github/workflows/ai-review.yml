@@ -74,7 +74,7 @@ jobs:
       - name: Open AI review gate
         if: steps.pr.outputs.found == 'true'
         id: gate
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -356,7 +356,7 @@ jobs:
 
       - name: Complete AI review gate
         if: steps.pr.outputs.found == 'true' && steps.gate.outputs.id != '' && always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           CHECK_RUN_ID: ${{ steps.gate.outputs.id }}
           GATE_CONCLUSION: ${{ steps.review.outputs.gate_conclusion || 'failure' }}

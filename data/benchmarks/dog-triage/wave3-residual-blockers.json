@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-04-20T13:56:26.572Z",
+  "generatedAt": "2026-04-20T14:41:55.060Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
   "summary": {
-    "totalBlockers": 96,
+    "totalBlockers": 84,
     "bySeverity": {
-      "CRITICAL": 34,
+      "CRITICAL": 22,
       "HIGH": 12,
       "MEDIUM": 50
     },
     "byRootCauseBucket": {
       "complaint normalization miss": 48,
       "deterministic emergency composite not triggered": 25,
-      "question orchestration overriding emergency": 23
+      "question orchestration overriding emergency": 11
     }
   },
   "delta": {
@@ -30,71 +30,7 @@
   },
   "blockers": [
     {
-      "caseId": "emergency-diabetic-crisis",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-dog-bite-wound",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-electrical-shock",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-glaucoma-eye",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-hard-labor-no-puppy",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-hypoglycemia-toy-breed",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-imma-mediated-thrombocytopenia",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
       "caseId": "emergency-limping-cry-pain",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-open-fracture",
       "severity": "CRITICAL",
       "frequency": 1,
       "rootCauseBucket": "question orchestration overriding emergency",
@@ -124,38 +60,6 @@
       "rootCauseBucket": "complaint normalization miss",
       "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge",
       "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
-    },
-    {
-      "caseId": "emergency-repeated-nonproductive-heaving",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-toxin-xylitol",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-trembling-cold-weak",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "emergency-unresponsive-after-tremors",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
     },
     {
       "caseId": "emergency-urinary-blockage",
