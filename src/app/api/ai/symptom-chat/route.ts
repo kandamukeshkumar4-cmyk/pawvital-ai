@@ -163,6 +163,167 @@ interface RequestBody {
   gateOverride?: boolean;
 }
 
+function humanizeEmergencySignal(signal: string): string {
+  return signal.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function collectDeterministicEmergencySignals(
+  session: TriageSession,
+  diagnosisContext: ReturnType<typeof buildDiagnosisContext>
+): string[] {
+  return Array.from(
+    new Set([
+      ...session.red_flags_triggered,
+      ...session.known_symptoms,
+      ...diagnosisContext.top5
+        .filter((candidate) => candidate.urgency === "emergency")
+        .map((candidate) => candidate.name),
+    ])
+  );
+}
+
+function collectRouteEmergencyOverrideSignals(
+  rawMessage: string,
+  session: TriageSession,
+  incomingUnresolvedIds: string[]
+): string[] {
+  const lower = rawMessage.toLowerCase();
+  const signals = new Set<string>();
+  const priorToxinExposure = String(session.extracted_answers.toxin_exposure || "");
+  const unresolvedQuestionIds = new Set(
+    session.case_memory?.unresolved_question_ids ?? []
+  );
+  const chiefComplaints = new Set(session.case_memory?.chief_complaints ?? []);
+  const activeFocusSymptoms = new Set(
+    session.case_memory?.active_focus_symptoms ?? []
+  );
+  const candidateDiseases = new Set(session.candidate_diseases ?? []);
+  const bodySystems = new Set(session.body_systems_involved ?? []);
+  const ambiguousUnknownReply =
+    coerceAmbiguousReplyToUnknown(rawMessage) !== null ||
+    /\b(can(?:not|'t) tell|not sure|don't know|do not know)\b/.test(lower);
+
+  const hasChemicalExposure =
+    /\b(drain cleaner|bleach|acid|lye|caustic|chemical|oven cleaner|pool chemical)\b/.test(
+      lower
+    ) ||
+    /\b(drain cleaner|bleach|acid|lye|caustic|chemical|oven cleaner|pool chemical)\b/.test(
+      priorToxinExposure.toLowerCase()
+    );
+  const hasChemicalInjury =
+    /\b(blister|blistered|burn|burned|burnt|raw|peeling|ulcerated)\b/.test(
+      lower
+    ) ||
+    (/\bred\b/.test(lower) && /\b(paw|foot|leg|skin|mouth|face)\b/.test(lower));
+  if (
+    hasChemicalExposure &&
+    (hasChemicalInjury ||
+      /\b(stepped in|paw|foot|skin|mouth|face)\b/.test(lower))
+  ) {
+    signals.add("chemical_burn_exposure");
+  }
+
+  const hasAnticoagulantExposure =
+    /\b(rat poison|rodenticide|mouse bait|bait station|warfarin|brodifacoum|bromadiolone)\b/.test(
+      lower
+    ) ||
+    session.extracted_answers.rat_poison_access === true ||
+    /\b(rat poison|rodenticide|mouse bait|bait station|warfarin|brodifacoum|bromadiolone)\b/.test(
+      priorToxinExposure.toLowerCase()
+    );
+  const hasActiveBleeding =
+    /\b(bleeding|bleed|blood)\b/.test(lower) &&
+    /\b(gum|gums|mouth|nose|stool|diarrhea|urine|vomit|vomiting)\b/.test(lower);
+  if (hasAnticoagulantExposure && hasActiveBleeding) {
+    signals.add("anticoagulant_poisoning_bleeding");
+  }
+
+  if (
+    /\b(hit by (a )?car|struck by (a )?car|ran over)\b/.test(lower) &&
+    /\b(can(?:not|'t) stand(?: up)?|unable to stand|won't stand|collapsed|collapse|won't get up|weak)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("major_trauma_hit_by_car");
+  }
+
+  if (
+    /\b(heatstroke|heat stroke|overheat|overheated|in the heat|too hot)\b/.test(
+      lower
+    ) &&
+    (/\b(panting hard|breathing hard|weak|collapse|collapsed)\b/.test(lower) ||
+      /\b(bright red|brick red)\b/.test(lower)) &&
+    (/\bgum\b|\bgums\b/.test(lower) ||
+      /\b(panting hard|breathing hard|weak|collapse|collapsed)\b/.test(lower))
+  ) {
+    signals.add("heatstroke_emergency");
+  }
+
+  if (
+    /\b(struggling to breathe|labored breathing|can't breathe|cannot breathe|gasping)\b/.test(
+      lower
+    ) ||
+    (/\b(open[- ]mouth breathing|mouth open breathing|breathing with mouth open)\b/.test(
+      lower
+    ) &&
+      /\b(rest|resting|at rest)\b/.test(lower)) ||
+    (/\bhonking\b/.test(lower) &&
+      /\b(struggling to breathe|trouble breathing|labored breathing)\b/.test(
+        lower
+      ))
+  ) {
+    signals.add("clear_respiratory_distress");
+  }
+
+  if (
+    /\bpuppy\b/.test(lower) &&
+    /\b(vomit|vomiting)\b/.test(lower) &&
+    (/\bbloody diarrhea\b/.test(lower) ||
+      (/\b(diarrhea|stool)\b/.test(lower) && /\b(blood|bloody)\b/.test(lower))) &&
+    /\b(unvaccinated|won't drink|will not drink|not drinking|weak|lethargic)\b/.test(
+      lower
+    )
+  ) {
+    signals.add("parvo_style_puppy_emergency");
+  }
+
+  if (
+    session.last_question_asked === "gum_color" &&
+    incomingUnresolvedIds.includes("gum_color") &&
+    unresolvedQuestionIds.has("gum_color") &&
+    session.known_symptoms.includes("difficulty_breathing") &&
+    chiefComplaints.has("difficulty_breathing") &&
+    activeFocusSymptoms.has("difficulty_breathing") &&
+    bodySystems.has("respiratory") &&
+    (candidateDiseases.has("heart_failure") ||
+      candidateDiseases.has("allergic_reaction")) &&
+    (session.case_memory?.turn_count ?? 0) >= 2 &&
+    ambiguousUnknownReply
+  ) {
+    signals.add("respiratory_distress_unknown_gum_color");
+  }
+
+  return Array.from(signals);
+}
+
+function buildDeterministicEmergencyMessage(
+  petName: string,
+  session: TriageSession,
+  diagnosisContext: ReturnType<typeof buildDiagnosisContext>
+): string {
+  const signalSummary = collectDeterministicEmergencySignals(
+    session,
+    diagnosisContext
+  )
+    .slice(0, 3)
+    .map(humanizeEmergencySignal)
+    .join(", ");
+
+  const details = signalSummary ? ` (${signalSummary})` : "";
+
+  return `Based on the symptoms you've shared${details}, ${petName} may be having a medical emergency. Please go to the nearest emergency veterinary hospital now. I have enough information to prepare an emergency summary for the vet while you're on the way.`;
+}
+
 export async function POST(request: Request) {
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
@@ -1104,6 +1265,7 @@ export async function POST(request: Request) {
       }),
       missingQuestionIds: getMissingQuestions(session),
     });
+    const diagnosisContext = buildDiagnosisContext(session, effectivePet);
 
     // ═══════════════════════════════════════════════════════════════════
     // STEP 3: Check red flags — EMERGENCY OVERRIDE (pure code)
@@ -1135,6 +1297,48 @@ export async function POST(request: Request) {
       return NextResponse.json(
         buildTerminalOutcomeResponse(terminalOutcome, session)
       );
+    }
+
+    const routeEmergencyOverrideSignals = collectRouteEmergencyOverrideSignals(
+      lastUserMessage.content,
+      session,
+      incomingUnresolvedIds
+    );
+    const hasRouteEmergencyOverride = routeEmergencyOverrideSignals.length > 0;
+    if (hasRouteEmergencyOverride) {
+      session = {
+        ...session,
+        red_flags_triggered: Array.from(
+          new Set([
+            ...session.red_flags_triggered,
+            ...routeEmergencyOverrideSignals,
+          ])
+        ),
+      };
+    }
+
+    if (hasRouteEmergencyOverride) {
+      session = transitionToEscalation({
+        session,
+        redFlags: Array.from(
+          new Set([
+            ...collectDeterministicEmergencySignals(session, diagnosisContext),
+            ...routeEmergencyOverrideSignals,
+          ])
+        ),
+        reason: "clinical_escalation",
+      });
+
+      return NextResponse.json({
+        type: "emergency" as const,
+        message: buildDeterministicEmergencyMessage(
+          effectivePet.name || pet.name || "your dog",
+          session,
+          diagnosisContext
+        ),
+        session: sanitizeSessionForClient(session),
+        ready_for_report: true,
+      });
     }
 
     if (alternateObservableOutcome) {
