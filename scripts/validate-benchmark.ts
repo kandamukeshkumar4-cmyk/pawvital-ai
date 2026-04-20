@@ -3,7 +3,7 @@ import * as path from "node:path";
 import {
   loadWave3CanonicalSuite,
   type Wave3CanonicalCase,
-} from "../src/lib/wave3-suite-manifest";
+} from "../src/lib/wave3-suite-manifest.ts";
 
 interface ReviewerSlot {
   role: string;
