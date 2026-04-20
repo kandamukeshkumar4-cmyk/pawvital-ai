@@ -185,7 +185,11 @@ function collectDeterministicEmergencySignals(
 function collectRouteEmergencyOverrideSignals(
   rawMessage: string,
   session: TriageSession,
-  incomingUnresolvedIds: string[]
+  incomingUnresolvedIds: string[],
+  context: {
+    answersBeforeTurn: TriageSession["extracted_answers"];
+    ambiguityFlagsBeforeTurn: string[];
+  }
 ): string[] {
   const lower = rawMessage.toLowerCase();
   const signals = new Set<string>();
@@ -200,9 +204,14 @@ function collectRouteEmergencyOverrideSignals(
   const candidateDiseases = new Set(session.candidate_diseases ?? []);
   const bodySystems = new Set(session.body_systems_involved ?? []);
   const turnCount = session.case_memory?.turn_count ?? 0;
+  const ambiguityFlagsBeforeTurn = new Set(context.ambiguityFlagsBeforeTurn);
   const ambiguousUnknownReply =
     coerceAmbiguousReplyToUnknown(rawMessage) !== null ||
     /\b(can(?:not|'t) tell|not sure|don't know|do not know)\b/.test(lower);
+  const hadPriorUnknownAnswer = (questionId: string) =>
+    String(context.answersBeforeTurn[questionId] ?? "")
+      .trim()
+      .toLowerCase() === "unknown";
   const hasCarriedOverRespiratoryUnknown =
     turnCount >= 2 &&
     session.known_symptoms.includes("difficulty_breathing") &&
@@ -600,7 +609,7 @@ function collectRouteEmergencyOverrideSignals(
   }
 
   if (
-    incomingUnresolvedIds.includes("breathing_onset") &&
+    hadPriorUnknownAnswer("breathing_onset") &&
     hasCarriedOverRespiratoryUnknown &&
     ambiguousUnknownReply
   ) {
@@ -608,7 +617,7 @@ function collectRouteEmergencyOverrideSignals(
   }
 
   if (
-    incomingUnresolvedIds.includes("breathing_pattern") &&
+    hadPriorUnknownAnswer("breathing_pattern") &&
     hasCarriedOverRespiratoryUnknown &&
     ambiguousUnknownReply
   ) {
@@ -616,7 +625,7 @@ function collectRouteEmergencyOverrideSignals(
   }
 
   if (
-    incomingUnresolvedIds.includes("consciousness_level") &&
+    hadPriorUnknownAnswer("consciousness_level") &&
     hasCarriedOverSeizureUnknown &&
     ambiguousUnknownReply
   ) {
@@ -624,7 +633,7 @@ function collectRouteEmergencyOverrideSignals(
   }
 
   if (
-    incomingUnresolvedIds.includes("seizure_duration") &&
+    hadPriorUnknownAnswer("seizure_duration") &&
     hasCarriedOverSeizureUnknown &&
     ambiguousUnknownReply
   ) {
@@ -633,6 +642,7 @@ function collectRouteEmergencyOverrideSignals(
 
   if (
     incomingUnresolvedIds.includes("gum_color") &&
+    ambiguityFlagsBeforeTurn.has("alternate_observable_prompted_gum_color") &&
     unresolvedQuestionIds.has("gum_color") &&
     session.known_symptoms.includes("difficulty_breathing") &&
     chiefComplaints.has("difficulty_breathing") &&
@@ -723,6 +733,9 @@ export async function POST(request: Request) {
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
     const answersBeforeTurn = { ...session.extracted_answers };
     const answerKeysBeforeTurn = new Set(Object.keys(session.extracted_answers));
+    const ambiguityFlagsBeforeTurn = [
+      ...(session.case_memory?.ambiguity_flags ?? []),
+    ];
     let imagePreprocess: VisionPreprocessResult | null = null;
     let visualEvidence: VisionClinicalEvidence | null = null;
     let consultOpinion: ConsultOpinion | null = null;
@@ -1634,7 +1647,11 @@ export async function POST(request: Request) {
     const routeEmergencyOverrideSignals = collectRouteEmergencyOverrideSignals(
       lastUserMessage.content,
       session,
-      incomingUnresolvedIds
+      incomingUnresolvedIds,
+      {
+        answersBeforeTurn,
+        ambiguityFlagsBeforeTurn,
+      }
     );
     const hasRouteEmergencyOverride = routeEmergencyOverrideSignals.length > 0;
     if (hasRouteEmergencyOverride) {
