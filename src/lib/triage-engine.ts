@@ -605,6 +605,14 @@ function getCompositeEmergencyRedFlags(session: TriageSession): string[] {
     }
   }
 
+  if (
+    session.known_symptoms.includes("vomiting") &&
+    answers.appetite_status === "none" &&
+    answers.water_intake === "not_drinking"
+  ) {
+    flags.add("vomiting_not_drinking");
+  }
+
   return [...flags];
 }
 
@@ -947,6 +955,9 @@ export function buildDiagnosisContext(
 } {
   const probs = calculateProbabilities(session, pet);
   const top5 = probs.slice(0, 5);
+  const compositeRedFlags = getCompositeEmergencyRedFlags(session);
+  const hasEmergencyFlooringEvidence =
+    session.red_flags_triggered.length > 0 || compositeRedFlags.length > 0;
 
   // Build breed risk summary
   const breedMods = getBreedModifiers(pet.breed);
@@ -988,13 +999,12 @@ export function buildDiagnosisContext(
     }
   }
 
-  // Red flags override urgency
-  if (session.red_flags_triggered.length > 0) {
+  if (hasEmergencyFlooringEvidence) {
     highestUrgency = "emergency";
-  }
-
-  if (getCompositeEmergencyRedFlags(session).length > 0) {
-    highestUrgency = "emergency";
+  } else if (highestUrgency === "emergency") {
+    // Prevent mild lookalikes from auto-upgrading when they only inherit an
+    // emergency candidate disease without matching emergency evidence.
+    highestUrgency = "high";
   }
 
   return {
