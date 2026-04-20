@@ -7,16 +7,16 @@
 - Canonical manifest generated at: 2026-04-17T16:44:31.613Z
 - Total frozen cases: 226
 - Scorecard case count: 226
-- Emergency recall: 71.0%
-- Unsafe downgrade rate: 9.73%
+- Emergency recall: 92.1%
+- Unsafe downgrade rate: 2.65%
 - Extra case IDs: none
 - Missing case IDs: none
 
 ## Failures
 
-- Emergency recall 71.0% is below the 98.0% gate.
-- Unsafe downgrade rate 9.73% exceeds the 1.00% gate.
-- 27 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
+- Emergency recall 92.1% is below the 98.0% gate.
+- Unsafe downgrade rate 2.65% exceeds the 1.00% gate.
+- 12 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
 
 ## Warnings
 
@@ -24,32 +24,24 @@ _None_
 
 ## Failure Bands
 
-- Critical release blockers: 22 (emergency-limping-cry-pain, emergency-postpartum-eclampsia, emergency-protozoal-acute-babesia, emergency-pyometra-style, emergency-urinary-blockage, emergency-vomit-blood-collapse, emergency-vomiting-green, emergency-wound-deep-avulsion, followup-breathing-onset-unknown-escalates, followup-breathing-pattern-unknown)
+- Critical release blockers: 6 (emergency-postpartum-eclampsia, emergency-protozoal-acute-babesia, emergency-urinary-blockage, emergency-vomit-blood-collapse, emergency-vomiting-green, emergency-wound-deep-avulsion)
 - High non-blocking failures: 12 (question-trauma-fall-yard, sameday-behavior-hiding, sameday-chronic-limp-sudden-worse, sameday-dental-bleeding-gum, sameday-drinking-excessive, sameday-face-swelling-worsening, sameday-hair-loss-spreading, sameday-limping-non-weight-bearing, sameday-regurgitation-frequent, sameday-urinary-blood)
 - Medium follow-up/readiness failures: 18 (followup-appetite-change-unknown, followup-diarrhea-frequency-unknown, followup-diarrhea-onset-unknown, followup-discharge-color-unknown, followup-energy-level-unknown, followup-itch-location-unknown, followup-limping-progression-unknown, followup-lump-size-unknown, followup-seasonal-pattern-unknown, followup-stool-consistency-unknown)
 
 ## Blocking High-Risk Failures
 
-- emergency-limping-cry-pain: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-postpartum-eclampsia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth)
 - emergency-protozoal-acute-babesia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy)
-- emergency-pyometra-style: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge)
 - emergency-urinary-blockage: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem)
 - emergency-vomit-blood-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
 - emergency-vomiting-green: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
 - emergency-wound-deep-avulsion: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue)
-- followup-breathing-onset-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-breathing-pattern-unknown: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-consciousness-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-gum-color-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-seizure-duration-unknown: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- oncology-emergency-nosebleed-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- oncology-emergency-obstructive-neck-mass: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- repro-emergency-foul-discharge-fever: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- repro-emergency-male-paraphimosis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- repro-emergency-retained-puppy-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- toxin-emergency-antifreeze: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- toxin-emergency-lily-chew: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-burn-chemical: MEDIUM expectation_mismatch (Failed checks: knownSymptomsInclude:wound_skin_issue)
+- emergency-pale-gums-collapse: MEDIUM expectation_mismatch (Failed checks: knownSymptomsInclude:lethargy)
+- emergency-post-vaccine-face-swelling: MEDIUM expectation_mismatch (Failed checks: knownSymptomsInclude:post_vaccination_reaction)
+- emergency-postpartum-heavy-bleeding: MEDIUM expectation_mismatch (Failed checks: knownSymptomsInclude:pregnancy_birth)
+- emergency-pyometra-style: MEDIUM expectation_mismatch (Failed checks: knownSymptomsInclude:vaginal_discharge)
+- emergency-rat-poison-bleeding: MEDIUM expectation_mismatch (Failed checks: knownSymptomsInclude:medication_reaction)
 
 ## Missing High-Stakes Rule IDs
 

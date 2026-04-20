@@ -1,55 +1,54 @@
 # Wave 3 Emergency Baseline Debug
 
-- Generated at: 2026-04-20T20:31:29.193Z
+- Generated at: 2026-04-20T20:39:48.904Z
 - Suite ID: wave3-freeze
 - Manifest hash: 3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f
-- Total failures: 84
+- Total failures: 69
 
 ## Burn-Down Snapshot
 
-- Compared against: 2026-04-20T20:29:30.662Z
-- Total failures: 84 (0)
-- Residual blockers: 84 (0)
-- Critical release blockers: 22 (0)
+- Compared against: 2026-04-20T20:31:29.193Z
+- Total failures: 69 (-15)
+- Residual blockers: 69 (-15)
+- Critical release blockers: 6 (-16)
 - High non-blocking failures: 12 (0)
 - Medium follow-up/readiness failures: 18 (0)
-- Residual blocker changes: new 0, resolved 0, regressed 0, improved 0, unchanged 84
-- Root-cause bucket changes: regressed 0, improved 0, unchanged 3
+- Residual blocker changes: new 0, resolved 15, regressed 0, improved 1, unchanged 68
+- Root-cause bucket changes: regressed 0, improved 3, unchanged 0
 
 ## Root Cause Delta
 
 | Root cause bucket | Status | Prev | Curr | Delta | Critical | High | Medium | New cases | Resolved cases |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |
-| question orchestration overriding emergency | unchanged | 11 | 11 | 0 | 0 | 0 | 0 | none | none |
-| complaint normalization miss | unchanged | 48 | 48 | 0 | 0 | 0 | 0 | none | none |
-| deterministic emergency composite not triggered | unchanged | 25 | 25 | 0 | 0 | 0 | 0 | none | none |
+| question orchestration overriding emergency | improved | 11 | 0 | -11 | -11 | 0 | 0 | none | emergency-limping-cry-pain, followup-gum-color-unknown-escalates, oncology-emergency-nosebleed-collapse, oncology-emergency-obstructive-neck-mass, repro-emergency-foul-discharge-fever, repro-emergency-male-paraphimosis, repro-emergency-retained-puppy-collapse, toxin-emergency-antifreeze, toxin-emergency-lily-chew, toxin-emergency-sago-palm, toxin-emergency-tremorgenic-mycotoxin |
+| complaint normalization miss | improved | 48 | 48 | 0 | -1 | 0 | +1 | none | none |
+| deterministic emergency composite not triggered | improved | 25 | 21 | -4 | -4 | 0 | 0 | none | followup-breathing-onset-unknown-escalates, followup-breathing-pattern-unknown, followup-consciousness-unknown-escalates, followup-seizure-duration-unknown |
 
 ## Residual Blocker Delta
 
 | Case ID | Status | Severity | Freq delta | Previous bucket | Current bucket | Notes |
 | --- | --- | --- | ---: | --- | --- | --- |
-| emergency-limping-cry-pain | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
 | emergency-postpartum-eclampsia | unchanged | CRITICAL | 0 | complaint normalization miss | complaint normalization miss | none |
 | emergency-protozoal-acute-babesia | unchanged | CRITICAL | 0 | complaint normalization miss | complaint normalization miss | none |
-| emergency-pyometra-style | unchanged | CRITICAL | 0 | complaint normalization miss | complaint normalization miss | none |
 | emergency-urinary-blockage | unchanged | CRITICAL | 0 | complaint normalization miss | complaint normalization miss | none |
 | emergency-vomit-blood-collapse | unchanged | CRITICAL | 0 | complaint normalization miss | complaint normalization miss | none |
 | emergency-vomiting-green | unchanged | CRITICAL | 0 | complaint normalization miss | complaint normalization miss | none |
 | emergency-wound-deep-avulsion | unchanged | CRITICAL | 0 | complaint normalization miss | complaint normalization miss | none |
-| followup-breathing-onset-unknown-escalates | unchanged | CRITICAL | 0 | deterministic emergency composite not triggered | deterministic emergency composite not triggered | none |
-| followup-breathing-pattern-unknown | unchanged | CRITICAL | 0 | deterministic emergency composite not triggered | deterministic emergency composite not triggered | none |
-| followup-consciousness-unknown-escalates | unchanged | CRITICAL | 0 | deterministic emergency composite not triggered | deterministic emergency composite not triggered | none |
-| followup-gum-color-unknown-escalates | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| followup-seizure-duration-unknown | unchanged | CRITICAL | 0 | deterministic emergency composite not triggered | deterministic emergency composite not triggered | none |
-| oncology-emergency-nosebleed-collapse | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| oncology-emergency-obstructive-neck-mass | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| repro-emergency-foul-discharge-fever | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| repro-emergency-male-paraphimosis | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| repro-emergency-retained-puppy-collapse | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| toxin-emergency-antifreeze | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| toxin-emergency-lily-chew | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| toxin-emergency-sago-palm | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
-| toxin-emergency-tremorgenic-mycotoxin | unchanged | CRITICAL | 0 | question orchestration overriding emergency | question orchestration overriding emergency | none |
+| emergency-limping-cry-pain | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| followup-breathing-onset-unknown-escalates | resolved | CRITICAL | -1 | deterministic emergency composite not triggered | resolved | none |
+| followup-breathing-pattern-unknown | resolved | CRITICAL | -1 | deterministic emergency composite not triggered | resolved | none |
+| followup-consciousness-unknown-escalates | resolved | CRITICAL | -1 | deterministic emergency composite not triggered | resolved | none |
+| followup-gum-color-unknown-escalates | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| followup-seizure-duration-unknown | resolved | CRITICAL | -1 | deterministic emergency composite not triggered | resolved | none |
+| oncology-emergency-nosebleed-collapse | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| oncology-emergency-obstructive-neck-mass | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| repro-emergency-foul-discharge-fever | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| repro-emergency-male-paraphimosis | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| repro-emergency-retained-puppy-collapse | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| toxin-emergency-antifreeze | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| toxin-emergency-lily-chew | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| toxin-emergency-sago-palm | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
+| toxin-emergency-tremorgenic-mycotoxin | resolved | CRITICAL | -1 | question orchestration overriding emergency | resolved | none |
 | question-trauma-fall-yard | unchanged | HIGH | 0 | complaint normalization miss | complaint normalization miss | none |
 | sameday-behavior-hiding | unchanged | HIGH | 0 | complaint normalization miss | complaint normalization miss | none |
 | sameday-chronic-limp-sudden-worse | unchanged | HIGH | 0 | complaint normalization miss | complaint normalization miss | none |
@@ -112,36 +111,21 @@
 | question-vague-lump-found | unchanged | MEDIUM | 0 | complaint normalization miss | complaint normalization miss | none |
 | question-weight-loss | unchanged | MEDIUM | 0 | complaint normalization miss | complaint normalization miss | none |
 | toxin-question-ibuprofen-maybe | unchanged | MEDIUM | 0 | deterministic emergency composite not triggered | deterministic emergency composite not triggered | none |
+| emergency-pyometra-style | improved | MEDIUM | 0 | complaint normalization miss | complaint normalization miss | summary changed |
 
 ## Critical Release Blockers
 
-- Count: 22 (0)
+- Count: 6 (-16)
 - Previous baseline: 22
 
 | Case ID | Severity | Root cause bucket | Summary |
 | --- | --- | --- | --- |
-| emergency-limping-cry-pain | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
 | emergency-postpartum-eclampsia | CRITICAL | complaint normalization miss | Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth |
 | emergency-protozoal-acute-babesia | CRITICAL | complaint normalization miss | Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy |
-| emergency-pyometra-style | CRITICAL | complaint normalization miss | Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge |
 | emergency-urinary-blockage | CRITICAL | complaint normalization miss | Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem |
 | emergency-vomit-blood-collapse | CRITICAL | complaint normalization miss | Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting |
 | emergency-vomiting-green | CRITICAL | complaint normalization miss | Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting |
 | emergency-wound-deep-avulsion | CRITICAL | complaint normalization miss | Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue |
-| followup-breathing-onset-unknown-escalates | CRITICAL | deterministic emergency composite not triggered | Failed checks: responseType, readyForReport |
-| followup-breathing-pattern-unknown | CRITICAL | deterministic emergency composite not triggered | Failed checks: responseType, readyForReport |
-| followup-consciousness-unknown-escalates | CRITICAL | deterministic emergency composite not triggered | Failed checks: responseType, readyForReport |
-| followup-gum-color-unknown-escalates | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| followup-seizure-duration-unknown | CRITICAL | deterministic emergency composite not triggered | Failed checks: responseType, readyForReport |
-| oncology-emergency-nosebleed-collapse | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| oncology-emergency-obstructive-neck-mass | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| repro-emergency-foul-discharge-fever | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| repro-emergency-male-paraphimosis | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| repro-emergency-retained-puppy-collapse | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| toxin-emergency-antifreeze | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| toxin-emergency-lily-chew | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| toxin-emergency-sago-palm | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
-| toxin-emergency-tremorgenic-mycotoxin | CRITICAL | question orchestration overriding emergency | Failed checks: responseType, readyForReport |
 
 ## High Non-Blocking Failures
 
@@ -191,42 +175,40 @@
 
 ## Top Failure Entries
 
-- emergency-limping-cry-pain: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
 - emergency-postpartum-eclampsia: CRITICAL question -> complaint normalization miss (Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth)
 - emergency-protozoal-acute-babesia: CRITICAL question -> complaint normalization miss (Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy)
-- emergency-pyometra-style: CRITICAL question -> complaint normalization miss (Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge)
 - emergency-urinary-blockage: CRITICAL question -> complaint normalization miss (Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem)
 - emergency-vomit-blood-collapse: CRITICAL question -> complaint normalization miss (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
 - emergency-vomiting-green: CRITICAL question -> complaint normalization miss (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
 - emergency-wound-deep-avulsion: CRITICAL question -> complaint normalization miss (Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue)
-- followup-breathing-onset-unknown-escalates: CRITICAL cannot_assess -> deterministic emergency composite not triggered (Failed checks: responseType, readyForReport)
-- followup-breathing-pattern-unknown: CRITICAL cannot_assess -> deterministic emergency composite not triggered (Failed checks: responseType, readyForReport)
-- followup-consciousness-unknown-escalates: CRITICAL cannot_assess -> deterministic emergency composite not triggered (Failed checks: responseType, readyForReport)
-- followup-gum-color-unknown-escalates: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
-- followup-seizure-duration-unknown: CRITICAL cannot_assess -> deterministic emergency composite not triggered (Failed checks: responseType, readyForReport)
-- oncology-emergency-nosebleed-collapse: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
-- oncology-emergency-obstructive-neck-mass: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
-- repro-emergency-foul-discharge-fever: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
-- repro-emergency-male-paraphimosis: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
-- repro-emergency-retained-puppy-collapse: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
-- toxin-emergency-antifreeze: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
-- toxin-emergency-lily-chew: CRITICAL question -> question orchestration overriding emergency (Failed checks: responseType, readyForReport)
+- question-trauma-fall-yard: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:trauma)
+- sameday-behavior-hiding: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:behavior_change)
+- sameday-chronic-limp-sudden-worse: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:limping)
+- sameday-dental-bleeding-gum: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:dental_problem)
+- sameday-drinking-excessive: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:drinking_more)
+- sameday-face-swelling-worsening: HIGH emergency -> deterministic emergency composite not triggered (Failed checks: responseType, readyForReport)
+- sameday-hair-loss-spreading: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:hair_loss)
+- sameday-limping-non-weight-bearing: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:limping)
+- sameday-regurgitation-frequent: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:regurgitation)
+- sameday-urinary-blood: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:urination_problem)
+- sameday-vomiting-multiple-times: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:vomiting)
+- sameday-weight-loss-rapid: HIGH question -> complaint normalization miss (Failed checks: knownSymptomsInclude:weight_loss)
+- emergency-burn-chemical: MEDIUM emergency -> complaint normalization miss (Failed checks: knownSymptomsInclude:wound_skin_issue)
+- emergency-pale-gums-collapse: MEDIUM emergency -> complaint normalization miss (Failed checks: knownSymptomsInclude:lethargy)
 
 ## Current Root Cause Summary
 
 | Root cause bucket | Total | Critical | High | Medium |
 | --- | ---: | ---: | ---: | ---: |
-| question orchestration overriding emergency | 11 | 11 | 0 | 0 |
-| complaint normalization miss | 48 | 7 | 11 | 30 |
-| deterministic emergency composite not triggered | 25 | 4 | 1 | 20 |
+| complaint normalization miss | 48 | 6 | 11 | 31 |
+| deterministic emergency composite not triggered | 21 | 0 | 1 | 20 |
 
 ## Root Cause Bucket Counts
 
 | Bucket | Failures |
 | --- | ---: |
 | complaint normalization miss | 48 |
-| deterministic emergency composite not triggered | 25 |
-| question orchestration overriding emergency | 11 |
+| deterministic emergency composite not triggered | 21 |
 
 ## By Complaint Family
 
@@ -238,7 +220,6 @@
 | coughing_breathing_combined | 1 |
 | dental_problem | 2 |
 | diarrhea | 4 |
-| difficulty_breathing | 4 |
 | drinking_more | 4 |
 | ear_scratching | 1 |
 | excessive_scratching | 2 |
@@ -246,24 +227,22 @@
 | generalized_stiffness | 1 |
 | hair_loss | 2 |
 | lethargy | 3 |
-| limping | 8 |
-| medication_reaction | 6 |
-| nasal_discharge | 3 |
+| limping | 7 |
+| medication_reaction | 2 |
+| nasal_discharge | 2 |
 | post_vaccination_reaction | 2 |
 | postoperative_concern | 1 |
-| pregnancy_birth | 3 |
+| pregnancy_birth | 2 |
 | regurgitation | 2 |
-| seizure_collapse | 3 |
 | senior_decline | 1 |
-| swelling_lump | 4 |
+| swelling_lump | 3 |
 | swollen_abdomen | 1 |
-| testicular_prostate | 1 |
 | trauma | 1 |
 | trembling | 1 |
 | urination_problem | 4 |
-| vaginal_discharge | 2 |
+| vaginal_discharge | 1 |
 | vision_loss | 1 |
-| vomiting | 8 |
+| vomiting | 6 |
 | weight_loss | 3 |
 | wound_skin_issue | 5 |
 
@@ -271,7 +250,7 @@
 
 | Bucket | Failures |
 | --- | ---: |
-| tier_1_emergency | 27 |
+| tier_1_emergency | 12 |
 | tier_2_same_day | 12 |
 | tier_3_48h_monitor | 45 |
 
@@ -279,8 +258,7 @@
 
 | Bucket | Failures |
 | --- | ---: |
-| cannot_assess | 4 |
-| emergency | 7 |
+| emergency | 8 |
 | out_of_scope | 2 |
-| question | 69 |
+| question | 57 |
 | ready | 2 |

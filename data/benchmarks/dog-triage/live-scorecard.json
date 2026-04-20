@@ -1,6 +1,6 @@
 {
-  "runId": "LIVE-EVAL-2026-04-20T14-41-47-955Z",
-  "generatedAt": "2026-04-20T14:41:47.956Z",
+  "runId": "LIVE-EVAL-2026-04-20T20-39-35-106Z",
+  "generatedAt": "2026-04-20T20:39:35.107Z",
   "executionMode": "live_route",
   "suiteId": "wave3-freeze",
   "suiteVersion": "wave3-freeze-v2",
@@ -465,25 +465,25 @@
   ],
   "extraCaseIds": [],
   "missingCaseIds": [],
-  "baseUrl": "http://localhost:3001",
+  "baseUrl": "http://localhost:3008",
   "filters": {},
   "totalCases": 226,
-  "passedCases": 142,
-  "failedCases": 84,
+  "passedCases": 157,
+  "failedCases": 69,
   "totalChecks": 600,
-  "passedChecks": 469,
-  "failedChecks": 131,
-  "expectationPassRate": 0.6283,
-  "meanExpectationScore": 0.7957,
-  "emergencyRecall": 0.7105,
+  "passedChecks": 501,
+  "failedChecks": 99,
+  "expectationPassRate": 0.6947,
+  "meanExpectationScore": 0.8636,
+  "emergencyRecall": 0.9211,
   "emergencyCaseCount": 76,
-  "emergencyMissCount": 22,
-  "unsafeDowngradeRate": 0.0973,
-  "blockingFailures": 22,
+  "emergencyMissCount": 6,
+  "unsafeDowngradeRate": 0.0265,
+  "blockingFailures": 6,
   "passFail": "FAIL",
   "preflight": {
-    "performedAt": "2026-04-20T14:41:08.691Z",
-    "routeUrl": "http://localhost:3001/api/ai/sidecar-readiness",
+    "performedAt": "2026-04-20T20:38:38.308Z",
+    "routeUrl": "http://localhost:3008/api/ai/sidecar-readiness",
     "ready": false,
     "requiredServices": 5,
     "configuredCount": 0,
@@ -497,9 +497,9 @@
   "byResponseType": {
     "emergency": {
       "cases": 76,
-      "passedCases": 49,
-      "failedCases": 27,
-      "meanScore": 0.6963
+      "passedCases": 64,
+      "failedCases": 12,
+      "meanScore": 0.898
     },
     "question": {
       "cases": 150,
@@ -511,9 +511,9 @@
   "byRiskTier": {
     "tier_1_emergency": {
       "cases": 76,
-      "passedCases": 49,
-      "failedCases": 27,
-      "meanScore": 0.6963
+      "passedCases": 64,
+      "failedCases": 12,
+      "meanScore": 0.898
     },
     "tier_2_same_day": {
       "cases": 26,
@@ -530,14 +530,6 @@
   },
   "failures": [
     {
-      "caseId": "emergency-limping-cry-pain",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-postpartum-eclampsia",
       "severity": "CRITICAL",
       "category": "unsafe_downgrade",
@@ -552,14 +544,6 @@
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy"
-    },
-    {
-      "caseId": "emergency-pyometra-style",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
     },
     {
       "caseId": "emergency-urinary-blockage",
@@ -592,118 +576,6 @@
       "expected": "emergency",
       "actual": "question",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
-    },
-    {
-      "caseId": "followup-breathing-onset-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "cannot_assess",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-breathing-pattern-unknown",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "cannot_assess",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-consciousness-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "cannot_assess",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-gum-color-unknown-escalates",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "followup-seizure-duration-unknown",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "cannot_assess",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "oncology-emergency-nosebleed-collapse",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "oncology-emergency-obstructive-neck-mass",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "repro-emergency-foul-discharge-fever",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "repro-emergency-male-paraphimosis",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "repro-emergency-retained-puppy-collapse",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "toxin-emergency-antifreeze",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "toxin-emergency-lily-chew",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "toxin-emergency-sago-palm",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "toxin-emergency-tremorgenic-mycotoxin",
-      "severity": "CRITICAL",
-      "category": "unsafe_downgrade",
-      "expected": "emergency",
-      "actual": "question",
-      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "question-trauma-fall-yard",
@@ -832,6 +704,14 @@
       "expected": "emergency",
       "actual": "emergency",
       "description": "Failed checks: knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "emergency-pyometra-style",
+      "severity": "MEDIUM",
+      "category": "expectation_mismatch",
+      "expected": "emergency",
+      "actual": "emergency",
+      "description": "Failed checks: knownSymptomsInclude:vaginal_discharge"
     },
     {
       "caseId": "emergency-rat-poison-bleeding",

@@ -1,50 +1,31 @@
 {
-  "generatedAt": "2026-04-20T20:31:29.193Z",
+  "generatedAt": "2026-04-20T20:39:48.904Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
   "summary": {
-    "totalBlockers": 84,
+    "totalBlockers": 69,
     "bySeverity": {
-      "CRITICAL": 22,
+      "CRITICAL": 6,
       "HIGH": 12,
-      "MEDIUM": 50
+      "MEDIUM": 51
     },
     "byRootCauseBucket": {
       "complaint normalization miss": 48,
-      "deterministic emergency composite not triggered": 25,
-      "question orchestration overriding emergency": 11
+      "deterministic emergency composite not triggered": 21
     },
     "severityBands": {
       "criticalReleaseBlockers": {
-        "total": 22,
+        "total": 6,
         "caseIds": [
-          "emergency-limping-cry-pain",
           "emergency-postpartum-eclampsia",
           "emergency-protozoal-acute-babesia",
-          "emergency-pyometra-style",
           "emergency-urinary-blockage",
           "emergency-vomit-blood-collapse",
           "emergency-vomiting-green",
-          "emergency-wound-deep-avulsion",
-          "followup-breathing-onset-unknown-escalates",
-          "followup-breathing-pattern-unknown",
-          "followup-consciousness-unknown-escalates",
-          "followup-gum-color-unknown-escalates",
-          "followup-seizure-duration-unknown",
-          "oncology-emergency-nosebleed-collapse",
-          "oncology-emergency-obstructive-neck-mass",
-          "repro-emergency-foul-discharge-fever",
-          "repro-emergency-male-paraphimosis",
-          "repro-emergency-retained-puppy-collapse",
-          "toxin-emergency-antifreeze",
-          "toxin-emergency-lily-chew",
-          "toxin-emergency-sago-palm",
-          "toxin-emergency-tremorgenic-mycotoxin"
+          "emergency-wound-deep-avulsion"
         ],
         "byRootCauseBucket": {
-          "complaint normalization miss": 7,
-          "deterministic emergency composite not triggered": 4,
-          "question orchestration overriding emergency": 11
+          "complaint normalization miss": 6
         }
       },
       "highNonBlockingFailures": {
@@ -97,21 +78,21 @@
     }
   },
   "delta": {
-    "comparedToGeneratedAt": "2026-04-20T20:29:30.662Z",
+    "comparedToGeneratedAt": "2026-04-20T20:31:29.193Z",
     "previousTotalBlockers": 84,
-    "blockerDelta": 0,
+    "blockerDelta": -15,
     "countsByStatus": {
       "new": 0,
-      "resolved": 0,
-      "improved": 0,
+      "resolved": 15,
+      "improved": 1,
       "regressed": 0,
-      "unchanged": 84
+      "unchanged": 68
     },
     "bandDeltas": {
       "criticalReleaseBlockers": {
         "previousTotal": 22,
-        "currentTotal": 22,
-        "delta": 0
+        "currentTotal": 6,
+        "delta": -16
       },
       "highNonBlockingFailures": {
         "previousTotal": 12,
@@ -125,22 +106,6 @@
       }
     },
     "changes": [
-      {
-        "caseId": "emergency-limping-cry-pain",
-        "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
-        "rootCauseChanged": false,
-        "summaryChanged": false,
-        "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
-        "previousFrequency": 1,
-        "currentFrequency": 1,
-        "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
-        "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
-      },
       {
         "caseId": "emergency-postpartum-eclampsia",
         "severity": "CRITICAL",
@@ -172,22 +137,6 @@
         "currentRootCauseBucket": "complaint normalization miss",
         "previousSummary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy",
         "currentSummary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy"
-      },
-      {
-        "caseId": "emergency-pyometra-style",
-        "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
-        "rootCauseChanged": false,
-        "summaryChanged": false,
-        "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
-        "previousFrequency": 1,
-        "currentFrequency": 1,
-        "previousRootCauseBucket": "complaint normalization miss",
-        "currentRootCauseBucket": "complaint normalization miss",
-        "previousSummary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge",
-        "currentSummary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
       },
       {
         "caseId": "emergency-urinary-blockage",
@@ -254,228 +203,244 @@
         "currentSummary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue"
       },
       {
-        "caseId": "followup-breathing-onset-unknown-escalates",
+        "caseId": "emergency-limping-cry-pain",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
-        "previousRootCauseBucket": "deterministic emergency composite not triggered",
-        "currentRootCauseBucket": "deterministic emergency composite not triggered",
+        "currentFrequency": null,
+        "previousRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
+      },
+      {
+        "caseId": "followup-breathing-onset-unknown-escalates",
+        "severity": "CRITICAL",
+        "status": "resolved",
+        "frequencyDelta": -1,
+        "rootCauseChanged": false,
+        "summaryChanged": false,
+        "previousSeverity": "CRITICAL",
+        "currentSeverity": null,
+        "previousFrequency": 1,
+        "currentFrequency": null,
+        "previousRootCauseBucket": "deterministic emergency composite not triggered",
+        "currentRootCauseBucket": null,
+        "previousSummary": "Failed checks: responseType, readyForReport",
+        "currentSummary": null
       },
       {
         "caseId": "followup-breathing-pattern-unknown",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "deterministic emergency composite not triggered",
-        "currentRootCauseBucket": "deterministic emergency composite not triggered",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "followup-consciousness-unknown-escalates",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "deterministic emergency composite not triggered",
-        "currentRootCauseBucket": "deterministic emergency composite not triggered",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "followup-gum-color-unknown-escalates",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "followup-seizure-duration-unknown",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "deterministic emergency composite not triggered",
-        "currentRootCauseBucket": "deterministic emergency composite not triggered",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "oncology-emergency-nosebleed-collapse",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "oncology-emergency-obstructive-neck-mass",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "repro-emergency-foul-discharge-fever",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "repro-emergency-male-paraphimosis",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "repro-emergency-retained-puppy-collapse",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "toxin-emergency-antifreeze",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "toxin-emergency-lily-chew",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "toxin-emergency-sago-palm",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "toxin-emergency-tremorgenic-mycotoxin",
         "severity": "CRITICAL",
-        "status": "unchanged",
-        "frequencyDelta": 0,
+        "status": "resolved",
+        "frequencyDelta": -1,
         "rootCauseChanged": false,
         "summaryChanged": false,
         "previousSeverity": "CRITICAL",
-        "currentSeverity": "CRITICAL",
+        "currentSeverity": null,
         "previousFrequency": 1,
-        "currentFrequency": 1,
+        "currentFrequency": null,
         "previousRootCauseBucket": "question orchestration overriding emergency",
-        "currentRootCauseBucket": "question orchestration overriding emergency",
+        "currentRootCauseBucket": null,
         "previousSummary": "Failed checks: responseType, readyForReport",
-        "currentSummary": "Failed checks: responseType, readyForReport"
+        "currentSummary": null
       },
       {
         "caseId": "question-trauma-fall-yard",
@@ -1468,18 +1433,26 @@
         "currentRootCauseBucket": "deterministic emergency composite not triggered",
         "previousSummary": "Failed checks: responseType",
         "currentSummary": "Failed checks: responseType"
+      },
+      {
+        "caseId": "emergency-pyometra-style",
+        "severity": "MEDIUM",
+        "status": "improved",
+        "frequencyDelta": 0,
+        "rootCauseChanged": false,
+        "summaryChanged": true,
+        "previousSeverity": "CRITICAL",
+        "currentSeverity": "MEDIUM",
+        "previousFrequency": 1,
+        "currentFrequency": 1,
+        "previousRootCauseBucket": "complaint normalization miss",
+        "currentRootCauseBucket": "complaint normalization miss",
+        "previousSummary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge",
+        "currentSummary": "Failed checks: knownSymptomsInclude:vaginal_discharge"
       }
     ]
   },
   "blockers": [
-    {
-      "caseId": "emergency-limping-cry-pain",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
     {
       "caseId": "emergency-postpartum-eclampsia",
       "severity": "CRITICAL",
@@ -1494,14 +1467,6 @@
       "frequency": 1,
       "rootCauseBucket": "complaint normalization miss",
       "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy",
-      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
-    },
-    {
-      "caseId": "emergency-pyometra-style",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "complaint normalization miss",
-      "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge",
       "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
     },
     {
@@ -1535,118 +1500,6 @@
       "rootCauseBucket": "complaint normalization miss",
       "summary": "Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue",
       "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
-    },
-    {
-      "caseId": "followup-breathing-onset-unknown-escalates",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "deterministic emergency composite not triggered",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
-    },
-    {
-      "caseId": "followup-breathing-pattern-unknown",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "deterministic emergency composite not triggered",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
-    },
-    {
-      "caseId": "followup-consciousness-unknown-escalates",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "deterministic emergency composite not triggered",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
-    },
-    {
-      "caseId": "followup-gum-color-unknown-escalates",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "followup-seizure-duration-unknown",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "deterministic emergency composite not triggered",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency composite follow-up"
-    },
-    {
-      "caseId": "oncology-emergency-nosebleed-collapse",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "oncology-emergency-obstructive-neck-mass",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "repro-emergency-foul-discharge-fever",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "repro-emergency-male-paraphimosis",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "repro-emergency-retained-puppy-collapse",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "toxin-emergency-antifreeze",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "toxin-emergency-lily-chew",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "toxin-emergency-sago-palm",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
-    },
-    {
-      "caseId": "toxin-emergency-tremorgenic-mycotoxin",
-      "severity": "CRITICAL",
-      "frequency": 1,
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "summary": "Failed checks: responseType, readyForReport",
-      "recommendedNextTicket": "Wave 3 emergency orchestration follow-up"
     },
     {
       "caseId": "question-trauma-fall-yard",
@@ -1774,6 +1627,14 @@
       "frequency": 1,
       "rootCauseBucket": "complaint normalization miss",
       "summary": "Failed checks: knownSymptomsInclude:pregnancy_birth",
+      "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
+    },
+    {
+      "caseId": "emergency-pyometra-style",
+      "severity": "MEDIUM",
+      "frequency": 1,
+      "rootCauseBucket": "complaint normalization miss",
+      "summary": "Failed checks: knownSymptomsInclude:vaginal_discharge",
       "recommendedNextTicket": "Wave 3 complaint-normalization follow-up"
     },
     {
