@@ -8199,6 +8199,45 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
     });
 
+    it("VET-1327: keeps gum-color unknown follow-up answers in question flow without emergency respiratory context", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const session = buildPendingQuestionSession(
+        "difficulty_breathing",
+        "gum_color"
+      );
+      session.candidate_diseases = ["kennel_cough"];
+      session.body_systems_involved = ["respiratory"];
+      session.case_memory = {
+        ...session.case_memory!,
+        turn_count: 2,
+        chief_complaints: ["difficulty_breathing"],
+        active_focus_symptoms: ["difficulty_breathing"],
+        unresolved_question_ids: ["gum_color"],
+        ambiguity_flags: [],
+      };
+
+      const response = await POST(
+        makeTextOnlyRequest(
+          session,
+          "I can't tell what color they are right now.",
+          {
+            name: "Pepper",
+            breed: "Pug",
+            age_years: 9,
+            weight: 19,
+          }
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.session.red_flags_triggered).not.toContain(
+        "respiratory_distress_unknown_gum_color"
+      );
+    });
+
     it.each([
       {
         caseId: "emergency-limping-cry-pain",
@@ -8324,6 +8363,80 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         expect(payload.session.red_flags_triggered).toContain(expectedSignal);
         expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
         expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+      }
+    );
+
+    it.each([
+      {
+        caseId: "mild-gum-irritation-dental-tartar",
+        message:
+          "My dog has mild gum irritation from dental tartar, but his gums are pink, he is breathing normally, and he is eating fine.",
+        blockedSignals: ["blue_gums", "pale_gums", "gum_petechiae_weakness"],
+      },
+      {
+        caseId: "mild-limping-weight-bearing",
+        message:
+          "My dog is limping a little, but he is still weight-bearing, eating normally, and wants to play.",
+        blockedSignals: ["severe_limping_spinal_pain", "open_fracture"],
+      },
+      {
+        caseId: "tired-after-exercise-normal-gums",
+        message:
+          "My dog seems tired after exercise, but his gums are pink and his breathing is normal now.",
+        blockedSignals: ["heatstroke_emergency", "blue_gums", "pale_gums"],
+      },
+      {
+        caseId: "single-cough-breathing-normal",
+        message: "My dog coughed once and then went back to breathing normally.",
+        blockedSignals: ["clear_respiratory_distress"],
+      },
+      {
+        caseId: "thunderstorm-tremble-alert",
+        message:
+          "My dog trembled briefly during a thunderstorm, but he is alert, eating, and his gums are pink.",
+        blockedSignals: [
+          "electrical_shock",
+          "tremorgenic_mycotoxin",
+          "hypoglycemia_collapse",
+        ],
+      },
+      {
+        caseId: "small-superficial-scrape",
+        message:
+          "My dog has a small superficial scrape on his leg, but it is not deep and there is no heavy bleeding.",
+        blockedSignals: ["dog_bite_trauma", "open_fracture"],
+      },
+      {
+        caseId: "vomited-once-no-collapse",
+        message:
+          "My dog vomited once this morning but there is no blood, no retching, no collapse, and his gums are pink.",
+        blockedSignals: [
+          "xylitol_toxicity",
+          "sago_palm_toxicity",
+          "toxic_plant_exposure",
+        ],
+      },
+      {
+        caseId: "mild-eye-discharge-no-pain",
+        message:
+          "My dog has mild eye discharge, but there is no pain, no swelling, and he can still see normally.",
+        blockedSignals: ["acute_glaucoma_emergency"],
+      },
+    ])(
+      "VET-1327: keeps $caseId out of emergency override flow",
+      async ({ message, blockedSignals }) => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(createSession(), message));
+        const payload = await response.json();
+        const redFlags = payload.session?.red_flags_triggered ?? [];
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("question");
+        expect(payload.ready_for_report).toBe(false);
+
+        for (const signal of blockedSignals) {
+          expect(redFlags).not.toContain(signal);
+        }
       }
     );
 
