@@ -33,6 +33,17 @@ export interface Wave3CanonicalSuiteSummary {
   caseIds: string[];
 }
 
+export interface Wave3FailureBandSection {
+  total: number;
+  caseIds: string[];
+}
+
+export interface Wave3FailureBandSummary {
+  criticalReleaseBlockers: Wave3FailureBandSection;
+  highNonBlockingFailures: Wave3FailureBandSection;
+  mediumFollowupReadinessFailures: Wave3FailureBandSection;
+}
+
 export interface Wave3ReleaseGateResult {
   pass: boolean;
   failures: string[];
@@ -43,6 +54,7 @@ export interface Wave3ReleaseGateResult {
   missingHighStakesRuleIds: string[];
   expiredTierABEntries: ProvenanceEntry[];
   scorecard: LiveEvalScorecard | null;
+  failureBands: Wave3FailureBandSummary;
 }
 
 function incrementCount(
@@ -96,6 +108,47 @@ function toHighRiskCaseIdSet(cases: Wave3CaseRecord[]): Set<string> {
   );
 }
 
+function buildFailureBandSummary(scorecard: LiveEvalScorecard | null): Wave3FailureBandSummary {
+  const failures = scorecard?.failures ?? [];
+  const isMediumFollowupReadinessFailure = (failure: LiveEvalFailure): boolean => {
+    if (failure.severity !== "MEDIUM") {
+      return false;
+    }
+    if (failure.caseId.startsWith("followup-")) {
+      return true;
+    }
+    const description = failure.description.toLowerCase();
+    return (
+      description.includes("readyforreport") &&
+      !description.includes("responsetype")
+    );
+  };
+  const criticalReleaseBlockers = failures
+    .filter((failure) => failure.severity === "CRITICAL")
+    .map((failure) => failure.caseId);
+  const highNonBlockingFailures = failures
+    .filter((failure) => failure.severity === "HIGH")
+    .map((failure) => failure.caseId);
+  const mediumFollowupReadinessFailures = failures
+    .filter(isMediumFollowupReadinessFailure)
+    .map((failure) => failure.caseId);
+
+  return {
+    criticalReleaseBlockers: {
+      total: criticalReleaseBlockers.length,
+      caseIds: criticalReleaseBlockers,
+    },
+    highNonBlockingFailures: {
+      total: highNonBlockingFailures.length,
+      caseIds: highNonBlockingFailures,
+    },
+    mediumFollowupReadinessFailures: {
+      total: mediumFollowupReadinessFailures.length,
+      caseIds: mediumFollowupReadinessFailures,
+    },
+  };
+}
+
 export function evaluateWave3ReleaseGate(input: {
   cases: Wave3CaseRecord[];
   modalities?: Wave3ModalitySummary[];
@@ -129,6 +182,7 @@ export function evaluateWave3ReleaseGate(input: {
   });
 
   const scorecard = input.scorecard;
+  const failureBands = buildFailureBandSummary(scorecard);
   const highRiskCaseIds = toHighRiskCaseIdSet(input.cases);
   const blockingHighRiskFailures = scorecard
     ? scorecard.failures.filter((failure) => highRiskCaseIds.has(failure.caseId))
@@ -219,6 +273,7 @@ export function evaluateWave3ReleaseGate(input: {
     missingHighStakesRuleIds,
     expiredTierABEntries,
     scorecard,
+    failureBands,
   };
 }
 
@@ -292,6 +347,15 @@ export function renderWave3ReleaseGateMarkdown(
           .join("\n")}\n`
       : "## Blocking High-Risk Failures\n\n_None_\n";
 
+  const failureBands = [
+    "## Failure Bands",
+    "",
+    `- Critical release blockers: ${result.failureBands.criticalReleaseBlockers.total}${result.failureBands.criticalReleaseBlockers.caseIds.length > 0 ? ` (${result.failureBands.criticalReleaseBlockers.caseIds.slice(0, 10).join(", ")})` : ""}`,
+    `- High non-blocking failures: ${result.failureBands.highNonBlockingFailures.total}${result.failureBands.highNonBlockingFailures.caseIds.length > 0 ? ` (${result.failureBands.highNonBlockingFailures.caseIds.slice(0, 10).join(", ")})` : ""}`,
+    `- Medium follow-up/readiness failures: ${result.failureBands.mediumFollowupReadinessFailures.total}${result.failureBands.mediumFollowupReadinessFailures.caseIds.length > 0 ? ` (${result.failureBands.mediumFollowupReadinessFailures.caseIds.slice(0, 10).join(", ")})` : ""}`,
+    "",
+  ].join("\n");
+
   const missingRules =
     result.missingHighStakesRuleIds.length > 0
       ? `## Missing High-Stakes Rule IDs\n\n${result.missingHighStakesRuleIds
@@ -313,6 +377,7 @@ export function renderWave3ReleaseGateMarkdown(
     header,
     failures,
     warnings,
+    failureBands,
     highRiskFailures,
     missingRules,
     expiredEntries,

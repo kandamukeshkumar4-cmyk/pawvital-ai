@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-20T14:41:55.060Z",
+  "generatedAt": "2026-04-20T20:31:29.193Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
   "totalFailures": 84,
@@ -1360,14 +1360,90 @@
     }
   ],
   "delta": {
-    "comparedToGeneratedAt": null,
-    "previousTotalFailures": null,
-    "totalFailureDelta": null,
+    "comparedToGeneratedAt": "2026-04-20T20:29:30.662Z",
+    "previousTotalFailures": 84,
+    "totalFailureDelta": 0,
     "countsByStatus": {
       "improved": 0,
       "regressed": 0,
-      "unchanged": 0
+      "unchanged": 3
     },
-    "rootCauseChanges": []
+    "rootCauseChanges": [
+      {
+        "rootCauseBucket": "question orchestration overriding emergency",
+        "status": "unchanged",
+        "previousTotalFailures": 11,
+        "currentTotalFailures": 11,
+        "deltaFailures": 0,
+        "previousSeverityCounts": {
+          "CRITICAL": 11,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "currentSeverityCounts": {
+          "CRITICAL": 11,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [],
+        "compositionChanged": false
+      },
+      {
+        "rootCauseBucket": "complaint normalization miss",
+        "status": "unchanged",
+        "previousTotalFailures": 48,
+        "currentTotalFailures": 48,
+        "deltaFailures": 0,
+        "previousSeverityCounts": {
+          "CRITICAL": 7,
+          "HIGH": 11,
+          "MEDIUM": 30
+        },
+        "currentSeverityCounts": {
+          "CRITICAL": 7,
+          "HIGH": 11,
+          "MEDIUM": 30
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [],
+        "compositionChanged": false
+      },
+      {
+        "rootCauseBucket": "deterministic emergency composite not triggered",
+        "status": "unchanged",
+        "previousTotalFailures": 25,
+        "currentTotalFailures": 25,
+        "deltaFailures": 0,
+        "previousSeverityCounts": {
+          "CRITICAL": 4,
+          "HIGH": 1,
+          "MEDIUM": 20
+        },
+        "currentSeverityCounts": {
+          "CRITICAL": 4,
+          "HIGH": 1,
+          "MEDIUM": 20
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 0
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [],
+        "compositionChanged": false
+      }
+    ]
   }
 }

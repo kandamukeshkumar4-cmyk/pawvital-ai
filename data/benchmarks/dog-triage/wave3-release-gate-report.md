@@ -22,6 +22,12 @@
 
 _None_
 
+## Failure Bands
+
+- Critical release blockers: 22 (emergency-limping-cry-pain, emergency-postpartum-eclampsia, emergency-protozoal-acute-babesia, emergency-pyometra-style, emergency-urinary-blockage, emergency-vomit-blood-collapse, emergency-vomiting-green, emergency-wound-deep-avulsion, followup-breathing-onset-unknown-escalates, followup-breathing-pattern-unknown)
+- High non-blocking failures: 12 (question-trauma-fall-yard, sameday-behavior-hiding, sameday-chronic-limp-sudden-worse, sameday-dental-bleeding-gum, sameday-drinking-excessive, sameday-face-swelling-worsening, sameday-hair-loss-spreading, sameday-limping-non-weight-bearing, sameday-regurgitation-frequent, sameday-urinary-blood)
+- Medium follow-up/readiness failures: 18 (followup-appetite-change-unknown, followup-diarrhea-frequency-unknown, followup-diarrhea-onset-unknown, followup-discharge-color-unknown, followup-energy-level-unknown, followup-itch-location-unknown, followup-limping-progression-unknown, followup-lump-size-unknown, followup-seasonal-pattern-unknown, followup-stool-consistency-unknown)
+
 ## Blocking High-Risk Failures
 
 - emergency-limping-cry-pain: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
