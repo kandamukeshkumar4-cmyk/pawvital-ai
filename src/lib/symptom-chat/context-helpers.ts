@@ -63,11 +63,6 @@ function coerceExtendedFollowUpUnknown(
   questionId: string,
   rawMessage: string
 ): "unknown" | null {
-  const canonicalUnknown = coerceAmbiguousReplyToUnknown(rawMessage);
-  if (canonicalUnknown !== null) {
-    return canonicalUnknown;
-  }
-
   if (!SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS.has(questionId)) {
     return null;
   }
