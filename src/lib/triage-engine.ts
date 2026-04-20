@@ -305,6 +305,12 @@ function checkRedFlags(session: TriageSession): void {
       }
     }
   }
+
+  for (const flag of getCompositeEmergencyRedFlags(session)) {
+    if (!session.red_flags_triggered.includes(flag)) {
+      session.red_flags_triggered.push(flag);
+    }
+  }
 }
 
 function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
@@ -368,22 +374,36 @@ function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
         answers.trauma_mobility === "inability_to_stand" ||
         answers.hind_limb_function === "inability_to_stand"
       );
+    case "active_bleeding_trauma":
+      return answers.active_bleeding_trauma === true;
     case "no_water_24h":
       return answers.water_intake === "not_drinking";
+    case "not_drinking":
+      return answers.water_intake === "not_drinking";
     case "toxin_confirmed":
-      return matchesExposureText(answers.toxin_exposure, [
-        "rat poison",
-        "rodenticide",
-        "xylitol",
-        "chocolate",
-        "grapes",
-        "raisins",
-        "antifreeze",
-        "ibuprofen",
-        "naproxen",
-        "acetaminophen",
-        "marijuana",
-      ]);
+      return hasAnyExposureEvidence(session, TOXIN_EXPOSURE_KEYWORDS);
+    case "collapse_in_heat":
+      return (
+        session.known_symptoms.includes("heat_intolerance") &&
+        answers.consciousness_level === "unresponsive"
+      );
+    case "brick_red_gums":
+      return (
+        session.known_symptoms.includes("heat_intolerance") &&
+        answers.gum_color === "bright_red"
+      );
+    case "vomiting_overheating":
+      return (
+        session.known_symptoms.includes("heat_intolerance") &&
+        answers.vomiting_present === true
+      );
+    case "blood_in_both":
+      return answers.blood_in_either === true;
+    case "puppy_vomiting_diarrhea":
+      return (
+        session.known_symptoms.includes("vomiting_diarrhea_combined") &&
+        answers.blood_in_either === true
+      );
     case "rapid_onset_distension":
       return matchesExposureText(answers.abdomen_onset, [
         "sudden",
@@ -403,6 +423,66 @@ function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
   }
 }
 
+const RAT_POISON_KEYWORDS = [
+  "rat poison",
+  "rodenticide",
+  "mouse bait",
+  "bait station",
+  "warfarin",
+  "brodifacoum",
+  "bromadiolone",
+];
+
+const GENERAL_TOXIN_KEYWORDS = [
+  "xylitol",
+  "chocolate",
+  "grapes",
+  "raisins",
+  "antifreeze",
+  "ibuprofen",
+  "naproxen",
+  "acetaminophen",
+  "marijuana",
+  "cannabis",
+];
+
+const CHEMICAL_EXPOSURE_KEYWORDS = [
+  "chemical",
+  "drain cleaner",
+  "bleach",
+  "oven cleaner",
+  "detergent",
+  "battery acid",
+  "muriatic acid",
+  "acid burn",
+  "alkali",
+  "caustic",
+  "solvent",
+];
+
+const TOXIN_EXPOSURE_KEYWORDS = [
+  ...RAT_POISON_KEYWORDS,
+  ...GENERAL_TOXIN_KEYWORDS,
+  ...CHEMICAL_EXPOSURE_KEYWORDS,
+];
+
+const BLEEDING_KEYWORDS = [
+  "bleeding",
+  "bleed",
+  "bloody",
+  "blood from gums",
+  "gums bleeding",
+  "coughing blood",
+];
+
+const MAJOR_TRAUMA_KEYWORDS = [
+  "hit by car",
+  "run over",
+  "struck by car",
+  "vehicle",
+  "major trauma",
+];
+
 function matchesExposureText(
   value: string | boolean | number | undefined,
   keywords: string[]
@@ -413,6 +493,119 @@ function matchesExposureText(
 
   const lower = value.toLowerCase();
   return keywords.some((keyword) => lower.includes(keyword));
+}
+
+function answerTextIncludes(
+  answers: Record<string, string | boolean | number>,
+  questionIds: string[],
+  keywords: string[]
+): boolean {
+  return questionIds.some((questionId) =>
+    matchesExposureText(answers[questionId], keywords)
+  );
+}
+
+function hasAnyExposureEvidence(
+  session: TriageSession,
+  keywords: string[]
+): boolean {
+  const answers = session.extracted_answers;
+  return (
+    answerTextIncludes(
+      answers,
+      [
+        "toxin_exposure",
+        "reaction_symptoms",
+        "medication_name",
+        "current_medications",
+      ],
+      keywords
+    ) || answers.rat_poison_access === true
+  );
+}
+
+function hasBleedingEvidence(session: TriageSession): boolean {
+  const answers = session.extracted_answers;
+  return (
+    answers.active_bleeding_trauma === true ||
+    answers.bleeding_present === true ||
+    answers.vomit_blood === true ||
+    answers.blood_in_either === true ||
+    (typeof answers.blood_amount === "string" &&
+      ["streaks", "mixed_in", "mostly_blood"].includes(answers.blood_amount)) ||
+    answerTextIncludes(
+      answers,
+      ["reaction_symptoms", "wound_discharge", "wound_color"],
+      BLEEDING_KEYWORDS
+    )
+  );
+}
+
+function hasMajorTraumaEvidence(session: TriageSession): boolean {
+  const answers = session.extracted_answers;
+  return (
+    session.known_symptoms.includes("trauma") ||
+    answerTextIncludes(
+      answers,
+      ["trauma_mechanism", "trauma_timeframe", "trauma_area"],
+      MAJOR_TRAUMA_KEYWORDS
+    ) ||
+    answers.trauma_mechanism === "hit_by_car"
+  );
+}
+
+function getCompositeEmergencyRedFlags(session: TriageSession): string[] {
+  const flags = new Set<string>();
+  const answers = session.extracted_answers;
+
+  if (hasAnyExposureEvidence(session, TOXIN_EXPOSURE_KEYWORDS)) {
+    flags.add("toxin_confirmed");
+  }
+
+  if (
+    hasAnyExposureEvidence(session, RAT_POISON_KEYWORDS) &&
+    hasBleedingEvidence(session)
+  ) {
+    flags.add("rat_poison_confirmed");
+  }
+
+  if (
+    session.known_symptoms.includes("heat_intolerance") &&
+    answers.gum_color === "bright_red"
+  ) {
+    flags.add("brick_red_gums");
+  }
+
+  if (
+    session.known_symptoms.includes("heat_intolerance") &&
+    answers.vomiting_present === true
+  ) {
+    flags.add("vomiting_overheating");
+  }
+
+  if (
+    session.known_symptoms.includes("heat_intolerance") &&
+    answers.consciousness_level === "unresponsive"
+  ) {
+    flags.add("collapse_in_heat");
+  }
+
+  if (hasMajorTraumaEvidence(session) && isRedFlagTriggered("inability_to_stand", session)) {
+    flags.add("inability_to_stand");
+  }
+
+  if (session.known_symptoms.includes("vomiting_diarrhea_combined")) {
+    if (answers.blood_in_either === true) {
+      flags.add("blood_in_both");
+      flags.add("puppy_vomiting_diarrhea");
+    }
+
+    if (answers.water_intake === "not_drinking") {
+      flags.add("not_drinking");
+    }
+  }
+
+  return [...flags];
 }
 
 /**
@@ -649,6 +842,59 @@ function applyAnswerModifiers(
     }
   }
 
+  const compositeRedFlags = getCompositeEmergencyRedFlags(session);
+
+  if (
+    session.known_symptoms.includes("heat_intolerance") &&
+    compositeRedFlags.some((flag) =>
+      ["brick_red_gums", "vomiting_overheating", "collapse_in_heat"].includes(flag)
+    )
+  ) {
+    if (diseaseKey === "heat_stroke") {
+      score *= 4.0;
+    }
+  }
+
+  if (
+    hasMajorTraumaEvidence(session) &&
+    compositeRedFlags.includes("inability_to_stand") &&
+    diseaseKey === "trauma_chest"
+  ) {
+    score *= 5.0;
+  }
+
+  if (
+    compositeRedFlags.includes("rat_poison_confirmed") &&
+    diseaseKey === "toxin_ingestion"
+  ) {
+    score *= 6.0;
+  }
+
+  if (
+    compositeRedFlags.includes("toxin_confirmed") &&
+    session.known_symptoms.includes("wound_skin_issue") &&
+    diseaseKey === "toxin_ingestion"
+  ) {
+    score *= 5.0;
+  }
+
+  if (session.known_symptoms.includes("vomiting_diarrhea_combined")) {
+    const giEmergencySignalCount = [
+      compositeRedFlags.includes("blood_in_both"),
+      compositeRedFlags.includes("not_drinking"),
+      answers.appetite_status === "none",
+    ].filter(Boolean).length;
+
+    if (giEmergencySignalCount > 0) {
+      if (diseaseKey === "parvovirus") {
+        score *= 1 + giEmergencySignalCount * 1.5;
+      }
+      if (diseaseKey === "hemorrhagic_gastroenteritis") {
+        score *= 1 + giEmergencySignalCount;
+      }
+    }
+  }
+
   return score;
 }
 
@@ -658,7 +904,12 @@ function applyAnswerModifiers(
  */
 export function isReadyForDiagnosis(session: TriageSession): boolean {
   // Always ready if red flags are triggered
-  if (session.red_flags_triggered.length > 0) return true;
+  if (
+    session.red_flags_triggered.length > 0 ||
+    getCompositeEmergencyRedFlags(session).length > 0
+  ) {
+    return true;
+  }
 
   // NEVER ready if no symptoms identified yet
   if (session.known_symptoms.length === 0) return false;
@@ -739,6 +990,10 @@ export function buildDiagnosisContext(
 
   // Red flags override urgency
   if (session.red_flags_triggered.length > 0) {
+    highestUrgency = "emergency";
+  }
+
+  if (getCompositeEmergencyRedFlags(session).length > 0) {
     highestUrgency = "emergency";
   }
 
