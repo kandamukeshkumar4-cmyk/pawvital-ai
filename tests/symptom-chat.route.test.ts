@@ -7895,6 +7895,82 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       );
     });
 
+    it("captures labored abdominal breathing emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog is breathing with great effort using his belly muscles."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("difficulty_breathing");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["breathing_difficulty"])
+      );
+    });
+
+    it("captures choking foreign-body emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog is gagging and pawing at his mouth like something is stuck."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("difficulty_breathing");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["breathing_difficulty"])
+      );
+    });
+
+    it("captures oral bleeding inability-to-swallow emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "There is blood coming from his mouth and he cannot really eat or drink."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("dental_problem");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["blood_from_mouth", "inability_to_drink"])
+      );
+    });
+
+    it("captures resting open-mouth breathing emergencies without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "He is open-mouth breathing while resting and his gums are looking bluish."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.known_symptoms).toContain("difficulty_breathing");
+      expect(payload.session.red_flags_triggered).toEqual(
+        expect.arrayContaining(["breathing_distress_at_rest", "blue_gums"])
+      );
+    });
+
     it("preserves the existing demo fallback for report generation without providers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const response = await POST(makeReportRequest(buildModerateReportSession()));

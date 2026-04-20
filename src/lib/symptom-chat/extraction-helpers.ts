@@ -141,6 +141,7 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "labored breathing": "difficulty_breathing",
     "laboured breathing": "difficulty_breathing",
     "open mouth breathing": "difficulty_breathing",
+    "open-mouth breathing": "difficulty_breathing",
     gasping: "difficulty_breathing",
     choking: "difficulty_breathing",
     "hard to breathe": "difficulty_breathing",
@@ -225,6 +226,33 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     if (lower.includes(keyword) && !symptoms.includes(symptom)) {
       symptoms.push(symptom);
     }
+  }
+
+  if (
+    /\b(breathing with (great |real )?effort|working hard to breathe|using (his|her|their) belly muscles|using (his|her|their) abdomen to breathe|belly heaving|abdomen (is )?heaving|labou?red breathing)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("difficulty_breathing");
+  }
+
+  if (
+    /\b(gagging|choking)\b/.test(lower) &&
+    /\b(pawing at (his|her|their) mouth|pawing at the mouth|something (is )?stuck|object (is )?stuck|stuck in (his|her|their) (mouth|throat))\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("difficulty_breathing");
+  }
+
+  if (
+    (/\b(blood|bleeding)\b[^.?!]*\b(mouth|gum|gums)\b/.test(lower) ||
+      /\b(mouth|gum|gums)\b[^.?!]*\b(blood|bleeding)\b/.test(lower)) &&
+    /\b(cannot|can't|can not|unable to|won't|wont|hard to)\b[^.?!]*\b(swallow|eat|drink)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("dental_problem");
   }
 
   const mentionsVomiting =
@@ -321,13 +349,23 @@ export function extractDeterministicEmergencyRedFlags(
 ): string[] {
   const lower = rawMessage.toLowerCase();
   const flags = new Set<string>();
+  const hasCyanoticGumLanguage =
+    /\b(bluish?|gray|grey|purple) gums?\b/.test(lower) ||
+    /\bgums? (?:look(?:ing|s|ed)?|are(?: looking)?|turned?) (bluish?|gray|grey|purple)\b/.test(
+      lower
+    );
+  const hasPaleGumLanguage =
+    /\b(pale|white) gums?\b/.test(lower) ||
+    /\bgums? (?:look(?:ing|s|ed)?|are(?: looking)?|turned?) (pale|white)\b/.test(
+      lower
+    );
 
   if (
     knownSymptoms.includes("difficulty_breathing") &&
-    /\b(breathing hard|breathing heavy|breathing fast|trouble breathing|short of breath)\b/.test(
+    /\b(breathing hard|breathing heavy|breathing fast|trouble breathing|short of breath|open[-\s]?mouth breathing)\b/.test(
       lower
     ) &&
-    /\b(while lying still|while resting|at rest|even at rest|lying still)\b/.test(
+    /\b(while lying still|while resting|at rest|even at rest|lying still|resting)\b/.test(
       lower
     )
   ) {
@@ -335,18 +373,24 @@ export function extractDeterministicEmergencyRedFlags(
   }
 
   if (knownSymptoms.includes("difficulty_breathing")) {
-    if (
-      /\bblue gums?\b/.test(lower) ||
-      /\bgums? (look|looks|looked|are|turned?) blue\b/.test(lower)
-    ) {
+    if (hasCyanoticGumLanguage) {
       flags.add("blue_gums");
     }
 
-    if (
-      /\b(pale|white) gums?\b/.test(lower) ||
-      /\bgums? (look|looks|looked|are|turned?) (pale|white)\b/.test(lower)
-    ) {
+    if (hasPaleGumLanguage) {
       flags.add("pale_gums");
+    }
+
+    if (
+      /\b(breathing with (great |real )?effort|working hard to breathe|using (his|her|their) belly muscles|using (his|her|their) abdomen to breathe|belly heaving|abdomen (is )?heaving|labou?red breathing)\b/.test(
+        lower
+      ) ||
+      (/\b(gagging|choking)\b/.test(lower) &&
+        /\b(pawing at (his|her|their) mouth|pawing at the mouth|something (is )?stuck|object (is )?stuck|stuck in (his|her|their) (mouth|throat))\b/.test(
+          lower
+        ))
+    ) {
+      flags.add("breathing_difficulty");
     }
   }
 
@@ -436,6 +480,26 @@ export function extractDeterministicEmergencyRedFlags(
 
     if (/\b(bone sticking out|bone visible)\b/.test(lower)) {
       flags.add("wound_bone_visible");
+    }
+  }
+
+  if (knownSymptoms.includes("dental_problem")) {
+    if (
+      /\b(blood|bleeding)\b[^.?!]*\b(mouth|gum|gums)\b/.test(lower) ||
+      /\b(mouth|gum|gums)\b[^.?!]*\b(blood|bleeding)\b/.test(lower)
+    ) {
+      flags.add("blood_from_mouth");
+    }
+
+    if (
+      /\b(cannot|can't|can not|unable to|won't|wont|hard to)\b[^.?!]*\b(swallow|drink)\b/.test(
+        lower
+      ) ||
+      /\b(cannot|can't|can not|unable to|won't|wont|hard to)\b[^.?!]*\beat\b[^.?!]*\bdrink\b/.test(
+        lower
+      )
+    ) {
+      flags.add("inability_to_drink");
     }
   }
 
