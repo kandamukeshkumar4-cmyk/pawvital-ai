@@ -22,7 +22,7 @@ jobs:
       THRESHOLD_CLINICAL_REVIEWER: ${{ vars.THRESHOLD_CLINICAL_REVIEWER || '18rsoni' }}
     steps:
       - name: Enforce required threshold approvals
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const pr = context.payload.pull_request;
