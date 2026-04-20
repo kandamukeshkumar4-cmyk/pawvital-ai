@@ -20,6 +20,70 @@ import {
 } from "@/lib/symptom-chat/answer-coercion";
 import { extractSymptomsFromKeywords } from "@/lib/symptom-chat/extraction-helpers";
 
+const SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS = new Set([
+  "appetite_change",
+  "diarrhea_frequency",
+  "diarrhea_onset",
+  "discharge_color",
+  "energy_level",
+  "has_fever",
+  "itch_location",
+  "limping_progression",
+  "lump_size",
+  "stool_consistency",
+  "urine_color",
+  "vomit_color",
+  "water_intake",
+  "weight_bearing",
+  "wound_depth",
+]);
+
+const EXTENDED_FOLLOW_UP_UNKNOWN_PATTERNS = [
+  /\bi (?:do not|don't|dont) (?:really )?know\b/,
+  /\bi(?: am|'m)? not sure\b/,
+  /\b(?:do not|don't|dont) remember\b/,
+  /\b(?:did not|didn't|didnt) (?:really )?(?:look|notice)\b/,
+  /\b(?:can(?:not|'t)|cant) (?:really )?(?:tell|pinpoint|judge|describe)\b/,
+  /\bno idea\b/,
+  /\b(?:do not|don't|dont) have a thermometer\b/,
+  /\bno thermometer\b/,
+];
+
+function normalizeExtendedUnknownReply(rawMessage: string): string {
+  return rawMessage
+    .trim()
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[,:;]+/g, " ")
+    .replace(/[.!?]+$/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function coerceExtendedFollowUpUnknown(
+  questionId: string,
+  rawMessage: string
+): "unknown" | null {
+  const canonicalUnknown = coerceAmbiguousReplyToUnknown(rawMessage);
+  if (canonicalUnknown !== null) {
+    return canonicalUnknown;
+  }
+
+  if (!SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS.has(questionId)) {
+    return null;
+  }
+
+  const normalized = normalizeExtendedUnknownReply(rawMessage);
+  if (!normalized) {
+    return null;
+  }
+
+  return EXTENDED_FOLLOW_UP_UNKNOWN_PATTERNS.some((pattern) =>
+    pattern.test(normalized)
+  )
+    ? "unknown"
+    : null;
+}
+
 export function buildCompactImageSignalContext(
   session: TriageSession,
   visionSymptoms: string[] = [],
@@ -281,6 +345,19 @@ export function getDeterministicFastPathExtraction(
 
   const trimmed = rawMessage.trim();
   if (!trimmed) return null;
+
+  const extendedUnknown = coerceExtendedFollowUpUnknown(
+    pendingQuestionId,
+    trimmed
+  );
+  if (extendedUnknown !== null) {
+    return {
+      symptoms: [],
+      answers: {
+        [pendingQuestionId]: extendedUnknown,
+      },
+    };
+  }
 
   const question = FOLLOW_UP_QUESTIONS[pendingQuestionId];
   if (!question) return null;
