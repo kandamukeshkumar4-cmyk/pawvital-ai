@@ -1317,6 +1317,15 @@ export async function POST(request: Request) {
       };
     }
 
+    if (alternateObservableOutcome) {
+      return NextResponse.json(
+        buildAlternateObservableRecoveryResponse(
+          alternateObservableOutcome,
+          session
+        )
+      );
+    }
+
     if (hasRouteEmergencyOverride) {
       session = transitionToEscalation({
         session,
@@ -1339,15 +1348,6 @@ export async function POST(request: Request) {
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
       });
-    }
-
-    if (alternateObservableOutcome) {
-      return NextResponse.json(
-        buildAlternateObservableRecoveryResponse(
-          alternateObservableOutcome,
-          session
-        )
-      );
     }
 
     // ═══════════════════════════════════════════════════════════════════

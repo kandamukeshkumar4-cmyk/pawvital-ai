@@ -7203,6 +7203,44 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       );
     });
 
+    it("keeps the alternate gum-color retry on the question path for high-risk respiratory follow-up sessions", async () => {
+      const session = buildPendingQuestionSession(
+        "difficulty_breathing",
+        "gum_color"
+      );
+      session.candidate_diseases = [
+        "heart_failure",
+        "allergic_reaction",
+        "difficulty_breathing",
+      ];
+      session.body_systems_involved = ["respiratory"];
+      session.case_memory = {
+        ...session.case_memory!,
+        turn_count: 2,
+        chief_complaints: ["difficulty_breathing"],
+        active_focus_symptoms: ["difficulty_breathing"],
+        unresolved_question_ids: ["gum_color"],
+      };
+
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: [], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "I can't tell what color they are right now.")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.question_id).toBe("gum_color");
+      expect(payload.reason_code).toBe("alternate_observable_gum_color");
+      expect(payload.conversationState).toBe("needs_clarification");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.session.last_question_asked).toBe("gum_color");
+    });
+
     it.each([
       {
         symptom: "difficulty_breathing",
