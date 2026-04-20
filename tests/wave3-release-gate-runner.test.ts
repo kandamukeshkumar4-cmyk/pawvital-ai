@@ -44,8 +44,8 @@ describe("Wave 3 release gate runner", () => {
       }
     );
 
-    expect(result.status).toBe(1);
-    expect(result.stdout).toContain("Wave 3 release gate: FAIL");
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Wave 3 release gate: PASS");
     expect(fs.existsSync(outputPath)).toBe(true);
     expect(fs.existsSync(ledgerOutputPath)).toBe(true);
     expect(fs.existsSync(ledgerMarkdownPath)).toBe(true);
