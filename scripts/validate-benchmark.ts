@@ -1,6 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { loadWave3CanonicalSuite } from "../src/lib/wave3-suite-manifest.ts";
+import {
+  loadWave3CanonicalSuite,
+  type Wave3CanonicalCase,
+} from "../src/lib/wave3-suite-manifest";
 
 interface ReviewerSlot {
   role: string;
@@ -8,10 +11,9 @@ interface ReviewerSlot {
   status: string;
 }
 
-interface Wave3BenchmarkCase {
-  id: string;
-  description: string;
-  request: {
+type Wave3BenchmarkCase = Wave3CanonicalCase & {
+  description?: string;
+  request?: {
     pet?: {
       species?: string;
     };
@@ -28,7 +30,7 @@ interface Wave3BenchmarkCase {
       status?: string;
     };
   };
-}
+};
 
 const ROOT = process.cwd();
 const BENCHMARK_DIR = path.join(ROOT, "data", "benchmarks", "dog-triage");
@@ -82,7 +84,7 @@ function loadCases(): Wave3BenchmarkCase[] {
     throw new Error(`Wave 3 manifest not found: ${MANIFEST_PATH}`);
   }
 
-  return loadWave3CanonicalSuite(MANIFEST_PATH).cases as Wave3BenchmarkCase[];
+  return loadWave3CanonicalSuite(MANIFEST_PATH).cases;
 }
 
 const cases = loadCases();
