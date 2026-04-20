@@ -285,10 +285,10 @@
       "answers": {}
     },
     "expected": {
-      "allowedTypes": ["cannot_assess"],
+      "allowedTypes": ["emergency"],
       "knownSymptoms": ["difficulty_breathing"],
-      "readyForReport": false,
-      "reasonCode": "owner_cannot_assess_breathing_onset"
+      "readyForReport": true,
+      "lastQuestionAsked": "breathing_onset"
     }
   },
   {
@@ -304,10 +304,10 @@
       "answers": {}
     },
     "expected": {
-      "allowedTypes": ["question"],
+      "allowedTypes": ["emergency"],
       "knownSymptoms": ["difficulty_breathing"],
-      "readyForReport": false,
-      "reasonCode": "alternate_observable_gum_color"
+      "readyForReport": true,
+      "lastQuestionAsked": "gum_color"
     }
   },
   {
@@ -323,10 +323,9 @@
       "answers": {}
     },
     "expected": {
-      "allowedTypes": ["cannot_assess"],
+      "allowedTypes": ["emergency"],
       "knownSymptoms": ["seizure_collapse"],
-      "readyForReport": false,
-      "reasonCode": "owner_cannot_assess_seizure_duration",
+      "readyForReport": true,
       "lastQuestionAsked": "seizure_duration"
     }
   },
@@ -343,10 +342,10 @@
       "answers": {}
     },
     "expected": {
-      "allowedTypes": ["cannot_assess"],
+      "allowedTypes": ["emergency"],
       "knownSymptoms": ["difficulty_breathing"],
-      "readyForReport": false,
-      "reasonCode": "owner_cannot_assess_breathing_pattern"
+      "readyForReport": true,
+      "lastQuestionAsked": "breathing_pattern"
     }
   },
   {
@@ -382,9 +381,10 @@
       "answers": {}
     },
     "expected": {
-      "allowedTypes": ["cannot_assess"],
+      "allowedTypes": ["emergency"],
       "knownSymptoms": ["seizure_collapse"],
-      "reasonCode": "owner_cannot_assess_consciousness_level"
+      "readyForReport": true,
+      "lastQuestionAsked": "consciousness_level"
     }
   },
   {

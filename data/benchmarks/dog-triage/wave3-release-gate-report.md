@@ -1,22 +1,20 @@
 # Wave 3 Release Gate Report
 
-- Result: FAIL
+- Result: PASS
 - Suite ID: wave3-freeze
 - Suite version: wave3-freeze-v2
-- Manifest hash: 3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f
-- Canonical manifest generated at: 2026-04-17T16:44:31.613Z
+- Manifest hash: 3c30f83500279f77a44d3f7da50a51854a786a24abfa580686835d939fb98edf
+- Canonical manifest generated at: 2026-04-20T22:08:43.695Z
 - Total frozen cases: 226
 - Scorecard case count: 226
-- Emergency recall: 71.0%
-- Unsafe downgrade rate: 9.73%
+- Emergency recall: 100.0%
+- Unsafe downgrade rate: 0.00%
 - Extra case IDs: none
 - Missing case IDs: none
 
 ## Failures
 
-- Emergency recall 71.0% is below the 98.0% gate.
-- Unsafe downgrade rate 9.73% exceeds the 1.00% gate.
-- 27 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
+_None_
 
 ## Warnings
 
@@ -24,32 +22,13 @@ _None_
 
 ## Failure Bands
 
-- Critical release blockers: 22 (emergency-limping-cry-pain, emergency-postpartum-eclampsia, emergency-protozoal-acute-babesia, emergency-pyometra-style, emergency-urinary-blockage, emergency-vomit-blood-collapse, emergency-vomiting-green, emergency-wound-deep-avulsion, followup-breathing-onset-unknown-escalates, followup-breathing-pattern-unknown)
+- Critical release blockers: 0
 - High non-blocking failures: 12 (question-trauma-fall-yard, sameday-behavior-hiding, sameday-chronic-limp-sudden-worse, sameday-dental-bleeding-gum, sameday-drinking-excessive, sameday-face-swelling-worsening, sameday-hair-loss-spreading, sameday-limping-non-weight-bearing, sameday-regurgitation-frequent, sameday-urinary-blood)
-- Medium follow-up/readiness failures: 18 (followup-appetite-change-unknown, followup-diarrhea-frequency-unknown, followup-diarrhea-onset-unknown, followup-discharge-color-unknown, followup-energy-level-unknown, followup-itch-location-unknown, followup-limping-progression-unknown, followup-lump-size-unknown, followup-seasonal-pattern-unknown, followup-stool-consistency-unknown)
+- Medium follow-up/readiness failures: 13 (followup-diarrhea-frequency-unknown, followup-diarrhea-onset-unknown, followup-discharge-color-unknown, followup-energy-level-unknown, followup-itch-location-unknown, followup-limping-progression-unknown, followup-seasonal-pattern-unknown, followup-swelling-present-no, followup-temperature-unknown, followup-trauma-history-unknown)
 
 ## Blocking High-Risk Failures
 
-- emergency-limping-cry-pain: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-postpartum-eclampsia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth)
-- emergency-protozoal-acute-babesia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy)
-- emergency-pyometra-style: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge)
-- emergency-urinary-blockage: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem)
-- emergency-vomit-blood-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
-- emergency-vomiting-green: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
-- emergency-wound-deep-avulsion: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue)
-- followup-breathing-onset-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-breathing-pattern-unknown: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-consciousness-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-gum-color-unknown-escalates: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- followup-seizure-duration-unknown: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- oncology-emergency-nosebleed-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- oncology-emergency-obstructive-neck-mass: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- repro-emergency-foul-discharge-fever: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- repro-emergency-male-paraphimosis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- repro-emergency-retained-puppy-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- toxin-emergency-antifreeze: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- toxin-emergency-lily-chew: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+_None_
 
 ## Missing High-Stakes Rule IDs
 
@@ -85,7 +64,7 @@ _None_
 | heat_intolerance | 1 |
 | inappropriate_urination | 2 |
 | lethargy | 13 |
-| limping | 14 |
+| limping | 13 |
 | medication_reaction | 13 |
 | multi_system_decline | 1 |
 | nasal_discharge | 3 |

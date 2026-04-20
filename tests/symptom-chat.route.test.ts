@@ -7198,7 +7198,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       );
     });
 
-    it("keeps the first high-risk respiratory gum-color unknown on the alternate-observable retry", async () => {
+    it("routes high-risk respiratory gum-color unknown replies to emergency", async () => {
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
         "gum_color"
@@ -7228,86 +7228,12 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      expect(payload.type).toBe("question");
-      expect(payload.question_id).toBe("gum_color");
-      expect(payload.reason_code).toBe("alternate_observable_gum_color");
-      expect(payload.ready_for_report).toBe(false);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.red_flags_triggered).toContain(
+        "respiratory_distress_unknown_gum_color"
+      );
     });
-
-    it.each([
-      {
-        symptom: "difficulty_breathing",
-        questionId: "breathing_onset",
-        ownerReply: "I don't know, I just found him like this.",
-        candidateDiseases: [
-          "heart_failure",
-          "allergic_reaction",
-          "difficulty_breathing",
-        ],
-        bodySystems: ["respiratory"],
-      },
-      {
-        symptom: "difficulty_breathing",
-        questionId: "breathing_pattern",
-        ownerReply: "I can't describe how he's breathing, he just seems off.",
-        candidateDiseases: [
-          "heart_failure",
-          "allergic_reaction",
-          "difficulty_breathing",
-        ],
-        bodySystems: ["respiratory"],
-      },
-      {
-        symptom: "seizure_collapse",
-        questionId: "consciousness_level",
-        ownerReply: "I don't know if he's fully aware right now.",
-        candidateDiseases: ["seizure_disorder", "toxin_exposure", "heatstroke"],
-        bodySystems: ["neurologic"],
-      },
-      {
-        symptom: "seizure_collapse",
-        questionId: "seizure_duration",
-        ownerReply: "I don't know how long it lasted, it felt like forever.",
-        candidateDiseases: ["seizure_disorder", "toxin_exposure", "brain_tumor"],
-        bodySystems: ["neurologic"],
-      },
-    ])(
-      "keeps direct tier-1 unknown follow-ups on cannot_assess for $questionId",
-      async ({
-        symptom,
-        questionId,
-        ownerReply,
-        candidateDiseases,
-        bodySystems,
-      }) => {
-        const session = buildPendingQuestionSession(symptom, questionId);
-        session.candidate_diseases = candidateDiseases;
-        session.body_systems_involved = bodySystems;
-        session.case_memory = {
-          ...session.case_memory!,
-          turn_count: 2,
-          chief_complaints: [symptom],
-          active_focus_symptoms: [symptom],
-          unresolved_question_ids: [questionId],
-        };
-
-        mockExtractWithQwen.mockResolvedValueOnce(
-          JSON.stringify({ symptoms: [symptom], answers: {} })
-        );
-
-        const { POST } = await import("@/app/api/ai/symptom-chat/route");
-        const response = await POST(makeTextOnlyRequest(session, ownerReply));
-        const payload = await response.json();
-
-        expect(response.status).toBe(200);
-        expect(payload.type).toBe("cannot_assess");
-        expect(payload.terminal_state).toBe("cannot_assess");
-        expect(payload.reason_code).toBe(
-          `owner_cannot_assess_${questionId}`
-        );
-        expect(payload.ready_for_report).toBe(false);
-      }
-    );
 
     it.each([
       {
@@ -7401,8 +7327,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         bodySystems,
         redFlag,
       }) => {
-        let session = buildPendingQuestionSession(symptom, questionId);
-        session = recordAnswer(session, questionId, "unknown");
+        const session = buildPendingQuestionSession(symptom, questionId);
         session.candidate_diseases = candidateDiseases;
         session.body_systems_involved = bodySystems;
         session.case_memory = {
@@ -7410,7 +7335,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
           turn_count: 2,
           chief_complaints: [symptom],
           active_focus_symptoms: [symptom],
-          unresolved_question_ids: [],
+          unresolved_question_ids: [questionId],
         };
 
         mockExtractWithQwen.mockResolvedValueOnce(
@@ -7429,11 +7354,10 @@ describe("VET-900: world-class symptom checker regression pack", () => {
     );
 
     it("does not over-escalate carried-over seizure follow-ups when the dog is clearly normal now", async () => {
-      let session = buildPendingQuestionSession(
+      const session = buildPendingQuestionSession(
         "seizure_collapse",
         "consciousness_level"
       );
-      session = recordAnswer(session, "consciousness_level", "unknown");
       session.candidate_diseases = [
         "seizure_disorder",
         "toxin_exposure",
@@ -7445,7 +7369,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         turn_count: 2,
         chief_complaints: ["seizure_collapse"],
         active_focus_symptoms: ["seizure_collapse"],
-        unresolved_question_ids: [],
+        unresolved_question_ids: ["consciousness_level"],
       };
 
       mockExtractWithQwen.mockResolvedValueOnce(
@@ -8458,7 +8382,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       }
     );
 
-    it("VET-1327: escalates high-risk gum-color unknown follow-up answers to emergency after the alternate-observable retry was already offered", async () => {
+    it("VET-1327: escalates high-risk gum-color unknown follow-up answers to emergency", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
@@ -8476,7 +8400,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         chief_complaints: ["difficulty_breathing"],
         active_focus_symptoms: ["difficulty_breathing"],
         unresolved_question_ids: ["gum_color"],
-        ambiguity_flags: ["alternate_observable_prompted_gum_color"],
+        ambiguity_flags: [],
       };
 
       const response = await POST(

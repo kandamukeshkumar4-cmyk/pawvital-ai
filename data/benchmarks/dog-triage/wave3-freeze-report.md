@@ -1,7 +1,7 @@
 # Wave 3 Freeze Report
 
-Generated at: 2026-04-17T16:44:31.613Z
-Source input: C:\pv1301\data\benchmarks\dog-triage\gold-candidate
+Generated at: 2026-04-20T22:08:43.695Z
+Source input: C:\pv-wave3-stack\data\benchmarks\dog-triage\gold-candidate
 Unique case count: 226
 High-risk cases requiring dual review: 129
 

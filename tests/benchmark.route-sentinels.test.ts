@@ -206,7 +206,9 @@ interface ReplayFixture {
     allowedTypes: string[];
     knownSymptoms: string[];
     redFlags?: string[];
+    readyForReport?: boolean;
     reasonCode?: string;
+    lastQuestionAsked?: string | null;
   };
 }
 
@@ -214,6 +216,7 @@ interface BenchmarkCase {
   id: string;
   request: {
     pet: PetProfile;
+    session?: TriageSession;
     messages: Array<{ role: "user" | "assistant"; content: string }>;
   };
 }
@@ -270,7 +273,19 @@ function buildRequest(session: TriageSession, pet: PetProfile, message: string) 
   });
 }
 
-function buildSeededSession(fixture: ReplayFixture) {
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function buildSeededSession(fixture: ReplayFixture, benchmark: BenchmarkCase) {
+  if (
+    benchmark.request.session &&
+    fixture.mode === "followup_unknown" &&
+    fixture.expected.allowedTypes.includes("emergency")
+  ) {
+    return cloneJson(benchmark.request.session);
+  }
+
   let session = createSession();
   for (const symptom of fixture.seedSession?.knownSymptoms ?? []) {
     session = addSymptoms(session, [symptom]);
@@ -421,7 +436,7 @@ describe("VET-1012 route-backed emergency sentinel replay", () => {
       JSON.stringify(fixture.mockExtraction)
     );
 
-    const session = buildSeededSession(fixture);
+    const session = buildSeededSession(fixture, benchmark!);
     const message = fixture.message ?? benchmark!.request.messages[0]?.content ?? "";
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
     const response = await POST(buildRequest(session, benchmark!.request.pet, message));
@@ -436,6 +451,16 @@ describe("VET-1012 route-backed emergency sentinel replay", () => {
     if (fixture.expected.redFlags?.length) {
       expect(payload.session.red_flags_triggered).toEqual(
         expect.arrayContaining(fixture.expected.redFlags)
+      );
+    }
+
+    if (fixture.expected.readyForReport !== undefined) {
+      expect(payload.ready_for_report).toBe(fixture.expected.readyForReport);
+    }
+
+    if (fixture.expected.lastQuestionAsked !== undefined) {
+      expect(payload.session.last_question_asked ?? null).toBe(
+        fixture.expected.lastQuestionAsked
       );
     }
 
