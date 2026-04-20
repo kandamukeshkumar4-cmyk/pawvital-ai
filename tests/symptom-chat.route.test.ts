@@ -7203,7 +7203,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       );
     });
 
-    it("keeps the alternate gum-color retry on the question path for high-risk respiratory follow-up sessions", async () => {
+    it("routes high-risk respiratory gum-color unknown replies to emergency", async () => {
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
         "gum_color"
@@ -7233,12 +7233,11 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      expect(payload.type).toBe("question");
-      expect(payload.question_id).toBe("gum_color");
-      expect(payload.reason_code).toBe("alternate_observable_gum_color");
-      expect(payload.conversationState).toBe("needs_clarification");
-      expect(payload.ready_for_report).toBe(false);
-      expect(payload.session.last_question_asked).toBe("gum_color");
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.red_flags_triggered).toContain(
+        "respiratory_distress_unknown_gum_color"
+      );
     });
 
     it.each([
@@ -8155,7 +8154,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
     });
 
-    it("VET-1322: preserves the gum-color alternate observable retry for unknown respiratory follow-up answers", async () => {
+    it("VET-1327: escalates high-risk gum-color unknown follow-up answers to emergency", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
@@ -8191,14 +8190,142 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       const payload = await response.json();
 
       expect(response.status).toBe(200);
-      expect(payload.type).toBe("question");
-      expect(payload.reason_code).toBe("alternate_observable_gum_color");
-      expect(payload.conversationState).toBe("needs_clarification");
-      expect(payload.ready_for_report).toBe(false);
-      expect(payload.session.last_question_asked).toBe("gum_color");
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+      expect(payload.session.red_flags_triggered).toContain(
+        "respiratory_distress_unknown_gum_color"
+      );
       expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
       expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
     });
+
+    it.each([
+      {
+        caseId: "emergency-limping-cry-pain",
+        message:
+          "My dog is limping and crying in pain and won't let me touch his back.",
+        expectedSignal: "severe_limping_spinal_pain",
+      },
+      {
+        caseId: "emergency-diabetic-crisis",
+        message: "My diabetic dog is stumbling around and seems very confused.",
+        expectedSignal: "diabetic_crisis",
+      },
+      {
+        caseId: "emergency-dog-bite-wound",
+        message:
+          "My dog was attacked and has deep puncture wounds on his chest.",
+        expectedSignal: "dog_bite_trauma",
+      },
+      {
+        caseId: "emergency-electrical-shock",
+        message:
+          "My puppy chewed an electrical cord and now he is trembling and weak.",
+        expectedSignal: "electrical_shock",
+      },
+      {
+        caseId: "emergency-glaucoma-eye",
+        message:
+          "My dog's eye is suddenly cloudy, bulging, and he seems to be in pain.",
+        expectedSignal: "acute_glaucoma_emergency",
+      },
+      {
+        caseId: "emergency-hard-labor-no-puppy",
+        message:
+          "My dog has been having strong contractions for over two hours and still has not delivered a puppy.",
+        expectedSignal: "dystocia_no_puppy",
+      },
+      {
+        caseId: "emergency-hypoglycemia-toy-breed",
+        message:
+          "My tiny puppy is shaky, weak, and just flopped over after not eating well.",
+        expectedSignal: "hypoglycemia_collapse",
+      },
+      {
+        caseId: "emergency-imma-mediated-thrombocytopenia",
+        message:
+          "There are tiny red spots all over my dog's gums and she is very weak.",
+        expectedSignal: "gum_petechiae_weakness",
+      },
+      {
+        caseId: "emergency-open-fracture",
+        message:
+          "He is limping badly and I can actually see bone through the wound on the leg.",
+        expectedSignal: "open_fracture",
+      },
+      {
+        caseId: "oncology-emergency-nosebleed-collapse",
+        message: "My dog has a major nosebleed and is now weak and shaky.",
+        expectedSignal: "nosebleed_collapse",
+      },
+      {
+        caseId: "oncology-emergency-obstructive-neck-mass",
+        message:
+          "My dog has a large throat lump and now he is struggling to swallow and breathe.",
+        expectedSignal: "obstructive_throat_mass",
+      },
+      {
+        caseId: "repro-emergency-foul-discharge-fever",
+        message:
+          "My unspayed dog has smelly discharge, is drinking a lot, and feels feverish and miserable.",
+        expectedSignal: "pyometra_style_emergency",
+      },
+      {
+        caseId: "repro-emergency-male-paraphimosis",
+        message:
+          "My dog's penis is stuck out, swollen, and he is very uncomfortable.",
+        expectedSignal: "paraphimosis_emergency",
+      },
+      {
+        caseId: "repro-emergency-retained-puppy-collapse",
+        message:
+          "She finished having puppies but now seems weak, distressed, and still has strong contractions.",
+        expectedSignal: "retained_puppy_distress",
+      },
+      {
+        caseId: "toxin-emergency-antifreeze",
+        message:
+          "My dog licked green fluid from the garage floor and is now staggering and drooling.",
+        expectedSignal: "antifreeze_toxicity",
+      },
+      {
+        caseId: "toxin-emergency-lily-chew",
+        message:
+          "My dog got into a toxic plant and now is vomiting and seems really weak.",
+        expectedSignal: "toxic_plant_exposure",
+      },
+      {
+        caseId: "toxin-emergency-sago-palm",
+        message: "My dog chewed on a sago palm and is vomiting now.",
+        expectedSignal: "sago_palm_toxicity",
+      },
+      {
+        caseId: "toxin-emergency-tremorgenic-mycotoxin",
+        message:
+          "He got into moldy trash and now he is shaking hard and cannot walk right.",
+        expectedSignal: "tremorgenic_mycotoxin",
+      },
+      {
+        caseId: "emergency-toxin-xylitol",
+        message:
+          "My dog ate sugar-free gum with xylitol and now he is vomiting and looks weak.",
+        expectedSignal: "toxin_confirmed",
+      },
+    ])(
+      "VET-1327: routes $caseId before question orchestration",
+      async ({ message, expectedSignal }) => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(createSession(), message));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("emergency");
+        expect(payload.ready_for_report).toBe(true);
+        expect(payload.session.red_flags_triggered).toContain(expectedSignal);
+        expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+        expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+      }
+    );
 
     it("preserves the existing demo fallback for report generation without providers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
