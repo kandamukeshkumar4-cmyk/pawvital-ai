@@ -255,6 +255,15 @@ describe("Wave 3 root-cause ledger deltas", () => {
     expect(currentBlockers.delta.countsByStatus.new).toBe(1);
     expect(currentBlockers.delta.countsByStatus.resolved).toBe(1);
     expect(currentBlockers.delta.countsByStatus.unchanged).toBe(0);
+    expect(currentBlockers.summary.severityBands.criticalReleaseBlockers.total).toBe(
+      2
+    );
+    expect(
+      currentBlockers.delta.bandDeltas.criticalReleaseBlockers.previousTotal
+    ).toBe(2);
+    expect(currentBlockers.delta.bandDeltas.highNonBlockingFailures.delta).toBe(
+      0
+    );
 
     expect(currentBlockers.delta.changes[0].caseId).toBe(
       "emergency-breathing-labored"
@@ -317,22 +326,49 @@ describe("Wave 3 root-cause ledger deltas", () => {
     });
   });
 
-  it("loads prior artifacts only when the caller provides explicit baseline paths", () => {
+  it("loads the latest benchmark artifacts by default and allows explicit opt-out", () => {
     const previousLedger = buildPreviousLedger();
     const previousBlockers = buildWave3ResidualBlockers(previousLedger, null);
     const tempDir = fs.mkdtempSync(
       path.join(os.tmpdir(), "pawvital-wave3-ledger-baseline-")
     );
+    const originalCwd = process.cwd();
 
     try {
-      const previousLedgerPath = path.join(tempDir, "previous-ledger.json");
-      const previousBlockersPath = path.join(
+      const benchmarkDir = path.join(
         tempDir,
-        "previous-blockers.json"
+        "data",
+        "benchmarks",
+        "dog-triage"
+      );
+      fs.mkdirSync(benchmarkDir, { recursive: true });
+      const previousLedgerPath = path.join(
+        benchmarkDir,
+        "wave3-emergency-root-cause-ledger.json"
+      );
+      const previousBlockersPath = path.join(
+        benchmarkDir,
+        "wave3-residual-blockers.json"
       );
       writeJsonArtifact(previousLedgerPath, previousLedger);
       writeJsonArtifact(previousBlockersPath, previousBlockers);
+      process.chdir(tempDir);
 
+      const currentLedgerWithDefaultBaseline = buildWave3FailureLedger({
+        manifest,
+        cases,
+        scorecard: buildScorecard([
+          {
+            caseId: "emergency-breathing-labored",
+            severity: "CRITICAL",
+            category: "missed_emergency",
+            expected: "emergency",
+            actual: "question",
+            description:
+              "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
+          },
+        ]),
+      });
       const currentLedgerWithoutBaseline = buildWave3FailureLedger({
         manifest,
         cases,
@@ -347,43 +383,29 @@ describe("Wave 3 root-cause ledger deltas", () => {
               "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
           },
         ]),
-      });
-      const currentLedgerWithBaseline = buildWave3FailureLedger({
-        manifest,
-        cases,
-        scorecard: buildScorecard([
-          {
-            caseId: "emergency-breathing-labored",
-            severity: "CRITICAL",
-            category: "missed_emergency",
-            expected: "emergency",
-            actual: "question",
-            description:
-              "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing",
-          },
-        ]),
-        previousLedgerPath,
+        previousLedgerPath: null,
       });
 
-      expect(currentLedgerWithoutBaseline.delta.previousTotalFailures).toBeNull();
-      expect(currentLedgerWithBaseline.delta.previousTotalFailures).toBe(
+      expect(currentLedgerWithDefaultBaseline.delta.previousTotalFailures).toBe(
         previousLedger.totalFailures
       );
+      expect(currentLedgerWithoutBaseline.delta.previousTotalFailures).toBeNull();
 
+      const blockersWithDefaultBaseline = buildWave3ResidualBlockers(
+        currentLedgerWithDefaultBaseline
+      );
       const blockersWithoutBaseline = buildWave3ResidualBlockers(
-        currentLedgerWithBaseline
-      );
-      const blockersWithBaseline = buildWave3ResidualBlockers(
-        currentLedgerWithBaseline,
+        currentLedgerWithDefaultBaseline,
         undefined,
-        { previousBlockersPath }
+        { previousBlockersPath: null }
       );
 
-      expect(blockersWithoutBaseline.delta.previousTotalBlockers).toBeNull();
-      expect(blockersWithBaseline.delta.previousTotalBlockers).toBe(
+      expect(blockersWithDefaultBaseline.delta.previousTotalBlockers).toBe(
         previousBlockers.blockers.length
       );
+      expect(blockersWithoutBaseline.delta.previousTotalBlockers).toBeNull();
     } finally {
+      process.chdir(originalCwd);
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
@@ -472,6 +494,8 @@ describe("Wave 3 root-cause ledger deltas", () => {
     expect(markdown).toContain("## Burn-Down Snapshot");
     expect(markdown).toContain("## Root Cause Delta");
     expect(markdown).toContain("## Residual Blocker Delta");
+    expect(markdown).toContain("## Critical Release Blockers");
+    expect(markdown).toContain("## Root Cause Bucket Counts");
     expect(markdown).toContain("emergency-breathing-labored");
     expect(markdown).toContain("emergency-hit-by-car");
   });

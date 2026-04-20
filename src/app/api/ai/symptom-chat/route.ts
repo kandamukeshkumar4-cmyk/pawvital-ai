@@ -185,7 +185,11 @@ function collectDeterministicEmergencySignals(
 function collectRouteEmergencyOverrideSignals(
   rawMessage: string,
   session: TriageSession,
-  incomingUnresolvedIds: string[]
+  incomingUnresolvedIds: string[],
+  context: {
+    answersBeforeTurn: TriageSession["extracted_answers"];
+    ambiguityFlagsBeforeTurn: string[];
+  }
 ): string[] {
   const lower = rawMessage.toLowerCase();
   const signals = new Set<string>();
@@ -199,9 +203,27 @@ function collectRouteEmergencyOverrideSignals(
   );
   const candidateDiseases = new Set(session.candidate_diseases ?? []);
   const bodySystems = new Set(session.body_systems_involved ?? []);
+  const turnCount = session.case_memory?.turn_count ?? 0;
+  const ambiguityFlagsBeforeTurn = new Set(context.ambiguityFlagsBeforeTurn);
   const ambiguousUnknownReply =
     coerceAmbiguousReplyToUnknown(rawMessage) !== null ||
     /\b(can(?:not|'t) tell|not sure|don't know|do not know)\b/.test(lower);
+  const hadPriorUnknownAnswer = (questionId: string) =>
+    String(context.answersBeforeTurn[questionId] ?? "")
+      .trim()
+      .toLowerCase() === "unknown";
+  const hasCarriedOverRespiratoryUnknown =
+    turnCount >= 2 &&
+    session.known_symptoms.includes("difficulty_breathing") &&
+    chiefComplaints.has("difficulty_breathing") &&
+    activeFocusSymptoms.has("difficulty_breathing") &&
+    bodySystems.has("respiratory");
+  const hasCarriedOverSeizureUnknown =
+    turnCount >= 2 &&
+    session.known_symptoms.includes("seizure_collapse") &&
+    chiefComplaints.has("seizure_collapse") &&
+    activeFocusSymptoms.has("seizure_collapse") &&
+    bodySystems.has("neurologic");
 
   const hasChemicalExposure =
     /\b(drain cleaner|bleach|acid|lye|caustic|chemical|oven cleaner|pool chemical)\b/.test(
@@ -587,8 +609,40 @@ function collectRouteEmergencyOverrideSignals(
   }
 
   if (
-    session.last_question_asked === "gum_color" &&
+    hadPriorUnknownAnswer("breathing_onset") &&
+    hasCarriedOverRespiratoryUnknown &&
+    ambiguousUnknownReply
+  ) {
+    signals.add("respiratory_distress_unknown_breathing_onset");
+  }
+
+  if (
+    hadPriorUnknownAnswer("breathing_pattern") &&
+    hasCarriedOverRespiratoryUnknown &&
+    ambiguousUnknownReply
+  ) {
+    signals.add("respiratory_distress_unknown_breathing_pattern");
+  }
+
+  if (
+    hadPriorUnknownAnswer("consciousness_level") &&
+    hasCarriedOverSeizureUnknown &&
+    ambiguousUnknownReply
+  ) {
+    signals.add("neurologic_emergency_unknown_consciousness");
+  }
+
+  if (
+    hadPriorUnknownAnswer("seizure_duration") &&
+    hasCarriedOverSeizureUnknown &&
+    ambiguousUnknownReply
+  ) {
+    signals.add("neurologic_emergency_unknown_seizure_duration");
+  }
+
+  if (
     incomingUnresolvedIds.includes("gum_color") &&
+    ambiguityFlagsBeforeTurn.has("alternate_observable_prompted_gum_color") &&
     unresolvedQuestionIds.has("gum_color") &&
     session.known_symptoms.includes("difficulty_breathing") &&
     chiefComplaints.has("difficulty_breathing") &&
@@ -596,7 +650,7 @@ function collectRouteEmergencyOverrideSignals(
     bodySystems.has("respiratory") &&
     (candidateDiseases.has("heart_failure") ||
       candidateDiseases.has("allergic_reaction")) &&
-    (session.case_memory?.turn_count ?? 0) >= 2 &&
+    turnCount >= 2 &&
     ambiguousUnknownReply
   ) {
     signals.add("respiratory_distress_unknown_gum_color");
@@ -679,6 +733,9 @@ export async function POST(request: Request) {
     const knownSymptomsBeforeTurn = new Set(session.known_symptoms);
     const answersBeforeTurn = { ...session.extracted_answers };
     const answerKeysBeforeTurn = new Set(Object.keys(session.extracted_answers));
+    const ambiguityFlagsBeforeTurn = [
+      ...(session.case_memory?.ambiguity_flags ?? []),
+    ];
     let imagePreprocess: VisionPreprocessResult | null = null;
     let visualEvidence: VisionClinicalEvidence | null = null;
     let consultOpinion: ConsultOpinion | null = null;
@@ -1587,21 +1644,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (terminalOutcome) {
-      session = recordTerminalOutcomeTelemetry(
-        session,
-        terminalOutcome,
-        session.last_question_asked ?? undefined
-      );
-      return NextResponse.json(
-        buildTerminalOutcomeResponse(terminalOutcome, session)
-      );
-    }
-
     const routeEmergencyOverrideSignals = collectRouteEmergencyOverrideSignals(
       lastUserMessage.content,
       session,
-      incomingUnresolvedIds
+      incomingUnresolvedIds,
+      {
+        answersBeforeTurn,
+        ambiguityFlagsBeforeTurn,
+      }
     );
     const hasRouteEmergencyOverride = routeEmergencyOverrideSignals.length > 0;
     if (hasRouteEmergencyOverride) {
@@ -1638,6 +1688,17 @@ export async function POST(request: Request) {
         session: sanitizeSessionForClient(session),
         ready_for_report: true,
       });
+    }
+
+    if (terminalOutcome) {
+      session = recordTerminalOutcomeTelemetry(
+        session,
+        terminalOutcome,
+        session.last_question_asked ?? undefined
+      );
+      return NextResponse.json(
+        buildTerminalOutcomeResponse(terminalOutcome, session)
+      );
     }
 
     if (alternateObservableOutcome) {

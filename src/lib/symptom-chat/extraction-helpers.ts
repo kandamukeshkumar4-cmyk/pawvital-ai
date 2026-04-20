@@ -176,7 +176,13 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "in labor": "pregnancy_birth",
     "in labour": "pregnancy_birth",
     "giving birth": "pregnancy_birth",
+    "after giving birth": "pregnancy_birth",
+    "recently gave birth": "pregnancy_birth",
+    "after whelping": "pregnancy_birth",
     "having puppies": "pregnancy_birth",
+    "had puppies": "pregnancy_birth",
+    "nursing puppies": "pregnancy_birth",
+    postpartum: "pregnancy_birth",
     "green discharge": "pregnancy_birth",
     "stuck puppy": "pregnancy_birth",
     contractions: "pregnancy_birth",
@@ -189,8 +195,6 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "chemical burn": "trauma",
     "can't pee": "urination_problem",
     "cannot pee": "urination_problem",
-    "trying to pee": "urination_problem",
-    "straining to pee": "urination_problem",
     "eye discharge": "eye_discharge",
     "goopy eye": "eye_discharge",
     "goopy eyes": "eye_discharge",
@@ -257,6 +261,9 @@ export function extractSymptomsFromKeywords(message: string): string[] {
 
   const mentionsVomiting =
     /\b(vomit|vomiting|throwing up|threw up|retching|heaving)\b/.test(lower);
+  if (mentionsVomiting) {
+    pushSymptom("vomiting");
+  }
   const mentionsDiarrhea =
     /\b(diarrhea|diarrhoea|bloody diarrhea|the runs)\b/.test(lower);
   if (mentionsVomiting && mentionsDiarrhea) {
@@ -332,12 +339,58 @@ export function extractSymptomsFromKeywords(message: string): string[] {
   }
 
   if (
+    /\b(flap of skin|skin hanging off|skin torn open|gaping wound|flesh visible|tissue exposed|avulsion)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("wound_skin_issue");
+  }
+
+  if (
     /\b(heat|hot|overheat|overheated|heatstroke)\b/.test(lower) &&
     /\b(panting hard|panting heavily|bright red gums|collapse|collapsed|weak)\b/.test(
       lower
     )
   ) {
     pushSymptom("heat_intolerance");
+  }
+
+  if (
+    /\b(weak|weakness|wobbly|stumbling|lethargic)\b/.test(lower) &&
+    (/\b(pale|white) gums?\b/.test(lower) ||
+      /\bgums? (?:look(?:ing|s|ed)?|are(?: looking)?|turned?) (pale|white)\b/.test(
+        lower
+      )) &&
+    /\b(dark (?:brown|red|tea-colored) urine|urine is dark|dark urine|brown urine|red urine)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("lethargy");
+  }
+
+  const hasUrinaryContext = /\b(pee|peeing|urinat|urine|squatt)\b/.test(lower);
+  const hasBlockageAttemptCue =
+    /\b(straining|trying to pee|trying to urinate|crying while trying to pee|crying when he tries to pee|repeated trips outside|keeps going outside)\b/.test(
+      lower
+    ) &&
+    !/\b(not|without|was not|wasn't)\b[^.?!]{0,24}\b(straining|crying|trying to pee|trying to urinate)\b/.test(
+      lower
+    );
+  const hasLowOutputCue =
+    /\b(almost no urine|nothing comes out|nothing has come out|no urine|only dribbles|only a few drops|few drops|barely anything)\b/.test(
+      lower
+    );
+
+  if (hasUrinaryContext && hasBlockageAttemptCue && hasLowOutputCue) {
+    pushSymptom("urination_problem");
+  }
+
+  if (
+    /\b(flap of skin|skin hanging off|skin torn open|gaping wound|flesh visible|tissue exposed|avulsion)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("wound_skin_issue");
   }
 
   return symptoms;
@@ -349,6 +402,17 @@ export function extractDeterministicEmergencyRedFlags(
 ): string[] {
   const lower = rawMessage.toLowerCase();
   const flags = new Set<string>();
+  const hasUrinaryBlockageAttemptCue =
+    /\b(straining|trying to pee|trying to urinate|crying while trying to pee|crying when he tries to pee|repeated trips outside|keeps going outside)\b/.test(
+      lower
+    ) &&
+    !/\b(not|without|was not|wasn't)\b[^.?!]{0,24}\b(straining|crying|trying to pee|trying to urinate)\b/.test(
+      lower
+    );
+  const hasUrinaryLowOutputCue =
+    /\b(almost no urine|nothing comes out|nothing has come out|no urine|only dribbles|only a few drops|few drops|barely anything)\b/.test(
+      lower
+    );
   const hasCyanoticGumLanguage =
     /\b(bluish?|gray|grey|purple) gums?\b/.test(lower) ||
     /\bgums? (?:look(?:ing|s|ed)?|are(?: looking)?|turned?) (bluish?|gray|grey|purple)\b/.test(
@@ -431,7 +495,7 @@ export function extractDeterministicEmergencyRedFlags(
 
     if (
       /\b(postpartum|after giving birth|after whelping|nursing)\b/.test(lower) &&
-      /\b(tremors?|shaking|seizures?)\b/.test(lower)
+      /\b(trembling|tremors?|shaking|seizures?)\b/.test(lower)
     ) {
       flags.add("eclampsia_signs");
     }
@@ -481,6 +545,14 @@ export function extractDeterministicEmergencyRedFlags(
     if (/\b(bone sticking out|bone visible)\b/.test(lower)) {
       flags.add("wound_bone_visible");
     }
+
+    if (
+      /\b(flap of skin|skin hanging off|skin torn open|gaping wound|flesh visible|tissue exposed|avulsion)\b/.test(
+        lower
+      )
+    ) {
+      flags.add("wound_tissue_exposed");
+    }
   }
 
   if (knownSymptoms.includes("dental_problem")) {
@@ -505,9 +577,17 @@ export function extractDeterministicEmergencyRedFlags(
 
   if (
     knownSymptoms.includes("urination_problem") &&
-    /\b(can'?t pee|cannot pee|trying to pee|straining to pee|nothing comes out|only dribbles|no urine)\b/.test(
-      lower
-    )
+    ((/\b(can'?t pee|cannot pee)\b/.test(lower) ||
+      ((/\b(trying to pee|straining to pee)\b/.test(lower) &&
+        !/\b(not|without|was not|wasn't)\b[^.?!]{0,24}\b(trying to pee|straining to pee)\b/.test(
+          lower
+        )) &&
+        hasUrinaryLowOutputCue) ||
+      /\b(only dribbles|no urine)\b/.test(lower)) ||
+      (hasUrinaryBlockageAttemptCue &&
+        /\b(almost no urine|nothing has come out|nothing comes out|no urine|only a few drops|few drops|barely anything)\b/.test(
+          lower
+        )))
   ) {
     flags.add("urinary_blockage");
   }

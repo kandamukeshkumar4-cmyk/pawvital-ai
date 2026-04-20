@@ -523,7 +523,7 @@ function questionLooksDurationLike(question: {
 }
 
 function hasDurationLikeSignal(normalizedMessage: string): boolean {
-  return /\b(\d+\s*(hour|day|week|month|year)s?|today|yesterday|tonight|this morning|last night|since|for\s+\w+|sudden|suddenly|gradual|gradually)\b/.test(
+  return /\b(\d+\s*(hour|day|week|month|year)s?|(a\s+)?few\s*(hour|day|week|month|year)s?|couple of\s*(hour|day|week|month|year)s?|today|yesterday|tonight|this morning|last night|since|for\s+\w+|sudden|suddenly|gradual|gradually)\b/.test(
     normalizedMessage
   );
 }

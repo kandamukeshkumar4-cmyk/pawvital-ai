@@ -193,6 +193,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "gdv",
       "toxin_ingestion",
       "kidney_disease",
+      "coagulopathy",
     ],
     follow_up_questions: [
       "vomit_duration",
@@ -203,7 +204,13 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "dietary_change",
       "appetite_status",
     ],
-    red_flags: ["vomit_blood", "unproductive_retching", "toxin_confirmed"],
+    red_flags: [
+      "vomit_blood",
+      "unproductive_retching",
+      "toxin_confirmed",
+      "not_drinking",
+      "pale_gums",
+    ],
     body_systems: ["gastrointestinal"],
   },
   not_eating: {
@@ -298,6 +305,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "liver_disease",
       "addisons_disease",
       "imha",
+      "babesiosis",
       "coagulopathy",
       "sepsis",
       "heat_stroke",
@@ -547,7 +555,12 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "wound_licking",
       "trauma_history",
     ],
-    red_flags: ["wound_deep_bleeding", "wound_bone_visible", "wound_spreading_rapidly"],
+    red_flags: [
+      "wound_deep_bleeding",
+      "wound_bone_visible",
+      "wound_spreading_rapidly",
+      "wound_tissue_exposed",
+    ],
     body_systems: ["dermatologic", "musculoskeletal"],
   },
   trauma: {
@@ -632,7 +645,12 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "water_intake",
       "spay_status",
     ],
-    red_flags: ["urinary_blockage", "no_urine_24h"],
+    red_flags: [
+      "urinary_blockage",
+      "no_urine_24h",
+      "straining_no_urine",
+      "male_unable_to_urinate",
+    ],
     body_systems: ["renal", "reproductive", "endocrine"],
   },
 
@@ -1398,6 +1416,27 @@ const SUPPLEMENTAL_DISEASES: Record<string, DiseaseEntry> = {
   prostate_disease: makeSystemicDisease("Prostate Disease", "Prostatitis / Benign Prostatic Hyperplasia / Prostatic Neoplasia", "Prostate enlargement causes straining to urinate, ribbon-like stool, and hind limb weakness.", "high", 0.06, { puppy: 0.0, adult: 1.0, senior: 2.2 }),
   bladder_cancer: makeSystemicDisease("Bladder Cancer", "Transitional Cell Carcinoma", "Malignant bladder tumor causes blood in urine, straining, and recurrent infections.", "high", 0.02, { puppy: 0.0, adult: 0.4, senior: 2.0 }),
   urethral_obstruction: makeSystemicDisease("Urethral Obstruction", "Urethral Blockage", "Complete blockage of urine flow is a life-threatening emergency causing bladder rupture and kidney failure.", "emergency", 0.04),
+  babesiosis: makeDiseaseEntry({
+    name: "Babesiosis",
+    medicalTerm: "Canine Babesiosis",
+    description: "Tick-borne hemolytic protozoal disease can cause sudden weakness, pale gums, dark urine, fever, and collapse.",
+    urgency: "emergency",
+    baseProbability: 0.02,
+    keyDifferentiators: [
+      "Acute weakness with hemolysis signals such as pale gums or dark urine",
+      "Tick exposure or travel to endemic areas raises concern",
+      "Fever, jaundice, or collapse can develop quickly",
+    ],
+    typicalTests: [
+      "CBC with blood smear review for hemolysis or organisms",
+      "Tick-borne infectious disease PCR or serology",
+      "Chemistry panel and urinalysis to assess systemic impact",
+    ],
+    typicalHomeCare: [
+      "Keep the dog calm and transport for same-day emergency evaluation",
+      "Do not delay care if weakness, pale gums, or collapse are present",
+    ],
+  }),
 
   cognitive_dysfunction: makeNeuroOrOrthoDisease("Cognitive Dysfunction Syndrome", "Canine Cognitive Dysfunction", "Age-related brain changes cause confusion, disorientation, sleep changes, and housetraining loss.", "moderate", 0.08, { puppy: 0.0, adult: 0.3, senior: 2.5 }),
   brain_tumor: makeNeuroOrOrthoDisease("Brain Tumor", "Intracranial Neoplasia", "Brain tumors cause seizures, behavior changes, vision loss, circling, and head pressing.", "high", 0.02, { puppy: 0.0, adult: 0.5, senior: 2.0 }),

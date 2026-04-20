@@ -54,6 +54,7 @@ describe("Wave 3 release gate runner", () => {
     const report = fs.readFileSync(outputPath, "utf8");
     expect(report).toContain("# Wave 3 Release Gate Report");
     expect(report).toContain("## Failures");
+    expect(report).toContain("## Failure Bands");
     expect(report).not.toContain("Scorecard case count: 0");
 
     fs.rmSync(tempDir, { recursive: true, force: true });
