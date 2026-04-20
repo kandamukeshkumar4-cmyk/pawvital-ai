@@ -1,13 +1,13 @@
 # Wave 3 Emergency Baseline Debug
 
-- Generated at: 2026-04-17T21:28:49.842Z
+- Generated at: 2026-04-20T13:08:30.388Z
 - Suite ID: wave3-freeze
 - Manifest hash: 3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f
 - Total failures: 105
 
 ## Burn-Down Snapshot
 
-- Compared against: 2026-04-17T19:51:05.630Z
+- Compared against: 2026-04-17T21:28:49.842Z
 - Total failures: 105 (0)
 - Residual blockers: 105 (0)
 - Residual blocker changes: new 0, resolved 0, regressed 0, improved 0, unchanged 105

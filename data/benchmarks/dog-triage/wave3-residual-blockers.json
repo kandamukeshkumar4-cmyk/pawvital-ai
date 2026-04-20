@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-17T21:28:49.842Z",
+  "generatedAt": "2026-04-20T13:08:30.388Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
   "summary": {
@@ -17,7 +17,7 @@
     }
   },
   "delta": {
-    "comparedToGeneratedAt": "2026-04-17T19:51:05.630Z",
+    "comparedToGeneratedAt": "2026-04-17T21:28:49.842Z",
     "previousTotalBlockers": 105,
     "blockerDelta": 0,
     "countsByStatus": {

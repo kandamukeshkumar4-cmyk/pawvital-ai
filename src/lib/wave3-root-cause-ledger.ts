@@ -389,8 +389,14 @@ function buildResidualBlockerDelta(input: {
       severity: current?.severity ?? previous?.severity ?? "MEDIUM",
       status,
       frequencyDelta: (current?.frequency ?? 0) - (previous?.frequency ?? 0),
-      rootCauseChanged: Boolean(previous && current) && previous.rootCauseBucket !== current.rootCauseBucket,
-      summaryChanged: Boolean(previous && current) && previous.summary !== current.summary,
+      rootCauseChanged:
+        previous !== null &&
+        current !== null &&
+        previous.rootCauseBucket !== current.rootCauseBucket,
+      summaryChanged:
+        previous !== null &&
+        current !== null &&
+        previous.summary !== current.summary,
       previousSeverity: previous?.severity ?? null,
       currentSeverity: current?.severity ?? null,
       previousFrequency: previous?.frequency ?? null,
