@@ -472,7 +472,7 @@ describe("VET-1014 terminal payload safety pack", () => {
     expectNoInternalTelemetry(payload);
   });
 
-  it("keeps cannot_assess payloads free of internal telemetry", async () => {
+  it("keeps high-risk gum-color emergency payloads free of internal telemetry", async () => {
     let session = seedInternalTelemetry(createSession());
     session = addSymptoms(session, ["difficulty_breathing"]);
     session.last_question_asked = "gum_color";
@@ -496,10 +496,11 @@ describe("VET-1014 terminal payload safety pack", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(payload.type).toBe("cannot_assess");
-    expect(payload.terminal_state).toBe("cannot_assess");
-    expect(payload.reason_code).toBe("owner_cannot_assess_gum_color");
-    expect(payload.ready_for_report).toBe(false);
+    expect(payload.type).toBe("emergency");
+    expect(payload.ready_for_report).toBe(true);
+    expect(payload.session.red_flags_triggered).toContain(
+      "respiratory_distress_unknown_gum_color"
+    );
     expectNoInternalTelemetry(payload);
   });
 

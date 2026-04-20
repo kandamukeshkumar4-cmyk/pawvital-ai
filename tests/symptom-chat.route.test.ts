@@ -7155,7 +7155,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(getNextQuestion(readySession)).toBeNull();
     });
 
-    it("routes the supported gum-color branch through one alternate observable retry before cannot_assess", async () => {
+    it("routes the supported gum-color branch through one alternate observable retry before emergency", async () => {
       const session = buildPendingQuestionSession(
         "difficulty_breathing",
         "gum_color"
@@ -7185,21 +7185,16 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         "alternate_observable_prompted_gum_color"
       );
 
-      const cannotAssessResponse = await POST(
+      const emergencyResponse = await POST(
         makeTextOnlyRequest(retryPayload.session, "Still can't tell")
       );
-      const cannotAssessPayload = await cannotAssessResponse.json();
+      const emergencyPayload = await emergencyResponse.json();
 
-      expect(cannotAssessResponse.status).toBe(200);
-      expect(cannotAssessPayload.type).toBe("cannot_assess");
-      expect(cannotAssessPayload.terminal_state).toBe("cannot_assess");
-      expect(cannotAssessPayload.reason_code).toBe(
-        "owner_cannot_assess_gum_color"
-      );
-      expect(cannotAssessPayload.conversationState).toBe("escalation");
-      expect(cannotAssessPayload.ready_for_report).toBe(false);
-      expect(cannotAssessPayload.recommended_next_step).toContain(
-        "Seek veterinary assessment"
+      expect(emergencyResponse.status).toBe(200);
+      expect(emergencyPayload.type).toBe("emergency");
+      expect(emergencyPayload.ready_for_report).toBe(true);
+      expect(emergencyPayload.session.red_flags_triggered).toContain(
+        "respiratory_distress_unknown_gum_color"
       );
     });
 
@@ -7278,6 +7273,83 @@ describe("VET-900: world-class symptom checker regression pack", () => {
           "Seek veterinary assessment"
         );
         expect(payload.message).not.toContain("gently lift the upper lip");
+      }
+    );
+
+    it.each([
+      {
+        symptom: "difficulty_breathing",
+        questionId: "breathing_onset",
+        ownerReply: "I don't know, I just found him like this.",
+        candidateDiseases: [
+          "heart_failure",
+          "allergic_reaction",
+          "difficulty_breathing",
+        ],
+        bodySystems: ["respiratory"],
+        redFlag: "respiratory_distress_unknown_breathing_onset",
+      },
+      {
+        symptom: "difficulty_breathing",
+        questionId: "breathing_pattern",
+        ownerReply: "I can't describe how he's breathing, he just seems off.",
+        candidateDiseases: [
+          "heart_failure",
+          "allergic_reaction",
+          "difficulty_breathing",
+        ],
+        bodySystems: ["respiratory"],
+        redFlag: "respiratory_distress_unknown_breathing_pattern",
+      },
+      {
+        symptom: "seizure_collapse",
+        questionId: "consciousness_level",
+        ownerReply: "I don't know if he's fully aware right now.",
+        candidateDiseases: ["seizure_disorder", "toxin_exposure", "heatstroke"],
+        bodySystems: ["neurologic"],
+        redFlag: "neurologic_emergency_unknown_consciousness",
+      },
+      {
+        symptom: "seizure_collapse",
+        questionId: "seizure_duration",
+        ownerReply: "I don't know how long it lasted, it felt like forever.",
+        candidateDiseases: ["seizure_disorder", "toxin_exposure", "brain_tumor"],
+        bodySystems: ["neurologic"],
+        redFlag: "neurologic_emergency_unknown_seizure_duration",
+      },
+    ])(
+      "escalates carried-over tier-1 unsafe unknowns for $questionId",
+      async ({
+        symptom,
+        questionId,
+        ownerReply,
+        candidateDiseases,
+        bodySystems,
+        redFlag,
+      }) => {
+        const session = buildPendingQuestionSession(symptom, questionId);
+        session.candidate_diseases = candidateDiseases;
+        session.body_systems_involved = bodySystems;
+        session.case_memory = {
+          ...session.case_memory!,
+          turn_count: 2,
+          chief_complaints: [symptom],
+          active_focus_symptoms: [symptom],
+          unresolved_question_ids: [questionId],
+        };
+
+        mockExtractWithQwen.mockResolvedValueOnce(
+          JSON.stringify({ symptoms: [symptom], answers: {} })
+        );
+
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(session, ownerReply));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("emergency");
+        expect(payload.ready_for_report).toBe(true);
+        expect(payload.session.red_flags_triggered).toContain(redFlag);
       }
     );
 
