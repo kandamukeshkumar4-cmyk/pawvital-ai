@@ -169,4 +169,29 @@ describe("VET-1335 critical emergency normalization", () => {
       expect(answers.vomit_content).toBeUndefined();
     });
   });
+
+  describe("deep avulsion wound", () => {
+    it("maps exposed tissue owner language to wound_skin_issue and wound_tissue_exposed", () => {
+      const message =
+        "My dog has a large flap of skin hanging off his shoulder from a fence incident.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+      const redFlags = extractDeterministicEmergencyRedFlags(message, symptoms);
+
+      expect(symptoms).toContain("wound_skin_issue");
+      expect(redFlags).toContain("wound_tissue_exposed");
+    });
+
+    it("does not mark a superficial scrape as tissue-exposed", () => {
+      const message =
+        "My dog has a small superficial scrape, the bleeding stopped quickly, and he is acting normal.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+      const redFlags = extractDeterministicEmergencyRedFlags(message, symptoms);
+
+      expect(redFlags).not.toContain("wound_tissue_exposed");
+      expect(redFlags).not.toContain("wound_deep_bleeding");
+      expect(symptoms).toContain("wound_skin_issue");
+    });
+  });
 });

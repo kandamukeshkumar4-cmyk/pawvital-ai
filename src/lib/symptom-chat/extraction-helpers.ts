@@ -339,6 +339,14 @@ export function extractSymptomsFromKeywords(message: string): string[] {
   }
 
   if (
+    /\b(flap of skin|skin hanging off|skin torn open|gaping wound|flesh visible|tissue exposed|avulsion)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("wound_skin_issue");
+  }
+
+  if (
     /\b(heat|hot|overheat|overheated|heatstroke)\b/.test(lower) &&
     /\b(panting hard|panting heavily|bright red gums|collapse|collapsed|weak)\b/.test(
       lower
@@ -375,6 +383,14 @@ export function extractSymptomsFromKeywords(message: string): string[] {
 
   if (hasUrinaryContext && hasBlockageAttemptCue && hasLowOutputCue) {
     pushSymptom("urination_problem");
+  }
+
+  if (
+    /\b(flap of skin|skin hanging off|skin torn open|gaping wound|flesh visible|tissue exposed|avulsion)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("wound_skin_issue");
   }
 
   return symptoms;
@@ -528,6 +544,14 @@ export function extractDeterministicEmergencyRedFlags(
 
     if (/\b(bone sticking out|bone visible)\b/.test(lower)) {
       flags.add("wound_bone_visible");
+    }
+
+    if (
+      /\b(flap of skin|skin hanging off|skin torn open|gaping wound|flesh visible|tissue exposed|avulsion)\b/.test(
+        lower
+      )
+    ) {
+      flags.add("wound_tissue_exposed");
     }
   }
 
