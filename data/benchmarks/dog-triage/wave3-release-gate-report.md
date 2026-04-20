@@ -7,16 +7,16 @@
 - Canonical manifest generated at: 2026-04-17T16:44:31.613Z
 - Total frozen cases: 226
 - Scorecard case count: 226
-- Emergency recall: 40.8%
-- Unsafe downgrade rate: 19.91%
+- Emergency recall: 55.3%
+- Unsafe downgrade rate: 15.04%
 - Extra case IDs: none
 - Missing case IDs: none
 
 ## Failures
 
-- Emergency recall 40.8% is below the 98.0% gate.
-- Unsafe downgrade rate 19.91% exceeds the 1.00% gate.
-- 48 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
+- Emergency recall 55.3% is below the 98.0% gate.
+- Unsafe downgrade rate 15.04% exceeds the 1.00% gate.
+- 39 blocking failure(s) still hit rare-but-critical or must-not-miss cases.
 
 ## Warnings
 
@@ -24,26 +24,26 @@ _None_
 
 ## Blocking High-Risk Failures
 
-- emergency-breathing-labored: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
-- emergency-burn-chemical: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-choking-foreign-body: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing)
 - emergency-diabetic-crisis: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-difficulty-breathing-kennel: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-dog-bite-wound: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-electrical-shock: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-glaucoma-eye: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-hard-labor-no-puppy: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-heatstroke: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-hemorrhagic-diarrhea-shock: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-hit-by-car: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-hypoglycemia-toy-breed: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-imma-mediated-thrombocytopenia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-limping-cry-pain: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-open-fracture: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
-- emergency-oral-bleeding-cant-swallow: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem)
-- emergency-parvo-style-puppy: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
 - emergency-postpartum-eclampsia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth)
-- emergency-protozoal-acute-babesia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-protozoal-acute-babesia: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy)
+- emergency-pyometra-style: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge)
+- emergency-repeated-nonproductive-heaving: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-toxin-xylitol: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-trembling-cold-weak: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-unresponsive-after-tremors: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport)
+- emergency-urinary-blockage: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:urination_problem)
+- emergency-vomit-blood-collapse: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
+- emergency-vomiting-green: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:vomiting)
+- emergency-wound-deep-avulsion: CRITICAL unsafe_downgrade (Failed checks: responseType, readyForReport, knownSymptomsInclude:wound_skin_issue)
 
 ## Missing High-Stakes Rule IDs
 

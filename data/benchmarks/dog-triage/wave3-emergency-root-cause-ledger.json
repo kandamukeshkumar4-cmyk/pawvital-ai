@@ -1,51 +1,10 @@
 {
-  "generatedAt": "2026-04-20T13:08:30.388Z",
+  "generatedAt": "2026-04-20T13:56:26.572Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3082027e2e6752178849a8a92306186d24d242fd7050fe0f9300a82891089c7f",
-  "totalFailures": 105,
+  "totalFailures": 96,
+  "hasScorecard": true,
   "entries": [
-    {
-      "caseId": "emergency-breathing-labored",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "difficulty_breathing"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog is breathing with great effort using his belly muscles.",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
-    {
-      "caseId": "emergency-burn-chemical",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "wound_skin_issue"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My dog stepped in drain cleaner and his paw is red and blistered.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-choking-foreign-body",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "difficulty_breathing"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog is gagging and pawing at his mouth like something is stuck.",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
-    },
     {
       "caseId": "emergency-diabetic-crisis",
       "severity": "CRITICAL",
@@ -58,20 +17,6 @@
       "actualResponseType": "question",
       "rootCauseBucket": "question orchestration overriding emergency",
       "ownerMessage": "My diabetic dog is stumbling around and seems very confused.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-difficulty-breathing-kennel",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "difficulty_breathing"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "After boarding, my dog is struggling to breathe and making honking sounds.",
       "description": "Failed checks: responseType, readyForReport"
     },
     {
@@ -132,49 +77,6 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "emergency-heatstroke",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "heat_intolerance"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "After a walk in the heat she is panting hard, weak, and her gums look bright red.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-hemorrhagic-diarrhea-shock",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "diarrhea"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "missing red flag linkage",
-      "ownerMessage": "My dog has explosive bloody diarrhea and is weak with pale gums.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-hit-by-car",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "trauma",
-        "limping"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "He was hit by a car and now he cannot stand up.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-hypoglycemia-toy-breed",
       "severity": "CRITICAL",
       "expected": "emergency",
@@ -231,34 +133,6 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "emergency-oral-bleeding-cant-swallow",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "dental_problem"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "There is blood coming from his mouth and he cannot really eat or drink.",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:dental_problem"
-    },
-    {
-      "caseId": "emergency-parvo-style-puppy",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "vomiting_diarrhea_combined"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My unvaccinated puppy is vomiting and has bloody diarrhea and will not drink.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-postpartum-eclampsia",
       "severity": "CRITICAL",
       "expected": "emergency",
@@ -270,7 +144,7 @@
       "riskTier": "tier_1_emergency",
       "actualResponseType": "question",
       "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "She is nursing puppies and now she is trembling badly and seems weak and restless.",
+      "ownerMessage": "She is nursing puppies and now she is trembling, weak, and pacing restlessly.",
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:pregnancy_birth"
     },
     {
@@ -283,9 +157,9 @@
       ],
       "riskTier": "tier_1_emergency",
       "actualResponseType": "question",
-      "rootCauseBucket": "missing red flag linkage",
-      "ownerMessage": "My dog is extremely weak, his gums are pale, and his urine is dark brown.",
-      "description": "Failed checks: responseType, readyForReport"
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog is suddenly extremely weak, his gums are pale, and his urine is dark brown.",
+      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:lethargy"
     },
     {
       "caseId": "emergency-pyometra-style",
@@ -302,20 +176,6 @@
       "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:vaginal_discharge"
     },
     {
-      "caseId": "emergency-rat-poison-bleeding",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "medication_reaction"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "question orchestration overriding emergency",
-      "ownerMessage": "My dog may have gotten rat poison and now I see bleeding from his gums.",
-      "description": "Failed checks: responseType, readyForReport"
-    },
-    {
       "caseId": "emergency-repeated-nonproductive-heaving",
       "severity": "CRITICAL",
       "expected": "emergency",
@@ -328,20 +188,6 @@
       "rootCauseBucket": "question orchestration overriding emergency",
       "ownerMessage": "He keeps heaving like he needs to vomit but nothing is coming up and he looks panicked.",
       "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "emergency-resting-open-mouth-breathing",
-      "severity": "CRITICAL",
-      "expected": "emergency",
-      "actual": "question",
-      "complaintFamilies": [
-        "difficulty_breathing"
-      ],
-      "riskTier": "tier_1_emergency",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "He is open-mouth breathing while resting and his gums are looking bluish.",
-      "description": "Failed checks: responseType, readyForReport, knownSymptomsInclude:difficulty_breathing"
     },
     {
       "caseId": "emergency-toxin-xylitol",
@@ -811,6 +657,20 @@
       "description": "Failed checks: knownSymptomsInclude:weight_loss"
     },
     {
+      "caseId": "emergency-burn-chemical",
+      "severity": "MEDIUM",
+      "expected": "emergency",
+      "actual": "emergency",
+      "complaintFamilies": [
+        "wound_skin_issue"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog stepped in drain cleaner and now his paw pads are red, blistered, and peeling.",
+      "description": "Failed checks: knownSymptomsInclude:wound_skin_issue"
+    },
+    {
       "caseId": "emergency-pale-gums-collapse",
       "severity": "MEDIUM",
       "expected": "emergency",
@@ -851,6 +711,20 @@
       "rootCauseBucket": "complaint normalization miss",
       "ownerMessage": "My dog gave birth a few hours ago and now she is bleeding a lot and seems weak.",
       "description": "Failed checks: knownSymptomsInclude:pregnancy_birth"
+    },
+    {
+      "caseId": "emergency-rat-poison-bleeding",
+      "severity": "MEDIUM",
+      "expected": "emergency",
+      "actual": "emergency",
+      "complaintFamilies": [
+        "medication_reaction"
+      ],
+      "riskTier": "tier_1_emergency",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "complaint normalization miss",
+      "ownerMessage": "My dog may have eaten rat poison and now there is blood on his gums and he seems weak.",
+      "description": "Failed checks: knownSymptomsInclude:medication_reaction"
     },
     {
       "caseId": "followup-appetite-change-unknown",
@@ -1488,18 +1362,17 @@
     "blood_in_stool": 1,
     "constipation": 1,
     "coughing_breathing_combined": 1,
-    "dental_problem": 3,
-    "diarrhea": 5,
-    "difficulty_breathing": 8,
+    "dental_problem": 2,
+    "diarrhea": 4,
+    "difficulty_breathing": 4,
     "drinking_more": 4,
     "ear_scratching": 1,
     "excessive_scratching": 2,
     "eye_discharge": 2,
     "generalized_stiffness": 1,
     "hair_loss": 2,
-    "heat_intolerance": 1,
     "lethargy": 5,
-    "limping": 10,
+    "limping": 9,
     "medication_reaction": 7,
     "nasal_discharge": 3,
     "post_vaccination_reaction": 2,
@@ -1511,59 +1384,51 @@
     "swelling_lump": 4,
     "swollen_abdomen": 1,
     "testicular_prostate": 1,
-    "trauma": 3,
+    "trauma": 2,
     "trembling": 4,
     "urination_problem": 4,
     "vaginal_discharge": 2,
     "vision_loss": 1,
     "vomiting": 10,
-    "vomiting_diarrhea_combined": 1,
     "weight_loss": 3,
     "wound_skin_issue": 6
   },
   "byRiskTier": {
-    "tier_1_emergency": 48,
+    "tier_1_emergency": 39,
     "tier_2_same_day": 12,
     "tier_3_48h_monitor": 45
   },
   "byActualResponseType": {
     "cannot_assess": 4,
-    "emergency": 5,
+    "emergency": 7,
     "out_of_scope": 2,
-    "question": 92,
+    "question": 81,
     "ready": 2
   },
   "byRootCauseBucket": {
-    "complaint normalization miss": 49,
+    "complaint normalization miss": 48,
     "deterministic emergency composite not triggered": 25,
-    "missing red flag linkage": 2,
-    "question orchestration overriding emergency": 29
+    "question orchestration overriding emergency": 23
   },
   "rootCauseSummary": [
     {
       "rootCauseBucket": "question orchestration overriding emergency",
-      "totalFailures": 29,
+      "totalFailures": 23,
       "severityCounts": {
-        "CRITICAL": 29,
+        "CRITICAL": 23,
         "HIGH": 0,
         "MEDIUM": 0
       },
       "caseIds": [
-        "emergency-burn-chemical",
         "emergency-diabetic-crisis",
-        "emergency-difficulty-breathing-kennel",
         "emergency-dog-bite-wound",
         "emergency-electrical-shock",
         "emergency-glaucoma-eye",
         "emergency-hard-labor-no-puppy",
-        "emergency-heatstroke",
-        "emergency-hit-by-car",
         "emergency-hypoglycemia-toy-breed",
         "emergency-imma-mediated-thrombocytopenia",
         "emergency-limping-cry-pain",
         "emergency-open-fracture",
-        "emergency-parvo-style-puppy",
-        "emergency-rat-poison-bleeding",
         "emergency-repeated-nonproductive-heaving",
         "emergency-toxin-xylitol",
         "emergency-trembling-cold-weak",
@@ -1582,22 +1447,21 @@
     },
     {
       "rootCauseBucket": "complaint normalization miss",
-      "totalFailures": 49,
+      "totalFailures": 48,
       "severityCounts": {
-        "CRITICAL": 10,
+        "CRITICAL": 7,
         "HIGH": 11,
-        "MEDIUM": 28
+        "MEDIUM": 30
       },
       "caseIds": [
-        "emergency-breathing-labored",
-        "emergency-choking-foreign-body",
-        "emergency-oral-bleeding-cant-swallow",
+        "emergency-burn-chemical",
         "emergency-pale-gums-collapse",
         "emergency-post-vaccine-face-swelling",
         "emergency-postpartum-eclampsia",
         "emergency-postpartum-heavy-bleeding",
+        "emergency-protozoal-acute-babesia",
         "emergency-pyometra-style",
-        "emergency-resting-open-mouth-breathing",
+        "emergency-rat-poison-bleeding",
         "emergency-urinary-blockage",
         "emergency-vomit-blood-collapse",
         "emergency-vomiting-green",
@@ -1675,131 +1539,17 @@
         "sameday-face-swelling-worsening",
         "toxin-question-ibuprofen-maybe"
       ]
-    },
-    {
-      "rootCauseBucket": "missing red flag linkage",
-      "totalFailures": 2,
-      "severityCounts": {
-        "CRITICAL": 2,
-        "HIGH": 0,
-        "MEDIUM": 0
-      },
-      "caseIds": [
-        "emergency-hemorrhagic-diarrhea-shock",
-        "emergency-protozoal-acute-babesia"
-      ]
     }
   ],
   "delta": {
-    "comparedToGeneratedAt": "2026-04-17T21:28:49.842Z",
-    "previousTotalFailures": 105,
-    "totalFailureDelta": 0,
+    "comparedToGeneratedAt": null,
+    "previousTotalFailures": null,
+    "totalFailureDelta": null,
     "countsByStatus": {
       "improved": 0,
       "regressed": 0,
-      "unchanged": 4
+      "unchanged": 0
     },
-    "rootCauseChanges": [
-      {
-        "rootCauseBucket": "question orchestration overriding emergency",
-        "status": "unchanged",
-        "previousTotalFailures": 29,
-        "currentTotalFailures": 29,
-        "deltaFailures": 0,
-        "previousSeverityCounts": {
-          "CRITICAL": 29,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "currentSeverityCounts": {
-          "CRITICAL": 29,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "severityDelta": {
-          "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "newCaseIds": [],
-        "resolvedCaseIds": [],
-        "compositionChanged": false
-      },
-      {
-        "rootCauseBucket": "complaint normalization miss",
-        "status": "unchanged",
-        "previousTotalFailures": 49,
-        "currentTotalFailures": 49,
-        "deltaFailures": 0,
-        "previousSeverityCounts": {
-          "CRITICAL": 10,
-          "HIGH": 11,
-          "MEDIUM": 28
-        },
-        "currentSeverityCounts": {
-          "CRITICAL": 10,
-          "HIGH": 11,
-          "MEDIUM": 28
-        },
-        "severityDelta": {
-          "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "newCaseIds": [],
-        "resolvedCaseIds": [],
-        "compositionChanged": false
-      },
-      {
-        "rootCauseBucket": "deterministic emergency composite not triggered",
-        "status": "unchanged",
-        "previousTotalFailures": 25,
-        "currentTotalFailures": 25,
-        "deltaFailures": 0,
-        "previousSeverityCounts": {
-          "CRITICAL": 4,
-          "HIGH": 1,
-          "MEDIUM": 20
-        },
-        "currentSeverityCounts": {
-          "CRITICAL": 4,
-          "HIGH": 1,
-          "MEDIUM": 20
-        },
-        "severityDelta": {
-          "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "newCaseIds": [],
-        "resolvedCaseIds": [],
-        "compositionChanged": false
-      },
-      {
-        "rootCauseBucket": "missing red flag linkage",
-        "status": "unchanged",
-        "previousTotalFailures": 2,
-        "currentTotalFailures": 2,
-        "deltaFailures": 0,
-        "previousSeverityCounts": {
-          "CRITICAL": 2,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "currentSeverityCounts": {
-          "CRITICAL": 2,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "severityDelta": {
-          "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "newCaseIds": [],
-        "resolvedCaseIds": [],
-        "compositionChanged": false
-      }
-    ]
+    "rootCauseChanges": []
   }
 }
