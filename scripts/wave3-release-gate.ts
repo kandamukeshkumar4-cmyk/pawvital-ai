@@ -8,17 +8,17 @@ import type { LiveEvalScorecard } from "../src/lib/benchmark-live-eval";
 import {
   evaluateWave3ReleaseGate,
   renderWave3ReleaseGateMarkdown,
-} from "../src/lib/wave3-release-gate";
+} from "../src/lib/wave3-release-gate.ts";
 import {
   getAllProvenanceEntries,
   getRequiredHighStakesRuleIds,
-} from "../src/lib/provenance-registry";
-import { loadWave3CanonicalSuite } from "../src/lib/wave3-suite-manifest";
+} from "../src/lib/provenance-registry.ts";
+import { loadWave3CanonicalSuite } from "../src/lib/wave3-suite-manifest.ts";
 import {
   buildWave3FailureLedger,
   buildWave3ResidualBlockers,
   renderWave3FailureLedgerMarkdown,
-} from "../src/lib/wave3-root-cause-ledger";
+} from "../src/lib/wave3-root-cause-ledger.ts";
 
 interface CliArgs {
   manifestPath: string;
