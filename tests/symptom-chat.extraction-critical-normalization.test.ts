@@ -30,4 +30,32 @@ describe("VET-1335 critical emergency normalization", () => {
       expect(redFlags).not.toContain("eclampsia_signs");
     });
   });
+
+  describe("protozoal acute weakness", () => {
+    it("maps weakness with pale gums and dark urine to lethargy", () => {
+      const message =
+        "My dog is suddenly extremely weak, his gums are pale, and his urine is dark brown.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).toContain("lethargy");
+    });
+
+    it("does not turn a normal tick exposure into lethargy", () => {
+      const message = "I found one tick on him, but he is acting normal and his gums look fine.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).not.toContain("lethargy");
+    });
+
+    it("does not turn post-exercise tiredness with normal gums into lethargy", () => {
+      const message =
+        "He seemed tired after running, but his breathing is normal and his gums are pink.";
+
+      const symptoms = extractSymptomsFromKeywords(message);
+
+      expect(symptoms).not.toContain("lethargy");
+    });
+  });
 });

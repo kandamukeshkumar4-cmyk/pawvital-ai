@@ -346,6 +346,19 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     pushSymptom("heat_intolerance");
   }
 
+  if (
+    /\b(weak|weakness|wobbly|stumbling|lethargic)\b/.test(lower) &&
+    (/\b(pale|white) gums?\b/.test(lower) ||
+      /\bgums? (?:look(?:ing|s|ed)?|are(?: looking)?|turned?) (pale|white)\b/.test(
+        lower
+      )) &&
+    /\b(dark (?:brown|red|tea-colored) urine|urine is dark|dark urine|brown urine|red urine)\b/.test(
+      lower
+    )
+  ) {
+    pushSymptom("lethargy");
+  }
+
   return symptoms;
 }
 
