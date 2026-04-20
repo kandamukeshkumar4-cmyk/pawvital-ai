@@ -7353,6 +7353,47 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       }
     );
 
+    it("does not over-escalate carried-over seizure follow-ups when the dog is clearly normal now", async () => {
+      const session = buildPendingQuestionSession(
+        "seizure_collapse",
+        "consciousness_level"
+      );
+      session.candidate_diseases = [
+        "seizure_disorder",
+        "toxin_exposure",
+        "heatstroke",
+      ];
+      session.body_systems_involved = ["neurologic"];
+      session.case_memory = {
+        ...session.case_memory!,
+        turn_count: 2,
+        chief_complaints: ["seizure_collapse"],
+        active_focus_symptoms: ["seizure_collapse"],
+        unresolved_question_ids: ["consciousness_level"],
+      };
+
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify({ symptoms: ["seizure_collapse"], answers: {} })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          session,
+          "My dog had one brief odd episode, but he is now alert, walking, eating, and breathing normally."
+        )
+      );
+      const payload = await response.json();
+      const redFlags = payload.session?.red_flags_triggered ?? [];
+
+      expect(response.status).toBe(200);
+      expect(payload.type).not.toBe("emergency");
+      expect(redFlags).not.toContain("neurologic_emergency_unknown_consciousness");
+      expect(redFlags).not.toContain(
+        "neurologic_emergency_unknown_seizure_duration"
+      );
+    });
+
     it("VET-1227: seizure_duration unknown stays on cannot_assess path", async () => {
       const session = buildPendingQuestionSession(
         "seizure_collapse",
