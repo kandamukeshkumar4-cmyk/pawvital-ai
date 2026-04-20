@@ -96,22 +96,28 @@ function readCases(inputPath) {
   if (inputPath.endsWith("wave3-freeze-manifest.json")) {
     const manifest = JSON.parse(fs.readFileSync(inputPath, "utf8"));
     const caseMap = new Map();
+    const shardPaths = (manifest.shardPaths || []).length
+      ? manifest.shardPaths
+      : (manifest.strata || []).map((entry) =>
+          path.join("wave3-freeze", entry.fileName).replace(/\\/g, "/")
+        );
 
-    for (const shard of manifest.strata || []) {
-      const suitePath = path.join(
-        ROOT_DIR,
-        "data",
-        "benchmarks",
-        "dog-triage",
-        "wave3-freeze",
-        shard.fileName
-      );
+    for (const shardPath of shardPaths) {
+      const suitePath = path.resolve(path.dirname(inputPath), shardPath);
       const suite = JSON.parse(fs.readFileSync(suitePath, "utf8"));
       for (const caseRecord of suite.cases || []) {
         if (!caseMap.has(caseRecord.id)) {
           caseMap.set(caseRecord.id, caseRecord);
         }
       }
+    }
+
+    const expectedTotal =
+      manifest.totalCases || manifest.uniqueCaseCount || caseMap.size;
+    if (expectedTotal !== caseMap.size) {
+      throw new Error(
+        `Wave 3 manifest expected ${expectedTotal} canonical cases but loaded ${caseMap.size}`
+      );
     }
 
     return Array.from(caseMap.values());

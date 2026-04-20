@@ -10,7 +10,8 @@ export interface TransitionToEscalationInput {
     | "red_flags_detected"
     | "vision_red_flags_detected"
     | "clinical_escalation"
-    | "owner_cannot_assess_critical_indicator";
+    | "owner_cannot_assess_critical_indicator"
+    | "deterministic_emergency_first_turn";
 }
 
 /**

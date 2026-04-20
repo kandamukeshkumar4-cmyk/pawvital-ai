@@ -95,9 +95,14 @@ function levenshteinSimilarity(str1, str2) {
 function loadFreezeCases() {
   const manifest = JSON.parse(fs.readFileSync(FREEZE_MANIFEST, "utf8"));
   const caseMap = new Map();
+  const shardPaths = (manifest.shardPaths || []).length
+    ? manifest.shardPaths
+    : (manifest.strata || []).map((entry) =>
+        path.join("wave3-freeze", entry.fileName).replace(/\\/g, "/")
+      );
 
-  for (const shard of manifest.strata || []) {
-    const suitePath = path.join(BENCHMARK_DIR, "wave3-freeze", shard.fileName);
+  for (const shardPath of shardPaths) {
+    const suitePath = path.resolve(BENCHMARK_DIR, shardPath);
     const suite = JSON.parse(fs.readFileSync(suitePath, "utf8"));
     for (const caseRecord of suite.cases || []) {
       if (!caseMap.has(caseRecord.id)) {

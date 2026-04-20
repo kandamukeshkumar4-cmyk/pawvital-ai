@@ -24,10 +24,20 @@ export interface Wave3CoverageSummary {
   modalityCounts: Record<string, number>;
 }
 
+export interface Wave3CanonicalSuiteSummary {
+  suiteId: string;
+  suiteVersion: string;
+  generatedAt: string;
+  manifestHash: string;
+  totalCases: number;
+  caseIds: string[];
+}
+
 export interface Wave3ReleaseGateResult {
   pass: boolean;
   failures: string[];
   warnings: string[];
+  canonicalSuite: Wave3CanonicalSuiteSummary;
   coverage: Wave3CoverageSummary;
   blockingHighRiskFailures: LiveEvalFailure[];
   missingHighStakesRuleIds: string[];
@@ -90,6 +100,7 @@ export function evaluateWave3ReleaseGate(input: {
   cases: Wave3CaseRecord[];
   modalities?: Wave3ModalitySummary[];
   scorecard: LiveEvalScorecard | null;
+  canonicalSuite: Wave3CanonicalSuiteSummary;
   requiredHighStakesRuleIds: string[];
   provenanceEntries: ProvenanceEntry[];
   referenceDate?: Date;
@@ -126,9 +137,40 @@ export function evaluateWave3ReleaseGate(input: {
   if (!scorecard) {
     failures.push("Missing live scorecard for Wave 3 release gate.");
   } else {
+    const extraCaseIds = scorecard.extraCaseIds ?? [];
+    const missingCaseIds = scorecard.missingCaseIds ?? [];
+
+    if (scorecard.suiteId !== input.canonicalSuite.suiteId) {
+      failures.push(
+        `Live scorecard suite identity (${scorecard.suiteId}) does not match canonical suite identity (${input.canonicalSuite.suiteId}).`
+      );
+    }
+    if (scorecard.manifestHash !== input.canonicalSuite.manifestHash) {
+      failures.push(
+        `Live scorecard manifest hash (${scorecard.manifestHash || "missing"}) does not match canonical manifest hash (${input.canonicalSuite.manifestHash}).`
+      );
+    }
+    if (
+      typeof scorecard.suiteTotalCases === "number" &&
+      scorecard.suiteTotalCases !== input.canonicalSuite.totalCases
+    ) {
+      failures.push(
+        `Live scorecard canonical suite case count (${scorecard.suiteTotalCases}) does not match Wave 3 freeze (${input.canonicalSuite.totalCases}).`
+      );
+    }
     if (scorecard.totalCases !== input.cases.length) {
       failures.push(
         `Live scorecard case count (${scorecard.totalCases}) does not match Wave 3 freeze (${input.cases.length}).`
+      );
+    }
+    if (extraCaseIds.length > 0) {
+      failures.push(
+        `Live scorecard includes extra case IDs outside the canonical manifest: ${extraCaseIds.join(", ")}.`
+      );
+    }
+    if (missingCaseIds.length > 0) {
+      failures.push(
+        `Live scorecard is missing canonical case IDs: ${missingCaseIds.join(", ")}.`
       );
     }
     if (scorecard.emergencyRecall < 0.98) {
@@ -171,6 +213,7 @@ export function evaluateWave3ReleaseGate(input: {
     pass: failures.length === 0,
     failures,
     warnings,
+    canonicalSuite: input.canonicalSuite,
     coverage,
     blockingHighRiskFailures,
     missingHighStakesRuleIds,
@@ -199,11 +242,17 @@ function renderCountsTable(
 export function renderWave3ReleaseGateMarkdown(
   result: Wave3ReleaseGateResult
 ): string {
+  const scorecardExtraCaseIds = result.scorecard?.extraCaseIds ?? [];
+  const scorecardMissingCaseIds = result.scorecard?.missingCaseIds ?? [];
   const header = [
     "# Wave 3 Release Gate Report",
     "",
     `- Result: ${result.pass ? "PASS" : "FAIL"}`,
-    `- Total frozen cases: ${result.coverage.totalCases}`,
+    `- Suite ID: ${result.canonicalSuite.suiteId}`,
+    `- Suite version: ${result.canonicalSuite.suiteVersion}`,
+    `- Manifest hash: ${result.canonicalSuite.manifestHash}`,
+    `- Canonical manifest generated at: ${result.canonicalSuite.generatedAt}`,
+    `- Total frozen cases: ${result.canonicalSuite.totalCases}`,
     result.scorecard
       ? `- Scorecard case count: ${result.scorecard.totalCases}`
       : "- Scorecard case count: unavailable",
@@ -213,6 +262,12 @@ export function renderWave3ReleaseGateMarkdown(
     result.scorecard
       ? `- Unsafe downgrade rate: ${(result.scorecard.unsafeDowngradeRate * 100).toFixed(2)}%`
       : "- Unsafe downgrade rate: unavailable",
+    result.scorecard
+      ? `- Extra case IDs: ${scorecardExtraCaseIds.length > 0 ? scorecardExtraCaseIds.join(", ") : "none"}`
+      : "- Extra case IDs: unavailable",
+    result.scorecard
+      ? `- Missing case IDs: ${scorecardMissingCaseIds.length > 0 ? scorecardMissingCaseIds.join(", ") : "none"}`
+      : "- Missing case IDs: unavailable",
     "",
   ].join("\n");
 

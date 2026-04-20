@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { createHash } from "node:crypto";
 
 const rootDir = process.cwd();
 const defaultInputPath = path.join(
@@ -108,9 +109,123 @@ function writeJson(filePath, payload) {
   fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
+function incrementCount(counts, key) {
+  if (!key) return;
+  counts[key] = (counts[key] ?? 0) + 1;
+}
+
+function buildManifestHash(input) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        suiteId: input.suiteId,
+        suiteVersion: input.suiteVersion,
+        shardPaths: input.shardPaths,
+        caseIds: input.caseIds,
+        totalCases: input.totalCases,
+        complaintFamilyCounts: input.complaintFamilyCounts,
+        riskTierCounts: input.riskTierCounts,
+        modalityCounts: input.modalityCounts,
+      })
+    )
+    .digest("hex");
+}
+
+function loadCanonicalWave3Suite(inputPath) {
+  const manifestPath = path.join(path.dirname(inputPath), "wave3-freeze-manifest.json");
+  const manifest = readJson(manifestPath);
+  const shardPaths = (manifest.shardPaths || []).length
+    ? manifest.shardPaths
+    : (manifest.strata || []).map((entry) =>
+        path.relative(
+          path.dirname(manifestPath),
+          path.join(path.dirname(manifestPath), "wave3-freeze", entry.fileName)
+        ).replace(/\\/g, "/")
+      );
+  const caseMap = new Map();
+
+  for (const shardPath of shardPaths) {
+    const suite = readJson(path.resolve(path.dirname(manifestPath), shardPath));
+    for (const caseRecord of suite.cases || []) {
+      if (!caseMap.has(caseRecord.id)) {
+        caseMap.set(caseRecord.id, caseRecord);
+      }
+    }
+  }
+
+  const cases = Array.from(caseMap.values());
+  const caseIds = Array.from(caseMap.keys()).sort();
+  const complaintFamilyCounts = {};
+  const riskTierCounts = {};
+  for (const caseRecord of cases) {
+    incrementCount(riskTierCounts, caseRecord.risk_tier);
+    for (const family of caseRecord.complaint_family_tags || []) {
+      incrementCount(complaintFamilyCounts, family);
+    }
+  }
+
+  const modalityCounts = {
+    ...(manifest.modalityCounts || {}),
+  };
+  for (const slice of manifest.multimodalSlices || []) {
+    if (slice.modality && typeof slice.caseCount === "number") {
+      modalityCounts[slice.modality] = slice.caseCount;
+    }
+  }
+
+  const suiteId = manifest.suiteId || "wave3-freeze";
+  const suiteVersion = manifest.suiteVersion || manifest.version || "wave3-freeze-v2";
+  const totalCases = manifest.totalCases || manifest.uniqueCaseCount || caseIds.length;
+  ensure(totalCases === caseIds.length, `Canonical Wave 3 manifest expected ${totalCases} cases but loaded ${caseIds.length}`);
+
+  const expectedCaseIds = (manifest.caseIds || caseIds).slice().sort();
+  const extraCaseIds = caseIds.filter((caseId) => !expectedCaseIds.includes(caseId));
+  const missingCaseIds = expectedCaseIds.filter((caseId) => !caseIds.includes(caseId));
+  ensure(
+    extraCaseIds.length === 0 && missingCaseIds.length === 0,
+    `Canonical Wave 3 manifest drift detected. extra=${extraCaseIds.join(", ") || "none"} missing=${missingCaseIds.join(", ") || "none"}`
+  );
+
+  return {
+    suite_id: suiteId,
+    version: suiteVersion,
+    suite_version: suiteVersion,
+    suite_generated_at: manifest.generatedAt,
+    manifest_hash:
+      manifest.manifestHash ||
+      manifest.shardHash ||
+      buildManifestHash({
+        suiteId,
+        suiteVersion,
+        shardPaths,
+        caseIds,
+        totalCases,
+        complaintFamilyCounts,
+        riskTierCounts,
+        modalityCounts,
+      }),
+    suite_total_cases: totalCases,
+    suite_case_ids: expectedCaseIds,
+    species: "dog",
+    description: `Canonical benchmark suite from ${manifestPath}`,
+    cases,
+  };
+}
+
 function loadSuite(inputPath) {
   const stat = fs.statSync(inputPath);
   if (stat.isDirectory()) {
+    const canonicalManifestPath = path.join(
+      path.dirname(inputPath),
+      "wave3-freeze-manifest.json"
+    );
+    if (
+      path.basename(inputPath) === "wave3-freeze" &&
+      fs.existsSync(canonicalManifestPath)
+    ) {
+      return loadCanonicalWave3Suite(inputPath);
+    }
+
     const files = fs
       .readdirSync(inputPath)
       .filter(
@@ -461,6 +576,16 @@ async function main() {
       mode: "dry-run",
       generatedAt: new Date().toISOString(),
       suiteId: suite.suite_id,
+      suiteVersion: suite.suite_version || suite.version || null,
+      manifestHash: suite.manifest_hash || null,
+      suiteGeneratedAt: suite.suite_generated_at || null,
+      suiteTotalCases:
+        typeof suite.suite_total_cases === "number"
+          ? suite.suite_total_cases
+          : suite.cases.length,
+      suiteCaseIds: Array.isArray(suite.suite_case_ids)
+        ? suite.suite_case_ids
+        : suite.cases.map((row) => row.id),
       species: suite.species,
       caseCount: suite.cases.length,
       cases: suite.cases.map((row) => ({
@@ -513,6 +638,16 @@ async function main() {
       mode: "blocked",
       generatedAt: new Date().toISOString(),
       suiteId: suite.suite_id,
+      suiteVersion: suite.suite_version || suite.version || null,
+      manifestHash: suite.manifest_hash || null,
+      suiteGeneratedAt: suite.suite_generated_at || null,
+      suiteTotalCases:
+        typeof suite.suite_total_cases === "number"
+          ? suite.suite_total_cases
+          : suite.cases.length,
+      suiteCaseIds: Array.isArray(suite.suite_case_ids)
+        ? suite.suite_case_ids
+        : suite.cases.map((row) => row.id),
       species: suite.species,
       baseUrl: options.baseUrl,
       preflight,
@@ -559,6 +694,16 @@ async function main() {
     mode: "live",
     generatedAt: new Date().toISOString(),
     suiteId: suite.suite_id,
+    suiteVersion: suite.suite_version || suite.version || null,
+    manifestHash: suite.manifest_hash || null,
+    suiteGeneratedAt: suite.suite_generated_at || null,
+    suiteTotalCases:
+      typeof suite.suite_total_cases === "number"
+        ? suite.suite_total_cases
+        : suite.cases.length,
+    suiteCaseIds: Array.isArray(suite.suite_case_ids)
+      ? suite.suite_case_ids
+      : suite.cases.map((row) => row.id),
     species: suite.species,
     baseUrl: options.baseUrl,
     preflight,

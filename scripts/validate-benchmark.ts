@@ -1,5 +1,9 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import {
+  loadWave3CanonicalSuite,
+  type Wave3CanonicalCase,
+} from "../src/lib/wave3-suite-manifest";
 
 interface ReviewerSlot {
   role: string;
@@ -7,10 +11,9 @@ interface ReviewerSlot {
   status: string;
 }
 
-interface Wave3BenchmarkCase {
-  id: string;
-  description: string;
-  request: {
+type Wave3BenchmarkCase = Wave3CanonicalCase & {
+  description?: string;
+  request?: {
     pet?: {
       species?: string;
     };
@@ -27,18 +30,7 @@ interface Wave3BenchmarkCase {
       status?: string;
     };
   };
-}
-
-interface Wave3SuiteFile {
-  cases: Wave3BenchmarkCase[];
-}
-
-interface Wave3FreezeManifest {
-  uniqueCaseCount: number;
-  strata: Array<{
-    fileName: string;
-  }>;
-}
+};
 
 const ROOT = process.cwd();
 const BENCHMARK_DIR = path.join(ROOT, "data", "benchmarks", "dog-triage");
@@ -92,28 +84,7 @@ function loadCases(): Wave3BenchmarkCase[] {
     throw new Error(`Wave 3 manifest not found: ${MANIFEST_PATH}`);
   }
 
-  const manifest = JSON.parse(
-    fs.readFileSync(MANIFEST_PATH, "utf8")
-  ) as Wave3FreezeManifest;
-  const caseMap = new Map<string, Wave3BenchmarkCase>();
-
-  for (const shard of manifest.strata) {
-    const suitePath = path.join(BENCHMARK_DIR, "wave3-freeze", shard.fileName);
-    const suite = JSON.parse(fs.readFileSync(suitePath, "utf8")) as Wave3SuiteFile;
-    for (const caseRecord of suite.cases) {
-      if (!caseMap.has(caseRecord.id)) {
-        caseMap.set(caseRecord.id, caseRecord);
-      }
-    }
-  }
-
-  if (manifest.uniqueCaseCount !== caseMap.size) {
-    throw new Error(
-      `Manifest expected ${manifest.uniqueCaseCount} unique cases but loaded ${caseMap.size}`
-    );
-  }
-
-  return Array.from(caseMap.values());
+  return loadWave3CanonicalSuite(MANIFEST_PATH).cases;
 }
 
 const cases = loadCases();

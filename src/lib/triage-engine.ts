@@ -264,6 +264,8 @@ export function addSymptoms(
     }
   }
 
+  checkRedFlags(updated);
+
   return updated;
 }
 
@@ -317,8 +319,20 @@ function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
       return answers.gum_color === "blue";
     case "pale_gums":
       return answers.gum_color === "pale_white";
+    case "collapse":
+      return answers.consciousness_level === "unresponsive";
     case "breathing_onset_sudden":
       return answers.breathing_onset === "sudden";
+    case "collapse_after_exercise":
+      return (
+        answers.onset_during_exercise === "during" &&
+        isRedFlagTriggered("collapse", session)
+      );
+    case "blue_gums_after_exercise":
+      return (
+        answers.onset_during_exercise === "during" &&
+        answers.gum_color === "blue"
+      );
     case "large_blood_volume":
       return answers.blood_amount === "mostly_blood";
     case "rat_poison_confirmed":
@@ -338,6 +352,22 @@ function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
       return answers.balance_issues === true;
     case "head_tilt_sudden":
       return answers.head_tilt === true;
+    case "face_swelling":
+      return answers.face_swelling === true;
+    case "hives_with_breathing":
+      return answers.hives_with_breathing === true;
+    case "hives_widespread":
+      return answers.hives_with_breathing === true;
+    case "inability_to_stand":
+      return (
+        answers.trauma_mobility === "inability_to_stand" ||
+        answers.hind_limb_function === "inability_to_stand"
+      );
+    case "paralysis":
+      return (
+        answers.trauma_mobility === "inability_to_stand" ||
+        answers.hind_limb_function === "inability_to_stand"
+      );
     case "no_water_24h":
       return answers.water_intake === "not_drinking";
     case "toxin_confirmed":
@@ -363,7 +393,9 @@ function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
         "last night",
         "hours",
         "just started",
-      ]);
+      ]) ||
+      (session.known_symptoms.includes("swollen_abdomen") &&
+        answers.restlessness === true);
     case "unresponsive":
       return answers.consciousness_level === "unresponsive";
     default:

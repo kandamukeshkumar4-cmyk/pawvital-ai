@@ -94,6 +94,13 @@ Each benchmark case is simulated as follows:
   "run_id": "EVAL-2026-04-10-001",
   "timestamp": "2026-04-10T12:00:00Z",
   "version": "commit-hash",
+  "suiteId": "wave3-freeze",
+  "suiteVersion": "wave3-freeze-v2",
+  "manifestHash": "sha256...",
+  "suiteGeneratedAt": "2026-04-17T16:44:31.613Z",
+  "suiteTotalCases": 226,
+  "extraCaseIds": [],
+  "missingCaseIds": [],
   "benchmark_version": "v1.0",
   "total_cases": 500,
 
@@ -142,6 +149,37 @@ Each benchmark case is simulated as follows:
   "blocking_failures": 3
 }
 ```
+
+---
+
+## Canonical Suite Contract
+
+Wave 3 uses one canonical freeze manifest under `data/benchmarks/dog-triage/`.
+That manifest is the source of truth for:
+
+- `suiteId`
+- `suiteVersion`
+- `generatedAt`
+- `manifestHash`
+- `caseIds`
+- `shardPaths`
+- `totalCases`
+- complaint-family, risk-tier, and modality counts
+
+All evaluation surfaces must consume that same manifest:
+
+- the live benchmark runner
+- the scorecard generator
+- the release-gate runner
+- the release-gate markdown report
+
+Hard rules:
+
+- case IDs must be unique
+- manifest case IDs must match shard contents exactly
+- scorecard and release gate must emit `extraCaseIds` and `missingCaseIds`
+- any suite-identity mismatch must fail the run loudly instead of writing a best-effort artifact
+- a stale report with `0` scorecard cases is invalid when a nonzero canonical scorecard exists
 
 ---
 

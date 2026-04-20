@@ -696,20 +696,60 @@ function buildFreezeSuites(freezeCases) {
 }
 
 function buildFreezeManifest(freezeSuites, allFreezeCases, sourceInput, multimodalSlices) {
-  const hashInput = allFreezeCases
-    .map((caseData) => `${caseData.id}:${caseData.provenance?.source_shard || ""}`)
-    .sort()
-    .join("|");
+  const complaintFamilyCounts = {};
+  const riskTierCounts = {};
+  for (const caseData of allFreezeCases) {
+    riskTierCounts[caseData.risk_tier] = (riskTierCounts[caseData.risk_tier] || 0) + 1;
+    for (const family of caseData.complaint_family_tags || []) {
+      complaintFamilyCounts[family] = (complaintFamilyCounts[family] || 0) + 1;
+    }
+  }
+
+  const modalityCounts = Object.fromEntries(
+    multimodalSlices
+      .filter((entry) => entry.modality && typeof entry.caseCount === "number")
+      .map((entry) => [entry.modality, entry.caseCount])
+  );
+  const shardPaths = freezeSuites.map(({ stratum }) =>
+    path.join("wave3-freeze", `${stratum.key}.json`).replace(/\\/g, "/")
+  );
+  const caseIds = allFreezeCases
+    .map((caseData) => caseData.id)
+    .sort((left, right) => left.localeCompare(right));
+  const manifestHash = crypto
+    .createHash("sha256")
+    .update(
+      JSON.stringify({
+        suiteId: "wave3-freeze",
+        suiteVersion: "wave3-freeze-v2",
+        shardPaths,
+        caseIds,
+        totalCases: allFreezeCases.length,
+        complaintFamilyCounts,
+        riskTierCounts,
+        modalityCounts,
+      })
+    )
+    .digest("hex");
 
   return {
-    version: "wave3-freeze-v2",
+    suiteId: "wave3-freeze",
+    suiteVersion: "wave3-freeze-v2",
     generatedAt: new Date().toISOString(),
+    manifestHash,
+    caseIds,
+    shardPaths,
+    totalCases: allFreezeCases.length,
+    complaintFamilyCounts,
+    riskTierCounts,
+    modalityCounts,
+    version: "wave3-freeze-v2",
     sourceInput,
     uniqueCaseCount: allFreezeCases.length,
     highRiskCaseCount: allFreezeCases.filter((caseData) =>
       Boolean(caseData.wave3_adjudication?.high_risk)
     ).length,
-    shardHash: crypto.createHash("sha256").update(hashInput).digest("hex"),
+    shardHash: manifestHash,
     strata: freezeSuites.map(({ stratum, suite }) => ({
       key: stratum.key,
       title: stratum.title,

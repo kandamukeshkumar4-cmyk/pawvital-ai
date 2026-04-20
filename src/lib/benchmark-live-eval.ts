@@ -52,6 +52,11 @@ export interface RouteBenchmarkReport {
   mode: "live" | "dry-run" | "blocked";
   generatedAt: string;
   suiteId: string;
+  suiteVersion?: string;
+  manifestHash?: string;
+  suiteGeneratedAt?: string;
+  suiteTotalCases?: number;
+  suiteCaseIds?: string[];
   species: string;
   baseUrl?: string;
   preflight?: RouteBenchmarkPreflight | null;
@@ -87,6 +92,14 @@ export interface LiveEvalScorecard {
   generatedAt: string;
   executionMode: "live_route";
   suiteId: string;
+  suiteVersion: string | null;
+  manifestHash: string | null;
+  suiteGeneratedAt: string | null;
+  suiteTotalCases: number | null;
+  suiteCaseIds: string[];
+  evaluatedCaseIds: string[];
+  extraCaseIds: string[];
+  missingCaseIds: string[];
   baseUrl: string | null;
   filters: LiveEvalFilter;
   totalCases: number;
@@ -244,16 +257,110 @@ function summarizeBucket(
   };
 }
 
+function uniqueOrdered(values: string[]): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  for (const value of values) {
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    ordered.push(value);
+  }
+
+  return ordered;
+}
+
+function compareCaseIds(expected: string[], actual: string[]) {
+  const expectedSet = new Set(expected);
+  const actualSet = new Set(actual);
+
+  return {
+    extraCaseIds: actual.filter((caseId) => !expectedSet.has(caseId)),
+    missingCaseIds: expected.filter((caseId) => !actualSet.has(caseId)),
+  };
+}
+
+function buildSuiteAlignmentFailures(input: {
+  suiteTotalCases: number | null;
+  actualCaseIds: string[];
+  extraCaseIds: string[];
+  missingCaseIds: string[];
+}): LiveEvalFailure[] {
+  const failures: LiveEvalFailure[] = [];
+
+  if (
+    input.suiteTotalCases !== null &&
+    input.actualCaseIds.length !== input.suiteTotalCases
+  ) {
+    failures.push({
+      caseId: "__suite__",
+      severity: "CRITICAL",
+      category: "suite_alignment",
+      expected: String(input.suiteTotalCases),
+      actual: String(input.actualCaseIds.length),
+      description:
+        "Canonical suite totalCases does not match the artifact case count.",
+    });
+  }
+
+  if (input.extraCaseIds.length > 0 || input.missingCaseIds.length > 0) {
+    failures.push({
+      caseId: "__suite__",
+      severity: "CRITICAL",
+      category: "suite_alignment",
+      expected: "canonical manifest case IDs",
+      actual: "artifact case IDs",
+      description: [
+        input.extraCaseIds.length > 0
+          ? `extra=${input.extraCaseIds.join(", ")}`
+          : null,
+        input.missingCaseIds.length > 0
+          ? `missing=${input.missingCaseIds.join(", ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join("; "),
+    });
+  }
+
+  return failures;
+}
+
 export function scoreLiveBenchmarkReport(
   report: RouteBenchmarkReport,
   filter: LiveEvalFilter = {}
 ): LiveEvalScorecard {
+  const suiteCaseIds = uniqueOrdered(
+    report.suiteCaseIds ?? report.cases.map((result) => result.id)
+  );
+  const actualCaseIds = uniqueOrdered(report.cases.map((result) => result.id));
+  const { extraCaseIds, missingCaseIds } = compareCaseIds(
+    suiteCaseIds,
+    actualCaseIds
+  );
+  const suiteAlignmentFailures = buildSuiteAlignmentFailures({
+    suiteTotalCases:
+      typeof report.suiteTotalCases === "number" ? report.suiteTotalCases : null,
+    actualCaseIds,
+    extraCaseIds,
+    missingCaseIds,
+  });
+
   if (report.mode === "blocked") {
     return {
       runId: `LIVE-EVAL-${new Date().toISOString().replace(/[:.]/g, "-")}`,
       generatedAt: new Date().toISOString(),
       executionMode: "live_route",
       suiteId: report.suiteId,
+      suiteVersion: report.suiteVersion || null,
+      manifestHash: report.manifestHash || null,
+      suiteGeneratedAt: report.suiteGeneratedAt || null,
+      suiteTotalCases:
+        typeof report.suiteTotalCases === "number" ? report.suiteTotalCases : null,
+      suiteCaseIds,
+      evaluatedCaseIds: [],
+      extraCaseIds,
+      missingCaseIds,
       baseUrl: report.baseUrl || null,
       filters: filter,
       totalCases: 0,
@@ -273,11 +380,12 @@ export function scoreLiveBenchmarkReport(
       preflight: report.preflight || null,
       byResponseType: {},
       byRiskTier: {},
-      failures: [],
+      failures: suiteAlignmentFailures,
     };
   }
 
   const filtered = report.cases.filter((result) => matchesFilter(result, filter));
+  const evaluatedCaseIds = uniqueOrdered(filtered.map((result) => result.id));
   const totalCases = filtered.length;
   const passedCases = filtered.filter((result) => result.evaluation.pass).length;
   const failedCases = totalCases - passedCases;
@@ -342,7 +450,9 @@ export function scoreLiveBenchmarkReport(
       .map(([key, results]) => [key, summarizeBucket(results)])
   );
 
-  const failures = buildFailures(filtered).sort(compareFailureSeverity);
+  const failures = [...suiteAlignmentFailures, ...buildFailures(filtered)].sort(
+    compareFailureSeverity
+  );
   const blockingFailures = failures.filter(
     (failure) => failure.severity === "CRITICAL"
   ).length;
@@ -359,6 +469,15 @@ export function scoreLiveBenchmarkReport(
     generatedAt: new Date().toISOString(),
     executionMode: "live_route",
     suiteId: report.suiteId,
+    suiteVersion: report.suiteVersion || null,
+    manifestHash: report.manifestHash || null,
+    suiteGeneratedAt: report.suiteGeneratedAt || null,
+    suiteTotalCases:
+      typeof report.suiteTotalCases === "number" ? report.suiteTotalCases : null,
+    suiteCaseIds,
+    evaluatedCaseIds,
+    extraCaseIds,
+    missingCaseIds,
     baseUrl: report.baseUrl || null,
     filters: filter,
     totalCases,
@@ -441,6 +560,9 @@ export function renderLiveScorecardMarkdown(
     "",
     `- Generated at: ${scorecard.generatedAt}`,
     `- Suite: ${scorecard.suiteId}`,
+    `- Suite version: ${scorecard.suiteVersion || "unknown"}`,
+    `- Manifest hash: ${scorecard.manifestHash || "unknown"}`,
+    `- Suite generated at: ${scorecard.suiteGeneratedAt || "unknown"}`,
     `- Base URL: ${scorecard.baseUrl || "unknown"}`,
     `- Filters: ${filterParts.length > 0 ? filterParts.join(", ") : "none"}`,
     `- Result: ${scorecard.passFail}`,
@@ -448,11 +570,14 @@ export function renderLiveScorecardMarkdown(
     "## Primary Metrics",
     "",
     `- Cases: ${scorecard.totalCases}`,
+    `- Canonical suite cases: ${scorecard.suiteTotalCases ?? scorecard.suiteCaseIds.length}`,
     `- Expectation pass rate: ${(scorecard.expectationPassRate * 100).toFixed(1)}%`,
     `- Mean expectation score: ${(scorecard.meanExpectationScore * 100).toFixed(1)}%`,
     `- Emergency recall: ${(scorecard.emergencyRecall * 100).toFixed(1)}% (${scorecard.emergencyCaseCount} cases)`,
     `- Unsafe downgrade rate: ${(scorecard.unsafeDowngradeRate * 100).toFixed(2)}%`,
     `- Blocking failures: ${scorecard.blockingFailures}`,
+    `- Extra case IDs: ${scorecard.extraCaseIds.length > 0 ? scorecard.extraCaseIds.join(", ") : "none"}`,
+    `- Missing case IDs: ${scorecard.missingCaseIds.length > 0 ? scorecard.missingCaseIds.join(", ") : "none"}`,
     "",
     "## Sidecar Preflight",
     "",
