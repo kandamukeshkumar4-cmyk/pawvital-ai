@@ -83,7 +83,14 @@ function parseAsyncReviewRequestBody(
       return null;
     }
 
-    return parsed as AsyncReviewRequestBody;
+    return {
+      image: parsed.image,
+      pet: parsed.pet as unknown as PetProfile,
+      session: parsed.session as unknown as TriageSession,
+      ...(parsed.report !== undefined
+        ? { report: parsed.report as Record<string, unknown> }
+        : {}),
+    };
   } catch {
     return null;
   }
