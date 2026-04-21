@@ -103,7 +103,6 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({
-    flaggedForReview: body.matchedExpectation === "no",
     ok: true,
     case: saved.caseSummary,
     warnings: saved.warnings,
