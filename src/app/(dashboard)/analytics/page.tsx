@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
 import { BarChart3, Loader2 } from "lucide-react";
+import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import Card from "@/components/ui/card";
 import Select from "@/components/ui/select";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/components/analytics";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
 import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-check-entry-map";
+import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { DEMO_ANALYTICS_SYMPTOM_ENTRIES } from "@/lib/demo-health-data";
 import { useAppStore } from "@/store/app-store";
@@ -32,7 +34,7 @@ function inDateRange(entry: SymptomCheckEntry, rangeKey: string, now: Date): boo
   return new Date(entry.created_at) >= cutoff;
 }
 
-export default function AnalyticsPage() {
+function AnalyticsPageContent() {
   const { pets } = useAppStore();
   const [rawEntries, setRawEntries] = useState<SymptomCheckEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,4 +180,14 @@ export default function AnalyticsPage() {
       )}
     </div>
   );
+}
+
+export default function AnalyticsPage() {
+  const quarantinedSurface = getPrivateTesterQuarantinedSurface("/analytics");
+
+  if (quarantinedSurface) {
+    return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
+  }
+
+  return <AnalyticsPageContent />;
 }

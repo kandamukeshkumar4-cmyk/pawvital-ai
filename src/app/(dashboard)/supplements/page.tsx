@@ -5,6 +5,8 @@ import { Pill, ExternalLink, Sparkles } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
+import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
+import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 
 interface SupplementItem {
@@ -84,6 +86,7 @@ const priorityConfig = {
 };
 
 export default function SupplementsPage() {
+  const quarantinedSurface = getPrivateTesterQuarantinedSurface("/supplements");
   const { activePet } = useAppStore();
   const [supplements, setSupplements] = useState(aiRecommendations);
   const [generating, setGenerating] = useState(false);
@@ -105,6 +108,10 @@ export default function SupplementsPage() {
   const monthlyCost = supplements
     .filter((s) => s.isActive)
     .reduce((sum, s) => sum + parseInt(s.price.replace(/[^0-9]/g, "")), 0);
+
+  if (quarantinedSurface) {
+    return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

@@ -19,6 +19,7 @@ import {
   BarChart3,
   PawPrint,
 } from "lucide-react";
+import { filterPrivateTesterNavItems } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 import { useAuth } from "@/hooks/useSupabase";
 
@@ -41,6 +42,7 @@ export default function Sidebar() {
   const { signOut } = useAuth();
   const [isDesktop, setIsDesktop] = useState(true);
   const previousIsDesktopRef = useRef<boolean | null>(null);
+  const visibleNavItems = filterPrivateTesterNavItems(navItems);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -134,7 +136,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
