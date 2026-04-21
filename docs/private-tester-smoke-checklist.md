@@ -26,10 +26,14 @@ Run the repo-owned smoke suites before pushing or handing the release to a
 tester:
 
 ```bash
+npm run smoke:browser-mobile
 npm run smoke:private-tester
 npm run smoke:private-tester:emergency-bypass
 npm run smoke:private-tester:access
 ```
+
+For a headed browser/mobile pass and the exact writable artifact-path contract,
+use `docs/browser-mobile-smoke-checklist.md`.
 
 The automated suites verify:
 
