@@ -22,6 +22,9 @@ import type {
   PrivateTesterDataSummary,
 } from "@/lib/private-tester-admin";
 
+const ADMIN_ACCESS_REQUIRED_MESSAGE =
+  "Tester access controls are only available to authorized founder/admin accounts. Return to /admin or sign in with the founder/admin account to continue.";
+
 function buildEnvLikeConfig(config: PrivateTesterConfigSummary) {
   return {
     NEXT_PUBLIC_PRIVATE_TESTER_FREE_ACCESS: config.freeAccess ? "1" : "0",
@@ -37,6 +40,18 @@ function buildEnvLikeConfig(config: PrivateTesterConfigSummary) {
 
 function renderEnvValue(values: string[]) {
   return values.length > 0 ? values.join(", ") : "(empty)";
+}
+
+function resolveAdminRequestError(
+  status: number,
+  error: string | undefined,
+  fallback: string
+) {
+  if (status === 401 || status === 403) {
+    return ADMIN_ACCESS_REQUIRED_MESSAGE;
+  }
+
+  return error || fallback;
 }
 
 function formatWhen(value: string | null) {
@@ -117,13 +132,20 @@ export default function TesterAccessDashboardClient({
   async function refreshDashboard() {
     const response = await fetch("/api/admin/private-tester", {
       cache: "no-store",
+      credentials: "same-origin",
     });
     const payload = (await response.json()) as PrivateTesterDashboardData & {
       error?: string;
     };
 
     if (!response.ok) {
-      throw new Error(payload.error || "Failed to refresh tester dashboard");
+      throw new Error(
+        resolveAdminRequestError(
+          response.status,
+          payload.error,
+          "Failed to refresh tester dashboard"
+        )
+      );
     }
 
     setDashboard(payload);
@@ -144,6 +166,7 @@ export default function TesterAccessDashboardClient({
 
     try {
       const response = await fetch("/api/admin/private-tester", {
+        credentials: "same-origin",
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -159,7 +182,13 @@ export default function TesterAccessDashboardClient({
       };
 
       if (!response.ok || !payload.summary) {
-        throw new Error(payload.error || "Admin update failed");
+        throw new Error(
+          resolveAdminRequestError(
+            response.status,
+            payload.error,
+            "Admin update failed"
+          )
+        );
       }
 
       await refreshDashboard();
@@ -189,6 +218,7 @@ export default function TesterAccessDashboardClient({
 
     try {
       const response = await fetch("/api/admin/private-tester", {
+        credentials: "same-origin",
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -207,7 +237,13 @@ export default function TesterAccessDashboardClient({
       };
 
       if (!response.ok || !payload.summary) {
-        throw new Error(payload.error || "Delete request failed");
+        throw new Error(
+          resolveAdminRequestError(
+            response.status,
+            payload.error,
+            "Delete request failed"
+          )
+        );
       }
 
       if (dryRun) {

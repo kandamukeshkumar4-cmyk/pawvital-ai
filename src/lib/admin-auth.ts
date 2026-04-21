@@ -6,8 +6,36 @@ export interface AdminRequestContext {
   userId: string | null;
 }
 
+function asObject(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
 function isTruthyEnvFlag(value: string | undefined) {
   return value === "true" || value === "1";
+}
+
+function isTruthyAdminFlag(value: unknown) {
+  return value === true || value === "true" || value === 1 || value === "1";
+}
+
+function isAdminRole(value: unknown) {
+  return typeof value === "string" && value.trim().toLowerCase() === "admin";
+}
+
+function hasAdminRole(value: unknown): boolean {
+  if (isAdminRole(value)) {
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((entry) => isAdminRole(entry));
+  }
+
+  return false;
 }
 
 function isProductionAdminRuntime() {
@@ -27,6 +55,29 @@ function getAdminEmailAllowlist() {
     .split(",")
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean);
+}
+
+function isAdminViaAuthMetadata(user: {
+  app_metadata?: unknown;
+  role?: unknown;
+  user_metadata?: unknown;
+}) {
+  const userMetadata = asObject(user.user_metadata);
+  const appMetadata = asObject(user.app_metadata);
+  const appClaims = asObject(appMetadata?.claims);
+
+  return (
+    isAdminRole(user.role) ||
+    hasAdminRole(userMetadata?.role) ||
+    hasAdminRole(userMetadata?.roles) ||
+    isTruthyAdminFlag(userMetadata?.is_admin) ||
+    hasAdminRole(appMetadata?.role) ||
+    hasAdminRole(appMetadata?.roles) ||
+    isTruthyAdminFlag(appMetadata?.is_admin) ||
+    hasAdminRole(appClaims?.role) ||
+    hasAdminRole(appClaims?.roles) ||
+    isTruthyAdminFlag(appClaims?.is_admin)
+  );
 }
 
 async function isAdminViaUsersTable(
@@ -71,7 +122,7 @@ export async function getAdminRequestContext(): Promise<AdminRequestContext | nu
     }
 
     const email = typeof user.email === "string" ? user.email.toLowerCase() : null;
-    if (user.user_metadata?.role === "admin" || user.role === "admin") {
+    if (isAdminViaAuthMetadata(user)) {
       return { email, isDemo: false, userId: user.id };
     }
 
