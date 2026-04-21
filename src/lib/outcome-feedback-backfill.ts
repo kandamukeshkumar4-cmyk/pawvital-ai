@@ -1,8 +1,13 @@
 import type { SymptomReport } from "@/components/symptom-report/types";
 import type { OutcomeFeedbackInput } from "./report-storage";
 
+type HistoricalOutcomeFeedbackInput = Omit<
+  OutcomeFeedbackInput,
+  "requestingUserId"
+>;
+
 export interface HistoricalOutcomeFeedbackRecord {
-  feedback: OutcomeFeedbackInput;
+  feedback: HistoricalOutcomeFeedbackInput;
   report: SymptomReport;
   reportRecord: Record<string, unknown>;
   submittedAt: string;

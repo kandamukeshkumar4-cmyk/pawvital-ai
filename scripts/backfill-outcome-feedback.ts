@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { buildThresholdProposalDraft } from "../src/lib/threshold-proposals";
 import { extractHistoricalOutcomeFeedback } from "../src/lib/outcome-feedback-backfill";
+import type { OutcomeFeedbackInput } from "../src/lib/report-storage";
 
 const rootDir = process.cwd();
 const defaultCheckpointPath = path.join(
@@ -65,6 +66,17 @@ interface SymptomCheckRow {
   symptoms: string | null;
   symptom_check_id: string;
   threshold_proposal_id: string | null;
+}
+
+function toDraftFeedback(
+  feedback: NonNullable<ReturnType<typeof extractHistoricalOutcomeFeedback>>["feedback"]
+): OutcomeFeedbackInput {
+  return {
+    ...feedback,
+    // Historical ai_response feedback does not preserve authenticated owner
+    // context. The draft builder only reads the clinical mismatch fields.
+    requestingUserId: "00000000-0000-0000-0000-000000000000",
+  };
 }
 
 function loadEnvFiles() {
@@ -342,7 +354,7 @@ async function insertThresholdProposal(
   }
 
   const proposal = buildThresholdProposalDraft({
-    feedback: historical.feedback,
+    feedback: toDraftFeedback(historical.feedback),
     report: historical.report,
     symptomSummary: row.symptoms || "unknown",
   });
@@ -535,7 +547,7 @@ async function main() {
         }
 
         const proposal = buildThresholdProposalDraft({
-          feedback: historical.feedback,
+          feedback: toDraftFeedback(historical.feedback),
           report: historical.report,
           symptomSummary: row.symptoms || "unknown",
         });
