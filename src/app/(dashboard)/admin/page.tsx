@@ -1,5 +1,6 @@
 import { headers, cookies } from "next/headers";
 import AdminDashboardClient from "./AdminDashboardClient";
+import { buildDemoAdminFeedbackLedgerDashboardData } from "@/lib/admin-feedback-ledger";
 import { buildDemoShadowRolloutDashboardData } from "@/lib/admin-shadow-rollout";
 import { buildDemoThresholdProposalDashboardData } from "@/lib/admin-threshold-proposals";
 import { isNvidiaConfigured } from "@/lib/nvidia-models";
@@ -16,14 +17,23 @@ export default async function AdminDashboardPage() {
   let stats = null;
   let deployment = null;
   let shadowRollout = null;
+  let testerFeedbackReview = null;
   let thresholdProposals = null;
 
   try {
-    const [statsRes, deploymentRes, shadowRolloutRes, thresholdProposalRes] =
-      await Promise.all([
+    const [
+      statsRes,
+      deploymentRes,
+      shadowRolloutRes,
+      testerFeedbackRes,
+      thresholdProposalRes,
+    ] = await Promise.all([
       fetch(`${baseUrl}/api/admin/stats`, { headers: { cookie: cookieHeader } }),
       fetch(`${baseUrl}/api/admin/deployment`, { headers: { cookie: cookieHeader } }),
       fetch(`${baseUrl}/api/admin/shadow-rollout`, {
+        headers: { cookie: cookieHeader },
+      }),
+      fetch(`${baseUrl}/api/admin/tester-feedback`, {
         headers: { cookie: cookieHeader },
       }),
       fetch(`${baseUrl}/api/admin/threshold-proposals`, {
@@ -34,6 +44,9 @@ export default async function AdminDashboardPage() {
     if (statsRes.ok) stats = await statsRes.json();
     if (deploymentRes.ok) deployment = await deploymentRes.json();
     if (shadowRolloutRes.ok) shadowRollout = await shadowRolloutRes.json();
+    if (testerFeedbackRes.ok) {
+      testerFeedbackReview = await testerFeedbackRes.json();
+    }
     if (thresholdProposalRes.ok) {
       thresholdProposals = await thresholdProposalRes.json();
     }
@@ -58,10 +71,14 @@ export default async function AdminDashboardPage() {
       commit_sha: "abcd123",
     };
     shadowRollout = buildDemoShadowRolloutDashboardData();
+    testerFeedbackReview = buildDemoAdminFeedbackLedgerDashboardData();
     thresholdProposals = buildDemoThresholdProposalDashboardData();
   } else {
     if (!shadowRollout) {
       shadowRollout = buildDemoShadowRolloutDashboardData();
+    }
+    if (!testerFeedbackReview) {
+      testerFeedbackReview = buildDemoAdminFeedbackLedgerDashboardData();
     }
     if (!thresholdProposals) {
       thresholdProposals = buildDemoThresholdProposalDashboardData();
@@ -81,6 +98,7 @@ export default async function AdminDashboardPage() {
         initialDeployment={deployment}
         initialShadowRollout={shadowRollout}
         initialStats={stats}
+        initialTesterFeedbackReview={testerFeedbackReview}
         initialThresholdProposals={thresholdProposals}
       />
     </div>

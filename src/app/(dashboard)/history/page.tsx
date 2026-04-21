@@ -18,6 +18,7 @@ import {
   severityConfig,
   type SymptomReport,
 } from "@/components/symptom-report";
+import { TesterFeedbackWidget } from "@/components/tester-feedback";
 import {
   buildVetHandoffPacket,
   isEscalatedReport,
@@ -427,16 +428,24 @@ export default function HistoryPage() {
                   </div>
                 </div>
                 {expanded && report && (
-                  <div className="p-4 bg-white">
-                    <FullReport
-                      report={{
-                        ...report,
-                        report_storage_id:
-                          report.report_storage_id ?? row.id,
-                      }}
-                    />
-                  </div>
-                )}
+                    <div className="space-y-4 bg-white p-4">
+                      <FullReport
+                        report={{
+                          ...report,
+                          report_storage_id:
+                            report.report_storage_id ?? row.id,
+                        }}
+                      />
+                      {isSupabaseConfigured ? (
+                        <TesterFeedbackWidget
+                          symptomCheckId={row.id}
+                          reportTitle={report.title}
+                          urgencyLabel={report.recommendation}
+                          surface="history_page"
+                        />
+                      ) : null}
+                    </div>
+                  )}
                 {expanded && !report && (
                   <div className="p-4 text-sm text-amber-800 bg-amber-50">
                     This saved check could not be parsed as a full report. Raw symptoms

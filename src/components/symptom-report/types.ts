@@ -1,5 +1,11 @@
 export type { StructuredEvidenceChainItem } from "@/lib/evidence-chain";
 import type { StructuredEvidenceChainItem } from "@/lib/evidence-chain";
+import type {
+  TesterFeedbackConfusingArea,
+  TesterFeedbackHelpfulness,
+  TesterFeedbackSurface,
+  TesterFeedbackTrustLevel,
+} from "@/lib/tester-feedback-contract";
 
 export interface DifferentialDiagnosis {
   condition: string;
@@ -93,8 +99,9 @@ export interface SymptomReport {
 
 export type OutcomeFeedbackSubmitPayload = {
   symptomCheckId: string;
-  matchedExpectation: "yes" | "partly" | "no";
-  confirmedDiagnosis: string;
-  vetOutcome: string;
-  ownerNotes: string;
+  helpfulness: TesterFeedbackHelpfulness;
+  confusingAreas: TesterFeedbackConfusingArea[];
+  trustLevel: TesterFeedbackTrustLevel;
+  notes: string;
+  surface?: TesterFeedbackSurface;
 };

@@ -3,9 +3,11 @@
 import React, { useState } from "react";
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Server, Database, CheckCircle, AlertCircle, X, FileAudio } from "lucide-react";
+import type { AdminFeedbackLedgerDashboardData } from "@/lib/admin-feedback-ledger";
 import type { AdminShadowRolloutDashboardData } from "@/lib/admin-shadow-rollout";
 import type { ThresholdProposalDashboardData } from "@/lib/admin-threshold-proposals";
 import { ShadowRolloutControlPanel } from "@/components/admin/shadow-rollout-control-panel";
+import { TesterFeedbackReviewPanel } from "@/components/admin/tester-feedback-review-panel";
 import { ThresholdProposalPanel } from "@/components/admin/threshold-proposal-panel";
 
 interface AdminDashboardProps {
@@ -26,6 +28,7 @@ interface AdminDashboardProps {
     [key: string]: string | undefined;
   };
   initialShadowRollout: AdminShadowRolloutDashboardData;
+  initialTesterFeedbackReview: AdminFeedbackLedgerDashboardData;
   initialThresholdProposals: ThresholdProposalDashboardData;
 }
 
@@ -33,6 +36,7 @@ export default function AdminDashboardClient({
   initialStats,
   initialDeployment,
   initialShadowRollout,
+  initialTesterFeedbackReview,
   initialThresholdProposals,
 }: AdminDashboardProps) {
   const [issueModalOpen, setIssueModalOpen] = useState(false);
@@ -276,6 +280,7 @@ export default function AdminDashboardClient({
       )}
 
       <ShadowRolloutControlPanel initialData={initialShadowRollout} />
+      <TesterFeedbackReviewPanel initialData={initialTesterFeedbackReview} />
       <ThresholdProposalPanel initialData={initialThresholdProposals} />
     </div>
   );
