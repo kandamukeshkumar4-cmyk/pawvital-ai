@@ -28,5 +28,14 @@ describe("usage-limit-gate helpers", () => {
         { role: "user", content: "My dog seems itchy today." },
       ])
     ).toBe(false);
+    expect(
+      hasEmergencyUsageGateBypassSignal(session, [
+        {
+          role: "user",
+          content:
+            "My dog keeps trying to vomit but nothing comes up and his belly looks swollen.",
+        },
+      ])
+    ).toBe(true);
   });
 });

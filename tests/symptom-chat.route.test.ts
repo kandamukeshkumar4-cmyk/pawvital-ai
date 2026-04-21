@@ -8861,4 +8861,290 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(mockDiagnoseWithDeepSeek).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("VET-1352 private tester release smoke", () => {
+    it.each([
+      {
+        expectedSignal: "pale_gums",
+        label: "collapsed + pale gums",
+        message:
+          "My dog collapsed and his gums look pale and white right now.",
+      },
+      {
+        expectedSignal: "blue_gums",
+        label: "struggling to breathe",
+        message:
+          "My dog suddenly started struggling to breathe and his gums look blue.",
+      },
+      {
+        expectedSignal: "unproductive_retching",
+        label: "nonproductive retching + swollen belly",
+        message:
+          "My dog keeps trying to vomit but nothing comes up and his belly is suddenly swollen.",
+      },
+      {
+        expectedSignal: "seizure_activity",
+        label: "seizure over 5 minutes",
+        message:
+          "My dog has been seizing for over five minutes and is still not recovering.",
+      },
+      {
+        expectedSignal: "pale_gums",
+        label: "hit by car",
+        message:
+          "My dog was hit by a car and now seems weak and his gums look pale.",
+      },
+      {
+        expectedSignal: "toxin_confirmed",
+        label: "toxin ingestion",
+        message:
+          "My dog ate sugar-free gum with xylitol and now he is vomiting and looks weak.",
+      },
+    ])(
+      "VET-1352 production smoke: routes $label",
+      async ({ expectedSignal, message }) => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(createSession(), message));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("emergency");
+        expect(payload.ready_for_report).toBe(true);
+        expect(payload.session.red_flags_triggered).toContain(expectedSignal);
+      }
+    );
+
+    it.each([
+      {
+        label: "mild itching eating normally",
+        message:
+          "My dog has mild itching, but he is eating normally, playful, and breathing fine.",
+      },
+      {
+        label: "mild soft stool",
+        message:
+          "My dog has mildly soft stool today but is still drinking, eating, and acting normal.",
+      },
+      {
+        label: "mild limping weight-bearing",
+        message:
+          "My dog is limping a little, but he is still weight-bearing, eating normally, and wants to play.",
+      },
+      {
+        label: "routine wellness question",
+        message:
+          "My dog seems healthy overall, and I just want to know if a routine wellness visit is due.",
+      },
+    ])(
+      "VET-1352 production smoke: keeps $label out of emergency",
+      async ({ message }) => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(makeTextOnlyRequest(createSession(), message));
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(["error", "usage_limit"]).not.toContain(payload.type);
+        expect(payload.type).not.toBe("emergency");
+      }
+    );
+
+    it("VET-1352 report smoke: emergency report renders real content", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-emergency-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-emergency-1");
+      mockDiagnoseWithDeepSeek.mockResolvedValue(
+        JSON.stringify({
+          severity: "emergency",
+          recommendation: "emergency_vet",
+          title: "Emergency triage report",
+          explanation: "Immediate emergency care is recommended.",
+          differential_diagnoses: [],
+          clinical_notes: "Emergency notes",
+          recommended_tests: [],
+          home_care: [],
+          actions: [],
+          warning_signs: [],
+          vet_questions: [],
+        })
+      );
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Report is clinically sound",
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBeTruthy();
+      expect(payload.report.title).not.toContain("Demo Mode");
+      expect(payload.report.explanation).toBeTruthy();
+    });
+
+    it("VET-1352 report smoke: mild report renders real content without demo copy", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockCreateServerSupabaseClient.mockResolvedValue(buildAuthSupabase("user-1"));
+      mockSaveSymptomReportToDB.mockResolvedValue("report-mild-1");
+      mockDiagnoseWithDeepSeek.mockResolvedValue(
+        JSON.stringify({
+          severity: "medium",
+          recommendation: "vet_48h",
+          title: "Mild triage report",
+          explanation: "This does not look like an emergency right now.",
+          differential_diagnoses: [],
+          clinical_notes: "Mild notes",
+          recommended_tests: [],
+          home_care: [],
+          actions: [],
+          warning_signs: [],
+          vet_questions: [],
+        })
+      );
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Report is clinically sound",
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBeTruthy();
+      expect(payload.report.title).not.toContain("Demo Mode");
+      expect(payload.report.explanation).toBeTruthy();
+    });
+
+    it("VET-1352 emergency bypass smoke: keeps emergency guidance reachable when server auth fails open", async () => {
+      mockCreateServerSupabaseClient.mockRejectedValue(new Error("AUTH_DOWN"));
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog is struggling to breathe and his gums look pale."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+    });
+
+    it("VET-1352 emergency bypass smoke: keeps emergency guidance reachable when usage limits would otherwise trigger", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildBillingSupabase({
+          completedChecksThisMonth: 99,
+          userId: "user-1",
+        })
+      );
+      const emergencySession = createSession();
+      emergencySession.red_flags_triggered = ["vomit_blood"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          emergencySession,
+          "My dog keeps trying to vomit but nothing comes up and his belly is suddenly swollen."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.code).toBeUndefined();
+    });
+
+    it("VET-1352 emergency bypass smoke: keeps emergency guidance out of demo mode when providers fail", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(false);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog was hit by a car and now he cannot stand up."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.message).not.toContain("Demo mode");
+    });
+
+    it("VET-1352 emergency bypass smoke: keeps emergency guidance reachable when image sidecars fail", async () => {
+      mockIsVisionPreprocessConfigured.mockReturnValue(true);
+      mockPreprocessVeterinaryImageWithResult.mockResolvedValue(
+        buildErrorSidecarResult(
+          "vision-preprocess-service",
+          "connection_refused",
+          "vision offline"
+        )
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeRequest(
+          createSession(),
+          "My dog is struggling to breathe and his gums look pale."
+        )
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.ready_for_report).toBe(true);
+    });
+
+    it("VET-1352 emergency bypass smoke: keeps report payloads available when report persistence fails", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-emergency-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue(null);
+      mockDiagnoseWithDeepSeek.mockResolvedValue(
+        JSON.stringify({
+          severity: "emergency",
+          recommendation: "emergency_vet",
+          title: "Emergency persistence fallback report",
+          explanation: "Emergency guidance remains available even if save fails.",
+          differential_diagnoses: [],
+          clinical_notes: "Persistence failure fallback notes",
+          recommended_tests: [],
+          home_care: [],
+          actions: [],
+          warning_signs: [],
+          vet_questions: [],
+        })
+      );
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Persistence fallback report is clinically sound",
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBeTruthy();
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+  });
 });

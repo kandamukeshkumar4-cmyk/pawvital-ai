@@ -1,10 +1,18 @@
 import {
   blocksAdditionalCheckout,
+  blocksAdditionalCheckoutForUser,
   evaluateSymptomCheckUsageGate,
+  getEffectivePlanForUser,
   getPlanFromSubscription,
 } from "@/lib/subscription-state";
 
 describe("subscription-state helpers", () => {
+  const originalEnv = process.env;
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
   it("treats paid active rows as their real plan", () => {
     expect(
       getPlanFromSubscription({
@@ -25,6 +33,28 @@ describe("subscription-state helpers", () => {
     expect(blocksAdditionalCheckout("trialing")).toBe(true);
     expect(blocksAdditionalCheckout("past_due")).toBe(true);
     expect(blocksAdditionalCheckout("canceled")).toBe(false);
+  });
+
+  it("VET-1352 tester access smoke: elevates invited private testers to effective pro access", () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_PRIVATE_TESTER_FREE_ACCESS: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+
+    expect(
+      getEffectivePlanForUser({
+        email: "tester@example.com",
+        subscription: null,
+      })
+    ).toBe("pro");
+    expect(
+      blocksAdditionalCheckoutForUser({
+        email: "tester@example.com",
+        status: null,
+      })
+    ).toBe(true);
   });
 
   it("fires the free-tier usage gate at the monthly threshold", () => {

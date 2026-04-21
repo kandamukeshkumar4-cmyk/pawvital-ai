@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
-import { getPlanFromSubscription } from "@/lib/subscription-state";
+import { getEffectivePlanForUser } from "@/lib/subscription-state";
 import { useAppStore } from "@/store/app-store";
 import type { SubscriptionPlanTier, SubscriptionRow } from "@/types";
 
@@ -71,6 +71,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setSubscription(null);
         return;
       }
+
       setSubscription(data as SubscriptionRow | null);
     } catch (e) {
       console.warn("Subscription fetch failed:", e);
@@ -117,8 +118,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       return DEFAULT_FREE;
     }
 
-    return getPlanFromSubscription(subscription);
-  }, [subscription]);
+    return getEffectivePlanForUser({
+      email: user?.email ?? null,
+      subscription,
+    });
+  }, [subscription, user?.email]);
 
   const value = useMemo(
     () => ({ plan, subscription, loading, refresh }),

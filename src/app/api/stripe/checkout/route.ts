@@ -6,7 +6,8 @@ import {
   isStripeConfigured,
   stripe,
 } from "@/lib/stripe";
-import { blocksAdditionalCheckout } from "@/lib/subscription-state";
+import { shouldBypassPlanGateForPrivateTester } from "@/lib/private-tester-access";
+import { blocksAdditionalCheckoutForUser } from "@/lib/subscription-state";
 
 interface ProfileSnapshot {
   email: string | null;
@@ -162,7 +163,13 @@ export async function POST(request: Request) {
     const profile = await loadProfileSnapshot(supabase, user.id);
     const latestSubscription = await loadLatestSubscription(supabase, user.id);
 
-    if (latestSubscription && blocksAdditionalCheckout(latestSubscription.status)) {
+    if (
+      latestSubscription &&
+      blocksAdditionalCheckoutForUser({
+        email: user.email ?? profile?.email ?? null,
+        status: latestSubscription.status,
+      })
+    ) {
       return NextResponse.json(
         {
           current_period_end: latestSubscription.current_period_end,
@@ -183,6 +190,17 @@ export async function POST(request: Request) {
           code: "EMAIL_REQUIRED",
         },
         { status: 400 }
+      );
+    }
+
+    if (shouldBypassPlanGateForPrivateTester(email)) {
+      return NextResponse.json(
+        {
+          code: "TESTER_ACCESS_GRANTED",
+          error: "Invite-only tester access is already active for this account.",
+          free_access: true,
+        },
+        { status: 409 }
       );
     }
 

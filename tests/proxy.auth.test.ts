@@ -65,7 +65,7 @@ describe("VET-1215 proxy auth guard", () => {
 
   it("sends authenticated users to their intended destination from auth pages", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: "user-1", email: "alpha@example.com" } },
       error: null,
     });
 
@@ -79,7 +79,7 @@ describe("VET-1215 proxy auth guard", () => {
 
   it("ignores unsafe external redirect params on auth pages", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { id: "user-1" } },
+      data: { user: { id: "user-1", email: "alpha@example.com" } },
       error: null,
     });
 
@@ -103,5 +103,45 @@ describe("VET-1215 proxy auth guard", () => {
 
     expect(response.status).toBe(200);
     expect(mockCreateServerClient).not.toHaveBeenCalled();
+  });
+
+  it("VET-1352 tester access smoke: redirects non-invited authenticated users away from protected routes in private tester mode", async () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1", email: "outside@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(new NextRequest("https://app.pawvital.ai/history"));
+
+    expect(response.headers.get("location")).toBe("https://app.pawvital.ai/");
+  });
+
+  it("VET-1352 tester access smoke: allows invited authenticated users through protected routes in private tester mode", async () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1", email: "tester@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(new NextRequest("https://app.pawvital.ai/history"));
+
+    expect(response.status).toBe(200);
   });
 });
