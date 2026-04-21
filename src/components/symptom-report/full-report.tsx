@@ -18,7 +18,9 @@ import { ActionStepsSection } from "./action-steps";
 import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
 import { BayesianDifferentials } from "./bayesian-differentials";
+import { OwnerSummarySection } from "./owner-summary";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
@@ -42,6 +44,7 @@ export function FullReport({
   readOnlyShared = false,
 }: FullReportProps) {
   const handoffRef = useRef<HTMLDivElement | null>(null);
+  const feedbackRef = useRef<HTMLDivElement | null>(null);
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [expiry, setExpiry] = useState<ExpiryOption>(() =>
@@ -74,6 +77,10 @@ export function FullReport({
     !readOnlyShared &&
     Boolean(report.report_storage_id) &&
     isSupabaseConfigured;
+  const feedbackEnabled =
+    !readOnlyShared &&
+    Boolean(report.report_storage_id) &&
+    Boolean(report.outcome_feedback_enabled);
 
   const downloadPdf = async () => {
     if (!canExport || pdfBusy) return;
@@ -185,9 +192,7 @@ export function FullReport({
         loading={pdfBusy}
       >
         <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">
-          {escalatedReport ? "Download Clinic PDF" : "Download PDF"}
-        </span>
+        <span>{escalatedReport ? "Download Clinic PDF" : "Download PDF"}</span>
       </Button>
       <Button
         type="button"
@@ -201,7 +206,7 @@ export function FullReport({
         onClick={openShareModal}
       >
         <Share2 className="w-4 h-4" />
-        <span className="ml-1.5 hidden sm:inline">
+        <span className="ml-1.5">
           {escalatedReport ? "Share Clinic Link" : "Share with Vet"}
         </span>
       </Button>
@@ -221,6 +226,41 @@ export function FullReport({
           })
         }
         headerActions={headerActions}
+      />
+
+      <ActionStepsSection
+        report={report}
+        actions={report.actions}
+        warningSigns={report.warning_signs}
+      />
+
+      <OwnerSummarySection
+        report={report}
+        canExport={canExport}
+        feedbackEnabled={feedbackEnabled}
+        pdfBusy={pdfBusy}
+        onCopyVetSummary={copyVetSummary}
+        onJumpToHandoff={
+          report.vet_handoff_summary
+            ? () =>
+                handoffRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+            : undefined
+        }
+        onJumpToFeedback={
+          !readOnlyShared
+            ? () =>
+                feedbackRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+            : undefined
+        }
+        onDownloadPdf={() => void downloadPdf()}
+        onOpenShareModal={openShareModal}
+        readOnlyShared={readOnlyShared}
       />
 
       <Modal
@@ -349,17 +389,32 @@ export function FullReport({
         <HomeCareSection items={report.home_care} />
       )}
 
-      <ActionStepsSection
-        actions={report.actions}
-        warningSigns={report.warning_signs}
-      />
-
       {report.vet_questions && report.vet_questions.length > 0 && (
         <VetQuestionsSection questions={report.vet_questions} />
       )}
 
       {!readOnlyShared ? (
-        <OutcomeFeedbackSection report={report} />
+        <div ref={feedbackRef}>
+          {feedbackEnabled ? (
+            <OutcomeFeedbackSection
+              report={report}
+              onSubmit={onOutcomeFeedback}
+            />
+          ) : (
+            <Card className="border border-dashed border-emerald-300 bg-emerald-50/70 p-4">
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold text-emerald-900">
+                  Feedback for this report
+                </p>
+                <p className="text-sm leading-6 text-emerald-900/80">
+                  Tester feedback tools are still being connected in a parallel
+                  lane. This placeholder marks where the private tester feedback
+                  widget will appear once it is ready.
+                </p>
+              </div>
+            </Card>
+          )}
+        </div>
       ) : null}
 
       {!readOnlyShared && report.system_observability && (
@@ -376,12 +431,12 @@ export function FullReport({
 
       <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
         <p className="text-xs text-gray-500 leading-relaxed">
-          <strong>Medical Disclaimer:</strong> This AI analysis is for
-          informational purposes only and is NOT a substitute for hands-on
-          physical examination, diagnostic testing, or professional veterinary
-          medical advice. Always consult a licensed veterinarian for diagnosis
-          and treatment decisions. In emergencies, contact your nearest
-          emergency veterinary hospital immediately.
+          <strong>Medical Disclaimer:</strong> PawVital is an informational
+          screening tool and cannot replace a hands-on veterinary exam,
+          diagnostic testing, or professional veterinary advice. A licensed
+          veterinarian should confirm the cause and safest care plan for your
+          dog. If your dog worsens, develops the warning signs above, or seems
+          unable to travel safely, contact a veterinary clinic right away.
         </p>
       </div>
     </div>

@@ -9,6 +9,8 @@ import type { SymptomReport } from "./types";
 import { severityConfig } from "./constants";
 import {
   getRecommendationLabel,
+  getUrgencyLevelBody,
+  getUrgencyLevelLabel,
   isEmergencyReport,
   isEscalatedReport,
 } from "@/lib/report-handoff";
@@ -35,6 +37,8 @@ export function SeverityHeader({
     report.calibrated_confidence ?? report.confidence_calibration;
   const emergencyReport = isEmergencyReport(report);
   const escalatedReport = isEscalatedReport(report);
+  const urgencyLevelLabel = getUrgencyLevelLabel(report);
+  const urgencyLevelBody = getUrgencyLevelBody(report);
   const bannerTone = emergencyReport
     ? {
         border: "border-red-300",
@@ -66,6 +70,22 @@ export function SeverityHeader({
           return <IconComponent className="w-7 h-7 text-current mt-0.5" />;
         })()}
         <div className="min-w-0 flex-1">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+              Urgency level
+            </span>
+            <span
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                emergencyReport
+                  ? "bg-red-600 text-white"
+                  : escalatedReport
+                    ? "bg-orange-600 text-white"
+                    : "bg-emerald-600 text-white"
+              }`}
+            >
+              {urgencyLevelLabel}
+            </span>
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <div className="flex items-center gap-2 flex-wrap min-w-0">
               <h3 className="text-lg font-bold text-gray-900 sm:text-xl">
@@ -97,17 +117,22 @@ export function SeverityHeader({
               </div>
             ) : null}
           </div>
-          <p className="text-sm text-gray-600 mt-1">
-            Recommendation:{" "}
-            <span className="font-semibold">
-              {getRecommendationLabel(report)}
-            </span>
-          </p>
         </div>
       </div>
-      <p className="text-gray-700 leading-relaxed mt-4 text-[15px]">
-        {report.explanation}
-      </p>
+      <div className="mt-4 rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+          Urgency Guidance
+        </p>
+        <p className="mt-2 text-base font-semibold text-gray-900 sm:text-lg">
+          {urgencyLevelLabel}
+        </p>
+        <p className="mt-1 text-sm font-medium text-gray-700">
+          {getRecommendationLabel(report)}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-gray-700">
+          {urgencyLevelBody}
+        </p>
+      </div>
       {escalatedReport && (
         <div
           className={`mt-4 rounded-xl border bg-white/90 p-4 ${bannerTone.border}`}
