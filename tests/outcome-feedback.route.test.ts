@@ -53,7 +53,7 @@ describe("outcome-feedback route", () => {
     const { POST } = await import("@/app/api/ai/outcome-feedback/route");
     const response = await POST(
       makeRequest({
-        symptomCheckId: "abc123",
+        symptomCheckId: "11111111-1111-1111-1111-111111111111",
         matchedExpectation: "partly",
         confirmedDiagnosis: "otitis externa",
         vetOutcome: "Cytology and medication",
@@ -67,7 +67,7 @@ describe("outcome-feedback route", () => {
     expect(payload.structuredStored).toBe(true);
     expect(mockSaveOutcomeFeedbackToDB).toHaveBeenCalledWith(
       expect.objectContaining({
-        symptomCheckId: "abc123",
+        symptomCheckId: "11111111-1111-1111-1111-111111111111",
         matchedExpectation: "partly",
         requestingUserId: "user-1",
       })
@@ -84,7 +84,9 @@ describe("outcome-feedback route", () => {
     const payload = await response.json();
 
     expect(response.status).toBe(400);
-    expect(payload.error).toContain("required");
+    expect(payload.error).toBe("Invalid request body");
+    expect(payload.code).toBe("VALIDATION_ERROR");
+    expect(mockSaveOutcomeFeedbackToDB).not.toHaveBeenCalled();
   });
 
   it("rejects unauthenticated feedback submissions", async () => {
@@ -100,12 +102,59 @@ describe("outcome-feedback route", () => {
     const { POST } = await import("@/app/api/ai/outcome-feedback/route");
     const response = await POST(
       makeRequest({
-        symptomCheckId: "abc123",
+        symptomCheckId: "11111111-1111-1111-1111-111111111111",
         matchedExpectation: "partly",
       })
     );
 
     expect(response.status).toBe(401);
     expect(mockSaveOutcomeFeedbackToDB).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed symptom check identifiers before storage writes", async () => {
+    const { POST } = await import("@/app/api/ai/outcome-feedback/route");
+    const response = await POST(
+      makeRequest({
+        symptomCheckId: "not-a-uuid",
+        matchedExpectation: "partly",
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload.error).toBe("Invalid request body");
+    expect(payload.code).toBe("VALIDATION_ERROR");
+    expect(mockSaveOutcomeFeedbackToDB).not.toHaveBeenCalled();
+  });
+
+  it("returns generic ownership failures without leaking private content", async () => {
+    mockSaveOutcomeFeedbackToDB.mockResolvedValue({
+      ok: false,
+      errorCode: "forbidden",
+      legacyUpdated: false,
+      structuredStored: false,
+      proposalCreated: false,
+      warnings: [
+        "Owner notes: Piper needed sedation after the emergency visit",
+      ],
+    });
+
+    const { POST } = await import("@/app/api/ai/outcome-feedback/route");
+    const response = await POST(
+      makeRequest({
+        symptomCheckId: "11111111-1111-1111-1111-111111111111",
+        matchedExpectation: "no",
+        ownerNotes: "Piper needed sedation after the emergency visit",
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(payload).toEqual({
+      ok: false,
+      error: "Unable to save outcome feedback",
+    });
+    expect(JSON.stringify(payload)).not.toContain("Piper");
+    expect(payload.warnings).toBeUndefined();
   });
 });
