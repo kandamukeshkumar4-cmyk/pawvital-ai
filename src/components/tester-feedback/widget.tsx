@@ -31,6 +31,27 @@ interface TesterFeedbackWidgetProps {
   surface?: TesterFeedbackSurface;
 }
 
+interface TesterFeedbackSubmitResponse {
+  ok?: boolean;
+  error?: string;
+  case?: { flagged?: boolean };
+}
+
+function getSafeFeedbackErrorMessage(status: number) {
+  switch (status) {
+    case 400:
+      return "Please review your feedback and try again.";
+    case 401:
+      return "Please sign in again to submit feedback.";
+    case 404:
+      return "We could not link this feedback to a saved report.";
+    case 429:
+      return "You're sending feedback too quickly. Please try again shortly.";
+    default:
+      return "Feedback is temporarily unavailable. Please try again shortly.";
+  }
+}
+
 function ChoiceButton<T extends string>({
   active,
   label,
@@ -110,14 +131,10 @@ export function TesterFeedbackWidget({
         }),
       });
 
-      const payload = (await response.json()) as {
-        ok?: boolean;
-        error?: string;
-        case?: { flagged?: boolean };
-      };
+      const payload = (await response.json().catch(() => ({}))) as TesterFeedbackSubmitResponse;
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.error || "Unable to save feedback");
+        throw new Error(getSafeFeedbackErrorMessage(response.status));
       }
 
       setFlagged(Boolean(payload.case?.flagged));

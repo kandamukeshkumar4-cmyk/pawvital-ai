@@ -230,14 +230,14 @@ export function OwnerSummarySection({
                     onClick={onJumpToFeedback}
                   >
                     <MessageSquareMore className="mr-1.5 h-4 w-4" />
-                    {feedbackEnabled ? "Open Feedback" : "See Feedback Area"}
+                    {feedbackEnabled ? "Open Feedback" : "See Feedback Status"}
                   </Button>
                 ) : null}
                 {!feedbackEnabled ? (
                   <p className="text-xs text-gray-500">
-                    Tester feedback tools are still being connected in a
-                    parallel lane. The feedback section below stays visible so
-                    you know where it will appear.
+                    Feedback opens once this report is linked to a saved
+                    symptom check. If it stays unavailable, reload History and
+                    try again.
                   </p>
                 ) : null}
               </div>

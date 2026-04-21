@@ -10,7 +10,7 @@ interface OutcomeFeedbackSectionProps {
 export function OutcomeFeedbackSection({
   report,
 }: OutcomeFeedbackSectionProps) {
-  if (!report.outcome_feedback_enabled || !report.report_storage_id) {
+  if (!report.report_storage_id) {
     return null;
   }
 

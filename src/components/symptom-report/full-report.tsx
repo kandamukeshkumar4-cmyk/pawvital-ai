@@ -86,7 +86,7 @@ export function FullReport({
   const feedbackEnabled =
     !readOnlyShared &&
     Boolean(report.report_storage_id) &&
-    Boolean(report.outcome_feedback_enabled);
+    report.outcome_feedback_enabled !== false;
 
   const downloadPdf = async () => {
     if (!canExport || pdfBusy) return;
@@ -400,9 +400,7 @@ export function FullReport({
       {!readOnlyShared ? (
         <div ref={feedbackRef}>
           {feedbackEnabled ? (
-            <OutcomeFeedbackSection
-              report={report}
-            />
+            <OutcomeFeedbackSection report={report} />
           ) : (
             <Card className="border border-dashed border-emerald-300 bg-emerald-50/70 p-4">
               <div className="space-y-1.5">
@@ -410,9 +408,8 @@ export function FullReport({
                   Feedback for this report
                 </p>
                 <p className="text-sm leading-6 text-emerald-900/80">
-                  Tester feedback tools are still being connected in a parallel
-                  lane. This placeholder marks where the private tester feedback
-                  widget will appear once it is ready.
+                  This report is not linked to a saved symptom check yet, so
+                  feedback cannot be submitted from this page right now.
                 </p>
               </div>
             </Card>
