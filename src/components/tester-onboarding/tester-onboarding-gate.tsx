@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Card from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { hasTesterConsent, recordTesterConsent } from "@/lib/tester-consent";
@@ -20,6 +20,10 @@ function getConsentSubjectId(userId?: string | null): string {
   return trimmedUserId ? `user:${trimmedUserId}` : "anonymous";
 }
 
+function subscribeToTesterConsent() {
+  return () => {};
+}
+
 export default function TesterOnboardingGate({
   children,
 }: TesterOnboardingGateProps) {
@@ -27,36 +31,25 @@ export default function TesterOnboardingGate({
   const [acknowledgedSubjectId, setAcknowledgedSubjectId] = useState<
     string | null
   >(null);
-  const [storedAcknowledged, setStoredAcknowledged] = useState(false);
-  const [consentResolved, setConsentResolved] = useState(false);
 
   const consentSubjectId = getConsentSubjectId(user?.id);
   const ready = !isSupabaseConfigured || userDataLoaded;
-
-  useEffect(() => {
-    if (!ready) {
-      setStoredAcknowledged(false);
-      setConsentResolved(false);
-      return;
-    }
-
-    setStoredAcknowledged(hasTesterConsent(user?.id));
-    setConsentResolved(true);
-  }, [ready, user?.id]);
+  const storedAcknowledged = useSyncExternalStore(
+    subscribeToTesterConsent,
+    () => (ready ? hasTesterConsent(user?.id) : false),
+    () => false
+  );
 
   const acknowledged =
     ready &&
-    consentResolved &&
     (storedAcknowledged || acknowledgedSubjectId === consentSubjectId);
 
   const handleAcknowledge = () => {
     recordTesterConsent(user?.id);
-    setStoredAcknowledged(true);
-    setConsentResolved(true);
     setAcknowledgedSubjectId(consentSubjectId);
   };
 
-  if (!ready || !consentResolved) {
+  if (!ready) {
     return (
       <Card className="mx-auto max-w-3xl p-6 text-sm text-gray-500">
         Loading tester onboarding…
