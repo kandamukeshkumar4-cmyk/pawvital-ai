@@ -6,6 +6,7 @@ import {
   checkRateLimit,
   generalApiLimiter,
   getRateLimitId,
+  type RateLimitResult,
 } from "@/lib/rate-limit";
 import {
   listTesterFeedbackCases,
@@ -53,24 +54,22 @@ function isOutcomeFeedbackPayload(
   return isRecord(value) && "matchedExpectation" in value;
 }
 
-function buildRateLimitResponse(rateLimitResult: {
-  reset: number;
-  success: boolean;
-}) {
-  if (!rateLimitResult.success) {
-    return NextResponse.json(
-      { error: "Too many requests. Please slow down." },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(
-            Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
-          ),
-        },
-      }
-    );
+function buildRateLimitResponse(rateLimitResult: RateLimitResult) {
+  if (rateLimitResult.success) {
+    return null;
   }
-  return null;
+
+  return NextResponse.json(
+    { error: "Too many requests. Please slow down." },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(
+          Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+        ),
+      },
+    }
+  );
 }
 
 async function requireUser() {
