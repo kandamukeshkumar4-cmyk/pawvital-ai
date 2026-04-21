@@ -16,7 +16,7 @@ const suites = {
       "tests/outcome-feedback.route.test.ts",
     ],
     pattern:
-      "VET-1352 production smoke|VET-1352 report smoke|VET-1352 feedback smoke",
+      "VET-1352 production smoke|VET-1352 report smoke|stores structured tester feedback for a saved symptom check",
   },
   "emergency-bypass": {
     files: ["tests/symptom-chat.route.test.ts"],

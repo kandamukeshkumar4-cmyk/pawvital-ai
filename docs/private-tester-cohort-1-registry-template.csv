@@ -1,0 +1,2 @@
+tester_alias,email,dog_name,dog_age,dog_breed_size,device_browser,invite_status,consent_status,first_login_timestamp,first_symptom_check_timestamp,feedback_submitted,deletion_requested,access_disabled,notes
+example-tester,tester@example.com,Buddy,4 years,Golden Retriever medium-large,iPhone Safari,invited,manual-verify,,,,,,

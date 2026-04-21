@@ -89,6 +89,13 @@ export default function AdminDashboardClient({
       <div className="mb-6 flex justify-end">
         <div className="flex flex-wrap gap-3">
           <Link
+            href="/admin/cohort-launch"
+            className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <ShieldCheck className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+            Cohort Command Center
+          </Link>
+          <Link
             href="/admin/tester-access"
             className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >

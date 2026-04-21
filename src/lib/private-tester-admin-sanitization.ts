@@ -43,6 +43,18 @@ export function sanitizePrivateTesterDataSummary(
       modeEnabled: summary.access.modeEnabled,
       reason: summary.access.reason,
     },
+    adminState: {
+      accessDisabled: summary.adminState.accessDisabled,
+      accessDisabledAt: summary.adminState.accessDisabledAt,
+      auditLog: summary.adminState.auditLog.map((event) => ({
+        action: event.action,
+        actorEmail: event.actorEmail,
+        at: event.at,
+        note: event.note,
+      })),
+      deletionRequested: summary.adminState.deletionRequested,
+      deletionRequestedAt: summary.adminState.deletionRequestedAt,
+    },
     config: {
       allowedEmailCount: summary.config.allowedEmailCount,
       allowedEmails: [...(summary.config.allowedEmails ?? [])],
@@ -90,7 +102,9 @@ export function sanitizePrivateTesterDashboardData(
     },
     summary: {
       active: dashboard.summary.active,
+      authAccessDisabled: dashboard.summary.authAccessDisabled,
       blocked: dashboard.summary.blocked,
+      deletionRequested: dashboard.summary.deletionRequested,
       negativeFeedbackEntries: dashboard.summary.negativeFeedbackEntries,
       symptomChecks: dashboard.summary.symptomChecks,
       total: dashboard.summary.total,
@@ -104,6 +118,14 @@ export function sanitizePrivateTesterDeleteResult(
   result: PrivateTesterDeleteResult
 ): PrivateTesterDeleteResult {
   return {
+    auditEvent: result.auditEvent
+      ? {
+          action: result.auditEvent.action,
+          actorEmail: result.auditEvent.actorEmail,
+          at: result.auditEvent.at,
+          note: result.auditEvent.note,
+        }
+      : null,
     deleted: result.deleted,
     dryRun: result.dryRun,
     summary: sanitizePrivateTesterDataSummary(result.summary),

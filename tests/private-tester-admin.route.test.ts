@@ -3,6 +3,7 @@ const mockInspectPrivateTesterData = jest.fn();
 const mockDeletePrivateTesterData = jest.fn();
 const mockBuildPrivateTesterDashboardFallback = jest.fn();
 const mockListPrivateTesterSummaries = jest.fn();
+const mockUpdatePrivateTesterAdminState = jest.fn();
 
 jest.mock("@/lib/admin-auth", () => ({
   getAdminRequestContext: (...args: unknown[]) =>
@@ -18,6 +19,8 @@ jest.mock("@/lib/private-tester-admin", () => ({
     mockDeletePrivateTesterData(...args),
   listPrivateTesterSummaries: (...args: unknown[]) =>
     mockListPrivateTesterSummaries(...args),
+  updatePrivateTesterAdminState: (...args: unknown[]) =>
+    mockUpdatePrivateTesterAdminState(...args),
 }));
 
 function buildUnsafeTesterSummary() {
@@ -31,6 +34,20 @@ function buildUnsafeTesterSummary() {
       inviteOnly: true,
       modeEnabled: true,
       reason: "allowlisted_email",
+    },
+    adminState: {
+      accessDisabled: true,
+      accessDisabledAt: "2026-04-21T14:00:00.000Z",
+      auditLog: [
+        {
+          action: "disable_access",
+          actorEmail: "admin@pawvital.ai",
+          at: "2026-04-21T14:00:00.000Z",
+          note: "Pause access after emergency confusion.",
+        },
+      ],
+      deletionRequested: true,
+      deletionRequestedAt: "2026-04-21T15:00:00.000Z",
     },
     config: {
       allowedEmailCount: 2,
@@ -93,12 +110,14 @@ function buildUnsafeDashboardPayload() {
       inviteOnly: true,
       modeEnabled: true,
     },
-    summary: {
-      active: 1,
-      blocked: 1,
-      negativeFeedbackEntries: 1,
-      symptomChecks: 4,
-      total: 2,
+      summary: {
+        active: 1,
+        authAccessDisabled: 1,
+        blocked: 1,
+        deletionRequested: 1,
+        negativeFeedbackEntries: 1,
+        symptomChecks: 4,
+        total: 2,
     },
     telemetry: {
       ownerSymptomText: "Dog vomited blood after dinner.",
@@ -137,7 +156,9 @@ describe("admin private tester route", () => {
       },
       summary: {
         active: 0,
+        authAccessDisabled: 0,
         blocked: 0,
+        deletionRequested: 0,
         negativeFeedbackEntries: 0,
         symptomChecks: 0,
         total: 0,
@@ -193,7 +214,9 @@ describe("admin private tester route", () => {
       },
       summary: {
         active: 1,
+        authAccessDisabled: 0,
         blocked: 1,
+        deletionRequested: 0,
         negativeFeedbackEntries: 0,
         symptomChecks: 0,
         total: 2,
@@ -248,6 +271,7 @@ describe("admin private tester route", () => {
       userId: undefined,
     });
     expect(payload.summary.user.id).toBe("user-1");
+    expect(payload.summary.adminState.accessDisabled).toBe(true);
     expect(payload.summary.recentCases).toEqual([
       {
         createdAt: "2026-04-20",
@@ -267,6 +291,7 @@ describe("admin private tester route", () => {
 
   it("forwards delete operations with dry-run support", async () => {
     mockDeletePrivateTesterData.mockResolvedValue({
+      auditEvent: null,
       deleted: false,
       dryRun: true,
       summary: buildUnsafeTesterSummary(),
@@ -285,8 +310,10 @@ describe("admin private tester route", () => {
 
     expect(response.status).toBe(200);
     expect(mockDeletePrivateTesterData).toHaveBeenCalledWith({
+      actorEmail: "admin@pawvital.ai",
       dryRun: true,
       email: "tester@example.com",
+      note: undefined,
       userId: undefined,
     });
     expect(payload.dryRun).toBe(true);
@@ -305,5 +332,29 @@ describe("admin private tester route", () => {
     expect(serializedPayload).not.toContain("Juniper");
     expect(serializedPayload).not.toContain("vomited blood");
     expect(serializedPayload).not.toContain("Emergency report body");
+  });
+
+  it("applies admin access and deletion-state actions with the acting admin identity", async () => {
+    mockUpdatePrivateTesterAdminState.mockResolvedValue(buildUnsafeTesterSummary());
+
+    const { POST } = await import("@/app/api/admin/private-tester/route");
+    const response = await POST(
+      makePostRequest({
+        action: "disable_access",
+        email: "tester@example.com",
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.action).toBe("disable_access");
+    expect(payload.summary.adminState.accessDisabled).toBe(true);
+    expect(mockUpdatePrivateTesterAdminState).toHaveBeenCalledWith({
+      action: "disable_access",
+      actorEmail: "admin@pawvital.ai",
+      email: "tester@example.com",
+      note: undefined,
+      userId: undefined,
+    });
   });
 });

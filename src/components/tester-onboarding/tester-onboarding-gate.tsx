@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Card from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { hasTesterConsent, recordTesterConsent } from "@/lib/tester-consent";
@@ -20,6 +20,10 @@ function getConsentSubjectId(userId?: string | null): string {
   return trimmedUserId ? `user:${trimmedUserId}` : "anonymous";
 }
 
+function subscribeToTesterConsent() {
+  return () => {};
+}
+
 export default function TesterOnboardingGate({
   children,
 }: TesterOnboardingGateProps) {
@@ -30,9 +34,15 @@ export default function TesterOnboardingGate({
 
   const consentSubjectId = getConsentSubjectId(user?.id);
   const ready = !isSupabaseConfigured || userDataLoaded;
+  const storedAcknowledged = useSyncExternalStore(
+    subscribeToTesterConsent,
+    () => (ready ? hasTesterConsent(user?.id) : false),
+    () => false
+  );
+
   const acknowledged =
     ready &&
-    (hasTesterConsent(user?.id) || acknowledgedSubjectId === consentSubjectId);
+    (storedAcknowledged || acknowledgedSubjectId === consentSubjectId);
 
   const handleAcknowledge = () => {
     recordTesterConsent(user?.id);
