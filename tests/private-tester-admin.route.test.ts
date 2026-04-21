@@ -20,6 +20,93 @@ jest.mock("@/lib/private-tester-admin", () => ({
     mockListPrivateTesterSummaries(...args),
 }));
 
+function buildUnsafeTesterSummary() {
+  return {
+    access: {
+      allowed: true,
+      blocked: false,
+      email: "tester@example.com",
+      freeAccess: true,
+      guestSymptomChecker: false,
+      inviteOnly: true,
+      modeEnabled: true,
+      reason: "allowlisted_email",
+    },
+    config: {
+      allowedEmailCount: 2,
+      allowedEmails: ["tester@example.com", "blocked@example.com"],
+      blockedEmailCount: 1,
+      blockedEmails: ["blocked@example.com"],
+      freeAccess: true,
+      guestSymptomChecker: false,
+      inviteOnly: true,
+      modeEnabled: true,
+    },
+    counts: {
+      caseOutcomes: 2,
+      journalEntries: 1,
+      negativeFeedbackEntries: 1,
+      notifications: 0,
+      outcomeFeedbackEntries: 1,
+      pets: 1,
+      sharedReports: 1,
+      subscriptions: 1,
+      symptomChecks: 4,
+      thresholdProposals: 1,
+    },
+    privateNotes: "Owner said the dog vomited blood after dinner.",
+    rawOwnerSymptomText: "My dog vomited blood after dinner.",
+    recentCases: [
+      {
+        createdAt: "2026-04-20T15:34:12.000Z",
+        negativeFeedbackFlagged: true,
+        ownerSymptomText: "Dog vomited blood after dinner.",
+        petName: "Juniper",
+        recommendation: "Seek immediate emergency care now.",
+        reportContent: "Emergency report body that must stay private.",
+        severity: "emergency",
+        symptomCheckId: "symptom-check-123",
+      },
+    ],
+    telemetry: {
+      eventPayload: {
+        symptomText: "Dog vomited blood after dinner.",
+      },
+    },
+    user: {
+      email: "tester@example.com",
+      fullName: "Tester",
+      id: "user-1",
+    },
+  };
+}
+
+function buildUnsafeDashboardPayload() {
+  return {
+    config: {
+      allowedEmailCount: 2,
+      allowedEmails: ["tester@example.com", "blocked@example.com"],
+      blockedEmailCount: 1,
+      blockedEmails: ["blocked@example.com"],
+      freeAccess: true,
+      guestSymptomChecker: false,
+      inviteOnly: true,
+      modeEnabled: true,
+    },
+    summary: {
+      active: 1,
+      blocked: 1,
+      negativeFeedbackEntries: 1,
+      symptomChecks: 4,
+      total: 2,
+    },
+    telemetry: {
+      ownerSymptomText: "Dog vomited blood after dinner.",
+    },
+    testers: [buildUnsafeTesterSummary()],
+  };
+}
+
 function makePostRequest(body: Record<string, unknown>) {
   return new Request("http://localhost/api/admin/private-tester", {
     body: JSON.stringify(body),
@@ -60,34 +147,33 @@ describe("admin private tester route", () => {
   });
 
   it("VET-1352 tester access smoke: returns the current tester dashboard for admins", async () => {
-    mockListPrivateTesterSummaries.mockResolvedValue({
-      config: {
-        allowedEmailCount: 2,
-        allowedEmails: ["tester@example.com", "blocked@example.com"],
-        blockedEmailCount: 1,
-        blockedEmails: ["blocked@example.com"],
-        freeAccess: true,
-        guestSymptomChecker: false,
-        inviteOnly: true,
-        modeEnabled: true,
-      },
-      summary: {
-        active: 1,
-        blocked: 1,
-        negativeFeedbackEntries: 0,
-        symptomChecks: 4,
-        total: 2,
-      },
-      testers: [],
-    });
+    mockListPrivateTesterSummaries.mockResolvedValue(buildUnsafeDashboardPayload());
 
     const { GET } = await import("@/app/api/admin/private-tester/route");
     const response = await GET();
     const payload = await response.json();
+    const serializedPayload = JSON.stringify(payload);
 
     expect(response.status).toBe(200);
     expect(payload.config.allowedEmailCount).toBe(2);
     expect(payload.summary.blocked).toBe(1);
+    expect(payload.testers[0].user.email).toBe("tester@example.com");
+    expect(payload.testers[0].recentCases).toEqual([
+      {
+        createdAt: "2026-04-20",
+        negativeFeedbackFlagged: true,
+        petName: null,
+        recommendation: null,
+        severity: "emergency",
+        symptomCheckId: "case-1",
+      },
+    ]);
+    expect(payload.telemetry).toBeUndefined();
+    expect(payload.testers[0].rawOwnerSymptomText).toBeUndefined();
+    expect(payload.testers[0].telemetry).toBeUndefined();
+    expect(serializedPayload).not.toContain("Juniper");
+    expect(serializedPayload).not.toContain("vomited blood");
+    expect(serializedPayload).not.toContain("Emergency report body");
   });
 
   it("VET-1352 tester access smoke: returns a warning payload when service-role Supabase is unavailable", async () => {
@@ -126,28 +212,35 @@ describe("admin private tester route", () => {
     expect(payload.warning).toContain("Service-role Supabase access");
   });
 
-  it("rejects unauthorized requests", async () => {
+  it("rejects unauthorized requests before any tester admin metadata is returned", async () => {
     mockGetAdminRequestContext.mockResolvedValue(null);
 
-    const { GET } = await import("@/app/api/admin/private-tester/route");
-    const response = await GET();
+    const { GET, POST } = await import("@/app/api/admin/private-tester/route");
+    const getResponse = await GET();
+    const postResponse = await POST(
+      makePostRequest({ action: "inspect", email: "tester@example.com" })
+    );
+    const getPayload = await getResponse.json();
+    const postPayload = await postResponse.json();
 
-    expect(response.status).toBe(403);
+    expect(getResponse.status).toBe(403);
+    expect(postResponse.status).toBe(403);
+    expect(getPayload).toEqual({ error: "Unauthorized" });
+    expect(postPayload).toEqual({ error: "Unauthorized" });
+    expect(mockListPrivateTesterSummaries).not.toHaveBeenCalled();
+    expect(mockInspectPrivateTesterData).not.toHaveBeenCalled();
+    expect(mockDeletePrivateTesterData).not.toHaveBeenCalled();
   });
 
   it("inspects tester data by email", async () => {
-    mockInspectPrivateTesterData.mockResolvedValue({
-      access: { allowed: true, reason: "allowlisted_email" },
-      config: { modeEnabled: true },
-      counts: { pets: 1, symptomChecks: 3 },
-      user: { email: "tester@example.com", fullName: "Tester", id: "user-1" },
-    });
+    mockInspectPrivateTesterData.mockResolvedValue(buildUnsafeTesterSummary());
 
     const { POST } = await import("@/app/api/admin/private-tester/route");
     const response = await POST(
       makePostRequest({ action: "inspect", email: "tester@example.com" })
     );
     const payload = await response.json();
+    const serializedPayload = JSON.stringify(payload);
 
     expect(response.status).toBe(200);
     expect(mockInspectPrivateTesterData).toHaveBeenCalledWith({
@@ -155,18 +248,28 @@ describe("admin private tester route", () => {
       userId: undefined,
     });
     expect(payload.summary.user.id).toBe("user-1");
+    expect(payload.summary.recentCases).toEqual([
+      {
+        createdAt: "2026-04-20",
+        negativeFeedbackFlagged: true,
+        petName: null,
+        recommendation: null,
+        severity: "emergency",
+        symptomCheckId: "case-1",
+      },
+    ]);
+    expect(payload.summary.rawOwnerSymptomText).toBeUndefined();
+    expect(payload.summary.telemetry).toBeUndefined();
+    expect(serializedPayload).not.toContain("Juniper");
+    expect(serializedPayload).not.toContain("vomited blood");
+    expect(serializedPayload).not.toContain("Emergency report body");
   });
 
   it("forwards delete operations with dry-run support", async () => {
     mockDeletePrivateTesterData.mockResolvedValue({
       deleted: false,
       dryRun: true,
-      summary: {
-        access: { allowed: true, reason: "allowlisted_email" },
-        config: { modeEnabled: true },
-        counts: { pets: 1, symptomChecks: 3 },
-        user: { email: "tester@example.com", fullName: "Tester", id: "user-1" },
-      },
+      summary: buildUnsafeTesterSummary(),
     });
 
     const { POST } = await import("@/app/api/admin/private-tester/route");
@@ -178,6 +281,7 @@ describe("admin private tester route", () => {
       })
     );
     const payload = await response.json();
+    const serializedPayload = JSON.stringify(payload);
 
     expect(response.status).toBe(200);
     expect(mockDeletePrivateTesterData).toHaveBeenCalledWith({
@@ -186,5 +290,20 @@ describe("admin private tester route", () => {
       userId: undefined,
     });
     expect(payload.dryRun).toBe(true);
+    expect(payload.summary.recentCases).toEqual([
+      {
+        createdAt: "2026-04-20",
+        negativeFeedbackFlagged: true,
+        petName: null,
+        recommendation: null,
+        severity: "emergency",
+        symptomCheckId: "case-1",
+      },
+    ]);
+    expect(payload.summary.rawOwnerSymptomText).toBeUndefined();
+    expect(payload.summary.telemetry).toBeUndefined();
+    expect(serializedPayload).not.toContain("Juniper");
+    expect(serializedPayload).not.toContain("vomited blood");
+    expect(serializedPayload).not.toContain("Emergency report body");
   });
 });

@@ -6,6 +6,11 @@ import {
   inspectPrivateTesterData,
   listPrivateTesterSummaries,
 } from "@/lib/private-tester-admin";
+import {
+  sanitizePrivateTesterDashboardData,
+  sanitizePrivateTesterDataSummary,
+  sanitizePrivateTesterDeleteResult,
+} from "@/lib/private-tester-admin-sanitization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,15 +38,19 @@ export async function GET() {
       return unauthorized;
     }
 
-    return NextResponse.json(await listPrivateTesterSummaries());
+    return NextResponse.json(
+      sanitizePrivateTesterDashboardData(await listPrivateTesterSummaries())
+    );
   } catch (error) {
     if (
       error instanceof Error &&
       /SUPABASE_SERVICE_ROLE_REQUIRED/.test(error.message)
     ) {
       return NextResponse.json(
-        buildPrivateTesterDashboardFallback(
-          "Service-role Supabase access is not configured, so tester data inspection and deletion are unavailable."
+        sanitizePrivateTesterDashboardData(
+          buildPrivateTesterDashboardFallback(
+            "Service-role Supabase access is not configured, so tester data inspection and deletion are unavailable."
+          )
         )
       );
     }
@@ -81,7 +90,7 @@ export async function POST(request: Request) {
         email: body.email,
         userId: body.userId,
       });
-      return NextResponse.json(result);
+      return NextResponse.json(sanitizePrivateTesterDeleteResult(result));
     }
 
     const summary = await inspectPrivateTesterData({
@@ -89,7 +98,10 @@ export async function POST(request: Request) {
       userId: body.userId,
     });
 
-    return NextResponse.json({ dryRun: body.dryRun !== false, summary });
+    return NextResponse.json({
+      dryRun: body.dryRun !== false,
+      summary: sanitizePrivateTesterDataSummary(summary),
+    });
   } catch (error) {
     console.error("Private tester admin POST failed:", error);
     const message =
