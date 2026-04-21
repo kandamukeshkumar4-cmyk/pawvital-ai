@@ -39,6 +39,24 @@ describe("rate-limit helper", () => {
     });
   });
 
+  it("returns success when the Redis-backed limiter allows the request", async () => {
+    const { checkRateLimit } = await import("../src/lib/rate-limit");
+    const limiter = {
+      limit: jest.fn().mockResolvedValue({
+        success: true,
+        reset: Date.now() + 60_000,
+        remaining: 29,
+      }),
+    };
+
+    await expect(checkRateLimit(limiter as never, "user:allowed")).resolves.toEqual(
+      {
+        success: true,
+      }
+    );
+    expect(limiter.limit).toHaveBeenCalledWith("user:allowed");
+  });
+
   it("allows the same client again after the limiter window resets", async () => {
     jest.useFakeTimers().setSystemTime(new Date("2026-04-14T12:00:00.000Z"));
     const resetAt = Date.now() + 1_000;
@@ -143,17 +161,43 @@ describe("rate-limit helper", () => {
     expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("uses a trusted server-side user id before falling back to proxy IP headers", async () => {
+  it("prefers trusted user ids and the strongest proxy-derived IP header", async () => {
     const { getRateLimitId } = await import("../src/lib/rate-limit");
-    const ipRequest = new Request("http://localhost/api/test", {
+    const cfRequest = new Request("http://localhost/api/test", {
+      headers: {
+        "cf-connecting-ip": "192.0.2.10",
+        "x-real-ip": "198.51.100.8",
+        "x-forwarded-for": "203.0.113.4, 203.0.113.5",
+      },
+    });
+    const realIpRequest = new Request("http://localhost/api/test", {
+      headers: {
+        "x-real-ip": "198.51.100.8",
+        "x-forwarded-for": "203.0.113.4, 203.0.113.5",
+      },
+    });
+    const forwardedIpRequest = new Request("http://localhost/api/test", {
       headers: { "x-forwarded-for": "198.51.100.22, 203.0.113.5" },
     });
+
+    expect(getRateLimitId(cfRequest, "user-123")).toBe("user:user-123");
+    expect(getRateLimitId(cfRequest)).toBe("ip:192.0.2.10");
+    expect(getRateLimitId(realIpRequest)).toBe("ip:198.51.100.8");
+    expect(getRateLimitId(forwardedIpRequest)).toBe("ip:198.51.100.22");
+    expect(getRateLimitId(new Request("http://localhost/api/test"))).toBe(
+      "ip:anonymous"
+    );
+  });
+
+  it("ignores spoofed x-user-id headers when no trusted server identity is present", async () => {
+    const { getRateLimitId } = await import("../src/lib/rate-limit");
     const spoofedHeaderRequest = new Request("http://localhost/api/test", {
-      headers: { "x-user-id": "attacker-controlled", "x-real-ip": "203.0.113.7" },
+      headers: {
+        "x-user-id": "attacker-controlled",
+        "x-real-ip": "203.0.113.7",
+      },
     });
 
-    expect(getRateLimitId(ipRequest, "user-123")).toBe("user:user-123");
-    expect(getRateLimitId(ipRequest)).toBe("ip:198.51.100.22");
     expect(getRateLimitId(spoofedHeaderRequest)).toBe("ip:203.0.113.7");
   });
 });

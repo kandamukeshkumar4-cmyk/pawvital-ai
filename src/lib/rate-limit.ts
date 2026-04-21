@@ -27,7 +27,7 @@ const DEFAULT_FALLBACK_WINDOW_MS = 60_000;
 const DEFAULT_FALLBACK_LIMIT = 30;
 let lastRateLimitErrorLogAt = 0;
 
-type LocalFallbackConfig = {
+export type RateLimitFallbackConfig = {
   limit: number;
   scope: string;
   windowMs: number;
@@ -38,16 +38,24 @@ type LocalFallbackState = {
   reset: number;
 };
 
-const limiterFallbackConfigs = new WeakMap<object, LocalFallbackConfig>();
+const limiterFallbackConfigs = new WeakMap<object, RateLimitFallbackConfig>();
 const localFallbackState = new Map<string, LocalFallbackState>();
 
 function registerFallbackConfig<T extends object>(
   limiter: T | null,
-  config: LocalFallbackConfig
+  config: RateLimitFallbackConfig
 ): T | null {
   if (limiter) {
     limiterFallbackConfigs.set(limiter, config);
   }
+  return limiter;
+}
+
+export function __registerRateLimitFallbackForTests<T extends object>(
+  limiter: T,
+  config: RateLimitFallbackConfig
+): T {
+  registerFallbackConfig(limiter, config);
   return limiter;
 }
 
