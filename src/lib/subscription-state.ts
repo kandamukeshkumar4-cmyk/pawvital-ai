@@ -1,3 +1,4 @@
+import { shouldBypassPlanGateForPrivateTester } from "@/lib/private-tester-access";
 import type { SubscriptionPlanTier, SubscriptionRow, UserProfile } from "@/types";
 
 const DEFAULT_FREE_TIER_SYMPTOM_CHECKS_PER_MONTH = 5;
@@ -88,6 +89,28 @@ export function getPlanFromSubscription(
   return subscription.plan === "clinic" || subscription.plan === "pro"
     ? subscription.plan
     : "free";
+}
+
+export function getEffectivePlanForUser(input: {
+  email?: string | null;
+  subscription: SubscriptionRow | null;
+}): SubscriptionPlanTier {
+  if (shouldBypassPlanGateForPrivateTester(input.email)) {
+    return "pro";
+  }
+
+  return getPlanFromSubscription(input.subscription);
+}
+
+export function blocksAdditionalCheckoutForUser(input: {
+  email?: string | null;
+  status: string | null | undefined;
+}) {
+  if (shouldBypassPlanGateForPrivateTester(input.email)) {
+    return true;
+  }
+
+  return blocksAdditionalCheckout(input.status);
 }
 
 export function mapStripeStatusToProfileStatus(

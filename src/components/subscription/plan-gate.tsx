@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { shouldBypassPlanGateForPrivateTester } from "@/lib/private-tester-access";
 import { planMeetsRequired, useSubscriptionOptional } from "@/contexts/subscription-context";
+import { useAppStore } from "@/store/app-store";
 
 const UTM =
   "utm_source=app&utm_medium=plan_gate&utm_campaign=upgrade";
@@ -17,8 +19,12 @@ export default function PlanGate({ requiredPlan, children, fallback }: PlanGateP
   const sub = useSubscriptionOptional();
   const plan = sub?.plan ?? "free";
   const loading = sub?.loading ?? false;
+  const user = useAppStore((state) => state.user);
 
-  if (!isSupabaseConfigured) {
+  if (
+    !isSupabaseConfigured ||
+    shouldBypassPlanGateForPrivateTester(user?.email ?? null)
+  ) {
     return <>{children}</>;
   }
 

@@ -113,15 +113,22 @@ function buildSupabaseMock(options?: {
 }
 
 describe("POST /api/stripe/checkout", () => {
+  const originalEnv = process.env;
+
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env = originalEnv;
     mockCheckoutSessionCreate.mockResolvedValue({
       url: "https://checkout.stripe.com/test-session",
     });
     mockCustomerCreate.mockResolvedValue({ id: "cus_created" });
     mockCustomerList.mockResolvedValue({ data: [] });
     mockCustomerUpdate.mockResolvedValue({ id: "cus_existing" });
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
   });
 
   it("rejects unauthenticated checkout attempts", async () => {
@@ -194,6 +201,27 @@ describe("POST /api/stripe/checkout", () => {
 
     expect(response.status).toBe(409);
     expect(payload.code).toBe("ALREADY_SUBSCRIBED");
+    expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+  });
+
+  it("VET-1352 tester access smoke: blocks Stripe checkout when invite-only tester free access is already active", async () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_PRIVATE_TESTER_FREE_ACCESS: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "owner@example.com",
+    };
+
+    const { supabase } = buildSupabaseMock();
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { POST } = await import("@/app/api/stripe/checkout/route");
+    const response = await POST(makeRequest());
+    const payload = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(payload.code).toBe("TESTER_ACCESS_GRANTED");
+    expect(payload.free_access).toBe(true);
     expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
   });
 });

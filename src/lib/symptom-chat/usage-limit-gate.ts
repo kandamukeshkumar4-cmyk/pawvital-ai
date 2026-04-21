@@ -5,6 +5,7 @@ import {
   type SymptomCheckUsageGateResult,
 } from "@/lib/subscription-state";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { shouldBypassUsageLimitForPrivateTester } from "@/lib/private-tester-access";
 import { sanitizeSessionForClient } from "@/lib/symptom-chat/context-helpers";
 import type { TriageSession } from "@/lib/triage-engine";
 import type { SubscriptionRow } from "@/types";
@@ -20,7 +21,8 @@ const USAGE_LIMIT_BYPASS_PATTERNS = [
   /\b(can(?:not|'?t)\s+breathe|difficulty breathing|struggling to breathe|not breathing)\b/i,
   /\b(vomit(?:ing|ed)? blood|blood in vomit|coughing blood|bloody diarrhea)\b/i,
   /\b(seizure|collapsed?|collapse|unresponsive)\b/i,
-  /\b(hit by a car|car accident|distended abdomen|bloated abdomen|bloat)\b/i,
+  /\b(hit by a car|car accident|distended abdomen|bloated abdomen|bloat|swollen belly)\b/i,
+  /\b(trying to vomit but nothing (?:comes|is coming) up|retching with nothing coming up|unproductive retching)\b/i,
 ];
 
 export function hasConversationStarted(
@@ -163,6 +165,14 @@ export async function maybeBuildUsageLimitResponse(input: {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      return null;
+    }
+
+    if (
+      shouldBypassUsageLimitForPrivateTester(
+        typeof user.email === "string" ? user.email : null
+      )
+    ) {
       return null;
     }
 

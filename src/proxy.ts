@@ -7,6 +7,7 @@ import {
   isProtectedPath,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
+import { evaluatePrivateTesterAccess } from "@/lib/private-tester-access";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -86,6 +87,16 @@ export async function proxy(request: NextRequest) {
   // Redirect authenticated users away from auth pages
   if (isAuthPage && user) {
     return NextResponse.redirect(new URL(redirectTarget, request.url));
+  }
+
+  if (isProtected && user) {
+    const testerAccess = evaluatePrivateTesterAccess({
+      email: typeof user.email === "string" ? user.email : null,
+      pathname,
+    });
+    if (!testerAccess.allowed) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   return response;

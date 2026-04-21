@@ -1,9 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState } from "react";
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
-import { Server, Database, CheckCircle, AlertCircle, X, FileAudio } from "lucide-react";
 import type { AdminFeedbackLedgerDashboardData } from "@/lib/admin-feedback-ledger";
+import {
+  Server,
+  Database,
+  CheckCircle,
+  AlertCircle,
+  X,
+  FileAudio,
+  ShieldCheck,
+} from "lucide-react";
 import type { AdminShadowRolloutDashboardData } from "@/lib/admin-shadow-rollout";
 import type { ThresholdProposalDashboardData } from "@/lib/admin-threshold-proposals";
 import { ShadowRolloutControlPanel } from "@/components/admin/shadow-rollout-control-panel";
@@ -78,16 +87,25 @@ export default function AdminDashboardClient({
   return (
     <div>
       <div className="mb-6 flex justify-end">
-        <button
-          onClick={() => {
-            setIssueStatus("idle");
-            setIssueModalOpen(true);
-          }}
-          className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-        >
-          <AlertCircle className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
-          File Issue
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/tester-access"
+            className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <ShieldCheck className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+            Tester Access
+          </Link>
+          <button
+            onClick={() => {
+              setIssueStatus("idle");
+              setIssueModalOpen(true);
+            }}
+            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
+            <AlertCircle className="-ml-0.5 mr-1.5 h-5 w-5" aria-hidden="true" />
+            File Issue
+          </button>
+        </div>
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
