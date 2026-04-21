@@ -22,6 +22,7 @@ export { EvidenceChainSection } from "./evidence-chain";
 export { RecommendedTestsSection } from "./recommended-tests";
 export { HomeCareSection } from "./home-care";
 export { ActionStepsSection } from "./action-steps";
+export { OwnerSummarySection } from "./owner-summary";
 export { VetQuestionsSection } from "./vet-questions";
 export { VetHandoffSection } from "./vet-handoff";
 export { OutcomeFeedbackSection } from "./outcome-feedback";

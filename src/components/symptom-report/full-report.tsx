@@ -18,34 +18,43 @@ import { ActionStepsSection } from "./action-steps";
 import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
 import { BayesianDifferentials } from "./bayesian-differentials";
+import { OwnerSummarySection } from "./owner-summary";
 import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
-  buildVetHandoffPacket,
-  getDefaultClinicLinkExpiry,
-  isEscalatedReport,
-} from "@/lib/report-handoff";
+  buildReportPresentation,
+  type ShareExpiryOption,
+} from "./report-presentation";
 
 type CopyState = "idle" | "copied" | "error";
 
 interface FullReportProps {
   report: SymptomReport;
+  onOutcomeFeedback?: (data: {
+    symptomCheckId: string;
+    matchedExpectation: "yes" | "partly" | "no";
+    confirmedDiagnosis: string;
+    vetOutcome: string;
+    ownerNotes: string;
+  }) => void | Promise<void>;
   /** Public shared view: hide owner-only UI */
   readOnlyShared?: boolean;
 }
 
-type ExpiryOption = "24h" | "7d" | "30d";
-
 export function FullReport({
   report,
+  onOutcomeFeedback,
   readOnlyShared = false,
 }: FullReportProps) {
+  const presentation = buildReportPresentation(report);
   const handoffRef = useRef<HTMLDivElement | null>(null);
+  const feedbackRef = useRef<HTMLDivElement | null>(null);
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [expiry, setExpiry] = useState<ExpiryOption>(() =>
-    getDefaultClinicLinkExpiry(report),
+  const [expiry, setExpiry] = useState<ShareExpiryOption>(() =>
+    presentation.defaultExpiry,
   );
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
@@ -53,16 +62,16 @@ export function FullReport({
   const [shareError, setShareError] = useState<string | null>(null);
   const [linkCopyState, setLinkCopyState] = useState<"idle" | "copied">("idle");
   const [pdfBusy, setPdfBusy] = useState(false);
-  const escalatedReport = isEscalatedReport(report);
+  const actionToneClass =
+    presentation.tone === "emergency"
+      ? "border-red-600 text-red-700 hover:bg-red-50"
+      : presentation.tone === "urgent"
+        ? "border-orange-600 text-orange-700 hover:bg-orange-50"
+        : "border-emerald-600 text-emerald-700 hover:bg-emerald-50";
 
   const copyVetSummary = async () => {
     try {
-      await navigator.clipboard.writeText(
-        buildVetHandoffPacket({
-          ...report,
-          vet_handoff_summary: report.vet_handoff_summary ?? report.explanation,
-        }),
-      );
+      await navigator.clipboard.writeText(presentation.vetHandoffPacket);
       setCopyState("copied");
       window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
@@ -74,6 +83,10 @@ export function FullReport({
     !readOnlyShared &&
     Boolean(report.report_storage_id) &&
     isSupabaseConfigured;
+  const feedbackEnabled =
+    !readOnlyShared &&
+    Boolean(report.report_storage_id) &&
+    Boolean(report.outcome_feedback_enabled);
 
   const downloadPdf = async () => {
     if (!canExport || pdfBusy) return;
@@ -163,7 +176,7 @@ export function FullReport({
 
   const openShareModal = () => {
     setShareModalOpen(true);
-    setExpiry(getDefaultClinicLinkExpiry(report));
+    setExpiry(presentation.defaultExpiry);
     setShareError(null);
     setShareUrl(null);
     setShareExpiresAt(null);
@@ -176,34 +189,22 @@ export function FullReport({
         type="button"
         variant="outline"
         size="sm"
-        className={`w-full justify-center gap-1.5 sm:w-auto ${
-          escalatedReport
-            ? "border-red-600 text-red-700 hover:bg-red-50"
-            : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-        }`}
+        className={`w-full justify-center gap-1.5 sm:w-auto ${actionToneClass}`}
         onClick={() => void downloadPdf()}
         loading={pdfBusy}
       >
         <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">
-          {escalatedReport ? "Download Clinic PDF" : "Download PDF"}
-        </span>
+        <span>{presentation.downloadLabel}</span>
       </Button>
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className={`w-full justify-center sm:w-auto ${
-          escalatedReport
-            ? "border-red-600 text-red-700 hover:bg-red-50"
-            : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-        }`}
+        className={`w-full justify-center sm:w-auto ${actionToneClass}`}
         onClick={openShareModal}
       >
         <Share2 className="w-4 h-4" />
-        <span className="ml-1.5 hidden sm:inline">
-          {escalatedReport ? "Share Clinic Link" : "Share with Vet"}
-        </span>
+        <span className="ml-1.5">{presentation.shareButtonLabel}</span>
       </Button>
     </>
   ) : null;
@@ -211,7 +212,12 @@ export function FullReport({
   return (
     <div className="space-y-4 animate-fade-in sm:space-y-5">
       <SeverityHeader
+        banner={presentation.headerBanner}
+        recommendationLabel={presentation.recommendationLabel}
         report={report}
+        tone={presentation.tone}
+        urgencyBody={presentation.urgencyBody}
+        urgencyLabel={presentation.urgencyLabel}
         copyState={copyState}
         onCopyVetSummary={copyVetSummary}
         onJumpToHandoff={() =>
@@ -223,26 +229,64 @@ export function FullReport({
         headerActions={headerActions}
       />
 
+      <ActionStepsSection
+        actions={report.actions}
+        tone={presentation.tone}
+        actionTitle={presentation.actionTitle}
+        warningSigns={report.warning_signs}
+        warningTitle={presentation.warningTitle}
+      />
+
+      <OwnerSummarySection
+        canExport={canExport}
+        confidenceCalibration={
+          report.calibrated_confidence ?? report.confidence_calibration
+        }
+        explanation={report.explanation}
+        feedbackEnabled={feedbackEnabled}
+        limitations={presentation.limitations}
+        pdfBusy={pdfBusy}
+        recommendationLabel={presentation.recommendationLabel}
+        onCopyVetSummary={copyVetSummary}
+        onJumpToHandoff={
+          report.vet_handoff_summary
+            ? () =>
+                handoffRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+            : undefined
+        }
+        onJumpToFeedback={
+          !readOnlyShared
+            ? () =>
+                feedbackRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+            : undefined
+        }
+        onDownloadPdf={() => void downloadPdf()}
+        onOpenShareModal={openShareModal}
+        readOnlyShared={readOnlyShared}
+      />
+
       <Modal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        title={
-          escalatedReport ? "Share clinic link" : "Share with your veterinarian"
-        }
+        title={presentation.shareModalTitle}
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            {escalatedReport
-              ? "Create a read-only clinic link you can hand to intake staff or text to the veterinary team before you arrive."
-              : "Anyone with the link can view this report until it expires. Links are read-only."}
+            {presentation.shareDescription}
           </p>
           <label className="block text-sm font-medium text-gray-700">
             Link expires after
             <select
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               value={expiry}
-              onChange={(e) => setExpiry(e.target.value as ExpiryOption)}
+              onChange={(e) => setExpiry(e.target.value as ShareExpiryOption)}
               disabled={shareBusy}
             >
               <option value="24h">24 hours</option>
@@ -260,7 +304,7 @@ export function FullReport({
               loading={shareBusy}
               disabled={shareBusy}
             >
-              {escalatedReport ? "Create clinic link" : "Generate link"}
+              {presentation.sharePrimaryLabel}
             </Button>
             {shareUrl ? (
               <Button
@@ -313,7 +357,7 @@ export function FullReport({
 
       <div ref={handoffRef}>
         <VetHandoffSection
-          report={report}
+          intro={presentation.vetHandoffIntro}
           summary={report.vet_handoff_summary ?? ""}
           copyState={copyState}
           onCopy={copyVetSummary}
@@ -349,17 +393,31 @@ export function FullReport({
         <HomeCareSection items={report.home_care} />
       )}
 
-      <ActionStepsSection
-        actions={report.actions}
-        warningSigns={report.warning_signs}
-      />
-
       {report.vet_questions && report.vet_questions.length > 0 && (
         <VetQuestionsSection questions={report.vet_questions} />
       )}
 
       {!readOnlyShared ? (
-        <OutcomeFeedbackSection report={report} />
+        <div ref={feedbackRef}>
+          {feedbackEnabled ? (
+            <OutcomeFeedbackSection
+              report={report}
+            />
+          ) : (
+            <Card className="border border-dashed border-emerald-300 bg-emerald-50/70 p-4">
+              <div className="space-y-1.5">
+                <p className="text-sm font-semibold text-emerald-900">
+                  Feedback for this report
+                </p>
+                <p className="text-sm leading-6 text-emerald-900/80">
+                  Tester feedback tools are still being connected in a parallel
+                  lane. This placeholder marks where the private tester feedback
+                  widget will appear once it is ready.
+                </p>
+              </div>
+            </Card>
+          )}
+        </div>
       ) : null}
 
       {!readOnlyShared && report.system_observability && (
@@ -376,12 +434,12 @@ export function FullReport({
 
       <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
         <p className="text-xs text-gray-500 leading-relaxed">
-          <strong>Medical Disclaimer:</strong> This AI analysis is for
-          informational purposes only and is NOT a substitute for hands-on
-          physical examination, diagnostic testing, or professional veterinary
-          medical advice. Always consult a licensed veterinarian for diagnosis
-          and treatment decisions. In emergencies, contact your nearest
-          emergency veterinary hospital immediately.
+          <strong>Medical Disclaimer:</strong> PawVital is an informational
+          screening tool and cannot replace a hands-on veterinary exam,
+          diagnostic testing, or professional veterinary advice. A licensed
+          veterinarian should confirm the cause and safest care plan for your
+          dog. If your dog worsens, develops the warning signs above, or seems
+          unable to travel safely, contact a veterinary clinic right away.
         </p>
       </div>
     </div>

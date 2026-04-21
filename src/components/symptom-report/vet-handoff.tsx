@@ -2,26 +2,23 @@
 
 import { Stethoscope, Copy, CheckCheck } from "lucide-react";
 import { CollapsibleSection } from "./collapsible-section";
-import type { SymptomReport } from "./types";
-import { isEscalatedReport } from "@/lib/report-handoff";
 
 type CopyState = "idle" | "copied" | "error";
 
 interface VetHandoffSectionProps {
-  report: SymptomReport;
+  intro: string;
   summary: string;
   copyState: CopyState;
   onCopy: () => void | Promise<void>;
 }
 
 export function VetHandoffSection({
-  report,
+  intro,
   summary,
   copyState,
   onCopy,
 }: VetHandoffSectionProps) {
   if (!summary) return null;
-  const escalatedReport = isEscalatedReport(report);
 
   return (
     <CollapsibleSection
@@ -31,11 +28,7 @@ export function VetHandoffSection({
       defaultOpen={true}
     >
       <div className="space-y-3 mt-2">
-        <p className="text-sm text-gray-600">
-          {escalatedReport
-            ? "Front-desk ready summary for urgent intake or triage."
-            : "Quick summary to copy into a message or intake form for your veterinarian."}
-        </p>
+        <p className="text-sm text-gray-600">{intro}</p>
         <div className="rounded-lg border border-red-100 bg-red-50/60 p-4">
           <p className="text-sm leading-relaxed text-red-950 whitespace-pre-wrap">
             {summary}

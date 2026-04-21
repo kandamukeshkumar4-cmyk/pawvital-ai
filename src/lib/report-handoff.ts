@@ -28,6 +28,32 @@ export function getRecommendationLabel(report: SymptomReport): string {
   }
 }
 
+export function getUrgencyLevelLabel(report: SymptomReport): string {
+  switch (report.recommendation) {
+    case "emergency_vet":
+      return "Emergency care now";
+    case "vet_24h":
+      return "Same-day veterinary visit";
+    case "vet_48h":
+      return "Veterinary visit within 48 hours";
+    default:
+      return "Home monitoring for now";
+  }
+}
+
+export function getUrgencyLevelBody(report: SymptomReport): string {
+  switch (report.recommendation) {
+    case "emergency_vet":
+      return "Use the next-step cards below first, then bring or share the clinic handoff with the veterinary team.";
+    case "vet_24h":
+      return "Use the next-step cards below, then call or visit a clinic today and keep this report handy.";
+    case "vet_48h":
+      return "Follow the next-step cards below and arrange follow-up soon if the problem continues or gets worse.";
+    default:
+      return "Start with the next-step cards below and watch for the warning signs that would change this plan.";
+  }
+}
+
 function topDifferentials(report: SymptomReport): string[] {
   return (report.differential_diagnoses || [])
     .slice(0, 3)

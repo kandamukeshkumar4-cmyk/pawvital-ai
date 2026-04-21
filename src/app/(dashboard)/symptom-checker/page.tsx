@@ -232,6 +232,7 @@ export default function SymptomCheckerPage() {
   const [answeredCount, setAnsweredCount] = useState<number>(0);
   const [totalQuestions, setTotalQuestions] = useState<number>(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -254,6 +255,17 @@ export default function SymptomCheckerPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (!report) {
+      return;
+    }
+
+    reportRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [report]);
 
   const clearComposerImage = () => {
     setSelectedImage(null);
@@ -1076,7 +1088,11 @@ export default function SymptomCheckerPage() {
         )}
 
         {/* Full Report */}
-        {report && <FullReport report={report} />}
+        {report && (
+          <div ref={reportRef} className="scroll-mt-4">
+            <FullReport report={report} />
+          </div>
+        )}
       </div>
     </TesterOnboardingGate>
   );
