@@ -77,7 +77,7 @@ export function deleteSession(sessionId: string): void {
 
 // Cleanup expired sessions periodically
 if (typeof setInterval !== "undefined") {
-  setInterval(() => {
+  const cleanupTimer = setInterval(() => {
     const now = Date.now();
     for (const [id, session] of sessions) {
       if (now - session.lastActiveAt > SESSION_TTL_MS) {
@@ -85,4 +85,13 @@ if (typeof setInterval !== "undefined") {
       }
     }
   }, 60 * 60 * 1000); // Every hour
+
+  if (
+    typeof cleanupTimer === "object" &&
+    cleanupTimer !== null &&
+    "unref" in cleanupTimer &&
+    typeof cleanupTimer.unref === "function"
+  ) {
+    cleanupTimer.unref();
+  }
 }

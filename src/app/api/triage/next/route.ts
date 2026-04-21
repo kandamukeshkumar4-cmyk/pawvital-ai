@@ -7,10 +7,22 @@ const DEPRECATION_PAYLOAD = {
     "Use /api/ai/symptom-chat for active symptom-check conversations.",
 } as const;
 
-export async function GET() {
-  return NextResponse.json(DEPRECATION_PAYLOAD, { status: 410 });
+const DEPRECATION_HEADERS = {
+  "Cache-Control": "no-store",
+} as const;
+
+function buildRetiredRouteResponse() {
+  return NextResponse.json(DEPRECATION_PAYLOAD, {
+    status: 410,
+    headers: DEPRECATION_HEADERS,
+  });
 }
 
-export async function POST() {
-  return NextResponse.json(DEPRECATION_PAYLOAD, { status: 410 });
+// Ignore caller-controlled request data so this retired endpoint cannot proxy or bind sessions.
+export async function GET(_request: Request) {
+  return buildRetiredRouteResponse();
+}
+
+export async function POST(_request: Request) {
+  return buildRetiredRouteResponse();
 }
