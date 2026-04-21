@@ -9,6 +9,7 @@ import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
   getAuthFeedbackMessage,
+  getAuthActionErrorMessage,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
@@ -50,7 +51,12 @@ export default function LoginPage() {
       if (authError) throw authError;
       router.replace(redirectTarget);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to sign in";
+      console.error("Failed to sign in", err);
+      const message = getAuthActionErrorMessage(
+        err,
+        "login",
+        "We couldn't sign you in right now. Please try again."
+      );
       setError(message);
     } finally {
       setLoading(false);
