@@ -104,7 +104,36 @@ Use the severity rules below so every founder report uses the same launch bar.
 
 ## Blockers
 
-- 
+Add an entry here for every open `P0` or `P1`, and for any `P2` that should block additional invites until verified.
+
+Use this checklist for each blocker:
+
+- Severity: `P0`, `P1`, `P2`, or `P3`
+- Trigger: the exact failure that was observed
+- Evidence: case ID, issue link, failing route, or failing command output
+- Founder impact: what testers or founder operations could not complete safely
+- Required rerun: the exact smoke/test/build command needed before clearing the blocker
+- Owner: single DRI
+- Status: `open`, `mitigated`, or `verified`
+- Exit criterion: one sentence that defines when this blocker is truly closed
+
+Default blocker calls:
+
+- `P0` if emergency guidance is unsafe, sign-in breaks, the emergency report path fails, `/symptom-checker` shows a hydration or console error, or tester disable/delete controls fail.
+- `P1` if the core flow fails with a manual workaround, a non-emergency report fails, repeated-question handling breaks outside a high-risk session, or feedback/deletion follow-up needs manual recovery.
+- `P2` if trust/copy/admin friction is safe but should be fixed before widening the cohort.
+- `P3` if it is polish only and safe to defer.
+
+Blocker entry template:
+
+- Severity:
+- Trigger:
+- Evidence:
+- Founder impact:
+- Required rerun:
+- Owner:
+- Status:
+- Exit criterion:
 
 ## Final verification checklist
 
