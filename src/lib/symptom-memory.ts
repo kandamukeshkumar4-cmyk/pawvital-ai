@@ -293,11 +293,12 @@ export function buildNarrativeSnapshot(
   // The protected control state (answered_questions, unresolved_question_ids, etc.)
   // is the authoritative source of truth for question state.
   // MiniMax should summarize the narrative context, not the control state.
+  // We also avoid feeding the previous compressed summary back into the next
+  // compression pass. Re-summarizing summaries compounds drift over time, so
+  // each prompt is rebuilt from current deterministic/raw-ish state instead.
 
   return [
-    memory.compressed_summary
-      ? `Compressed case summary:\n${memory.compressed_summary}`
-      : "Compressed case summary: none yet",
+    `Stable case baseline:\n${buildStableCompressionBaseline(memory)}`,
     `Chief complaints: ${memory.chief_complaints.join(", ") || "none"}`,
     `Active focus symptoms: ${memory.active_focus_symptoms.join(", ") || "none"}`,
     factLines.length > 0
@@ -393,6 +394,9 @@ interface TurnMemoryUpdate {
   imageSymptoms?: string[];
   imageRedFlags?: string[];
   turnFocusSymptoms?: string[];
+  // Compatibility-only inputs. Narrative updates should not own question control
+  // state, but the route still passes these while that flow remains split across
+  // legacy helpers.
   nextQuestionId?: string | null;
   missingQuestionIds?: string[];
   visualEvidence?: VisionClinicalEvidence | null;
@@ -430,6 +434,33 @@ function summarizeFacts(
     .filter(([, value]) => value !== null && value !== undefined && value !== "")
     .slice(0, limit)
     .map(([key, value]) => `${key}: ${String(value)}`);
+}
+
+function buildStableCompressionBaseline(
+  memory: StructuredCaseMemory
+): string {
+  const factLines = summarizeFacts(memory.confirmed_facts, 10);
+  const sections = [
+    `Chief complaints: ${memory.chief_complaints.join(", ") || "none"}.`,
+    `Focus symptoms: ${memory.active_focus_symptoms.join(", ") || "none"}.`,
+    factLines.length > 0
+      ? `Confirmed facts: ${factLines.join("; ")}.`
+      : "Confirmed facts: none yet.",
+    memory.image_findings.length > 0
+      ? `Image findings: ${memory.image_findings.slice(0, 3).join("; ")}.`
+      : "",
+    memory.red_flag_notes.length > 0
+      ? `Red flag watch: ${memory.red_flag_notes.slice(0, 3).join("; ")}.`
+      : "",
+    memory.ambiguity_flags.length > 0
+      ? `Open ambiguities: ${memory.ambiguity_flags.slice(0, 4).join("; ")}.`
+      : "",
+    memory.timeline_notes.length > 0
+      ? `Recent timeline: ${memory.timeline_notes.slice(-2).join(" || ")}.`
+      : "",
+  ].filter(Boolean);
+
+  return sections.join(" ");
 }
 
 function buildTimelineLine(
@@ -711,102 +742,9 @@ export function buildCaseMemorySnapshot(
   messages: { role: "user" | "assistant"; content: string }[],
   latestUserMessage: string
 ): string {
-  const memory = ensureStructuredCaseMemory(session);
-  const factLines = summarizeFacts(memory.confirmed_facts, 14);
-  const recentTranscript = messages
-    .slice(-8)
-    .map((message, index) => {
-      const role = message.role === "user" ? "Owner" : "Assistant";
-      const compact = message.content.replace(/\s+/g, " ").trim().slice(0, 180);
-      return `${index + 1}. ${role}: ${compact}`;
-    });
-
-  return [
-    memory.compressed_summary
-      ? `Compressed case summary:\n${memory.compressed_summary}`
-      : "Compressed case summary: none yet",
-    `Chief complaints: ${memory.chief_complaints.join(", ") || "none"}`,
-    `Active focus symptoms: ${memory.active_focus_symptoms.join(", ") || "none"}`,
-    memory.unresolved_question_ids.length > 0
-      ? `Open question IDs: ${memory.unresolved_question_ids.join(", ")}`
-      : "Open question IDs: none",
-    factLines.length > 0
-      ? `Structured facts:\n- ${factLines.join("\n- ")}`
-      : "Structured facts: none yet",
-    memory.image_findings.length > 0
-      ? `Image findings:\n- ${memory.image_findings.slice(0, 5).join("\n- ")}`
-      : "Image findings: none",
-    memory.visual_evidence.length > 0
-      ? `Structured visual evidence:\n- ${memory.visual_evidence
-          .slice(-4)
-          .map(
-            (entry) =>
-              `${entry.domain} | ${entry.bodyRegion || "unknown region"} | ${entry.findings.join(", ") || "no findings"} | severity=${entry.severity} | confidence=${entry.confidence.toFixed(2)}`
-          )
-          .join("\n- ")}`
-      : "Structured visual evidence: none",
-    memory.consult_opinions.length > 0
-      ? `Consult opinions:\n- ${memory.consult_opinions
-          .slice(-3)
-          .map(
-            (entry) =>
-              `${entry.model} (${entry.mode}) confidence=${entry.confidence.toFixed(2)} | ${entry.summary}`
-          )
-          .join("\n- ")}`
-      : "Consult opinions: none",
-    memory.retrieval_evidence.length > 0
-      ? `Retrieved evidence:\n- ${memory.retrieval_evidence
-          .slice(-6)
-          .map((entry) => `${entry.title} | score=${entry.score.toFixed(2)} | ${entry.summary}`)
-          .join("\n- ")}`
-      : "Retrieved evidence: none",
-    memory.evidence_chain.length > 0
-      ? `Evidence chain:\n- ${memory.evidence_chain.slice(-6).join("\n- ")}`
-      : "Evidence chain: none",
-    memory.service_timeouts.length > 0
-      ? `Service timeouts:\n- ${memory.service_timeouts
-          .slice(-4)
-          .map((entry) => `${entry.service}:${entry.stage} (${entry.reason})`)
-          .join("\n- ")}`
-      : "Service timeouts: none",
-    // VET-706 / VET-718: Filter out internal telemetry entries from compression prompt.
-    // Telemetry entries (extraction, pending_recovery, compression, repeat_suppression, state_transition)
-    // are internal observability data and should not influence the compression prompt.
-    (() => {
-      const telemetryEventTypes = ["extraction", "pending_recovery", "compression", "repeat_suppression", "state_transition"];
-      const realServiceObservations = memory.service_observations.filter(
-        (entry) => !(entry.service === "async-review-service" && telemetryEventTypes.includes(entry.stage))
-      );
-      return realServiceObservations.length > 0
-        ? `Recent service telemetry:\n- ${realServiceObservations
-            .slice(-6)
-            .map(
-              (entry) =>
-                `${entry.service}:${entry.stage} ${entry.outcome} in ${entry.latencyMs}ms${entry.shadowMode ? " [shadow]" : ""}${entry.fallbackUsed ? " [fallback]" : ""}`
-            )
-            .join("\n- ")}`
-        : "Recent service telemetry: none";
-    })(),
-    memory.shadow_comparisons.length > 0
-      ? `Shadow comparisons:\n- ${memory.shadow_comparisons
-          .slice(-4)
-          .map(
-            (entry) =>
-              `${entry.service} used=${entry.usedStrategy} shadow=${entry.shadowStrategy} disagreements=${entry.disagreementCount} | ${entry.summary}`
-          )
-          .join("\n- ")}`
-      : "Shadow comparisons: none",
-    memory.ambiguity_flags.length > 0
-      ? `Ambiguity flags:\n- ${memory.ambiguity_flags.join("\n- ")}`
-      : "Ambiguity flags: none",
-    memory.timeline_notes.length > 0
-      ? `Timeline notes:\n- ${memory.timeline_notes.slice(-6).join("\n- ")}`
-      : "Timeline notes: none",
-    recentTranscript.length > 0
-      ? `Recent transcript:\n${recentTranscript.join("\n")}`
-      : "Recent transcript: none",
-    `Latest owner turn: ${latestUserMessage}`,
-  ].join("\n");
+  // Legacy alias retained for compatibility. Keep it narrative-only so future
+  // callers cannot accidentally inject protected question-control state.
+  return buildNarrativeSnapshot(session, messages, latestUserMessage);
 }
 
 export function shouldCompressCaseMemory(
@@ -827,6 +765,7 @@ export function shouldCompressCaseMemory(
     !memory.compressed_summary ||
     turnsSinceCompression >= 4 ||
     options.imageAnalyzed ||
+    options.changedAnswers.length > 0 ||
     options.changedSymptoms.length > 0 ||
     messages.length >= 8
   );
