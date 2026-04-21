@@ -49,19 +49,24 @@ describe("VET-1215 proxy auth guard", () => {
     );
   });
 
-  it("protects admin routes that previously fell through", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    });
+  it.each(["/admin", "/admin/cohort-launch"])(
+    "protects %s via the login redirect",
+    async (pathname) => {
+      mockGetUser.mockResolvedValue({
+        data: { user: null },
+        error: null,
+      });
 
-    const { proxy } = await loadProxyModule();
-    const response = await proxy(new NextRequest("https://app.pawvital.ai/admin"));
+      const { proxy } = await loadProxyModule();
+      const response = await proxy(
+        new NextRequest(`https://app.pawvital.ai${pathname}`)
+      );
 
-    expect(response.headers.get("location")).toBe(
-      "https://app.pawvital.ai/login?redirect=%2Fadmin"
-    );
-  });
+      expect(response.headers.get("location")).toBe(
+        `https://app.pawvital.ai/login?redirect=${encodeURIComponent(pathname)}`
+      );
+    }
+  );
 
   it("sends authenticated users to their intended destination from auth pages", async () => {
     mockGetUser.mockResolvedValue({
