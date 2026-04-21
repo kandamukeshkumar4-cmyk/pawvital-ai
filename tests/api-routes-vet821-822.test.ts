@@ -1184,6 +1184,41 @@ describe("GET /api/shared/[token]", () => {
     expect(payload.report.title).toBe(sampleReport.title);
   });
 
+  it("fails safely when the shared report payload is missing", async () => {
+    const { supabase } = buildSupabaseMock({
+      sharedReports: {
+        selectResult: {
+          data: {
+            check_id: validShareCheckId,
+            ai_response: null,
+            expires_at: futureExpiryIso,
+          },
+          error: null,
+        },
+      },
+      rpcResult: {
+        data: [
+          {
+            check_id: validShareCheckId,
+            ai_response: null,
+            expires_at: futureExpiryIso,
+          },
+        ],
+        error: null,
+      },
+    });
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { GET } = await import("../src/app/api/shared/[token]/route");
+    const response = await GET(makeGetRequest("http://localhost/api/shared/missing-payload"), {
+      params: Promise.resolve({ token: "missing-payload" }),
+    });
+    const payload = await readJson<{ error: string }>(response);
+
+    expect(response.status).toBe(502);
+    expect(payload.error).toContain("could not be loaded");
+  });
+
   it("returns 400 for an empty shared token", async () => {
     const { GET } = await import("../src/app/api/shared/[token]/route");
     const response = await GET(makeGetRequest("http://localhost/api/shared/"), {

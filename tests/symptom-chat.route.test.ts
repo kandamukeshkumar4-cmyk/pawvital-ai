@@ -8702,6 +8702,94 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
     });
 
+    it("renders real generated emergency report content when providers are available", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Emergency narrative verified",
+        })
+      );
+      mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+        JSON.stringify({
+          severity: "emergency",
+          recommendation: "emergency_vet",
+          title: "Acute respiratory distress",
+          explanation:
+            "Blue gums and labored breathing can indicate a life-threatening oxygen problem that needs emergency treatment now.",
+          differential_diagnoses: [
+            {
+              condition: "Acute respiratory compromise",
+              likelihood: "high",
+              description: "Immediate stabilization is required while the clinic looks for the cause.",
+            },
+          ],
+          clinical_notes: "Emergency respiratory stabilization required.",
+          recommended_tests: [],
+          home_care: [],
+          actions: ["Go to the nearest emergency veterinarian now."],
+          warning_signs: ["Blue or gray gums"],
+          vet_questions: ["What is causing the breathing crisis?"],
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBe("Acute respiratory distress");
+      expect(payload.report.explanation).toContain("life-threatening");
+      expect(payload.report.title).not.toContain("Demo");
+      expect(payload.report.report_mode).toBeUndefined();
+    });
+
+    it("renders real generated non-emergency report content when providers are available", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Non-emergency narrative verified",
+        })
+      );
+      mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+        JSON.stringify({
+          severity: "medium",
+          recommendation: "vet_48h",
+          title: "Acute gastrointestinal upset",
+          explanation:
+            "This pattern is more consistent with a real gastrointestinal concern than a demo placeholder and should guide a vet visit if it continues.",
+          differential_diagnoses: [
+            {
+              condition: "Gastroenteritis",
+              likelihood: "moderate",
+              description: "GI inflammation can cause vomiting and appetite changes without immediate collapse.",
+            },
+          ],
+          clinical_notes: "Monitor hydration and abdominal comfort.",
+          recommended_tests: [],
+          home_care: [],
+          actions: ["Offer small amounts of water."],
+          warning_signs: ["Repeated vomiting"],
+          vet_questions: ["Should we run stool or blood testing?"],
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBe("Acute gastrointestinal upset");
+      expect(payload.report.explanation).toContain("real gastrointestinal concern");
+      expect(payload.report.explanation).not.toContain("Demo mode");
+      expect(payload.report.report_mode).toBeUndefined();
+    });
+
     it("falls back to a fail-safe report when narrative generation fails", async () => {
       mockIsNvidiaConfigured.mockReturnValue(true);
       mockDiagnoseWithDeepSeek.mockRejectedValueOnce(
