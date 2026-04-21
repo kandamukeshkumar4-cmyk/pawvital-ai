@@ -3,7 +3,6 @@
 import * as React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import SymptomCheckerPage from "@/app/(dashboard)/symptom-checker/page";
-import TesterOnboardingGate from "@/components/tester-onboarding/tester-onboarding-gate";
 import { useAppStore } from "@/store/app-store";
 import {
   TESTER_ACKNOWLEDGEMENT_STORAGE_KEY,
@@ -11,42 +10,26 @@ import {
 } from "@/lib/tester-acknowledgement";
 import type { Pet, UserProfile } from "@/types";
 
-const mockUsePathname = jest.fn();
-
-jest.mock("next/navigation", () => ({
-  usePathname: () => mockUsePathname(),
-}));
-
 jest.mock("@/components/symptom-report", () => ({
   __esModule: true,
   FullReport: () => null,
 }));
 
-const TEST_PET: Pet = {
+const TEST_PET = {
   id: "pet-1",
   user_id: "user-1",
   name: "Buddy",
   breed: "Golden Retriever",
   species: "dog",
   age_years: 4,
-  age_months: 0,
   weight: 55,
-  weight_unit: "lbs",
-  gender: "male",
-  is_neutered: true,
   existing_conditions: [],
-  medications: [],
-  created_at: "2026-04-20T12:00:00.000Z",
-  updated_at: "2026-04-20T12:00:00.000Z",
-};
+} as Pet;
 
-const TEST_USER: UserProfile = {
+const TEST_USER = {
   id: "user-1",
   email: "tester@example.com",
-  full_name: "Tester",
-  subscription_status: "active",
-  created_at: "2026-04-20T12:00:00.000Z",
-};
+} as UserProfile;
 
 function seedAppStore() {
   useAppStore.setState((state) => ({
@@ -59,12 +42,13 @@ function seedAppStore() {
 }
 
 function renderSymptomChecker() {
-  return render(
-    React.createElement(
-      TesterOnboardingGate,
-      {},
-      React.createElement(SymptomCheckerPage)
-    )
+  return render(React.createElement(SymptomCheckerPage));
+}
+
+function acknowledgeBoundary() {
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Acknowledge and continue" })
   );
 }
 
@@ -72,8 +56,7 @@ describe("tester onboarding boundaries on the symptom checker", () => {
   beforeEach(() => {
     seedAppStore();
     localStorage.clear();
-    jest.resetAllMocks();
-    mockUsePathname.mockReturnValue("/symptom-checker");
+    jest.clearAllMocks();
     Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
       configurable: true,
       value: jest.fn(),
@@ -83,17 +66,24 @@ describe("tester onboarding boundaries on the symptom checker", () => {
   it("shows the first-use boundary screen, records acknowledgement, and skips it for returning users", async () => {
     const view = renderSymptomChecker();
 
-    expect(await screen.findByText("Before you use PawVital with Buddy")).toBeTruthy();
     expect(
-      (screen.getByRole("button", {
-        name: "Acknowledge and continue",
-      }) as HTMLButtonElement).disabled
+      await screen.findByText("Before you use PawVital with Buddy")
+    ).toBeTruthy();
+    expect(screen.getByText("Dog-only")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "PawVital gives urgency guidance, not diagnosis or treatment."
+      )
+    ).toBeTruthy();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Acknowledge and continue",
+        }) as HTMLButtonElement
+      ).disabled
     ).toBe(true);
 
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Acknowledge and continue" })
-    );
+    acknowledgeBoundary();
 
     expect(screen.getByText("Tell me what's going on with Buddy")).toBeTruthy();
 
@@ -128,11 +118,7 @@ describe("tester onboarding boundaries on the symptom checker", () => {
     global.fetch = fetchMock as unknown as typeof fetch;
 
     renderSymptomChecker();
-
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(
-      screen.getByRole("button", { name: "Acknowledge and continue" })
-    );
+    acknowledgeBoundary();
 
     fireEvent.change(
       screen.getByPlaceholderText(
@@ -148,7 +134,9 @@ describe("tester onboarding boundaries on the symptom checker", () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    expect(await screen.findByText(/Buddy may be having a medical emergency\./i)).toBeTruthy();
+    expect(
+      await screen.findByText(/Buddy may be having a medical emergency\./i)
+    ).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "Generate Emergency Report" })
     ).toBeTruthy();

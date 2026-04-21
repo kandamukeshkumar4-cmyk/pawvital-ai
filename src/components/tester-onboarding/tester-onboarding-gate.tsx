@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState } from "react";
 import Card from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import {
-  hasTesterConsent,
-  recordTesterConsent,
-  requiresTesterConsent,
-} from "@/lib/tester-consent";
+import { hasTesterConsent, recordTesterConsent } from "@/lib/tester-consent";
 import { useAppStore } from "@/store/app-store";
 import TesterBoundaryCard from "./tester-boundary-card";
 
@@ -16,40 +11,33 @@ interface TesterOnboardingGateProps {
   children: React.ReactNode;
 }
 
+function getConsentSubjectId(userId?: string | null): string {
+  if (typeof userId !== "string") {
+    return "anonymous";
+  }
+
+  const trimmedUserId = userId.trim();
+  return trimmedUserId ? `user:${trimmedUserId}` : "anonymous";
+}
+
 export default function TesterOnboardingGate({
   children,
 }: TesterOnboardingGateProps) {
-  const pathname = usePathname();
   const { activePet, user, userDataLoaded } = useAppStore();
-  const [ready, setReady] = useState(false);
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [acknowledgedSubjectId, setAcknowledgedSubjectId] = useState<
+    string | null
+  >(null);
 
-  const shouldGateRoute = requiresTesterConsent(pathname);
-
-  useEffect(() => {
-    if (!shouldGateRoute) {
-      setReady(true);
-      return;
-    }
-
-    if (isSupabaseConfigured && !userDataLoaded) {
-      setReady(false);
-      return;
-    }
-
-    setAcknowledged(hasTesterConsent(user?.id));
-    setReady(true);
-  }, [shouldGateRoute, user?.id, userDataLoaded]);
+  const consentSubjectId = getConsentSubjectId(user?.id);
+  const ready = !isSupabaseConfigured || userDataLoaded;
+  const acknowledged =
+    ready &&
+    (hasTesterConsent(user?.id) || acknowledgedSubjectId === consentSubjectId);
 
   const handleAcknowledge = () => {
     recordTesterConsent(user?.id);
-    setAcknowledged(true);
-    setReady(true);
+    setAcknowledgedSubjectId(consentSubjectId);
   };
-
-  if (!shouldGateRoute) {
-    return <>{children}</>;
-  }
 
   if (!ready) {
     return (

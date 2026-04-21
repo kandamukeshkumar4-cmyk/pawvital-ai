@@ -18,6 +18,7 @@ import {
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
+import TesterOnboardingGate from "@/components/tester-onboarding/tester-onboarding-gate";
 import {
   ProgressBar,
   StateBadge,
@@ -691,39 +692,40 @@ export default function SymptomCheckerPage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-              Veterinary Symptom Analyzer
-            </h1>
-            <Badge variant="info">
-              <Activity className="w-3 h-3 mr-1" />
-              Clinical Matrix AI
-            </Badge>
+    <TesterOnboardingGate>
+      <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+                Veterinary Symptom Analyzer
+              </h1>
+              <Badge variant="info">
+                <Activity className="w-3 h-3 mr-1" />
+                Clinical Matrix AI
+              </Badge>
+            </div>
+            <p className="text-gray-500 mt-1">
+              4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
+            </p>
           </div>
-          <p className="text-gray-500 mt-1">
-            4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
-          </p>
+          <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
+            {sessionStarted && (
+              <Button
+                variant="secondary"
+                onClick={startNewSession}
+                className="w-full flex-shrink-0 sm:w-auto"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                New Session
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
-          {sessionStarted && (
-            <Button
-              variant="secondary"
-              onClick={startNewSession}
-              className="w-full flex-shrink-0 sm:w-auto"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              New Session
-            </Button>
-          )}
-        </div>
-      </div>
 
         {/* Pre-session: Welcome + Quick Start */}
-        {!sessionStarted && !report && (
+        {!sessionStarted && (
           <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -1067,6 +1069,7 @@ export default function SymptomCheckerPage() {
 
         {/* Full Report */}
         {report && <FullReport report={report} />}
-    </div>
+      </div>
+    </TesterOnboardingGate>
   );
 }

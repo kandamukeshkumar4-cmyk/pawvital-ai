@@ -26,31 +26,31 @@ function createMemoryStorage(): Storage {
 }
 
 describe("tester acknowledgement storage", () => {
-  it("records a versioned acknowledgement for a signed-in tester", () => {
+  it("stores separate versioned acknowledgements for signed-in and anonymous testers", () => {
     const storage = createMemoryStorage();
-    const record = recordTesterAcknowledgement(
+    const userRecord = recordTesterAcknowledgement(
       "user-123",
       storage,
       new Date("2026-04-20T12:00:00.000Z")
     );
+    const anonymousRecord = recordTesterAcknowledgement(
+      null,
+      storage,
+      new Date("2026-04-20T12:05:00.000Z")
+    );
 
-    expect(record).toEqual({
+    expect(userRecord).toEqual({
       acceptedAt: "2026-04-20T12:00:00.000Z",
       subjectId: "user:user-123",
       userId: "user-123",
       version: TESTER_ACKNOWLEDGEMENT_VERSION,
     });
     expect(hasTesterAcknowledgement("user-123", storage)).toBe(true);
-    expect(getTesterAcknowledgement("user-123", storage)).toEqual(record);
-  });
-
-  it("keeps anonymous acknowledgement separate from a signed-in user", () => {
-    const storage = createMemoryStorage();
-
-    recordTesterAcknowledgement(null, storage);
-
+    expect(getTesterAcknowledgement("user-123", storage)).toEqual(userRecord);
     expect(hasTesterAcknowledgement(undefined, storage)).toBe(true);
-    expect(hasTesterAcknowledgement("user-123", storage)).toBe(false);
+    expect(getTesterAcknowledgement(undefined, storage)).toEqual(
+      anonymousRecord
+    );
   });
 
   it("ignores stale acknowledgement versions and asks the tester again", () => {

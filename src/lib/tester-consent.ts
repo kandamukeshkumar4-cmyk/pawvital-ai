@@ -8,7 +8,7 @@ export interface TesterConsentRecord {
   version: string;
 }
 
-type StoredConsents = Record<string, TesterConsentRecord>;
+type StoredConsents = Record<string, unknown>;
 type ReadStorage = Pick<Storage, "getItem">;
 type WriteStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -17,8 +17,8 @@ function normalizeUserId(userId?: string | null): string | null {
     return null;
   }
 
-  const trimmed = userId.trim();
-  return trimmed.length > 0 ? trimmed : null;
+  const trimmedUserId = userId.trim();
+  return trimmedUserId ? trimmedUserId : null;
 }
 
 function buildSubjectId(userId?: string | null): string {
@@ -26,11 +26,21 @@ function buildSubjectId(userId?: string | null): string {
   return normalizedUserId ? `user:${normalizedUserId}` : "anonymous";
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function getBrowserStorage(): Storage | null {
+function isTesterConsentRecord(value: unknown): value is TesterConsentRecord {
+  return (
+    isObject(value) &&
+    typeof value.acceptedAt === "string" &&
+    typeof value.subjectId === "string" &&
+    typeof value.version === "string" &&
+    (typeof value.userId === "string" || value.userId === null)
+  );
+}
+
+function getBrowserStorage(): WriteStorage | null {
   if (typeof window === "undefined") {
     return null;
   }
@@ -42,42 +52,15 @@ function getBrowserStorage(): Storage | null {
   }
 }
 
-function parseStoredConsents(rawValue: string | null): StoredConsents {
-  if (!rawValue) {
-    return {};
-  }
-
+function readStoredConsents(storage: ReadStorage): StoredConsents {
   try {
-    const parsed = JSON.parse(rawValue) as unknown;
-    if (!isRecord(parsed)) {
-      return {};
-    }
-
-    const entries = Object.entries(parsed).filter(([, value]) => {
-      if (!isRecord(value)) {
-        return false;
-      }
-
-      return (
-        typeof value.acceptedAt === "string" &&
-        typeof value.subjectId === "string" &&
-        typeof value.version === "string" &&
-        (typeof value.userId === "string" || value.userId === null)
-      );
-    });
-
-    return Object.fromEntries(entries) as StoredConsents;
+    const parsed = JSON.parse(
+      storage.getItem(TESTER_CONSENT_STORAGE_KEY) ?? "{}"
+    ) as unknown;
+    return isObject(parsed) ? parsed : {};
   } catch {
     return {};
   }
-}
-
-export function requiresTesterConsent(pathname?: string | null): boolean {
-  if (!pathname) {
-    return false;
-  }
-
-  return pathname === "/symptom-checker" || pathname.startsWith("/symptom-checker/");
 }
 
 export function getTesterConsent(
@@ -88,12 +71,8 @@ export function getTesterConsent(
     return null;
   }
 
-  const storedConsents = parseStoredConsents(
-    storage.getItem(TESTER_CONSENT_STORAGE_KEY)
-  );
-  const record = storedConsents[buildSubjectId(userId)];
-
-  if (!record) {
+  const record = readStoredConsents(storage)[buildSubjectId(userId)];
+  if (!isTesterConsentRecord(record)) {
     return null;
   }
 
@@ -116,10 +95,6 @@ export function recordTesterConsent(
     return null;
   }
 
-  const storedConsents = parseStoredConsents(
-    storage.getItem(TESTER_CONSENT_STORAGE_KEY)
-  );
-
   const record: TesterConsentRecord = {
     acceptedAt: now.toISOString(),
     subjectId: buildSubjectId(userId),
@@ -127,6 +102,7 @@ export function recordTesterConsent(
     version: TESTER_CONSENT_VERSION,
   };
 
+  const storedConsents = readStoredConsents(storage);
   storedConsents[record.subjectId] = record;
   storage.setItem(TESTER_CONSENT_STORAGE_KEY, JSON.stringify(storedConsents));
 

@@ -1,7 +1,6 @@
 "use client";
 
 import Sidebar from "@/components/dashboard/sidebar";
-import TesterOnboardingGate from "@/components/tester-onboarding/tester-onboarding-gate";
 import TopBar from "@/components/dashboard/top-bar";
 import PetOnboardingHost from "@/components/onboarding/pet-onboarding-host";
 import { SubscriptionProvider } from "@/contexts/subscription-context";
@@ -29,9 +28,7 @@ export default function DashboardLayout({
           }`}
         >
           <TopBar />
-          <main className="p-4 sm:p-6">
-            <TesterOnboardingGate>{children}</TesterOnboardingGate>
-          </main>
+          <main className="p-4 sm:p-6">{children}</main>
         </div>
       </div>
     </SubscriptionProvider>

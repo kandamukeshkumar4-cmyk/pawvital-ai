@@ -17,24 +17,23 @@ interface TesterBoundaryCardProps {
 }
 
 const CAN_DO_POINTS = [
-  "Help you understand urgency.",
+  "Highlight urgency.",
   "Help you prepare for a vet visit.",
-  "Summarize what you are seeing so you can share it with a veterinarian.",
+  "Summarize symptoms for a veterinarian.",
 ];
 
 const CANNOT_DO_POINTS = [
   "Diagnose your dog.",
   "Replace a veterinarian.",
-  "Prescribe treatment.",
+  "Prescribe treatment or home remedies.",
   "Guarantee an outcome.",
 ];
 
 const ACKNOWLEDGEMENT_POINTS = [
-  "This is private testing.",
-  "PawVital gives urgency guidance, not diagnosis.",
-  "I should not rely on PawVital as my only source of help in a real emergency.",
-  "My feedback may be reviewed to improve the product.",
-  "I can request data deletion.",
+  "This is a private dog-only test.",
+  "PawVital gives urgency guidance, not diagnosis or treatment.",
+  "Real emergencies still need immediate veterinary care.",
+  "Feedback may be reviewed, and data deletion can be requested.",
 ];
 
 export default function TesterBoundaryCard({
@@ -55,16 +54,8 @@ export default function TesterBoundaryCard({
         </h2>
         <div className="mt-3 max-w-3xl space-y-3 text-sm leading-6 text-gray-700 sm:text-base">
           <p>
-            PawVital helps you understand urgency and prepare for a vet visit.
-          </p>
-          <p>
-            It does not diagnose your dog, replace a veterinarian, prescribe
-            treatment, or guarantee an outcome.
-          </p>
-          <p>
-            If your dog is struggling to breathe, collapsed, bleeding heavily,
-            having repeated seizures, unable to urinate, or you think this is an
-            emergency, contact a veterinarian immediately.
+            PawVital helps you understand urgency and prepare for a vet visit
+            during private testing.
           </p>
         </div>
       </div>
@@ -141,8 +132,7 @@ export default function TesterBoundaryCard({
                   className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="text-sm font-medium text-blue-950">
-                  I understand these boundaries and want to continue private
-                  testing.
+                  I understand these boundaries and want to continue testing.
                 </span>
               </label>
             </div>
@@ -150,9 +140,7 @@ export default function TesterBoundaryCard({
         </section>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-500">
-            You can request data deletion at any time during private testing.
-          </p>
+          <p className="text-sm text-gray-500">You can request data deletion.</p>
           <Button disabled={!confirmed} onClick={onAcknowledge}>
             Acknowledge and continue
           </Button>
