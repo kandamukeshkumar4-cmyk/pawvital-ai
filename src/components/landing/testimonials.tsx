@@ -8,25 +8,25 @@ const testimonials = [
   {
     name: "Sarah M.",
     pet: "Cooper, Golden Retriever, 11 yrs",
-    text: "The AI asked me questions my regular vet would ask — onset, duration, severity. Within minutes I had a SOAP report showing likely osteoarthritis with 72% confidence. My vet confirmed it the next day.",
+    text: "The follow-up questions helped me organize Cooper's limp clearly before I called my vet. The urgency guidance made it much easier to explain what had changed and why I was concerned.",
     rating: 5,
   },
   {
     name: "David K.",
     pet: "Luna, Boxer Mix, 6 yrs",
-    text: "I uploaded a photo of a skin patch on Luna's ear and PawVital matched it to similar canine cases in seconds. It flagged a same-day skin check and gave my vet a much clearer starting point.",
+    text: "I uploaded a photo of a skin patch on Luna's ear and PawVital helped me describe it more clearly. The same-day recommendation gave my vet a much cleaner starting point.",
     rating: 5,
   },
   {
     name: "Michelle T.",
     pet: "Buddy, Beagle Mix, 13 yrs",
-    text: "The health timeline let me track Buddy's joint mobility over three months. When I showed my vet the trend data, she said it was more detailed than most owners ever provide. The vet handoff summary is perfect.",
+    text: "The health timeline let me track Buddy's mobility over three months. When I showed the trend data to my vet, it helped me explain the pattern much more clearly.",
     rating: 5,
   },
   {
     name: "James R.",
     pet: "Max, Dachshund, 8 yrs",
-    text: "PawVital flagged Max's back pain as high-risk because of his breed — Dachshunds are 10x more likely to get IVDD. That breed-specific warning got us to the vet faster. Turned out to be early-stage IVDD.",
+    text: "PawVital reminded me that Max's breed can make back pain more urgent. That context nudged me to call my vet sooner instead of waiting to see if it passed.",
     rating: 5,
   },
 ];
@@ -45,10 +45,11 @@ export default function Testimonials() {
           transition={{ duration: 0.5 }}
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-            Trusted by Dog Parents Who Want Real Answers
+            Built for Dog Owners Who Want Clearer Next Steps
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            See how PawVital is helping dog owners make better decisions.
+            See how PawVital helps dog owners organize symptoms and prepare for
+            veterinary care.
           </p>
         </motion.div>
 

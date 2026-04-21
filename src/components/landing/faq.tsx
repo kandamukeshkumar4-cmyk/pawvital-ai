@@ -67,19 +67,19 @@ export default function Faq() {
         // Fallback FAQ data if JSON fails to load
         setFaqItems([
           {
-            question: "Is this a replacement for a vet?",
+            question: "Is this a replacement for a veterinarian?",
             answer:
-              "No. PawVital AI is a triage tool that helps you understand symptoms and decide whether a vet visit is needed. Always consult your veterinarian for medical decisions.",
+              "No. PawVital helps dog owners understand urgency and prepare for a vet visit. It is not a diagnosis and it does not replace a veterinarian. If you think your dog is having an emergency, contact a veterinarian immediately.",
           },
           {
-            question: "What breeds do you support?",
+            question: "What dogs do you support?",
             answer:
               "PawVital currently supports dogs only. Breed-aware guidance is limited to the validated canine scope documented in the current clinical audit.",
           },
           {
-            question: "How does the AI work?",
+            question: "How does PawVital work?",
             answer:
-              "PawVital uses a deterministic canine clinical matrix combined with AI-supported retrieval from veterinary manuals, curated clinical cases, and reference imagery.",
+              "PawVital uses a deterministic canine clinical matrix with supportive reference retrieval to provide urgency guidance, symptom organization, and a vet handoff summary.",
           },
         ]);
       });
@@ -98,7 +98,7 @@ export default function Faq() {
             Frequently Asked Questions
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Everything you need to know about PawVital AI.
+            Questions about PawVital&apos;s dog-only symptom checker.
           </p>
         </motion.div>
 

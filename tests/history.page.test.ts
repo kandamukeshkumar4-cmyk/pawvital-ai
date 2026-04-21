@@ -18,7 +18,7 @@ jest.mock("@/lib/supabase", () => ({
 }));
 
 jest.mock("@/components/symptom-report", () => {
-  const React = require("react");
+  const React = jest.requireActual("react") as typeof import("react");
   const icon = (props: Record<string, unknown>) =>
     React.createElement("svg", props);
 

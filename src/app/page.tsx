@@ -12,11 +12,11 @@ import Footer from "@/components/landing/footer";
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "PawVital AI",
+  name: "PawVital",
   applicationCategory: "HealthApplication",
   operatingSystem: "Web",
   description:
-    "AI-powered dog symptom checker with evidence-based canine triage, breed-aware guidance, and vet-ready reports.",
+    "Dog symptom triage support with evidence-based canine urgency guidance and vet-ready handoff summaries.",
   offers: {
     "@type": "Offer",
     price: "0",

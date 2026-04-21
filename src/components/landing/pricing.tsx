@@ -7,18 +7,17 @@ import Link from "next/link";
 import Button from "@/components/ui/button";
 
 const freeFeatures = [
-  "Basic symptom checks (3/month)",
-  "General health advice",
+  "Basic dog symptom checks (3/month)",
+  "Urgency guidance",
   "Single dog profile",
 ];
 
 const premiumFeatures = [
-  "Unlimited AI symptom consultations",
-  "Evidence-based SOAP reports",
-  "Vision analysis (photo upload)",
-  "Breed-specific disease analysis",
-  "Health timeline & trends",
+  "More dog symptom checks",
   "Vet handoff summaries",
+  "Photo support for visible issues",
+  "Breed-aware canine context",
+  "Health timeline & trends",
   "Multi-dog profiles",
   "Priority support",
 ];
@@ -40,7 +39,7 @@ export default function Pricing() {
             Simple, Transparent Pricing
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Start free. Upgrade when you need clinical-grade analysis.
+            Start free. Upgrade when you need more dog symptom-triage support.
           </p>
         </motion.div>
 
@@ -61,7 +60,7 @@ export default function Pricing() {
                 <span className="text-gray-500">/month</span>
               </div>
               <p className="mt-2 text-sm text-gray-500">
-                Basic symptom checks to get started.
+                Basic dog symptom checks to get started.
               </p>
             </div>
 

@@ -6,22 +6,22 @@ import { motion, useInView } from "framer-motion";
 
 const rows = [
   {
-    feature: "Evidence-based diagnosis",
-    pawvital: "Merck + WAVD + 10K cases",
+    feature: "Urgency guidance",
+    pawvital: "Dog-only triage support",
     generic: "Search engine results",
     pawvitalStatus: "check",
     genericStatus: "x",
   },
   {
-    feature: "Breed-specific analysis",
-    pawvital: "Canine breed risk modifiers",
+    feature: "Breed-aware context",
+    pawvital: "Validated canine context",
     generic: "One-size-fits-all",
     pawvitalStatus: "check",
     genericStatus: "x",
   },
   {
-    feature: "Vision analysis",
-    pawvital: "3-tier AI pipeline",
+    feature: "Photo context support",
+    pawvital: "Guarded image review",
     generic: "No image support",
     pawvitalStatus: "check",
     genericStatus: "x",
@@ -35,7 +35,7 @@ const rows = [
   },
   {
     feature: "Vet handoff report",
-    pawvital: "SOAP format",
+    pawvital: "Shareable summary",
     generic: "None",
     pawvitalStatus: "check",
     genericStatus: "x",
@@ -86,7 +86,7 @@ export default function ComparisonTable() {
             PawVital vs Generic Symptom Apps
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Clinical-grade triage built on real veterinary data — not search
+            Safety-first dog symptom triage with clearer next steps, not search
             engine shortcuts.
           </p>
         </motion.div>
@@ -103,7 +103,7 @@ export default function ComparisonTable() {
               <div className="grid grid-cols-3 gap-0 border-b border-gray-200 text-sm font-semibold">
                 <div className="px-4 py-4 text-gray-500 sm:px-6">Feature</div>
                 <div className="bg-emerald-50 px-4 py-4 text-center text-emerald-700 sm:px-6">
-                  PawVital AI
+                  PawVital
                 </div>
                 <div className="px-4 py-4 text-center text-gray-500 sm:px-6">
                   Generic Apps

@@ -68,7 +68,10 @@ export default function LoginPage() {
             <span className="text-2xl font-bold text-gray-900">PawVital AI</span>
           </Link>
           <h1 className="mt-6 text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="mt-2 text-gray-600">Sign in to check on your pet&apos;s wellness</p>
+          <p className="mt-2 text-gray-600">
+            Sign in to continue your dog&apos;s symptom checks and vet handoff
+            summaries
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
