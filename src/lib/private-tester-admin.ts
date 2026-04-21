@@ -129,6 +129,34 @@ function asString(value: unknown) {
     : null;
 }
 
+function isMissingRelationError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code === "42P01") {
+    return true;
+  }
+
+  const message = typeof error.message === "string" ? error.message : "";
+  return (
+    /does not exist/i.test(message) ||
+    /schema cache/i.test(message) ||
+    /could not find the table/i.test(message)
+  );
+}
+
+function formatSupabaseError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) {
+    return "";
+  }
+
+  return [error.code, error.message]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean)
+    .join(":");
+}
+
 function isBannedUntilActive(value: unknown) {
   const bannedUntil = asString(value);
   if (!bannedUntil) {
@@ -381,7 +409,11 @@ async function countRows(
     .eq(column, value);
 
   if (error) {
-    throw new Error(`COUNT_FAILED:${table}:${error.message}`);
+    if (isMissingRelationError(error)) {
+      return 0;
+    }
+
+    throw new Error(`COUNT_FAILED:${table}:${formatSupabaseError(error)}`);
   }
 
   return count ?? 0;
@@ -414,7 +446,23 @@ async function loadRelatedSymptomData(
     .in("pet_id", petIds);
 
   if (symptomChecksError) {
-    throw new Error(`COUNT_FAILED:symptom_checks:${symptomChecksError.message}`);
+    if (isMissingRelationError(symptomChecksError)) {
+      return {
+        counts: {
+          caseOutcomes: 0,
+          negativeFeedbackEntries: 0,
+          outcomeFeedbackEntries: 0,
+          sharedReports: 0,
+          symptomChecks: 0,
+          thresholdProposals: 0,
+        },
+        recentCases: [] as PrivateTesterRecentCase[],
+      };
+    }
+
+    throw new Error(
+      `COUNT_FAILED:symptom_checks:${formatSupabaseError(symptomChecksError)}`
+    );
   }
 
   const checkIds = (symptomChecks ?? [])
@@ -467,25 +515,49 @@ async function loadRelatedSymptomData(
   ] = counts;
 
   if (caseOutcomes.error) {
-    throw new Error(`COUNT_FAILED:case_outcomes:${caseOutcomes.error.message}`);
+    if (isMissingRelationError(caseOutcomes.error)) {
+      caseOutcomes.count = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:case_outcomes:${formatSupabaseError(caseOutcomes.error)}`
+      );
+    }
   }
   if (outcomeFeedbackEntries.error) {
-    throw new Error(
-      `COUNT_FAILED:outcome_feedback_entries:${outcomeFeedbackEntries.error.message}`
-    );
+    if (isMissingRelationError(outcomeFeedbackEntries.error)) {
+      outcomeFeedbackEntries.count = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:outcome_feedback_entries:${formatSupabaseError(outcomeFeedbackEntries.error)}`
+      );
+    }
   }
   if (sharedReports.error) {
-    throw new Error(`COUNT_FAILED:shared_reports:${sharedReports.error.message}`);
+    if (isMissingRelationError(sharedReports.error)) {
+      sharedReports.count = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:shared_reports:${formatSupabaseError(sharedReports.error)}`
+      );
+    }
   }
   if (thresholdProposals.error) {
-    throw new Error(
-      `COUNT_FAILED:threshold_proposals:${thresholdProposals.error.message}`
-    );
+    if (isMissingRelationError(thresholdProposals.error)) {
+      thresholdProposals.count = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:threshold_proposals:${formatSupabaseError(thresholdProposals.error)}`
+      );
+    }
   }
   if (feedbackEntries.error) {
-    throw new Error(
-      `COUNT_FAILED:outcome_feedback_entries:${feedbackEntries.error.message}`
-    );
+    if (isMissingRelationError(feedbackEntries.error)) {
+      feedbackEntries.data = [];
+    } else {
+      throw new Error(
+        `COUNT_FAILED:outcome_feedback_entries:${formatSupabaseError(feedbackEntries.error)}`
+      );
+    }
   }
 
   const flaggedCheckIds = new Set(
