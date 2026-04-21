@@ -5,6 +5,7 @@ import {
   deletePrivateTesterData,
   inspectPrivateTesterData,
   listPrivateTesterSummaries,
+  updatePrivateTesterAdminState,
 } from "@/lib/private-tester-admin";
 import {
   sanitizePrivateTesterDashboardData,
@@ -16,9 +17,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface PostBody {
-  action?: "inspect" | "delete";
+  action?:
+    | "inspect"
+    | "delete"
+    | "disable_access"
+    | "restore_access"
+    | "mark_deletion"
+    | "clear_deletion_mark";
   dryRun?: boolean;
   email?: string | null;
+  note?: string | null;
   userId?: string | null;
 }
 
@@ -28,14 +36,14 @@ async function requireAdmin() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  return null;
+  return adminContext;
 }
 
 export async function GET() {
   try {
-    const unauthorized = await requireAdmin();
-    if (unauthorized) {
-      return unauthorized;
+    const adminContext = await requireAdmin();
+    if (adminContext instanceof NextResponse) {
+      return adminContext;
     }
 
     return NextResponse.json(
@@ -65,9 +73,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const unauthorized = await requireAdmin();
-    if (unauthorized) {
-      return unauthorized;
+    const adminContext = await requireAdmin();
+    if (adminContext instanceof NextResponse) {
+      return adminContext;
     }
 
     let body: PostBody;
@@ -86,11 +94,34 @@ export async function POST(request: Request) {
 
     if (body.action === "delete") {
       const result = await deletePrivateTesterData({
+        actorEmail: adminContext.email,
         dryRun: body.dryRun,
         email: body.email,
+        note: body.note,
         userId: body.userId,
       });
       return NextResponse.json(sanitizePrivateTesterDeleteResult(result));
+    }
+
+    if (
+      body.action === "disable_access" ||
+      body.action === "restore_access" ||
+      body.action === "mark_deletion" ||
+      body.action === "clear_deletion_mark"
+    ) {
+      const summary = await updatePrivateTesterAdminState({
+        action: body.action,
+        actorEmail: adminContext.email,
+        email: body.email,
+        note: body.note,
+        userId: body.userId,
+      });
+
+      return NextResponse.json({
+        action: body.action,
+        dryRun: false,
+        summary: sanitizePrivateTesterDataSummary(summary),
+      });
     }
 
     const summary = await inspectPrivateTesterData({

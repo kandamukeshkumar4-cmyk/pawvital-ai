@@ -5,6 +5,8 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ClipboardList,
+  Download,
+  FileJson,
   ShieldBan,
   ShieldCheck,
   Trash2,
@@ -37,8 +39,19 @@ function renderEnvValue(values: string[]) {
   return values.length > 0 ? values.join(", ") : "(empty)";
 }
 
+function formatWhen(value: string | null) {
+  if (!value) {
+    return "not recorded";
+  }
+
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
 function statusTone(tester: PrivateTesterDataSummary) {
-  if (tester.access.blocked) {
+  if (tester.adminState.accessDisabled || tester.access.blocked) {
     return "bg-red-100 text-red-800";
   }
 
@@ -61,13 +74,43 @@ function accessStatusTone(access: PrivateTesterDataSummary["access"]) {
   return "bg-amber-100 text-amber-800";
 }
 
+function buildBusyKey(email: string, action: string) {
+  return `${action}:${email}`;
+}
+
+function downloadSafeSummary(tester: PrivateTesterDataSummary) {
+  const safeSlug = (tester.user.email ?? tester.user.id)
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+  const blob = new Blob(
+    [
+      JSON.stringify(
+        {
+          exportedAt: new Date().toISOString(),
+          tester,
+        },
+        null,
+        2
+      ),
+    ],
+    { type: "application/json" }
+  );
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${safeSlug || "private-tester"}-safe-summary.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function TesterAccessDashboardClient({
   initialData,
 }: {
   initialData: PrivateTesterDashboardData;
 }) {
   const [dashboard, setDashboard] = useState(initialData);
-  const [busyEmail, setBusyEmail] = useState<string | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -86,8 +129,61 @@ export default function TesterAccessDashboardClient({
     setDashboard(payload);
   }
 
+  async function runAdminAction(
+    email: string,
+    action:
+      | "disable_access"
+      | "restore_access"
+      | "mark_deletion"
+      | "clear_deletion_mark"
+  ) {
+    const nextBusyKey = buildBusyKey(email, action);
+    setBusyKey(nextBusyKey);
+    setMessage(null);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch("/api/admin/private-tester", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action,
+          email,
+        }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        summary?: PrivateTesterDataSummary;
+      };
+
+      if (!response.ok || !payload.summary) {
+        throw new Error(payload.error || "Admin update failed");
+      }
+
+      await refreshDashboard();
+
+      const actionMessage = {
+        clear_deletion_mark: `Cleared deletion-request marker for ${email}.`,
+        disable_access: `Disabled sign-in access for ${email}.`,
+        mark_deletion: `Marked ${email} for deletion follow-up.`,
+        restore_access: `Restored sign-in access for ${email}.`,
+      } satisfies Record<typeof action, string>;
+
+      setMessage(actionMessage[action]);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Tester admin update failed"
+      );
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   async function runDelete(email: string, dryRun: boolean) {
-    setBusyEmail(email);
+    const nextBusyKey = buildBusyKey(email, dryRun ? "dry_run_delete" : "delete");
+    setBusyKey(nextBusyKey);
     setMessage(null);
     setErrorMessage(null);
 
@@ -127,7 +223,7 @@ export default function TesterAccessDashboardClient({
         error instanceof Error ? error.message : "Tester deletion failed"
       );
     } finally {
-      setBusyEmail(null);
+      setBusyKey(null);
     }
   }
 
@@ -154,8 +250,9 @@ export default function TesterAccessDashboardClient({
             Tester Access Controls
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-gray-600">
-            Invite-only mode, free-access behavior, tester data inspection, and
-            deletion runbook in one place for the private tester release.
+            Invite-only mode, real auth disablement, deletion markers, safe
+            summary export, and data deletion controls for the private tester
+            release.
           </p>
         </div>
         <Link
@@ -184,7 +281,7 @@ export default function TesterAccessDashboardClient({
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <UserRoundCheck className="h-5 w-5 text-emerald-600" />
@@ -216,6 +313,34 @@ export default function TesterAccessDashboardClient({
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <ShieldBan className="h-5 w-5 text-red-600" />
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                Auth Disabled
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">
+                {dashboard.summary.authAccessDisabled}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <FileJson className="h-5 w-5 text-amber-600" />
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                Deletion Requested
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-gray-900">
+                {dashboard.summary.deletionRequested}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <ShieldBan className="h-5 w-5 text-rose-600" />
             <div>
               <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
                 Blocked Testers
@@ -250,9 +375,9 @@ export default function TesterAccessDashboardClient({
               Current Private Tester Config
             </h2>
             <p className="text-sm text-gray-600">
-              The private tester release is controlled by environment-backed
-              allow and block lists. Free access stays on only for invited,
-              non-blocked testers.
+              Environment-backed allow/block lists still govern invite scope.
+              Auth disablement and deletion-request markers add a second founder
+              control layer without exposing raw tester content.
             </p>
           </div>
         </div>
@@ -423,12 +548,22 @@ PRIVATE_TESTER_BLOCKED_EMAILS=${renderEnvValue(removePlan.blockedEmails)}`}
                         tester
                       )}`}
                     >
-                      {tester.access.blocked
+                      {tester.adminState.accessDisabled || tester.access.blocked
                         ? "Blocked"
                         : tester.access.allowed
                           ? "Invited"
                           : "Not Invited"}
                     </span>
+                    {tester.adminState.accessDisabled ? (
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
+                        Auth disabled
+                      </span>
+                    ) : null}
+                    {tester.adminState.deletionRequested ? (
+                      <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                        Deletion requested
+                      </span>
+                    ) : null}
                     {tester.access.freeAccess ? (
                       <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">
                         Free access
@@ -444,8 +579,73 @@ PRIVATE_TESTER_BLOCKED_EMAILS=${renderEnvValue(removePlan.blockedEmails)}`}
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
+                    onClick={() => downloadSafeSummary(tester)}
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    Export Safe Summary
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      runAdminAction(
+                        email,
+                        tester.adminState.accessDisabled
+                          ? "restore_access"
+                          : "disable_access"
+                      )
+                    }
+                    disabled={
+                      !email ||
+                      busyKey ===
+                        buildBusyKey(
+                          email,
+                          tester.adminState.accessDisabled
+                            ? "restore_access"
+                            : "disable_access"
+                        )
+                    }
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    <ShieldBan className="h-4 w-4" />
+                    {tester.adminState.accessDisabled
+                      ? "Restore Access"
+                      : "Disable Access"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      runAdminAction(
+                        email,
+                        tester.adminState.deletionRequested
+                          ? "clear_deletion_mark"
+                          : "mark_deletion"
+                      )
+                    }
+                    disabled={
+                      !email ||
+                      busyKey ===
+                        buildBusyKey(
+                          email,
+                          tester.adminState.deletionRequested
+                            ? "clear_deletion_mark"
+                            : "mark_deletion"
+                        )
+                    }
+                    className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    <FileJson className="h-4 w-4" />
+                    {tester.adminState.deletionRequested
+                      ? "Clear Deletion Mark"
+                      : "Mark for Deletion"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => runDelete(email, true)}
-                    disabled={busyEmail === email}
+                    disabled={
+                      !email ||
+                      busyKey === buildBusyKey(email, "dry_run_delete")
+                    }
                     className="inline-flex items-center rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
                   >
                     Dry-Run Delete
@@ -453,7 +653,7 @@ PRIVATE_TESTER_BLOCKED_EMAILS=${renderEnvValue(removePlan.blockedEmails)}`}
                   <button
                     type="button"
                     onClick={() => runDelete(email, false)}
-                    disabled={busyEmail === email}
+                    disabled={!email || busyKey === buildBusyKey(email, "delete")}
                     className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -462,7 +662,7 @@ PRIVATE_TESTER_BLOCKED_EMAILS=${renderEnvValue(removePlan.blockedEmails)}`}
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-4">
+              <div className="mt-5 grid gap-4 lg:grid-cols-6">
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
                     Symptom Checks
@@ -495,9 +695,69 @@ PRIVATE_TESTER_BLOCKED_EMAILS=${renderEnvValue(removePlan.blockedEmails)}`}
                     {tester.counts.pets}
                   </p>
                 </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                    Auth Access
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">
+                    {tester.adminState.accessDisabled ? "Disabled" : "Active"}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formatWhen(tester.adminState.accessDisabledAt)}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                    Deletion Status
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-gray-900">
+                    {tester.adminState.deletionRequested ? "Marked" : "Clear"}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {formatWhen(tester.adminState.deletionRequestedAt)}
+                  </p>
+                </div>
               </div>
 
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                <div className="rounded-2xl border border-gray-200 p-4">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Founder Control Audit
+                  </h3>
+                  <p className="mt-2 text-sm text-gray-600">
+                    Real auth disablement and deletion markers are stored in
+                    admin-only metadata. The safe export uses the sanitized
+                    tester summary shown on this page.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {tester.adminState.auditLog.length > 0 ? (
+                      tester.adminState.auditLog.map((event) => (
+                        <div
+                          key={`${tester.user.id}-${event.action}-${event.at}`}
+                          className="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700"
+                        >
+                          <p className="font-semibold text-slate-900">
+                            {event.action}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {formatWhen(event.at)}
+                            {event.actorEmail ? ` • ${event.actorEmail}` : ""}
+                          </p>
+                          {event.note ? (
+                            <p className="mt-2 text-sm text-slate-700">
+                              {event.note}
+                            </p>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        No founder actions recorded for this tester yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="rounded-2xl border border-gray-200 p-4">
                   <h3 className="text-sm font-semibold text-gray-900">
                     Recent Tester Cases
@@ -543,11 +803,12 @@ PRIVATE_TESTER_BLOCKED_EMAILS=${renderEnvValue(removePlan.blockedEmails)}`}
 
                 <div className="rounded-2xl border border-gray-200 p-4">
                   <h3 className="text-sm font-semibold text-gray-900">
-                    Access Control Snippets
+                    Invite Env Control Snippets
                   </h3>
                   <p className="mt-2 text-sm text-gray-600">
                     Use these values when you need to disable, restore, or fully
-                    remove this tester from the invite-only release.
+                    remove this tester from the invite-only release at the
+                    environment layer.
                   </p>
 
                   <div className="mt-4 space-y-4">

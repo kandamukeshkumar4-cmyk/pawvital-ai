@@ -45,6 +45,20 @@ function buildUnsafeTesterSummary(): PrivateTesterDataSummary & {
       modeEnabled: true,
       reason: "allowlisted_email",
     },
+    adminState: {
+      accessDisabled: true,
+      accessDisabledAt: "2026-04-21T14:00:00.000Z",
+      auditLog: [
+        {
+          action: "disable_access",
+          actorEmail: "admin@pawvital.ai",
+          at: "2026-04-21T14:00:00.000Z",
+          note: "Pause access after confusing emergency session.",
+        },
+      ],
+      deletionRequested: true,
+      deletionRequestedAt: "2026-04-21T15:00:00.000Z",
+    },
     config: {
       allowedEmailCount: 2,
       allowedEmails: ["tester@example.com", "blocked@example.com"],
@@ -222,6 +236,20 @@ describe("private tester access helpers", () => {
       fullName: "Tester",
       id: "user-1",
     });
+    expect(sanitized.adminState).toEqual({
+      accessDisabled: true,
+      accessDisabledAt: "2026-04-21T14:00:00.000Z",
+      auditLog: [
+        {
+          action: "disable_access",
+          actorEmail: "admin@pawvital.ai",
+          at: "2026-04-21T14:00:00.000Z",
+          note: "Pause access after confusing emergency session.",
+        },
+      ],
+      deletionRequested: true,
+      deletionRequestedAt: "2026-04-21T15:00:00.000Z",
+    });
     expect(sanitized.counts).toEqual({
       caseOutcomes: 2,
       journalEntries: 1,
@@ -264,7 +292,9 @@ describe("private tester access helpers", () => {
       },
       summary: {
         active: 1,
+        authAccessDisabled: 1,
         blocked: 1,
+        deletionRequested: 1,
         negativeFeedbackEntries: 1,
         symptomChecks: 3,
         total: 2,
