@@ -97,10 +97,10 @@ describe("tester onboarding boundaries on the symptom checker", () => {
     view.unmount();
     renderSymptomChecker();
 
-    expect(screen.queryByText("Before you use PawVital with Buddy")).toBeNull();
     expect(
-      screen.getAllByText("Tell me what's going on with Buddy").length
-    ).toBeGreaterThan(0);
+      await screen.findByText("Tell me what's going on with Buddy")
+    ).toBeTruthy();
+    expect(screen.queryByText("Before you use PawVital with Buddy")).toBeNull();
   });
 
   it("keeps the emergency chat flow available after acknowledgement", async () => {
