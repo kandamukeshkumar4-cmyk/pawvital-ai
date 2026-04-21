@@ -402,7 +402,6 @@ export function FullReport({
           {feedbackEnabled ? (
             <OutcomeFeedbackSection
               report={report}
-              onSubmit={onOutcomeFeedback}
             />
           ) : (
             <Card className="border border-dashed border-emerald-300 bg-emerald-50/70 p-4">
