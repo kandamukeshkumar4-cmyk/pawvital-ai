@@ -18,7 +18,6 @@ import {
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
-import PlanGate from "@/components/subscription/plan-gate";
 import {
   ProgressBar,
   StateBadge,
@@ -692,40 +691,39 @@ export default function SymptomCheckerPage() {
   };
 
   return (
-    <PlanGate requiredPlan="pro">
-      <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                Veterinary Symptom Analyzer
-              </h1>
-              <Badge variant="info">
-                <Activity className="w-3 h-3 mr-1" />
-                Clinical Matrix AI
-              </Badge>
-            </div>
-            <p className="text-gray-500 mt-1">
-              4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
-            </p>
+    <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+              Veterinary Symptom Analyzer
+            </h1>
+            <Badge variant="info">
+              <Activity className="w-3 h-3 mr-1" />
+              Clinical Matrix AI
+            </Badge>
           </div>
-          <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
-            {sessionStarted && (
-              <Button
-                variant="secondary"
-                onClick={startNewSession}
-                className="w-full flex-shrink-0 sm:w-auto"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                New Session
-              </Button>
-            )}
-          </div>
+          <p className="text-gray-500 mt-1">
+            4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
+          </p>
         </div>
+        <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
+          {sessionStarted && (
+            <Button
+              variant="secondary"
+              onClick={startNewSession}
+              className="w-full flex-shrink-0 sm:w-auto"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              New Session
+            </Button>
+          )}
+        </div>
+      </div>
 
         {/* Pre-session: Welcome + Quick Start */}
-        {!sessionStarted && (
+        {!sessionStarted && !report && (
           <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -926,6 +924,7 @@ export default function SymptomCheckerPage() {
                       onClick={() => fileInputRef.current?.click()}
                       className="shrink-0 px-3"
                       title="Attach Photo"
+                      aria-label="Attach photo"
                     >
                       <ImagePlus className="w-5 h-5 text-gray-500" />
                     </Button>
@@ -955,6 +954,7 @@ export default function SymptomCheckerPage() {
                       onClick={() => sendMessage()}
                       disabled={(!input.trim() && !selectedImage) || loading}
                       className="w-full sm:h-full sm:w-auto"
+                      aria-label="Send message"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
@@ -1000,6 +1000,7 @@ export default function SymptomCheckerPage() {
                   onClick={() => fileInputRef.current?.click()}
                   className="shrink-0 px-3"
                   title="Attach Photo"
+                  aria-label="Attach photo"
                 >
                   <ImagePlus className="w-5 h-5 text-gray-500" />
                 </Button>
@@ -1025,6 +1026,7 @@ export default function SymptomCheckerPage() {
                   onClick={() => sendMessage()}
                   disabled={(!input.trim() && !selectedImage) || loading}
                   className="w-full sm:h-full sm:w-auto"
+                  aria-label="Send message"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -1065,7 +1067,6 @@ export default function SymptomCheckerPage() {
 
         {/* Full Report */}
         {report && <FullReport report={report} />}
-      </div>
-    </PlanGate>
+    </div>
   );
 }
