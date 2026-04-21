@@ -14,7 +14,6 @@ function buildReport(): SymptomReport {
     actions: ["Schedule a vet visit."],
     warning_signs: ["Head tilt"],
     report_storage_id: "check-123",
-    outcome_feedback_enabled: true,
   };
 }
 
@@ -86,5 +85,38 @@ describe("OutcomeFeedbackSection", () => {
         /Saved and flagged for follow-up review\./,
       ),
     ).toBeTruthy();
+  });
+
+  it("shows a safe failure state without echoing raw sensitive server text", async () => {
+    const fetchSpy = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({
+        ok: false,
+        error: "Piper needed sedation after the emergency visit.",
+      }),
+    });
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      writable: true,
+      value: fetchSpy,
+    });
+
+    render(
+      React.createElement(OutcomeFeedbackSection, {
+        report: buildReport(),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Feedback is temporarily unavailable. Please try again shortly.",
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText(/Piper needed sedation/i)).toBeNull();
   });
 });

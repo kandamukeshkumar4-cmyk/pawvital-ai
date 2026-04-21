@@ -56,7 +56,7 @@ describe("full report owner summary", () => {
     });
   });
 
-  it("renders the owner-first hierarchy with feedback placeholder when the widget is not ready", () => {
+  it("renders a real feedback-unavailable state instead of placeholder copy when the report is not saved", () => {
     render(React.createElement(FullReport, { report: makeReport() }));
 
     expect(
@@ -79,18 +79,27 @@ describe("full report owner summary", () => {
     expect(
       screen.getByRole("button", { name: "Copy Shareable Summary" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "See Feedback Area" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "See Feedback Status" }),
+    ).toBeTruthy();
     expect(screen.getByText("Feedback for this report")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This report is not linked to a saved symptom check yet, so feedback cannot be submitted from this page right now.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(/still being connected in a parallel lane/i),
+    ).toBeNull();
   });
 
-  it("keeps the feedback CTA wired to the live widget when enabled", () => {
+  it("keeps the feedback CTA wired to the live widget for saved reports without requiring the legacy feedback flag", () => {
     render(
       React.createElement(FullReport, {
         report: makeReport({
           severity: "low",
           recommendation: "monitor",
           report_storage_id: "check-123",
-          outcome_feedback_enabled: true,
         }),
       }),
     );
