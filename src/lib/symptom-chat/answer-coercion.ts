@@ -76,6 +76,20 @@ export function coerceAnswerForQuestion(
   if (!question || !message) return null;
 
   if (question.data_type === "boolean") {
+    if (isReproductiveStatusQuestion(questionId)) {
+      if (
+        /\b(not spayed|not neutered|unspayed|unneutered|unfixed|intact)\b/.test(
+          lower
+        )
+      ) {
+        return false;
+      }
+
+      if (/\b(spayed|neutered|fixed)\b/.test(lower)) {
+        return true;
+      }
+    }
+
     const words = lower.split(/\s+/).filter(Boolean);
     if (
       /(^|\b)(yes|yeah|yep|true)\b/.test(lower) ||
@@ -260,6 +274,10 @@ function isNormalityQuestion(question: {
   );
 }
 
+function isReproductiveStatusQuestion(questionId: string): boolean {
+  return questionId === "spay_status" || questionId === "neuter_status";
+}
+
 export function coerceChoiceAnswerFromIntent(
   questionId: string,
   rawMessage: string
@@ -283,6 +301,30 @@ export function coerceChoiceAnswerFromIntent(
     const unknownCoercion = coerceAmbiguousReplyToUnknown(rawMessage);
     if (unknownCoercion !== null) {
       return unknownCoercion;
+    }
+  }
+
+  if (questionId === "appetite_change") {
+    if (
+      /\b(decreased|decrease|less|eating less|reduced|lower|down)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["decreas"], ["less"]]);
+    }
+
+    if (
+      /\b(increased|increase|more|eating more|hungrier|up)\b/.test(lower)
+    ) {
+      return pickChoiceByPriority(choices, [["increas"], ["more"]]);
+    }
+
+    if (
+      /\b(same|normal|unchanged|stayed normal|no change|about the same)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["normal"], ["same"]]);
     }
   }
 
@@ -544,10 +586,11 @@ export function shouldPersistRawPendingAnswer(
     return false;
   }
 
-  // Critical "I don't know" style replies must remain recoverable even for
-  // typed follow-ups so the owner response is preserved for clarification.
+  // Preserve the legacy raw-unknown contract for existing typed follow-ups that
+  // still rely on it, but keep reproductive-status questions unresolved so the
+  // checker can explicitly clarify instead of silently accepting "not sure".
   if (isShortUnknownResponse(normalizedMessage)) {
-    return true;
+    return !isReproductiveStatusQuestion(questionId);
   }
 
   // Raw fallback is only safe for free-text prompts. For choice/boolean/number

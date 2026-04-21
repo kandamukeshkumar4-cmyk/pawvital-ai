@@ -1922,6 +1922,140 @@ describe("symptom-chat mixed text + image routing", () => {
     }
   );
 
+  it.each([
+    ["spayed", true],
+    ["neutered", true],
+    ["fixed", true],
+    ["yes", true],
+    ["no", false],
+    ["not spayed", false],
+    ["not neutered", false],
+    ["intact", false],
+  ])(
+    "VET-1367: accepts reproductive-status follow-up reply %s without repeating the same question",
+    async (message, expectedValue) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["drinking_more", "weight_loss"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["drinking_more", "weight_loss"]);
+      session.last_question_asked = "spay_status";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.spay_status).toBe(expectedValue);
+      expect(payload.session.answered_questions).toContain("spay_status");
+      expect(payload.session.last_question_asked).not.toBe("spay_status");
+    }
+  );
+
+  it.each([
+    ["decreased", "decreased"],
+    ["less", "decreased"],
+    ["eating less", "decreased"],
+    ["increased", "increased"],
+    ["more", "increased"],
+    ["same", "normal"],
+    ["normal", "normal"],
+    ["unchanged", "normal"],
+  ])(
+    "VET-1367: persists appetite-change follow-up reply %s without repeating the same question",
+    async (message, expectedValue) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["drinking_more", "weight_loss"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["drinking_more", "weight_loss"]);
+      session.last_question_asked = "appetite_change";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.appetite_change).toBe(
+        expectedValue
+      );
+      expect(payload.session.answered_questions).toContain("appetite_change");
+      expect(payload.session.last_question_asked).not.toBe("appetite_change");
+    }
+  );
+
+  it("VET-1367: preserves prior appetite-change answer when reproductive follow-up is answered next", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["drinking_more", "weight_loss"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["drinking_more", "weight_loss"]);
+    session = recordAnswer(session, "appetite_change", "decreased");
+    session.last_question_asked = "spay_status";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "spayed"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.appetite_change).toBe("decreased");
+    expect(payload.session.extracted_answers.spay_status).toBe(true);
+    expect(payload.session.answered_questions).toEqual(
+      expect.arrayContaining(["appetite_change", "spay_status"])
+    );
+    expect(payload.session.last_question_asked).not.toBe("spay_status");
+  });
+
+  it("VET-1367: keeps reproductive-status follow-up unresolved on ambiguous not sure replies", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["drinking_more", "weight_loss"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["drinking_more", "weight_loss"]);
+    session.last_question_asked = "spay_status";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not sure"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.spay_status).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("spay_status");
+    expect(payload.session.last_question_asked).toBe("spay_status");
+  });
+
   it("prioritizes breathing follow-up over coughing when both symptoms are reported together", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
