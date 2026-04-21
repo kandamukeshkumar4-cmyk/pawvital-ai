@@ -1,8 +1,8 @@
 # Browser/Mobile Smoke Checklist
 
 This is the VET-1369 repo-owned browser/mobile smoke path for the private tester
-result flow. It pins Playwright to writable repo-local artifacts so the runner
-does not fall back to `C:\Windows\System32\.playwright-mcp`.
+result flow. It pins Playwright to writable repo-local and local-temp artifacts
+so the runner does not fall back to `C:\Windows\System32\.playwright-mcp`.
 
 ## Default writable paths
 
@@ -11,10 +11,12 @@ caller's current working directory. That keeps the smoke runner out of
 `C:\Windows\System32` even if the caller starts from a protected directory.
 
 - artifact root: `<repo>/.tmp/browser-mobile-smoke`
-- temp root: `...\tmp`
-- Playwright browser cache: `...\ms-playwright`
+- Windows runtime root: `%LOCALAPPDATA%/pawvital-browser-mobile-smoke`
+- non-Windows runtime root: `<repo>/.tmp/browser-mobile-smoke`
+- temp root: `<runtime root>/tmp`
+- Playwright browser cache: `<runtime root>/ms-playwright`
 - Playwright HTML report: `...\playwright-report`
-- Playwright traces, screenshots, and video: `...\test-results`
+- Playwright traces and screenshots: `...\test-results`
 
 The runner sets these automatically:
 
@@ -23,15 +25,20 @@ The runner sets these automatically:
 - `TMPDIR`
 - `PLAYWRIGHT_BROWSERS_PATH`
 - `PAWVITAL_SMOKE_ARTIFACT_DIR`
+- `PAWVITAL_SMOKE_RUNTIME_ROOT`
+- `PAWVITAL_SMOKE_EXECUTABLE_PATH` on Windows when local Chrome is available
 
 ## Commands
 
-Install Chromium into the writable smoke cache once per machine or after cache
-cleanup:
+Install bundled browsers when the local machine needs them:
 
 ```bash
 npm run smoke:browser-mobile:install
 ```
+
+On Windows, the runner prefers the locally installed Chrome executable when it
+exists, so the install step becomes a no-op and still avoids protected system
+directories. Linux/Codex fallback continues to use bundled Playwright browsers.
 
 Run the automated desktop + mobile smoke flow against a local dev server:
 

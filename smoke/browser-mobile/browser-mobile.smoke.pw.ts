@@ -249,7 +249,7 @@ test("tester onboarding smoke shows the boundary once and skips it for returning
   await expect(
     page.getByText("Before you use PawVital with Buddy")
   ).toBeVisible();
-  await expect(page.getByText("Dog-only")).toBeVisible();
+  await expect(page.getByText("Dog-only", { exact: true })).toBeVisible();
   await expect(
     page.getByText("PawVital gives urgency guidance, not diagnosis or treatment.")
   ).toBeVisible();
@@ -296,7 +296,9 @@ test("emergency result-flow smoke shows urgency, opens a non-demo report, and su
     .getByRole("button", { name: "Generate Emergency Vet Summary" })
     .click();
 
-  await expect(page.getByText("Emergency vet handoff summary")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Emergency vet handoff summary" })
+  ).toBeVisible();
   await expect(
     page.getByText(/Generated from the browser\/mobile smoke runner/i)
   ).toBeVisible();
@@ -346,7 +348,9 @@ test("mild result-flow smoke keeps the question flow understandable and submits 
   );
   await page.getByRole("button", { name: "Send message" }).click();
 
-  await expect(page.getByText("Itching follow-up summary")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Itching follow-up summary" })
+  ).toBeVisible();
   await expect(
     page.getByText(/without demo fallback copy/i)
   ).toBeVisible();

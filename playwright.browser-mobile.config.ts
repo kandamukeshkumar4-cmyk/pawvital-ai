@@ -7,6 +7,7 @@ const artifactRoot = path.resolve(
     path.join(repoRoot, ".tmp", "browser-mobile-smoke")
 );
 const baseURL = process.env.PAWVITAL_SMOKE_BASE_URL ?? "http://127.0.0.1:3100";
+const executablePath = process.env.PAWVITAL_SMOKE_EXECUTABLE_PATH;
 
 export default defineConfig({
   testDir: path.join(repoRoot, "smoke", "browser-mobile"),
@@ -33,13 +34,14 @@ export default defineConfig({
     navigationTimeout: 30_000,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
-    video: "retain-on-failure",
+    video: "off",
   },
   projects: [
     {
       name: "desktop-chromium",
       use: {
-        ...devices["Desktop Chrome"],
+        browserName: "chromium",
+        launchOptions: executablePath ? { executablePath } : undefined,
         viewport: { width: 1440, height: 1080 },
       },
     },
@@ -47,6 +49,8 @@ export default defineConfig({
       name: "mobile-chromium",
       use: {
         ...devices["iPhone 13"],
+        browserName: "chromium",
+        launchOptions: executablePath ? { executablePath } : undefined,
       },
     },
   ],
