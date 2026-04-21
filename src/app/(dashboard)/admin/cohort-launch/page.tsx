@@ -54,7 +54,7 @@ export default async function AdminCohortLaunchPage() {
   const cookieHeader = (await cookies()).toString();
 
   let privateTesterDashboard = buildPrivateTesterDashboardFallback(
-    "Private tester service-role data is unavailable."
+    "Private tester admin data is currently unavailable."
   );
   let feedbackDashboard = buildDemoAdminFeedbackLedgerDashboardData();
 
