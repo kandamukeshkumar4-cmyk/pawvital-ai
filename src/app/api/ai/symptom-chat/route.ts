@@ -131,7 +131,6 @@ import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orches
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
-import { demoResponse } from "@/lib/symptom-chat/demo-response";
 import { generateReport } from "@/lib/symptom-chat/report-pipeline";
 
 // =============================================================================
@@ -698,13 +697,6 @@ export async function POST(request: Request) {
       imageMeta,
       gateOverride,
     } = body;
-
-    // Keep report generation in explicit demo mode when no AI providers are
-    // configured, but still run chat turns through the deterministic engine so
-    // local release-gate and benchmark paths remain clinically auditable.
-    if (!useNvidia && action === "generate_report") {
-      return demoResponse(action, pet);
-    }
 
     let session = clientSession || createSession();
     const usageLimitResponse = await maybeBuildUsageLimitResponse({

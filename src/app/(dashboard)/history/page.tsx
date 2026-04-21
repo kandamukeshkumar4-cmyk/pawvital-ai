@@ -197,6 +197,7 @@ export default function HistoryPage() {
   const { activePet } = useAppStore();
   const [rows, setRows] = useState<DbSymptomCheckRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -212,6 +213,7 @@ export default function HistoryPage() {
         setRows((prev) => (append ? [...prev, ...slice] : slice));
         setHasMore(start + slice.length < all.length);
         setOffset(start + slice.length);
+        setLoadError(null);
         setLoading(false);
         return;
       }
@@ -232,13 +234,17 @@ export default function HistoryPage() {
         setRows((prev) => (append ? [...prev, ...list] : list));
         setHasMore(list.length === PAGE_SIZE);
         setOffset(start + list.length);
+        setLoadError(null);
       } catch (e) {
         console.error("History load failed:", e);
-        const all = DEMO_ROWS;
-        const slice = all.slice(start, start + PAGE_SIZE);
-        setRows((prev) => (append ? [...prev, ...slice] : slice));
-        setHasMore(start + slice.length < all.length);
-        setOffset(start + slice.length);
+        if (!append) {
+          setRows([]);
+          setOffset(0);
+        }
+        setHasMore(false);
+        setLoadError(
+          "Saved symptom-check reports are temporarily unavailable. Please try again shortly."
+        );
       } finally {
         setLoading(false);
       }
@@ -327,10 +333,21 @@ export default function HistoryPage() {
         </p>
       )}
 
+      {loadError && (
+        <p className="text-sm rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900">
+          {loadError}
+        </p>
+      )}
+
       {loading && rows.length === 0 ? (
         <div className="flex justify-center py-16">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
+      ) : rows.length === 0 && loadError ? (
+        <Card className="p-8 text-center text-amber-900 text-sm bg-amber-50 border-amber-200">
+          Saved symptom-check reports are temporarily unavailable. Please try again
+          shortly.
+        </Card>
       ) : rows.length === 0 ? (
         <Card className="p-8 text-center text-gray-600 text-sm">
           No symptom checks yet. Run a check from the Symptom Checker to see it here.

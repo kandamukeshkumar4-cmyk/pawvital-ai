@@ -8668,14 +8668,197 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       }
     );
 
-    it("preserves the existing demo fallback for report generation without providers", async () => {
+    it("returns a fail-safe non-demo report for non-emergency sessions without providers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const response = await POST(makeReportRequest(buildModerateReportSession()));
       const payload = await response.json();
 
       expect(response.status).toBe(200);
       expect(payload.type).toBe("report");
-      expect(payload.report.title).toBe("Demo Mode — Configure API Keys");
+      expect(payload.report.report_mode).toBe("failsafe");
+      expect(payload.report.report_unavailable_reason).toBe(
+        "provider_unavailable"
+      );
+      expect(payload.report.title).not.toContain("Demo Mode");
+      expect(payload.report.explanation).toContain("not a diagnosis");
+      expect(payload.report.clinical_notes).toContain(
+        "Deterministic fail-safe handoff generated from route urgency context."
+      );
+      expect(payload.report.clinical_notes).toContain(
+        "Known symptoms: excessive_scratching."
+      );
+      expect(payload.report.clinical_notes).not.toContain(
+        "He keeps scratching around his ears."
+      );
+      expect(payload.report.recommendation).not.toBe("emergency_vet");
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability).toEqual(
+        expect.objectContaining({
+          fallbackCount: expect.any(Number),
+          timeoutCount: expect.any(Number),
+        })
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(payload.report.system_observability.contradictionRecords).toBeUndefined();
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+      expect(mockVerifyWithGLM).not.toHaveBeenCalled();
+    });
+
+    it("returns a fail-safe non-demo report for emergency sessions without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_mode).toBe("failsafe");
+      expect(payload.report.report_unavailable_reason).toBe(
+        "provider_unavailable"
+      );
+      expect(payload.report.title).toBe("Emergency veterinary care recommended");
+      expect(payload.report.recommendation).toBe("emergency_vet");
+      expect(payload.report.explanation).not.toContain("Demo mode");
+      expect(payload.report.clinical_notes).toContain(
+        "Deterministic fail-safe handoff generated from route urgency context."
+      );
+      expect(payload.report.clinical_notes).toContain("Known symptoms: vomiting.");
+      expect(payload.report.clinical_notes).toContain("Red flags: vomit_blood.");
+      expect(payload.report.clinical_notes).not.toContain(
+        "He vomited blood this morning."
+      );
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+      expect(mockVerifyWithGLM).not.toHaveBeenCalled();
+    });
+
+    it("renders real generated emergency report content when providers are available", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Emergency narrative verified",
+        })
+      );
+      mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+        JSON.stringify({
+          severity: "emergency",
+          recommendation: "emergency_vet",
+          title: "Acute respiratory distress",
+          explanation:
+            "Blue gums and labored breathing can indicate a life-threatening oxygen problem that needs emergency treatment now.",
+          differential_diagnoses: [
+            {
+              condition: "Acute respiratory compromise",
+              likelihood: "high",
+              description: "Immediate stabilization is required while the clinic looks for the cause.",
+            },
+          ],
+          clinical_notes: "Emergency respiratory stabilization required.",
+          recommended_tests: [],
+          home_care: [],
+          actions: ["Go to the nearest emergency veterinarian now."],
+          warning_signs: ["Blue or gray gums"],
+          vet_questions: ["What is causing the breathing crisis?"],
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBe("Acute respiratory distress");
+      expect(payload.report.explanation).toContain("life-threatening");
+      expect(payload.report.title).not.toContain("Demo");
+      expect(payload.report.report_mode).toBeUndefined();
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+    });
+
+    it("renders real generated non-emergency report content when providers are available", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Non-emergency narrative verified",
+        })
+      );
+      mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+        JSON.stringify({
+          severity: "medium",
+          recommendation: "vet_48h",
+          title: "Acute gastrointestinal upset",
+          explanation:
+            "This pattern is more consistent with a real gastrointestinal concern than a demo placeholder and should guide a vet visit if it continues.",
+          differential_diagnoses: [
+            {
+              condition: "Gastroenteritis",
+              likelihood: "moderate",
+              description: "GI inflammation can cause vomiting and appetite changes without immediate collapse.",
+            },
+          ],
+          clinical_notes: "Monitor hydration and abdominal comfort.",
+          recommended_tests: [],
+          home_care: [],
+          actions: ["Offer small amounts of water."],
+          warning_signs: ["Repeated vomiting"],
+          vet_questions: ["Should we run stool or blood testing?"],
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.title).toBe("Acute gastrointestinal upset");
+      expect(payload.report.explanation).toContain("real gastrointestinal concern");
+      expect(payload.report.explanation).not.toContain("Demo mode");
+      expect(payload.report.report_mode).toBeUndefined();
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+    });
+
+    it("falls back to a fail-safe report when narrative generation fails", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockDiagnoseWithDeepSeek.mockRejectedValueOnce(
+        new Error("Narrative report unavailable")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_mode).toBe("failsafe");
+      expect(payload.report.report_unavailable_reason).toBe("generation_failed");
+      expect(payload.report.title).not.toContain("Demo Mode");
+      expect(payload.report.explanation).toContain("full narrative report");
+      expect(payload.report.clinical_notes).toContain(
+        "Deterministic fail-safe handoff generated from route urgency context."
+      );
+      expect(payload.report.clinical_notes).not.toContain(
+        "He keeps scratching around his ears."
+      );
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(mockDiagnoseWithDeepSeek).toHaveBeenCalledTimes(1);
     });
   });
 });
