@@ -32,12 +32,20 @@ type CopyState = "idle" | "copied" | "error";
 
 interface FullReportProps {
   report: SymptomReport;
+  onOutcomeFeedback?: (data: {
+    symptomCheckId: string;
+    matchedExpectation: "yes" | "partly" | "no";
+    confirmedDiagnosis: string;
+    vetOutcome: string;
+    ownerNotes: string;
+  }) => void | Promise<void>;
   /** Public shared view: hide owner-only UI */
   readOnlyShared?: boolean;
 }
 
 export function FullReport({
   report,
+  onOutcomeFeedback,
   readOnlyShared = false,
 }: FullReportProps) {
   const presentation = buildReportPresentation(report);

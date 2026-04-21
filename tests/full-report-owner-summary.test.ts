@@ -96,7 +96,7 @@ describe("full report owner summary", () => {
     );
 
     expect(screen.getByRole("button", { name: "Open Feedback" })).toBeTruthy();
-    expect(screen.getByText("After Your Vet Visit")).toBeTruthy();
+    expect(screen.getByText("Was this helpful?")).toBeTruthy();
   });
 
   it("renders provided monitor action text and limitations without synthesizing extra report language", () => {

@@ -138,7 +138,7 @@ describe("tester onboarding boundaries on the symptom checker", () => {
       await screen.findByText(/Buddy may be having a medical emergency\./i)
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Generate Emergency Report" })
+      screen.getByRole("button", { name: "Generate Emergency Vet Summary" })
     ).toBeTruthy();
   });
 });
