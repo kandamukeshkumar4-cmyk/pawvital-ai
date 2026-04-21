@@ -95,7 +95,7 @@ export function TesterFeedbackWidget({
     setErrorMessage(null);
 
     try {
-      const response = await fetch("/api/ai/tester-feedback", {
+      const response = await fetch("/api/ai/outcome-feedback", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +178,7 @@ export function TesterFeedbackWidget({
 
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-900">
-              What was confusing?
+              What, if anything, was confusing?
             </p>
             <div className="flex flex-wrap gap-2">
               {TESTER_FEEDBACK_CONFUSING_AREA_VALUES.map((area) => (

@@ -30,7 +30,6 @@ import type { ConversationState } from "@/lib/conversation-state/types";
 import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
-import { TesterFeedbackWidget } from "@/components/tester-feedback";
 
 // --- Types ---
 
@@ -1073,17 +1072,7 @@ export default function SymptomCheckerPage() {
         )}
 
         {/* Full Report */}
-        {report && (
-          <div className="space-y-4">
-            <FullReport report={report} />
-            <TesterFeedbackWidget
-              symptomCheckId={report.report_storage_id ?? null}
-              reportTitle={report.title}
-              urgencyLabel={report.recommendation}
-              surface="result_page"
-            />
-          </div>
-        )}
+        {report && <FullReport report={report} />}
       </div>
     </PlanGate>
   );

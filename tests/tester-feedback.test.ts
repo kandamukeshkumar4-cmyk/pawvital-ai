@@ -67,14 +67,15 @@ describe("tester feedback helpers", () => {
     expect(ledger.case_flags).toEqual(
       expect.arrayContaining(["emergency_result", "question_flow_issue"])
     );
+    expect(ledger.negative_feedback_flag).toBe(true);
 
     const flags = buildTesterFeedbackFlags({
       feedback: {
         symptomCheckId: ledger.symptom_check_id,
         helpfulness: "no",
-        confusingAreas: ["wording"],
+        confusingAreas: ["wording", "report"],
         trustLevel: "not_sure",
-        notes: "The wording felt too vague for an emergency.",
+        notes: "The wording felt too vague and scary for an emergency.",
       },
       ledger,
     });
@@ -84,6 +85,9 @@ describe("tester feedback helpers", () => {
         "helpfulness_no",
         "trust_not_sure",
         "confusing_wording",
+        "confusing_report",
+        "report_failed",
+        "notes_concern_language",
         "emergency_result",
         "question_flow_issue",
       ])
@@ -157,10 +161,22 @@ describe("tester feedback helpers", () => {
     });
 
     expect(updatedLedger.feedback_status).toBe("submitted");
+    expect(updatedLedger.negative_feedback_flag).toBe(false);
     expect(summary.flagged).toBe(false);
+    expect(summary.negativeFeedbackFlag).toBe(false);
+    expect(summary.emergencyCase).toBe(false);
+    expect(summary.reportFailed).toBe(false);
     expect(summary.helpfulness).toBe("yes");
     expect(summary.trustLevel).toBe("yes");
     expect(summary.questionCount).toBe(1);
     expect(summary.answerCount).toBe(1);
+    expect(summary.questionsAsked).toEqual([
+      expect.objectContaining({
+        id: "weight_bearing",
+      }),
+    ]);
+    expect(summary.answersGiven).toEqual({
+      weight_bearing: "yes",
+    });
   });
 });

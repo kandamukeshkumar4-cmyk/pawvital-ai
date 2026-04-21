@@ -87,6 +87,29 @@ function dedupeFlags(flags: Array<TesterFeedbackFlag | null | undefined>) {
   );
 }
 
+const NEGATIVE_FLAG_SET = new Set<TesterFeedbackFlag>(
+  TESTER_FEEDBACK_NEGATIVE_FLAG_VALUES as readonly TesterFeedbackFlag[]
+);
+
+const CONCERN_LANGUAGE_PATTERN =
+  /\b(wrong|confusing|scary|unclear|unsafe|misleading|incorrect|inaccurate|off|bad|terrifying|frightening|alarm(?:ing|ed)|concern(?:ing|ed)?)\b/i;
+
+export function hasConcernLanguage(notes: string | null | undefined) {
+  return Boolean(notes && CONCERN_LANGUAGE_PATTERN.test(notes));
+}
+
+export function hasNegativeFeedbackFlags(flags: TesterFeedbackFlag[]) {
+  return flags.some((flag) => NEGATIVE_FLAG_SET.has(flag));
+}
+
+export function hasReportFailureFlag(flags: TesterFeedbackFlag[]) {
+  return flags.includes("report_failed");
+}
+
+export function hasEmergencyResultFlag(flags: TesterFeedbackFlag[]) {
+  return flags.includes("emergency_result");
+}
+
 function deriveSymptomInput(session: TriageSession, pet: PetProfile): string {
   const latestOwnerTurn = asString(session.case_memory?.latest_owner_turn);
   if (latestOwnerTurn) {
@@ -105,7 +128,15 @@ function deriveSymptomInput(session: TriageSession, pet: PetProfile): string {
 }
 
 function buildAskedQuestions(session: TriageSession): TesterFeedbackAskedQuestion[] {
-  return (session.answered_questions ?? []).map((questionId) => ({
+  const questionIds = Array.from(
+    new Set([
+      ...(session.answered_questions ?? []),
+      ...(session.case_memory?.unresolved_question_ids ?? []),
+      ...(session.last_question_asked ? [session.last_question_asked] : []),
+    ])
+  );
+
+  return questionIds.map((questionId) => ({
     id: questionId,
     prompt: FOLLOW_UP_QUESTIONS[questionId]?.question_text ?? questionId,
   }));
@@ -140,6 +171,8 @@ export function buildTesterFeedbackFlags(input: {
     input.feedback.trustLevel === "not_sure" ? "trust_not_sure" : null,
     input.feedback.trustLevel === "no" ? "trust_no" : null,
     ...confusingFlags,
+    input.feedback.confusingAreas.includes("report") ? "report_failed" : null,
+    hasConcernLanguage(input.feedback.notes) ? "notes_concern_language" : null,
     ...input.ledger.case_flags,
     input.ledger.report_failed ? "report_failed" : null,
     input.ledger.repeated_question_state ? "question_flow_issue" : null,
@@ -176,13 +209,23 @@ export function buildTesterFeedbackCaseLedger(
   const recommendation = asString(input.report.recommendation) ?? "monitor";
   const severity = asString(input.report.severity);
   const ambiguityFlags = input.session.case_memory?.ambiguity_flags ?? [];
+  const serviceObservations = input.session.case_memory?.service_observations ?? [];
+  const repeatSuppressionSeen = serviceObservations.some(
+    (observation) => observation.stage === "repeat_suppression"
+  );
+  const terminalCannotAssessSeen = serviceObservations.some(
+    (observation) =>
+      observation.stage === "terminal_outcome" &&
+      String(observation.note ?? "").toLowerCase().includes("cannot_assess")
+  );
   const repeatedQuestionState =
+    repeatSuppressionSeen ||
     (input.session.case_memory?.unresolved_question_ids?.length ?? 0) > 0 ||
     Object.keys(input.session.case_memory?.clarification_reasons ?? {}).length > 0 ||
     ambiguityFlags.length > 0;
-  const cannotAssessState = ambiguityFlags.some((flag) =>
-    flag.toLowerCase().includes("cannot_assess")
-  );
+  const cannotAssessState =
+    terminalCannotAssessSeen ||
+    ambiguityFlags.some((flag) => flag.toLowerCase().includes("cannot_assess"));
 
   const caseFlags = dedupeFlags([
     recommendation === "emergency_vet" || severity === "emergency"
@@ -204,6 +247,7 @@ export function buildTesterFeedbackCaseLedger(
     urgency_result: recommendation,
     created_at: input.createdAt ?? new Date().toISOString(),
     feedback_status: "pending",
+    negative_feedback_flag: caseFlags.length > 0,
     case_flags: caseFlags,
     repeated_question_state: repeatedQuestionState,
     cannot_assess_state: cannotAssessState,
@@ -215,11 +259,15 @@ export function updateLedgerAfterFeedback(
   ledger: TesterFeedbackCaseLedger,
   feedback: TesterFeedbackRecord
 ): TesterFeedbackCaseLedger {
+  const nextFlags = dedupeFlags([...ledger.case_flags, ...feedback.flags]);
+
   return {
     ...ledger,
-    feedback_status: feedback.flags.length > 0 ? "flagged" : "submitted",
+    feedback_status: nextFlags.length > 0 ? "flagged" : "submitted",
     feedback_submitted_at: feedback.updated_at,
-    case_flags: dedupeFlags([...ledger.case_flags, ...feedback.flags]),
+    negative_feedback_flag: nextFlags.length > 0,
+    case_flags: nextFlags,
+    report_failed: ledger.report_failed || hasReportFailureFlag(feedback.flags),
   };
 }
 
@@ -301,10 +349,10 @@ export function parseStoredTesterFeedbackCase(
       )
         ? ((asString(rawLedger.feedback_status) ?? "pending") as TesterFeedbackStatus)
         : "pending",
-      case_flags: asStringArray(
-        rawLedger.case_flags,
-        TESTER_FEEDBACK_FLAG_VALUES
-      ),
+      negative_feedback_flag:
+        rawLedger.negative_feedback_flag === true ||
+        asStringArray(rawLedger.case_flags, TESTER_FEEDBACK_FLAG_VALUES).length > 0,
+      case_flags: asStringArray(rawLedger.case_flags, TESTER_FEEDBACK_FLAG_VALUES),
       repeated_question_state: rawLedger.repeated_question_state === true,
       cannot_assess_state: rawLedger.cannot_assess_state === true,
       report_failed: rawLedger.report_failed === true,
@@ -330,6 +378,7 @@ export function parseStoredTesterFeedbackCase(
     urgency_result: fallback.recommendation,
     created_at: createdAt,
     feedback_status: "pending",
+    negative_feedback_flag: emergencyFlag.length > 0,
     case_flags: emergencyFlag,
     repeated_question_state: false,
     cannot_assess_state: false,
@@ -406,6 +455,8 @@ export function buildTesterFeedbackCaseSummary(input: {
     ...ledger.case_flags,
     ...(feedback?.flags ?? []),
   ]);
+  const negativeFeedbackFlag =
+    ledger.negative_feedback_flag || flagReasons.length > 0;
 
   return {
     symptomCheckId: ledger.symptom_check_id,
@@ -418,7 +469,12 @@ export function buildTesterFeedbackCaseSummary(input: {
     urgencyResult: ledger.urgency_result,
     createdAt: ledger.created_at,
     feedbackStatus: ledger.feedback_status,
-    flagged: flagReasons.length > 0,
+    flagged: negativeFeedbackFlag,
+    negativeFeedbackFlag,
+    emergencyCase:
+      hasEmergencyResultFlag(flagReasons) || ledger.urgency_result === "emergency_vet",
+    reportFailed:
+      ledger.report_failed || hasReportFailureFlag(flagReasons),
     flagReasons,
     helpfulness: feedback?.helpfulness ?? null,
     confusingAreas: feedback?.confusing_areas ?? [],
@@ -427,5 +483,7 @@ export function buildTesterFeedbackCaseSummary(input: {
     submittedAt: feedback?.updated_at ?? null,
     questionCount: ledger.questions_asked.length,
     answerCount: Object.keys(ledger.answers_given).length,
+    questionsAsked: [...ledger.questions_asked],
+    answersGiven: { ...ledger.answers_given },
   };
 }
