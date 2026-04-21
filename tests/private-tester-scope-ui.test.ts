@@ -2,8 +2,11 @@
 
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
+import AnalyticsPage from "@/app/(dashboard)/analytics/page";
 import DashboardPage from "@/app/(dashboard)/dashboard/page";
 import CommunityPage from "@/app/(dashboard)/community/page";
+import JournalPage from "@/app/(dashboard)/journal/page";
+import RemindersPage from "@/app/(dashboard)/reminders/page";
 import SupplementsPage from "@/app/(dashboard)/supplements/page";
 import Sidebar from "@/components/dashboard/sidebar";
 import { useAppStore } from "@/store/app-store";
@@ -193,5 +196,43 @@ describe("private tester scope UI", () => {
     expect(screen.queryByText("Supplement Plan")).toBeNull();
     expect(screen.queryByText("Glucosamine & Chondroitin")).toBeNull();
     expect(screen.queryByText(/73% improvement in mobility/i)).toBeNull();
+  });
+
+  it("VET-1368 tester scope UI: quarantines direct route access for analytics, reminders, and journal", () => {
+    setPrivateTesterMode(true);
+
+    const directRoutes = [
+      {
+        component: AnalyticsPage,
+        detail: "Analytics dashboards are not part of this private test.",
+        heading: "Health analytics is disabled for private testers",
+      },
+      {
+        component: RemindersPage,
+        detail: "Reminder tools are not part of this private test.",
+        heading: "Reminder tools is disabled for private testers",
+      },
+      {
+        component: JournalPage,
+        detail: "Journal tools are not part of this private test.",
+        heading: "Journal is disabled for private testers",
+      },
+    ];
+
+    for (const route of directRoutes) {
+      const { unmount } = render(React.createElement(route.component));
+      expect(screen.getByText(route.heading)).toBeTruthy();
+      expect(screen.getByText(route.detail)).toBeTruthy();
+      expect(
+        screen.getByText(
+          "This private test is focused on dog symptom triage, urgency guidance, vet handoff reports, feedback, and onboarding."
+        )
+      ).toBeTruthy();
+      unmount();
+    }
+
+    expect(screen.queryByText("Health analytics")).toBeNull();
+    expect(screen.queryByText("Never miss a medication or appointment")).toBeNull();
+    expect(screen.queryByText("AI Weekly Summary")).toBeNull();
   });
 });

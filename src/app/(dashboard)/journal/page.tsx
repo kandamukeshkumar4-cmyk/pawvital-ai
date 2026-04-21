@@ -13,12 +13,14 @@ import {
   Trash2,
   Loader2,
 } from "lucide-react";
+import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import Badge from "@/components/ui/badge";
+import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { JournalEntry, JournalMood, JournalSummary } from "@/types/journal";
@@ -66,7 +68,7 @@ function trendBadgeVariant(
   return "default";
 }
 
-export default function JournalPage() {
+function JournalPageContent() {
   const { activePet, pets } = useAppStore();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -615,4 +617,14 @@ export default function JournalPage() {
       </Modal>
     </div>
   );
+}
+
+export default function JournalPage() {
+  const quarantinedSurface = getPrivateTesterQuarantinedSurface("/journal");
+
+  if (quarantinedSurface) {
+    return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
+  }
+
+  return <JournalPageContent />;
 }

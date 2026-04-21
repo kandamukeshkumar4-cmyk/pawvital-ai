@@ -13,11 +13,13 @@ import {
   Trash2,
   Edit2,
 } from "lucide-react";
+import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
+import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 
 interface ReminderItem {
   id: string;
@@ -110,7 +112,7 @@ const initialReminders: ReminderItem[] = [
   },
 ];
 
-export default function RemindersPage() {
+function RemindersPageContent() {
   const [reminders, setReminders] = useState(initialReminders);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newReminder, setNewReminder] = useState({
@@ -310,4 +312,14 @@ export default function RemindersPage() {
       </Modal>
     </div>
   );
+}
+
+export default function RemindersPage() {
+  const quarantinedSurface = getPrivateTesterQuarantinedSurface("/reminders");
+
+  if (quarantinedSurface) {
+    return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
+  }
+
+  return <RemindersPageContent />;
 }
