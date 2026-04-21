@@ -36,7 +36,8 @@ export default function CTA() {
           </h2>
 
           <p className="mt-6 text-xl text-emerald-200 max-w-2xl mx-auto">
-            Evidence-based answers in minutes — not hours of anxious Googling.
+            Clear dog-symptom next steps in minutes, plus a summary to share
+            with your veterinarian.
           </p>
 
           <div className="mt-10">
@@ -53,6 +54,10 @@ export default function CTA() {
 
           <p className="mt-4 text-sm text-emerald-300">
             Free to start. No credit card required.
+          </p>
+          <p className="mt-2 text-sm text-emerald-200/90">
+            If you think your dog is having an emergency, contact a
+            veterinarian immediately.
           </p>
         </motion.div>
       </div>

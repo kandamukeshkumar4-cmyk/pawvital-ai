@@ -6,28 +6,28 @@ import { Check, Heart, Zap, Shield, ArrowRight } from "lucide-react";
 import Button from "@/components/ui/button";
 
 const features = [
-  "AI Health Dashboard with daily score",
-  "24/7 Symptom Checker & Vet Decision Engine",
-  "Personalized supplement & nutrition plans",
-  "Medication & wellness reminders",
+  "Dog symptom triage support",
+  "Vet handoff summaries",
+  "Photo support for visible issues",
+  "Care reminders and timeline",
   "Dog journal & health timeline",
   "Paw Circle community access",
-  "Monthly wellness reports",
-  "Unlimited AI health consultations",
+  "Symptom history review",
+  "Breed-aware canine context",
 ];
 
 const faqs = [
   {
     q: "Is PawVital a replacement for my vet?",
-    a: "No. PawVital AI is a wellness companion that helps you make informed decisions between vet visits. It helps you know when to monitor at home vs. when to seek professional care, potentially saving you unnecessary emergency visits while ensuring you don't miss anything serious.",
+    a: "No. PawVital helps dog owners understand urgency and prepare for a vet visit. It is not a diagnosis, it does not prescribe treatment, and it does not replace professional veterinary care.",
   },
   {
     q: "What happens after the free trial?",
     a: "After your 7-day free trial, you'll be charged $9.97/month. You can cancel anytime with one click — no questions asked, no hidden fees. Your dog's health data remains accessible even after cancellation.",
   },
   {
-    q: "How accurate is the AI?",
-    a: "PawVital AI is trained on extensive veterinary data and provides breed-specific, age-appropriate guidance. It's designed to err on the side of caution — if there's any doubt, it will recommend professional veterinary care.",
+    q: "How should I use PawVital?",
+    a: "Use PawVital for dog symptom triage support, urgency guidance, and vet handoff summaries. If you think your dog is having an emergency, contact a veterinarian immediately.",
   },
   {
     q: "Can I use PawVital for multiple dogs?",
@@ -91,11 +91,11 @@ export default function PricingPage() {
       <section className="bg-gradient-to-br from-blue-50 via-white to-amber-50 py-16 sm:py-20">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900">
-            One Plan. Everything Your Dog Needs.
+            One Plan for Dog Symptom Triage Support
           </h1>
           <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
-            Less than a bag of premium dog treats. Less than one-tenth of an
-            unnecessary emergency vet visit.
+            Dog-only urgency guidance, symptom history, and vet handoff support
+            in one place.
           </p>
         </div>
       </section>
@@ -207,11 +207,11 @@ export default function PricingPage() {
       <section className="py-16 bg-blue-600 text-center">
         <div className="max-w-2xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-white">
-            Your Dog Deserves the Best
+            Help Your Vet Start With a Clearer Picture
           </h2>
           <p className="mt-4 text-blue-200">
-            Start your free trial today and see the difference AI-powered
-            wellness makes.
+            Start your free trial today and use PawVital for dog symptom triage
+            support, not diagnosis.
           </p>
           <div className="mt-8">
             <Button variant="secondary" size="lg" onClick={handleCheckout}>

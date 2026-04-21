@@ -14,37 +14,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PawVital AI — Dog Symptom Checker",
+  title: "PawVital — Dog Symptom Checker",
   description:
-    "AI-powered dog symptom triage with a deterministic canine clinical matrix, evidence-backed guidance, and vet-ready reports.",
+    "Dog symptom triage support with urgency guidance, a deterministic canine clinical matrix, and vet-ready handoff summaries.",
   keywords: [
     "dog health",
-    "veterinary AI",
     "dog symptom checker",
     "canine triage",
-    "veterinary diagnosis",
+    "dog urgency guidance",
+    "vet handoff summary",
     "dog symptoms",
   ],
   openGraph: {
-    title: "PawVital AI — Smart Dog Symptom Checker",
+    title: "PawVital — Dog Symptom Checker",
     description:
-      "Evidence-based dog symptom triage powered by AI. Analyze symptoms, get differential guidance, and share vet-ready reports.",
+      "Evidence-based dog symptom triage support with clear urgency guidance and vet-ready handoff summaries.",
     type: "website",
-    siteName: "PawVital AI",
+    siteName: "PawVital",
     images: [
       {
         url: "/images/og-image.svg",
         width: 1200,
         height: 630,
-        alt: "PawVital AI — Veterinary Symptom Checker",
+        alt: "PawVital dog symptom checker",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PawVital AI — Dog Symptom Checker",
+    title: "PawVital — Dog Symptom Checker",
     description:
-      "AI-powered dog symptom triage. Evidence-based. Breed-aware. Vet-ready.",
+      "Dog symptom triage support with evidence-based urgency guidance and vet-ready handoff summaries.",
     images: ["/images/og-image.svg"],
   },
 };

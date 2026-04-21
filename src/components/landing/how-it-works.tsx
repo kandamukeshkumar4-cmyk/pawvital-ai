@@ -9,21 +9,21 @@ const steps = [
     icon: MessageSquare,
     title: "Describe the Symptom",
     description:
-      "Tell us what\u2019s wrong in plain language. Upload a photo if it helps.",
+      "Tell PawVital what is going on in plain language. Upload a photo when the concern is visible.",
     color: "emerald",
   },
   {
     icon: Activity,
-    title: "AI Analyzes Everything",
+    title: "Answer Focused Follow-Up Questions",
     description:
-      "Our canine clinical matrix checks the current validated complaint coverage, matches similar cases, and cross-references veterinary literature.",
+      "PawVital uses dog-only triage logic to ask the follow-up questions needed for safer urgency guidance.",
     color: "blue",
   },
   {
     icon: FileText,
-    title: "Get Your Report",
+    title: "Get Urgency Guidance and a Vet Summary",
     description:
-      "Receive a SOAP-format diagnosis with differential diagnoses, urgency rating, home care steps, and questions for your vet.",
+      "Receive clear next steps, warning signs to watch for, and a summary you can share with your veterinarian.",
     color: "indigo",
   },
 ];
@@ -75,7 +75,7 @@ export default function HowItWorks() {
             How PawVital Works
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            From symptom to report in minutes — not hours of anxious Googling.
+            From dog symptom to clearer next steps in minutes.
           </p>
         </motion.div>
 

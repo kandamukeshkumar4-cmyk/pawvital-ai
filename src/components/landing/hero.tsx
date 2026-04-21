@@ -37,21 +37,21 @@ export default function Hero() {
           >
             <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
               <Shield className="w-4 h-4" />
-              Evidence-Based Veterinary AI
+              Dog-Only Symptom Triage Support
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight">
               Your Dog&apos;s Symptoms,{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-blue-600">
-                Understood by AI
+                turned into clearer next steps
               </span>
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-gray-600 max-w-xl leading-relaxed">
-              PawVital uses a deterministic canine clinical matrix, veterinary
-              reference material, and curated evidence support to give you
-              clearer answers about your dog&apos;s symptoms, not generic search
-              results.
+              PawVital combines deterministic canine triage logic with vetted
+              clinical references to help you understand urgency, prepare for a
+              vet visit, and avoid generic search-result guesswork. It does not
+              diagnose your dog or replace a veterinarian.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
@@ -103,7 +103,7 @@ export default function Hero() {
                 <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex items-center gap-3">
                   <div className="w-3 h-3 rounded-full bg-emerald-300" />
                   <span className="text-white text-sm font-medium">
-                    PawVital AI — Symptom Check
+                    PawVital — Dog Symptom Check
                   </span>
                 </div>
 
@@ -123,8 +123,8 @@ export default function Hero() {
                   <div className="flex justify-start">
                     <div className="bg-emerald-50 rounded-2xl rounded-bl-md px-4 py-3 max-w-[280px]">
                       <p className="text-sm text-gray-800">
-                        I&apos;ll help you assess that. Golden Retrievers are prone to
-                        joint issues, especially at older ages.
+                        I&apos;ll help you think through urgency and next steps for
+                        that limp.
                       </p>
                       <p className="text-sm text-gray-800 mt-2">
                         A few follow-up questions:
@@ -163,7 +163,7 @@ export default function Hero() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-800">
-                      Merck Verified
+                      Clinical references
                     </p>
                     <p className="text-xs text-gray-500">Evidence-based</p>
                   </div>

@@ -14,9 +14,9 @@ export default function Footer() {
               <span className="text-xl font-bold text-white">PawVital AI</span>
             </div>
             <p className="text-gray-400 max-w-md leading-relaxed">
-              Evidence-based dog symptom triage powered by AI and a
-              deterministic canine clinical matrix — giving you clearer next
-              steps for your dog&apos;s health.
+              Dog-only symptom triage support built on a deterministic canine
+              clinical matrix, with clearer next steps and a cleaner vet
+              handoff for your dog.
             </p>
           </div>
           <div>
@@ -92,8 +92,11 @@ export default function Footer() {
         </div>
         <div className="mt-12 pt-8 border-t border-gray-800 text-center text-sm">
           <p>
-            PawVital AI is not a substitute for professional veterinary care.
-            Always consult your vet for medical decisions.
+            PawVital is not a diagnosis or a substitute for professional
+            veterinary care. If your dog is struggling to breathe, has
+            collapsed, is bleeding heavily, having repeated seizures, unable to
+            urinate, or you think this is an emergency, contact a veterinarian
+            immediately.
           </p>
           <p className="mt-2">
             &copy; {new Date().getFullYear()} PawVital AI. All rights reserved.

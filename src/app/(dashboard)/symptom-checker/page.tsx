@@ -699,15 +699,16 @@ export default function SymptomCheckerPage() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                Veterinary Symptom Analyzer
+                Dog Symptom Checker
               </h1>
               <Badge variant="info">
                 <Activity className="w-3 h-3 mr-1" />
-                Clinical Matrix AI
+                Urgency guidance
               </Badge>
             </div>
             <p className="text-gray-500 mt-1">
-              4-Model Pipeline: Qwen 3.5 · Kimi K2.5 · Nemotron Ultra · GLM-5
+              Dog-only symptom triage support. Not a diagnosis or a replacement
+              for a veterinarian.
             </p>
           </div>
           <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
@@ -724,6 +725,12 @@ export default function SymptomCheckerPage() {
           </div>
         </div>
 
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          If your dog is struggling to breathe, has collapsed, is bleeding
+          heavily, having repeated seizures, unable to urinate, or you think
+          this is an emergency, contact a veterinarian immediately.
+        </div>
+
         {/* Pre-session: Welcome + Quick Start */}
         {!sessionStarted && (
           <Card className="p-4 sm:p-6">
@@ -736,8 +743,9 @@ export default function SymptomCheckerPage() {
                   Tell me what&apos;s going on with {pet.name}
                 </h2>
                 <p className="text-sm text-gray-500">
-                  I&apos;ll ask follow-up questions like a real vet, then
-                  generate a full clinical report with differential diagnoses
+                  I&apos;ll guide a dog-only symptom check, ask focused follow-up
+                  questions, and prepare a vet handoff summary with urgency
+                  guidance. PawVital does not diagnose or prescribe treatment.
                 </p>
               </div>
             </div>
@@ -754,10 +762,10 @@ export default function SymptomCheckerPage() {
                       Describe what&apos;s happening in your own words or upload
                       a photo of the issue
                     </li>
-                    <li>I&apos;ll ask 3-5 focused clinical questions</li>
+                    <li>I&apos;ll ask 3-5 focused questions about urgency</li>
                     <li>
-                      I&apos;ll generate a full report: differential diagnoses,
-                      diagnostic tests, home care, and vet prep questions
+                      I&apos;ll prepare a vet handoff summary with urgency
+                      guidance, important details, and what to watch for
                     </li>
                   </ol>
                 </div>
@@ -796,7 +804,7 @@ export default function SymptomCheckerPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
-                  Veterinary Triage for {pet.name}
+                  Dog symptom check for {pet.name}
                 </p>
                 <p className="text-xs text-gray-500">
                   {pet.breed}, {pet.age_years}y, {pet.weight} lbs
@@ -975,12 +983,12 @@ export default function SymptomCheckerPage() {
                       {conversationState === "escalation" ? (
                         <>
                           <AlertCircle className="w-4 h-4" />
-                          Generate Emergency Report
+                          Generate Emergency Vet Summary
                         </>
                       ) : (
                         <>
                           <Zap className="w-4 h-4" />
-                          Generate Full Veterinary Report
+                          Generate Vet Handoff Summary
                         </>
                       )}
                     </button>
@@ -1053,12 +1061,12 @@ export default function SymptomCheckerPage() {
           <Card className="p-8 text-center animate-pulse">
             <Stethoscope className="w-12 h-12 text-purple-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700">
-              Generating Veterinary Report...
+              Preparing Vet Handoff Summary...
             </h3>
             <p className="text-sm text-gray-500 mt-2">
-              Analyzing full conversation history, building differential
-              diagnoses with breed-specific data, and preparing diagnostic
-              recommendations...
+              Reviewing the conversation, organizing the symptom timeline, and
+              preparing urgency guidance plus notes to share with your
+              veterinarian...
             </p>
           </Card>
         )}

@@ -21,36 +21,36 @@ const features = [
   {
     id: "chat",
     icon: MessageSquare,
-    title: "Smart Symptom Chat",
+    title: "Focused Symptom Intake",
     description:
-      "Our AI asks the right follow-up questions — just like a vet would. No generic questionnaires.",
+      "Structured follow-up questions keep the dog symptom check focused and easier to explain to your veterinarian.",
     illustration: SymptomChatIllustration,
     color: "emerald",
   },
   {
     id: "evidence",
     icon: BookOpen,
-    title: "Evidence-Based Diagnosis",
+    title: "Evidence-Supported Urgency Guidance",
     description:
-      "Every diagnosis is backed by Merck Veterinary Manual references, WAVD guidelines, and similar clinical cases.",
+      "PawVital combines deterministic canine triage rules, clinical references, and similar case patterns to explain why emergency, same-day, or routine care may be appropriate.",
     illustration: DiagnosisReportIllustration,
     color: "blue",
   },
   {
     id: "vision",
     icon: Camera,
-    title: "Vision Analysis",
+    title: "Photo Context Support",
     description:
-      "Upload a photo of a skin condition, eye issue, or wound. Our guarded vision pipeline compares it against curated reference imagery.",
+      "Upload a photo of a skin condition, eye issue, or wound when the concern is visible. PawVital uses guarded photo support to add context without guessing beyond the image.",
     illustration: VisionAnalysisIllustration,
     color: "indigo",
   },
   {
     id: "breed",
     icon: PawPrint,
-    title: "Breed-Aware Intelligence",
+    title: "Breed-Aware Canine Context",
     description:
-      "Dachshunds are 10× more likely to get IVDD. Our breed-specific modifiers catch what generic tools miss.",
+      "Validated breed-aware context helps PawVital flag when a dog&apos;s breed may raise the urgency of certain symptoms.",
     illustration: null,
     color: "amber",
   },
@@ -68,7 +68,7 @@ const features = [
     icon: ClipboardCopy,
     title: "Vet Handoff Summary",
     description:
-      "One-click copy of a professional summary to share with your veterinarian.",
+      "One-click sharing helps you hand the symptom timeline and urgency summary to your veterinarian.",
     illustration: null,
     color: "rose",
   },
@@ -162,14 +162,14 @@ export default function Features() {
           transition={{ duration: 0.5 }}
         >
           <span className="inline-block text-sm font-semibold text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-full mb-4">
-            Clinical-Grade Features
+            Safety-First Features
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
             Everything That Makes PawVital Different
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Evidence-based analysis, not generic checklists. See what&apos;s under
-            the hood.
+            Dog-only symptom-triage support with clear urgency guidance and a
+            cleaner handoff to your veterinarian.
           </p>
         </motion.div>
 

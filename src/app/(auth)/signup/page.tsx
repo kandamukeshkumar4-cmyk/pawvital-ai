@@ -16,8 +16,8 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const benefits = [
   "7-day free trial, no credit card required",
-  "AI symptom checker available 24/7",
-  "Personalized wellness plans for your dog",
+  "Dog symptom checker available 24/7",
+  "Vet handoff summaries for symptom checks",
   "Cancel anytime — no questions asked",
 ];
 
@@ -84,10 +84,11 @@ export default function SignupPage() {
         {/* Left side - Benefits */}
         <div className="hidden lg:block">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Your dog deserves the best care possible.
+            Your dog deserves clearer next steps.
           </h2>
           <p className="text-lg text-gray-600 mb-8">
-            Join thousands of dog parents who stopped guessing and started knowing.
+            Start with dog-only symptom triage support and cleaner vet handoff
+            notes.
           </p>
           <div className="space-y-4">
             {benefits.map((b) => (
@@ -101,10 +102,10 @@ export default function SignupPage() {
           </div>
           <div className="mt-10 bg-blue-50 rounded-2xl p-6 border border-blue-200">
             <p className="text-blue-800 font-medium">
-              &quot;PawVital caught a kidney issue before my vet did.
-              This app literally saved my dog&apos;s life.&quot;
+              &quot;PawVital helped me explain the symptom timeline to my vet and
+              decide not to wait overnight.&quot;
             </p>
-            <p className="mt-2 text-blue-600 text-sm">— Jessica R., Luna&apos;s mom</p>
+            <p className="mt-2 text-blue-600 text-sm">— Jessica R., Luna&apos;s owner</p>
           </div>
         </div>
 
