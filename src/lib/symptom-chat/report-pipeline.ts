@@ -184,6 +184,140 @@ function buildFailSafeTitle(urgency: string): string {
   return "Monitor closely and follow up if symptoms continue";
 }
 
+function formatFailSafeList(values: string[], fallback: string): string {
+  return values.length > 0 ? values.join(", ") : fallback;
+}
+
+function buildFailSafeClinicalNotes(input: {
+  session: TriageSession;
+  context: ReturnType<typeof buildDiagnosisContext>;
+}) {
+  return [
+    "Deterministic fail-safe handoff generated from route urgency context.",
+    `Highest urgency: ${input.context.highest_urgency}.`,
+    `Known symptoms: ${formatFailSafeList(input.session.known_symptoms, "not fully established")}.`,
+    `Red flags: ${formatFailSafeList(input.context.red_flags, "none")}.`,
+  ].join(" ");
+}
+
+function buildNarrativeReportPrompt(input: {
+  session: TriageSession;
+  pet: PetProfile;
+  messages: SymptomChatMessage[];
+  context: ReturnType<typeof buildDiagnosisContext>;
+  top5Formatted: string;
+  knowledgeContext: string;
+  breedRiskContext: string;
+  referenceImageContext: string;
+  clinicalCaseContext: string;
+}) {
+  const conversationSummary = input.messages
+    .slice(-10)
+    .map((m) => `${m.role === "user" ? "Owner" : "Triage AI"}: ${m.content}`)
+    .join("\n");
+
+  return `You are a board-certified veterinary internist (DACVIM) with 15+ years of clinical experience writing a detailed clinical report.
+
+IMPORTANT — USE CORRECT CANINE ANATOMY: "front leg/forelimb" (NOT arm/forearm), "hind leg" (NOT leg), "paw" (NOT hand/foot), "digits" (NOT fingers/toes), "carpus" (NOT wrist), "hock/tarsus" (NOT ankle), "stifle" (NOT knee), "muzzle" (NOT face). Dogs do not have human body parts.
+
+PATIENT: ${input.pet.name}, ${input.pet.age_years}yr ${input.pet.breed}, ${input.pet.weight} lbs
+Known conditions: ${input.pet.existing_conditions?.join(", ") || "None"}
+Current medications: ${input.pet.medications?.join(", ") || "None"}
+
+TRIAGE CONVERSATION:
+${conversationSummary}
+
+STRUCTURED CASE MEMORY:
+${input.session.case_memory?.compressed_summary || buildDeterministicCaseSummary(input.session, input.pet)}
+
+CLINICAL MATRIX CALCULATIONS (pre-calculated disease probabilities — use as your ranking):
+${input.top5Formatted}
+
+BREED RISK PROFILE: ${input.context.breed_risk_summary}
+BODY SYSTEMS INVOLVED: ${input.context.body_systems.join(", ")}
+RED FLAGS: ${input.context.red_flags.length > 0 ? input.context.red_flags.join(", ") : "None"}
+MATRIX-DETERMINED URGENCY: ${input.context.highest_urgency}
+OWNER-REPORTED FACTS:
+- Latest owner turn: ${input.session.case_memory?.latest_owner_turn || "none"}
+- Structured facts: ${Object.entries(input.session.extracted_answers)
+    .map(([key, value]) => `${key}=${String(value)}`)
+    .join("; ") || "none"}
+
+DETERMINISTIC EXTRACTED FACTS:
+${input.context.answer_summary}
+
+VISUAL FINDINGS:
+${formatVisualEvidenceForReport(input.session)}
+
+CONSULT EVIDENCE:
+${formatConsultEvidenceForReport(input.session)}
+
+EVIDENCE CHAIN:
+${formatEvidenceChainForReport(input.session)}
+
+${input.session.image_inferred_breed ? `IMAGE-INFERRED BREED SIGNAL: ${input.session.image_inferred_breed} (${Math.round((input.session.image_inferred_breed_confidence || 0) * 100)}% confidence)\n` : ""}${input.session.breed_profile_summary ? `EXTERNAL BREED PROFILE: ${input.session.breed_profile_summary}\n` : ""}${input.session.roboflow_skin_summary ? `ROBOFLOW SKIN FLAG: ${input.session.roboflow_skin_summary}\n` : ""}${input.knowledgeContext ? `EXTERNAL KNOWLEDGE RETRIEVAL (trusted public corpus; use to support, not replace, the matrix ranking):\n${input.knowledgeContext}\n` : ""}
+${input.breedRiskContext ? `${input.breedRiskContext}\n` : ""}
+${input.referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases; use as supportive visual context, not a diagnosis by itself):\n${input.referenceImageContext}\n` : ""}
+${input.clinicalCaseContext ? `SIMILAR CLINICAL CASES (CSV corpus; use as supplementary case-similarity evidence, not a replacement for matrix ranking):\n${input.clinicalCaseContext}\n` : ""}
+
+${input.session.vision_analysis ? `VISUAL ANALYSIS FROM PET PHOTO (analyzed by the NVIDIA 11B/90B vision stack):\n${input.session.vision_analysis}\n\nIMPORTANT: Incorporate the visual findings above into your differential diagnoses and clinical notes. Reference what was observed in the image (e.g., wound characteristics, skin condition, eye appearance). The visual analysis should heavily influence your report.\n` : ""}
+YOUR TASK: Write the clinical report using the matrix's disease ranking as your primary guide. Do NOT reorder the differentials unless you have strong clinical reasoning to do so. The matrix has already applied breed multipliers, age factors, and symptom-specific modifiers.
+
+For each differential diagnosis, provide:
+- Specific breed prevalence data (e.g., "Golden Retrievers have 2.2x higher incidence of hip dysplasia")
+- Age-specific risk context
+- How the owner-reported symptoms specifically map to this condition
+- Expected disease progression if untreated
+
+For recommended tests, be SPECIFIC:
+- Name exact diagnostic procedures (e.g., "Orthogonal radiographs of the stifle — lateral and craniocaudal views" not just "X-ray")
+- Explain what each test confirms or rules out
+
+Output ONLY valid JSON (no markdown, no code blocks, no thinking):
+{
+  "severity": "${URGENCY_TO_SEVERITY[input.context.highest_urgency] || "medium"}",
+  "recommendation": "${URGENCY_TO_RECOMMENDATION[input.context.highest_urgency] || "vet_48h"}",
+  "title": "Specific clinical title based on top differential",
+  "explanation": "4-6 sentences for a dog owner. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
+  "differential_diagnoses": [
+    {
+      "condition": "Use the medical_term from the matrix calculation",
+      "likelihood": "high" | "moderate" | "low",
+      "description": "2-3 sentences: clinical reasoning using the matrix's breed multiplier and key differentiators. Mention specific prevalence data."
+    }
+  ],
+  "clinical_notes": "Technical paragraph for veterinary colleague. Reference the matrix's probability scores, breed multipliers, and body systems.",
+  "recommended_tests": [
+    {
+      "test": "Use the typical_tests from the matrix data",
+      "reason": "What it confirms/rules out for which differential",
+      "urgency": "stat" | "urgent" | "routine"
+    }
+  ],
+  "home_care": [
+    {
+      "instruction": "Specific measurable instruction",
+      "duration": "Timeframe",
+      "details": "Include normal vs abnormal values"
+    }
+  ],
+  "actions": ["5-7 specific steps"],
+  "warning_signs": ["4-6 escalation signs with thresholds"],
+  "vet_questions": ["3-5 questions tailored to top differentials"],
+  "confidence": 0.0,
+  "evidence_chain": ["brief evidence statements linking owner facts, visual findings, and supporting references"]
+}`;
+}
+
+function buildClientObservabilitySnapshot(session: TriageSession) {
+  const observabilitySnapshot = buildObservabilitySnapshot(session);
+
+  return {
+    timeoutCount: observabilitySnapshot.timeoutCount,
+    fallbackCount: observabilitySnapshot.fallbackCount,
+  };
+}
+
 function buildFailSafeReport(input: {
   session: TriageSession;
   pet: PetProfile;
@@ -195,9 +329,6 @@ function buildFailSafeReport(input: {
       ? "The full narrative report service is not configured right now."
       : "The full narrative report could not be completed right now.";
   const petName = input.pet.name || "your dog";
-  const structuredSummary =
-    input.session.case_memory?.compressed_summary ||
-    buildDeterministicCaseSummary(input.session, input.pet);
 
   return {
     severity:
@@ -206,7 +337,7 @@ function buildFailSafeReport(input: {
       URGENCY_TO_RECOMMENDATION[input.context.highest_urgency] || "vet_48h",
     title: buildFailSafeTitle(input.context.highest_urgency),
     explanation: `${availabilityMessage} This fail-safe report still preserves PawVital's urgency guidance based on the symptom-check answers collected for ${petName}. This is not a diagnosis or a treatment plan. Use the vet handoff below when you contact your clinic, and seek emergency care immediately if your dog worsens.`,
-    clinical_notes: `Deterministic fail-safe report. Highest urgency: ${input.context.highest_urgency}. Known symptoms: ${input.session.known_symptoms.join(", ") || "not fully established"}. Red flags: ${input.context.red_flags.join(", ") || "none"}. Structured summary: ${structuredSummary}`,
+    clinical_notes: buildFailSafeClinicalNotes(input),
     actions: buildFailSafeActions(input.context.highest_urgency),
     warning_signs: buildFailSafeWarningSigns(input.context.highest_urgency),
     vet_questions: [
@@ -401,103 +532,6 @@ export async function generateReport({
     )
     .join("\n\n");
 
-  const conversationSummary = messages
-    .slice(-10)
-    .map((m) => `${m.role === "user" ? "Owner" : "Triage AI"}: ${m.content}`)
-    .join("\n");
-
-  const reportPrompt = `You are a board-certified veterinary internist (DACVIM) with 15+ years of clinical experience writing a detailed clinical report.
-
-IMPORTANT — USE CORRECT CANINE ANATOMY: "front leg/forelimb" (NOT arm/forearm), "hind leg" (NOT leg), "paw" (NOT hand/foot), "digits" (NOT fingers/toes), "carpus" (NOT wrist), "hock/tarsus" (NOT ankle), "stifle" (NOT knee), "muzzle" (NOT face). Dogs do not have human body parts.
-
-PATIENT: ${pet.name}, ${pet.age_years}yr ${pet.breed}, ${pet.weight} lbs
-Known conditions: ${pet.existing_conditions?.join(", ") || "None"}
-Current medications: ${pet.medications?.join(", ") || "None"}
-
-TRIAGE CONVERSATION:
-${conversationSummary}
-
-STRUCTURED CASE MEMORY:
-${session.case_memory?.compressed_summary || buildDeterministicCaseSummary(session, pet)}
-
-CLINICAL MATRIX CALCULATIONS (pre-calculated disease probabilities — use as your ranking):
-${top5Formatted}
-
-BREED RISK PROFILE: ${context.breed_risk_summary}
-BODY SYSTEMS INVOLVED: ${context.body_systems.join(", ")}
-RED FLAGS: ${context.red_flags.length > 0 ? context.red_flags.join(", ") : "None"}
-MATRIX-DETERMINED URGENCY: ${context.highest_urgency}
-OWNER-REPORTED FACTS:
-- Latest owner turn: ${session.case_memory?.latest_owner_turn || "none"}
-- Structured facts: ${Object.entries(session.extracted_answers)
-  .map(([key, value]) => `${key}=${String(value)}`)
-  .join("; ") || "none"}
-
-DETERMINISTIC EXTRACTED FACTS:
-${context.answer_summary}
-
-VISUAL FINDINGS:
-${formatVisualEvidenceForReport(session)}
-
-CONSULT EVIDENCE:
-${formatConsultEvidenceForReport(session)}
-
-EVIDENCE CHAIN:
-${formatEvidenceChainForReport(session)}
-
-${session.image_inferred_breed ? `IMAGE-INFERRED BREED SIGNAL: ${session.image_inferred_breed} (${Math.round((session.image_inferred_breed_confidence || 0) * 100)}% confidence)\n` : ""}${session.breed_profile_summary ? `EXTERNAL BREED PROFILE: ${session.breed_profile_summary}\n` : ""}${session.roboflow_skin_summary ? `ROBOFLOW SKIN FLAG: ${session.roboflow_skin_summary}\n` : ""}${knowledgeContext ? `EXTERNAL KNOWLEDGE RETRIEVAL (trusted public corpus; use to support, not replace, the matrix ranking):\n${knowledgeContext}\n` : ""}
-${breedRiskContext ? `${breedRiskContext}\n` : ""}
-${referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases; use as supportive visual context, not a diagnosis by itself):\n${referenceImageContext}\n` : ""}
-${clinicalCaseContext ? `SIMILAR CLINICAL CASES (CSV corpus; use as supplementary case-similarity evidence, not a replacement for matrix ranking):\n${clinicalCaseContext}\n` : ""}
-
-${session.vision_analysis ? `VISUAL ANALYSIS FROM PET PHOTO (analyzed by the NVIDIA 11B/90B vision stack):\n${session.vision_analysis}\n\nIMPORTANT: Incorporate the visual findings above into your differential diagnoses and clinical notes. Reference what was observed in the image (e.g., wound characteristics, skin condition, eye appearance). The visual analysis should heavily influence your report.\n` : ""}
-YOUR TASK: Write the clinical report using the matrix's disease ranking as your primary guide. Do NOT reorder the differentials unless you have strong clinical reasoning to do so. The matrix has already applied breed multipliers, age factors, and symptom-specific modifiers.
-
-For each differential diagnosis, provide:
-- Specific breed prevalence data (e.g., "Golden Retrievers have 2.2x higher incidence of hip dysplasia")
-- Age-specific risk context
-- How the owner-reported symptoms specifically map to this condition
-- Expected disease progression if untreated
-
-For recommended tests, be SPECIFIC:
-- Name exact diagnostic procedures (e.g., "Orthogonal radiographs of the stifle — lateral and craniocaudal views" not just "X-ray")
-- Explain what each test confirms or rules out
-
-Output ONLY valid JSON (no markdown, no code blocks, no thinking):
-{
-  "severity": "${URGENCY_TO_SEVERITY[context.highest_urgency] || "medium"}",
-  "recommendation": "${URGENCY_TO_RECOMMENDATION[context.highest_urgency] || "vet_48h"}",
-  "title": "Specific clinical title based on top differential",
-  "explanation": "4-6 sentences for a dog owner. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
-  "differential_diagnoses": [
-    {
-      "condition": "Use the medical_term from the matrix calculation",
-      "likelihood": "high" | "moderate" | "low",
-      "description": "2-3 sentences: clinical reasoning using the matrix's breed multiplier and key differentiators. Mention specific prevalence data."
-    }
-  ],
-  "clinical_notes": "Technical paragraph for veterinary colleague. Reference the matrix's probability scores, breed multipliers, and body systems.",
-  "recommended_tests": [
-    {
-      "test": "Use the typical_tests from the matrix data",
-      "reason": "What it confirms/rules out for which differential",
-      "urgency": "stat" | "urgent" | "routine"
-    }
-  ],
-  "home_care": [
-    {
-      "instruction": "Specific measurable instruction",
-      "duration": "Timeframe",
-      "details": "Include normal vs abnormal values"
-    }
-  ],
-  "actions": ["5-7 specific steps"],
-  "warning_signs": ["4-6 escalation signs with thresholds"],
-  "vet_questions": ["3-5 questions tailored to top differentials"],
-  "confidence": 0.0,
-  "evidence_chain": ["brief evidence statements linking owner facts, visual findings, and supporting references"]
-}`;
-
   try {
     const structuredEvidenceChain = buildStructuredEvidenceChain({
       session,
@@ -518,6 +552,17 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       });
     } else {
       try {
+        const reportPrompt = buildNarrativeReportPrompt({
+          session,
+          pet,
+          messages,
+          context,
+          top5Formatted,
+          knowledgeContext,
+          breedRiskContext,
+          referenceImageContext,
+          clinicalCaseContext,
+        });
         const rawReport = await diagnoseWithDeepSeek(reportPrompt);
         console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
 
@@ -703,8 +748,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
       pet,
       finalReport
     );
-    const observabilitySnapshot = buildObservabilitySnapshot(session);
-    finalReport.system_observability = observabilitySnapshot;
+    finalReport.system_observability = buildClientObservabilitySnapshot(session);
     const persistedShadowTelemetrySnapshot =
       buildInternalShadowTelemetrySnapshot(session);
 

@@ -8681,8 +8681,29 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       );
       expect(payload.report.title).not.toContain("Demo Mode");
       expect(payload.report.explanation).toContain("not a diagnosis");
+      expect(payload.report.clinical_notes).toContain(
+        "Deterministic fail-safe handoff generated from route urgency context."
+      );
+      expect(payload.report.clinical_notes).toContain(
+        "Known symptoms: excessive_scratching."
+      );
+      expect(payload.report.clinical_notes).not.toContain(
+        "He keeps scratching around his ears."
+      );
       expect(payload.report.recommendation).not.toBe("emergency_vet");
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability).toEqual(
+        expect.objectContaining({
+          fallbackCount: expect.any(Number),
+          timeoutCount: expect.any(Number),
+        })
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(payload.report.system_observability.contradictionRecords).toBeUndefined();
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+      expect(mockVerifyWithGLM).not.toHaveBeenCalled();
     });
 
     it("returns a fail-safe non-demo report for emergency sessions without providers", async () => {
@@ -8699,7 +8720,20 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.title).toBe("Emergency veterinary care recommended");
       expect(payload.report.recommendation).toBe("emergency_vet");
       expect(payload.report.explanation).not.toContain("Demo mode");
+      expect(payload.report.clinical_notes).toContain(
+        "Deterministic fail-safe handoff generated from route urgency context."
+      );
+      expect(payload.report.clinical_notes).toContain("Known symptoms: vomiting.");
+      expect(payload.report.clinical_notes).toContain("Red flags: vomit_blood.");
+      expect(payload.report.clinical_notes).not.toContain(
+        "He vomited blood this morning."
+      );
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+      expect(mockVerifyWithGLM).not.toHaveBeenCalled();
     });
 
     it("renders real generated emergency report content when providers are available", async () => {
@@ -8744,6 +8778,10 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.explanation).toContain("life-threatening");
       expect(payload.report.title).not.toContain("Demo");
       expect(payload.report.report_mode).toBeUndefined();
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
     });
 
     it("renders real generated non-emergency report content when providers are available", async () => {
@@ -8788,6 +8826,10 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.explanation).toContain("real gastrointestinal concern");
       expect(payload.report.explanation).not.toContain("Demo mode");
       expect(payload.report.report_mode).toBeUndefined();
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
     });
 
     it("falls back to a fail-safe report when narrative generation fails", async () => {
@@ -8806,6 +8848,16 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.report_unavailable_reason).toBe("generation_failed");
       expect(payload.report.title).not.toContain("Demo Mode");
       expect(payload.report.explanation).toContain("full narrative report");
+      expect(payload.report.clinical_notes).toContain(
+        "Deterministic fail-safe handoff generated from route urgency context."
+      );
+      expect(payload.report.clinical_notes).not.toContain(
+        "He keeps scratching around his ears."
+      );
+      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
+        ["fallbackCount", "timeoutCount"]
+      );
+      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
       expect(mockDiagnoseWithDeepSeek).toHaveBeenCalledTimes(1);
     });
   });
