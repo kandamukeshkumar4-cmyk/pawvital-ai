@@ -1,6 +1,6 @@
 {
-  "runId": "LIVE-EVAL-2026-04-20T22-12-11-023Z",
-  "generatedAt": "2026-04-20T22:12:11.025Z",
+  "runId": "LIVE-EVAL-2026-04-21T07-31-34-726Z",
+  "generatedAt": "2026-04-21T07:31:34.727Z",
   "executionMode": "live_route",
   "suiteId": "wave3-freeze",
   "suiteVersion": "wave3-freeze-v2",
@@ -465,16 +465,16 @@
   ],
   "extraCaseIds": [],
   "missingCaseIds": [],
-  "baseUrl": "http://127.0.0.1:3011",
+  "baseUrl": "http://localhost:3010",
   "filters": {},
   "totalCases": 226,
-  "passedCases": 175,
-  "failedCases": 51,
+  "passedCases": 204,
+  "failedCases": 22,
   "totalChecks": 600,
-  "passedChecks": 535,
-  "failedChecks": 65,
-  "expectationPassRate": 0.7743,
-  "meanExpectationScore": 0.9093,
+  "passedChecks": 562,
+  "failedChecks": 38,
+  "expectationPassRate": 0.9027,
+  "meanExpectationScore": 0.9476,
   "emergencyRecall": 1,
   "emergencyCaseCount": 76,
   "emergencyMissCount": 0,
@@ -482,8 +482,8 @@
   "blockingFailures": 0,
   "passFail": "PASS",
   "preflight": {
-    "performedAt": "2026-04-20T22:11:42.398Z",
-    "routeUrl": "http://127.0.0.1:3011/api/ai/sidecar-readiness",
+    "performedAt": "2026-04-21T06:56:36.154Z",
+    "routeUrl": "http://localhost:3010/api/ai/sidecar-readiness",
     "ready": false,
     "requiredServices": 5,
     "configuredCount": 0,
@@ -503,9 +503,9 @@
     },
     "question": {
       "cases": 150,
-      "passedCases": 99,
-      "failedCases": 51,
-      "meanScore": 0.8633
+      "passedCases": 128,
+      "failedCases": 22,
+      "meanScore": 0.9211
     }
   },
   "byRiskTier": {
@@ -517,57 +517,25 @@
     },
     "tier_2_same_day": {
       "cases": 26,
-      "passedCases": 14,
-      "failedCases": 12,
-      "meanScore": 0.8205
+      "passedCases": 24,
+      "failedCases": 2,
+      "meanScore": 0.9359
     },
     "tier_3_48h_monitor": {
       "cases": 124,
-      "passedCases": 85,
-      "failedCases": 39,
-      "meanScore": 0.8723
+      "passedCases": 104,
+      "failedCases": 20,
+      "meanScore": 0.918
     }
   },
   "failures": [
-    {
-      "caseId": "question-trauma-fall-yard",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:trauma"
-    },
-    {
-      "caseId": "sameday-behavior-hiding",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:behavior_change"
-    },
-    {
-      "caseId": "sameday-chronic-limp-sudden-worse",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:limping"
-    },
     {
       "caseId": "sameday-dental-bleeding-gum",
       "severity": "HIGH",
       "category": "expectation_mismatch",
       "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:dental_problem"
-    },
-    {
-      "caseId": "sameday-drinking-excessive",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:drinking_more"
+      "actual": "emergency",
+      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "sameday-face-swelling-worsening",
@@ -576,54 +544,6 @@
       "expected": "question",
       "actual": "emergency",
       "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "sameday-hair-loss-spreading",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:hair_loss"
-    },
-    {
-      "caseId": "sameday-limping-non-weight-bearing",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:limping"
-    },
-    {
-      "caseId": "sameday-regurgitation-frequent",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:regurgitation"
-    },
-    {
-      "caseId": "sameday-urinary-blood",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:urination_problem"
-    },
-    {
-      "caseId": "sameday-vomiting-multiple-times",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:vomiting"
-    },
-    {
-      "caseId": "sameday-weight-loss-rapid",
-      "severity": "HIGH",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:weight_loss"
     },
     {
       "caseId": "followup-diarrhea-frequency-unknown",
@@ -730,60 +650,12 @@
       "description": "Failed checks: answeredQuestionsInclude:wound_depth, extractedAnswersMatch:wound_depth"
     },
     {
-      "caseId": "question-behavior-change",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:behavior_change"
-    },
-    {
-      "caseId": "question-constipation",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:constipation"
-    },
-    {
       "caseId": "question-coughing-breathing-combined",
       "severity": "MEDIUM",
       "category": "expectation_mismatch",
       "expected": "question",
       "actual": "question",
       "description": "Failed checks: knownSymptomsInclude:coughing_breathing_combined"
-    },
-    {
-      "caseId": "question-dental-problem",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:dental_problem"
-    },
-    {
-      "caseId": "question-drinking-more",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:drinking_more"
-    },
-    {
-      "caseId": "question-ear-scratching",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:ear_scratching"
-    },
-    {
-      "caseId": "question-eye-discharge",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
     },
     {
       "caseId": "question-face-swelling-mild",
@@ -794,54 +666,6 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "question-generalized-stiffness",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:generalized_stiffness"
-    },
-    {
-      "caseId": "question-hair-loss",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:hair_loss"
-    },
-    {
-      "caseId": "question-low-literacy-belly-big",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:swollen_abdomen"
-    },
-    {
-      "caseId": "question-low-literacy-eye-bad",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
-    },
-    {
-      "caseId": "question-low-literacy-leg-hurt",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:limping"
-    },
-    {
-      "caseId": "question-nasal-discharge",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:nasal_discharge"
-    },
-    {
       "caseId": "question-postoperative-concern",
       "severity": "MEDIUM",
       "category": "expectation_mismatch",
@@ -850,28 +674,12 @@
       "description": "Failed checks: responseType, knownSymptomsInclude:postoperative_concern"
     },
     {
-      "caseId": "question-regurgitation",
+      "caseId": "question-senior-arthritis-worsening",
       "severity": "MEDIUM",
       "category": "expectation_mismatch",
       "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:regurgitation"
-    },
-    {
-      "caseId": "question-senior-decline",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:senior_decline"
-    },
-    {
-      "caseId": "question-slang-the-runs",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:diarrhea"
+      "actual": "emergency",
+      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "question-slang-throwing-up-bricks",
@@ -882,52 +690,12 @@
       "description": "Failed checks: knownSymptomsInclude:vomiting"
     },
     {
-      "caseId": "question-small-blood-in-stool",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:blood_in_stool"
-    },
-    {
-      "caseId": "question-swelling-lump",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:swelling_lump"
-    },
-    {
-      "caseId": "question-urination-problem",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:urination_problem"
-    },
-    {
-      "caseId": "question-vaccine-reaction-mild",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:post_vaccination_reaction"
-    },
-    {
       "caseId": "question-vague-lump-found",
       "severity": "MEDIUM",
       "category": "expectation_mismatch",
       "expected": "question",
       "actual": "question",
       "description": "Failed checks: knownSymptomsInclude:swelling_lump"
-    },
-    {
-      "caseId": "question-weight-loss",
-      "severity": "MEDIUM",
-      "category": "expectation_mismatch",
-      "expected": "question",
-      "actual": "question",
-      "description": "Failed checks: knownSymptomsInclude:weight_loss"
     },
     {
       "caseId": "toxin-question-ibuprofen-maybe",

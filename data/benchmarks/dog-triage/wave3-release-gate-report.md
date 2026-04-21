@@ -23,7 +23,7 @@ _None_
 ## Failure Bands
 
 - Critical release blockers: 0
-- High non-blocking failures: 12 (question-trauma-fall-yard, sameday-behavior-hiding, sameday-chronic-limp-sudden-worse, sameday-dental-bleeding-gum, sameday-drinking-excessive, sameday-face-swelling-worsening, sameday-hair-loss-spreading, sameday-limping-non-weight-bearing, sameday-regurgitation-frequent, sameday-urinary-blood)
+- High non-blocking failures: 2 (sameday-dental-bleeding-gum, sameday-face-swelling-worsening)
 - Medium follow-up/readiness failures: 13 (followup-diarrhea-frequency-unknown, followup-diarrhea-onset-unknown, followup-discharge-color-unknown, followup-energy-level-unknown, followup-itch-location-unknown, followup-limping-progression-unknown, followup-seasonal-pattern-unknown, followup-swelling-present-no, followup-temperature-unknown, followup-trauma-history-unknown)
 
 ## Blocking High-Risk Failures

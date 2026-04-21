@@ -1,79 +1,23 @@
 {
-  "generatedAt": "2026-04-20T22:12:19.478Z",
+  "generatedAt": "2026-04-21T07:31:41.623Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3c30f83500279f77a44d3f7da50a51854a786a24abfa580686835d939fb98edf",
-  "totalFailures": 51,
+  "totalFailures": 22,
   "hasScorecard": true,
   "entries": [
-    {
-      "caseId": "question-trauma-fall-yard",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "trauma"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog jumped off the deck wrong and now seems sore and shaky.",
-      "description": "Failed checks: knownSymptomsInclude:trauma"
-    },
-    {
-      "caseId": "sameday-behavior-hiding",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "behavior_change"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog is hiding under the bed and not eating like usual.",
-      "description": "Failed checks: knownSymptomsInclude:behavior_change"
-    },
-    {
-      "caseId": "sameday-chronic-limp-sudden-worse",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "limping"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog has had a bad hip for years but today he can barely walk.",
-      "description": "Failed checks: knownSymptomsInclude:limping"
-    },
     {
       "caseId": "sameday-dental-bleeding-gum",
       "severity": "HIGH",
       "expected": "question",
-      "actual": "question",
+      "actual": "emergency",
       "complaintFamilies": [
         "dental_problem"
       ],
       "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
       "ownerMessage": "My dog's gums are bleeding and she cries when I try to check her teeth.",
-      "description": "Failed checks: knownSymptomsInclude:dental_problem"
-    },
-    {
-      "caseId": "sameday-drinking-excessive",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "drinking_more"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog is drinking entire bowls of water and refilling them multiple times a day.",
-      "description": "Failed checks: knownSymptomsInclude:drinking_more"
+      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "sameday-face-swelling-worsening",
@@ -88,90 +32,6 @@
       "rootCauseBucket": "deterministic emergency composite not triggered",
       "ownerMessage": "My dog's face has been getting more swollen over the past few hours.",
       "description": "Failed checks: responseType, readyForReport"
-    },
-    {
-      "caseId": "sameday-hair-loss-spreading",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "hair_loss"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "The bald patches on my dog are spreading to new areas.",
-      "description": "Failed checks: knownSymptomsInclude:hair_loss"
-    },
-    {
-      "caseId": "sameday-limping-non-weight-bearing",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "limping"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog won't put any weight on his front leg after playing fetch.",
-      "description": "Failed checks: knownSymptomsInclude:limping"
-    },
-    {
-      "caseId": "sameday-regurgitation-frequent",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "regurgitation"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog regurgitates after almost every meal now.",
-      "description": "Failed checks: knownSymptomsInclude:regurgitation"
-    },
-    {
-      "caseId": "sameday-urinary-blood",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "urination_problem"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "I noticed blood in my dog's urine this morning but she is still peeing normally.",
-      "description": "Failed checks: knownSymptomsInclude:urination_problem"
-    },
-    {
-      "caseId": "sameday-vomiting-multiple-times",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "vomiting"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog has thrown up four times today but is still trying to drink.",
-      "description": "Failed checks: knownSymptomsInclude:vomiting"
-    },
-    {
-      "caseId": "sameday-weight-loss-rapid",
-      "severity": "HIGH",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "weight_loss"
-      ],
-      "riskTier": "tier_2_same_day",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog has lost a noticeable amount of weight in the last two weeks.",
-      "description": "Failed checks: knownSymptomsInclude:weight_loss"
     },
     {
       "caseId": "followup-diarrhea-frequency-unknown",
@@ -356,34 +216,6 @@
       "description": "Failed checks: answeredQuestionsInclude:wound_depth, extractedAnswersMatch:wound_depth"
     },
     {
-      "caseId": "question-behavior-change",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "behavior_change"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog seems confused lately and paces around at night.",
-      "description": "Failed checks: knownSymptomsInclude:behavior_change"
-    },
-    {
-      "caseId": "question-constipation",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "constipation"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "He keeps straining to poop and only tiny dry pieces come out.",
-      "description": "Failed checks: knownSymptomsInclude:constipation"
-    },
-    {
       "caseId": "question-coughing-breathing-combined",
       "severity": "MEDIUM",
       "expected": "question",
@@ -396,62 +228,6 @@
       "rootCauseBucket": "complaint normalization miss",
       "ownerMessage": "He has been coughing and his breathing seems noisier than usual.",
       "description": "Failed checks: knownSymptomsInclude:coughing_breathing_combined"
-    },
-    {
-      "caseId": "question-dental-problem",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "dental_problem"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "Her breath is awful and she drops food when she tries to chew.",
-      "description": "Failed checks: knownSymptomsInclude:dental_problem"
-    },
-    {
-      "caseId": "question-drinking-more",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "drinking_more"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog is drinking way more water and peeing more than usual.",
-      "description": "Failed checks: knownSymptomsInclude:drinking_more"
-    },
-    {
-      "caseId": "question-ear-scratching",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "ear_scratching"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "He keeps scratching his ears and they smell bad.",
-      "description": "Failed checks: knownSymptomsInclude:ear_scratching"
-    },
-    {
-      "caseId": "question-eye-discharge",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "eye_discharge"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog's left eye has yellow discharge and she keeps squinting a little.",
-      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
     },
     {
       "caseId": "question-face-swelling-mild",
@@ -468,90 +244,6 @@
       "description": "Failed checks: responseType, readyForReport"
     },
     {
-      "caseId": "question-generalized-stiffness",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "generalized_stiffness"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My senior dog is very stiff when he gets up after resting.",
-      "description": "Failed checks: knownSymptomsInclude:generalized_stiffness"
-    },
-    {
-      "caseId": "question-hair-loss",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "hair_loss"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog is losing patches of hair on her back and belly.",
-      "description": "Failed checks: knownSymptomsInclude:hair_loss"
-    },
-    {
-      "caseId": "question-low-literacy-belly-big",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "swollen_abdomen"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "His belly be real big like a balloon.",
-      "description": "Failed checks: knownSymptomsInclude:swollen_abdomen"
-    },
-    {
-      "caseId": "question-low-literacy-eye-bad",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "vision_loss"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "His eye all goopy and squinty.",
-      "description": "Failed checks: knownSymptomsInclude:eye_discharge"
-    },
-    {
-      "caseId": "question-low-literacy-leg-hurt",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "limping"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "His leg be hurting him bad.",
-      "description": "Failed checks: knownSymptomsInclude:limping"
-    },
-    {
-      "caseId": "question-nasal-discharge",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "nasal_discharge"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "He has discharge coming from one nostril and keeps sneezing.",
-      "description": "Failed checks: knownSymptomsInclude:nasal_discharge"
-    },
-    {
       "caseId": "question-postoperative-concern",
       "severity": "MEDIUM",
       "expected": "question",
@@ -566,46 +258,18 @@
       "description": "Failed checks: responseType, knownSymptomsInclude:postoperative_concern"
     },
     {
-      "caseId": "question-regurgitation",
+      "caseId": "question-senior-arthritis-worsening",
       "severity": "MEDIUM",
       "expected": "question",
-      "actual": "question",
+      "actual": "emergency",
       "complaintFamilies": [
-        "regurgitation"
+        "generalized_stiffness"
       ],
       "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "Food comes back up right after he eats, almost like he never digested it.",
-      "description": "Failed checks: knownSymptomsInclude:regurgitation"
-    },
-    {
-      "caseId": "question-senior-decline",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "senior_decline"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My old dog is slowing down a lot, sleeping more, and just not himself lately.",
-      "description": "Failed checks: knownSymptomsInclude:senior_decline"
-    },
-    {
-      "caseId": "question-slang-the-runs",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "diarrhea"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog has the runs really bad.",
-      "description": "Failed checks: knownSymptomsInclude:diarrhea"
+      "actualResponseType": "emergency",
+      "rootCauseBucket": "deterministic emergency composite not triggered",
+      "ownerMessage": "My dog has arthritis but it seems much worse lately. He can barely stand.",
+      "description": "Failed checks: responseType, readyForReport"
     },
     {
       "caseId": "question-slang-throwing-up-bricks",
@@ -622,62 +286,6 @@
       "description": "Failed checks: knownSymptomsInclude:vomiting"
     },
     {
-      "caseId": "question-small-blood-in-stool",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "blood_in_stool"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "There were a few streaks of blood in my dog's stool today.",
-      "description": "Failed checks: knownSymptomsInclude:blood_in_stool"
-    },
-    {
-      "caseId": "question-swelling-lump",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "swelling_lump"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "I found a new lump under the skin on my dog's side.",
-      "description": "Failed checks: knownSymptomsInclude:swelling_lump"
-    },
-    {
-      "caseId": "question-urination-problem",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "urination_problem"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "She is having accidents and seems to strain a little when she pees.",
-      "description": "Failed checks: knownSymptomsInclude:urination_problem"
-    },
-    {
-      "caseId": "question-vaccine-reaction-mild",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "post_vaccination_reaction"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My puppy got shots yesterday and seems a bit tired and sore today.",
-      "description": "Failed checks: knownSymptomsInclude:post_vaccination_reaction"
-    },
-    {
       "caseId": "question-vague-lump-found",
       "severity": "MEDIUM",
       "expected": "question",
@@ -690,20 +298,6 @@
       "rootCauseBucket": "complaint normalization miss",
       "ownerMessage": "Found something under his skin. Not sure what it is.",
       "description": "Failed checks: knownSymptomsInclude:swelling_lump"
-    },
-    {
-      "caseId": "question-weight-loss",
-      "severity": "MEDIUM",
-      "expected": "question",
-      "actual": "question",
-      "complaintFamilies": [
-        "weight_loss"
-      ],
-      "riskTier": "tier_3_48h_monitor",
-      "actualResponseType": "question",
-      "rootCauseBucket": "complaint normalization miss",
-      "ownerMessage": "My dog is losing weight even though he is still eating.",
-      "description": "Failed checks: knownSymptomsInclude:weight_loss"
     },
     {
       "caseId": "toxin-question-ibuprofen-maybe",
@@ -721,103 +315,44 @@
     }
   ],
   "byComplaintFamily": {
-    "behavior_change": 2,
-    "blood_in_stool": 1,
-    "constipation": 1,
     "coughing_breathing_combined": 1,
-    "dental_problem": 2,
-    "diarrhea": 3,
-    "drinking_more": 3,
-    "ear_scratching": 1,
+    "dental_problem": 1,
+    "diarrhea": 2,
+    "drinking_more": 1,
     "excessive_scratching": 2,
-    "eye_discharge": 1,
     "generalized_stiffness": 1,
-    "hair_loss": 2,
     "lethargy": 1,
-    "limping": 6,
+    "limping": 3,
     "medication_reaction": 1,
-    "nasal_discharge": 2,
-    "post_vaccination_reaction": 1,
+    "nasal_discharge": 1,
     "postoperative_concern": 1,
-    "regurgitation": 2,
-    "senior_decline": 1,
-    "swelling_lump": 2,
-    "swollen_abdomen": 1,
-    "trauma": 1,
-    "urination_problem": 3,
-    "vision_loss": 1,
-    "vomiting": 3,
-    "weight_loss": 2,
+    "swelling_lump": 1,
+    "urination_problem": 1,
+    "vomiting": 2,
     "wound_skin_issue": 3
   },
   "byRiskTier": {
-    "tier_2_same_day": 12,
-    "tier_3_48h_monitor": 39
+    "tier_2_same_day": 2,
+    "tier_3_48h_monitor": 20
   },
   "byActualResponseType": {
-    "emergency": 2,
+    "emergency": 4,
     "out_of_scope": 2,
-    "question": 45,
+    "question": 14,
     "ready": 2
   },
   "byRootCauseBucket": {
-    "complaint normalization miss": 35,
-    "deterministic emergency composite not triggered": 16
+    "complaint normalization miss": 4,
+    "deterministic emergency composite not triggered": 18
   },
   "rootCauseSummary": [
     {
-      "rootCauseBucket": "complaint normalization miss",
-      "totalFailures": 35,
-      "severityCounts": {
-        "CRITICAL": 0,
-        "HIGH": 11,
-        "MEDIUM": 24
-      },
-      "caseIds": [
-        "question-behavior-change",
-        "question-constipation",
-        "question-coughing-breathing-combined",
-        "question-dental-problem",
-        "question-drinking-more",
-        "question-ear-scratching",
-        "question-eye-discharge",
-        "question-generalized-stiffness",
-        "question-hair-loss",
-        "question-low-literacy-belly-big",
-        "question-low-literacy-eye-bad",
-        "question-low-literacy-leg-hurt",
-        "question-nasal-discharge",
-        "question-postoperative-concern",
-        "question-regurgitation",
-        "question-senior-decline",
-        "question-slang-the-runs",
-        "question-slang-throwing-up-bricks",
-        "question-small-blood-in-stool",
-        "question-swelling-lump",
-        "question-trauma-fall-yard",
-        "question-urination-problem",
-        "question-vaccine-reaction-mild",
-        "question-vague-lump-found",
-        "question-weight-loss",
-        "sameday-behavior-hiding",
-        "sameday-chronic-limp-sudden-worse",
-        "sameday-dental-bleeding-gum",
-        "sameday-drinking-excessive",
-        "sameday-hair-loss-spreading",
-        "sameday-limping-non-weight-bearing",
-        "sameday-regurgitation-frequent",
-        "sameday-urinary-blood",
-        "sameday-vomiting-multiple-times",
-        "sameday-weight-loss-rapid"
-      ]
-    },
-    {
       "rootCauseBucket": "deterministic emergency composite not triggered",
-      "totalFailures": 16,
+      "totalFailures": 18,
       "severityCounts": {
         "CRITICAL": 0,
-        "HIGH": 1,
-        "MEDIUM": 15
+        "HIGH": 2,
+        "MEDIUM": 16
       },
       "caseIds": [
         "followup-diarrhea-frequency-unknown",
@@ -834,46 +369,91 @@
         "followup-vomit-color-unknown",
         "followup-wound-depth-unknown",
         "question-face-swelling-mild",
+        "question-senior-arthritis-worsening",
+        "sameday-dental-bleeding-gum",
         "sameday-face-swelling-worsening",
         "toxin-question-ibuprofen-maybe"
+      ]
+    },
+    {
+      "rootCauseBucket": "complaint normalization miss",
+      "totalFailures": 4,
+      "severityCounts": {
+        "CRITICAL": 0,
+        "HIGH": 0,
+        "MEDIUM": 4
+      },
+      "caseIds": [
+        "question-coughing-breathing-combined",
+        "question-postoperative-concern",
+        "question-slang-throwing-up-bricks",
+        "question-vague-lump-found"
       ]
     }
   ],
   "delta": {
-    "comparedToGeneratedAt": "2026-04-20T22:11:42.352Z",
-    "previousTotalFailures": 0,
-    "totalFailureDelta": 51,
+    "comparedToGeneratedAt": "2026-04-20T22:12:19.478Z",
+    "previousTotalFailures": 51,
+    "totalFailureDelta": -29,
     "countsByStatus": {
-      "improved": 0,
-      "regressed": 2,
+      "improved": 1,
+      "regressed": 1,
       "unchanged": 0
     },
     "rootCauseChanges": [
       {
-        "rootCauseBucket": "complaint normalization miss",
+        "rootCauseBucket": "deterministic emergency composite not triggered",
         "status": "regressed",
-        "previousTotalFailures": 0,
-        "currentTotalFailures": 35,
-        "deltaFailures": 35,
+        "previousTotalFailures": 16,
+        "currentTotalFailures": 18,
+        "deltaFailures": 2,
         "previousSeverityCounts": {
           "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 0
+          "HIGH": 1,
+          "MEDIUM": 15
         },
         "currentSeverityCounts": {
           "CRITICAL": 0,
-          "HIGH": 11,
-          "MEDIUM": 24
+          "HIGH": 2,
+          "MEDIUM": 16
         },
         "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": 1,
+          "MEDIUM": 1
+        },
+        "newCaseIds": [
+          "question-senior-arthritis-worsening",
+          "sameday-dental-bleeding-gum"
+        ],
+        "resolvedCaseIds": [],
+        "compositionChanged": true
+      },
+      {
+        "rootCauseBucket": "complaint normalization miss",
+        "status": "improved",
+        "previousTotalFailures": 35,
+        "currentTotalFailures": 4,
+        "deltaFailures": -31,
+        "previousSeverityCounts": {
           "CRITICAL": 0,
           "HIGH": 11,
           "MEDIUM": 24
         },
-        "newCaseIds": [
+        "currentSeverityCounts": {
+          "CRITICAL": 0,
+          "HIGH": 0,
+          "MEDIUM": 4
+        },
+        "severityDelta": {
+          "CRITICAL": 0,
+          "HIGH": -11,
+          "MEDIUM": -20
+        },
+        "newCaseIds": [],
+        "resolvedCaseIds": [
           "question-behavior-change",
           "question-constipation",
-          "question-coughing-breathing-combined",
           "question-dental-problem",
           "question-drinking-more",
           "question-ear-scratching",
@@ -884,17 +464,14 @@
           "question-low-literacy-eye-bad",
           "question-low-literacy-leg-hurt",
           "question-nasal-discharge",
-          "question-postoperative-concern",
           "question-regurgitation",
           "question-senior-decline",
           "question-slang-the-runs",
-          "question-slang-throwing-up-bricks",
           "question-small-blood-in-stool",
           "question-swelling-lump",
           "question-trauma-fall-yard",
           "question-urination-problem",
           "question-vaccine-reaction-mild",
-          "question-vague-lump-found",
           "question-weight-loss",
           "sameday-behavior-hiding",
           "sameday-chronic-limp-sudden-worse",
@@ -907,49 +484,6 @@
           "sameday-vomiting-multiple-times",
           "sameday-weight-loss-rapid"
         ],
-        "resolvedCaseIds": [],
-        "compositionChanged": true
-      },
-      {
-        "rootCauseBucket": "deterministic emergency composite not triggered",
-        "status": "regressed",
-        "previousTotalFailures": 0,
-        "currentTotalFailures": 16,
-        "deltaFailures": 16,
-        "previousSeverityCounts": {
-          "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 0
-        },
-        "currentSeverityCounts": {
-          "CRITICAL": 0,
-          "HIGH": 1,
-          "MEDIUM": 15
-        },
-        "severityDelta": {
-          "CRITICAL": 0,
-          "HIGH": 1,
-          "MEDIUM": 15
-        },
-        "newCaseIds": [
-          "followup-diarrhea-frequency-unknown",
-          "followup-diarrhea-onset-unknown",
-          "followup-discharge-color-unknown",
-          "followup-energy-level-unknown",
-          "followup-itch-location-unknown",
-          "followup-limping-progression-unknown",
-          "followup-seasonal-pattern-unknown",
-          "followup-swelling-present-no",
-          "followup-temperature-unknown",
-          "followup-trauma-history-unknown",
-          "followup-urine-color-unknown",
-          "followup-vomit-color-unknown",
-          "followup-wound-depth-unknown",
-          "question-face-swelling-mild",
-          "sameday-face-swelling-worsening",
-          "toxin-question-ibuprofen-maybe"
-        ],
-        "resolvedCaseIds": [],
         "compositionChanged": true
       }
     ]
