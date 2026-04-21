@@ -11,14 +11,16 @@ import {
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import { formatConfidenceLevelLabel } from "@/lib/report-confidence";
-import { getRecommendationLabel } from "@/lib/report-handoff";
 import type { SymptomReport } from "./types";
 
 interface OwnerSummarySectionProps {
-  report: SymptomReport;
   canExport: boolean;
+  confidenceCalibration?: SymptomReport["calibrated_confidence"];
+  explanation: string;
   feedbackEnabled: boolean;
+  limitations: string[];
   pdfBusy?: boolean;
+  recommendationLabel: string;
   onCopyVetSummary: () => void | Promise<void>;
   onJumpToHandoff?: () => void;
   onJumpToFeedback?: () => void;
@@ -27,33 +29,14 @@ interface OwnerSummarySectionProps {
   readOnlyShared?: boolean;
 }
 
-function buildLimitations(report: SymptomReport): string[] {
-  const limitations = [
-    "the exact cause without a hands-on veterinary exam",
-    "which medicines, procedures, or care plan are safest without a veterinarian guiding them",
-  ];
-
-  if ((report.recommended_tests?.length ?? 0) > 0) {
-    limitations.push(
-      `whether tests like ${report.recommended_tests
-        ?.slice(0, 2)
-        .map((entry) => entry.test)
-        .join(" or ")} are needed until your veterinarian examines your dog`,
-    );
-  } else {
-    limitations.push(
-      "whether your dog needs bloodwork, imaging, or other testing until your veterinarian examines them",
-    );
-  }
-
-  return limitations;
-}
-
 export function OwnerSummarySection({
-  report,
   canExport,
+  confidenceCalibration,
+  explanation,
   feedbackEnabled,
+  limitations,
   pdfBusy = false,
+  recommendationLabel,
   onCopyVetSummary,
   onJumpToHandoff,
   onJumpToFeedback,
@@ -61,10 +44,6 @@ export function OwnerSummarySection({
   onOpenShareModal,
   readOnlyShared = false,
 }: OwnerSummarySectionProps) {
-  const calibratedConfidence =
-    report.calibrated_confidence ?? report.confidence_calibration;
-  const limitations = buildLimitations(report);
-
   return (
     <section
       aria-label="Owner summary"
@@ -78,7 +57,7 @@ export function OwnerSummarySection({
           What this result means for your dog right now
         </h4>
         <p className="text-sm leading-6 text-gray-600">
-          {getRecommendationLabel(report)}
+          {recommendationLabel}
         </p>
       </div>
 
@@ -91,14 +70,14 @@ export function OwnerSummarySection({
                 Why PawVital recommended this
               </h5>
               <p className="text-sm leading-6 text-gray-700">
-                {report.explanation}
+                {explanation}
               </p>
-              {calibratedConfidence ? (
+              {confidenceCalibration ? (
                 <p className="text-xs text-gray-500">
                   How certain PawVital is right now:{" "}
                   <span className="font-semibold text-gray-700">
                     {formatConfidenceLevelLabel(
-                      calibratedConfidence.confidence_level,
+                      confidenceCalibration.confidence_level,
                     )}
                   </span>
                 </p>

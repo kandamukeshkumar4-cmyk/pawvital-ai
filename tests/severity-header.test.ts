@@ -3,6 +3,7 @@
 import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { SymptomReport } from "@/components/symptom-report/types";
+import { buildReportPresentation } from "@/components/symptom-report/report-presentation";
 import { SeverityHeader } from "@/components/symptom-report/severity-header";
 
 function makeReport(
@@ -25,10 +26,17 @@ describe("severity header escalation UI", () => {
   it("renders emergency clinic handoff actions", () => {
     const handleCopy = jest.fn();
     const handleJump = jest.fn();
+    const report = makeReport();
+    const presentation = buildReportPresentation(report);
 
     render(
       React.createElement(SeverityHeader, {
-        report: makeReport(),
+        banner: presentation.headerBanner,
+        recommendationLabel: presentation.recommendationLabel,
+        report,
+        tone: presentation.tone,
+        urgencyBody: presentation.urgencyBody,
+        urgencyLabel: presentation.urgencyLabel,
         copyState: "idle",
         onCopyVetSummary: handleCopy,
         onJumpToHandoff: handleJump,
@@ -48,13 +56,21 @@ describe("severity header escalation UI", () => {
   });
 
   it("renders same-day follow-up guidance for high concern reports", () => {
+    const report = makeReport({
+      severity: "high",
+      recommendation: "vet_24h",
+      title: "Painful ear infection",
+    });
+    const presentation = buildReportPresentation(report);
+
     render(
       React.createElement(SeverityHeader, {
-        report: makeReport({
-          severity: "high",
-          recommendation: "vet_24h",
-          title: "Painful ear infection",
-        }),
+        banner: presentation.headerBanner,
+        recommendationLabel: presentation.recommendationLabel,
+        report,
+        tone: presentation.tone,
+        urgencyBody: presentation.urgencyBody,
+        urgencyLabel: presentation.urgencyLabel,
         copyState: "idle",
         onCopyVetSummary: jest.fn(),
       })

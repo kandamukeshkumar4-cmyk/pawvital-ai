@@ -7,18 +7,17 @@ import Badge from "@/components/ui/badge";
 import { formatConfidenceLevelLabel } from "@/lib/report-confidence";
 import type { SymptomReport } from "./types";
 import { severityConfig } from "./constants";
-import {
-  getRecommendationLabel,
-  getUrgencyLevelBody,
-  getUrgencyLevelLabel,
-  isEmergencyReport,
-  isEscalatedReport,
-} from "@/lib/report-handoff";
+import type { HeaderBannerCopy, ReportTone } from "./report-presentation";
 
 type CopyState = "idle" | "copied" | "error";
 
 interface SeverityHeaderProps {
+  banner: HeaderBannerCopy | null;
+  recommendationLabel: string;
   report: SymptomReport;
+  tone: ReportTone;
+  urgencyBody: string;
+  urgencyLabel: string;
   copyState: CopyState;
   onCopyVetSummary: () => void | Promise<void>;
   onJumpToHandoff?: () => void;
@@ -26,8 +25,37 @@ interface SeverityHeaderProps {
   headerActions?: ReactNode;
 }
 
+const TONE_STYLES: Record<
+  ReportTone,
+  { button: string; helperPill: string; urgencyPill: string }
+> = {
+  emergency: {
+    button:
+      "border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50",
+    helperPill: "bg-red-600 text-white",
+    urgencyPill: "bg-red-600 text-white",
+  },
+  routine: {
+    button:
+      "border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50",
+    helperPill: "bg-emerald-600 text-white",
+    urgencyPill: "bg-emerald-600 text-white",
+  },
+  urgent: {
+    button:
+      "border-orange-300 bg-white px-4 py-2 text-sm font-semibold text-orange-900 hover:bg-orange-50",
+    helperPill: "bg-orange-600 text-white",
+    urgencyPill: "bg-orange-600 text-white",
+  },
+};
+
 export function SeverityHeader({
+  banner,
+  recommendationLabel,
   report,
+  tone,
+  urgencyBody,
+  urgencyLabel,
   copyState,
   onCopyVetSummary,
   onJumpToHandoff,
@@ -35,29 +63,7 @@ export function SeverityHeader({
 }: SeverityHeaderProps) {
   const calibratedConfidence =
     report.calibrated_confidence ?? report.confidence_calibration;
-  const emergencyReport = isEmergencyReport(report);
-  const escalatedReport = isEscalatedReport(report);
-  const urgencyLevelLabel = getUrgencyLevelLabel(report);
-  const urgencyLevelBody = getUrgencyLevelBody(report);
-  const bannerTone = emergencyReport
-    ? {
-        border: "border-red-300",
-        button:
-          "border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-800 hover:bg-red-50",
-        helper:
-          "Leave now if you can travel safely. Call the clinic on the way and use the clinic handoff below at intake.",
-        pill: "bg-red-600 text-white",
-        title: "Emergency clinic handoff",
-      }
-    : {
-        border: "border-orange-300",
-        button:
-          "border-orange-300 bg-white px-4 py-2 text-sm font-semibold text-orange-900 hover:bg-orange-50",
-        helper:
-          "Arrange same-day veterinary follow-up and copy the clinic handoff before you leave.",
-        pill: "bg-orange-600 text-white",
-        title: "Same-day veterinary follow-up",
-      };
+  const toneStyles = TONE_STYLES[tone];
 
   return (
     <Card
@@ -75,15 +81,9 @@ export function SeverityHeader({
               Urgency level
             </span>
             <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                emergencyReport
-                  ? "bg-red-600 text-white"
-                  : escalatedReport
-                    ? "bg-orange-600 text-white"
-                    : "bg-emerald-600 text-white"
-              }`}
+              className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneStyles.urgencyPill}`}
             >
-              {urgencyLevelLabel}
+              {urgencyLabel}
             </span>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
@@ -124,32 +124,32 @@ export function SeverityHeader({
           Urgency Guidance
         </p>
         <p className="mt-2 text-base font-semibold text-gray-900 sm:text-lg">
-          {urgencyLevelLabel}
+          {urgencyLabel}
         </p>
         <p className="mt-1 text-sm font-medium text-gray-700">
-          {getRecommendationLabel(report)}
+          {recommendationLabel}
         </p>
         <p className="mt-2 text-sm leading-6 text-gray-700">
-          {urgencyLevelBody}
+          {urgencyBody}
         </p>
       </div>
-      {escalatedReport && (
+      {banner && (
         <div
-          className={`mt-4 rounded-xl border bg-white/90 p-4 ${bannerTone.border}`}
+          className={`mt-4 rounded-xl border bg-white/90 p-4 ${tone === "emergency" ? "border-red-300" : "border-orange-300"}`}
         >
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${bannerTone.pill}`}
+                  className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${toneStyles.helperPill}`}
                 >
                   Act before you travel
                 </span>
                 <p className="font-semibold text-gray-900">
-                  {bannerTone.title}
+                  {banner.title}
                 </p>
               </div>
-              <p className="text-sm text-gray-800 mt-2">{bannerTone.helper}</p>
+              <p className="mt-2 text-sm text-gray-800">{banner.helper}</p>
               <p className="text-xs text-gray-600 mt-2">
                 The copied clinic packet includes the recommendation, handoff
                 summary, top differentials, recommended diagnostics, and
@@ -161,7 +161,7 @@ export function SeverityHeader({
                 <button
                   type="button"
                   onClick={onCopyVetSummary}
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full transition-colors sm:w-auto ${bannerTone.button}`}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full transition-colors sm:w-auto ${toneStyles.button}`}
                 >
                   {copyState === "copied" ? (
                     <CheckCheck className="w-4 h-4" />
@@ -177,7 +177,7 @@ export function SeverityHeader({
                 <button
                   type="button"
                   onClick={onJumpToHandoff}
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full transition-colors sm:w-auto ${bannerTone.button}`}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full transition-colors sm:w-auto ${toneStyles.button}`}
                 >
                   <ArrowDownRight className="w-4 h-4" />
                   Jump to Handoff

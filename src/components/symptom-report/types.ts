@@ -75,6 +75,7 @@ export interface SymptomReport {
   home_care?: HomeCare[];
   actions: string[];
   warning_signs: string[];
+  limitations?: string[];
   vet_questions?: string[];
   confidence?: number;
   calibrated_confidence?: ConfidenceCalibrationSummary | null;

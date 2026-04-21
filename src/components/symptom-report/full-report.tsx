@@ -24,10 +24,9 @@ import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import {
-  buildVetHandoffPacket,
-  getDefaultClinicLinkExpiry,
-  isEscalatedReport,
-} from "@/lib/report-handoff";
+  buildReportPresentation,
+  type ShareExpiryOption,
+} from "./report-presentation";
 
 type CopyState = "idle" | "copied" | "error";
 
@@ -37,18 +36,17 @@ interface FullReportProps {
   readOnlyShared?: boolean;
 }
 
-type ExpiryOption = "24h" | "7d" | "30d";
-
 export function FullReport({
   report,
   readOnlyShared = false,
 }: FullReportProps) {
+  const presentation = buildReportPresentation(report);
   const handoffRef = useRef<HTMLDivElement | null>(null);
   const feedbackRef = useRef<HTMLDivElement | null>(null);
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [expiry, setExpiry] = useState<ExpiryOption>(() =>
-    getDefaultClinicLinkExpiry(report),
+  const [expiry, setExpiry] = useState<ShareExpiryOption>(() =>
+    presentation.defaultExpiry,
   );
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
@@ -56,16 +54,16 @@ export function FullReport({
   const [shareError, setShareError] = useState<string | null>(null);
   const [linkCopyState, setLinkCopyState] = useState<"idle" | "copied">("idle");
   const [pdfBusy, setPdfBusy] = useState(false);
-  const escalatedReport = isEscalatedReport(report);
+  const actionToneClass =
+    presentation.tone === "emergency"
+      ? "border-red-600 text-red-700 hover:bg-red-50"
+      : presentation.tone === "urgent"
+        ? "border-orange-600 text-orange-700 hover:bg-orange-50"
+        : "border-emerald-600 text-emerald-700 hover:bg-emerald-50";
 
   const copyVetSummary = async () => {
     try {
-      await navigator.clipboard.writeText(
-        buildVetHandoffPacket({
-          ...report,
-          vet_handoff_summary: report.vet_handoff_summary ?? report.explanation,
-        }),
-      );
+      await navigator.clipboard.writeText(presentation.vetHandoffPacket);
       setCopyState("copied");
       window.setTimeout(() => setCopyState("idle"), 2000);
     } catch {
@@ -170,7 +168,7 @@ export function FullReport({
 
   const openShareModal = () => {
     setShareModalOpen(true);
-    setExpiry(getDefaultClinicLinkExpiry(report));
+    setExpiry(presentation.defaultExpiry);
     setShareError(null);
     setShareUrl(null);
     setShareExpiresAt(null);
@@ -183,32 +181,22 @@ export function FullReport({
         type="button"
         variant="outline"
         size="sm"
-        className={`w-full justify-center gap-1.5 sm:w-auto ${
-          escalatedReport
-            ? "border-red-600 text-red-700 hover:bg-red-50"
-            : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-        }`}
+        className={`w-full justify-center gap-1.5 sm:w-auto ${actionToneClass}`}
         onClick={() => void downloadPdf()}
         loading={pdfBusy}
       >
         <Download className="w-4 h-4" />
-        <span>{escalatedReport ? "Download Clinic PDF" : "Download PDF"}</span>
+        <span>{presentation.downloadLabel}</span>
       </Button>
       <Button
         type="button"
         variant="outline"
         size="sm"
-        className={`w-full justify-center sm:w-auto ${
-          escalatedReport
-            ? "border-red-600 text-red-700 hover:bg-red-50"
-            : "border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-        }`}
+        className={`w-full justify-center sm:w-auto ${actionToneClass}`}
         onClick={openShareModal}
       >
         <Share2 className="w-4 h-4" />
-        <span className="ml-1.5">
-          {escalatedReport ? "Share Clinic Link" : "Share with Vet"}
-        </span>
+        <span className="ml-1.5">{presentation.shareButtonLabel}</span>
       </Button>
     </>
   ) : null;
@@ -216,7 +204,12 @@ export function FullReport({
   return (
     <div className="space-y-4 animate-fade-in sm:space-y-5">
       <SeverityHeader
+        banner={presentation.headerBanner}
+        recommendationLabel={presentation.recommendationLabel}
         report={report}
+        tone={presentation.tone}
+        urgencyBody={presentation.urgencyBody}
+        urgencyLabel={presentation.urgencyLabel}
         copyState={copyState}
         onCopyVetSummary={copyVetSummary}
         onJumpToHandoff={() =>
@@ -229,16 +222,23 @@ export function FullReport({
       />
 
       <ActionStepsSection
-        report={report}
         actions={report.actions}
+        tone={presentation.tone}
+        actionTitle={presentation.actionTitle}
         warningSigns={report.warning_signs}
+        warningTitle={presentation.warningTitle}
       />
 
       <OwnerSummarySection
-        report={report}
         canExport={canExport}
+        confidenceCalibration={
+          report.calibrated_confidence ?? report.confidence_calibration
+        }
+        explanation={report.explanation}
         feedbackEnabled={feedbackEnabled}
+        limitations={presentation.limitations}
         pdfBusy={pdfBusy}
+        recommendationLabel={presentation.recommendationLabel}
         onCopyVetSummary={copyVetSummary}
         onJumpToHandoff={
           report.vet_handoff_summary
@@ -266,23 +266,19 @@ export function FullReport({
       <Modal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        title={
-          escalatedReport ? "Share clinic link" : "Share with your veterinarian"
-        }
+        title={presentation.shareModalTitle}
         size="md"
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            {escalatedReport
-              ? "Create a read-only clinic link you can hand to intake staff or text to the veterinary team before you arrive."
-              : "Anyone with the link can view this report until it expires. Links are read-only."}
+            {presentation.shareDescription}
           </p>
           <label className="block text-sm font-medium text-gray-700">
             Link expires after
             <select
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
               value={expiry}
-              onChange={(e) => setExpiry(e.target.value as ExpiryOption)}
+              onChange={(e) => setExpiry(e.target.value as ShareExpiryOption)}
               disabled={shareBusy}
             >
               <option value="24h">24 hours</option>
@@ -300,7 +296,7 @@ export function FullReport({
               loading={shareBusy}
               disabled={shareBusy}
             >
-              {escalatedReport ? "Create clinic link" : "Generate link"}
+              {presentation.sharePrimaryLabel}
             </Button>
             {shareUrl ? (
               <Button
@@ -353,7 +349,7 @@ export function FullReport({
 
       <div ref={handoffRef}>
         <VetHandoffSection
-          report={report}
+          intro={presentation.vetHandoffIntro}
           summary={report.vet_handoff_summary ?? ""}
           copyState={copyState}
           onCopy={copyVetSummary}
