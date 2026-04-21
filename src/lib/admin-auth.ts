@@ -40,7 +40,10 @@ async function isAdminViaUsersTable(
 }
 
 export async function getAdminRequestContext(): Promise<AdminRequestContext | null> {
-  if (isTruthyEnvFlag(process.env.ADMIN_OVERRIDE)) {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    isTruthyEnvFlag(process.env.ADMIN_OVERRIDE)
+  ) {
     return {
       email: process.env.ADMIN_OVERRIDE_EMAIL || "admin-override@pawvital.local",
       isDemo: false,

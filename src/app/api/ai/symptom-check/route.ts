@@ -3,8 +3,39 @@ import {
   generateNvidiaJson,
   isNvidiaGenerationConfigured,
 } from "@/lib/nvidia-generation";
+import { requireAuthenticatedApiUser } from "@/lib/api-auth";
+import {
+  checkRateLimit,
+  getRateLimitId,
+  symptomChatLimiter,
+} from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const rateLimitResult = await checkRateLimit(
+    symptomChatLimiter,
+    getRateLimitId(request)
+  );
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+          ),
+        },
+      }
+    );
+  }
+
+  const auth = await requireAuthenticatedApiUser({
+    demoMessage: "Symptom analysis requires a configured account backend",
+  });
+  if ("response" in auth) {
+    return auth.response;
+  }
+
   try {
     const { symptoms, pet } = await request.json();
 

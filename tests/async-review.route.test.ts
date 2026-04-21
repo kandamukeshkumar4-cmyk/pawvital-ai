@@ -25,9 +25,13 @@ function makeRequest(body: Record<string, unknown>) {
 }
 
 describe("async-review route", () => {
+  const originalEnv = process.env;
+
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env = { ...originalEnv };
+    delete process.env.ASYNC_REVIEW_WEBHOOK_SECRET;
     mockIsAsyncReviewServiceConfigured.mockReturnValue(true);
     mockSubmitAsyncReviewToSidecar.mockResolvedValue({
       ok: true,
@@ -35,6 +39,10 @@ describe("async-review route", () => {
       status: "queued",
       message: "queued",
     });
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
   });
 
   it("queues an async multimodal review with the session evidence", async () => {
@@ -107,5 +115,22 @@ describe("async-review route", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error).toContain("required");
+  });
+
+  it("requires the async review secret in production", async () => {
+    process.env.NODE_ENV = "production";
+
+    const { POST } = await import("@/app/api/ai/async-review/route");
+    const response = await POST(
+      makeRequest({
+        image: "data:image/jpeg;base64,ZmFrZQ==",
+        pet: PET,
+        session: {},
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload.error).toContain("secret");
   });
 });

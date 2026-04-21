@@ -9,6 +9,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { requireAuthenticatedApiUser } from "@/lib/api-auth";
 import type { JournalSummary } from "@/types/journal";
 
 const EntryBriefSchema = z.object({
@@ -64,6 +65,13 @@ export async function POST(request: Request) {
         },
       }
     );
+  }
+
+  const auth = await requireAuthenticatedApiUser({
+    demoMessage: "Journal AI summary requires a configured account backend",
+  });
+  if ("response" in auth) {
+    return auth.response;
   }
 
   let body: unknown;

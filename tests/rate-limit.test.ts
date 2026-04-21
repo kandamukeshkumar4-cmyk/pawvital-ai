@@ -78,7 +78,7 @@ describe("rate-limit helper", () => {
     });
   });
 
-  it("fails open and marks the result degraded when Upstash throws", async () => {
+  it("uses the local fallback limiter and marks the result degraded when Upstash throws", async () => {
     jest.useFakeTimers().setSystemTime(new Date("2026-04-14T12:00:00.000Z"));
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
     const { checkRateLimit } = await import("../src/lib/rate-limit");
@@ -94,7 +94,36 @@ describe("rate-limit helper", () => {
       reason: "redis_unavailable",
     });
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(String(warnSpy.mock.calls[0]?.[0] ?? "")).toContain("failing open");
+    expect(String(warnSpy.mock.calls[0]?.[0] ?? "")).toContain(
+      "using local fallback"
+    );
+  });
+
+  it("blocks repeated requests through the local fallback limiter when Redis stays offline", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-04-14T12:00:00.000Z"));
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    const { checkRateLimit } = await import("../src/lib/rate-limit");
+    const limiter = {
+      limit: jest.fn().mockRejectedValue(new Error("upstash offline")),
+    };
+
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      await expect(
+        checkRateLimit(limiter as never, "ip:offline-window")
+      ).resolves.toEqual({
+        success: true,
+        degraded: true,
+        reason: "redis_unavailable",
+      });
+    }
+
+    await expect(
+      checkRateLimit(limiter as never, "ip:offline-window")
+    ).resolves.toEqual({
+      success: false,
+      reset: expect.any(Number),
+      remaining: 0,
+    });
   });
 
   it("throttles repeated fail-open warnings", async () => {
@@ -114,16 +143,17 @@ describe("rate-limit helper", () => {
     expect(warnSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("prefers the injected user id before falling back to forwarded IP", async () => {
+  it("uses a trusted server-side user id before falling back to proxy IP headers", async () => {
     const { getRateLimitId } = await import("../src/lib/rate-limit");
-    const userRequest = new Request("http://localhost/api/test", {
-      headers: { "x-user-id": "user-123", "x-forwarded-for": "198.51.100.22" },
-    });
     const ipRequest = new Request("http://localhost/api/test", {
       headers: { "x-forwarded-for": "198.51.100.22, 203.0.113.5" },
     });
+    const spoofedHeaderRequest = new Request("http://localhost/api/test", {
+      headers: { "x-user-id": "attacker-controlled", "x-real-ip": "203.0.113.7" },
+    });
 
-    expect(getRateLimitId(userRequest)).toBe("user:user-123");
+    expect(getRateLimitId(ipRequest, "user-123")).toBe("user:user-123");
     expect(getRateLimitId(ipRequest)).toBe("ip:198.51.100.22");
+    expect(getRateLimitId(spoofedHeaderRequest)).toBe("ip:203.0.113.7");
   });
 });

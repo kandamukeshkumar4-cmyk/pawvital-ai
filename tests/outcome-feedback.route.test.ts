@@ -1,8 +1,21 @@
 const mockSaveOutcomeFeedbackToDB = jest.fn();
+const mockCreateServerSupabaseClient = jest.fn();
+const mockCheckRateLimit = jest.fn();
+const mockGetRateLimitId = jest.fn();
 
 jest.mock("@/lib/report-storage", () => ({
   saveOutcomeFeedbackToDB: (...args: unknown[]) =>
     mockSaveOutcomeFeedbackToDB(...args),
+}));
+
+jest.mock("@/lib/supabase-server", () => ({
+  createServerSupabaseClient: () => mockCreateServerSupabaseClient(),
+}));
+
+jest.mock("@/lib/rate-limit", () => ({
+  generalApiLimiter: {},
+  checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
+  getRateLimitId: (...args: unknown[]) => mockGetRateLimitId(...args),
 }));
 
 function makeRequest(body: Record<string, unknown>) {
@@ -17,6 +30,16 @@ describe("outcome-feedback route", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    mockCheckRateLimit.mockResolvedValue({ success: true });
+    mockGetRateLimitId.mockReturnValue("ip:test");
+    mockCreateServerSupabaseClient.mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1" } },
+          error: null,
+        }),
+      },
+    });
     mockSaveOutcomeFeedbackToDB.mockResolvedValue({
       ok: true,
       legacyUpdated: true,
@@ -46,6 +69,7 @@ describe("outcome-feedback route", () => {
       expect.objectContaining({
         symptomCheckId: "abc123",
         matchedExpectation: "partly",
+        requestingUserId: "user-1",
       })
     );
   });
@@ -61,5 +85,27 @@ describe("outcome-feedback route", () => {
 
     expect(response.status).toBe(400);
     expect(payload.error).toContain("required");
+  });
+
+  it("rejects unauthenticated feedback submissions", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: null },
+          error: null,
+        }),
+      },
+    });
+
+    const { POST } = await import("@/app/api/ai/outcome-feedback/route");
+    const response = await POST(
+      makeRequest({
+        symptomCheckId: "abc123",
+        matchedExpectation: "partly",
+      })
+    );
+
+    expect(response.status).toBe(401);
+    expect(mockSaveOutcomeFeedbackToDB).not.toHaveBeenCalled();
   });
 });

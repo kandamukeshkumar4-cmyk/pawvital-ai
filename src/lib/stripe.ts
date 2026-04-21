@@ -20,11 +20,16 @@ export function getStripeAppUrl(request?: Request) {
     return configured.replace(/\/$/, "");
   }
 
-  if (request) {
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    return `https://${vercelUrl.replace(/\/$/, "")}`;
+  }
+
+  if (process.env.NODE_ENV !== "production" && request) {
     return new URL(request.url).origin;
   }
 
-  return "http://localhost:3000";
+  throw new Error("APP_URL_NOT_CONFIGURED");
 }
 
 export function getSubscriptionLineItems(): Stripe.Checkout.SessionCreateParams.LineItem[] {

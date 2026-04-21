@@ -5,9 +5,16 @@ import {
 } from "@/lib/hf-sidecars";
 import type { PetProfile, TriageSession } from "@/lib/triage-engine";
 import type { VisionPreprocessResult, VisionSeverityClass } from "@/lib/clinical-evidence";
+import {
+  checkRateLimit,
+  generalApiLimiter,
+  getRateLimitId,
+} from "@/lib/rate-limit";
 
 const ASYNC_REVIEW_WEBHOOK_SECRET =
   process.env.ASYNC_REVIEW_WEBHOOK_SECRET?.trim() || "";
+const MAX_CONTENT_LENGTH_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGE_PAYLOAD_LENGTH = 8 * 1024 * 1024;
 
 interface AsyncReviewRequestBody {
   image?: string;
@@ -54,6 +61,41 @@ function scheduleAfterSafely(task: () => Promise<unknown>): boolean {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResult = await checkRateLimit(
+    generalApiLimiter,
+    getRateLimitId(request)
+  );
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+          ),
+        },
+      }
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length") || "0");
+  if (Number.isFinite(contentLength) && contentLength > MAX_CONTENT_LENGTH_BYTES) {
+    return NextResponse.json(
+      { error: "Async review payload is too large" },
+      { status: 413 }
+    );
+  }
+
+  if (!ASYNC_REVIEW_WEBHOOK_SECRET) {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "Async review secret is not configured" },
+        { status: 503 }
+      );
+    }
+  }
+
   if (
     ASYNC_REVIEW_WEBHOOK_SECRET &&
     request.headers.get("x-async-review-secret") !== ASYNC_REVIEW_WEBHOOK_SECRET
@@ -83,9 +125,15 @@ export async function POST(request: Request) {
   }
 
   const image = body.image;
-  const pet = body.pet;
   const session = body.session;
   const report = body.report;
+
+  if (image.length > MAX_IMAGE_PAYLOAD_LENGTH) {
+    return NextResponse.json(
+      { error: "Async review image payload is too large" },
+      { status: 413 }
+    );
+  }
 
   const task = async (): Promise<boolean> => {
     try {
