@@ -4,6 +4,7 @@ import {
   buildRecoveryRedirectPath,
   buildRedirectTarget,
   buildLoginPath,
+  getAuthActionErrorMessage,
   isProtectedPath,
   resolvePostAuthRedirect,
   sanitizeRedirectTarget,
@@ -77,5 +78,32 @@ describe("VET-1215 auth routing helpers", () => {
     expect(buildRedirectTarget("/notifications", "?tab=unread")).toBe(
       "/notifications?tab=unread"
     );
+  });
+
+  it("sanitizes raw network failures for auth actions", () => {
+    expect(
+      getAuthActionErrorMessage(
+        new TypeError("Failed to fetch"),
+        "login",
+        "Fallback"
+      )
+    ).toBe("We couldn't reach secure sign-in right now. Please try again in a moment.");
+    expect(
+      getAuthActionErrorMessage(
+        new TypeError("Network request failed"),
+        "signup",
+        "Fallback"
+      )
+    ).toBe("We couldn't reach account setup right now. Please try again in a moment.");
+  });
+
+  it("preserves explicit auth provider errors", () => {
+    expect(
+      getAuthActionErrorMessage(
+        new Error("Invalid login credentials"),
+        "login",
+        "Fallback"
+      )
+    ).toBe("Invalid login credentials");
   });
 });

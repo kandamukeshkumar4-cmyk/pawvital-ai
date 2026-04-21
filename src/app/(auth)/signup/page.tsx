@@ -10,6 +10,7 @@ import {
   appendRedirectParam,
   buildCallbackUrl,
   getAuthFeedbackMessage,
+  getAuthActionErrorMessage,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
@@ -71,7 +72,12 @@ export default function SignupPage() {
 
       setSuccessMessage("Check your email to confirm your account and continue.");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to create account";
+      console.error("Failed to create account", err);
+      const message = getAuthActionErrorMessage(
+        err,
+        "signup",
+        "We couldn't create your account right now. Please try again."
+      );
       setError(message);
     } finally {
       setLoading(false);

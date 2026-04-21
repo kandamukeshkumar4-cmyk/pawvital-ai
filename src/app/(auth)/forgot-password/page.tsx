@@ -11,6 +11,7 @@ import {
   buildCallbackUrl,
   buildRecoveryRedirectPath,
   getAuthFeedbackMessage,
+  getAuthActionErrorMessage,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
@@ -53,7 +54,12 @@ export default function ForgotPasswordPage() {
       if (resetError) throw resetError;
       setSent(true);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to send reset email";
+      console.error("Failed to send reset email", err);
+      const message = getAuthActionErrorMessage(
+        err,
+        "password_reset",
+        "We couldn't send the reset email right now. Please try again."
+      );
       setError(message);
     } finally {
       setLoading(false);

@@ -31,6 +31,21 @@ export const AUTH_REASON_MESSAGES: Record<string, string> = {
   check_email: "Check your email for the link to continue.",
 };
 
+const AUTH_NETWORK_ERROR_PATTERNS = [
+  "Failed to fetch",
+  "Load failed",
+  "NetworkError",
+  "Network request failed",
+  "ERR_NAME_NOT_RESOLVED",
+];
+
+const AUTH_NETWORK_ERROR_MESSAGES = {
+  login: "We couldn't reach secure sign-in right now. Please try again in a moment.",
+  password_reset:
+    "We couldn't reach password reset right now. Please try again in a moment.",
+  signup: "We couldn't reach account setup right now. Please try again in a moment.",
+} as const;
+
 function toPath(url: URL) {
   return `${url.pathname}${url.search}${url.hash}`;
 }
@@ -173,4 +188,22 @@ export function getAuthFeedbackMessage(reason: string | null, error: string | nu
   }
 
   return null;
+}
+
+export function getAuthActionErrorMessage(
+  error: unknown,
+  action: keyof typeof AUTH_NETWORK_ERROR_MESSAGES,
+  fallbackMessage: string
+) {
+  const rawMessage = error instanceof Error ? error.message.trim() : "";
+
+  if (!rawMessage) {
+    return fallbackMessage;
+  }
+
+  if (AUTH_NETWORK_ERROR_PATTERNS.some((pattern) => rawMessage.includes(pattern))) {
+    return AUTH_NETWORK_ERROR_MESSAGES[action];
+  }
+
+  return rawMessage;
 }
