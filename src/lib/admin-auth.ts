@@ -10,6 +10,18 @@ function isTruthyEnvFlag(value: string | undefined) {
   return value === "true" || value === "1";
 }
 
+function isProductionAdminRuntime() {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production"
+  );
+}
+
+function getAdminOverrideEmail() {
+  const overrideEmail = process.env.ADMIN_OVERRIDE_EMAIL?.trim().toLowerCase();
+  return overrideEmail || "admin-override@pawvital.local";
+}
+
 function getAdminEmailAllowlist() {
   return (process.env.ADMIN_EMAILS || "")
     .split(",")
@@ -40,12 +52,9 @@ async function isAdminViaUsersTable(
 }
 
 export async function getAdminRequestContext(): Promise<AdminRequestContext | null> {
-  if (
-    process.env.NODE_ENV !== "production" &&
-    isTruthyEnvFlag(process.env.ADMIN_OVERRIDE)
-  ) {
+  if (!isProductionAdminRuntime() && isTruthyEnvFlag(process.env.ADMIN_OVERRIDE)) {
     return {
-      email: process.env.ADMIN_OVERRIDE_EMAIL || "admin-override@pawvital.local",
+      email: getAdminOverrideEmail(),
       isDemo: false,
       userId: "admin-override",
     };
@@ -75,6 +84,10 @@ export async function getAdminRequestContext(): Promise<AdminRequestContext | nu
     }
   } catch (error) {
     if (error instanceof Error && error.message === "DEMO_MODE") {
+      if (isProductionAdminRuntime()) {
+        return null;
+      }
+
       return {
         email: "demo-admin@pawvital.local",
         isDemo: true,

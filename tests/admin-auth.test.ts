@@ -45,4 +45,28 @@ describe("admin auth override hardening", () => {
       userId: "admin-override",
     });
   });
+
+  it("fails closed on demo-mode auth fallback in production", async () => {
+    process.env.NODE_ENV = "production";
+    mockCreateServerSupabaseClient.mockImplementation(() => {
+      throw new Error("DEMO_MODE");
+    });
+
+    const { getAdminRequestContext } = await import("@/lib/admin-auth");
+    await expect(getAdminRequestContext()).resolves.toBeNull();
+  });
+
+  it("retains the demo admin fallback outside production", async () => {
+    process.env.NODE_ENV = "development";
+    mockCreateServerSupabaseClient.mockImplementation(() => {
+      throw new Error("DEMO_MODE");
+    });
+
+    const { getAdminRequestContext } = await import("@/lib/admin-auth");
+    await expect(getAdminRequestContext()).resolves.toEqual({
+      email: "demo-admin@pawvital.local",
+      isDemo: true,
+      userId: "demo-admin",
+    });
+  });
 });
