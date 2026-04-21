@@ -243,6 +243,26 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
+    if (error instanceof Error && error.message === "APP_URL_NOT_CONFIGURED") {
+      return NextResponse.json(
+        {
+          error: "Stripe checkout requires a configured canonical application URL.",
+          code: "APP_URL_NOT_CONFIGURED",
+        },
+        { status: 503 }
+      );
+    }
+
+    if (error instanceof Error && error.message === "APP_URL_INVALID") {
+      return NextResponse.json(
+        {
+          error: "Stripe checkout requires a valid canonical application URL.",
+          code: "APP_URL_INVALID",
+        },
+        { status: 503 }
+      );
+    }
+
     if (error instanceof Error && error.message === "DEMO_MODE") {
       return NextResponse.json(
         {

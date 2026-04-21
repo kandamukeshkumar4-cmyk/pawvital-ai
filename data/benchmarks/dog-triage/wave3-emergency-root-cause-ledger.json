@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-20T22:12:19.478Z",
+  "generatedAt": "2026-04-21T07:47:26.371Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3c30f83500279f77a44d3f7da50a51854a786a24abfa580686835d939fb98edf",
   "totalFailures": 51,
@@ -840,25 +840,25 @@
     }
   ],
   "delta": {
-    "comparedToGeneratedAt": "2026-04-20T22:11:42.352Z",
-    "previousTotalFailures": 0,
-    "totalFailureDelta": 51,
+    "comparedToGeneratedAt": "2026-04-21T07:31:41.623Z",
+    "previousTotalFailures": 22,
+    "totalFailureDelta": 29,
     "countsByStatus": {
-      "improved": 0,
-      "regressed": 2,
+      "improved": 1,
+      "regressed": 1,
       "unchanged": 0
     },
     "rootCauseChanges": [
       {
         "rootCauseBucket": "complaint normalization miss",
         "status": "regressed",
-        "previousTotalFailures": 0,
+        "previousTotalFailures": 4,
         "currentTotalFailures": 35,
-        "deltaFailures": 35,
+        "deltaFailures": 31,
         "previousSeverityCounts": {
           "CRITICAL": 0,
           "HIGH": 0,
-          "MEDIUM": 0
+          "MEDIUM": 4
         },
         "currentSeverityCounts": {
           "CRITICAL": 0,
@@ -868,12 +868,11 @@
         "severityDelta": {
           "CRITICAL": 0,
           "HIGH": 11,
-          "MEDIUM": 24
+          "MEDIUM": 20
         },
         "newCaseIds": [
           "question-behavior-change",
           "question-constipation",
-          "question-coughing-breathing-combined",
           "question-dental-problem",
           "question-drinking-more",
           "question-ear-scratching",
@@ -884,17 +883,14 @@
           "question-low-literacy-eye-bad",
           "question-low-literacy-leg-hurt",
           "question-nasal-discharge",
-          "question-postoperative-concern",
           "question-regurgitation",
           "question-senior-decline",
           "question-slang-the-runs",
-          "question-slang-throwing-up-bricks",
           "question-small-blood-in-stool",
           "question-swelling-lump",
           "question-trauma-fall-yard",
           "question-urination-problem",
           "question-vaccine-reaction-mild",
-          "question-vague-lump-found",
           "question-weight-loss",
           "sameday-behavior-hiding",
           "sameday-chronic-limp-sudden-worse",
@@ -912,14 +908,14 @@
       },
       {
         "rootCauseBucket": "deterministic emergency composite not triggered",
-        "status": "regressed",
-        "previousTotalFailures": 0,
+        "status": "improved",
+        "previousTotalFailures": 18,
         "currentTotalFailures": 16,
-        "deltaFailures": 16,
+        "deltaFailures": -2,
         "previousSeverityCounts": {
           "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 0
+          "HIGH": 2,
+          "MEDIUM": 16
         },
         "currentSeverityCounts": {
           "CRITICAL": 0,
@@ -928,28 +924,14 @@
         },
         "severityDelta": {
           "CRITICAL": 0,
-          "HIGH": 1,
-          "MEDIUM": 15
+          "HIGH": -1,
+          "MEDIUM": -1
         },
-        "newCaseIds": [
-          "followup-diarrhea-frequency-unknown",
-          "followup-diarrhea-onset-unknown",
-          "followup-discharge-color-unknown",
-          "followup-energy-level-unknown",
-          "followup-itch-location-unknown",
-          "followup-limping-progression-unknown",
-          "followup-seasonal-pattern-unknown",
-          "followup-swelling-present-no",
-          "followup-temperature-unknown",
-          "followup-trauma-history-unknown",
-          "followup-urine-color-unknown",
-          "followup-vomit-color-unknown",
-          "followup-wound-depth-unknown",
-          "question-face-swelling-mild",
-          "sameday-face-swelling-worsening",
-          "toxin-question-ibuprofen-maybe"
+        "newCaseIds": [],
+        "resolvedCaseIds": [
+          "question-senior-arthritis-worsening",
+          "sameday-dental-bleeding-gum"
         ],
-        "resolvedCaseIds": [],
         "compositionChanged": true
       }
     ]

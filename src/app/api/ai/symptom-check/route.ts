@@ -1,54 +1,232 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   generateNvidiaJson,
   isNvidiaGenerationConfigured,
 } from "@/lib/nvidia-generation";
+import { requireAuthenticatedApiUser } from "@/lib/api-auth";
+import {
+  checkRateLimit,
+  getRateLimitId,
+  symptomChatLimiter,
+} from "@/lib/rate-limit";
+
+const MAX_REQUEST_BYTES = 32 * 1024;
+
+const PetSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+    species: z.string().trim().min(1).optional(),
+    breed: z.string().trim().min(1).optional(),
+    age_years: z.number().finite().optional(),
+    weight: z.number().finite().optional(),
+    existing_conditions: z.array(z.string()).optional(),
+    medications: z.array(z.string()).optional(),
+    vaccination_status: z.string().trim().min(1).optional(),
+  })
+  .passthrough();
+
+const BodySchema = z.object({
+  symptoms: z.string().trim().min(1),
+  pet: PetSchema,
+});
+
+type BodyParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; response: Response };
+
+function jsonError(error: string, status: number, code: string) {
+  return NextResponse.json({ error, code }, { status });
+}
+
+function decodeUtf8(chunks: Uint8Array[], totalBytes: number) {
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(merged);
+}
+
+async function readJsonBody<T>(
+  request: Request,
+  maxBytes: number
+): Promise<BodyParseResult<T>> {
+  const declaredLength = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return {
+      ok: false,
+      response: jsonError(
+        "Request body too large",
+        413,
+        "PAYLOAD_TOO_LARGE"
+      ),
+    };
+  }
+
+  const reader = request.body?.getReader();
+  if (!reader) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!value) {
+        continue;
+      }
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {}
+
+        return {
+          ok: false,
+          response: jsonError(
+            "Request body too large",
+            413,
+            "PAYLOAD_TOO_LARGE"
+          ),
+        };
+      }
+
+      chunks.push(value);
+    }
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+
+  const rawBody = decodeUtf8(chunks, totalBytes).trim();
+  if (!rawBody) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  try {
+    return { ok: true, value: JSON.parse(rawBody) as T };
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+}
 
 export async function POST(request: Request) {
+  const rateLimitResult = await checkRateLimit(
+    symptomChatLimiter,
+    getRateLimitId(request)
+  );
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+          ),
+        },
+      }
+    );
+  }
+
+  const auth = await requireAuthenticatedApiUser({
+    demoMessage: "Symptom analysis requires a configured account backend",
+  });
+  if ("response" in auth) {
+    return auth.response;
+  }
+
+  const parsedBody = await readJsonBody<unknown>(request, MAX_REQUEST_BYTES);
+  if (!parsedBody.ok) {
+    return parsedBody.response;
+  }
+
+  const body = BodySchema.safeParse(parsedBody.value);
+  if (!body.success) {
+    return jsonError(
+      "Provide a symptom description and pet profile",
+      400,
+      "VALIDATION_ERROR"
+    );
+  }
+
+  const { pet, symptoms } = body.data;
+
+  if (!isNvidiaGenerationConfigured("diagnosis")) {
+    return NextResponse.json({
+      severity: "high",
+      recommendation: "vet_48h",
+      title: "AI Assessment (Demo Mode)",
+      explanation: `Based on the symptoms described for ${pet.name || "your dog"}: "${symptoms}". This is demo mode — add your NVIDIA NIM API key to get full AI-powered veterinary symptom analysis.`,
+      differential_diagnoses: [
+        {
+          condition: "Demo Mode — Configure API Key",
+          likelihood: "high",
+          description:
+            "Add your NVIDIA NIM API key to unlock full veterinary-grade differential diagnosis with clinical specificity.",
+        },
+      ],
+      clinical_notes:
+        "Demo mode active. Real analysis will include ICD-10-CM veterinary codes, breed-specific epidemiological data, and evidence-based diagnostic pathways.",
+      recommended_tests: [
+        {
+          test: "Complete Blood Count (CBC)",
+          reason: "Baseline hematological assessment",
+          urgency: "routine",
+        },
+      ],
+      home_care: [
+        {
+          instruction: "Monitor symptoms closely",
+          duration: "24-48 hours",
+          details: "Track frequency, duration, and any changes in severity",
+        },
+      ],
+      actions: [
+        "Monitor your dog closely for the next 24-48 hours",
+        "Keep a log of when symptoms occur and their duration",
+        "Schedule a vet visit if no improvement in 48 hours",
+      ],
+      warning_signs: [
+        "Symptoms suddenly worsen or new symptoms appear",
+        "Loss of appetite persists beyond 24 hours",
+        "Difficulty breathing or rapid breathing at rest",
+        "Inability to stand or walk",
+      ],
+      vet_questions: ["Ask your vet about breed-specific risk factors"],
+    });
+  }
+
   try {
-    const { symptoms, pet } = await request.json();
-
-    if (!isNvidiaGenerationConfigured("diagnosis")) {
-      return NextResponse.json({
-        severity: "high",
-        recommendation: "vet_48h",
-        title: "AI Assessment (Demo Mode)",
-        explanation: `Based on the symptoms described for ${pet?.name || "your dog"}: "${symptoms}". This is demo mode — add your NVIDIA NIM API key to get full AI-powered veterinary symptom analysis.`,
-        differential_diagnoses: [
-          { condition: "Demo Mode — Configure API Key", likelihood: "high", description: "Add your NVIDIA NIM API key to unlock full veterinary-grade differential diagnosis with clinical specificity." },
-        ],
-        clinical_notes: "Demo mode active. Real analysis will include ICD-10-CM veterinary codes, breed-specific epidemiological data, and evidence-based diagnostic pathways.",
-        recommended_tests: [
-          { test: "Complete Blood Count (CBC)", reason: "Baseline hematological assessment", urgency: "routine" },
-        ],
-        home_care: [
-          { instruction: "Monitor symptoms closely", duration: "24-48 hours", details: "Track frequency, duration, and any changes in severity" },
-        ],
-        actions: [
-          "Monitor your dog closely for the next 24-48 hours",
-          "Keep a log of when symptoms occur and their duration",
-          "Schedule a vet visit if no improvement in 48 hours",
-        ],
-        warning_signs: [
-          "Symptoms suddenly worsen or new symptoms appear",
-          "Loss of appetite persists beyond 24 hours",
-          "Difficulty breathing or rapid breathing at rest",
-          "Inability to stand or walk",
-        ],
-        vet_questions: [
-          "Ask your vet about breed-specific risk factors",
-        ],
-      });
-    }
-
     const prompt = `You are a board-certified veterinary internist (DACVIM) with 20+ years of clinical experience, fellowship training in emergency medicine, and deep expertise in breed-specific pathology. You think like a specialist — not a Google search. Your analysis must reflect the depth and specificity of a $300 specialist consultation.
 
 PATIENT HISTORY:
-- Patient: ${pet.name}
+- Patient: ${pet.name || "your dog"}
 - Species: ${pet.species || "Dog"}
-- Breed: ${pet.breed}
-- Age: ${pet.age_years} years ${pet.age_years >= 7 ? "(GERIATRIC — elevated oncological, orthopedic, and organ-failure risk)" : pet.age_years <= 1 ? "(PEDIATRIC — elevated infectious, congenital, and developmental risk)" : ""}
-- Weight: ${pet.weight} lbs
+- Breed: ${pet.breed || "Unknown breed"}
+- Age: ${typeof pet.age_years === "number" ? pet.age_years : "Unknown"} years ${typeof pet.age_years === "number" ? (pet.age_years >= 7 ? "(GERIATRIC — elevated oncological, orthopedic, and organ-failure risk)" : pet.age_years <= 1 ? "(PEDIATRIC — elevated infectious, congenital, and developmental risk)" : "") : ""}
+- Weight: ${typeof pet.weight === "number" ? pet.weight : "Unknown"} lbs
 - Known conditions: ${pet.existing_conditions?.join(", ") || "None documented"}
 - Current medications: ${pet.medications?.join(", ") || "None"}
 - Vaccination status: ${pet.vaccination_status || "Unknown"}

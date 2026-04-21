@@ -17,7 +17,15 @@ function normalizeBaseUrl(baseUrl: string): string {
 }
 
 export function isAsyncReviewQueueConfigured(baseUrl?: string): boolean {
-  return Boolean(baseUrl && normalizeBaseUrl(baseUrl));
+  if (!baseUrl || !normalizeBaseUrl(baseUrl)) {
+    return false;
+  }
+
+  if (process.env.NODE_ENV === "production" && !ASYNC_REVIEW_WEBHOOK_SECRET) {
+    return false;
+  }
+
+  return true;
 }
 
 function isAbortError(error: unknown): boolean {
