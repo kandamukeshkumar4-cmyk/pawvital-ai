@@ -8668,14 +8668,57 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       }
     );
 
-    it("preserves the existing demo fallback for report generation without providers", async () => {
+    it("returns a fail-safe non-demo report for non-emergency sessions without providers", async () => {
       const { POST } = await import("@/app/api/ai/symptom-chat/route");
       const response = await POST(makeReportRequest(buildModerateReportSession()));
       const payload = await response.json();
 
       expect(response.status).toBe(200);
       expect(payload.type).toBe("report");
-      expect(payload.report.title).toBe("Demo Mode — Configure API Keys");
+      expect(payload.report.report_mode).toBe("failsafe");
+      expect(payload.report.report_unavailable_reason).toBe(
+        "provider_unavailable"
+      );
+      expect(payload.report.title).not.toContain("Demo Mode");
+      expect(payload.report.explanation).toContain("not a diagnosis");
+      expect(payload.report.recommendation).not.toBe("emergency_vet");
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+
+    it("returns a fail-safe non-demo report for emergency sessions without providers", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildEmergencyReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_mode).toBe("failsafe");
+      expect(payload.report.report_unavailable_reason).toBe(
+        "provider_unavailable"
+      );
+      expect(payload.report.title).toBe("Emergency veterinary care recommended");
+      expect(payload.report.recommendation).toBe("emergency_vet");
+      expect(payload.report.explanation).not.toContain("Demo mode");
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+
+    it("falls back to a fail-safe report when narrative generation fails", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockDiagnoseWithDeepSeek.mockRejectedValueOnce(
+        new Error("Narrative report unavailable")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_mode).toBe("failsafe");
+      expect(payload.report.report_unavailable_reason).toBe("generation_failed");
+      expect(payload.report.title).not.toContain("Demo Mode");
+      expect(payload.report.explanation).toContain("full narrative report");
+      expect(mockDiagnoseWithDeepSeek).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -57,6 +57,24 @@ import {
 } from "./report-helpers";
 
 const useNvidia = isNvidiaConfigured();
+const EMPTY_RETRIEVAL_BUNDLE: RetrievalBundle = {
+  textChunks: [],
+  imageMatches: [],
+  rerankScores: [],
+  sourceCitations: [],
+};
+const URGENCY_TO_SEVERITY: Record<string, string> = {
+  emergency: "emergency",
+  high: "high",
+  moderate: "medium",
+  low: "low",
+};
+const URGENCY_TO_RECOMMENDATION: Record<string, string> = {
+  emergency: "emergency_vet",
+  high: "vet_24h",
+  moderate: "vet_48h",
+  low: "monitor",
+};
 
 export interface SymptomChatMessage {
   role: string;
@@ -102,6 +120,103 @@ function buildEvidenceSummary(input: {
     ).length,
     retrieval_sources_found: dedupeStrings(input.retrievalBundle.sourceCitations)
       .length,
+  };
+}
+
+function buildFailSafeActions(urgency: string): string[] {
+  if (urgency === "emergency") {
+    return [
+      "Go to the nearest emergency veterinarian now.",
+      "Call the clinic on the way if you can travel safely.",
+      "Keep your dog as still and calm as possible during transport.",
+      "Bring this report and any medication or toxin packaging you have.",
+    ];
+  }
+
+  if (urgency === "high") {
+    return [
+      "Arrange veterinary care today.",
+      "Limit strenuous activity until your dog is seen.",
+      "Monitor breathing, energy, appetite, and comfort closely.",
+      "Share this report with the clinic when you book the visit.",
+    ];
+  }
+
+  if (urgency === "moderate") {
+    return [
+      "Book a veterinary visit within the next 24 to 48 hours.",
+      "Watch for worsening pain, breathing trouble, vomiting, or collapse.",
+      "Keep a short log of what you notice before the appointment.",
+      "Use this report to summarize the symptom timeline for the clinic.",
+    ];
+  }
+
+  return [
+    "Continue monitoring your dog closely at home.",
+    "Book a routine veterinary visit if symptoms persist or return.",
+    "Write down any new symptoms, appetite changes, or behavior changes.",
+    "Use this report as a handoff summary if you contact your clinic.",
+  ];
+}
+
+function buildFailSafeWarningSigns(urgency: string): string[] {
+  if (urgency === "emergency") {
+    return [
+      "Trouble breathing or blue, gray, or pale gums.",
+      "Collapse, repeated seizures, or inability to stand.",
+      "Nonproductive retching, severe bloating, or repeated vomiting.",
+      "Heavy bleeding or rapidly worsening weakness.",
+    ];
+  }
+
+  return [
+    "Trouble breathing, collapse, or repeated seizures.",
+    "Repeated vomiting, vomiting blood, or a swollen belly.",
+    "Unable to urinate, severe pain, or rapidly worsening weakness.",
+    "Any sudden change that makes this feel like an emergency.",
+  ];
+}
+
+function buildFailSafeTitle(urgency: string): string {
+  if (urgency === "emergency") return "Emergency veterinary care recommended";
+  if (urgency === "high") return "Same-day veterinary care recommended";
+  if (urgency === "moderate") return "Veterinary follow-up recommended";
+  return "Monitor closely and follow up if symptoms continue";
+}
+
+function buildFailSafeReport(input: {
+  session: TriageSession;
+  pet: PetProfile;
+  context: ReturnType<typeof buildDiagnosisContext>;
+  reason: "provider_unavailable" | "generation_failed";
+}) {
+  const availabilityMessage =
+    input.reason === "provider_unavailable"
+      ? "The full narrative report service is not configured right now."
+      : "The full narrative report could not be completed right now.";
+  const petName = input.pet.name || "your dog";
+  const structuredSummary =
+    input.session.case_memory?.compressed_summary ||
+    buildDeterministicCaseSummary(input.session, input.pet);
+
+  return {
+    severity:
+      URGENCY_TO_SEVERITY[input.context.highest_urgency] || "medium",
+    recommendation:
+      URGENCY_TO_RECOMMENDATION[input.context.highest_urgency] || "vet_48h",
+    title: buildFailSafeTitle(input.context.highest_urgency),
+    explanation: `${availabilityMessage} This fail-safe report still preserves PawVital's urgency guidance based on the symptom-check answers collected for ${petName}. This is not a diagnosis or a treatment plan. Use the vet handoff below when you contact your clinic, and seek emergency care immediately if your dog worsens.`,
+    clinical_notes: `Deterministic fail-safe report. Highest urgency: ${input.context.highest_urgency}. Known symptoms: ${input.session.known_symptoms.join(", ") || "not fully established"}. Red flags: ${input.context.red_flags.join(", ") || "none"}. Structured summary: ${structuredSummary}`,
+    actions: buildFailSafeActions(input.context.highest_urgency),
+    warning_signs: buildFailSafeWarningSigns(input.context.highest_urgency),
+    vet_questions: [
+      "When did the symptoms start, and how have they changed?",
+      "What has your dog eaten, taken, or gotten into recently?",
+      "What medications, supplements, or past conditions should the clinic know about?",
+    ],
+    confidence: Math.min(deriveBaselineReportConfidence(input.context), 0.45),
+    report_mode: "failsafe",
+    report_unavailable_reason: input.reason,
   };
 }
 
@@ -224,15 +339,23 @@ export async function generateReport({
     pet,
     rankedConditions
   );
-  const retrievalResult = await buildReportRetrievalBundle(
-    session,
-    pet,
-    knowledgeQuery,
-    referenceImageQuery,
-    rankedConditions
-  );
-  session = retrievalResult.session;
-  const retrievalBundle = retrievalResult.bundle;
+  let retrievalBundle: RetrievalBundle = EMPTY_RETRIEVAL_BUNDLE;
+  try {
+    const retrievalResult = await buildReportRetrievalBundle(
+      session,
+      pet,
+      knowledgeQuery,
+      referenceImageQuery,
+      rankedConditions
+    );
+    session = retrievalResult.session;
+    retrievalBundle = retrievalResult.bundle;
+  } catch (retrievalError) {
+    console.error(
+      "[Report] Retrieval bundle failed, continuing with fail-safe report context:",
+      retrievalError
+    );
+  }
   session.latest_retrieval_bundle = retrievalBundle;
   const reportMemory = ensureStructuredCaseMemory(session);
   session.case_memory = {
@@ -282,19 +405,6 @@ export async function generateReport({
     .slice(-10)
     .map((m) => `${m.role === "user" ? "Owner" : "Triage AI"}: ${m.content}`)
     .join("\n");
-
-  const urgencyToSeverity: Record<string, string> = {
-    emergency: "emergency",
-    high: "high",
-    moderate: "medium",
-    low: "low",
-  };
-  const urgencyToRecommendation: Record<string, string> = {
-    emergency: "emergency_vet",
-    high: "vet_24h",
-    moderate: "vet_48h",
-    low: "monitor",
-  };
 
   const reportPrompt = `You are a board-certified veterinary internist (DACVIM) with 15+ years of clinical experience writing a detailed clinical report.
 
@@ -355,8 +465,8 @@ For recommended tests, be SPECIFIC:
 
 Output ONLY valid JSON (no markdown, no code blocks, no thinking):
 {
-  "severity": "${urgencyToSeverity[context.highest_urgency] || "medium"}",
-  "recommendation": "${urgencyToRecommendation[context.highest_urgency] || "vet_48h"}",
+  "severity": "${URGENCY_TO_SEVERITY[context.highest_urgency] || "medium"}",
+  "recommendation": "${URGENCY_TO_RECOMMENDATION[context.highest_urgency] || "vet_48h"}",
   "title": "Specific clinical title based on top differential",
   "explanation": "4-6 sentences for a dog owner. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
   "differential_diagnoses": [
@@ -389,28 +499,55 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
 }`;
 
   try {
-    const rawReport = await diagnoseWithDeepSeek(reportPrompt);
-    console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
-
-    const report = parseReportJSON(rawReport);
-    if (!Array.isArray(report.evidence_chain)) {
-      report.evidence_chain = buildEvidenceChainForResponse(
-        session,
-        retrievalBundle
-      );
-    }
     const structuredEvidenceChain = buildStructuredEvidenceChain({
       session,
       retrievalBundle,
       pet,
       highestUrgency: context.highest_urgency,
     });
-    report.evidenceChain = structuredEvidenceChain;
 
-    let finalReport = report;
-    if (useNvidia) {
+    let finalReport: Record<string, unknown>;
+    let usedModelNarrative = false;
+
+    if (!useNvidia) {
+      finalReport = buildFailSafeReport({
+        session,
+        pet,
+        context,
+        reason: "provider_unavailable",
+      });
+    } else {
       try {
-        finalReport = await safetyVerify(report, pet, context);
+        const rawReport = await diagnoseWithDeepSeek(reportPrompt);
+        console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
+
+        const report = parseReportJSON(rawReport);
+        if (!Array.isArray(report.evidence_chain)) {
+          report.evidence_chain = buildEvidenceChainForResponse(
+            session,
+            retrievalBundle
+          );
+        }
+        finalReport = report;
+        usedModelNarrative = true;
+      } catch (reportError) {
+        console.error(
+          "[Report] Narrative generation unavailable, using fail-safe report:",
+          reportError
+        );
+        finalReport = buildFailSafeReport({
+          session,
+          pet,
+          context,
+          reason: "generation_failed",
+        });
+      }
+    }
+
+    finalReport.evidenceChain = structuredEvidenceChain;
+    if (usedModelNarrative) {
+      try {
+        finalReport = await safetyVerify(finalReport, pet, context);
         console.log("[Engine] Safety: GLM-5 verified");
       } catch (safetyError) {
         console.error("Safety verification failed (non-blocking):", safetyError);
@@ -502,6 +639,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
         })
       : null;
     const shouldAttemptAsyncReview =
+      finalReport.report_mode !== "failsafe" &&
       Boolean(reviewImage) &&
       context.highest_urgency !== "emergency" &&
       shouldScheduleAsyncConsultReview(session) &&
@@ -636,6 +774,14 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
     return NextResponse.json({ type: "report", report: finalReport });
   } catch (error) {
     console.error("Report generation failed:", error);
-    throw error;
+    return NextResponse.json({
+      type: "report",
+      report: buildFailSafeReport({
+        session,
+        pet,
+        context,
+        reason: "generation_failed",
+      }),
+    });
   }
 }
