@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { saveOutcomeFeedbackToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import {
@@ -7,13 +8,17 @@ import {
   getRateLimitId,
 } from "@/lib/rate-limit";
 
-interface OutcomeFeedbackRequestBody {
-  symptomCheckId?: string;
-  matchedExpectation?: "yes" | "partly" | "no";
-  confirmedDiagnosis?: string;
-  vetOutcome?: string;
-  ownerNotes?: string;
-}
+const OutcomeFeedbackRequestBodySchema = z.object({
+  symptomCheckId: z.string().uuid(),
+  matchedExpectation: z.enum(["yes", "partly", "no"]),
+  confirmedDiagnosis: z.string().trim().max(2000).optional(),
+  vetOutcome: z.string().trim().max(2000).optional(),
+  ownerNotes: z.string().trim().max(4000).optional(),
+});
+
+type OutcomeFeedbackRequestBody = z.infer<
+  typeof OutcomeFeedbackRequestBodySchema
+>;
 
 export async function POST(request: Request) {
   const rateLimitResult = await checkRateLimit(
@@ -64,19 +69,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  let body: OutcomeFeedbackRequestBody;
+  let requestBody: unknown;
   try {
-    body = (await request.json()) as OutcomeFeedbackRequestBody;
+    requestBody = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body.symptomCheckId || !body.matchedExpectation) {
+  const parsedBody = OutcomeFeedbackRequestBodySchema.safeParse(requestBody);
+  if (!parsedBody.success) {
     return NextResponse.json(
-      { error: "symptomCheckId and matchedExpectation are required" },
+      { error: "Invalid request body", code: "VALIDATION_ERROR" },
       { status: 400 }
     );
   }
+
+  const body: OutcomeFeedbackRequestBody = parsedBody.data;
 
   const saved = await saveOutcomeFeedbackToDB({
     symptomCheckId: body.symptomCheckId,
