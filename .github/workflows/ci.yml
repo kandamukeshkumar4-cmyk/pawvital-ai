@@ -164,6 +164,39 @@ jobs:
               body: `## Tests Failed\n\nOne or more tests failed. Run \`npm test\` locally to debug.\n\n[View logs](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`
             });
 
+  dependency-audit:
+    name: Dependency Audit
+    needs: install
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: actions/cache/restore@v5
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
+      - name: Production dependency audit
+        run: |
+          echo "Running production dependency audit (npm audit --omit=dev)"
+          npm run audit:prod
+      - name: Full dependency audit
+        run: |
+          echo "Running full dependency audit (npm audit)"
+          npm run audit:full
+      - name: Comment on failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request.number;
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: pr,
+              body: `## Dependency Audit Failed\n\nOne or more dependency audits failed.\n\n- Production audit: \`npm audit --omit=dev\`\n- Full audit: \`npm audit\`\n\n[View logs](${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId})`
+            });
+
   emergency-sentinel-advisory:
     name: Emergency Sentinel Advisory
     needs: install
@@ -322,7 +355,7 @@ jobs:
 
   ci-gate:
     name: CI Gate
-    needs: [lint, typecheck, build, test, benchmark-integrity, route-sentinel-replay]
+    needs: [lint, typecheck, build, test, dependency-audit, benchmark-integrity, route-sentinel-replay]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -332,6 +365,7 @@ jobs:
              [ "${{ needs.typecheck.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
              [ "${{ needs.test.result }}" != "success" ] || \
+             [ "${{ needs.dependency-audit.result }}" != "success" ] || \
              [ "${{ needs.benchmark-integrity.result }}" != "success" ] || \
              [ "${{ needs.route-sentinel-replay.result }}" != "success" ]; then
             echo "One or more CI checks failed"

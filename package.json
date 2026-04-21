@@ -9,6 +9,8 @@
     "lint": "eslint",
     "test": "jest --verbose",
     "test:watch": "jest --watch",
+    "audit:full": "npm audit",
+    "audit:prod": "npm audit --omit=dev",
     "test:retrieval:live": "node -e \"const { spawnSync } = require('node:child_process'); const path = require('node:path'); const jestBin = path.join(process.cwd(), 'node_modules', 'jest', 'bin', 'jest.js'); const result = spawnSync(process.execPath, [jestBin, '--runInBand', '--runTestsByPath', 'tests/retrieval.integration.test.ts'], { stdio: 'inherit', env: { ...process.env, RUN_LIVE_RETRIEVAL_TESTS: '1' } }); process.exit(result.status ?? 1);\"",
     "verify:sidecars": "node scripts/verify-sidecars.mjs",
     "verify:sidecars:env": "node scripts/verify-sidecars.mjs env",
