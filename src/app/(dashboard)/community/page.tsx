@@ -8,6 +8,8 @@ import Textarea from "@/components/ui/textarea";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
+import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
+import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 
 interface Post {
   id: string;
@@ -108,6 +110,7 @@ const initialPosts: Post[] = [
 ];
 
 export default function CommunityPage() {
+  const quarantinedSurface = getPrivateTesterQuarantinedSurface("/community");
   const [posts, setPosts] = useState(initialPosts);
   const [filter, setFilter] = useState("all");
   const [showNewPost, setShowNewPost] = useState(false);
@@ -159,6 +162,10 @@ export default function CommunityPage() {
       p.content.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  if (quarantinedSurface) {
+    return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
