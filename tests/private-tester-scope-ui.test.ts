@@ -13,7 +13,7 @@ const mockUsePathname = jest.fn();
 const mockSignOut = jest.fn();
 
 jest.mock("next/link", () => {
-  const React = require("react");
+  const ReactActual = jest.requireActual<typeof import("react")>("react");
 
   return {
     __esModule: true,
@@ -24,7 +24,7 @@ jest.mock("next/link", () => {
     }: {
       children: React.ReactNode;
       href: string;
-    }) => React.createElement("a", { href, ...props }, children),
+    }) => ReactActual.createElement("a", { href, ...props }, children),
   };
 });
 
