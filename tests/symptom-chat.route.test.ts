@@ -644,9 +644,9 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(mockCompressCaseMemoryWithMiniMax).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("IMAGE REASONING CONTEXT:");
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Internal ID: wound_size");
-    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Compressed case summary:");
+    expect(mockPhraseWithLlama.mock.calls[0][0]).toContain("Stable case baseline:");
     expect(mockPhraseWithLlama.mock.calls[0][0]).toContain(
-      "Bruno remains in a limping triage flow"
+      "Focus symptoms: wound_skin_issue, limping."
     );
     expect(mockPhraseWithLlama.mock.calls[0][0]).not.toContain(
       "Internal ID: limping_onset"
