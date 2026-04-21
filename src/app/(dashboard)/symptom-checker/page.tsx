@@ -18,7 +18,7 @@ import {
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
-import PlanGate from "@/components/subscription/plan-gate";
+import TesterOnboardingGate from "@/components/tester-onboarding/tester-onboarding-gate";
 import {
   ProgressBar,
   StateBadge,
@@ -692,7 +692,7 @@ export default function SymptomCheckerPage() {
   };
 
   return (
-    <PlanGate requiredPlan="pro">
+    <TesterOnboardingGate>
       <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -934,6 +934,7 @@ export default function SymptomCheckerPage() {
                       onClick={() => fileInputRef.current?.click()}
                       className="shrink-0 px-3"
                       title="Attach Photo"
+                      aria-label="Attach photo"
                     >
                       <ImagePlus className="w-5 h-5 text-gray-500" />
                     </Button>
@@ -963,6 +964,7 @@ export default function SymptomCheckerPage() {
                       onClick={() => sendMessage()}
                       disabled={(!input.trim() && !selectedImage) || loading}
                       className="w-full sm:h-full sm:w-auto"
+                      aria-label="Send message"
                     >
                       <Send className="w-4 h-4" />
                     </Button>
@@ -1008,6 +1010,7 @@ export default function SymptomCheckerPage() {
                   onClick={() => fileInputRef.current?.click()}
                   className="shrink-0 px-3"
                   title="Attach Photo"
+                  aria-label="Attach photo"
                 >
                   <ImagePlus className="w-5 h-5 text-gray-500" />
                 </Button>
@@ -1033,6 +1036,7 @@ export default function SymptomCheckerPage() {
                   onClick={() => sendMessage()}
                   disabled={(!input.trim() && !selectedImage) || loading}
                   className="w-full sm:h-full sm:w-auto"
+                  aria-label="Send message"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -1074,6 +1078,6 @@ export default function SymptomCheckerPage() {
         {/* Full Report */}
         {report && <FullReport report={report} />}
       </div>
-    </PlanGate>
+    </TesterOnboardingGate>
   );
 }
