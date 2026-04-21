@@ -24,6 +24,7 @@ import { getProvenanceRegistry } from "@/lib/provenance-registry";
 import { buildReportConfidenceCalibration } from "@/lib/report-confidence";
 import { saveSymptomReportToDB } from "@/lib/report-storage";
 import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
+import { saveTesterFeedbackCaseLedgerToDB } from "@/lib/tester-feedback-storage";
 import {
   appendSidecarObservation,
   buildInternalShadowTelemetrySnapshot,
@@ -787,6 +788,20 @@ export async function generateReport({
       if (reportStorageId) {
         finalReport.report_storage_id = reportStorageId;
         finalReport.outcome_feedback_enabled = true;
+        const testerLedgerSave = await saveTesterFeedbackCaseLedgerToDB({
+          symptomCheckId: reportStorageId,
+          verifiedUserId,
+          pet: pet as PetProfile & { id?: string },
+          report: finalReport,
+          session,
+        });
+
+        if (!testerLedgerSave.ok && testerLedgerSave.warnings.length > 0) {
+          console.warn(
+            "[TesterFeedback] Non-blocking case ledger save issue:",
+            testerLedgerSave.warnings.join("; ")
+          );
+        }
       }
     } catch (saveError) {
       console.error("[DB] Failed to save triage session:", saveError);
