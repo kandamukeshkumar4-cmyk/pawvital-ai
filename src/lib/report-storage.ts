@@ -7,17 +7,21 @@ export interface OutcomeFeedbackInput {
   symptomCheckId: string;
   matchedExpectation: "yes" | "partly" | "no";
   confirmedDiagnosis?: string;
+  requestingUserId: string;
   vetOutcome?: string;
   ownerNotes?: string;
 }
 
 export interface OutcomeFeedbackSaveResult {
+  errorCode?: "forbidden" | "not_found" | "server_unavailable";
   ok: boolean;
   legacyUpdated: boolean;
   proposalCreated: boolean;
   structuredStored: boolean;
   warnings: string[];
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getServerSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,6 +31,15 @@ function getServerSupabase() {
   }
 
   return createClient(url, serviceKey);
+}
+
+function isUuid(value: string | null | undefined): value is string {
+  return typeof value === "string" && UUID_RE.test(value);
+}
+
+function normalizeOptionalText(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 export async function saveSymptomReportToDB(
@@ -85,6 +98,28 @@ export async function saveSymptomReportToDB(
 export async function saveOutcomeFeedbackToDB(
   input: OutcomeFeedbackInput
 ): Promise<OutcomeFeedbackSaveResult> {
+  if (!isUuid(input.symptomCheckId)) {
+    return {
+      errorCode: "not_found",
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Invalid symptom check identifier"],
+    };
+  }
+
+  if (!isUuid(input.requestingUserId)) {
+    return {
+      errorCode: "forbidden",
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Invalid authenticated user context"],
+    };
+  }
+
   const supabase = getServerSupabase();
   if (!supabase) {
     return {
@@ -98,18 +133,56 @@ export async function saveOutcomeFeedbackToDB(
 
   const { data, error } = await supabase
     .from("symptom_checks")
-    .select("id, symptoms, severity, recommendation, ai_response")
+    .select("id, pet_id, symptoms, severity, recommendation, ai_response")
     .eq("id", input.symptomCheckId)
     .maybeSingle();
 
   if (error || !data) {
     console.error("[DB] Failed to load symptom check for feedback:", error);
     return {
+      errorCode: "not_found",
       ok: false,
       legacyUpdated: false,
       proposalCreated: false,
       structuredStored: false,
       warnings: ["Failed to load symptom check"],
+    };
+  }
+
+  const petId = typeof data.pet_id === "string" ? data.pet_id : null;
+  if (!petId) {
+    return {
+      errorCode: "not_found",
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Missing symptom check ownership data"],
+    };
+  }
+
+  const { data: petData, error: petError } = await supabase
+    .from("pets")
+    .select("user_id")
+    .eq("id", petId)
+    .maybeSingle();
+
+  const ownerUserId =
+    petData && typeof petData === "object" && typeof petData.user_id === "string"
+      ? petData.user_id
+      : null;
+
+  if (petError || !ownerUserId || ownerUserId !== input.requestingUserId) {
+    if (petError) {
+      console.error("[DB] Failed to verify symptom check ownership:", petError);
+    }
+    return {
+      errorCode: "forbidden",
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Symptom check does not belong to the authenticated user"],
     };
   }
 
@@ -125,9 +198,9 @@ export async function saveOutcomeFeedbackToDB(
 
   const feedbackPayload = {
     matched_expectation: input.matchedExpectation,
-    confirmed_diagnosis: input.confirmedDiagnosis?.trim() || null,
-    vet_outcome: input.vetOutcome?.trim() || null,
-    owner_notes: input.ownerNotes?.trim() || null,
+    confirmed_diagnosis: normalizeOptionalText(input.confirmedDiagnosis),
+    vet_outcome: normalizeOptionalText(input.vetOutcome),
+    owner_notes: normalizeOptionalText(input.ownerNotes),
     submitted_at: new Date().toISOString(),
   };
   aiResponse.outcome_feedback = feedbackPayload;
@@ -137,11 +210,13 @@ export async function saveOutcomeFeedbackToDB(
     .update({
       ai_response: JSON.stringify(aiResponse),
     })
-    .eq("id", input.symptomCheckId);
+    .eq("id", input.symptomCheckId)
+    .eq("pet_id", petId);
 
   if (updateError) {
     console.error("[DB] Failed to save outcome feedback:", updateError);
     return {
+      errorCode: "server_unavailable",
       ok: false,
       legacyUpdated: false,
       proposalCreated: false,
@@ -160,10 +235,10 @@ export async function saveOutcomeFeedbackToDB(
     const { data: feedbackEntry, error: feedbackError } = await supabase
       .from("outcome_feedback_entries")
       .insert({
-        confirmed_diagnosis: input.confirmedDiagnosis?.trim() || null,
+        confirmed_diagnosis: feedbackPayload.confirmed_diagnosis,
         feedback_source: "owner_feedback",
         matched_expectation: input.matchedExpectation,
-        owner_notes: input.ownerNotes?.trim() || null,
+        owner_notes: feedbackPayload.owner_notes,
         report_recommendation:
           typeof data.recommendation === "string" ? data.recommendation : null,
         report_severity:
@@ -175,7 +250,7 @@ export async function saveOutcomeFeedbackToDB(
         symptom_check_id: input.symptomCheckId,
         symptom_summary:
           typeof data.symptoms === "string" ? data.symptoms : null,
-        vet_outcome: input.vetOutcome?.trim() || null,
+        vet_outcome: feedbackPayload.vet_outcome,
       })
       .select("id")
       .maybeSingle();

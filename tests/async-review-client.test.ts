@@ -38,6 +38,21 @@ describe("async-review-client", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("returns false in production when the async review secret is missing", async () => {
+    process.env.NODE_ENV = "production";
+    const client = await import("@/lib/async-review-client");
+
+    const result = await client.enqueueAsyncReview({
+      baseUrl: "https://queue.example.com/review/",
+      image: "data:image/jpeg;base64,ZmFrZQ==",
+      pet: PET,
+      session: {} as TriageSession,
+    });
+
+    expect(result).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("submits async review payloads and returns true on success", async () => {
     process.env.ASYNC_REVIEW_WEBHOOK_SECRET = "secret-123";
     fetchMock.mockResolvedValue({ ok: true });

@@ -5,19 +5,19 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
-
-const MAX_BYTES = 5 * 1024 * 1024;
-const ALLOWED = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
+import {
+  MAX_JOURNAL_UPLOAD_BYTES,
+  validateJournalUploadFile,
+} from "./validation";
 
 function safeFileStem(name: string): string {
   const base = name.split(/[/\\]/).pop() || "photo";
   return base.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120) || "photo";
 }
+
+const MAX_JOURNAL_UPLOAD_MB = Math.floor(
+  MAX_JOURNAL_UPLOAD_BYTES / (1024 * 1024)
+);
 
 async function getSupabaseOrResponse() {
   try {
@@ -92,48 +92,43 @@ export async function POST(request: Request) {
     );
   }
 
-  if (file.size > MAX_BYTES) {
+  const validation = await validateJournalUploadFile(file);
+  if (!validation.ok && validation.reason === "file-too-large") {
     return NextResponse.json(
-      { error: "File too large (max 5MB)" },
+      { error: `File too large (max ${MAX_JOURNAL_UPLOAD_MB}MB)` },
       { status: 400 }
     );
   }
 
-  const type = file.type || "application/octet-stream";
-  if (!ALLOWED.has(type)) {
+  if (!validation.ok && validation.reason === "unsupported-file-type") {
     return NextResponse.json(
       { error: "Unsupported file type" },
       { status: 400 }
     );
   }
 
-  const ext =
-    type === "image/jpeg"
-      ? "jpg"
-      : type === "image/png"
-        ? "png"
-        : type === "image/webp"
-          ? "webp"
-          : "gif";
+  if (!validation.ok) {
+    return NextResponse.json(
+      { error: "Uploaded file contents do not match a supported image file" },
+      { status: 400 }
+    );
+  }
 
-  const objectPath = `${user.id}/${Date.now()}-${safeFileStem(file.name)}.${ext}`;
+  const { buffer, detectedType, extension } = validation;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const objectPath = `${user.id}/${Date.now()}-${safeFileStem(file.name)}.${extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from("journal-photos")
     .upload(objectPath, buffer, {
-      contentType: type,
+      contentType: detectedType,
       upsert: false,
     });
 
   if (uploadError) {
     console.error("[Journal Upload] Storage error:", uploadError);
-    return NextResponse.json(
-      { error: "Upload failed", detail: uploadError.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ path: objectPath, bucket: "journal-photos" });
+  return NextResponse.json({ path: objectPath });
 }

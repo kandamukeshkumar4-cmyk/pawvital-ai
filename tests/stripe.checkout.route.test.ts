@@ -3,35 +3,47 @@ const mockCustomerCreate = jest.fn();
 const mockCustomerList = jest.fn();
 const mockCustomerUpdate = jest.fn();
 const mockCheckoutSessionCreate = jest.fn();
+const originalEnv = process.env;
 
 jest.mock("@/lib/supabase-server", () => ({
   createServerSupabaseClient: (...args: unknown[]) =>
     mockCreateServerSupabaseClient(...args),
 }));
 
-jest.mock("@/lib/stripe", () => ({
-  getStripeAppUrl: jest.fn(() => "https://app.pawvital.test"),
-  getSubscriptionLineItems: jest.fn(() => [{ price: "price_test", quantity: 1 }]),
-  isStripeConfigured: true,
-  stripe: {
-    checkout: {
-      sessions: {
-        create: (...args: unknown[]) => mockCheckoutSessionCreate(...args),
+jest.mock("@/lib/stripe", () => {
+  const actual = jest.requireActual("@/lib/stripe") as typeof import("@/lib/stripe");
+
+  return {
+    ...actual,
+    getSubscriptionLineItems: jest.fn(() => [{ price: "price_test", quantity: 1 }]),
+    isStripeConfigured: true,
+    stripe: {
+      checkout: {
+        sessions: {
+          create: (...args: unknown[]) => mockCheckoutSessionCreate(...args),
+        },
+      },
+      customers: {
+        create: (...args: unknown[]) => mockCustomerCreate(...args),
+        list: (...args: unknown[]) => mockCustomerList(...args),
+        update: (...args: unknown[]) => mockCustomerUpdate(...args),
       },
     },
-    customers: {
-      create: (...args: unknown[]) => mockCustomerCreate(...args),
-      list: (...args: unknown[]) => mockCustomerList(...args),
-      update: (...args: unknown[]) => mockCustomerUpdate(...args),
-    },
-  },
-}));
+  };
+});
 
-function makeRequest(body: Record<string, unknown> = {}) {
-  return new Request("http://localhost/api/stripe/checkout", {
+function makeRequest(
+  body: Record<string, unknown> = {},
+  options?: {
+    headers?: Record<string, string>;
+    url?: string;
+  }
+) {
+  return new Request(options?.url ?? "http://localhost/api/stripe/checkout", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...options?.headers,
     },
     body: JSON.stringify(body),
   });
@@ -113,12 +125,12 @@ function buildSupabaseMock(options?: {
 }
 
 describe("POST /api/stripe/checkout", () => {
-  const originalEnv = process.env;
-
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    process.env = originalEnv;
+    process.env = { ...originalEnv };
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    delete process.env.VERCEL_URL;
     mockCheckoutSessionCreate.mockResolvedValue({
       url: "https://checkout.stripe.com/test-session",
     });
@@ -143,6 +155,7 @@ describe("POST /api/stripe/checkout", () => {
   });
 
   it("creates a checkout session with the authenticated identity and persists the customer id", async () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://app.pawvital.test";
     const { profileUpdate, profileUpdateEq, supabase } = buildSupabaseMock();
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
@@ -173,6 +186,7 @@ describe("POST /api/stripe/checkout", () => {
     expect(profileUpdateEq).toHaveBeenCalledWith("id", "user-1");
     expect(mockCheckoutSessionCreate).toHaveBeenCalledWith(
       expect.objectContaining({
+        cancel_url: "https://app.pawvital.test/pricing",
         client_reference_id: "user-1",
         customer: "cus_created",
         metadata: expect.objectContaining({
@@ -183,6 +197,80 @@ describe("POST /api/stripe/checkout", () => {
           "https://app.pawvital.test/dashboard?session_id={CHECKOUT_SESSION_ID}",
       })
     );
+  });
+
+  it("uses the configured canonical app url instead of hostile host or origin headers", async () => {
+    process.env.NEXT_PUBLIC_APP_URL = "https://app.pawvital.test";
+    const { supabase } = buildSupabaseMock();
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { POST } = await import("@/app/api/stripe/checkout/route");
+    const response = await POST(
+      makeRequest(
+        {},
+        {
+          headers: {
+            Host: "evil.example",
+            Origin: "https://evil.example",
+          },
+          url: "https://evil.example/api/stripe/checkout",
+        }
+      )
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockCheckoutSessionCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cancel_url: "https://app.pawvital.test/pricing",
+        success_url:
+          "https://app.pawvital.test/dashboard?session_id={CHECKOUT_SESSION_ID}",
+      })
+    );
+  });
+
+  it("fails safely when production checkout lacks a canonical app url", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.VERCEL_URL = "preview.pawvital.ai";
+    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const { supabase } = buildSupabaseMock();
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { POST } = await import("@/app/api/stripe/checkout/route");
+    const response = await POST(makeRequest({}, { url: "https://evil.example/api/stripe/checkout" }));
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({
+      error: "Stripe checkout requires a configured canonical application URL.",
+      code: "APP_URL_NOT_CONFIGURED",
+    });
+    expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("fails safely when the canonical app url is malformed", async () => {
+    process.env.NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_APP_URL = "https://app.pawvital.ai/path?secret=topsecret";
+    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    const { supabase } = buildSupabaseMock();
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { POST } = await import("@/app/api/stripe/checkout/route");
+    const response = await POST(makeRequest());
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({
+      error: "Stripe checkout requires a valid canonical application URL.",
+      code: "APP_URL_INVALID",
+    });
+    expect(JSON.stringify(payload)).not.toContain("topsecret");
+    expect(mockCheckoutSessionCreate).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+    consoleErrorSpy.mockRestore();
   });
 
   it("prevents duplicate paid checkout sessions when a subscription is already live", async () => {

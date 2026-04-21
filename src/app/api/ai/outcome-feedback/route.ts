@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { saveOutcomeFeedbackToDB } from "@/lib/report-storage";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import {
+  checkRateLimit,
+  generalApiLimiter,
+  getRateLimitId,
+} from "@/lib/rate-limit";
 import {
   listTesterFeedbackCases,
   saveTesterFeedbackToDB,
@@ -12,7 +18,7 @@ import {
   TESTER_FEEDBACK_TRUST_VALUES,
 } from "@/lib/tester-feedback";
 
-const OutcomeFeedbackBodySchema = z.object({
+const TesterFeedbackRequestBodySchema = z.object({
   symptomCheckId: z.string().uuid(),
   helpfulness: z.enum(TESTER_FEEDBACK_HELPFULNESS_VALUES),
   confusingAreas: z
@@ -24,79 +30,190 @@ const OutcomeFeedbackBodySchema = z.object({
   surface: z.enum(TESTER_FEEDBACK_SURFACE_VALUES).optional(),
 });
 
-async function requireUser() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+const OutcomeFeedbackRequestBodySchema = z.object({
+  symptomCheckId: z.string().uuid(),
+  matchedExpectation: z.enum(["yes", "partly", "no"]),
+  confirmedDiagnosis: z.string().trim().max(2000).optional(),
+  vetOutcome: z.string().trim().max(2000).optional(),
+  ownerNotes: z.string().trim().max(4000).optional(),
+});
 
-  if (error || !user) {
-    return { user: null };
+type TesterFeedbackRequestBody = z.infer<typeof TesterFeedbackRequestBodySchema>;
+type OutcomeFeedbackRequestBody = z.infer<
+  typeof OutcomeFeedbackRequestBodySchema
+>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isOutcomeFeedbackPayload(
+  value: unknown
+): value is Record<string, unknown> {
+  return isRecord(value) && "matchedExpectation" in value;
+}
+
+function buildRateLimitResponse(rateLimitResult: {
+  reset: number;
+  success: boolean;
+}) {
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+          ),
+        },
+      }
+    );
+  }
+  return null;
+}
+
+async function requireUser() {
+  let supabase;
+  try {
+    supabase = await createServerSupabaseClient();
+  } catch (error) {
+    if (error instanceof Error && error.message === "DEMO_MODE") {
+      return NextResponse.json(
+        {
+          error: "Outcome feedback requires a configured account backend",
+          code: "DEMO_MODE",
+        },
+        { status: 503 }
+      );
+    }
+
+    console.error("[outcome-feedback] Failed to create Supabase client:", error);
+    return NextResponse.json(
+      { error: "Server configuration error" },
+      { status: 500 }
+    );
   }
 
-  return { user };
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  return { supabase, user };
+}
+
+function saveOutcomeFeedback(
+  body: OutcomeFeedbackRequestBody,
+  userId: string
+) {
+  return saveOutcomeFeedbackToDB({
+    symptomCheckId: body.symptomCheckId,
+    matchedExpectation: body.matchedExpectation,
+    confirmedDiagnosis: body.confirmedDiagnosis,
+    requestingUserId: userId,
+    vetOutcome: body.vetOutcome,
+    ownerNotes: body.ownerNotes,
+  });
+}
+
+function saveTesterFeedback(body: TesterFeedbackRequestBody, userId: string) {
+  return saveTesterFeedbackToDB({
+    userId,
+    feedback: {
+      symptomCheckId: body.symptomCheckId,
+      helpfulness: body.helpfulness,
+      confusingAreas: body.confusingAreas,
+      trustLevel: body.trustLevel,
+      notes: body.notes ?? null,
+      surface: body.surface ?? "result_page",
+    },
+  });
 }
 
 export async function POST(request: Request) {
-  let rawBody: unknown;
+  const rateLimitBlock = buildRateLimitResponse(
+    await checkRateLimit(generalApiLimiter, getRateLimitId(request))
+  );
+  if (rateLimitBlock) {
+    return rateLimitBlock;
+  }
+
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  let requestBody: unknown;
   try {
-    rawBody = await request.json();
+    requestBody = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const parsed = OutcomeFeedbackBodySchema.safeParse(rawBody);
-  if (!parsed.success) {
+  if (isOutcomeFeedbackPayload(requestBody)) {
+    const parsedBody = OutcomeFeedbackRequestBodySchema.safeParse(requestBody);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "Invalid request body", code: "VALIDATION_ERROR" },
+        { status: 400 }
+      );
+    }
+
+    const saved = await saveOutcomeFeedback(parsedBody.data, auth.user.id);
+    const saveOk = typeof saved === "boolean" ? saved : saved.ok;
+
+    if (!saveOk) {
+      const status =
+        typeof saved === "boolean"
+          ? 503
+          : saved.errorCode === "forbidden"
+            ? 403
+            : saved.errorCode === "not_found"
+              ? 404
+              : 503;
+      return NextResponse.json(
+        { ok: false, error: "Unable to save outcome feedback" },
+        { status }
+      );
+    }
+
+    if (typeof saved === "boolean") {
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      proposalCreated: saved.proposalCreated,
+      structuredStored: saved.structuredStored,
+      warnings: saved.warnings,
+    });
+  }
+
+  const parsedTesterFeedback =
+    TesterFeedbackRequestBodySchema.safeParse(requestBody);
+  if (!parsedTesterFeedback.success) {
     return NextResponse.json(
       { error: "Invalid request body", code: "VALIDATION_ERROR" },
       { status: 400 }
     );
   }
 
-  let auth;
-  try {
-    auth = await requireUser();
-  } catch (error) {
-    if (error instanceof Error && error.message === "DEMO_MODE") {
-      return NextResponse.json(
-        { error: "Feedback requires a configured account", code: "DEMO_MODE" },
-        { status: 503 }
-      );
-    }
-    console.error("[OutcomeFeedback] Auth setup failed:", error);
-    return NextResponse.json(
-      { error: "Unable to validate the current user" },
-      { status: 500 }
-    );
-  }
-
-  if (!auth.user) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
-  const saved = await saveTesterFeedbackToDB({
-    userId: auth.user.id,
-    feedback: {
-      symptomCheckId: parsed.data.symptomCheckId,
-      helpfulness: parsed.data.helpfulness,
-      confusingAreas: parsed.data.confusingAreas,
-      trustLevel: parsed.data.trustLevel,
-      notes: parsed.data.notes ?? null,
-      surface: parsed.data.surface ?? "result_page",
-    },
-  });
+  const saved = await saveTesterFeedback(parsedTesterFeedback.data, auth.user.id);
 
   if (!saved.ok || !saved.caseSummary) {
     const status =
-      saved.warnings.some((warning) => warning.includes("not found")) ? 404 : 503;
+      saved.warnings.some((warning) => warning.toLowerCase().includes("not found"))
+        ? 404
+        : 503;
     return NextResponse.json(
       {
         ok: false,
-        error: saved.warnings[0] ?? "Unable to save outcome feedback",
+        error: "Unable to save outcome feedback",
       },
       { status }
     );
@@ -110,31 +227,16 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  let auth;
-  try {
-    auth = await requireUser();
-  } catch (error) {
-    if (error instanceof Error && error.message === "DEMO_MODE") {
-      return NextResponse.json(
-        {
-          error: "Feedback queries require a configured account",
-          code: "DEMO_MODE",
-        },
-        { status: 503 }
-      );
-    }
-    console.error("[OutcomeFeedback] Auth setup failed:", error);
-    return NextResponse.json(
-      { error: "Unable to validate the current user" },
-      { status: 500 }
-    );
+  const rateLimitBlock = buildRateLimitResponse(
+    await checkRateLimit(generalApiLimiter, getRateLimitId(request))
+  );
+  if (rateLimitBlock) {
+    return rateLimitBlock;
   }
 
-  if (!auth.user) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 }
-    );
+  const auth = await requireUser();
+  if (auth instanceof NextResponse) {
+    return auth;
   }
 
   const url = new URL(request.url);

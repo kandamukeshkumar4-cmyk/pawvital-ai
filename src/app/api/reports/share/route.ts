@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import {
+  checkRateLimit,
+  generalApiLimiter,
+  getRateLimitId,
+} from "@/lib/rate-limit";
 
 const EXPIRY: Record<"24h" | "7d" | "30d", number> = {
   "24h": 24 * 60 * 60 * 1000,
@@ -24,6 +29,24 @@ function appBaseUrl(): string {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResult = await checkRateLimit(
+    generalApiLimiter,
+    getRateLimitId(request)
+  );
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(
+            Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+          ),
+        },
+      }
+    );
+  }
+
   let supabase;
   try {
     supabase = await createServerSupabaseClient();
