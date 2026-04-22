@@ -514,45 +514,50 @@ async function loadRelatedSymptomData(
     feedbackEntries,
   ] = counts;
 
+  let caseOutcomesCount = caseOutcomes.count ?? 0;
   if (caseOutcomes.error) {
     if (isMissingRelationError(caseOutcomes.error)) {
-      caseOutcomes.count = 0;
+      caseOutcomesCount = 0;
     } else {
       throw new Error(
         `COUNT_FAILED:case_outcomes:${formatSupabaseError(caseOutcomes.error)}`
       );
     }
   }
+  let outcomeFeedbackEntriesCount = outcomeFeedbackEntries.count ?? 0;
   if (outcomeFeedbackEntries.error) {
     if (isMissingRelationError(outcomeFeedbackEntries.error)) {
-      outcomeFeedbackEntries.count = 0;
+      outcomeFeedbackEntriesCount = 0;
     } else {
       throw new Error(
         `COUNT_FAILED:outcome_feedback_entries:${formatSupabaseError(outcomeFeedbackEntries.error)}`
       );
     }
   }
+  let sharedReportsCount = sharedReports.count ?? 0;
   if (sharedReports.error) {
     if (isMissingRelationError(sharedReports.error)) {
-      sharedReports.count = 0;
+      sharedReportsCount = 0;
     } else {
       throw new Error(
         `COUNT_FAILED:shared_reports:${formatSupabaseError(sharedReports.error)}`
       );
     }
   }
+  let thresholdProposalsCount = thresholdProposals.count ?? 0;
   if (thresholdProposals.error) {
     if (isMissingRelationError(thresholdProposals.error)) {
-      thresholdProposals.count = 0;
+      thresholdProposalsCount = 0;
     } else {
       throw new Error(
         `COUNT_FAILED:threshold_proposals:${formatSupabaseError(thresholdProposals.error)}`
       );
     }
   }
+  let feedbackRows = feedbackEntries.data ?? [];
   if (feedbackEntries.error) {
     if (isMissingRelationError(feedbackEntries.error)) {
-      feedbackEntries.data = [];
+      feedbackRows = [];
     } else {
       throw new Error(
         `COUNT_FAILED:outcome_feedback_entries:${formatSupabaseError(feedbackEntries.error)}`
@@ -561,7 +566,7 @@ async function loadRelatedSymptomData(
   }
 
   const flaggedCheckIds = new Set(
-    (feedbackEntries.data ?? [])
+    feedbackRows
       .filter(
         (row) =>
           String(
@@ -604,12 +609,12 @@ async function loadRelatedSymptomData(
 
   return {
     counts: {
-      caseOutcomes: caseOutcomes.count ?? 0,
+      caseOutcomes: caseOutcomesCount,
       negativeFeedbackEntries: flaggedCheckIds.size,
-      outcomeFeedbackEntries: outcomeFeedbackEntries.count ?? 0,
-      sharedReports: sharedReports.count ?? 0,
+      outcomeFeedbackEntries: outcomeFeedbackEntriesCount,
+      sharedReports: sharedReportsCount,
       symptomChecks: checkIds.length,
-      thresholdProposals: thresholdProposals.count ?? 0,
+      thresholdProposals: thresholdProposalsCount,
     },
     recentCases,
   };
