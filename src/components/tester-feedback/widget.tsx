@@ -43,6 +43,7 @@ function getSafeFeedbackErrorMessage(status: number) {
       return "Please review your feedback and try again.";
     case 401:
       return "Please sign in again to submit feedback.";
+    case 403:
     case 404:
       return "We could not link this feedback to a saved report.";
     case 429:

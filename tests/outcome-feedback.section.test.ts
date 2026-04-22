@@ -119,4 +119,37 @@ describe("OutcomeFeedbackSection", () => {
     );
     expect(screen.queryByText(/Piper needed sedation/i)).toBeNull();
   });
+
+  it("treats forbidden saves like missing-report failures without echoing server text", async () => {
+    const fetchSpy = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({
+        ok: false,
+        error: "Owner notes: Piper needed sedation after the emergency visit.",
+      }),
+    });
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      writable: true,
+      value: fetchSpy,
+    });
+
+    render(
+      React.createElement(OutcomeFeedbackSection, {
+        report: buildReport(),
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "We could not link this feedback to a saved report.",
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText(/Piper needed sedation/i)).toBeNull();
+  });
 });
