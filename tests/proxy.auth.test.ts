@@ -164,7 +164,7 @@ describe("VET-1215 proxy auth guard", () => {
     });
 
     const { proxy } = await loadProxyModule();
-    const response = await proxy(new NextRequest("https://app.pawvital.ai/history"));
+    const response = await proxy(new NextRequest("https://app.pawvital.ai/"));
 
     expect(response.status).toBe(200);
     expect(response.cookies.get(PRIVATE_TESTER_MODE_COOKIE)?.value).toBe("1");
