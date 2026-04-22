@@ -80,23 +80,25 @@ function isAdminViaAuthMetadata(user: {
   );
 }
 
-async function isAdminViaUsersTable(
+function isAdminFromRoleRow(value: unknown) {
+  const row = asObject(value);
+
+  return hasAdminRole(row?.role) || isTruthyAdminFlag(row?.is_admin);
+}
+
+async function isAdminViaRoleTable(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  table: "profiles" | "users",
   userId: string
 ) {
   try {
     const { data } = await supabase
-      .from("users")
+      .from(table)
       .select("role, is_admin")
       .eq("id", userId)
       .maybeSingle();
 
-    if (!data || typeof data !== "object") {
-      return false;
-    }
-
-    const row = data as Record<string, unknown>;
-    return row.role === "admin" || row.is_admin === true;
+    return isAdminFromRoleRow(data);
   } catch {
     return false;
   }
@@ -130,7 +132,11 @@ export async function getAdminRequestContext(): Promise<AdminRequestContext | nu
       return { email, isDemo: false, userId: user.id };
     }
 
-    if (await isAdminViaUsersTable(supabase, user.id)) {
+    if (await isAdminViaRoleTable(supabase, "users", user.id)) {
+      return { email, isDemo: false, userId: user.id };
+    }
+
+    if (await isAdminViaRoleTable(supabase, "profiles", user.id)) {
       return { email, isDemo: false, userId: user.id };
     }
   } catch (error) {
