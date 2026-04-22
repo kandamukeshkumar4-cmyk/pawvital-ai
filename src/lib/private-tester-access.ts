@@ -37,9 +37,28 @@ export interface PrivateTesterEnvMutationPlan {
 type EnvLike = Record<string, string | undefined>;
 
 const PRIVATE_TESTER_ROUTE_PREFIX = "/symptom-checker";
+export const PRIVATE_TESTER_MODE_COOKIE = "pawvital_private_tester_mode";
 
 function isTruthyEnvFlag(value: string | undefined) {
   return value === "true" || value === "1";
+}
+
+function readBrowserCookieFlag(name: string) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookies = document.cookie
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const match = cookies.find((entry) => entry.startsWith(`${name}=`));
+
+  if (!match) {
+    return null;
+  }
+
+  return isTruthyEnvFlag(match.slice(name.length + 1));
 }
 
 function readFlag(
@@ -80,11 +99,17 @@ export function normalizePrivateTesterEmail(value: string | null | undefined) {
 }
 
 export function isPrivateTesterModeEnabled(env: EnvLike = process.env) {
-  return readFlag(
+  const modeEnabled = readFlag(
     env,
     ["NEXT_PUBLIC_PRIVATE_TESTER_MODE", "PRIVATE_TESTER_MODE"],
     false
   );
+
+  if (modeEnabled) {
+    return true;
+  }
+
+  return readBrowserCookieFlag(PRIVATE_TESTER_MODE_COOKIE) ?? false;
 }
 
 export function isPrivateTesterInviteOnly(env: EnvLike = process.env) {

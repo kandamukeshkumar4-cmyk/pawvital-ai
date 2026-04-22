@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { PRIVATE_TESTER_MODE_COOKIE } from "@/lib/private-tester-access";
 
 const mockGetUser = jest.fn();
 const mockCreateServerClient = jest.fn(() => ({
@@ -148,5 +149,24 @@ describe("VET-1215 proxy auth guard", () => {
     const response = await proxy(new NextRequest("https://app.pawvital.ai/history"));
 
     expect(response.status).toBe(200);
+  });
+
+  it("VET-1390 tester quarantine: mirrors server-side private tester mode into a client-readable cookie", async () => {
+    process.env = {
+      ...originalEnv,
+      PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1", email: "tester@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(new NextRequest("https://app.pawvital.ai/history"));
+
+    expect(response.status).toBe(200);
+    expect(response.cookies.get(PRIVATE_TESTER_MODE_COOKIE)?.value).toBe("1");
   });
 });
