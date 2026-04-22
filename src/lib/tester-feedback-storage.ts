@@ -23,12 +23,14 @@ interface SymptomCheckRow {
 }
 
 export interface TesterFeedbackSaveResult {
+  errorCode?: "not_found" | "server_unavailable";
   ok: boolean;
   caseSummary: TesterFeedbackCaseSummary | null;
   warnings: string[];
 }
 
 export interface TesterFeedbackListResult {
+  errorCode?: "not_found" | "server_unavailable";
   ok: boolean;
   cases: TesterFeedbackCaseSummary[];
   warnings: string[];
@@ -46,6 +48,7 @@ async function loadOwnedSymptomChecks(
   userId: string,
   symptomCheckId?: string
 ): Promise<{
+  errorCode?: "server_unavailable";
   ok: boolean;
   rows: SymptomCheckRow[];
   warnings: string[];
@@ -53,6 +56,7 @@ async function loadOwnedSymptomChecks(
   const supabase = getServiceSupabase();
   if (!supabase) {
     return {
+      errorCode: "server_unavailable",
       ok: false,
       rows: [],
       warnings: ["Supabase is not configured"],
@@ -67,6 +71,7 @@ async function loadOwnedSymptomChecks(
   if (petError) {
     console.error("[TesterFeedback] Failed to load owned pets:", petError);
     return {
+      errorCode: "server_unavailable",
       ok: false,
       rows: [],
       warnings: ["Failed to load owned pets"],
@@ -102,6 +107,7 @@ async function loadOwnedSymptomChecks(
   if (error) {
     console.error("[TesterFeedback] Failed to load symptom checks:", error);
     return {
+      errorCode: "server_unavailable",
       ok: false,
       rows: [],
       warnings: ["Failed to load symptom checks"],
@@ -192,6 +198,7 @@ export async function saveTesterFeedbackToDB(input: {
 
   if (!ownedChecks.ok) {
     return {
+      errorCode: ownedChecks.errorCode,
       ok: false,
       caseSummary: null,
       warnings: ownedChecks.warnings,
@@ -201,6 +208,7 @@ export async function saveTesterFeedbackToDB(input: {
   const row = ownedChecks.rows[0];
   if (!row) {
     return {
+      errorCode: "not_found",
       ok: false,
       caseSummary: null,
       warnings: ["Symptom check not found or access denied"],
@@ -210,6 +218,7 @@ export async function saveTesterFeedbackToDB(input: {
   const supabase = getServiceSupabase();
   if (!supabase) {
     return {
+      errorCode: "server_unavailable",
       ok: false,
       caseSummary: null,
       warnings: ["Supabase is not configured"],
@@ -236,6 +245,7 @@ export async function saveTesterFeedbackToDB(input: {
   if (error) {
     console.error("[TesterFeedback] Failed to save tester feedback:", error);
     return {
+      errorCode: "server_unavailable",
       ok: false,
       caseSummary: null,
       warnings: ["Unable to save tester feedback"],
@@ -264,6 +274,7 @@ export async function listTesterFeedbackCases(input: {
 
   if (!ownedChecks.ok) {
     return {
+      errorCode: ownedChecks.errorCode,
       ok: false,
       cases: [],
       warnings: ownedChecks.warnings,
