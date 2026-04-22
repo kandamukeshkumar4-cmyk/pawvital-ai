@@ -207,6 +207,46 @@ describe("AdminCohortLaunchPage", () => {
     );
   });
 
+  it("keeps founder-only cohort controls available when private tester mode is enabled", async () => {
+    const originalPrivateTesterMode = process.env.PRIVATE_TESTER_MODE;
+
+    try {
+      process.env.PRIVATE_TESTER_MODE = "1";
+      mockGetAdminRequestContext.mockResolvedValue({
+        email: "founder@example.com",
+        isDemo: false,
+        userId: "admin-1",
+      });
+      mockHeaders.mockResolvedValue(new Headers({ host: "app.pawvital.ai" }));
+      mockCookies.mockResolvedValue({
+        toString: () => "sb-access-token=admin-session",
+      });
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce(
+          makeJsonResponse({
+            testers: [],
+          })
+        )
+        .mockResolvedValueOnce(
+          makeJsonResponse({
+            latestCases: [],
+          })
+        );
+
+      const html = await renderPage();
+
+      expect(html).toContain("Private Tester Cohort 1 Command Center");
+      expect(html).toContain("Founder triage queue");
+      expect(html).toContain("Tester access");
+    } finally {
+      if (originalPrivateTesterMode) {
+        process.env.PRIVATE_TESTER_MODE = originalPrivateTesterMode;
+      } else {
+        delete process.env.PRIVATE_TESTER_MODE;
+      }
+    }
+  });
+
   it("blocks unauthenticated access before any admin data is fetched", async () => {
     mockGetAdminRequestContext.mockResolvedValue(null);
 
