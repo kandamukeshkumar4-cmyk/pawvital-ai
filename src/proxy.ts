@@ -41,6 +41,7 @@ function applyPrivateTesterModeCookie(response: NextResponse) {
 
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const isAdminRoute = pathname.startsWith("/admin");
 
   // Demo mode — no Supabase configured, allow everything through
   if (!isSupabaseConfigured) {
@@ -116,7 +117,7 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  if (isProtected && user) {
+  if (isProtected && user && !isAdminRoute) {
     const testerAccess = evaluatePrivateTesterAccess({
       email: typeof user.email === "string" ? user.email : null,
       pathname,

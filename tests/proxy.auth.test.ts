@@ -131,6 +131,29 @@ describe("VET-1215 proxy auth guard", () => {
     expect(response.headers.get("location")).toBe("https://app.pawvital.ai/");
   });
 
+  it("VET-1387 admin cohort launch smoke: keeps admin routes reachable even when the signed-in user is not on the tester allowlist", async () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1", email: "founder@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(
+      new NextRequest("https://app.pawvital.ai/admin/cohort-launch")
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("VET-1352 tester access smoke: allows invited authenticated users through protected routes in private tester mode", async () => {
     process.env = {
       ...originalEnv,
