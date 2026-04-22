@@ -37,9 +37,30 @@ export interface PrivateTesterEnvMutationPlan {
 type EnvLike = Record<string, string | undefined>;
 
 const PRIVATE_TESTER_ROUTE_PREFIX = "/symptom-checker";
+export const PRIVATE_TESTER_MODE_COOKIE = "pawvital_private_tester_mode";
+export const PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE =
+  "data-private-tester-mode";
 
 function isTruthyEnvFlag(value: string | undefined) {
   return value === "true" || value === "1";
+}
+
+function readBrowserCookieFlag(name: string) {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const cookies = document.cookie
+    .split(";")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const match = cookies.find((entry) => entry.startsWith(`${name}=`));
+
+  if (!match) {
+    return null;
+  }
+
+  return isTruthyEnvFlag(match.slice(name.length + 1));
 }
 
 function readFlag(
@@ -70,6 +91,28 @@ function readCsv(env: EnvLike, keys: string[]) {
   return [];
 }
 
+function readPrivateTesterModeRuntimeFlag() {
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const bodyValue = document.body?.getAttribute(
+    PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE
+  );
+  if (typeof bodyValue === "string" && bodyValue.length > 0) {
+    return isTruthyEnvFlag(bodyValue);
+  }
+
+  const htmlValue = document.documentElement?.getAttribute(
+    PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE
+  );
+  if (typeof htmlValue === "string" && htmlValue.length > 0) {
+    return isTruthyEnvFlag(htmlValue);
+  }
+
+  return null;
+}
+
 export function normalizePrivateTesterEmail(value: string | null | undefined) {
   if (typeof value !== "string") {
     return null;
@@ -80,11 +123,26 @@ export function normalizePrivateTesterEmail(value: string | null | undefined) {
 }
 
 export function isPrivateTesterModeEnabled(env: EnvLike = process.env) {
-  return readFlag(
-    env,
-    ["NEXT_PUBLIC_PRIVATE_TESTER_MODE", "PRIVATE_TESTER_MODE"],
-    false
-  );
+  if (
+    readFlag(
+      env,
+      ["NEXT_PUBLIC_PRIVATE_TESTER_MODE", "PRIVATE_TESTER_MODE"],
+      false
+    )
+  ) {
+    return true;
+  }
+
+  if (env !== process.env) {
+    return false;
+  }
+
+  const runtimeFlag = readPrivateTesterModeRuntimeFlag();
+  if (runtimeFlag !== null) {
+    return runtimeFlag;
+  }
+
+  return readBrowserCookieFlag(PRIVATE_TESTER_MODE_COOKIE) ?? false;
 }
 
 export function isPrivateTesterInviteOnly(env: EnvLike = process.env) {

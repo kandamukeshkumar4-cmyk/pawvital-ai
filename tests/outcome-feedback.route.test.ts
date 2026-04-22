@@ -281,6 +281,58 @@ describe("outcome-feedback route", () => {
     expect(payload.warnings).toBeUndefined();
   });
 
+  it("sanitizes tester feedback save failures without parsing warning text", async () => {
+    mockSaveTesterFeedbackToDB.mockResolvedValue({
+      ok: false,
+      errorCode: "not_found",
+      caseSummary: null,
+      warnings: [
+        "Owner notes: Piper needed sedation after the emergency visit",
+      ],
+    });
+
+    const { POST } = await import("@/app/api/ai/outcome-feedback/route");
+    const response = await POST(
+      makePostRequest({
+        symptomCheckId: "11111111-1111-1111-1111-111111111111",
+        helpfulness: "no",
+        confusingAreas: ["report"],
+        trustLevel: "no",
+        notes: "Piper needed sedation after the emergency visit",
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload).toEqual({
+      ok: false,
+      error: "Unable to save outcome feedback",
+    });
+    expect(JSON.stringify(payload)).not.toContain("Piper");
+  });
+
+  it("sanitizes tester feedback list failures without exposing storage warnings", async () => {
+    mockListTesterFeedbackCases.mockResolvedValue({
+      ok: false,
+      errorCode: "server_unavailable",
+      cases: [],
+      warnings: [
+        "Owner notes: Piper needed sedation after the emergency visit",
+      ],
+    });
+
+    const { GET } = await import("@/app/api/ai/outcome-feedback/route");
+    const response = await GET(makeGetRequest("?flaggedOnly=true"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({
+      ok: false,
+      error: "Unable to load outcome feedback cases",
+    });
+    expect(JSON.stringify(payload)).not.toContain("Piper");
+  });
+
   it("blocks repeated abuse when the route limiter trips", async () => {
     mockCheckRateLimit.mockResolvedValue({
       success: false,

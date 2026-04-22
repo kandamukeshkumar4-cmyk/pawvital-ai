@@ -7,26 +7,52 @@ import {
   isProtectedPath,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
-import { evaluatePrivateTesterAccess } from "@/lib/private-tester-access";
+import {
+  evaluatePrivateTesterAccess,
+  isPrivateTesterModeEnabled,
+  PRIVATE_TESTER_MODE_COOKIE,
+} from "@/lib/private-tester-access";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const isSupabaseConfigured =
   supabaseUrl.startsWith("http://") || supabaseUrl.startsWith("https://");
 
+function applyPrivateTesterModeCookie(response: NextResponse) {
+  if (isPrivateTesterModeEnabled(process.env)) {
+    response.cookies.set(PRIVATE_TESTER_MODE_COOKIE, "1", {
+      httpOnly: false,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+    return response;
+  }
+
+  response.cookies.set(PRIVATE_TESTER_MODE_COOKIE, "", {
+    expires: new Date(0),
+    httpOnly: false,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  const isAdminRoute = pathname.startsWith("/admin");
 
   // Demo mode — no Supabase configured, allow everything through
   if (!isSupabaseConfigured) {
-    return NextResponse.next();
+    return applyPrivateTesterModeCookie(NextResponse.next());
   }
 
   const isProtected = isProtectedPath(pathname);
   const isAuthPage = isAuthPagePath(pathname);
 
   if (!isProtected && !isAuthPage) {
-    return NextResponse.next();
+    return applyPrivateTesterModeCookie(NextResponse.next());
   }
 
   // Create Supabase client for middleware
@@ -81,25 +107,29 @@ export async function proxy(request: NextRequest) {
       }),
       request.url
     );
-    return NextResponse.redirect(loginUrl);
+    return applyPrivateTesterModeCookie(NextResponse.redirect(loginUrl));
   }
 
   // Redirect authenticated users away from auth pages
   if (isAuthPage && user) {
-    return NextResponse.redirect(new URL(redirectTarget, request.url));
+    return applyPrivateTesterModeCookie(
+      NextResponse.redirect(new URL(redirectTarget, request.url))
+    );
   }
 
-  if (isProtected && user) {
+  if (isProtected && user && !isAdminRoute) {
     const testerAccess = evaluatePrivateTesterAccess({
       email: typeof user.email === "string" ? user.email : null,
       pathname,
     });
     if (!testerAccess.allowed) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return applyPrivateTesterModeCookie(
+        NextResponse.redirect(new URL("/", request.url))
+      );
     }
   }
 
-  return response;
+  return applyPrivateTesterModeCookie(response);
 }
 
 export const config = {

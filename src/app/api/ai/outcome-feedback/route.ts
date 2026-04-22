@@ -44,6 +44,12 @@ type OutcomeFeedbackRequestBody = z.infer<
   typeof OutcomeFeedbackRequestBodySchema
 >;
 
+function getTesterFeedbackFailureStatus(
+  errorCode?: "not_found" | "server_unavailable"
+) {
+  return errorCode === "not_found" ? 404 : 503;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -205,16 +211,12 @@ export async function POST(request: Request) {
   const saved = await saveTesterFeedback(parsedTesterFeedback.data, auth.user.id);
 
   if (!saved.ok || !saved.caseSummary) {
-    const status =
-      saved.warnings.some((warning) => warning.toLowerCase().includes("not found"))
-        ? 404
-        : 503;
     return NextResponse.json(
       {
         ok: false,
         error: "Unable to save outcome feedback",
       },
-      { status }
+      { status: getTesterFeedbackFailureStatus(saved.errorCode) }
     );
   }
 
@@ -252,9 +254,9 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: listed.warnings[0] ?? "Unable to load outcome feedback cases",
+        error: "Unable to load outcome feedback cases",
       },
-      { status: 503 }
+      { status: getTesterFeedbackFailureStatus(listed.errorCode) }
     );
   }
 

@@ -172,4 +172,44 @@ describe("tester feedback storage", () => {
       }),
     );
   });
+
+  it("returns a structured not_found error when feedback cannot be linked to an owned report", async () => {
+    const row: MutableSymptomCheckRow = {
+      id: "11111111-1111-1111-1111-111111111111",
+      pet_id: null,
+      symptoms: "Repeated vomiting with pale gums",
+      ai_response: JSON.stringify({
+        recommendation: "emergency_vet",
+        title: "Emergency vomiting case",
+      }),
+      severity: "emergency",
+      recommendation: "emergency_vet",
+      created_at: "2026-04-20T12:00:00.000Z",
+    };
+
+    mockGetServiceSupabase.mockReturnValue(createSupabaseMock(row));
+
+    const { saveTesterFeedbackToDB } = await import(
+      "@/lib/tester-feedback-storage"
+    );
+
+    const result = await saveTesterFeedbackToDB({
+      userId: "owner-1",
+      feedback: {
+        symptomCheckId: row.id,
+        helpfulness: "no",
+        confusingAreas: ["report"],
+        trustLevel: "not_sure",
+        notes: "Piper needed sedation after the emergency visit.",
+        surface: "result_page",
+      },
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      errorCode: "not_found",
+      caseSummary: null,
+      warnings: ["Symptom check not found or access denied"],
+    });
+  });
 });
