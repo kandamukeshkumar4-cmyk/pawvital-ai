@@ -129,6 +129,34 @@ function asString(value: unknown) {
     : null;
 }
 
+function isMissingRelationError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code === "42P01") {
+    return true;
+  }
+
+  const message = typeof error.message === "string" ? error.message : "";
+  return (
+    /does not exist/i.test(message) ||
+    /schema cache/i.test(message) ||
+    /could not find the table/i.test(message)
+  );
+}
+
+function formatSupabaseError(error: { code?: string; message?: string } | null | undefined) {
+  if (!error) {
+    return "";
+  }
+
+  return [error.code, error.message]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean)
+    .join(":");
+}
+
 function isBannedUntilActive(value: unknown) {
   const bannedUntil = asString(value);
   if (!bannedUntil) {
@@ -381,7 +409,11 @@ async function countRows(
     .eq(column, value);
 
   if (error) {
-    throw new Error(`COUNT_FAILED:${table}:${error.message}`);
+    if (isMissingRelationError(error)) {
+      return 0;
+    }
+
+    throw new Error(`COUNT_FAILED:${table}:${formatSupabaseError(error)}`);
   }
 
   return count ?? 0;
@@ -414,7 +446,23 @@ async function loadRelatedSymptomData(
     .in("pet_id", petIds);
 
   if (symptomChecksError) {
-    throw new Error(`COUNT_FAILED:symptom_checks:${symptomChecksError.message}`);
+    if (isMissingRelationError(symptomChecksError)) {
+      return {
+        counts: {
+          caseOutcomes: 0,
+          negativeFeedbackEntries: 0,
+          outcomeFeedbackEntries: 0,
+          sharedReports: 0,
+          symptomChecks: 0,
+          thresholdProposals: 0,
+        },
+        recentCases: [] as PrivateTesterRecentCase[],
+      };
+    }
+
+    throw new Error(
+      `COUNT_FAILED:symptom_checks:${formatSupabaseError(symptomChecksError)}`
+    );
   }
 
   const checkIds = (symptomChecks ?? [])
@@ -466,30 +514,59 @@ async function loadRelatedSymptomData(
     feedbackEntries,
   ] = counts;
 
+  let caseOutcomesCount = caseOutcomes.count ?? 0;
   if (caseOutcomes.error) {
-    throw new Error(`COUNT_FAILED:case_outcomes:${caseOutcomes.error.message}`);
+    if (isMissingRelationError(caseOutcomes.error)) {
+      caseOutcomesCount = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:case_outcomes:${formatSupabaseError(caseOutcomes.error)}`
+      );
+    }
   }
+  let outcomeFeedbackEntriesCount = outcomeFeedbackEntries.count ?? 0;
   if (outcomeFeedbackEntries.error) {
-    throw new Error(
-      `COUNT_FAILED:outcome_feedback_entries:${outcomeFeedbackEntries.error.message}`
-    );
+    if (isMissingRelationError(outcomeFeedbackEntries.error)) {
+      outcomeFeedbackEntriesCount = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:outcome_feedback_entries:${formatSupabaseError(outcomeFeedbackEntries.error)}`
+      );
+    }
   }
+  let sharedReportsCount = sharedReports.count ?? 0;
   if (sharedReports.error) {
-    throw new Error(`COUNT_FAILED:shared_reports:${sharedReports.error.message}`);
+    if (isMissingRelationError(sharedReports.error)) {
+      sharedReportsCount = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:shared_reports:${formatSupabaseError(sharedReports.error)}`
+      );
+    }
   }
+  let thresholdProposalsCount = thresholdProposals.count ?? 0;
   if (thresholdProposals.error) {
-    throw new Error(
-      `COUNT_FAILED:threshold_proposals:${thresholdProposals.error.message}`
-    );
+    if (isMissingRelationError(thresholdProposals.error)) {
+      thresholdProposalsCount = 0;
+    } else {
+      throw new Error(
+        `COUNT_FAILED:threshold_proposals:${formatSupabaseError(thresholdProposals.error)}`
+      );
+    }
   }
+  let feedbackRows = feedbackEntries.data ?? [];
   if (feedbackEntries.error) {
-    throw new Error(
-      `COUNT_FAILED:outcome_feedback_entries:${feedbackEntries.error.message}`
-    );
+    if (isMissingRelationError(feedbackEntries.error)) {
+      feedbackRows = [];
+    } else {
+      throw new Error(
+        `COUNT_FAILED:outcome_feedback_entries:${formatSupabaseError(feedbackEntries.error)}`
+      );
+    }
   }
 
   const flaggedCheckIds = new Set(
-    (feedbackEntries.data ?? [])
+    feedbackRows
       .filter(
         (row) =>
           String(
@@ -532,12 +609,12 @@ async function loadRelatedSymptomData(
 
   return {
     counts: {
-      caseOutcomes: caseOutcomes.count ?? 0,
+      caseOutcomes: caseOutcomesCount,
       negativeFeedbackEntries: flaggedCheckIds.size,
-      outcomeFeedbackEntries: outcomeFeedbackEntries.count ?? 0,
-      sharedReports: sharedReports.count ?? 0,
+      outcomeFeedbackEntries: outcomeFeedbackEntriesCount,
+      sharedReports: sharedReportsCount,
       symptomChecks: checkIds.length,
-      thresholdProposals: thresholdProposals.count ?? 0,
+      thresholdProposals: thresholdProposalsCount,
     },
     recentCases,
   };
