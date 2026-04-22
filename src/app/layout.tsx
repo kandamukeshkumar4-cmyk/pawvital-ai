@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import {
+  isPrivateTesterModeEnabled,
+  PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE,
+} from "@/lib/private-tester-access";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -54,12 +58,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const privateTesterModeEnabled = isPrivateTesterModeEnabled();
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body
+        className="min-h-full flex flex-col"
+        {...{
+          [PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE]: privateTesterModeEnabled
+            ? "1"
+            : "0",
+        }}
+      >
         {children}
         <SpeedInsights />
       </body>

@@ -9,7 +9,10 @@ import JournalPage from "@/app/(dashboard)/journal/page";
 import RemindersPage from "@/app/(dashboard)/reminders/page";
 import SupplementsPage from "@/app/(dashboard)/supplements/page";
 import Sidebar from "@/components/dashboard/sidebar";
-import { PRIVATE_TESTER_MODE_COOKIE } from "@/lib/private-tester-access";
+import {
+  PRIVATE_TESTER_MODE_COOKIE,
+  PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE,
+} from "@/lib/private-tester-access";
 import { useAppStore } from "@/store/app-store";
 import type { Pet, UserProfile } from "@/types";
 
@@ -90,6 +93,15 @@ function setPrivateTesterModeCookie(enabled: boolean) {
   }
 }
 
+function setPrivateTesterRuntimeMode(value?: "1" | "0") {
+  if (value) {
+    document.body.setAttribute(PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE, value);
+    return;
+  }
+
+  document.body.removeAttribute(PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE);
+}
+
 describe("private tester scope UI", () => {
   const originalPrivateTesterMode = process.env.NEXT_PUBLIC_PRIVATE_TESTER_MODE;
 
@@ -98,6 +110,7 @@ describe("private tester scope UI", () => {
     jest.clearAllMocks();
     setPrivateTesterMode(false);
     setPrivateTesterModeCookie(false);
+    setPrivateTesterRuntimeMode();
     mockUsePathname.mockReturnValue("/dashboard");
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
@@ -116,6 +129,7 @@ describe("private tester scope UI", () => {
 
   afterAll(() => {
     setPrivateTesterModeCookie(false);
+    setPrivateTesterRuntimeMode();
     if (originalPrivateTesterMode) {
       process.env.NEXT_PUBLIC_PRIVATE_TESTER_MODE = originalPrivateTesterMode;
       return;
@@ -273,5 +287,40 @@ describe("private tester scope UI", () => {
     ).toBeTruthy();
     expect(screen.queryByText("View Supplements")).toBeNull();
     expect(screen.queryByText("Connect with fellow dog parents")).toBeNull();
+  });
+
+  it("VET-1390 tester scope UI: respects the server runtime flag when NEXT_PUBLIC mode is not present in the client bundle", () => {
+    setPrivateTesterMode(false);
+    setPrivateTesterRuntimeMode("1");
+
+    const sidebarView = render(React.createElement(Sidebar));
+
+    expect(screen.queryByText("Supplements")).toBeNull();
+    expect(screen.queryByText("Paw Circle")).toBeNull();
+
+    sidebarView.unmount();
+
+    const dashboardView = render(React.createElement(DashboardPage));
+
+    expect(screen.getByText("Private tester home")).toBeTruthy();
+    expect(screen.queryByText("View Supplements")).toBeNull();
+
+    dashboardView.unmount();
+
+    const communityView = render(React.createElement(CommunityPage));
+
+    expect(
+      screen.getByText("Paw Circle is disabled for private testers")
+    ).toBeTruthy();
+    expect(screen.queryByText("Connect with fellow dog parents")).toBeNull();
+
+    communityView.unmount();
+
+    render(React.createElement(SupplementsPage));
+
+    expect(
+      screen.getByText("Supplement plan is disabled for private testers")
+    ).toBeTruthy();
+    expect(screen.queryByText("Glucosamine & Chondroitin")).toBeNull();
   });
 });
