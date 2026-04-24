@@ -7,7 +7,9 @@ jest.mock("@supabase/supabase-js", () => ({
 type CountResult = { count: number | null; error: { code?: string; message?: string } | null };
 type DataResult<T> = { data: T; error: { code?: string; message?: string } | null };
 
-function buildMockSupabase() {
+function buildMockSupabase(input?: {
+  journalEntriesError?: { code?: string; message?: string };
+}) {
   const currentUser = {
     app_metadata: {} as Record<string, unknown>,
     banned_until: null as string | null,
@@ -69,8 +71,10 @@ function buildMockSupabase() {
 
               if (table === "journal_entries") {
                 return countResult(null, {
-                  code: "42P01",
-                  message: 'relation "journal_entries" does not exist',
+                  code: input?.journalEntriesError?.code ?? "42P01",
+                  message:
+                    input?.journalEntriesError?.message ??
+                    'relation "journal_entries" does not exist',
                 });
               }
 
@@ -122,29 +126,51 @@ describe("private tester admin data helpers", () => {
     }
   });
 
-  it("treats missing optional tables as zero counts during admin mutations", async () => {
-    const { updatePrivateTesterAdminState } = await import(
-      "@/lib/private-tester-admin"
-    );
+  it.each([
+    [
+      "missing optional tables",
+      {
+        code: "42P01",
+        message: 'relation "journal_entries" does not exist',
+      },
+    ],
+    [
+      "missing optional count columns",
+      {
+        code: "42703",
+        message: 'column journal_entries.user_id does not exist',
+      },
+    ],
+  ])(
+    "treats %s as zero counts during admin mutations",
+    async (_label, journalEntriesError) => {
+      mockCreateClient.mockReturnValue(
+        buildMockSupabase({ journalEntriesError })
+      );
 
-    const summary = await updatePrivateTesterAdminState({
-      action: "mark_deletion",
-      actorEmail: "admin@pawvital.ai",
-      email: "tester@example.com",
-    });
+      const { updatePrivateTesterAdminState } = await import(
+        "@/lib/private-tester-admin"
+      );
 
-    expect(summary.user).toEqual({
-      email: "tester@example.com",
-      fullName: "Tester",
-      id: "user-1",
-    });
-    expect(summary.adminState.deletionRequested).toBe(true);
-    expect(summary.counts).toMatchObject({
-      journalEntries: 0,
-      notifications: 0,
-      pets: 1,
-      subscriptions: 0,
-      symptomChecks: 0,
-    });
-  });
+      const summary = await updatePrivateTesterAdminState({
+        action: "mark_deletion",
+        actorEmail: "admin@pawvital.ai",
+        email: "tester@example.com",
+      });
+
+      expect(summary.user).toEqual({
+        email: "tester@example.com",
+        fullName: "Tester",
+        id: "user-1",
+      });
+      expect(summary.adminState.deletionRequested).toBe(true);
+      expect(summary.counts).toMatchObject({
+        journalEntries: 0,
+        notifications: 0,
+        pets: 1,
+        subscriptions: 0,
+        symptomChecks: 0,
+      });
+    }
+  );
 });

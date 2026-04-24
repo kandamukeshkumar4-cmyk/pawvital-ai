@@ -146,6 +146,21 @@ function isMissingRelationError(error: { code?: string; message?: string } | nul
   );
 }
 
+function isMissingOptionalCountColumnError(
+  error: { code?: string; message?: string } | null | undefined
+) {
+  if (!error) {
+    return false;
+  }
+
+  if (error.code === "42703") {
+    return true;
+  }
+
+  const message = typeof error.message === "string" ? error.message : "";
+  return /column .* does not exist/i.test(message);
+}
+
 function formatSupabaseError(error: { code?: string; message?: string } | null | undefined) {
   if (!error) {
     return "";
@@ -409,7 +424,10 @@ async function countRows(
     .eq(column, value);
 
   if (error) {
-    if (isMissingRelationError(error)) {
+    if (
+      isMissingRelationError(error) ||
+      isMissingOptionalCountColumnError(error)
+    ) {
       return 0;
     }
 
