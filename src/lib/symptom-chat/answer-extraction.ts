@@ -9,6 +9,7 @@ import {
   coerceChoiceAnswerFromIntent,
   questionAllowsCanonicalUnknown,
   sanitizePendingRawAnswer,
+  shouldClarifyAmbiguousReplyForQuestion,
   shouldEscalateForUnknown,
   shouldPersistRawPendingAnswer,
 } from "@/lib/symptom-chat/answer-coercion";
@@ -70,7 +71,10 @@ function coerceFallbackAnswerForPendingQuestion(
     return null;
   }
 
-  if (questionAllowsCanonicalUnknown(question)) {
+  if (
+    questionAllowsCanonicalUnknown(question) &&
+    !shouldClarifyAmbiguousReplyForQuestion(questionId)
+  ) {
     const unknownCoercion = coerceAmbiguousReplyToUnknown(rawMessage);
     if (unknownCoercion !== null) {
       return unknownCoercion;
@@ -223,6 +227,14 @@ function shouldSkipDeterministicQuestion(
   questionId: string,
   rawMessage: string
 ): boolean {
+  if (
+    session.last_question_asked &&
+    session.last_question_asked !== questionId &&
+    coerceAmbiguousReplyToUnknown(rawMessage) !== null
+  ) {
+    return true;
+  }
+
   if (
     !Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)
   ) {

@@ -2030,6 +2030,145 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.last_question_asked).not.toBe("spay_status");
   });
 
+  it("VET-1392: live route persists appetite before spay and does not repeat either follow-up", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["drinking_more", "weight_loss"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["drinking_more", "weight_loss"]);
+    session = recordAnswer(session, "water_amount_change", "about double");
+    session = recordAnswer(session, "urination_frequency", true);
+    session = recordAnswer(session, "weight_loss_duration", "two weeks");
+    session = recordAnswer(session, "water_intake", "more_than_usual");
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const askAppetiteResponse = await POST(
+      makeTextOnlyRequest(session, "He is drinking more and losing weight.")
+    );
+    const askAppetitePayload = await askAppetiteResponse.json();
+
+    expect(askAppetiteResponse.status).toBe(200);
+    expect(askAppetitePayload.type).toBe("question");
+    expect(askAppetitePayload.session.last_question_asked).toBe(
+      "appetite_change"
+    );
+
+    const appetiteResponse = await POST(
+      makeTextOnlyRequest(askAppetitePayload.session, "decreased")
+    );
+    const appetitePayload = await appetiteResponse.json();
+
+    expect(appetiteResponse.status).toBe(200);
+    expect(appetitePayload.type).toBe("question");
+    expect(appetitePayload.session.extracted_answers.appetite_change).toBe(
+      "decreased"
+    );
+    expect(appetitePayload.session.answered_questions).toContain(
+      "appetite_change"
+    );
+    expect(appetitePayload.session.last_question_asked).toBe("spay_status");
+
+    const spayResponse = await POST(
+      makeTextOnlyRequest(appetitePayload.session, "spayed")
+    );
+    const spayPayload = await spayResponse.json();
+
+    expect(spayResponse.status).toBe(200);
+    expect(["question", "ready"]).toContain(spayPayload.type);
+    expect(spayPayload.session.extracted_answers).toEqual(
+      expect.objectContaining({
+        appetite_change: "decreased",
+        spay_status: true,
+      })
+    );
+    expect(spayPayload.session.answered_questions).toEqual(
+      expect.arrayContaining(["appetite_change", "spay_status"])
+    );
+    expect(spayPayload.session.last_question_asked).not.toBe(
+      "appetite_change"
+    );
+    if (spayPayload.type === "question") {
+      expect(spayPayload.session.last_question_asked).not.toBe("spay_status");
+    }
+  });
+
+  it.each([
+    ["decreased", "decreased"],
+    ["less", "decreased"],
+    ["eating less", "decreased"],
+    ["increased", "increased"],
+    ["more", "increased"],
+    ["same", "normal"],
+    ["normal", "normal"],
+    ["unchanged", "normal"],
+  ])(
+    "VET-1392: persists appetite synonym %s from the live pending follow-up",
+    async (message, expectedValue) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockResolvedValue(
+        JSON.stringify({ symptoms: ["drinking_more", "weight_loss"], answers: {} })
+      );
+
+      let session = createSession();
+      session = addSymptoms(session, ["drinking_more", "weight_loss"]);
+      session = recordAnswer(session, "water_amount_change", "about double");
+      session = recordAnswer(session, "urination_frequency", true);
+      session.last_question_asked = "appetite_change";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, message));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.extracted_answers.appetite_change).toBe(
+        expectedValue
+      );
+      expect(payload.session.answered_questions).toContain("appetite_change");
+      expect(payload.session.last_question_asked).not.toBe("appetite_change");
+    }
+  );
+
+  it("VET-1392: keeps appetite-change follow-up unresolved on ambiguous not sure replies", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["drinking_more", "weight_loss"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["drinking_more", "weight_loss"]);
+    session.last_question_asked = "appetite_change";
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(session, "not sure"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.appetite_change).toBeUndefined();
+    expect(payload.session.extracted_answers.water_intake).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("appetite_change");
+    expect(payload.session.answered_questions).not.toContain("water_intake");
+    expect(payload.session.last_question_asked).toBe("appetite_change");
+  });
+
   it("VET-1367: keeps reproductive-status follow-up unresolved on ambiguous not sure replies", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
