@@ -17,11 +17,11 @@ import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   coerceAnswerForQuestion,
   questionAllowsCanonicalUnknown,
+  shouldClarifyAmbiguousReplyForQuestion,
 } from "@/lib/symptom-chat/answer-coercion";
 import { extractSymptomsFromKeywords } from "@/lib/symptom-chat/extraction-helpers";
 
 const SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS = new Set([
-  "appetite_change",
   "diarrhea_frequency",
   "diarrhea_onset",
   "discharge_color",
@@ -63,7 +63,10 @@ function coerceExtendedFollowUpUnknown(
   questionId: string,
   rawMessage: string
 ): "unknown" | null {
-  if (!SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS.has(questionId)) {
+  if (
+    !SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS.has(questionId) ||
+    shouldClarifyAmbiguousReplyForQuestion(questionId)
+  ) {
     return null;
   }
 
@@ -366,7 +369,10 @@ export function getDeterministicFastPathExtraction(
 
   if (!looksShortAnswer) return null;
 
-  if (questionAllowsCanonicalUnknown(question)) {
+  if (
+    questionAllowsCanonicalUnknown(question) &&
+    !shouldClarifyAmbiguousReplyForQuestion(pendingQuestionId)
+  ) {
     const unknownCoercion = coerceAmbiguousReplyToUnknown(trimmed);
     if (unknownCoercion !== null) {
       return {
