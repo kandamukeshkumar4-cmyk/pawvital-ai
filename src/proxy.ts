@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import {
+  DEFAULT_AUTH_REDIRECT,
   buildLoginPath,
   buildRedirectTarget,
   isAuthPagePath,
@@ -12,6 +13,7 @@ import {
   isPrivateTesterModeEnabled,
   PRIVATE_TESTER_MODE_COOKIE,
 } from "@/lib/private-tester-access";
+import { isAdminIdentityUser } from "@/lib/admin-identity";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -42,6 +44,7 @@ function applyPrivateTesterModeCookie(response: NextResponse) {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isAdminRoute = pathname.startsWith("/admin");
+  const isHomePage = pathname === "/";
 
   // Demo mode — no Supabase configured, allow everything through
   if (!isSupabaseConfigured) {
@@ -51,7 +54,7 @@ export async function proxy(request: NextRequest) {
   const isProtected = isProtectedPath(pathname);
   const isAuthPage = isAuthPagePath(pathname);
 
-  if (!isProtected && !isAuthPage) {
+  if (!isProtected && !isAuthPage && !isHomePage) {
     return applyPrivateTesterModeCookie(NextResponse.next());
   }
 
@@ -117,12 +120,28 @@ export async function proxy(request: NextRequest) {
     );
   }
 
+  const userEmail = typeof user?.email === "string" ? user.email : null;
+  const isAdminUser = isAdminIdentityUser(user);
+
+  if (isHomePage && user) {
+    const testerAccess = evaluatePrivateTesterAccess({
+      email: userEmail,
+      pathname: DEFAULT_AUTH_REDIRECT,
+    });
+
+    if (testerAccess.allowed || isAdminUser) {
+      return applyPrivateTesterModeCookie(
+        NextResponse.redirect(new URL(DEFAULT_AUTH_REDIRECT, request.url))
+      );
+    }
+  }
+
   if (isProtected && user && !isAdminRoute) {
     const testerAccess = evaluatePrivateTesterAccess({
-      email: typeof user.email === "string" ? user.email : null,
+      email: userEmail,
       pathname,
     });
-    if (!testerAccess.allowed) {
+    if (!testerAccess.allowed && !isAdminUser) {
       return applyPrivateTesterModeCookie(
         NextResponse.redirect(new URL("/", request.url))
       );

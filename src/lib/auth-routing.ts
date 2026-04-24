@@ -106,6 +106,10 @@ export function resolvePostAuthRedirect(
     return fallback;
   }
 
+  if (target === "/") {
+    return fallback;
+  }
+
   if (isAuthPagePath(target)) {
     return fallback;
   }

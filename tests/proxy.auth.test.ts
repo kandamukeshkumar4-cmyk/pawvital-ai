@@ -154,6 +154,50 @@ describe("VET-1215 proxy auth guard", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("VET-1389 founder login smoke: lets admins reach the dashboard even when they are not on the tester allowlist", async () => {
+    process.env = {
+      ...originalEnv,
+      ADMIN_EMAILS: "founder@example.com",
+      NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "admin-1", email: "founder@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(new NextRequest("https://app.pawvital.ai/dashboard"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("VET-1389 founder login smoke: sends authenticated admins away from the public homepage and into the product", async () => {
+    process.env = {
+      ...originalEnv,
+      ADMIN_EMAILS: "founder@example.com",
+      NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "admin-1", email: "founder@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(new NextRequest("https://app.pawvital.ai/"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://app.pawvital.ai/dashboard");
+  });
+
   it("VET-1352 tester access smoke: allows invited authenticated users through protected routes in private tester mode", async () => {
     process.env = {
       ...originalEnv,
@@ -172,6 +216,27 @@ describe("VET-1215 proxy auth guard", () => {
     const response = await proxy(new NextRequest("https://app.pawvital.ai/history"));
 
     expect(response.status).toBe(200);
+  });
+
+  it("VET-1389 tester login smoke: sends invited testers from the public homepage into the product", async () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "tester-1", email: "tester@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(new NextRequest("https://app.pawvital.ai/"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://app.pawvital.ai/dashboard");
   });
 
   it("VET-1390 tester quarantine: mirrors server-side private tester mode into a client-readable cookie", async () => {
