@@ -74,6 +74,7 @@ export function coerceAnswerForQuestion(
   const lower = message.toLowerCase();
 
   if (!question || !message) return null;
+  if (shouldLeaveAmbiguousReplyUnanswered(questionId, rawMessage)) return null;
 
   if (question.data_type === "boolean") {
     if (isReproductiveStatusQuestion(questionId)) {
@@ -278,6 +279,37 @@ function isReproductiveStatusQuestion(questionId: string): boolean {
   return questionId === "spay_status" || questionId === "neuter_status";
 }
 
+const AMBIGUOUS_REPLY_CLARIFICATION_QUESTION_IDS = new Set([
+  "appetite_change",
+]);
+
+export function shouldClarifyAmbiguousReplyForQuestion(
+  questionId: string
+): boolean {
+  return AMBIGUOUS_REPLY_CLARIFICATION_QUESTION_IDS.has(questionId);
+}
+
+function isAmbiguousFollowUpReply(rawMessage: string): boolean {
+  const normalized = normalizeIntentText(rawMessage);
+  return (
+    coerceAmbiguousReplyToUnknown(rawMessage) !== null ||
+    /\bi (?:do not|don't|dont) (?:really )?know\b/.test(normalized) ||
+    /\bi(?: am|'m)? not sure\b/.test(normalized) ||
+    /\b(?:can(?:not|'t)|cant) (?:really )?tell\b/.test(normalized) ||
+    /\bno idea\b/.test(normalized)
+  );
+}
+
+export function shouldLeaveAmbiguousReplyUnanswered(
+  questionId: string,
+  rawMessage: string
+): boolean {
+  return (
+    shouldClarifyAmbiguousReplyForQuestion(questionId) &&
+    isAmbiguousFollowUpReply(rawMessage)
+  );
+}
+
 export function coerceChoiceAnswerFromIntent(
   questionId: string,
   rawMessage: string
@@ -297,7 +329,14 @@ export function coerceChoiceAnswerFromIntent(
     return null;
   }
 
-  if (questionAllowsCanonicalUnknown(question)) {
+  if (shouldLeaveAmbiguousReplyUnanswered(questionId, rawMessage)) {
+    return null;
+  }
+
+  if (
+    questionAllowsCanonicalUnknown(question) &&
+    !shouldClarifyAmbiguousReplyForQuestion(questionId)
+  ) {
     const unknownCoercion = coerceAmbiguousReplyToUnknown(rawMessage);
     if (unknownCoercion !== null) {
       return unknownCoercion;
@@ -587,10 +626,17 @@ export function shouldPersistRawPendingAnswer(
   }
 
   // Preserve the legacy raw-unknown contract for existing typed follow-ups that
-  // still rely on it, but keep reproductive-status questions unresolved so the
-  // checker can explicitly clarify instead of silently accepting "not sure".
+  // still rely on it, but keep questions with explicit clarification policy
+  // unresolved so the checker can clarify instead of silently accepting "not sure".
+  if (shouldLeaveAmbiguousReplyUnanswered(questionId, rawMessage)) {
+    return false;
+  }
+
   if (isShortUnknownResponse(normalizedMessage)) {
-    return !isReproductiveStatusQuestion(questionId);
+    return (
+      !isReproductiveStatusQuestion(questionId) &&
+      !shouldClarifyAmbiguousReplyForQuestion(questionId)
+    );
   }
 
   // Raw fallback is only safe for free-text prompts. For choice/boolean/number

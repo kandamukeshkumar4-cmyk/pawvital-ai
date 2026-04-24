@@ -43,11 +43,6 @@ function recordFastPathUnknown(
 describe("VET-1338 / #263 follow-up unknown contract", () => {
   it.each([
     [
-      "appetite_change",
-      "I don't really know if she's eating more or less.",
-      ["weight_loss"],
-    ],
-    [
       "diarrhea_frequency",
       "I'm not sure how many times he went.",
       ["diarrhea"],
@@ -130,6 +125,16 @@ describe("VET-1338 / #263 follow-up unknown contract", () => {
       expect(isReadyForDiagnosis(updated)).toBe(false);
     }
   );
+
+  it("VET-1392: keeps ambiguous appetite_change unresolved instead of coercing unknown or directional words", () => {
+    const session = buildPendingSession("appetite_change", ["weight_loss"]);
+    const extraction = getDeterministicFastPathExtraction(
+      session,
+      "I don't really know if she's eating more or less."
+    );
+
+    expect(extraction).toBeNull();
+  });
 
   it("keeps determinate safe follow-up answers intact", () => {
     const session = buildPendingSession("water_intake", ["drinking_more"]);
