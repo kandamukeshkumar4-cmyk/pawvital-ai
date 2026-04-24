@@ -38,6 +38,7 @@ describe("VET-1215 auth routing helpers", () => {
   });
 
   it("falls back when auth pages are passed as post-auth redirects", () => {
+    expect(resolvePostAuthRedirect("/")).toBe("/dashboard");
     expect(resolvePostAuthRedirect("/login")).toBe("/dashboard");
     expect(resolvePostAuthRedirect("/forgot-password")).toBe("/dashboard");
     expect(resolvePostAuthRedirect("/reset-password")).toBe("/dashboard");
