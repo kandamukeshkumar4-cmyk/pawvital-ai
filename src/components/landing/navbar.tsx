@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X, PawPrint } from "lucide-react";
-import Button from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -47,18 +47,18 @@ export default function Navbar() {
             >
               FAQ
             </a>
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
-                Log In
-              </Button>
+            <Link href="/login" className={buttonClassName({ variant: "ghost", size: "sm" })}>
+              Log In
             </Link>
-            <Link href="/symptom-checker">
-              <Button
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500"
-              >
-                Start Free Check
-              </Button>
+            <Link
+              href="/symptom-checker"
+              className={buttonClassName({
+                size: "sm",
+                className:
+                  "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500",
+              })}
+            >
+              Start Free Check
             </Link>
           </div>
 
@@ -106,15 +106,22 @@ export default function Navbar() {
           >
             FAQ
           </a>
-          <Link href="/login" className="block">
-            <Button variant="outline" className="w-full">
-              Log In
-            </Button>
+          <Link
+            href="/login"
+            className={buttonClassName({
+              variant: "outline",
+              className: "w-full",
+            })}
+          >
+            Log In
           </Link>
-          <Link href="/symptom-checker" className="block">
-            <Button className="w-full bg-emerald-600 hover:bg-emerald-700">
-              Start Free Check
-            </Button>
+          <Link
+            href="/symptom-checker"
+            className={buttonClassName({
+              className: "w-full bg-emerald-600 hover:bg-emerald-700",
+            })}
+          >
+            Start Free Check
           </Link>
         </div>
       )}
