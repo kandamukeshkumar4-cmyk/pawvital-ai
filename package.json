@@ -148,6 +148,7 @@
   "overrides": {
     "brace-expansion": "^1.1.12",
     "handlebars": "^4.7.9",
-    "picomatch": "^4.0.4"
+    "picomatch": "^4.0.4",
+    "postcss": "8.5.12"
   }
 }
