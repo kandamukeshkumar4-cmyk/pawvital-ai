@@ -172,6 +172,12 @@ function formatSupabaseError(error: { code?: string; message?: string } | null |
     .join(":");
 }
 
+function isBlankSupabaseError(
+  error: { code?: string; message?: string } | null | undefined
+) {
+  return Boolean(error) && formatSupabaseError(error).length === 0;
+}
+
 function isBannedUntilActive(value: unknown) {
   const bannedUntil = asString(value);
   if (!bannedUntil) {
@@ -416,7 +422,8 @@ async function countRows(
   supabase: SupabaseClient,
   table: string,
   column: string,
-  value: string
+  value: string,
+  options?: { optional?: boolean }
 ) {
   const { count, error } = await supabase
     .from(table)
@@ -424,10 +431,11 @@ async function countRows(
     .eq(column, value);
 
   if (error) {
-    if (
+    if (options?.optional && (
       isMissingRelationError(error) ||
-      isMissingOptionalCountColumnError(error)
-    ) {
+      isMissingOptionalCountColumnError(error) ||
+      isBlankSupabaseError(error)
+    )) {
       return 0;
     }
 
@@ -677,9 +685,15 @@ export async function inspectPrivateTesterData(input: {
 
   const [journalEntries, notifications, subscriptions, relatedSymptomData] =
     await Promise.all([
-      countRows(supabase, "journal_entries", "user_id", profile.id),
-      countRows(supabase, "notifications", "user_id", profile.id),
-      countRows(supabase, "subscriptions", "user_id", profile.id),
+      countRows(supabase, "journal_entries", "user_id", profile.id, {
+        optional: true,
+      }),
+      countRows(supabase, "notifications", "user_id", profile.id, {
+        optional: true,
+      }),
+      countRows(supabase, "subscriptions", "user_id", profile.id, {
+        optional: true,
+      }),
       loadRelatedSymptomData(supabase, petRows),
     ]);
 

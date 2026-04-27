@@ -101,6 +101,8 @@ function buildMockSupabase(input?: {
 describe("private tester admin data helpers", () => {
   const envSnapshot = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    PRIVATE_TESTER_ALLOWED_EMAILS: process.env.PRIVATE_TESTER_ALLOWED_EMAILS,
+    PRIVATE_TESTER_MODE: process.env.PRIVATE_TESTER_MODE,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
 
@@ -108,6 +110,8 @@ describe("private tester admin data helpers", () => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.PRIVATE_TESTER_ALLOWED_EMAILS = "tester@example.com";
+    process.env.PRIVATE_TESTER_MODE = "1";
     process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
     mockCreateClient.mockReturnValue(buildMockSupabase());
   });
@@ -124,6 +128,19 @@ describe("private tester admin data helpers", () => {
     } else {
       process.env.SUPABASE_SERVICE_ROLE_KEY = envSnapshot.SUPABASE_SERVICE_ROLE_KEY;
     }
+
+    if (envSnapshot.PRIVATE_TESTER_ALLOWED_EMAILS === undefined) {
+      delete process.env.PRIVATE_TESTER_ALLOWED_EMAILS;
+    } else {
+      process.env.PRIVATE_TESTER_ALLOWED_EMAILS =
+        envSnapshot.PRIVATE_TESTER_ALLOWED_EMAILS;
+    }
+
+    if (envSnapshot.PRIVATE_TESTER_MODE === undefined) {
+      delete process.env.PRIVATE_TESTER_MODE;
+    } else {
+      process.env.PRIVATE_TESTER_MODE = envSnapshot.PRIVATE_TESTER_MODE;
+    }
   });
 
   it.each([
@@ -139,6 +156,13 @@ describe("private tester admin data helpers", () => {
       {
         code: "42703",
         message: 'column journal_entries.user_id does not exist',
+      },
+    ],
+    [
+      "blank optional count errors",
+      {
+        code: "",
+        message: "",
       },
     ],
   ])(
@@ -173,4 +197,57 @@ describe("private tester admin data helpers", () => {
       });
     }
   );
+
+  it("returns configured tester records when journal entry counts fall back to zero", async () => {
+    mockCreateClient.mockReturnValue(
+      buildMockSupabase({
+        journalEntriesError: {
+          code: "42703",
+          message: "column journal_entries.user_id does not exist",
+        },
+      })
+    );
+
+    const { listPrivateTesterSummaries } = await import(
+      "@/lib/private-tester-admin"
+    );
+
+    const dashboard = await listPrivateTesterSummaries();
+
+    expect(dashboard.summary.total).toBe(1);
+    expect(dashboard.testers).toHaveLength(1);
+    expect(dashboard.testers[0].user.email).toBe("tester@example.com");
+    expect(dashboard.testers[0].counts.journalEntries).toBe(0);
+  });
+
+  it("keeps disable and restore actions working after optional count fallback", async () => {
+    mockCreateClient.mockReturnValue(
+      buildMockSupabase({
+        journalEntriesError: {
+          code: "",
+          message: "",
+        },
+      })
+    );
+
+    const { updatePrivateTesterAdminState } = await import(
+      "@/lib/private-tester-admin"
+    );
+
+    const disabled = await updatePrivateTesterAdminState({
+      action: "disable_access",
+      actorEmail: "admin@pawvital.ai",
+      email: "tester@example.com",
+    });
+    const restored = await updatePrivateTesterAdminState({
+      action: "restore_access",
+      actorEmail: "admin@pawvital.ai",
+      email: "tester@example.com",
+    });
+
+    expect(disabled.adminState.accessDisabled).toBe(true);
+    expect(disabled.counts.journalEntries).toBe(0);
+    expect(restored.adminState.accessDisabled).toBe(false);
+    expect(restored.counts.journalEntries).toBe(0);
+  });
 });
