@@ -10,7 +10,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
-import Button from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 
 export default function Hero() {
   const ref = useRef<HTMLDivElement>(null);
@@ -55,16 +55,26 @@ export default function Hero() {
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
-              <Link href="/symptom-checker">
-                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500">
-                  Start Free Symptom Check{" "}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
+              <Link
+                href="/symptom-checker"
+                className={buttonClassName({
+                  size: "lg",
+                  className:
+                    "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500",
+                })}
+              >
+                Start Free Symptom Check{" "}
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
-              <a href="#how-it-works">
-                <Button variant="outline" size="lg" className="border-gray-300 text-gray-700 hover:bg-gray-50">
-                  See How It Works
-                </Button>
+              <a
+                href="#how-it-works"
+                className={buttonClassName({
+                  variant: "outline",
+                  size: "lg",
+                  className: "border-gray-300 text-gray-700 hover:bg-gray-50",
+                })}
+              >
+                See How It Works
               </a>
             </div>
 

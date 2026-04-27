@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Check, Zap, ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
-import Button from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 
 const freeFeatures = [
   "Basic dog symptom checks (3/month)",
@@ -75,10 +75,14 @@ export default function Pricing() {
               ))}
             </div>
 
-            <Link href="/signup" className="block">
-              <Button variant="outline" className="w-full">
-                Sign Up Free
-              </Button>
+            <Link
+              href="/signup"
+              className={buttonClassName({
+                variant: "outline",
+                className: "w-full",
+              })}
+            >
+              Sign Up Free
             </Link>
           </motion.div>
 
@@ -122,13 +126,15 @@ export default function Pricing() {
                 ))}
               </div>
 
-              <Link href="/signup" className="block">
-                <Button
-                  size="lg"
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500"
-                >
-                  Start 7-Day Free Trial <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
+              <Link
+                href="/signup"
+                className={buttonClassName({
+                  size: "lg",
+                  className:
+                    "w-full bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/25 focus:ring-emerald-500",
+                })}
+              >
+                Start 7-Day Free Trial <ArrowRight className="w-5 h-5 ml-2" />
               </Link>
             </div>
           </motion.div>

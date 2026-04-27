@@ -4,7 +4,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, PawPrint } from "lucide-react";
 import { motion, useInView } from "framer-motion";
-import Button from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 
 export default function CTA() {
   const ref = useRef<HTMLDivElement>(null);
@@ -41,14 +41,16 @@ export default function CTA() {
           </p>
 
           <div className="mt-10">
-            <Link href="/symptom-checker">
-              <Button
-                size="lg"
-                className="bg-white text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-900/20 text-lg px-10"
-              >
-                Start Free Symptom Check{" "}
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
+            <Link
+              href="/symptom-checker"
+              className={buttonClassName({
+                size: "lg",
+                className:
+                  "bg-white text-emerald-700 hover:bg-emerald-50 shadow-lg shadow-emerald-900/20 text-lg px-10",
+              })}
+            >
+              Start Free Symptom Check{" "}
+              <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
           </div>
 
