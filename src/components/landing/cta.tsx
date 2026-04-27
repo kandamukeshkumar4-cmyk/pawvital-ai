@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Link from "next/link";
 import { ArrowRight, PawPrint } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { buttonClassName } from "@/components/ui/button";
@@ -41,8 +40,9 @@ export default function CTA() {
           </p>
 
           <div className="mt-10">
-            <Link
+            <a
               href="/symptom-checker"
+              target="_top"
               className={buttonClassName({
                 size: "lg",
                 className:
@@ -51,7 +51,7 @@ export default function CTA() {
             >
               Start Free Symptom Check{" "}
               <ArrowRight className="w-5 h-5 ml-2" />
-            </Link>
+            </a>
           </div>
 
           <p className="mt-4 text-sm text-emerald-300">

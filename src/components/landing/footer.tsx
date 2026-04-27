@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { PawPrint } from "lucide-react";
 
 export default function Footer() {
@@ -52,20 +51,22 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <Link
+                <a
                   href="/login"
+                  target="_top"
                   className="hover:text-white transition-colors"
                 >
                   Log In
-                </Link>
+                </a>
               </li>
               <li>
-                <Link
+                <a
                   href="/signup"
+                  target="_top"
                   className="hover:text-white transition-colors"
                 >
                   Sign Up
-                </Link>
+                </a>
               </li>
             </ul>
           </div>

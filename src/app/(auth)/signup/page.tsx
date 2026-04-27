@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Mail, Lock, User, Heart, Check } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   getAuthActionErrorMessage,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
+import { replaceWithBrowser } from "@/lib/browser-navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const benefits = [
@@ -23,7 +24,6 @@ const benefits = [
 ];
 
 export default function SignupPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -50,7 +50,7 @@ export default function SignupPage() {
     try {
       if (!isSupabaseConfigured) {
         // Demo mode: skip auth and go to dashboard
-        router.replace(redirectTarget);
+        replaceWithBrowser(redirectTarget);
         return;
       }
       const supabase = createClient();
@@ -66,7 +66,7 @@ export default function SignupPage() {
       if (authError) throw authError;
 
       if (data.session) {
-        router.replace(redirectTarget);
+        replaceWithBrowser(redirectTarget);
         return;
       }
 
@@ -118,7 +118,7 @@ export default function SignupPage() {
         {/* Right side - Form */}
         <div>
           <div className="text-center mb-8 lg:text-left">
-            <Link href="/" className="inline-flex items-center gap-2">
+            <Link href="/" target="_top" prefetch={false} className="inline-flex items-center gap-2">
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
                 <Heart className="w-6 h-6 text-white fill-white" />
               </div>
@@ -185,12 +185,13 @@ export default function SignupPage() {
 
             <div className="mt-6 text-center text-sm text-gray-600">
               Already have an account?{" "}
-              <Link
+              <a
                 href={appendRedirectParam("/login", redirectTarget)}
+                target="_top"
                 className="text-blue-600 hover:text-blue-700 font-semibold"
               >
                 Sign in
-              </Link>
+              </a>
             </div>
           </div>
         </div>

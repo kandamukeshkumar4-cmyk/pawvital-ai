@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import Badge from "@/components/ui/badge";
@@ -73,12 +72,13 @@ export default function HealthTimeline({ checks }: { checks: SymptomCheckEntry[]
         <p className="text-gray-600 text-sm max-w-md mx-auto">
           No health checks yet — start your first symptom check
         </p>
-        <Link
+        <a
           href="/symptom-checker"
+          target="_top"
           className="inline-flex mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700"
         >
           Open Symptom Checker
-        </Link>
+        </a>
       </div>
     );
   }
@@ -145,12 +145,13 @@ export default function HealthTimeline({ checks }: { checks: SymptomCheckEntry[]
                           <span className="font-medium text-gray-700">{entry.top_diagnosis}</span>
                         </p>
                         <div className="mt-3">
-                          <Link
+                          <a
                             href="/history"
+                            target="_top"
                             className="text-sm font-semibold text-blue-600 hover:text-blue-700"
                           >
                             View Report
-                          </Link>
+                          </a>
                         </div>
                       </div>
                     </li>

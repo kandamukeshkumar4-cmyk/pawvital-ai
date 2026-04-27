@@ -14,9 +14,8 @@ import {
   Pill,
   TrendingUp,
 } from "lucide-react";
-import Link from "next/link";
 import Card from "@/components/ui/card";
-import Button from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 import HealthScoreCircle from "@/components/ui/health-score-circle";
 import { isPrivateTesterModeEnabled } from "@/lib/private-tester-access";
 import { PRIVATE_TESTER_FOCUS_SUMMARY } from "@/lib/private-tester-scope";
@@ -131,12 +130,14 @@ function PrivateTesterDashboard({
             {PRIVATE_TESTER_FOCUS_SUMMARY}
           </p>
         </div>
-        <Link href="/symptom-checker" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Stethoscope className="mr-2 h-4 w-4" />
-            Open symptom checker
-          </Button>
-        </Link>
+        <a
+          href="/symptom-checker"
+          target="_top"
+          className={`${buttonClassName()} w-full sm:w-auto`}
+        >
+          <Stethoscope className="mr-2 h-4 w-4" />
+          Open symptom checker
+        </a>
       </div>
 
       <Card className="border-amber-200 bg-amber-50 p-5">
@@ -166,11 +167,13 @@ function PrivateTesterDashboard({
             <p className="mt-2 text-sm leading-6 text-gray-600">
               {action.description}
             </p>
-            <Link href={action.href} className="mt-4 inline-flex">
-              <Button variant="outline" size="sm">
-                {action.label}
-              </Button>
-            </Link>
+            <a
+              href={action.href}
+              target="_top"
+              className={`${buttonClassName({ variant: "outline", size: "sm" })} mt-4 inline-flex`}
+            >
+              {action.label}
+            </a>
           </Card>
         ))}
       </div>
@@ -209,12 +212,14 @@ export default function DashboardPage() {
             Here&apos;s how your dog is doing today
           </p>
         </div>
-        <Link href="/symptom-checker" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto">
-            <Stethoscope className="w-4 h-4 mr-2" />
-            Quick Symptom Check
-          </Button>
-        </Link>
+        <a
+          href="/symptom-checker"
+          target="_top"
+          className={`${buttonClassName()} w-full sm:w-auto`}
+        >
+          <Stethoscope className="w-4 h-4 mr-2" />
+          Quick Symptom Check
+        </a>
       </div>
 
       {/* Main Grid */}
@@ -248,14 +253,14 @@ export default function DashboardPage() {
           </h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {quickActions.map((action) => (
-              <Link key={action.href} href={action.href}>
+              <a key={action.href} href={action.href} target="_top">
                 <div
                   className={`${action.color} border rounded-xl p-4 hover:shadow-sm transition-all cursor-pointer`}
                 >
                   <action.icon className="w-6 h-6 mb-2" />
                   <span className="text-sm font-medium">{action.label}</span>
                 </div>
-              </Link>
+              </a>
             ))}
           </div>
         </Card>
@@ -266,12 +271,13 @@ export default function DashboardPage() {
             <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
               Upcoming Reminders
             </h2>
-            <Link
+            <a
               href="/reminders"
+              target="_top"
               className="text-xs text-blue-600 font-medium hover:text-blue-700"
             >
               View all
-            </Link>
+            </a>
           </div>
           <div className="space-y-3">
             {upcomingReminders.map((r, i) => (

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Mail, Heart, ArrowLeft } from "lucide-react";
-import Button from "@/components/ui/button";
+import Button, { buttonClassName } from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
+          <Link href="/" target="_top" prefetch={false} className="inline-flex items-center gap-2">
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
               <Heart className="w-6 h-6 text-white fill-white" />
             </div>
@@ -90,11 +90,16 @@ export default function ForgotPasswordPage() {
               <p className="text-gray-600 mb-6">
                 We&apos;ve sent a password reset link to <strong>{email}</strong>
               </p>
-              <Link href={appendRedirectParam("/login", redirectTarget)}>
-                <Button variant="outline" className="w-full">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to login
-                </Button>
-              </Link>
+              <a
+                href={appendRedirectParam("/login", redirectTarget)}
+                target="_top"
+                className={buttonClassName({
+                  variant: "outline",
+                  className: "w-full",
+                })}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back to login
+              </a>
             </div>
           ) : (
             <form onSubmit={handleReset} className="space-y-5">
@@ -123,12 +128,13 @@ export default function ForgotPasswordPage() {
 
           {!sent && (
             <div className="mt-6 text-center">
-              <Link
+              <a
                 href={appendRedirectParam("/login", redirectTarget)}
+                target="_top"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to login
-              </Link>
+              </a>
             </div>
           )}
         </div>
