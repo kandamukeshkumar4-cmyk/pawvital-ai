@@ -6,12 +6,11 @@ import { ComparativeHealth, type PetHealthSummary } from "@/components/pets/comp
 import PetProfileModal from "@/components/onboarding/pet-profile-modal";
 import Button from "@/components/ui/button";
 import { Plus, Activity, Clock, Dog, Settings } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { navigateWithBrowser } from "@/lib/browser-navigation";
 
 export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { initialPets: Pet[], initialChecks: SymptomCheck[], isDemo: boolean }) {
   const [pets] = useState(initialPets);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const router = useRouter();
   const [clientNowMs, setClientNowMs] = useState<number | null>(null);
 
   useEffect(() => {
@@ -168,13 +167,16 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
               </div>
 
               <div className="flex gap-2">
-                <Button className="flex-1 text-sm bg-indigo-600 hover:bg-slate-700 hover:text-white" onClick={() => router.push(`/symptom-checker?pet=${pet.id}`)}>
+                <Button
+                  className="flex-1 text-sm bg-indigo-600 hover:bg-slate-700 hover:text-white"
+                  onClick={() => navigateWithBrowser(`/symptom-checker?pet=${pet.id}`)}
+                >
                   New Check
                 </Button>
                 <Button
                   variant="outline"
                   className="flex-1 text-sm"
-                  onClick={() => router.push(`/pets/${pet.id}`)}
+                  onClick={() => navigateWithBrowser(`/pets/${pet.id}`)}
                 >
                   Health
                 </Button>

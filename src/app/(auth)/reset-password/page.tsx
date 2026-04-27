@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Heart, Lock } from "lucide-react";
-import Button from "@/components/ui/button";
+import Button, { buttonClassName } from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
+import { replaceWithBrowser } from "@/lib/browser-navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
 
     try {
       if (!isSupabaseConfigured) {
-        router.replace(appendRedirectParam("/login", redirectTarget));
+        replaceWithBrowser(appendRedirectParam("/login", redirectTarget));
         return;
       }
 
@@ -114,7 +114,7 @@ export default function ResetPasswordPage() {
         throw updateError;
       }
 
-      router.replace(redirectTarget);
+      replaceWithBrowser(redirectTarget);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to update password";
       setError(message);
@@ -127,7 +127,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
+          <Link href="/" target="_top" prefetch={false} className="inline-flex items-center gap-2">
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
               <Heart className="w-6 h-6 text-white fill-white" />
             </div>
@@ -177,21 +177,24 @@ export default function ResetPasswordPage() {
               <div className="bg-amber-50 text-amber-800 rounded-xl p-3 text-sm">
                 {error || "This password reset link is invalid or has expired."}
               </div>
-              <Link href={appendRedirectParam("/forgot-password", redirectTarget)}>
-                <Button className="w-full" size="lg">
-                  Request a New Reset Link
-                </Button>
-              </Link>
+              <a
+                href={appendRedirectParam("/forgot-password", redirectTarget)}
+                target="_top"
+                className={buttonClassName({ className: "w-full", size: "lg" })}
+              >
+                Request a New Reset Link
+              </a>
             </div>
           )}
 
           <div className="mt-6 text-center">
-            <Link
+            <a
               href={appendRedirectParam("/login", redirectTarget)}
+              target="_top"
               className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
             >
               <ArrowLeft className="w-4 h-4" /> Back to login
-            </Link>
+            </a>
           </div>
         </div>
       </div>

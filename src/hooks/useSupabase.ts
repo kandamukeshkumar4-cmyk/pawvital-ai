@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { buildLoginPath, buildRedirectTarget } from "@/lib/auth-routing";
+import { replaceWithBrowser } from "@/lib/browser-navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { DEMO_PETS_STORAGE_KEY } from "@/lib/demo-storage";
 import { useAppStore } from "@/store/app-store";
@@ -25,7 +26,6 @@ function persistDemoPets(pets: Pet[]) {
 
 export function useAuth() {
   const { user, setUser, setPets, setActivePet, setUserDataLoaded } = useAppStore();
-  const router = useRouter();
 
   const signOut = useCallback(async () => {
     setUser(null);
@@ -34,7 +34,7 @@ export function useAuth() {
     setUserDataLoaded(true);
 
     if (!isSupabaseConfigured) {
-      router.replace("/login");
+      replaceWithBrowser("/login");
       return;
     }
 
@@ -45,8 +45,8 @@ export function useAuth() {
       console.error("Sign out error:", err);
     }
 
-    router.replace("/login");
-  }, [router, setActivePet, setPets, setUser, setUserDataLoaded]);
+    replaceWithBrowser("/login");
+  }, [setActivePet, setPets, setUser, setUserDataLoaded]);
 
   return { user, signOut, isConfigured: isSupabaseConfigured };
 }
@@ -55,7 +55,6 @@ export function useAuth() {
 
 export function useLoadUserData() {
   const { setUser, setPets, setActivePet, activePet, setUserDataLoaded } = useAppStore();
-  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -91,7 +90,7 @@ export function useLoadUserData() {
 
     function redirectToLogin() {
       const redirectTarget = buildRedirectTarget(pathname || "/dashboard");
-      router.replace(
+      replaceWithBrowser(
         buildLoginPath(redirectTarget, {
           reason: "session_expired",
         })

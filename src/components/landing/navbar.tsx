@@ -12,7 +12,7 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" target="_top" prefetch={false} className="flex items-center gap-2">
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
               <PawPrint className="w-5 h-5 text-white" />
             </div>
@@ -47,11 +47,16 @@ export default function Navbar() {
             >
               FAQ
             </a>
-            <Link href="/login" className={buttonClassName({ variant: "ghost", size: "sm" })}>
+            <a
+              href="/login"
+              target="_top"
+              className={buttonClassName({ variant: "ghost", size: "sm" })}
+            >
               Log In
-            </Link>
-            <Link
+            </a>
+            <a
               href="/symptom-checker"
+              target="_top"
               className={buttonClassName({
                 size: "sm",
                 className:
@@ -59,7 +64,7 @@ export default function Navbar() {
               })}
             >
               Start Free Check
-            </Link>
+            </a>
           </div>
 
           <button
@@ -106,23 +111,25 @@ export default function Navbar() {
           >
             FAQ
           </a>
-          <Link
+          <a
             href="/login"
+            target="_top"
             className={buttonClassName({
               variant: "outline",
               className: "w-full",
             })}
           >
             Log In
-          </Link>
-          <Link
+          </a>
+          <a
             href="/symptom-checker"
+            target="_top"
             className={buttonClassName({
               className: "w-full bg-emerald-600 hover:bg-emerald-700",
             })}
           >
             Start Free Check
-          </Link>
+          </a>
         </div>
       )}
     </nav>

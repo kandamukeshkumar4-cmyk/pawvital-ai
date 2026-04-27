@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Mail, Lock, Heart } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -12,10 +12,10 @@ import {
   getAuthActionErrorMessage,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
+import { replaceWithBrowser } from "@/lib/browser-navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +39,7 @@ export default function LoginPage() {
     try {
       if (!isSupabaseConfigured) {
         // Demo mode: skip auth and go to dashboard
-        router.replace(redirectTarget);
+        replaceWithBrowser(redirectTarget);
         return;
       }
       const supabase = createClient();
@@ -49,7 +49,7 @@ export default function LoginPage() {
       });
 
       if (authError) throw authError;
-      router.replace(redirectTarget);
+      replaceWithBrowser(redirectTarget);
     } catch (err: unknown) {
       console.error("Failed to sign in", err);
       const message = getAuthActionErrorMessage(
@@ -67,7 +67,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
+          <Link href="/" target="_top" prefetch={false} className="inline-flex items-center gap-2">
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
               <Heart className="w-6 h-6 text-white fill-white" />
             </div>
@@ -118,12 +118,13 @@ export default function LoginPage() {
                 <input type="checkbox" className="rounded border-gray-300" />
                 <span className="text-gray-600">Remember me</span>
               </label>
-              <Link
+              <a
                 href={appendRedirectParam("/forgot-password", redirectTarget)}
+                target="_top"
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 Forgot password?
-              </Link>
+              </a>
             </div>
 
             <Button type="submit" loading={loading} className="w-full" size="lg">
@@ -133,12 +134,13 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center text-sm text-gray-600">
             Don&apos;t have an account?{" "}
-            <Link
+            <a
               href={appendRedirectParam("/signup", redirectTarget)}
+              target="_top"
               className="text-blue-600 hover:text-blue-700 font-semibold"
             >
               Start your free trial
-            </Link>
+            </a>
           </div>
         </div>
       </div>

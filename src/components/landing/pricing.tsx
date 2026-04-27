@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import { Check, Zap, ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
-import Link from "next/link";
 import { buttonClassName } from "@/components/ui/button";
 
 const freeFeatures = [
@@ -75,15 +74,16 @@ export default function Pricing() {
               ))}
             </div>
 
-            <Link
+            <a
               href="/signup"
+              target="_top"
               className={buttonClassName({
                 variant: "outline",
                 className: "w-full",
               })}
             >
               Sign Up Free
-            </Link>
+            </a>
           </motion.div>
 
           {/* Premium tier */}
@@ -126,8 +126,9 @@ export default function Pricing() {
                 ))}
               </div>
 
-              <Link
+              <a
                 href="/signup"
+                target="_top"
                 className={buttonClassName({
                   size: "lg",
                   className:
@@ -135,7 +136,7 @@ export default function Pricing() {
                 })}
               >
                 Start 7-Day Free Trial <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
+              </a>
             </div>
           </motion.div>
         </div>

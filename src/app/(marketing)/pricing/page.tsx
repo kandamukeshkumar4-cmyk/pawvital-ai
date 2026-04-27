@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check, Heart, Zap, Shield, ArrowRight } from "lucide-react";
-import Button from "@/components/ui/button";
+import Button, { buttonClassName } from "@/components/ui/button";
+import { navigateWithBrowser, replaceWithBrowser } from "@/lib/browser-navigation";
 
 const features = [
   "Dog symptom triage support",
@@ -52,10 +53,10 @@ export default function PricingPage() {
         body: JSON.stringify({ email: "", userId: "" }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) navigateWithBrowser(data.url);
     } catch {
       // Redirect to signup if Stripe isn't configured
-      window.location.href = "/signup";
+      replaceWithBrowser("/signup");
     } finally {
       setLoading(false);
     }
@@ -66,23 +67,27 @@ export default function PricingPage() {
       {/* Nav */}
       <nav className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" target="_top" prefetch={false} className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Heart className="w-5 h-5 text-white fill-white" />
             </div>
             <span className="text-xl font-bold text-gray-900">PawVital AI</span>
           </Link>
           <div className="flex w-full items-center gap-2 sm:w-auto sm:gap-4">
-            <Link href="/login" className="flex-1 sm:flex-none">
-              <Button variant="ghost" size="sm" className="w-full sm:w-auto">
-                Log In
-              </Button>
-            </Link>
-            <Link href="/signup" className="flex-1 sm:flex-none">
-              <Button size="sm" className="w-full sm:w-auto">
-                Start Free Trial
-              </Button>
-            </Link>
+            <a
+              href="/login"
+              target="_top"
+              className={`${buttonClassName({ variant: "ghost", size: "sm" })} flex-1 sm:flex-none w-full sm:w-auto`}
+            >
+              Log In
+            </a>
+            <a
+              href="/signup"
+              target="_top"
+              className={`${buttonClassName({ size: "sm" })} flex-1 sm:flex-none w-full sm:w-auto`}
+            >
+              Start Free Trial
+            </a>
           </div>
         </div>
       </nav>
