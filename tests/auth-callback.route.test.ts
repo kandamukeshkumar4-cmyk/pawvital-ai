@@ -95,6 +95,27 @@ describe("VET-1215 auth callback route", () => {
     expect(response.headers.get("set-cookie")).toContain("sb-test-auth-token");
   });
 
+  it("hands recovery PKCE codes to the browser callback", async () => {
+    const { GET } = await import("@/app/api/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "https://app.pawvital.ai/api/auth/callback?code=recovery-code&next=%2Freset-password%3Fredirect%3D%252Fsymptom-checker"
+      )
+    );
+
+    const location = response.headers.get("location");
+    expect(location).toBeTruthy();
+
+    const callbackUrl = new URL(location || "");
+    expect(callbackUrl.origin).toBe("https://app.pawvital.ai");
+    expect(callbackUrl.pathname).toBe("/auth/callback");
+    expect(callbackUrl.searchParams.get("code")).toBe("recovery-code");
+    expect(callbackUrl.searchParams.get("next")).toBe(
+      "/reset-password?redirect=%2Fsymptom-checker"
+    );
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
   it("verifies recovery tokens and lands on reset-password with the preserved redirect", async () => {
     mockVerifyOtp.mockResolvedValue({ error: null });
 
