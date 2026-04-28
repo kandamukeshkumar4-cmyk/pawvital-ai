@@ -24,6 +24,22 @@ describe("question card registry", () => {
     expect(card?.ownerText).toBeTruthy();
   });
 
+  it("returns defensive clones so callers cannot mutate registry state", () => {
+    const first = getQuestionCardById("gum_color_check");
+    expect(first).toBeDefined();
+
+    if (!first) {
+      throw new Error("Expected gum_color_check to exist");
+    }
+
+    first.ownerText = "mutated";
+    first.complaintFamilies.push("mutated_family");
+
+    const second = getQuestionCardById("gum_color_check");
+    expect(second?.ownerText).not.toBe("mutated");
+    expect(second?.complaintFamilies).not.toContain("mutated_family");
+  });
+
   it("returns undefined for unknown id", () => {
     expect(getQuestionCardById("nonexistent_card")).toBeUndefined();
   });
@@ -100,6 +116,18 @@ describe("question card registry", () => {
     }
   });
 
+  it("every choice card has allowedAnswers", () => {
+    const cards = getAllQuestionCards();
+    const choiceCards = cards.filter((card) => card.answerType === "choice");
+
+    expect(choiceCards.length).toBeGreaterThan(0);
+
+    for (const card of choiceCards) {
+      expect(Array.isArray(card.allowedAnswers)).toBe(true);
+      expect(card.allowedAnswers.length).toBeGreaterThan(0);
+    }
+  });
+
   it("no card contains diagnosis or treatment claims", () => {
     const { diagnosisTreatmentClaims } = validateRegistry();
 
@@ -115,6 +143,7 @@ describe("question card registry", () => {
     expect(result.missingShortReason).toEqual([]);
     expect(result.missingSkipIfAnswered).toEqual([]);
     expect(result.missingSourceIds).toEqual([]);
+    expect(result.choiceCardsMissingAllowedAnswers).toEqual([]);
     expect(result.lowOwnerAnswerabilityWithoutSafetyNote).toEqual([]);
     expect(result.emergencyCardsWithLowUrgency).toEqual([]);
     expect(result.diagnosisTreatmentClaims).toEqual([]);

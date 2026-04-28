@@ -1,4 +1,4 @@
-export interface ClinicalQuestionCard {
+interface BaseClinicalQuestionCard {
   id: string;
   ownerText: string;
   shortReason: string;
@@ -22,9 +22,6 @@ export interface ClinicalQuestionCard {
   screensRedFlags: string[];
   changesUrgencyIf: Record<string, string>;
 
-  answerType: "boolean" | "choice" | "free_text" | "duration" | "number";
-  allowedAnswers?: string[];
-
   skipIfAnswered: string[];
   askIfAny?: string[];
   askIfAll?: string[];
@@ -32,3 +29,17 @@ export interface ClinicalQuestionCard {
   sourceIds: string[];
   safetyNotes?: string[];
 }
+
+export type ChoiceClinicalQuestionCard = BaseClinicalQuestionCard & {
+  answerType: "choice";
+  allowedAnswers: [string, ...string[]];
+};
+
+export type NonChoiceClinicalQuestionCard = BaseClinicalQuestionCard & {
+  answerType: "boolean" | "free_text" | "duration" | "number";
+  allowedAnswers?: never;
+};
+
+export type ClinicalQuestionCard =
+  | ChoiceClinicalQuestionCard
+  | NonChoiceClinicalQuestionCard;

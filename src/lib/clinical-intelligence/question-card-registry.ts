@@ -33,7 +33,7 @@ import { urinaryStrainingOutput } from "./question-cards/urinary";
 
 import { neuroSeizureDuration } from "./question-cards/neuro";
 
-const ALL_CARDS: readonly ClinicalQuestionCard[] = [
+const SOURCE_CARDS: readonly ClinicalQuestionCard[] = [
   emergencyGlobalScreen,
   gumColorCheck,
   breathingDifficultyCheck,
@@ -54,6 +54,41 @@ const ALL_CARDS: readonly ClinicalQuestionCard[] = [
   urinaryStrainingOutput,
   neuroSeizureDuration,
 ];
+
+function cloneQuestionCard(card: ClinicalQuestionCard): ClinicalQuestionCard {
+  if (card.answerType === "choice") {
+    return {
+      ...card,
+      complaintFamilies: [...card.complaintFamilies],
+      bodySystems: [...card.bodySystems],
+      screensRedFlags: [...card.screensRedFlags],
+      changesUrgencyIf: { ...card.changesUrgencyIf },
+      allowedAnswers: [...card.allowedAnswers] as [string, ...string[]],
+      skipIfAnswered: [...card.skipIfAnswered],
+      askIfAny: card.askIfAny ? [...card.askIfAny] : undefined,
+      askIfAll: card.askIfAll ? [...card.askIfAll] : undefined,
+      sourceIds: [...card.sourceIds],
+      safetyNotes: card.safetyNotes ? [...card.safetyNotes] : undefined,
+    };
+  }
+
+  return {
+    ...card,
+    complaintFamilies: [...card.complaintFamilies],
+    bodySystems: [...card.bodySystems],
+    screensRedFlags: [...card.screensRedFlags],
+    changesUrgencyIf: { ...card.changesUrgencyIf },
+    skipIfAnswered: [...card.skipIfAnswered],
+    askIfAny: card.askIfAny ? [...card.askIfAny] : undefined,
+    askIfAll: card.askIfAll ? [...card.askIfAll] : undefined,
+    sourceIds: [...card.sourceIds],
+    safetyNotes: card.safetyNotes ? [...card.safetyNotes] : undefined,
+  };
+}
+
+const ALL_CARDS: readonly ClinicalQuestionCard[] = SOURCE_CARDS.map((card) =>
+  cloneQuestionCard(card)
+);
 
 function buildRegistry(cards: readonly ClinicalQuestionCard[]): {
   byId: Map<string, ClinicalQuestionCard>;
@@ -96,13 +131,14 @@ const DIAGNOSIS_TREATMENT_CLAIM_PATTERNS: readonly string[] = [
 ];
 
 export function getAllQuestionCards(): readonly ClinicalQuestionCard[] {
-  return ALL_CARDS;
+  return ALL_CARDS.map((card) => cloneQuestionCard(card));
 }
 
 export function getQuestionCardById(
   id: string
 ): ClinicalQuestionCard | undefined {
-  return REGISTRY.byId.get(id);
+  const card = REGISTRY.byId.get(id);
+  return card ? cloneQuestionCard(card) : undefined;
 }
 
 export function getQuestionCardsByComplaintFamily(
@@ -110,13 +146,15 @@ export function getQuestionCardsByComplaintFamily(
 ): readonly ClinicalQuestionCard[] {
   return ALL_CARDS.filter((card) =>
     card.complaintFamilies.includes(family)
-  );
+  ).map((card) => cloneQuestionCard(card));
 }
 
 export function getQuestionCardsByPhase(
   phase: ClinicalQuestionCard["phase"]
 ): readonly ClinicalQuestionCard[] {
-  return ALL_CARDS.filter((card) => card.phase === phase);
+  return ALL_CARDS
+    .filter((card) => card.phase === phase)
+    .map((card) => cloneQuestionCard(card));
 }
 
 export function validateRegistry(): {
@@ -126,6 +164,7 @@ export function validateRegistry(): {
   missingShortReason: string[];
   missingSkipIfAnswered: string[];
   missingSourceIds: string[];
+  choiceCardsMissingAllowedAnswers: string[];
   lowOwnerAnswerabilityWithoutSafetyNote: string[];
   emergencyCardsWithLowUrgency: string[];
   diagnosisTreatmentClaims: string[];
@@ -136,6 +175,7 @@ export function validateRegistry(): {
   const missingShortReason: string[] = [];
   const missingSkipIfAnswered: string[] = [];
   const missingSourceIds: string[] = [];
+  const choiceCardsMissingAllowedAnswers: string[] = [];
   const lowOwnerAnswerabilityWithoutSafetyNote: string[] = [];
   const emergencyCardsWithLowUrgency: string[] = [];
   const diagnosisTreatmentClaims: string[] = [];
@@ -161,6 +201,13 @@ export function validateRegistry(): {
 
     if (!Array.isArray(card.sourceIds) || card.sourceIds.length === 0) {
       missingSourceIds.push(card.id);
+    }
+
+    if (
+      card.answerType === "choice" &&
+      (!Array.isArray(card.allowedAnswers) || card.allowedAnswers.length === 0)
+    ) {
+      choiceCardsMissingAllowedAnswers.push(card.id);
     }
 
     if (card.ownerAnswerability < 2) {
@@ -193,6 +240,7 @@ export function validateRegistry(): {
     missingShortReason.length === 0 &&
     missingSkipIfAnswered.length === 0 &&
     missingSourceIds.length === 0 &&
+    choiceCardsMissingAllowedAnswers.length === 0 &&
     lowOwnerAnswerabilityWithoutSafetyNote.length === 0 &&
     emergencyCardsWithLowUrgency.length === 0 &&
     diagnosisTreatmentClaims.length === 0;
@@ -204,6 +252,7 @@ export function validateRegistry(): {
     missingShortReason,
     missingSkipIfAnswered,
     missingSourceIds,
+    choiceCardsMissingAllowedAnswers,
     lowOwnerAnswerabilityWithoutSafetyNote,
     emergencyCardsWithLowUrgency,
     diagnosisTreatmentClaims,
