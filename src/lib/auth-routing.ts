@@ -167,6 +167,19 @@ export function buildBrowserCallbackUrl(
   return url.toString();
 }
 
+export function buildRecoveryCallbackUrl(
+  origin: string,
+  redirectTarget: string | null | undefined
+) {
+  const url = new URL("/auth/callback", origin);
+  const recoveryTarget = buildRecoveryRedirectPath(redirectTarget);
+
+  url.searchParams.set("flow", "recovery");
+  url.searchParams.set("next", recoveryTarget);
+
+  return url.toString();
+}
+
 export function buildLoginPath(
   redirectTarget: string | null | undefined,
   options?: {

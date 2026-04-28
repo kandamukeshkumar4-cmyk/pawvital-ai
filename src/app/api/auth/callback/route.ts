@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const rawType = searchParams.get("type");
+  const rawFlow = searchParams.get("flow");
   const rawNext = searchParams.get("next");
   const nextTarget = resolvePostAuthRedirect(rawNext, {
     allowedOrigin: origin,
@@ -77,14 +78,22 @@ export async function GET(request: NextRequest) {
 
   try {
     if (code) {
-      const isRecoveryFlow = rawNext?.includes(RESET_PASSWORD_PATH);
-      const redirectTarget = isRecoveryFlow ? recoveryTarget : nextTarget;
+      const isRecoveryFlow =
+        rawFlow === "recovery" ||
+        rawType === "recovery" ||
+        Boolean(rawNext?.includes(RESET_PASSWORD_PATH));
+      const redirectTarget = isRecoveryFlow
+        ? recoveryTarget.startsWith(RESET_PASSWORD_PATH)
+          ? recoveryTarget
+          : buildRecoveryRedirectPath(nextTarget)
+        : nextTarget;
 
       if (isRecoveryFlow) {
         const browserCallbackUrl = new URL(
           buildBrowserCallbackUrl(origin, redirectTarget)
         );
         browserCallbackUrl.searchParams.set("code", code);
+        browserCallbackUrl.searchParams.set("flow", "recovery");
 
         return NextResponse.redirect(browserCallbackUrl);
       }

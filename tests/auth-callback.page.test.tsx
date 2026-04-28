@@ -90,4 +90,21 @@ describe("auth browser callback page", () => {
       screen.getByRole("link", { name: "Return to sign in" }).getAttribute("href")
     ).toBe("/login?redirect=%2Fdashboard&error=auth_callback_failed");
   });
+
+  it("keeps recovery callbacks on the reset-password form before the app redirect", async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+    window.history.pushState(
+      {},
+      "",
+      "/auth/callback?code=test-code&flow=recovery&next=%2Fsymptom-checker"
+    );
+
+    render(React.createElement(AuthCallbackPage));
+
+    await waitFor(() =>
+      expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
+        "/reset-password?redirect=%2Fsymptom-checker"
+      )
+    );
+  });
 });
