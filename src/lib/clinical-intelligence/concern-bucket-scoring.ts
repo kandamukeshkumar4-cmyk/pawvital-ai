@@ -54,6 +54,14 @@ function hasMeaningfulText(value: unknown): boolean {
   ].includes(normalized);
 }
 
+function formatEvidenceValue(value: unknown): string {
+  return String(value)
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
 function doesExplicitAnswerSupportConcern(
   answerKey: string,
   value: unknown
@@ -303,7 +311,9 @@ export function scoreConcernBucket(
     const entry = caseState.redFlagStatus[redFlagId];
     if (entry?.status === "positive") {
       score += POSITIVE_RED_FLAG_SCORE;
-      evidence.push(`Positive red flag: ${redFlagId}${entry.evidenceText ? ` — ${entry.evidenceText}` : ""}`);
+      evidence.push(
+        `Positive red flag: ${redFlagId}${entry.evidenceText ? ` — ${formatEvidenceValue(entry.evidenceText)}` : ""}`
+      );
     }
   }
 
@@ -313,7 +323,11 @@ export function scoreConcernBucket(
     );
     if (matchingSignal) {
       score += CLINICAL_SIGNAL_SCORE;
-      evidence.push(`Clinical signal: ${matchingSignal.type} — ${matchingSignal.evidenceText}`);
+      // Evidence strings stay internal to logs and tests; normalize them so raw owner text
+      // never gets replayed with control characters.
+      evidence.push(
+        `Clinical signal: ${matchingSignal.type} — ${formatEvidenceValue(matchingSignal.evidenceText)}`
+      );
     }
   }
 
@@ -327,7 +341,7 @@ export function scoreConcernBucket(
     ) {
       score += EXPLICIT_ANSWER_SCORE;
       const value = caseState.explicitAnswers[answerKey];
-      evidence.push(`Explicit answer: ${answerKey} = ${String(value)}`);
+      evidence.push(`Explicit answer: ${answerKey} = ${formatEvidenceValue(value)}`);
     }
   }
 

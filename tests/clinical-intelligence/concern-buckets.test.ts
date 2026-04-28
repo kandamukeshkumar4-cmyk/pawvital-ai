@@ -317,8 +317,13 @@ describe("Scoring: clinical signals", () => {
     const breathing = scored.find((b) => b.id === "emergency_airway_breathing");
 
     expect(breathing).toBeDefined();
-    expect(breathing!.score).toBeGreaterThanOrEqual(20);
-    expect(breathing!.evidence.some((e) => e.includes("Clinical signal"))).toBe(true);
+    expect(breathing!.score).toBe(25);
+    expect(breathing!.evidence).toContain(
+      "Clinical signal: possible_breathing_difficulty — AI detected respiratory distress from owner description"
+    );
+    expect(breathing!.evidence).toContain(
+      "Must-not-miss bucket with unresolved red flags — kept at low score"
+    );
   });
 
   it("uses detector-aligned signal ids for scoring", () => {
@@ -336,7 +341,10 @@ describe("Scoring: clinical signals", () => {
     const bloat = scored.find((bucket) => bucket.id === "bloat_gdv_pattern");
 
     expect(bloat).toBeDefined();
-    expect(bloat!.score).toBeGreaterThanOrEqual(20);
+    expect(bloat!.score).toBe(25);
+    expect(bloat!.evidence).toContain(
+      "Clinical signal: possible_bloat_gdv — AI detected distended abdomen pattern"
+    );
   });
 });
 
