@@ -8,7 +8,7 @@ import Button, { buttonClassName } from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
-  buildBrowserCallbackUrl,
+  buildCallbackUrl,
   buildRecoveryRedirectPath,
   getAuthFeedbackMessage,
   getAuthActionErrorMessage,
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
       }
       const supabase = createClient();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: buildBrowserCallbackUrl(
+        redirectTo: buildCallbackUrl(
           window.location.origin,
           buildRecoveryRedirectPath(redirectTarget)
         ),
@@ -90,16 +90,15 @@ export default function ForgotPasswordPage() {
               <p className="text-gray-600 mb-6">
                 We&apos;ve sent a password reset link to <strong>{email}</strong>
               </p>
-              <a
+              <Link
                 href={appendRedirectParam("/login", redirectTarget)}
-                target="_top"
                 className={buttonClassName({
                   variant: "outline",
                   className: "w-full",
                 })}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back to login
-              </a>
+              </Link>
             </div>
           ) : (
             <form onSubmit={handleReset} className="space-y-5">
@@ -128,13 +127,12 @@ export default function ForgotPasswordPage() {
 
           {!sent && (
             <div className="mt-6 text-center">
-              <a
+              <Link
                 href={appendRedirectParam("/login", redirectTarget)}
-                target="_top"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to login
-              </a>
+              </Link>
             </div>
           )}
         </div>

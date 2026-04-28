@@ -177,24 +177,22 @@ export default function ResetPasswordPage() {
               <div className="bg-amber-50 text-amber-800 rounded-xl p-3 text-sm">
                 {error || "This password reset link is invalid or has expired."}
               </div>
-              <a
+              <Link
                 href={appendRedirectParam("/forgot-password", redirectTarget)}
-                target="_top"
                 className={buttonClassName({ className: "w-full", size: "lg" })}
               >
                 Request a New Reset Link
-              </a>
+              </Link>
             </div>
           )}
 
           <div className="mt-6 text-center">
-            <a
+            <Link
               href={appendRedirectParam("/login", redirectTarget)}
-              target="_top"
               className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
             >
               <ArrowLeft className="w-4 h-4" /> Back to login
-            </a>
+            </Link>
           </div>
         </div>
       </div>
