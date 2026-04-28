@@ -27,17 +27,22 @@ export default function AuthCallbackPage() {
 
     const url = new URL(window.location.href);
     const code = url.searchParams.get("code");
+    const flow = url.searchParams.get("flow") || url.searchParams.get("type");
     const rawNext = url.searchParams.get("next");
     const nextTarget = resolvePostAuthRedirect(rawNext, {
       allowedOrigin: window.location.origin,
       fallback: DEFAULT_AUTH_REDIRECT,
     });
-    const recoveryTarget = resolvePostAuthRedirect(rawNext, {
+    const isRecoveryFlow =
+      flow === "recovery" || Boolean(rawNext?.includes(RESET_PASSWORD_PATH));
+    const explicitRecoveryTarget = resolvePostAuthRedirect(rawNext, {
       allowedOrigin: window.location.origin,
       fallback: buildRecoveryRedirectPath(DEFAULT_AUTH_REDIRECT),
       allowResetPassword: true,
     });
-    const isRecoveryRedirect = recoveryTarget.startsWith(RESET_PASSWORD_PATH);
+    const recoveryTarget = explicitRecoveryTarget.startsWith(RESET_PASSWORD_PATH)
+      ? explicitRecoveryTarget
+      : buildRecoveryRedirectPath(nextTarget);
 
     if (!code) {
       replaceWithBrowser(
@@ -57,25 +62,25 @@ export default function AuthCallbackPage() {
       if (exchangeError) {
         replaceWithBrowser(
           buildLoginPath(nextTarget, {
-            error: isRecoveryRedirect ? "invalid_reset_link" : "auth_callback_failed",
+            error: isRecoveryFlow ? "invalid_reset_link" : "auth_callback_failed",
           })
         );
         return;
       }
 
-      replaceWithBrowser(isRecoveryRedirect ? recoveryTarget : nextTarget);
+      replaceWithBrowser(isRecoveryFlow ? recoveryTarget : nextTarget);
     }
 
     void completeCallback().catch((err: unknown) => {
       console.error("Failed to complete auth callback", err);
       setError({
-        actionHref: isRecoveryRedirect
+        actionHref: isRecoveryFlow
           ? "/forgot-password"
           : buildLoginPath(nextTarget, { error: "auth_callback_failed" }),
-        actionLabel: isRecoveryRedirect
+        actionLabel: isRecoveryFlow
           ? "Request a new reset link"
           : "Return to sign in",
-        message: isRecoveryRedirect
+        message: isRecoveryFlow
           ? "We couldn't complete password reset from that link. Please try again."
           : "We couldn't complete sign-in from that link. Please try again.",
       });
