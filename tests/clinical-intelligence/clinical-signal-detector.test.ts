@@ -388,6 +388,12 @@ describe("Clinical Signal Detector", () => {
   });
 
   describe("Edge cases and robustness", () => {
+    it("handles overlapping matchers for the same signal without hanging", () => {
+      const signals = detectSignals("he is breathing hard");
+      expect(signals).toHaveLength(1);
+      expect(signals[0].id).toBe("possible_breathing_difficulty");
+    });
+
     it("handles mixed case input", () => {
       const signals = detectSignals("HIT BY A CAR");
       expect(signals).toHaveLength(1);

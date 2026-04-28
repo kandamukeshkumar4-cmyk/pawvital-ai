@@ -29,6 +29,7 @@ interface ClinicalSignal {
 5. **Evidence preservation** — the exact owner phrase is preserved in `evidenceText` where possible.
 6. **Ambiguous phrases** return lower confidence and `needsConfirmation: true`.
 7. **False-positive protection** — negation words within an 8-word window suppress detection.
+8. **Overlapping matchers are safe** — when multiple regexes match the same signal, the detector stops after the first non-negated match for that signal ID.
 
 ## Signal Library
 

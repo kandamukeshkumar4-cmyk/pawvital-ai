@@ -90,6 +90,7 @@ const SIGNAL_PATTERNS: SignalPattern[] = [
     id: "possible_blue_gums",
     matchers: [
       /(?:gums?|mouth|tongue)\s+(?:look|are|is|seem|appear)\s+(?:blue|cyanotic|purplish?)/i,
+      /(?:gums?|mouth|tongue).{0,40}\b(?:blueish|bluish|blue|cyanotic|purplish?)\b/i,
       /blue\s+(?:gums?|mouth|tongue)/i,
     ],
     confidence: 0.95,
@@ -274,25 +275,21 @@ export function detectSignals(ownerMessage: string): ClinicalSignal[] {
   const detected = new Map<string, ClinicalSignal>();
 
   for (const pattern of SIGNAL_PATTERNS) {
-    const lowerMessage = normalized.toLowerCase();
+    let matchedPattern = false;
 
     for (const matcher of pattern.matchers) {
-      // Reset regex lastIndex
-      matcher.lastIndex = 0;
+      const flags = matcher.flags.includes("g")
+        ? matcher.flags
+        : `${matcher.flags}g`;
+      const globalMatcher = new RegExp(matcher.source, flags);
       let match: RegExpExecArray | null;
 
-      while ((match = matcher.exec(lowerMessage)) !== null) {
-        if (hasNegationContext(lowerMessage, match.index)) {
+      while ((match = globalMatcher.exec(normalized)) !== null) {
+        if (hasNegationContext(normalized, match.index)) {
           continue;
         }
 
         const evidenceText = extractEvidence(normalized, match);
-
-        // If same signal already detected with higher confidence, skip
-        const existing = detected.get(pattern.id);
-        if (existing && existing.confidence >= pattern.confidence) {
-          continue;
-        }
 
         const signal: ClinicalSignal = {
           id: pattern.id,
@@ -305,7 +302,12 @@ export function detectSignals(ownerMessage: string): ClinicalSignal[] {
         };
 
         detected.set(pattern.id, signal);
-        break; // Only take first match per pattern
+        matchedPattern = true;
+        break;
+      }
+
+      if (matchedPattern) {
+        break;
       }
     }
   }
