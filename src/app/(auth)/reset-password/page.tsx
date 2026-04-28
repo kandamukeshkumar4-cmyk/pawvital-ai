@@ -11,7 +11,23 @@ import {
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
+
+const RECOVERY_SESSION_RETRY_MS = 150;
+const RECOVERY_SESSION_RETRY_COUNT = 10;
+
+function hasRecoveryHash() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const hashParams = new URLSearchParams(window.location.hash.slice(1));
+  return Boolean(
+    hashParams.get("access_token") ||
+      hashParams.get("refresh_token") ||
+      hashParams.get("token_type")
+  );
+}
 
 export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
@@ -30,13 +46,29 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const supabase = createClient();
+    const supabase = createRecoveryClient();
     let mounted = true;
 
     async function loadSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const shouldRetry = hasRecoveryHash();
+      let session = null;
+
+      for (let attempt = 0; attempt < (shouldRetry ? RECOVERY_SESSION_RETRY_COUNT : 1); attempt += 1) {
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+
+        if (currentSession) {
+          session = currentSession;
+          break;
+        }
+
+        if (attempt < RECOVERY_SESSION_RETRY_COUNT - 1) {
+          await new Promise((resolve) => {
+            window.setTimeout(resolve, RECOVERY_SESSION_RETRY_MS);
+          });
+        }
+      }
 
       if (!mounted) {
         return;
@@ -49,8 +81,6 @@ export default function ResetPasswordPage() {
         setError("This password reset link is invalid or has expired.");
       }
     }
-
-    void loadSession();
 
     const {
       data: { subscription },
@@ -75,6 +105,8 @@ export default function ResetPasswordPage() {
         setSessionReady(false);
       }
     });
+
+    void loadSession();
 
     return () => {
       mounted = false;
@@ -105,7 +137,7 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      const supabase = createClient();
+      const supabase = createRecoveryClient();
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });

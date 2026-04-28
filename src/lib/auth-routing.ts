@@ -142,6 +142,13 @@ export function buildRecoveryRedirectPath(redirectTarget: string | null | undefi
   return appendRedirectParam(RESET_PASSWORD_PATH, redirectTarget);
 }
 
+export function buildRecoveryPageUrl(
+  origin: string,
+  redirectTarget: string | null | undefined
+) {
+  return new URL(buildRecoveryRedirectPath(redirectTarget), origin).toString();
+}
+
 export function buildCallbackUrl(origin: string, redirectTarget: string | null | undefined) {
   const url = new URL("/api/auth/callback", origin);
   const safeTarget = sanitizeRedirectTarget(redirectTarget, origin);

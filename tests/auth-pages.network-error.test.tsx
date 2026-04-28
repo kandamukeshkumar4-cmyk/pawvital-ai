@@ -188,7 +188,7 @@ describe("auth page network error handling", () => {
         "owner@example.com",
         {
           redirectTo:
-            "http://localhost/auth/callback?flow=recovery&next=%2Freset-password%3Fredirect%3D%252Fdashboard",
+            "http://localhost/reset-password?redirect=%2Fdashboard",
         }
       )
     );
