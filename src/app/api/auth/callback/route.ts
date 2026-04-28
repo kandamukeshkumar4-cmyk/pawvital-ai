@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import {
+  buildBrowserCallbackUrl,
   buildLoginPath,
   buildRecoveryRedirectPath,
   DEFAULT_AUTH_REDIRECT,
@@ -78,6 +79,16 @@ export async function GET(request: NextRequest) {
     if (code) {
       const isRecoveryFlow = rawNext?.includes(RESET_PASSWORD_PATH);
       const redirectTarget = isRecoveryFlow ? recoveryTarget : nextTarget;
+
+      if (isRecoveryFlow) {
+        const browserCallbackUrl = new URL(
+          buildBrowserCallbackUrl(origin, redirectTarget)
+        );
+        browserCallbackUrl.searchParams.set("code", code);
+
+        return NextResponse.redirect(browserCallbackUrl);
+      }
+
       const response = NextResponse.redirect(
         new URL(redirectTarget, request.url)
       );
