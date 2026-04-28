@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import {
   ArrowRight,
   Shield,
@@ -54,9 +55,8 @@ export default function Hero() {
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-start gap-4">
-              <a
+              <Link
                 href="/symptom-checker"
-                target="_top"
                 className={buttonClassName({
                   size: "lg",
                   className:
@@ -65,7 +65,7 @@ export default function Hero() {
               >
                 Start Free Symptom Check{" "}
                 <ArrowRight className="w-5 h-5 ml-2" />
-              </a>
+              </Link>
               <a
                 href="#how-it-works"
                 className={buttonClassName({

@@ -47,16 +47,14 @@ export default function Navbar() {
             >
               FAQ
             </a>
-            <a
+            <Link
               href="/login"
-              target="_top"
               className={buttonClassName({ variant: "ghost", size: "sm" })}
             >
               Log In
-            </a>
-            <a
+            </Link>
+            <Link
               href="/symptom-checker"
-              target="_top"
               className={buttonClassName({
                 size: "sm",
                 className:
@@ -64,7 +62,7 @@ export default function Navbar() {
               })}
             >
               Start Free Check
-            </a>
+            </Link>
           </div>
 
           <button
@@ -111,25 +109,23 @@ export default function Navbar() {
           >
             FAQ
           </a>
-          <a
+          <Link
             href="/login"
-            target="_top"
             className={buttonClassName({
               variant: "outline",
               className: "w-full",
             })}
           >
             Log In
-          </a>
-          <a
+          </Link>
+          <Link
             href="/symptom-checker"
-            target="_top"
             className={buttonClassName({
               className: "w-full bg-emerald-600 hover:bg-emerald-700",
             })}
           >
             Start Free Check
-          </a>
+          </Link>
         </div>
       )}
     </nav>
