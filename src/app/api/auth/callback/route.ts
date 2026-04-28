@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import {
-  buildBrowserCallbackUrl,
   buildLoginPath,
   buildRecoveryRedirectPath,
   DEFAULT_AUTH_REDIRECT,
@@ -30,7 +29,7 @@ function buildFailureRedirect(
         error: errorCode,
       }),
       request.url
-  )
+    )
   );
 }
 
@@ -59,13 +58,23 @@ function createRouteHandlerSupabaseClient(
   });
 }
 
+function isRecoveryPath(path: string | null | undefined): boolean {
+  if (!path) return false;
+  const decoded = decodeURIComponent(path);
+  return (
+    decoded.includes("reset-password") ||
+    decoded.includes("reset_password") ||
+    decoded.startsWith(RESET_PASSWORD_PATH)
+  );
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const tokenHash = searchParams.get("token_hash");
   const rawType = searchParams.get("type");
-  const rawFlow = searchParams.get("flow");
   const rawNext = searchParams.get("next");
+
   const nextTarget = resolvePostAuthRedirect(rawNext, {
     allowedOrigin: origin,
     fallback: DEFAULT_AUTH_REDIRECT,
@@ -78,28 +87,11 @@ export async function GET(request: NextRequest) {
 
   try {
     if (code) {
-      const isRecoveryFlow =
-        rawFlow === "recovery" ||
-        rawType === "recovery" ||
-        Boolean(rawNext?.includes(RESET_PASSWORD_PATH));
-      const redirectTarget = isRecoveryFlow
-        ? recoveryTarget.startsWith(RESET_PASSWORD_PATH)
-          ? recoveryTarget
-          : buildRecoveryRedirectPath(nextTarget)
-        : nextTarget;
-
-      if (isRecoveryFlow) {
-        const browserCallbackUrl = new URL(
-          buildBrowserCallbackUrl(origin, redirectTarget)
-        );
-        browserCallbackUrl.searchParams.set("code", code);
-        browserCallbackUrl.searchParams.set("flow", "recovery");
-
-        return NextResponse.redirect(browserCallbackUrl);
-      }
-
       const response = NextResponse.redirect(
-        new URL(redirectTarget, request.url)
+        new URL(
+          isRecoveryPath(rawNext) ? recoveryTarget : nextTarget,
+          request.url
+        )
       );
       const supabase = createRouteHandlerSupabaseClient(request, response);
 
@@ -107,6 +99,7 @@ export async function GET(request: NextRequest) {
       if (error) {
         return buildFailureRedirect(request, nextTarget);
       }
+
       return response;
     }
 
