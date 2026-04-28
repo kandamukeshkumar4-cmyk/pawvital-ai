@@ -8,7 +8,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
-  buildCallbackUrl,
+  buildBrowserCallbackUrl,
   getAuthFeedbackMessage,
   getAuthActionErrorMessage,
   resolvePostAuthRedirect,
@@ -59,7 +59,7 @@ export default function SignupPage() {
         password,
         options: {
           data: { full_name: name },
-          emailRedirectTo: buildCallbackUrl(window.location.origin, redirectTarget),
+          emailRedirectTo: buildBrowserCallbackUrl(window.location.origin, redirectTarget),
         },
       });
 

@@ -153,6 +153,20 @@ export function buildCallbackUrl(origin: string, redirectTarget: string | null |
   return url.toString();
 }
 
+export function buildBrowserCallbackUrl(
+  origin: string,
+  redirectTarget: string | null | undefined
+) {
+  const url = new URL("/auth/callback", origin);
+  const safeTarget = sanitizeRedirectTarget(redirectTarget, origin);
+
+  if (safeTarget) {
+    url.searchParams.set("next", safeTarget);
+  }
+
+  return url.toString();
+}
+
 export function buildLoginPath(
   redirectTarget: string | null | undefined,
   options?: {

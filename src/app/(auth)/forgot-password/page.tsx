@@ -8,7 +8,7 @@ import Button, { buttonClassName } from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
-  buildCallbackUrl,
+  buildBrowserCallbackUrl,
   buildRecoveryRedirectPath,
   getAuthFeedbackMessage,
   getAuthActionErrorMessage,
@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
       }
       const supabase = createClient();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: buildCallbackUrl(
+        redirectTo: buildBrowserCallbackUrl(
           window.location.origin,
           buildRecoveryRedirectPath(redirectTarget)
         ),

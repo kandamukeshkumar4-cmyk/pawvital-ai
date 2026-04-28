@@ -167,4 +167,30 @@ describe("auth page network error handling", () => {
       errorSpy.mockRestore();
     }
   });
+
+  it("sends password reset emails through the browser callback for PKCE recovery", async () => {
+    const resetPasswordForEmail = jest.fn().mockResolvedValue({ error: null });
+    mockCreateClient.mockReturnValue({
+      auth: {
+        resetPasswordForEmail,
+      },
+    });
+
+    render(React.createElement(ForgotPasswordPage));
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "owner@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send Reset Link" }));
+
+    await waitFor(() =>
+      expect(resetPasswordForEmail).toHaveBeenCalledWith(
+        "owner@example.com",
+        {
+          redirectTo:
+            "http://localhost/auth/callback?next=%2Freset-password%3Fredirect%3D%252Fdashboard",
+        }
+      )
+    );
+  });
 });
