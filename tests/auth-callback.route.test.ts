@@ -2,22 +2,80 @@ import { NextRequest } from "next/server";
 
 const mockExchangeCodeForSession = jest.fn();
 const mockVerifyOtp = jest.fn();
-const mockCreateServerSupabaseClient = jest.fn(() => ({
-  auth: {
-    exchangeCodeForSession: mockExchangeCodeForSession,
-    verifyOtp: mockVerifyOtp,
-  },
-}));
+const mockCreateServerClient = jest.fn(
+  (
+    _url: string,
+    _key: string,
+    options: {
+      cookies: {
+        setAll: (
+          cookies: Array<{
+            name: string;
+            value: string;
+            options?: Record<string, unknown>;
+          }>
+        ) => void;
+      };
+    }
+  ) => ({
+    auth: {
+      exchangeCodeForSession: async (code: string) => {
+        const result = await mockExchangeCodeForSession(code);
+        if (!result.error) {
+          options.cookies.setAll([
+            {
+              name: "sb-test-auth-token",
+              value: "session-cookie",
+              options: { httpOnly: true, path: "/" },
+            },
+          ]);
+        }
+        return result;
+      },
+      verifyOtp: async (payload: { token_hash: string; type: string }) => {
+        const result = await mockVerifyOtp(payload);
+        if (!result.error) {
+          options.cookies.setAll([
+            {
+              name: "sb-test-auth-token",
+              value: "session-cookie",
+              options: { httpOnly: true, path: "/" },
+            },
+          ]);
+        }
+        return result;
+      },
+    },
+  })
+);
 
-jest.mock("@/lib/supabase-server", () => ({
-  createServerSupabaseClient: (...args: unknown[]) =>
-    mockCreateServerSupabaseClient(...args),
+jest.mock("@supabase/ssr", () => ({
+  createServerClient: (...args: unknown[]) => mockCreateServerClient(...args),
 }));
 
 describe("VET-1215 auth callback route", () => {
+  const originalSupabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const originalSupabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://supabase.example";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
+  });
+
+  afterAll(() => {
+    if (originalSupabaseUrl === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+    } else {
+      process.env.NEXT_PUBLIC_SUPABASE_URL = originalSupabaseUrl;
+    }
+
+    if (originalSupabaseAnonKey === undefined) {
+      delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    } else {
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = originalSupabaseAnonKey;
+    }
   });
 
   it("exchanges OAuth codes and redirects to a safe next target", async () => {
@@ -31,7 +89,10 @@ describe("VET-1215 auth callback route", () => {
     );
 
     expect(mockExchangeCodeForSession).toHaveBeenCalledWith("abc123");
-    expect(response.headers.get("location")).toBe("https://app.pawvital.ai/pets/pet-1");
+    expect(response.headers.get("location")).toBe(
+      "https://app.pawvital.ai/pets/pet-1"
+    );
+    expect(response.headers.get("set-cookie")).toContain("sb-test-auth-token");
   });
 
   it("verifies recovery tokens and lands on reset-password with the preserved redirect", async () => {
@@ -51,6 +112,7 @@ describe("VET-1215 auth callback route", () => {
     expect(response.headers.get("location")).toBe(
       "https://app.pawvital.ai/reset-password?redirect=%2Fhistory"
     );
+    expect(response.headers.get("set-cookie")).toContain("sb-test-auth-token");
   });
 
   it("rejects unsafe callback redirects", async () => {

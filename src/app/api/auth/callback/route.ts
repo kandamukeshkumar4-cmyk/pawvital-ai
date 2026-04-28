@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import {
   buildLoginPath,
@@ -7,7 +8,6 @@ import {
   RESET_PASSWORD_PATH,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 const OTP_TYPES = new Set<EmailOtpType>([
   "signup",
@@ -29,8 +29,33 @@ function buildFailureRedirect(
         error: errorCode,
       }),
       request.url
-    )
+  )
   );
+}
+
+function createRouteHandlerSupabaseClient(
+  request: NextRequest,
+  response: NextResponse
+) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("DEMO_MODE");
+  }
+
+  return createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
+        });
+      },
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -50,36 +75,46 @@ export async function GET(request: NextRequest) {
   });
 
   try {
-    const supabase = await createServerSupabaseClient();
-
     if (code) {
+      const isRecoveryFlow = rawNext?.includes(RESET_PASSWORD_PATH);
+      const redirectTarget = isRecoveryFlow ? recoveryTarget : nextTarget;
+      const response = NextResponse.redirect(
+        new URL(redirectTarget, request.url)
+      );
+      const supabase = createRouteHandlerSupabaseClient(request, response);
+
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         return buildFailureRedirect(request, nextTarget);
       }
-      return NextResponse.redirect(new URL(nextTarget, request.url));
+      return response;
     }
 
     if (tokenHash && rawType && OTP_TYPES.has(rawType as EmailOtpType)) {
       const type = rawType as EmailOtpType;
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type,
-      });
-
-      if (error) {
-        const errorCode = type === "recovery" ? "invalid_reset_link" : "auth_callback_failed";
-        return buildFailureRedirect(request, nextTarget, errorCode);
-      }
-
       const redirectTarget =
         type === "recovery"
           ? recoveryTarget.startsWith(RESET_PASSWORD_PATH)
             ? recoveryTarget
             : buildRecoveryRedirectPath(recoveryTarget)
           : nextTarget;
+      const response = NextResponse.redirect(
+        new URL(redirectTarget, request.url)
+      );
+      const supabase = createRouteHandlerSupabaseClient(request, response);
 
-      return NextResponse.redirect(new URL(redirectTarget, request.url));
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type,
+      });
+
+      if (error) {
+        const errorCode =
+          type === "recovery" ? "invalid_reset_link" : "auth_callback_failed";
+        return buildFailureRedirect(request, nextTarget, errorCode);
+      }
+
+      return response;
     }
   } catch (error) {
     if (!(error instanceof Error && error.message === "DEMO_MODE")) {
