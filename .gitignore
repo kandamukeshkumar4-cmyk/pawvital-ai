@@ -59,6 +59,7 @@ next-env.d.ts
 !/scripts/hooks/*.mjs
 !/scripts/build.js
 !/scripts/fix-readlink.js
+!/scripts/eval-question-quality.ts
 !/scripts/load-phase5-shadow.mjs
 !/scripts/reindex-live-corpus.mjs
 !/scripts/retrieval-quality-harness.mjs
