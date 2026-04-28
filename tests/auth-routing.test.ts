@@ -1,5 +1,6 @@
 import {
   appendRedirectParam,
+  buildBrowserCallbackUrl,
   buildCallbackUrl,
   buildRecoveryRedirectPath,
   buildRedirectTarget,
@@ -59,6 +60,9 @@ describe("VET-1215 auth routing helpers", () => {
     ).toBe("/login?redirect=%2Fnotifications%3Ftab%3Dunread&reason=session_expired");
     expect(buildCallbackUrl("https://pawvital.ai", "/pets/1")).toBe(
       "https://pawvital.ai/api/auth/callback?next=%2Fpets%2F1"
+    );
+    expect(buildBrowserCallbackUrl("https://pawvital.ai", "/pets/1")).toBe(
+      "https://pawvital.ai/auth/callback?next=%2Fpets%2F1"
     );
   });
 
