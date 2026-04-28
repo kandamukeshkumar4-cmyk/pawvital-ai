@@ -304,8 +304,8 @@ describe("Scoring: clinical signals", () => {
 
   it("scores matching clinical signals into the correct bucket", () => {
     const signal: ClinicalSignal = {
-      id: "respiratory_distress_signal",
-      type: "respiratory_distress_signal",
+      id: "possible_breathing_difficulty",
+      type: "possible_breathing_difficulty",
       severity: "high",
       evidenceText: "AI detected respiratory distress from owner description",
       turnDetected: 1,
@@ -319,6 +319,24 @@ describe("Scoring: clinical signals", () => {
     expect(breathing).toBeDefined();
     expect(breathing!.score).toBeGreaterThanOrEqual(20);
     expect(breathing!.evidence.some((e) => e.includes("Clinical signal"))).toBe(true);
+  });
+
+  it("uses detector-aligned signal ids for scoring", () => {
+    const signal: ClinicalSignal = {
+      id: "possible_bloat_gdv",
+      type: "possible_bloat_gdv",
+      severity: "critical",
+      evidenceText: "AI detected distended abdomen pattern",
+      turnDetected: 1,
+    };
+
+    state = addClinicalSignal(state, signal);
+
+    const scored = scoreConcernBuckets(state);
+    const bloat = scored.find((bucket) => bucket.id === "bloat_gdv_pattern");
+
+    expect(bloat).toBeDefined();
+    expect(bloat!.score).toBeGreaterThanOrEqual(20);
   });
 });
 
@@ -379,6 +397,23 @@ describe("Negative red flag does not override positive", () => {
 
     expect(breathing).toBeDefined();
     expect(breathing!.score).toBeGreaterThanOrEqual(35);
+  });
+});
+
+describe("Explicit answers only score when they support the concern", () => {
+  it("does not score reassuring breathing answers as emergency evidence", () => {
+    let state = createInitialClinicalCaseState();
+    state = recordAnsweredQuestion(state, "q1", "gum_color", "pink_normal");
+    state = recordAnsweredQuestion(state, "q2", "difficulty_breathing", "no");
+
+    const scored = scoreConcernBuckets(state);
+    const breathing = scored.find((bucket) => bucket.id === "emergency_airway_breathing");
+
+    expect(breathing).toBeDefined();
+    expect(breathing!.score).toBe(5);
+    expect(breathing!.evidence).toEqual([
+      "Must-not-miss bucket with unresolved red flags — kept at low score",
+    ]);
   });
 });
 
@@ -560,5 +595,23 @@ describe("Unknown emergency slots keep must-not-miss bucket present", () => {
 
     expect(breathing).toBeDefined();
     expect(breathing!.score).toBeGreaterThanOrEqual(5);
+  });
+
+  it("keeps the bucket visible when some red flags are answered negative but others remain unresolved", () => {
+    let state = createInitialClinicalCaseState();
+    state = updateRedFlagStatus(state, "blue_gums", {
+      status: "negative",
+      source: "explicit_answer",
+      turn: 1,
+    });
+
+    const scored = scoreConcernBuckets(state);
+    const breathing = scored.find((bucket) => bucket.id === "emergency_airway_breathing");
+
+    expect(breathing).toBeDefined();
+    expect(breathing!.score).toBe(5);
+    expect(breathing!.evidence).toContain(
+      "Must-not-miss bucket with unresolved red flags — kept at low score"
+    );
   });
 });

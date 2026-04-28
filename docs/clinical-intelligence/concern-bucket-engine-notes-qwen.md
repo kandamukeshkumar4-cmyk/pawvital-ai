@@ -48,9 +48,9 @@
 |---------------|-------|-------|
 | Positive matching red flag | +35 | Strong score increase |
 | Matching clinical signal | +20 | Medium score increase |
-| Matching explicit answer | +15 | Medium score increase |
-| Unknown emergency slot (must-not-miss) | +5 | Keeps bucket present at low score |
-| Emergency urgency + positive flag | min(score, 80) | Floor for emergency buckets |
+| Matching explicit answer | +15 | Only for answers that actually support the concern |
+| Unknown emergency slot (must-not-miss) | +5 | Keeps bucket present when any emergency slot is still unresolved |
+| Emergency urgency + positive flag | max(score, 80) | Floor for emergency buckets |
 
 Scores are clamped to 0–100.
 
@@ -67,7 +67,7 @@ Scores are clamped to 0–100.
 - `scoreConcernBuckets(caseState)` — scores all buckets against case state
 - `scoreConcernBucket(caseState, definition)` — scores a single bucket
 - `getTopConcernBuckets(caseState, limit?)` — returns top N scored buckets sorted descending
-- `hasMustNotMissConcern(caseState)` — true if any must-not-miss bucket has score > 0
+- `hasMustNotMissConcern(caseState)` — true if any must-not-miss bucket has score above the low-visibility floor
 - `mergeConcernBucketsIntoCaseState(caseState)` — writes scored buckets into `caseState.concernBuckets`
 
 ---
@@ -80,6 +80,25 @@ Scores are clamped to 0–100.
 4. **User-facing text must not use bucket labels** — bucket IDs are internal identifiers
 5. **No treatment advice** — buckets only suggest question-card IDs for further information gathering
 6. **Negative answer cannot override positive red flag** — scoring only adds for positive matches; negative flags are ignored
+7. **Reassuring answers do not inflate scores** — explicit answers must support the concern before they add evidence
+
+---
+
+## Signal Alignment
+
+The bucket `signalIds` are aligned to the VET-1403K detector output currently on `master`, including:
+- `possible_breathing_difficulty`
+- `possible_blue_gums`
+- `possible_pale_gums`
+- `possible_nonproductive_retching`
+- `possible_bloat_gdv`
+- `possible_abdominal_pain`
+- `toxin_exposure`
+- `possible_urinary_obstruction`
+- `possible_neuro_emergency`
+- `possible_trauma`
+- `possible_bloody_vomit`
+- `possible_bloody_diarrhea`
 
 ---
 
