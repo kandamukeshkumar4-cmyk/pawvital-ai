@@ -26,6 +26,8 @@ export const AUTH_CALLBACK_ERROR_MESSAGES: Record<string, string> = {
 };
 
 export const AUTH_REASON_MESSAGES: Record<string, string> = {
+  access_required:
+    "Sign in with an invited tester or admin account to continue.",
   session_expired: "Your session expired. Please sign in again.",
   password_updated: "Your password was updated. You can continue below.",
   check_email: "Check your email for the link to continue.",
