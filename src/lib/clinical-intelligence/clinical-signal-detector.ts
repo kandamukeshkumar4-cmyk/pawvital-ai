@@ -32,19 +32,15 @@ const NEGATION_WORDS = new Set([
   "wasn't",
   "wasnt",
   "without",
-  "normal",
-  "fine",
-  "okay",
-  "ok",
-  "good",
-  "better",
   "recovered",
   "stopped",
   "ceased",
   "resolved",
   "improved",
-  "back to normal",
+  "anymore",
 ]);
+
+const NEGATION_PHRASES = ["back to normal", "no more", "not anymore"];
 
 const SIGNAL_PATTERNS: SignalPattern[] = [
   {
@@ -234,7 +230,13 @@ const SIGNAL_PATTERNS: SignalPattern[] = [
 function hasNegationContext(message: string, matchIndex: number): boolean {
   const windowStart = Math.max(0, matchIndex - 60);
   const context = message.slice(windowStart, matchIndex);
-  const words = context.toLowerCase().split(/\s+/);
+  const loweredContext = context.toLowerCase();
+
+  if (NEGATION_PHRASES.some((phrase) => loweredContext.includes(phrase))) {
+    return true;
+  }
+
+  const words = loweredContext.split(/\s+/);
 
   // Check last 8 words before match for negation
   const recentWords = words.slice(-8);

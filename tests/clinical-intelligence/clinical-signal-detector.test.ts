@@ -414,6 +414,12 @@ describe("Clinical Signal Detector", () => {
       expect(breathing).toBeUndefined();
     });
 
+    it("does not suppress a real emergency just because the pet was previously fine", () => {
+      const signals = detectSignals("he was fine until he got hit by a car");
+      expect(signals).toHaveLength(1);
+      expect(signals[0].id).toBe("possible_trauma");
+    });
+
     it("handles messages with no clinical content", () => {
       const signals = detectSignals("can you help me?");
       expect(signals).toHaveLength(0);
