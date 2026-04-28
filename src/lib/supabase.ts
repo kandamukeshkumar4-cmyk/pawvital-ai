@@ -12,3 +12,16 @@ export function createClient() {
   }
   return createBrowserClient(supabaseUrl, supabaseKey);
 }
+
+export function createRecoveryClient() {
+  if (!isSupabaseConfigured) {
+    throw new Error("DEMO_MODE");
+  }
+
+  return createBrowserClient(supabaseUrl, supabaseKey, {
+    auth: {
+      detectSessionInUrl: true,
+      flowType: "implicit",
+    },
+  });
+}

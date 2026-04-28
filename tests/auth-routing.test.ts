@@ -3,6 +3,7 @@ import {
   buildBrowserCallbackUrl,
   buildCallbackUrl,
   buildRecoveryCallbackUrl,
+  buildRecoveryPageUrl,
   buildRecoveryRedirectPath,
   buildRedirectTarget,
   buildLoginPath,
@@ -67,6 +68,9 @@ describe("VET-1215 auth routing helpers", () => {
     );
     expect(buildRecoveryCallbackUrl("https://pawvital.ai", "/pets/1")).toBe(
       "https://pawvital.ai/auth/callback?flow=recovery&next=%2Freset-password%3Fredirect%3D%252Fpets%252F1"
+    );
+    expect(buildRecoveryPageUrl("https://pawvital.ai", "/pets/1")).toBe(
+      "https://pawvital.ai/reset-password?redirect=%2Fpets%2F1"
     );
   });
 
