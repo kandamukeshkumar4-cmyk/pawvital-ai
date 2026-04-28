@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const fs = require("node:fs");
 const path = require("node:path");
 const { fileURLToPath, pathToFileURL } = require("node:url");
@@ -11,236 +12,629 @@ const FIXTURE_PATH = path.join(
   "question-quality-cases.json"
 );
 const CATEGORY_KEYS = [
-  "specificity",
-  "urgencyValue",
-  "redFlagCoverage",
+  "questionSpecificity",
+  "urgencyChangingValue",
+  "emergencyRedFlagCoverage",
   "concernBucketDiscrimination",
   "ownerAnswerability",
-  "reportValue",
-  "repetitionSafety",
+  "repeatedQuestionBehavior",
+  "genericWording",
+  "reportUsefulnessValue",
 ];
 const CATEGORY_LABELS = {
-  specificity: "specificity",
-  urgencyValue: "urgency value",
-  redFlagCoverage: "red-flag coverage",
+  questionSpecificity: "question specificity",
+  urgencyChangingValue: "urgency-changing value",
+  emergencyRedFlagCoverage: "emergency red-flag coverage",
   concernBucketDiscrimination: "concern-bucket discrimination",
-  ownerAnswerability: "owner answerability",
-  reportValue: "report value",
-  repetitionSafety: "repetition safety",
+  ownerAnswerability: "owner-answerability",
+  repeatedQuestionBehavior: "repeated-question behavior",
+  genericWording: "generic wording",
+  reportUsefulnessValue: "report usefulness value",
 };
+const REQUIRED_CATEGORY_MINIMUMS = {
+  emergency: 45,
+  urgent_same_day: 40,
+  routine_unclear: 40,
+  confusing_multi_symptom: 25,
+};
+const REQUIRED_COMPLAINT_FAMILIES = new Set([
+  "collapse_pale_gums",
+  "breathing_difficulty",
+  "bloat_nonproductive_retching_swollen_abdomen",
+  "seizure_or_repeated_seizures",
+  "toxin_ingestion",
+  "trauma",
+  "urinary_blockage",
+  "heat_stroke",
+  "vomiting_and_lethargy",
+  "bloody_diarrhea",
+  "eye_injury",
+  "non_weight_bearing_limp",
+  "wound_or_bite",
+  "painful_abdomen_without_collapse",
+  "mild_itching",
+  "mild_limp",
+  "eating_less",
+  "ear_scratching",
+  "occasional_vomiting",
+  "mild_diarrhea",
+  "itching_and_vomiting",
+  "limping_and_lethargy",
+  "drinking_more_and_weight_loss",
+  "coughing_and_tiredness",
+  "old_dog_vague_weakness",
+]);
 const GENERIC_QUESTION_PATTERNS = [
   /\bcan you tell me more\b/i,
   /\btell me more\b/i,
-  /\bwhat else\b/i,
-  /\bwhat has changed\b/i,
+  /\bwhat else have you noticed\b/i,
   /\bwhat have you noticed\b/i,
   /\bcan you describe\b/i,
-  /\btell me what you've noticed\b/i,
-];
-const DISCRIMINATIVE_QUESTION_PATTERNS = [
-  /\bhow long\b/i,
-  /\bhow often\b/i,
-  /\bwhen\b/i,
-  /\bwhat color\b/i,
-  /\bwhich\b/i,
-  /\bwhere\b/i,
-  /\bhow much\b/i,
-  /\bhow many\b/i,
-  /\brate\b/i,
-  /\bfrequency\b/i,
-  /\bduration\b/i,
-  /\bonset\b/i,
-  /\bamount\b/i,
-  /\bsize\b/i,
-  /\bleg\b/i,
-  /\bgum\b/i,
-  /\bblood\b/i,
-  /\bdrink\b/i,
-  /\beat\b/i,
-  /\bretch\b/i,
-  /\bweight\bW*bearing\b/i,
+  /\bwhat's your best guess\b/i,
 ];
 const OWNER_JARGON_PATTERNS = [
   /\bcyanosis\b/i,
   /\bdyspnea\b/i,
   /\bhematochezia\b/i,
   /\bpolydipsia\b/i,
-  /\bregurgitation\b/i,
   /\bneurologic\b/i,
   /\bmucous membranes?\b/i,
   /\babdominal distension\b/i,
 ];
+const CRITICAL_QUESTION_CATEGORIES = new Set([
+  "abdominal_emergency_screen",
+  "bleeding_screen",
+  "breathing_distress_screen",
+  "collapse_screen",
+  "eye_emergency_screen",
+  "gdv_screen",
+  "gum_color_screen",
+  "heat_exposure_screen",
+  "mobility_screen",
+  "seizure_duration",
+  "toxin_screen",
+  "urinary_obstruction_screen",
+  "vision_screen",
+  "vomiting_screen",
+]);
+const DISCRIMINATIVE_CATEGORIES = new Set([
+  "abdominal_emergency_screen",
+  "appetite_duration",
+  "bite_trauma_history",
+  "bucket_split",
+  "cough_character",
+  "endocrine_discrimination",
+  "eye_emergency_screen",
+  "gi_bleeding_screen",
+  "heat_exposure_screen",
+  "hydration_screen",
+  "limp_location",
+  "mobility_screen",
+  "pain_severity",
+  "respiratory_vs_systemic_split",
+  "seizure_duration",
+  "stool_blood_screen",
+  "symptom_timing",
+  "timeline",
+  "toxin_screen",
+  "urinary_obstruction_screen",
+  "vision_screen",
+  "vomiting_severity",
+  "weight_change",
+  "wound_severity",
+]);
+const LOCATION_FIRST_CATEGORIES = new Set([
+  "itch_location",
+  "limp_location",
+  "wound_location",
+]);
+const DETAIL_FIRST_CATEGORIES = new Set([
+  "ear_discharge",
+  "ocular_discharge_color",
+  "urination_change",
+  "weight_change",
+]);
+const TIMELINE_FIRST_CATEGORIES = new Set([
+  "appetite_duration",
+  "timeline",
+  "vomiting_severity",
+]);
+const OPEN_FIRST_CATEGORIES = new Set(["open_clarification"]);
+const REPORT_STRONG_CATEGORIES = new Set([
+  "abdominal_emergency_screen",
+  "bleeding_screen",
+  "breathing_distress_screen",
+  "collapse_screen",
+  "cough_character",
+  "ear_discharge",
+  "endocrine_discrimination",
+  "eye_emergency_screen",
+  "gdv_screen",
+  "gi_bleeding_screen",
+  "gum_color_screen",
+  "heat_exposure_screen",
+  "hydration_screen",
+  "limp_location",
+  "mobility_screen",
+  "pain_severity",
+  "seizure_duration",
+  "stool_blood_screen",
+  "toxin_screen",
+  "urinary_obstruction_screen",
+  "vision_screen",
+  "vomiting_severity",
+  "wound_severity",
+]);
 const MODULE_DESCRIPTIONS = {
-  emergency_screening:
-    "Prioritize immediate red-flag screening for high-risk symptom clusters.",
-  red_flag_coverage:
-    "Improve direct coverage of symptom-specific emergency triggers.",
-  question_specificity:
-    "Reduce generic prompts and anchor follow-ups to observable complaint details.",
-  concern_bucket_discrimination:
-    "Bias question choice toward prompts that separate complaint families cleanly.",
-  owner_answerability:
-    "Prefer owner-observable questions and avoid phrasing that requires interpretation.",
-  report_structure:
-    "Favor structured answers that produce cleaner downstream report facts.",
-  repeat_guard:
-    "Strengthen repeat-avoidance when a follow-up was just asked or answered.",
-  question_selection_alignment:
-    "Align deterministic selection with explicitly expected or reviewed follow-up targets.",
+  collapse_shock_screen:
+    "Add a collapse and shock opener that checks responsiveness, gum color, and breathing before other detail questions.",
+  respiratory_distress_screen:
+    "Add a dedicated breathing-distress opener that checks onset, effort, and gum color first.",
+  bloat_gdv_screen:
+    "Add a bloat/GDV opener that screens retching, abdominal distension, and restlessness immediately.",
+  seizure_episode_screen:
+    "Add a seizure opener that checks duration, recurrence, breathing, and post-event responsiveness first.",
+  toxin_exposure_screen:
+    "Add a toxin-exposure opener that checks the substance, timing, and active symptoms before generic detail gathering.",
+  major_trauma_screen:
+    "Add a trauma opener that screens bleeding, breathing compromise, mobility loss, and fracture risk immediately.",
+  urinary_obstruction_screen:
+    "Add a urinary-obstruction opener that asks about straining with little or no urine before routine urinary detail.",
+  heat_illness_screen:
+    "Add a heat-illness opener that checks exposure, collapse, gum color, and vomiting first.",
+  vomiting_lethargy_module:
+    "Add a combined vomiting plus lethargy opener that screens hydration, gum color, and frequency before timeline only.",
+  gi_bleeding_module:
+    "Add a bloody-diarrhea opener that screens bleeding severity and perfusion before lower-value detail.",
+  eye_injury_module:
+    "Add an eye-injury opener that checks squinting, vision change, trauma, and swelling before discharge detail.",
+  limp_severity_module:
+    "Add a non-weight-bearing limp opener that asks about weight bearing before location-only detail.",
+  wound_bite_module:
+    "Add a wound or bite opener that screens wound depth, bleeding, and bite trauma severity before location-only detail.",
+  abdominal_pain_module:
+    "Add an abdominal-pain opener that checks distension, vomiting, and collapse risk before lower-value detail.",
+  itching_module:
+    "Add a mild-itching opener that screens allergy red flags before routine itch-location questions.",
+  mild_limp_module:
+    "Add a mild-limp opener that checks weight bearing and trauma before routine location and timing questions.",
+  reduced_appetite_module:
+    "Add a reduced-appetite opener that screens vomiting and hydration before duration-only questions.",
+  ear_scratching_module:
+    "Add an ear-scratching opener that checks head tilt and balance changes before routine discharge detail.",
+  vomiting_module:
+    "Add an occasional-vomiting opener that screens frequency and hydration before routine follow-up.",
+  mild_diarrhea_module:
+    "Add a mild-diarrhea opener that checks blood and hydration before stool-detail questions.",
+  itching_vomiting_split_module:
+    "Add a bucket-splitting opener for itching plus vomiting so the checker can separate allergy risk from GI severity first.",
+  limping_lethargy_split_module:
+    "Add a bucket-splitting opener for limping plus lethargy that screens perfusion and non-weight-bearing risk first.",
+  polydipsia_weight_loss_module:
+    "Add a drinking-more plus weight-loss opener that separates endocrine, urinary, and intact-female emergency paths earlier.",
+  cough_lethargy_module:
+    "Add a coughing plus tiredness opener that splits respiratory distress from lower-acuity cough characterization.",
+  senior_vague_weakness_module:
+    "Add an older-dog vague-weakness opener that screens responsiveness, breathing, gum color, and last-normal time first.",
 };
-const RED_FLAG_SCREEN_QUESTION_IDS = {
-  active_bleeding_trauma: ["active_bleeding_trauma"],
-  balance_loss: ["balance_issues", "head_tilt"],
-  blue_gums: ["gum_color"],
-  bloody_diarrhea_puppy: ["stool_blood", "blood_amount"],
-  breathing_difficulty: ["breathing_rate", "position_preference"],
-  breathing_onset_sudden: ["breathing_onset"],
-  collapse: ["consciousness_level"],
-  cough_blood: ["cough_type", "cough_timing"],
-  eye_bulging: ["eye_redness", "vision_changes"],
-  eye_swollen_shut: ["squinting", "eye_redness"],
-  face_swelling: ["hives_with_breathing", "skin_changes"],
-  hives_widespread: ["hives_with_breathing", "skin_changes"],
-  inability_to_stand: ["trauma_mobility", "hind_limb_function", "weight_bearing"],
-  large_blood_volume: ["blood_amount", "stool_blood"],
-  no_water_24h: ["water_intake"],
-  non_weight_bearing: ["weight_bearing", "trauma_mobility", "hind_limb_function"],
-  not_drinking: ["water_intake"],
-  pale_gums: ["gum_color"],
-  pyometra_signs: ["spay_status"],
-  rapid_onset_distension: ["abdomen_onset", "restlessness"],
-  rat_poison_confirmed: ["rat_poison_access", "toxin_exposure"],
-  sudden_blindness: ["vision_changes"],
-  sudden_paralysis: ["weight_bearing", "hind_limb_function", "trauma_mobility"],
-  toxin_confirmed: [
-    "toxin_exposure",
-    "reaction_symptoms",
-    "medication_name",
-    "current_medications",
-  ],
-  unproductive_retching: ["unproductive_retching"],
-  unresponsive: ["consciousness_level"],
-  visible_fracture: ["visible_fracture", "trauma_mobility"],
-  wound_bone_visible: ["wound_size", "wound_color"],
-  wound_deep_bleeding: ["wound_discharge", "wound_color", "wound_size"],
-  wound_spreading_rapidly: ["wound_duration", "wound_size", "wound_color"],
-  wound_tissue_exposed: ["wound_size", "wound_color"],
-};
-const RED_FLAG_KEYWORD_ALIASES = {
-  active_bleeding_trauma: ["bleeding", "bleed", "blood"],
-  balance_loss: ["balance", "falling", "wobbly"],
-  blue_gums: ["gum", "gums"],
-  bloody_diarrhea_puppy: ["blood", "bloody"],
-  breathing_difficulty: ["breathing", "breathe", "air"],
-  breathing_onset_sudden: ["started", "sudden", "suddenly", "onset"],
-  collapse: ["responsive", "conscious", "collapse"],
-  cough_blood: ["blood", "bloody"],
-  eye_bulging: ["eye", "bulging", "swollen"],
-  eye_swollen_shut: ["eye", "shut", "swollen"],
-  face_swelling: ["face", "swelling", "swollen"],
-  hives_widespread: ["hives", "widespread", "skin"],
-  inability_to_stand: ["stand", "standing", "walk"],
-  large_blood_volume: ["blood", "amount", "how much"],
-  no_water_24h: ["drink", "water", "drinking"],
-  non_weight_bearing: ["weight", "bearing", "walk", "stand"],
-  not_drinking: ["drink", "water", "drinking"],
-  pale_gums: ["gum", "gums"],
-  pyometra_signs: ["spayed", "spay"],
-  rapid_onset_distension: ["started", "sudden", "swollen", "abdomen", "belly"],
-  rat_poison_confirmed: ["rat poison", "bait", "toxin", "rodenticide"],
-  sudden_blindness: ["vision", "see", "blind"],
-  sudden_paralysis: ["stand", "walk", "legs", "paralysis"],
-  toxin_confirmed: ["toxin", "medication", "poison", "exposure"],
-  unproductive_retching: ["retch", "trying to vomit"],
-  unresponsive: ["responsive", "conscious"],
-  visible_fracture: ["fracture", "broken", "bone"],
-  wound_bone_visible: ["wound", "bone", "deep"],
-  wound_deep_bleeding: ["wound", "bleeding", "blood"],
-  wound_spreading_rapidly: ["spreading", "rapidly", "wound"],
-  wound_tissue_exposed: ["wound", "tissue", "exposed"],
+const QUESTION_SIGNAL_MAP = {
+  abdomen_onset: {
+    questionCategories: ["abdominal_emergency_screen", "gdv_screen", "timeline"],
+    mustScreenTags: ["abdominal_distension"],
+  },
+  active_bleeding_trauma: {
+    questionCategories: ["bleeding_screen"],
+    mustScreenTags: ["active_bleeding"],
+  },
+  appetite_duration: {
+    questionCategories: ["appetite_duration", "timeline"],
+    mustScreenTags: [],
+    missedScreenPattern: "appetite-duration-before-dehydration-screen",
+  },
+  appetite_status: {
+    questionCategories: ["appetite_severity"],
+    mustScreenTags: [],
+  },
+  balance_issues: {
+    questionCategories: ["head_tilt_balance"],
+    mustScreenTags: ["head_tilt_balance", "collapse_or_weakness"],
+  },
+  blood_amount: {
+    questionCategories: ["gi_bleeding_screen"],
+    mustScreenTags: ["bloody_stool_or_vomit"],
+  },
+  blood_color: {
+    questionCategories: ["gi_bleeding_screen"],
+    mustScreenTags: ["bloody_stool_or_vomit"],
+  },
+  blood_in_either: {
+    questionCategories: ["gi_bleeding_screen"],
+    mustScreenTags: ["bloody_stool_or_vomit"],
+  },
+  blood_in_urine: {
+    questionCategories: ["urination_change"],
+    mustScreenTags: [],
+  },
+  breathing_onset: {
+    questionCategories: ["breathing_distress_screen", "timeline"],
+    mustScreenTags: ["breathing_difficulty"],
+  },
+  breathing_rate: {
+    questionCategories: ["breathing_distress_screen"],
+    mustScreenTags: ["breathing_difficulty"],
+  },
+  breathing_status: {
+    questionCategories: ["breathing_distress_screen"],
+    mustScreenTags: ["breathing_difficulty"],
+  },
+  chief_complaint_guess: {
+    questionCategories: ["open_clarification"],
+    mustScreenTags: [],
+    missedScreenPattern: "open-guess-before-safety-screen",
+  },
+  combined_diarrhea_duration: {
+    questionCategories: ["timeline", "vomiting_severity"],
+    mustScreenTags: [],
+    missedScreenPattern: "timeline-before-safety-screen",
+  },
+  combined_vomiting_duration: {
+    questionCategories: ["timeline", "vomiting_severity"],
+    mustScreenTags: [],
+    missedScreenPattern: "timeline-before-safety-screen",
+  },
+  consciousness_level: {
+    questionCategories: ["collapse_screen"],
+    mustScreenTags: ["collapse_or_weakness"],
+  },
+  cough_duration: {
+    questionCategories: ["respiratory_vs_systemic_split", "timeline"],
+    mustScreenTags: [],
+  },
+  cough_type: {
+    questionCategories: ["cough_character", "respiratory_vs_systemic_split"],
+    mustScreenTags: [],
+  },
+  coughing_breathing_onset: {
+    questionCategories: ["breathing_distress_screen", "respiratory_vs_systemic_split"],
+    mustScreenTags: ["breathing_difficulty"],
+  },
+  discharge_color: {
+    questionCategories: ["ocular_discharge_color"],
+    mustScreenTags: [],
+    missedScreenPattern: "discharge-color-before-eye-emergency-screen",
+  },
+  ear_discharge: {
+    questionCategories: ["ear_discharge"],
+    mustScreenTags: [],
+    missedScreenPattern: "ear-detail-before-neuro-screen",
+  },
+  energy_level: {
+    questionCategories: ["vague_weakness_screen", "energy_change"],
+    mustScreenTags: [],
+  },
+  exercise_intolerance: {
+    questionCategories: ["respiratory_vs_systemic_split"],
+    mustScreenTags: [],
+  },
+  eye_redness: {
+    questionCategories: ["eye_emergency_screen"],
+    mustScreenTags: ["eye_swelling"],
+  },
+  gum_color: {
+    questionCategories: ["gum_color_screen"],
+    mustScreenTags: ["pale_or_blue_gums"],
+  },
+  heat_exposure_duration: {
+    questionCategories: ["heat_exposure_screen", "timeline"],
+    mustScreenTags: ["heat_exposure"],
+  },
+  head_tilt: {
+    questionCategories: ["head_tilt_balance"],
+    mustScreenTags: ["head_tilt_balance"],
+  },
+  last_normal: {
+    questionCategories: ["last_normal", "vague_weakness_screen", "timeline"],
+    mustScreenTags: [],
+  },
+  lethargy_duration: {
+    questionCategories: ["energy_change", "timeline"],
+    mustScreenTags: [],
+    missedScreenPattern: "duration-before-shock-screen",
+  },
+  limping_onset: {
+    questionCategories: ["limp_timing", "timeline"],
+    mustScreenTags: [],
+  },
+  medication_name: {
+    questionCategories: ["toxin_screen", "medication_name"],
+    mustScreenTags: ["toxin_exposure"],
+  },
+  position_preference: {
+    questionCategories: ["breathing_distress_screen", "position_preference"],
+    mustScreenTags: ["breathing_difficulty"],
+  },
+  prior_seizures: {
+    questionCategories: ["seizure_history", "bucket_split"],
+    mustScreenTags: [],
+  },
+  question_cards: {
+    questionCategories: [],
+    mustScreenTags: [],
+  },
+  reaction_symptoms: {
+    questionCategories: ["toxin_screen", "symptom_timing"],
+    mustScreenTags: ["toxin_exposure"],
+  },
+  scratch_location: {
+    questionCategories: ["itch_location"],
+    mustScreenTags: [],
+    missedScreenPattern: "itch-location-before-allergy-screen",
+  },
+  seizure_duration: {
+    questionCategories: ["seizure_duration", "collapse_screen", "timeline"],
+    mustScreenTags: ["seizure_activity"],
+  },
+  squinting: {
+    questionCategories: ["eye_emergency_screen", "vision_screen"],
+    mustScreenTags: ["vision_loss_or_eye_trauma", "eye_swelling"],
+  },
+  stool_blood: {
+    questionCategories: ["stool_blood_screen", "gi_bleeding_screen"],
+    mustScreenTags: ["bloody_stool_or_vomit"],
+  },
+  stool_consistency: {
+    questionCategories: ["stool_consistency"],
+    mustScreenTags: [],
+  },
+  straining_present: {
+    questionCategories: ["urinary_obstruction_screen", "urine_output"],
+    mustScreenTags: ["straining_with_no_urine"],
+  },
+  temperature_exposure: {
+    questionCategories: ["heat_exposure_screen", "timeline"],
+    mustScreenTags: ["heat_exposure"],
+  },
+  toxin_exposure: {
+    questionCategories: ["toxin_screen", "symptom_timing"],
+    mustScreenTags: ["toxin_exposure"],
+  },
+  trauma_mechanism: {
+    questionCategories: ["trauma_mechanism", "bite_trauma_history"],
+    mustScreenTags: [],
+  },
+  trauma_mobility: {
+    questionCategories: ["mobility_screen"],
+    mustScreenTags: ["collapse_or_weakness", "non_weight_bearing"],
+  },
+  treats_accepted: {
+    questionCategories: ["appetite_severity"],
+    mustScreenTags: [],
+  },
+  unproductive_retching: {
+    questionCategories: ["gdv_screen", "abdominal_emergency_screen"],
+    mustScreenTags: ["unproductive_retching"],
+  },
+  urination_accidents: {
+    questionCategories: ["urination_change"],
+    mustScreenTags: [],
+  },
+  urination_frequency: {
+    questionCategories: ["urination_change", "urine_output"],
+    mustScreenTags: [],
+    missedScreenPattern: "frequency-before-obstruction-screen",
+  },
+  vision_changes: {
+    questionCategories: ["vision_screen", "eye_emergency_screen"],
+    mustScreenTags: ["vision_loss_or_eye_trauma"],
+  },
+  visible_fracture: {
+    questionCategories: ["fracture_screen", "mobility_screen"],
+    mustScreenTags: ["fracture_or_bone_exposure"],
+  },
+  vomit_duration: {
+    questionCategories: ["vomiting_severity", "timeline"],
+    mustScreenTags: [],
+    missedScreenPattern: "vomit-duration-before-danger-screen",
+  },
+  vomit_frequency: {
+    questionCategories: ["vomiting_severity"],
+    mustScreenTags: ["repeated_vomiting"],
+  },
+  vomiting_present: {
+    questionCategories: ["vomiting_screen"],
+    mustScreenTags: [],
+  },
+  water_amount_change: {
+    questionCategories: ["endocrine_discrimination", "hydration_screen"],
+    mustScreenTags: [],
+  },
+  water_intake: {
+    questionCategories: ["hydration_screen"],
+    mustScreenTags: ["not_drinking"],
+  },
+  weight_bearing: {
+    questionCategories: ["mobility_screen", "weight_bearing"],
+    mustScreenTags: ["non_weight_bearing"],
+  },
+  weight_change: {
+    questionCategories: ["weight_change", "endocrine_discrimination"],
+    mustScreenTags: [],
+  },
+  weight_loss: {
+    questionCategories: ["weight_change"],
+    mustScreenTags: [],
+  },
+  weight_loss_duration: {
+    questionCategories: ["weight_change", "timeline"],
+    mustScreenTags: [],
+  },
+  which_leg: {
+    questionCategories: ["limp_location"],
+    mustScreenTags: [],
+    missedScreenPattern: "limb-location-before-weight-bearing-screen",
+  },
+  wound_color: {
+    questionCategories: ["wound_severity"],
+    mustScreenTags: [],
+  },
+  wound_discharge: {
+    questionCategories: ["wound_severity", "bleeding_screen"],
+    mustScreenTags: ["wound_depth_or_bleeding"],
+  },
+  wound_location: {
+    questionCategories: ["wound_location"],
+    mustScreenTags: [],
+    missedScreenPattern: "location-before-wound-depth-screen",
+  },
+  wound_size: {
+    questionCategories: ["wound_severity"],
+    mustScreenTags: ["wound_depth_or_bleeding"],
+  },
 };
 
 let hooksRegistered = false;
 let runtimePromise = null;
 
-function mean(values) {
-  if (!values.length) return 0;
+function normalizeText(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/[^a-z0-9\s]+/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function uniqueStrings(values) {
+  return [
+    ...new Set(
+      values
+        .filter((value) => value !== null && value !== undefined)
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+    ),
+  ];
+}
+
+function average(values) {
+  if (values.length === 0) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function round(value) {
-  return Number(value.toFixed(3));
+  return Number(value.toFixed(2));
 }
 
-function clamp01(value) {
-  return Math.max(0, Math.min(1, value));
+function clampScore(value) {
+  return Math.max(0, Math.min(3, value));
 }
 
-function safeRate(numerator, denominator) {
+function rate(numerator, denominator) {
   if (denominator <= 0) return 0;
   return numerator / denominator;
+}
+
+function formatScore(value) {
+  return `${value.toFixed(2)} / 3.00`;
 }
 
 function formatPercent(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function normalizeStringArray(value) {
-  if (!Array.isArray(value)) return [];
-  return [...new Set(value.map((item) => String(item).trim()).filter(Boolean))];
-}
-
-function getTextCaseId(rawCase, index) {
-  const value = rawCase.id ?? rawCase.caseId ?? rawCase.slug ?? `case-${index + 1}`;
-  return String(value).trim();
-}
-
 function normalizeCaseDefinition(rawCase, index) {
   if (!rawCase || typeof rawCase !== "object") {
-    throw new Error(`Fixture case at index ${index} must be an object`);
+    throw new Error(`Case at index ${index} must be an object`);
   }
 
-  const id = getTextCaseId(rawCase, index);
-  const symptomKeys = normalizeStringArray(
-    rawCase.symptomKeys ?? rawCase.symptoms ?? rawCase.knownSymptoms
+  const id = String(rawCase.id ?? "").trim() || `case-${index + 1}`;
+  const category = String(rawCase.category ?? "").trim();
+  const complaintFamily = String(rawCase.complaintFamily ?? "").trim();
+  const initialMessage = String(rawCase.initialMessage ?? "").trim();
+  const expectedUrgency = String(rawCase.expectedUrgency ?? "").trim();
+  const expectedMustScreen = uniqueStrings(rawCase.expectedMustScreen ?? []);
+  const badFirstQuestions = uniqueStrings(rawCase.badFirstQuestions ?? []);
+  const idealQuestionCategories = uniqueStrings(
+    rawCase.idealQuestionCategories ?? []
   );
-  const turnFocusSymptoms = normalizeStringArray(
-    rawCase.turnFocusSymptoms ??
-      rawCase.focusSymptoms ??
-      rawCase.preferredSymptoms ??
-      rawCase.turn_focus_symptoms
-  );
-  const redFlags = normalizeStringArray(
-    rawCase.redFlags ?? rawCase.expectedRedFlags ?? rawCase.emergencySignals
-  );
-  const tags = normalizeStringArray(rawCase.tags);
-  const expectedQuestionIds = normalizeStringArray(
-    rawCase.expectedQuestionIds ?? rawCase.expectedQuestionId
-  );
-  const recommendedModules = normalizeStringArray(
-    rawCase.recommendedModules ?? rawCase.modules
-  );
+  const symptomKeys = uniqueStrings(rawCase.symptomKeys ?? []);
+  const turnFocusSymptoms = uniqueStrings(rawCase.turnFocusSymptoms ?? []);
+  const recommendedFirstModule = String(
+    rawCase.recommendedFirstModule ?? ""
+  ).trim();
+  const pet = rawCase.pet ?? {};
 
+  if (!category) throw new Error(`Case "${id}" is missing category`);
+  if (!complaintFamily) throw new Error(`Case "${id}" is missing complaintFamily`);
+  if (!initialMessage) throw new Error(`Case "${id}" is missing initialMessage`);
+  if (!expectedUrgency) throw new Error(`Case "${id}" is missing expectedUrgency`);
+  if (expectedMustScreen.length === 0) {
+    throw new Error(`Case "${id}" must include expectedMustScreen`);
+  }
+  if (badFirstQuestions.length === 0) {
+    throw new Error(`Case "${id}" must include badFirstQuestions`);
+  }
+  if (idealQuestionCategories.length === 0) {
+    throw new Error(`Case "${id}" must include idealQuestionCategories`);
+  }
   if (symptomKeys.length === 0) {
-    throw new Error(`Fixture case "${id}" must include at least one symptom key`);
+    throw new Error(`Case "${id}" must include symptomKeys for deterministic replay`);
   }
 
   return {
     id,
+    category,
+    complaintFamily,
+    pet: {
+      species: String(pet.species ?? "").trim(),
+      breed: String(pet.breed ?? "").trim(),
+      ageYears: Number(pet.ageYears),
+      weightLbs: Number(pet.weightLbs),
+      sexNeuter: String(pet.sexNeuter ?? "").trim(),
+    },
+    initialMessage,
+    expectedMustScreen,
+    badFirstQuestions,
+    idealQuestionCategories,
+    expectedUrgency,
     symptomKeys,
     turnFocusSymptoms,
-    concernBucket: rawCase.concernBucket ?? rawCase.expectedConcernBucket ?? null,
-    emergency:
-      Boolean(rawCase.emergency) ||
-      Boolean(rawCase.mustScreenEmergency) ||
-      Boolean(rawCase.mustScreenUrgent) ||
-      redFlags.length > 0,
-    redFlags,
-    expectedQuestionIds,
-    recommendedModules,
-    tags,
-    notes: rawCase.notes ? String(rawCase.notes) : null,
+    recommendedFirstModule,
   };
+}
+
+function countByCategory(cases) {
+  return cases.reduce((counts, caseDefinition) => {
+    counts[caseDefinition.category] = (counts[caseDefinition.category] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function validateCaseSet(cases) {
+  if (cases.length < 150) {
+    throw new Error(`Expected at least 150 question-quality cases, found ${cases.length}`);
+  }
+
+  const categoryCounts = countByCategory(cases);
+  for (const [category, minimum] of Object.entries(REQUIRED_CATEGORY_MINIMUMS)) {
+    if ((categoryCounts[category] ?? 0) < minimum) {
+      throw new Error(
+        `Expected at least ${minimum} ${category} cases, found ${categoryCounts[category] ?? 0}`
+      );
+    }
+  }
+
+  const complaintFamilies = new Set(cases.map((caseDefinition) => caseDefinition.complaintFamily));
+  for (const complaintFamily of REQUIRED_COMPLAINT_FAMILIES) {
+    if (!complaintFamilies.has(complaintFamily)) {
+      throw new Error(`Missing required complaintFamily "${complaintFamily}"`);
+    }
+  }
+
+  for (const caseDefinition of cases) {
+    if (caseDefinition.pet.species !== "dog") {
+      throw new Error(`Case "${caseDefinition.id}" must be dog-only`);
+    }
+  }
 }
 
 function loadCases(fixturePath = FIXTURE_PATH) {
@@ -261,7 +655,11 @@ function loadCases(fixturePath = FIXTURE_PATH) {
     );
   }
 
-  return rawCases.map((rawCase, index) => normalizeCaseDefinition(rawCase, index));
+  const cases = rawCases.map((rawCase, index) =>
+    normalizeCaseDefinition(rawCase, index)
+  );
+  validateCaseSet(cases);
+  return cases;
 }
 
 function registerTypeScriptHooks() {
@@ -380,7 +778,6 @@ async function loadQuestionRuntime() {
         getNextQuestionAvoidingRepeat:
           questionSelection.getNextQuestionAvoidingRepeat,
         FOLLOW_UP_QUESTIONS: clinicalMatrix.FOLLOW_UP_QUESTIONS,
-        SYMPTOM_MAP: clinicalMatrix.SYMPTOM_MAP,
       };
     });
   })();
@@ -388,269 +785,312 @@ async function loadQuestionRuntime() {
   return runtimePromise;
 }
 
-function questionUsesGenericPattern(questionText) {
+function inferSignalsFromQuestionText(questionText) {
+  const lower = questionText.toLowerCase();
+  const questionCategories = [];
+  const mustScreenTags = [];
+
+  if (lower.includes("gum")) {
+    questionCategories.push("gum_color_screen");
+    mustScreenTags.push("pale_or_blue_gums");
+  }
+  if (lower.includes("breathe") || lower.includes("breathing")) {
+    questionCategories.push("breathing_distress_screen");
+    mustScreenTags.push("breathing_difficulty");
+  }
+  if (lower.includes("collapse") || lower.includes("responsive")) {
+    questionCategories.push("collapse_screen");
+    mustScreenTags.push("collapse_or_weakness");
+  }
+  if (lower.includes("seizure")) {
+    questionCategories.push("seizure_duration");
+    mustScreenTags.push("seizure_activity");
+  }
+  if (lower.includes("retch") || lower.includes("abdomen") || lower.includes("belly")) {
+    questionCategories.push("abdominal_emergency_screen");
+    mustScreenTags.push("abdominal_distension");
+  }
+  if (lower.includes("poison") || lower.includes("toxin") || lower.includes("medication")) {
+    questionCategories.push("toxin_screen");
+    mustScreenTags.push("toxin_exposure");
+  }
+  if (lower.includes("urinate") || lower.includes("pee") || lower.includes("urine")) {
+    questionCategories.push("urinary_obstruction_screen");
+    mustScreenTags.push("straining_with_no_urine");
+  }
+  if (lower.includes("heat") || lower.includes("hot car") || lower.includes("sun")) {
+    questionCategories.push("heat_exposure_screen");
+    mustScreenTags.push("heat_exposure");
+  }
+  if (lower.includes("blood")) {
+    questionCategories.push("gi_bleeding_screen");
+    mustScreenTags.push("bloody_stool_or_vomit");
+  }
+  if (lower.includes("vision") || lower.includes("eye")) {
+    questionCategories.push("eye_emergency_screen");
+    mustScreenTags.push("vision_loss_or_eye_trauma");
+  }
+  if (lower.includes("weight") && lower.includes("leg")) {
+    questionCategories.push("mobility_screen");
+    mustScreenTags.push("non_weight_bearing");
+  }
+  if (lower.includes("wound") || lower.includes("bite")) {
+    questionCategories.push("wound_severity");
+    mustScreenTags.push("wound_depth_or_bleeding");
+  }
+
+  if (lower.startsWith("when ") || lower.startsWith("how long")) {
+    questionCategories.push("timeline");
+  }
+  if (lower.includes("what color")) {
+    questionCategories.push("detail_question");
+  }
+  if (lower.includes("which leg") || lower.includes("where is")) {
+    questionCategories.push("location_question");
+  }
+  if (lower.includes("best guess")) {
+    questionCategories.push("open_clarification");
+  }
+
+  return {
+    questionCategories: uniqueStrings(questionCategories),
+    mustScreenTags: uniqueStrings(mustScreenTags),
+  };
+}
+
+function getQuestionSignals(questionId, questionText) {
+  const mappedSignals = QUESTION_SIGNAL_MAP[questionId] ?? {
+    questionCategories: [],
+    mustScreenTags: [],
+  };
+  const inferredSignals = inferSignalsFromQuestionText(questionText);
+
+  return {
+    questionCategories: uniqueStrings([
+      ...(mappedSignals.questionCategories ?? []),
+      ...inferredSignals.questionCategories,
+    ]),
+    mustScreenTags: uniqueStrings([
+      ...(mappedSignals.mustScreenTags ?? []),
+      ...inferredSignals.mustScreenTags,
+    ]),
+    missedScreenPattern: mappedSignals.missedScreenPattern ?? null,
+  };
+}
+
+function isGenericQuestion(questionText, badFirstQuestions, questionCategories) {
   if (!questionText) return true;
-  return GENERIC_QUESTION_PATTERNS.some((pattern) => pattern.test(questionText));
-}
 
-function questionHasDiscriminativeSignal(questionText) {
-  return DISCRIMINATIVE_QUESTION_PATTERNS.some((pattern) => pattern.test(questionText));
-}
-
-function normalizeFlagTokens(value) {
-  return String(value)
-    .toLowerCase()
-    .replace(/[_-]+/g, " ")
-    .split(/\s+/)
-    .map((token) => token.replace(/s$/u, ""))
-    .filter((token) => token.length >= 3);
-}
-
-function questionScreensRedFlag(questionId, questionText, redFlag) {
-  if (!questionId || !questionText || !redFlag) {
-    return false;
-  }
-
-  if (questionId === redFlag) {
+  const normalizedQuestion = normalizeText(questionText);
+  if (
+    badFirstQuestions.some(
+      (badQuestion) => normalizeText(badQuestion) === normalizedQuestion
+    )
+  ) {
     return true;
   }
 
-  const aliasQuestionIds = RED_FLAG_SCREEN_QUESTION_IDS[redFlag] ?? [];
-  if (aliasQuestionIds.includes(questionId)) {
+  if (GENERIC_QUESTION_PATTERNS.some((pattern) => pattern.test(questionText))) {
     return true;
   }
 
-  const lowerText = questionText.toLowerCase();
-  const questionTokens = new Set([
-    ...normalizeFlagTokens(questionId),
-    ...normalizeFlagTokens(questionText),
-  ]);
-  const redFlagTokens = normalizeFlagTokens(redFlag);
-  const keywordAliases = RED_FLAG_KEYWORD_ALIASES[redFlag] ?? [];
-
-  if (keywordAliases.some((keyword) => lowerText.includes(keyword.toLowerCase()))) {
-    return true;
-  }
-
-  return redFlagTokens.some((token) => questionTokens.has(token));
+  return questionCategories.includes("open_clarification");
 }
 
-function getRelevantRedFlags(caseDefinition, focusSymptoms, symptomMap) {
-  if (caseDefinition.redFlags.length > 0) {
-    return caseDefinition.redFlags;
-  }
-
-  return [...new Set(
-    focusSymptoms.flatMap((symptom) => symptomMap[symptom]?.red_flags ?? [])
-  )];
-}
-
-function scoreSpecificity({
+function scoreQuestionSpecificity(
   questionDef,
-  questionId,
-  questionText,
-  generic,
-  focusMatchCount,
-}) {
-  if (!questionId || !questionDef || !questionText) return 0;
-
-  let score = 0.3;
-  if (!generic) score += 0.2;
-  if (questionDef.critical) score += 0.15;
-  if (questionDef.data_type !== "string") score += 0.15;
-  if (questionHasDiscriminativeSignal(questionText)) score += 0.15;
-  if (focusMatchCount > 0) score += 0.1;
-  if (Array.isArray(questionDef.choices) && questionDef.choices.length > 0) {
-    score += 0.05;
-  }
-
-  return clamp01(score);
-}
-
-function scoreUrgencyValue({
-  questionDef,
-  isEmergencyCase,
-  emergencyScreened,
-  generic,
-  focusPriority,
-}) {
+  isGeneric,
+  idealCategoryHits,
+  mustScreenHits,
+  questionCategories
+) {
   if (!questionDef) return 0;
+  if (isGeneric) return 0;
 
-  if (isEmergencyCase || focusPriority >= 8) {
-    if (questionDef.critical && emergencyScreened) return 1;
-    if (emergencyScreened) return 0.8;
-    if (questionDef.critical) return 0.45;
-    return generic ? 0.1 : 0.25;
+  let score = 1;
+  if (questionDef.data_type !== "string" || questionCategories.length > 0) {
+    score += 1;
+  }
+  if (idealCategoryHits.length > 0 || mustScreenHits.length > 0) {
+    score += 1;
   }
 
-  if (questionDef.critical) return 0.95;
-  if (generic) return 0.55;
-  return 0.8;
+  return clampScore(score);
 }
 
-function scoreRedFlagCoverage(relevantRedFlags, coveredRedFlags, questionDef) {
+function scoreUrgencyChangingValue(questionDef, mustScreenHits, questionCategories) {
   if (!questionDef) return 0;
-  if (relevantRedFlags.length === 0) {
-    return questionDef.critical ? 1 : 0.8;
+  if (mustScreenHits.length > 0) return 3;
+  if (
+    questionDef.critical ||
+    questionCategories.some((category) => CRITICAL_QUESTION_CATEGORIES.has(category))
+  ) {
+    return 2;
   }
-
-  return coveredRedFlags.length / relevantRedFlags.length;
+  if (questionCategories.length > 0) return 1;
+  return 0;
 }
 
-function scoreConcernBucketDiscrimination({
-  questionId,
-  questionText,
-  focusMatchCount,
-  focusSymptoms,
-  sessionFocusFollowUpCount,
-  generic,
-}) {
-  if (!questionId || !questionText) return 0;
-
-  let score = generic ? 0.2 : 0.4;
-  if (focusMatchCount > 0) score += 0.25;
-  if (focusSymptoms.length > 1 && focusMatchCount === 1) score += 0.15;
-  if (sessionFocusFollowUpCount <= 3) score += 0.1;
-  if (questionHasDiscriminativeSignal(questionText)) score += 0.1;
-
-  return clamp01(score);
-}
-
-function scoreOwnerAnswerability(questionDef, questionText) {
-  if (!questionDef || !questionText) return 0;
-
-  const dataTypeScore = {
-    boolean: 0.95,
-    choice: 0.9,
-    number: 0.85,
-    string: 0.75,
-  }[questionDef.data_type] ?? 0.7;
-
-  let score = dataTypeScore;
-  const wordCount = questionText.trim().split(/\s+/).filter(Boolean).length;
-  if (wordCount > 18) score -= 0.15;
-  if (OWNER_JARGON_PATTERNS.some((pattern) => pattern.test(questionText))) {
-    score -= 0.2;
-  }
-  if (/^(is|are|has|have|did|does|when|how long|how often|what color|which)\b/i.test(questionText)) {
-    score += 0.05;
-  }
-
-  return clamp01(score);
-}
-
-function scoreReportValue(questionDef, questionText, generic) {
-  if (!questionDef || !questionText) return 0;
-
-  let score = {
-    choice: 0.95,
-    boolean: 0.9,
-    number: 0.85,
-    string: 0.7,
-  }[questionDef.data_type] ?? 0.7;
-
-  if (questionDef.critical) score += 0.05;
-  if (String(questionDef.extraction_hint ?? "").trim().length >= 10) score += 0.05;
-  if (generic) score -= 0.25;
-
-  return clamp01(score);
-}
-
-function buildWeakPatterns({
+function scoreEmergencyRedFlagCoverage(
   caseDefinition,
-  generic,
-  questionId,
-  questionText,
-  categories,
-  repeated,
-  missedRedFlags,
-  emergencyMiss,
-}) {
-  const weakPatterns = [];
+  mustScreenHits,
+  questionDef,
+  questionCategories
+) {
+  if (!questionDef) return 0;
+  if (caseDefinition.expectedMustScreen.length === 0) return 3;
+  if (mustScreenHits.includes(caseDefinition.expectedMustScreen[0])) return 3;
+  if (mustScreenHits.length > 0) return 2;
+  if (
+    questionDef.critical ||
+    questionCategories.some((category) => CRITICAL_QUESTION_CATEGORIES.has(category))
+  ) {
+    return 1;
+  }
+  return 0;
+}
 
+function scoreConcernBucketDiscrimination(questionDef, idealCategoryHits, questionCategories) {
+  if (!questionDef) return 0;
+  if (
+    idealCategoryHits.length > 0 &&
+    questionCategories.some((category) => DISCRIMINATIVE_CATEGORIES.has(category))
+  ) {
+    return 3;
+  }
+  if (idealCategoryHits.length > 0) return 2;
+  if (questionCategories.length > 0) return 1;
+  return 0;
+}
+
+function scoreOwnerAnswerability(questionDef, questionText, questionCategories) {
+  if (!questionDef || !questionText) return 0;
+
+  if (
+    questionCategories.includes("open_clarification") ||
+    OWNER_JARGON_PATTERNS.some((pattern) => pattern.test(questionText))
+  ) {
+    return 1;
+  }
+
+  if (
+    questionDef.data_type === "boolean" ||
+    questionDef.data_type === "choice" ||
+    questionDef.data_type === "number"
+  ) {
+    return 3;
+  }
+
+  const wordCount = questionText.split(/\s+/).filter(Boolean).length;
+  return wordCount <= 18 ? 2 : 1;
+}
+
+function scoreRepeatedQuestionBehavior(repeated) {
+  return repeated ? 0 : 3;
+}
+
+function scoreGenericWording(isGeneric, questionCategories, idealCategoryHits, mustScreenHits) {
+  if (isGeneric) return 0;
+  if (questionCategories.includes("open_clarification")) return 1;
+  if (idealCategoryHits.length > 0 || mustScreenHits.length > 0) return 3;
+  return 2;
+}
+
+function scoreReportUsefulnessValue(
+  questionDef,
+  questionCategories,
+  idealCategoryHits,
+  mustScreenHits
+) {
+  if (!questionDef) return 0;
+  if (
+    (questionDef.data_type === "boolean" ||
+      questionDef.data_type === "choice" ||
+      questionDef.data_type === "number") &&
+    (idealCategoryHits.length > 0 ||
+      mustScreenHits.length > 0 ||
+      questionCategories.some((category) => REPORT_STRONG_CATEGORIES.has(category)))
+  ) {
+    return 3;
+  }
+  if (
+    questionCategories.some((category) => REPORT_STRONG_CATEGORIES.has(category)) ||
+    idealCategoryHits.length > 0
+  ) {
+    return 2;
+  }
+  if (questionCategories.includes("open_clarification")) return 1;
+  return 1;
+}
+
+function buildWeakPatternLabel(questionId, questionSignals, mustScreenMiss, isGeneric) {
+  if (isGeneric) {
+    return "generic-first-question";
+  }
+
+  if (!mustScreenMiss) {
+    return null;
+  }
+
+  if (questionSignals.missedScreenPattern) {
+    return questionSignals.missedScreenPattern;
+  }
+
+  if (
+    questionSignals.questionCategories.some((category) =>
+      OPEN_FIRST_CATEGORIES.has(category)
+    )
+  ) {
+    return "open-clarification-before-safety-screen";
+  }
+  if (
+    questionSignals.questionCategories.some((category) =>
+      LOCATION_FIRST_CATEGORIES.has(category)
+    )
+  ) {
+    return "location-before-safety-screen";
+  }
+  if (
+    questionSignals.questionCategories.some((category) =>
+      DETAIL_FIRST_CATEGORIES.has(category)
+    )
+  ) {
+    return "detail-before-safety-screen";
+  }
+  if (
+    questionSignals.questionCategories.some((category) =>
+      TIMELINE_FIRST_CATEGORIES.has(category)
+    )
+  ) {
+    return "timeline-before-safety-screen";
+  }
   if (!questionId) {
-    weakPatterns.push("no-question-selected");
-    return weakPatterns;
+    return "no-first-question";
   }
-
-  if (generic) weakPatterns.push("generic-question");
-  if (categories.specificity < 0.7) weakPatterns.push("low-specificity");
-  if (categories.urgencyValue < 0.7) weakPatterns.push("low-urgency-value");
-  if (categories.redFlagCoverage < 0.75) weakPatterns.push("weak-red-flag-coverage");
-  if (categories.concernBucketDiscrimination < 0.75) {
-    weakPatterns.push("weak-concern-bucket-discrimination");
-  }
-  if (categories.ownerAnswerability < 0.75) {
-    weakPatterns.push("low-owner-answerability");
-  }
-  if (categories.reportValue < 0.75) weakPatterns.push("low-report-value");
-  if (repeated) weakPatterns.push("repeat-guard-failure");
-  if (
-    caseDefinition.expectedQuestionIds.length > 0 &&
-    !caseDefinition.expectedQuestionIds.includes(questionId)
-  ) {
-    weakPatterns.push("unexpected-question-selection");
-  }
-  if (emergencyMiss) weakPatterns.push("missed-emergency-screen");
-  for (const redFlag of missedRedFlags) {
-    weakPatterns.push(`missed-red-flag:${redFlag}`);
-  }
-  if (!questionText.trim()) weakPatterns.push("empty-question-text");
-
-  return weakPatterns;
+  return "missed-first-emergency-screen";
 }
 
-function buildRecommendedModules(caseResult) {
-  const modules = [];
+function addFrequencyEntry(map, key, caseDefinition, questionId) {
+  if (!key) return;
 
-  if (caseResult.generic || caseResult.categories.specificity < 0.7) {
-    modules.push("question_specificity");
-  }
-  if (caseResult.emergencyMiss || caseResult.categories.urgencyValue < 0.7) {
-    modules.push("emergency_screening");
-  }
-  if (caseResult.categories.redFlagCoverage < 0.75) {
-    modules.push("red_flag_coverage");
-  }
-  if (caseResult.categories.concernBucketDiscrimination < 0.75) {
-    modules.push("concern_bucket_discrimination");
-  }
-  if (caseResult.categories.ownerAnswerability < 0.75) {
-    modules.push("owner_answerability");
-  }
-  if (caseResult.categories.reportValue < 0.75) {
-    modules.push("report_structure");
-  }
-  if (caseResult.repeated) {
-    modules.push("repeat_guard");
-  }
-  if (
-    caseResult.caseDefinition.expectedQuestionIds.length > 0 &&
-    !caseResult.caseDefinition.expectedQuestionIds.includes(caseResult.questionId)
-  ) {
-    modules.push("question_selection_alignment");
-  }
-
-  return [...new Set([...modules, ...caseResult.caseDefinition.recommendedModules])];
-}
-
-function createFrequencyMap() {
-  return new Map();
-}
-
-function addFrequencyEntry(map, key, caseId, extra) {
-  const current = map.get(key) ?? { count: 0, cases: [], extras: new Set() };
+  const current = map.get(key) ?? {
+    count: 0,
+    cases: [],
+    complaintFamilies: new Set(),
+    questionIds: new Set(),
+  };
   current.count += 1;
-  if (current.cases.length < 5 && !current.cases.includes(caseId)) {
-    current.cases.push(caseId);
+  if (current.cases.length < 5 && !current.cases.includes(caseDefinition.id)) {
+    current.cases.push(caseDefinition.id);
   }
-  if (extra) {
-    current.extras.add(extra);
+  current.complaintFamilies.add(caseDefinition.complaintFamily);
+  if (questionId) {
+    current.questionIds.add(questionId);
   }
   map.set(key, current);
 }
 
-function summarizeFrequencyMap(map, limit, formatter) {
+function summarizeFrequencyMap(map, limit, labelKey) {
   return [...map.entries()]
     .sort((left, right) => {
       if (right[1].count !== left[1].count) {
@@ -659,234 +1099,264 @@ function summarizeFrequencyMap(map, limit, formatter) {
       return String(left[0]).localeCompare(String(right[0]));
     })
     .slice(0, limit)
-    .map(([key, entry]) => formatter(key, entry));
+    .map(([label, entry]) => ({
+      [labelKey]: label,
+      count: entry.count,
+      cases: entry.cases,
+      complaintFamilies: [...entry.complaintFamilies].sort(),
+      questionIds: [...entry.questionIds].sort(),
+    }));
 }
 
 function evaluateCase(caseDefinition, runtime) {
-  const session = runtime.addSymptoms(
-    runtime.createSession(),
-    caseDefinition.symptomKeys
-  );
-  const focusSymptoms =
+  let session = runtime.createSession();
+  session = runtime.addSymptoms(session, caseDefinition.symptomKeys);
+
+  const preferredSymptoms =
     caseDefinition.turnFocusSymptoms.length > 0
       ? caseDefinition.turnFocusSymptoms
       : caseDefinition.symptomKeys;
-  const questionId = runtime.getNextQuestionAvoidingRepeat(session, focusSymptoms);
+  const questionId = runtime.getNextQuestionAvoidingRepeat(
+    session,
+    preferredSymptoms
+  );
   const questionText = questionId ? runtime.getQuestionText(questionId) : "";
   const questionDef = questionId ? runtime.FOLLOW_UP_QUESTIONS[questionId] ?? null : null;
-  const generic = questionUsesGenericPattern(questionText);
-  const relevantRedFlags = getRelevantRedFlags(
-    caseDefinition,
-    focusSymptoms,
-    runtime.SYMPTOM_MAP
+  const questionSignals = getQuestionSignals(questionId, questionText);
+  const mustScreenHits = caseDefinition.expectedMustScreen.filter((tag) =>
+    questionSignals.mustScreenTags.includes(tag)
   );
-  const coveredRedFlags = relevantRedFlags.filter((redFlag) =>
-    questionScreensRedFlag(questionId, questionText, redFlag)
+  const missedMustScreen = caseDefinition.expectedMustScreen.filter(
+    (tag) => !mustScreenHits.includes(tag)
   );
-  const missedRedFlags = relevantRedFlags.filter(
-    (redFlag) => !coveredRedFlags.includes(redFlag)
+  const idealCategoryHits = caseDefinition.idealQuestionCategories.filter((tag) =>
+    questionSignals.questionCategories.includes(tag)
   );
-  const focusEntries = focusSymptoms
-    .map((symptom) => runtime.SYMPTOM_MAP[symptom])
-    .filter(Boolean);
-  const focusPriority = Math.max(
-    0,
-    ...focusSymptoms.map((symptom) => runtime.getSymptomPriorityScore(symptom))
+  const isGeneric = isGenericQuestion(
+    questionText,
+    caseDefinition.badFirstQuestions,
+    questionSignals.questionCategories
   );
-  const focusMatchCount = focusSymptoms.filter((symptom) =>
-    runtime.SYMPTOM_MAP[symptom]?.follow_up_questions?.includes(questionId)
-  ).length;
-  const sessionFocusFollowUpCount = new Set(
-    focusEntries.flatMap((entry) => entry.follow_up_questions ?? [])
-  ).size;
-  const isEmergencyCase =
-    caseDefinition.emergency || relevantRedFlags.length > 0 || focusPriority >= 8;
-  const emergencyScreened =
-    Boolean(questionDef?.critical) || coveredRedFlags.length > 0;
-
   const repeated = Boolean(questionId) && (() => {
-    const answeredQuestions = [...session.answered_questions];
-    if (!answeredQuestions.includes(questionId)) {
-      answeredQuestions.push(questionId);
-    }
     const replaySession = {
       ...session,
-      answered_questions: answeredQuestions,
+      answered_questions: session.answered_questions.includes(questionId)
+        ? [...session.answered_questions]
+        : [...session.answered_questions, questionId],
       last_question_asked: questionId,
     };
     return (
-      runtime.getNextQuestionAvoidingRepeat(replaySession, focusSymptoms) === questionId
+      runtime.getNextQuestionAvoidingRepeat(replaySession, preferredSymptoms) ===
+      questionId
     );
   })();
 
-  const categories = {
-    specificity: round(
-      scoreSpecificity({
-        questionDef,
-        questionId,
-        questionText,
-        generic,
-        focusMatchCount,
-      })
+  const scores = {
+    questionSpecificity: scoreQuestionSpecificity(
+      questionDef,
+      isGeneric,
+      idealCategoryHits,
+      mustScreenHits,
+      questionSignals.questionCategories
     ),
-    urgencyValue: round(
-      scoreUrgencyValue({
-        questionDef,
-        isEmergencyCase,
-        emergencyScreened,
-        generic,
-        focusPriority,
-      })
+    urgencyChangingValue: scoreUrgencyChangingValue(
+      questionDef,
+      mustScreenHits,
+      questionSignals.questionCategories
     ),
-    redFlagCoverage: round(
-      scoreRedFlagCoverage(relevantRedFlags, coveredRedFlags, questionDef)
+    emergencyRedFlagCoverage: scoreEmergencyRedFlagCoverage(
+      caseDefinition,
+      mustScreenHits,
+      questionDef,
+      questionSignals.questionCategories
     ),
-    concernBucketDiscrimination: round(
-      scoreConcernBucketDiscrimination({
-        questionId,
-        questionText,
-        focusMatchCount,
-        focusSymptoms,
-        sessionFocusFollowUpCount,
-        generic,
-      })
+    concernBucketDiscrimination: scoreConcernBucketDiscrimination(
+      questionDef,
+      idealCategoryHits,
+      questionSignals.questionCategories
     ),
-    ownerAnswerability: round(scoreOwnerAnswerability(questionDef, questionText)),
-    reportValue: round(scoreReportValue(questionDef, questionText, generic)),
-    repetitionSafety: repeated ? 0 : 1,
+    ownerAnswerability: scoreOwnerAnswerability(
+      questionDef,
+      questionText,
+      questionSignals.questionCategories
+    ),
+    repeatedQuestionBehavior: scoreRepeatedQuestionBehavior(repeated),
+    genericWording: scoreGenericWording(
+      isGeneric,
+      questionSignals.questionCategories,
+      idealCategoryHits,
+      mustScreenHits
+    ),
+    reportUsefulnessValue: scoreReportUsefulnessValue(
+      questionDef,
+      questionSignals.questionCategories,
+      idealCategoryHits,
+      mustScreenHits
+    ),
   };
 
-  const overallScore = round(mean(CATEGORY_KEYS.map((key) => categories[key])));
-  const emergencyMiss = Boolean(isEmergencyCase && !emergencyScreened);
-  const weakPatterns = buildWeakPatterns({
-    caseDefinition,
-    generic,
-    questionId,
-    questionText,
-    categories,
-    repeated,
-    missedRedFlags,
-    emergencyMiss,
-  });
-
-  const caseResult = {
-    caseDefinition,
-    questionId,
-    questionText,
-    questionDef,
-    categories,
-    overallScore,
-    generic,
-    repeated,
-    focusPriority,
-    isEmergencyCase,
-    emergencyScreened,
-    emergencyMiss,
-    relevantRedFlags,
-    coveredRedFlags,
-    missedRedFlags,
-    weakPatterns,
-  };
+  const averageScore = round(average(CATEGORY_KEYS.map((key) => scores[key])));
+  const mustScreenMiss = mustScreenHits.length === 0;
+  const weakPatterns = uniqueStrings([
+    buildWeakPatternLabel(questionId, questionSignals, mustScreenMiss, isGeneric),
+    mustScreenMiss ? "no-first-screen-hit" : null,
+    repeated ? "repeat-question-risk" : null,
+    idealCategoryHits.length === 0 ? "off-ideal-first-question" : null,
+    scores.questionSpecificity <= 1 ? "low-specificity-first-question" : null,
+    scores.reportUsefulnessValue <= 1 ? "low-report-value-first-question" : null,
+  ]);
 
   return {
-    ...caseResult,
-    recommendedModules: buildRecommendedModules(caseResult),
+    caseDefinition,
+    questionId,
+    questionText,
+    questionCategories: questionSignals.questionCategories,
+    mustScreenHits,
+    missedMustScreen,
+    idealCategoryHits,
+    isGeneric,
+    repeated,
+    scores,
+    averageScore,
+    weakPatterns,
   };
 }
 
-function aggregateResults(caseResults) {
-  const emergencyCaseCount = caseResults.filter(
-    (result) => result.isEmergencyCase
-  ).length;
-  const categoryScores = Object.fromEntries(
-    CATEGORY_KEYS.map((key) => [
-      key,
-      round(mean(caseResults.map((result) => result.categories[key]))),
-    ])
-  );
-  const weakPatternMap = createFrequencyMap();
-  const missedRedFlagMap = createFrequencyMap();
-  const recommendedModuleMap = createFrequencyMap();
+function summarizeComplaintFamilies(caseResults) {
+  const grouped = new Map();
+
+  for (const result of caseResults) {
+    const complaintFamily = result.caseDefinition.complaintFamily;
+    const current = grouped.get(complaintFamily) ?? {
+      count: 0,
+      totalScore: 0,
+      weakCases: 0,
+      missedScreens: 0,
+      genericCases: 0,
+      questionIds: new Set(),
+      recommendedFirstModule: result.caseDefinition.recommendedFirstModule,
+    };
+    current.count += 1;
+    current.totalScore += result.averageScore;
+    current.weakCases += result.averageScore < 2 ? 1 : 0;
+    current.missedScreens += result.mustScreenHits.length === 0 ? 1 : 0;
+    current.genericCases += result.isGeneric ? 1 : 0;
+    if (result.questionId) {
+      current.questionIds.add(result.questionId);
+    }
+    grouped.set(complaintFamily, current);
+  }
+
+  return [...grouped.entries()]
+    .map(([complaintFamily, entry]) => ({
+      complaintFamily,
+      averageScore: round(entry.totalScore / entry.count),
+      count: entry.count,
+      weakCases: entry.weakCases,
+      missedScreens: entry.missedScreens,
+      genericCases: entry.genericCases,
+      questionIds: [...entry.questionIds].sort(),
+      recommendedFirstModule: entry.recommendedFirstModule,
+    }))
+    .sort((left, right) => {
+      if (left.averageScore !== right.averageScore) {
+        return left.averageScore - right.averageScore;
+      }
+      return right.missedScreens - left.missedScreens;
+    });
+}
+
+function summarizeRecommendedModules(complaintFamilySummaries) {
+  const moduleMap = new Map();
+
+  for (const summary of complaintFamilySummaries) {
+    if (summary.averageScore >= 2 && summary.missedScreens === 0) {
+      continue;
+    }
+
+    const moduleId = summary.recommendedFirstModule;
+    if (!moduleId) continue;
+
+    const current = moduleMap.get(moduleId) ?? {
+      count: 0,
+      complaintFamilies: [],
+      weakestScore: 3,
+    };
+    current.count += summary.weakCases > 0 ? summary.weakCases : summary.count;
+    if (!current.complaintFamilies.includes(summary.complaintFamily)) {
+      current.complaintFamilies.push(summary.complaintFamily);
+    }
+    current.weakestScore = Math.min(current.weakestScore, summary.averageScore);
+    moduleMap.set(moduleId, current);
+  }
+
+  return [...moduleMap.entries()]
+    .map(([moduleId, entry]) => ({
+      moduleId,
+      count: entry.count,
+      weakestScore: round(entry.weakestScore),
+      complaintFamilies: entry.complaintFamilies.sort(),
+      description: MODULE_DESCRIPTIONS[moduleId] || "No description available.",
+    }))
+    .sort((left, right) => {
+      if (right.count !== left.count) {
+        return right.count - left.count;
+      }
+      return left.weakestScore - right.weakestScore;
+    });
+}
+
+function aggregateResults(cases, caseResults) {
+  const weakPatternMap = new Map();
+  const missedScreenMap = new Map();
 
   for (const result of caseResults) {
     for (const weakPattern of result.weakPatterns) {
-      addFrequencyEntry(
-        weakPatternMap,
-        weakPattern,
-        result.caseDefinition.id,
-        result.questionId || "none"
-      );
+      addFrequencyEntry(weakPatternMap, weakPattern, result.caseDefinition, result.questionId);
     }
-    for (const redFlag of result.missedRedFlags) {
-      addFrequencyEntry(
-        missedRedFlagMap,
-        redFlag,
-        result.caseDefinition.id,
-        result.questionId || "none"
-      );
-    }
-    for (const moduleId of result.recommendedModules) {
-      addFrequencyEntry(
-        recommendedModuleMap,
-        moduleId,
-        result.caseDefinition.id,
-        result.questionId || "none"
-      );
+    for (const missedTag of result.missedMustScreen) {
+      addFrequencyEntry(missedScreenMap, missedTag, result.caseDefinition, result.questionId);
     }
   }
 
+  const categoryScores = Object.fromEntries(
+    CATEGORY_KEYS.map((key) => [
+      key,
+      round(average(caseResults.map((result) => result.scores[key]))),
+    ])
+  );
+  const complaintFamilySummaries = summarizeComplaintFamilies(caseResults);
+
   return {
-    totalCases: caseResults.length,
-    averageScore: round(mean(caseResults.map((result) => result.overallScore))),
+    totalCases: cases.length,
+    categoryCounts: countByCategory(cases),
+    averageQuestionScore: round(
+      average(caseResults.map((result) => result.averageScore))
+    ),
+    genericQuestionRate: round(
+      rate(caseResults.filter((result) => result.isGeneric).length, caseResults.length)
+    ),
+    emergencyRedFlagMissRate: round(
+      rate(
+        caseResults.filter((result) => result.mustScreenHits.length === 0).length,
+        caseResults.length
+      )
+    ),
+    firstQuestionEmergencyScreenRate: round(
+      rate(
+        caseResults.filter((result) => result.mustScreenHits.length > 0).length,
+        caseResults.length
+      )
+    ),
+    repeatedQuestionRate: round(
+      rate(caseResults.filter((result) => result.repeated).length, caseResults.length)
+    ),
     categoryScores,
-    genericRate: round(
-      safeRate(
-        caseResults.filter((result) => result.generic).length,
-        caseResults.length
-      )
-    ),
-    emergencyCaseCount,
-    emergencyMissRate: round(
-      safeRate(
-        caseResults.filter((result) => result.emergencyMiss).length,
-        emergencyCaseCount
-      )
-    ),
-    emergencyScreenRate: round(
-      safeRate(
-        caseResults.filter((result) => result.emergencyScreened).length,
-        emergencyCaseCount
-      )
-    ),
-    repeatedRate: round(
-      safeRate(
-        caseResults.filter((result) => result.repeated).length,
-        caseResults.length
-      )
-    ),
-    weakPatterns: summarizeFrequencyMap(weakPatternMap, 20, (pattern, entry) => ({
-      pattern,
-      count: entry.count,
-      cases: entry.cases,
-      questionIds: [...entry.extras],
-    })),
-    missedRedFlags: summarizeFrequencyMap(missedRedFlagMap, 20, (redFlag, entry) => ({
-      redFlag,
-      count: entry.count,
-      cases: entry.cases,
-      questionIds: [...entry.extras],
-    })),
-    recommendedModules: summarizeFrequencyMap(
-      recommendedModuleMap,
-      20,
-      (moduleId, entry) => ({
-        moduleId,
-        count: entry.count,
-        cases: entry.cases,
-        questionIds: [...entry.extras],
-        description: MODULE_DESCRIPTIONS[moduleId] || "No description available.",
-      })
-    ),
+    weakPatterns: summarizeFrequencyMap(weakPatternMap, 20, "pattern"),
+    missedRedFlagPatterns: summarizeFrequencyMap(missedScreenMap, 20, "pattern"),
+    complaintFamilySummaries,
+    worstComplaintFamilies: complaintFamilySummaries.slice(0, 8),
+    recommendedFirstModules: summarizeRecommendedModules(complaintFamilySummaries),
   };
 }
 
@@ -900,62 +1370,77 @@ async function runEvaluation(options = {}) {
 
   return {
     fixturePath,
+    cases,
     caseResults,
-    summary: aggregateResults(caseResults),
+    summary: aggregateResults(cases, caseResults),
   };
 }
 
 function formatSummary(report) {
   const lines = [];
-  lines.push("PAWVITAL QUESTION-QUALITY EVAL");
-  lines.push("================================");
+  lines.push("PAWVITAL QUESTION INTELLIGENCE BASELINE");
+  lines.push("=======================================");
   lines.push(`Fixture: ${report.fixturePath}`);
   lines.push(`Total cases: ${report.summary.totalCases}`);
-  lines.push(`Average score: ${formatPercent(report.summary.averageScore)}`);
-  lines.push("Category scores:");
+  lines.push(
+    `Scenario counts: emergency=${report.summary.categoryCounts.emergency ?? 0}, urgent_same_day=${report.summary.categoryCounts.urgent_same_day ?? 0}, routine_unclear=${report.summary.categoryCounts.routine_unclear ?? 0}, confusing_multi_symptom=${report.summary.categoryCounts.confusing_multi_symptom ?? 0}`
+  );
+  lines.push(
+    `Average question score: ${formatScore(report.summary.averageQuestionScore)}`
+  );
+  lines.push(
+    `Generic question rate: ${formatPercent(report.summary.genericQuestionRate)}`
+  );
+  lines.push(
+    `Emergency red-flag miss rate: ${formatPercent(report.summary.emergencyRedFlagMissRate)}`
+  );
+  lines.push(
+    `First-question emergency-screen rate: ${formatPercent(report.summary.firstQuestionEmergencyScreenRate)}`
+  );
+  lines.push(
+    `Repeated-question rate: ${formatPercent(report.summary.repeatedQuestionRate)}`
+  );
+  lines.push("Per-category scores:");
   for (const key of CATEGORY_KEYS) {
+    lines.push(`  ${CATEGORY_LABELS[key]}: ${formatScore(report.summary.categoryScores[key])}`);
+  }
+
+  lines.push("Worst complaint families:");
+  for (const family of report.summary.worstComplaintFamilies) {
     lines.push(
-      `  ${CATEGORY_LABELS[key]}: ${formatPercent(report.summary.categoryScores[key])}`
+      `  ${family.complaintFamily}: ${formatScore(family.averageScore)} | missed screens ${family.missedScreens}/${family.count} | first questions ${family.questionIds.join(", ")}`
     );
   }
-  lines.push(`Generic rate: ${formatPercent(report.summary.genericRate)}`);
-  lines.push(
-    `Emergency miss rate: ${formatPercent(report.summary.emergencyMissRate)} (${report.summary.emergencyCaseCount} emergency case(s))`
-  );
-  lines.push(
-    `Emergency-screen rate: ${formatPercent(report.summary.emergencyScreenRate)} (${report.summary.emergencyCaseCount} emergency case(s))`
-  );
-  lines.push(`Repeated rate: ${formatPercent(report.summary.repeatedRate)}`);
 
-  lines.push("Top 20 weak patterns:");
+  lines.push("Top 20 generic or weak question patterns:");
   if (report.summary.weakPatterns.length === 0) {
     lines.push("  none");
   } else {
-    for (const item of report.summary.weakPatterns) {
+    for (const pattern of report.summary.weakPatterns) {
       lines.push(
-        `  ${item.pattern}: ${item.count} case(s) [${item.cases.join(", ")}]`
+        `  ${pattern.pattern}: ${pattern.count} case(s) [${pattern.complaintFamilies.join(", ")}]`
       );
     }
   }
 
-  lines.push("Top 20 missed red flags:");
-  if (report.summary.missedRedFlags.length === 0) {
+  lines.push("Top 20 missed red-flag patterns:");
+  if (report.summary.missedRedFlagPatterns.length === 0) {
     lines.push("  none");
   } else {
-    for (const item of report.summary.missedRedFlags) {
+    for (const pattern of report.summary.missedRedFlagPatterns) {
       lines.push(
-        `  ${item.redFlag}: ${item.count} case(s) [${item.cases.join(", ")}]`
+        `  ${pattern.pattern}: ${pattern.count} case(s) [${pattern.complaintFamilies.join(", ")}]`
       );
     }
   }
 
-  lines.push("Recommended modules:");
-  if (report.summary.recommendedModules.length === 0) {
+  lines.push("Recommended first complaint modules:");
+  if (report.summary.recommendedFirstModules.length === 0) {
     lines.push("  none");
   } else {
-    for (const item of report.summary.recommendedModules) {
+    for (const moduleSummary of report.summary.recommendedFirstModules) {
       lines.push(
-        `  ${item.moduleId}: ${item.count} case(s) [${item.cases.join(", ")}] — ${item.description}`
+        `  ${moduleSummary.moduleId}: ${moduleSummary.count} weak case(s) [${moduleSummary.complaintFamilies.join(", ")}] — ${moduleSummary.description}`
       );
     }
   }
@@ -978,7 +1463,6 @@ if (require.main === module) {
 module.exports = {
   CATEGORY_KEYS,
   FIXTURE_PATH,
-  evaluateCase,
   formatSummary,
   loadCases,
   loadQuestionRuntime,
@@ -986,15 +1470,20 @@ module.exports = {
   runEvaluation,
   __private: {
     aggregateResults,
-    buildRecommendedModules,
-    buildWeakPatterns,
-    questionScreensRedFlag,
-    questionUsesGenericPattern,
+    buildWeakPatternLabel,
+    evaluateCase,
+    getQuestionSignals,
+    isGenericQuestion,
     scoreConcernBucketDiscrimination,
+    scoreEmergencyRedFlagCoverage,
+    scoreGenericWording,
     scoreOwnerAnswerability,
-    scoreRedFlagCoverage,
-    scoreReportValue,
-    scoreSpecificity,
-    scoreUrgencyValue,
+    scoreQuestionSpecificity,
+    scoreRepeatedQuestionBehavior,
+    scoreReportUsefulnessValue,
+    scoreUrgencyChangingValue,
+    summarizeComplaintFamilies,
+    summarizeRecommendedModules,
+    validateCaseSet,
   },
 };
