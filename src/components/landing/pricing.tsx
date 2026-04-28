@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import { Check, Zap, ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { buttonClassName } from "@/components/ui/button";
@@ -74,16 +75,15 @@ export default function Pricing() {
               ))}
             </div>
 
-            <a
+            <Link
               href="/signup"
-              target="_top"
               className={buttonClassName({
                 variant: "outline",
                 className: "w-full",
               })}
             >
               Sign Up Free
-            </a>
+            </Link>
           </motion.div>
 
           {/* Premium tier */}
@@ -126,9 +126,8 @@ export default function Pricing() {
                 ))}
               </div>
 
-              <a
+              <Link
                 href="/signup"
-                target="_top"
                 className={buttonClassName({
                   size: "lg",
                   className:
@@ -136,7 +135,7 @@ export default function Pricing() {
                 })}
               >
                 Start 7-Day Free Trial <ArrowRight className="w-5 h-5 ml-2" />
-              </a>
+              </Link>
             </div>
           </motion.div>
         </div>
