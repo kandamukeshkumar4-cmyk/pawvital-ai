@@ -4,6 +4,7 @@ import {
   buildRecoveryRedirectPath,
   buildRedirectTarget,
   buildLoginPath,
+  getAuthFeedbackMessage,
   getAuthActionErrorMessage,
   isProtectedPath,
   resolvePostAuthRedirect,
@@ -59,6 +60,13 @@ describe("VET-1215 auth routing helpers", () => {
     expect(buildCallbackUrl("https://pawvital.ai", "/pets/1")).toBe(
       "https://pawvital.ai/api/auth/callback?next=%2Fpets%2F1"
     );
+  });
+
+  it("surfaces private-tester access redirects as friendly login feedback", () => {
+    expect(getAuthFeedbackMessage("access_required", null)).toEqual({
+      tone: "info",
+      text: "Sign in with an invited tester or admin account to continue.",
+    });
   });
 
   it("keeps redirect propagation relative for linked auth pages", () => {

@@ -113,15 +113,34 @@ export async function proxy(request: NextRequest) {
     return applyPrivateTesterModeCookie(NextResponse.redirect(loginUrl));
   }
 
-  // Redirect authenticated users away from auth pages
+  const userEmail = typeof user?.email === "string" ? user.email : null;
+  const isAdminUser = isAdminIdentityUser(user);
+
+  function canCurrentUserAccessTarget(target: string) {
+    if (!isProtectedPath(target) || target.startsWith("/admin")) {
+      return true;
+    }
+
+    return (
+      isAdminUser ||
+      evaluatePrivateTesterAccess({
+        email: userEmail,
+        pathname: target,
+      }).allowed
+    );
+  }
+
+  // Redirect authenticated users away from auth pages only when the current
+  // session can actually enter the destination.
   if (isAuthPage && user) {
+    if (!canCurrentUserAccessTarget(redirectTarget)) {
+      return applyPrivateTesterModeCookie(response);
+    }
+
     return applyPrivateTesterModeCookie(
       NextResponse.redirect(new URL(redirectTarget, request.url))
     );
   }
-
-  const userEmail = typeof user?.email === "string" ? user.email : null;
-  const isAdminUser = isAdminIdentityUser(user);
 
   if (isHomePage && user) {
     const testerAccess = evaluatePrivateTesterAccess({
@@ -142,8 +161,14 @@ export async function proxy(request: NextRequest) {
       pathname,
     });
     if (!testerAccess.allowed && !isAdminUser) {
+      const loginUrl = new URL(
+        buildLoginPath(requestedTarget, {
+          reason: "access_required",
+        }),
+        request.url
+      );
       return applyPrivateTesterModeCookie(
-        NextResponse.redirect(new URL("/", request.url))
+        NextResponse.redirect(loginUrl)
       );
     }
   }

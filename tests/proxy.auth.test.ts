@@ -111,7 +111,7 @@ describe("VET-1215 proxy auth guard", () => {
     expect(mockCreateServerClient).not.toHaveBeenCalled();
   });
 
-  it("VET-1352 tester access smoke: redirects non-invited authenticated users away from protected routes in private tester mode", async () => {
+  it("VET-1352 tester access smoke: sends non-invited authenticated users to login so they can switch accounts", async () => {
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
@@ -128,7 +128,33 @@ describe("VET-1215 proxy auth guard", () => {
     const { proxy } = await loadProxyModule();
     const response = await proxy(new NextRequest("https://app.pawvital.ai/history"));
 
-    expect(response.headers.get("location")).toBe("https://app.pawvital.ai/");
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "https://app.pawvital.ai/login?redirect=%2Fhistory&reason=access_required"
+    );
+  });
+
+  it("keeps the login page visible for signed-in users who cannot access the requested private-tester destination", async () => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY: "1",
+      NEXT_PUBLIC_PRIVATE_TESTER_MODE: "1",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      NEXT_PUBLIC_SUPABASE_URL: "https://supabase.example.co",
+      PRIVATE_TESTER_ALLOWED_EMAILS: "tester@example.com",
+    };
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "user-1", email: "outside@example.com" } },
+      error: null,
+    });
+
+    const { proxy } = await loadProxyModule();
+    const response = await proxy(
+      new NextRequest("https://app.pawvital.ai/login?redirect=%2Fsymptom-checker")
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
   });
 
   it("VET-1387 admin cohort launch smoke: keeps admin routes reachable even when the signed-in user is not on the tester allowlist", async () => {
