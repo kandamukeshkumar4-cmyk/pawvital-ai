@@ -58,12 +58,12 @@ export function resolveUnknownRedFlags(
 
   for (const id of redFlagIds) {
     const existing = newState.redFlagStatus[id];
-    if (existing && existing.status === "unknown") {
+    if (!existing || existing.status === "unknown") {
       newState.redFlagStatus[id] = {
-        ...existing,
         status,
         source: "explicit_answer",
         updatedAtTurn: turn,
+        evidenceText: existing?.evidenceText,
       };
     }
   }
