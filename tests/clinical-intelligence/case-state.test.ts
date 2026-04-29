@@ -517,7 +517,7 @@ describe("Red flag helper functions", () => {
     expect(unknowns).not.toContain("collapse");
   });
 
-  it("hasAnyPositiveEmergencyRedFlags returns true when any positive flag exists", () => {
+  it("hasAnyPositiveEmergencyRedFlags returns true for positive emergency flags", () => {
     const updated = updateRedFlagStatus(state, "blue_gums", {
       status: "positive",
       source: "explicit_answer",
@@ -606,6 +606,21 @@ describe("Case state after each answer", () => {
 
     expect(state.currentUrgency).toBe("emergency");
     expect(state.redFlagStatus["blue_gums"].status).toBe("positive");
+  });
+
+  it("keeps urgency trajectory unknown when urgency remains unknown", () => {
+    const updated = updateRedFlagStatus(
+      createInitialClinicalCaseState(),
+      "mild_skin_irritation",
+      {
+        status: "positive",
+        source: "clinical_signal",
+        turn: 1,
+      }
+    );
+
+    expect(updated.currentUrgency).toBe("unknown");
+    expect(updated.urgencyTrajectory).toBe("unknown");
   });
 });
 
