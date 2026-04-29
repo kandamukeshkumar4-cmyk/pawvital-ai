@@ -1,0 +1,5620 @@
+[
+  {
+    "id": "collapse_pale_gums_001",
+    "category": "emergency",
+    "complaintFamily": "collapse_pale_gums",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 4,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog suddenly collapsed and the gums look very pale.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "collapse_screen",
+      "gum_color_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "collapse_shock_screen"
+  },
+  {
+    "id": "collapse_pale_gums_002",
+    "category": "emergency",
+    "complaintFamily": "collapse_pale_gums",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 9,
+      "weightLbs": 24,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog went down and the gums are almost white.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "collapse_screen",
+      "gum_color_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "collapse_shock_screen"
+  },
+  {
+    "id": "collapse_pale_gums_003",
+    "category": "emergency",
+    "complaintFamily": "collapse_pale_gums",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 11,
+      "weightLbs": 32,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog had a collapse episode and the gums look pale right now.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "collapse_screen",
+      "gum_color_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "collapse_shock_screen"
+  },
+  {
+    "id": "collapse_pale_gums_004",
+    "category": "emergency",
+    "complaintFamily": "collapse_pale_gums",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 1,
+      "weightLbs": 66,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog suddenly collapsed and the gums look very pale.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "collapse_screen",
+      "gum_color_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "collapse_shock_screen"
+  },
+  {
+    "id": "collapse_pale_gums_005",
+    "category": "emergency",
+    "complaintFamily": "collapse_pale_gums",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 5,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog went down and the gums are almost white.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "collapse_screen",
+      "gum_color_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "collapse_shock_screen"
+  },
+  {
+    "id": "collapse_pale_gums_006",
+    "category": "emergency",
+    "complaintFamily": "collapse_pale_gums",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 7,
+      "weightLbs": 18,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog had a collapse episode and the gums look pale right now.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "collapse_screen",
+      "gum_color_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "collapse_shock_screen"
+  },
+  {
+    "id": "breathing_difficulty_001",
+    "category": "emergency",
+    "complaintFamily": "breathing_difficulty",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is struggling to breathe and looks panicked.",
+    "symptomKeys": [
+      "difficulty_breathing"
+    ],
+    "turnFocusSymptoms": [
+      "difficulty_breathing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has this happened before in general?"
+    ],
+    "idealQuestionCategories": [
+      "breathing_distress_screen",
+      "gum_color_screen",
+      "position_preference"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "respiratory_distress_screen"
+  },
+  {
+    "id": "breathing_difficulty_002",
+    "category": "emergency",
+    "complaintFamily": "breathing_difficulty",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 8,
+      "weightLbs": 38,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is breathing hard and cannot get comfortable.",
+    "symptomKeys": [
+      "difficulty_breathing"
+    ],
+    "turnFocusSymptoms": [
+      "difficulty_breathing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has this happened before in general?"
+    ],
+    "idealQuestionCategories": [
+      "breathing_distress_screen",
+      "gum_color_screen",
+      "position_preference"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "respiratory_distress_screen"
+  },
+  {
+    "id": "breathing_difficulty_003",
+    "category": "emergency",
+    "complaintFamily": "breathing_difficulty",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 9,
+      "weightLbs": 96,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has sudden trouble breathing and is breathing faster than normal.",
+    "symptomKeys": [
+      "difficulty_breathing"
+    ],
+    "turnFocusSymptoms": [
+      "difficulty_breathing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has this happened before in general?"
+    ],
+    "idealQuestionCategories": [
+      "breathing_distress_screen",
+      "gum_color_screen",
+      "position_preference"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "respiratory_distress_screen"
+  },
+  {
+    "id": "breathing_difficulty_004",
+    "category": "emergency",
+    "complaintFamily": "breathing_difficulty",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 2,
+      "weightLbs": 22,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is struggling to breathe and looks panicked.",
+    "symptomKeys": [
+      "difficulty_breathing"
+    ],
+    "turnFocusSymptoms": [
+      "difficulty_breathing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has this happened before in general?"
+    ],
+    "idealQuestionCategories": [
+      "breathing_distress_screen",
+      "gum_color_screen",
+      "position_preference"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "respiratory_distress_screen"
+  },
+  {
+    "id": "breathing_difficulty_005",
+    "category": "emergency",
+    "complaintFamily": "breathing_difficulty",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 4,
+      "weightLbs": 55,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is breathing hard and cannot get comfortable.",
+    "symptomKeys": [
+      "difficulty_breathing"
+    ],
+    "turnFocusSymptoms": [
+      "difficulty_breathing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has this happened before in general?"
+    ],
+    "idealQuestionCategories": [
+      "breathing_distress_screen",
+      "gum_color_screen",
+      "position_preference"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "respiratory_distress_screen"
+  },
+  {
+    "id": "breathing_difficulty_006",
+    "category": "emergency",
+    "complaintFamily": "breathing_difficulty",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 7,
+      "weightLbs": 65,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has sudden trouble breathing and is breathing faster than normal.",
+    "symptomKeys": [
+      "difficulty_breathing"
+    ],
+    "turnFocusSymptoms": [
+      "difficulty_breathing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has this happened before in general?"
+    ],
+    "idealQuestionCategories": [
+      "breathing_distress_screen",
+      "gum_color_screen",
+      "position_preference"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "respiratory_distress_screen"
+  },
+  {
+    "id": "bloat_nonproductive_retching_swollen_abdomen_001",
+    "category": "emergency",
+    "complaintFamily": "bloat_nonproductive_retching_swollen_abdomen",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps trying to vomit but nothing comes up and the belly looks swollen.",
+    "symptomKeys": [
+      "swollen_abdomen",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "unproductive_retching",
+      "abdominal_distension",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What has the appetite been like this week?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "gdv_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "bloat_gdv_screen"
+  },
+  {
+    "id": "bloat_nonproductive_retching_swollen_abdomen_002",
+    "category": "emergency",
+    "complaintFamily": "bloat_nonproductive_retching_swollen_abdomen",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 8,
+      "weightLbs": 38,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is retching without producing anything and the abdomen suddenly looks big.",
+    "symptomKeys": [
+      "swollen_abdomen",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "unproductive_retching",
+      "abdominal_distension",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What has the appetite been like this week?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "gdv_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "bloat_gdv_screen"
+  },
+  {
+    "id": "bloat_nonproductive_retching_swollen_abdomen_003",
+    "category": "emergency",
+    "complaintFamily": "bloat_nonproductive_retching_swollen_abdomen",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 9,
+      "weightLbs": 96,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog looks bloated, restless, and keeps trying to throw up with nothing coming out.",
+    "symptomKeys": [
+      "swollen_abdomen",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "unproductive_retching",
+      "abdominal_distension",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What has the appetite been like this week?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "gdv_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "bloat_gdv_screen"
+  },
+  {
+    "id": "bloat_nonproductive_retching_swollen_abdomen_004",
+    "category": "emergency",
+    "complaintFamily": "bloat_nonproductive_retching_swollen_abdomen",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 2,
+      "weightLbs": 22,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog keeps trying to vomit but nothing comes up and the belly looks swollen.",
+    "symptomKeys": [
+      "swollen_abdomen",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "unproductive_retching",
+      "abdominal_distension",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What has the appetite been like this week?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "gdv_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "bloat_gdv_screen"
+  },
+  {
+    "id": "bloat_nonproductive_retching_swollen_abdomen_005",
+    "category": "emergency",
+    "complaintFamily": "bloat_nonproductive_retching_swollen_abdomen",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 4,
+      "weightLbs": 55,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is retching without producing anything and the abdomen suddenly looks big.",
+    "symptomKeys": [
+      "swollen_abdomen",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "unproductive_retching",
+      "abdominal_distension",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What has the appetite been like this week?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "gdv_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "bloat_gdv_screen"
+  },
+  {
+    "id": "bloat_nonproductive_retching_swollen_abdomen_006",
+    "category": "emergency",
+    "complaintFamily": "bloat_nonproductive_retching_swollen_abdomen",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 7,
+      "weightLbs": 65,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog looks bloated, restless, and keeps trying to throw up with nothing coming out.",
+    "symptomKeys": [
+      "swollen_abdomen",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "unproductive_retching",
+      "abdominal_distension",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What has the appetite been like this week?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "gdv_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "bloat_gdv_screen"
+  },
+  {
+    "id": "seizure_or_repeated_seizures_001",
+    "category": "emergency",
+    "complaintFamily": "seizure_or_repeated_seizures",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 4,
+      "weightLbs": 48,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog just had a seizure and now seems out of it.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "seizure_activity",
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "toxin_exposure"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has your dog had diarrhea lately?"
+    ],
+    "idealQuestionCategories": [
+      "seizure_duration",
+      "collapse_screen",
+      "toxin_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "seizure_episode_screen"
+  },
+  {
+    "id": "seizure_or_repeated_seizures_002",
+    "category": "emergency",
+    "complaintFamily": "seizure_or_repeated_seizures",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 7,
+      "weightLbs": 18,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has had repeated seizure-like episodes today.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "seizure_activity",
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "toxin_exposure"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has your dog had diarrhea lately?"
+    ],
+    "idealQuestionCategories": [
+      "seizure_duration",
+      "collapse_screen",
+      "toxin_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "seizure_episode_screen"
+  },
+  {
+    "id": "seizure_or_repeated_seizures_003",
+    "category": "emergency",
+    "complaintFamily": "seizure_or_repeated_seizures",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 10,
+      "weightLbs": 30,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog collapsed with shaking and I am worried it is another seizure.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "seizure_activity",
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "toxin_exposure"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has your dog had diarrhea lately?"
+    ],
+    "idealQuestionCategories": [
+      "seizure_duration",
+      "collapse_screen",
+      "toxin_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "seizure_episode_screen"
+  },
+  {
+    "id": "seizure_or_repeated_seizures_004",
+    "category": "emergency",
+    "complaintFamily": "seizure_or_repeated_seizures",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 2,
+      "weightLbs": 48,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog just had a seizure and now seems out of it.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "seizure_activity",
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "toxin_exposure"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has your dog had diarrhea lately?"
+    ],
+    "idealQuestionCategories": [
+      "seizure_duration",
+      "collapse_screen",
+      "toxin_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "seizure_episode_screen"
+  },
+  {
+    "id": "seizure_or_repeated_seizures_005",
+    "category": "emergency",
+    "complaintFamily": "seizure_or_repeated_seizures",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has had repeated seizure-like episodes today.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "seizure_activity",
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "toxin_exposure"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has your dog had diarrhea lately?"
+    ],
+    "idealQuestionCategories": [
+      "seizure_duration",
+      "collapse_screen",
+      "toxin_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "seizure_episode_screen"
+  },
+  {
+    "id": "seizure_or_repeated_seizures_006",
+    "category": "emergency",
+    "complaintFamily": "seizure_or_repeated_seizures",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 8,
+      "weightLbs": 38,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog collapsed with shaking and I am worried it is another seizure.",
+    "symptomKeys": [
+      "seizure_collapse"
+    ],
+    "turnFocusSymptoms": [
+      "seizure_collapse"
+    ],
+    "expectedMustScreen": [
+      "seizure_activity",
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "toxin_exposure"
+    ],
+    "badFirstQuestions": [
+      "What breed is your dog?",
+      "Can you tell me more?",
+      "Has your dog had diarrhea lately?"
+    ],
+    "idealQuestionCategories": [
+      "seizure_duration",
+      "collapse_screen",
+      "toxin_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "seizure_episode_screen"
+  },
+  {
+    "id": "toxin_ingestion_001",
+    "category": "emergency",
+    "complaintFamily": "toxin_ingestion",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 3,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog may have gotten into ibuprofen and started acting sick.",
+    "symptomKeys": [
+      "medication_reaction"
+    ],
+    "turnFocusSymptoms": [
+      "medication_reaction"
+    ],
+    "expectedMustScreen": [
+      "toxin_exposure",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "toxin_screen",
+      "symptom_timing",
+      "collapse_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "toxin_exposure_screen"
+  },
+  {
+    "id": "toxin_ingestion_002",
+    "category": "emergency",
+    "complaintFamily": "toxin_ingestion",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 6,
+      "weightLbs": 56,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog ate something toxic and is now vomiting and trembling.",
+    "symptomKeys": [
+      "medication_reaction"
+    ],
+    "turnFocusSymptoms": [
+      "medication_reaction"
+    ],
+    "expectedMustScreen": [
+      "toxin_exposure",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "toxin_screen",
+      "symptom_timing",
+      "collapse_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "toxin_exposure_screen"
+  },
+  {
+    "id": "toxin_ingestion_003",
+    "category": "emergency",
+    "complaintFamily": "toxin_ingestion",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 11,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog chewed a medication bottle and now looks weak and nauseated.",
+    "symptomKeys": [
+      "medication_reaction"
+    ],
+    "turnFocusSymptoms": [
+      "medication_reaction"
+    ],
+    "expectedMustScreen": [
+      "toxin_exposure",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "toxin_screen",
+      "symptom_timing",
+      "collapse_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "toxin_exposure_screen"
+  },
+  {
+    "id": "toxin_ingestion_004",
+    "category": "emergency",
+    "complaintFamily": "toxin_ingestion",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 2,
+      "weightLbs": 34,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog may have gotten into ibuprofen and started acting sick.",
+    "symptomKeys": [
+      "medication_reaction"
+    ],
+    "turnFocusSymptoms": [
+      "medication_reaction"
+    ],
+    "expectedMustScreen": [
+      "toxin_exposure",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "toxin_screen",
+      "symptom_timing",
+      "collapse_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "toxin_exposure_screen"
+  },
+  {
+    "id": "toxin_ingestion_005",
+    "category": "emergency",
+    "complaintFamily": "toxin_ingestion",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 6,
+      "weightLbs": 18,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog ate something toxic and is now vomiting and trembling.",
+    "symptomKeys": [
+      "medication_reaction"
+    ],
+    "turnFocusSymptoms": [
+      "medication_reaction"
+    ],
+    "expectedMustScreen": [
+      "toxin_exposure",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "toxin_screen",
+      "symptom_timing",
+      "collapse_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "toxin_exposure_screen"
+  },
+  {
+    "id": "toxin_ingestion_006",
+    "category": "emergency",
+    "complaintFamily": "toxin_ingestion",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 8,
+      "weightLbs": 28,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog chewed a medication bottle and now looks weak and nauseated.",
+    "symptomKeys": [
+      "medication_reaction"
+    ],
+    "turnFocusSymptoms": [
+      "medication_reaction"
+    ],
+    "expectedMustScreen": [
+      "toxin_exposure",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "toxin_screen",
+      "symptom_timing",
+      "collapse_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "toxin_exposure_screen"
+  },
+  {
+    "id": "trauma_001",
+    "category": "emergency",
+    "complaintFamily": "trauma",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 4,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog was hit by a car and is not acting normal.",
+    "symptomKeys": [
+      "trauma"
+    ],
+    "turnFocusSymptoms": [
+      "trauma"
+    ],
+    "expectedMustScreen": [
+      "active_bleeding",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has your dog ever had this before?"
+    ],
+    "idealQuestionCategories": [
+      "trauma_mechanism",
+      "bleeding_screen",
+      "mobility_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "major_trauma_screen"
+  },
+  {
+    "id": "trauma_002",
+    "category": "emergency",
+    "complaintFamily": "trauma",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 9,
+      "weightLbs": 24,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog took a bad fall and now seems painful and weak.",
+    "symptomKeys": [
+      "trauma"
+    ],
+    "turnFocusSymptoms": [
+      "trauma"
+    ],
+    "expectedMustScreen": [
+      "active_bleeding",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has your dog ever had this before?"
+    ],
+    "idealQuestionCategories": [
+      "trauma_mechanism",
+      "bleeding_screen",
+      "mobility_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "major_trauma_screen"
+  },
+  {
+    "id": "trauma_003",
+    "category": "emergency",
+    "complaintFamily": "trauma",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 11,
+      "weightLbs": 32,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog was bitten during a fight and I am worried about internal injury.",
+    "symptomKeys": [
+      "trauma"
+    ],
+    "turnFocusSymptoms": [
+      "trauma"
+    ],
+    "expectedMustScreen": [
+      "active_bleeding",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has your dog ever had this before?"
+    ],
+    "idealQuestionCategories": [
+      "trauma_mechanism",
+      "bleeding_screen",
+      "mobility_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "major_trauma_screen"
+  },
+  {
+    "id": "trauma_004",
+    "category": "emergency",
+    "complaintFamily": "trauma",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 1,
+      "weightLbs": 66,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog was hit by a car and is not acting normal.",
+    "symptomKeys": [
+      "trauma"
+    ],
+    "turnFocusSymptoms": [
+      "trauma"
+    ],
+    "expectedMustScreen": [
+      "active_bleeding",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has your dog ever had this before?"
+    ],
+    "idealQuestionCategories": [
+      "trauma_mechanism",
+      "bleeding_screen",
+      "mobility_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "major_trauma_screen"
+  },
+  {
+    "id": "trauma_005",
+    "category": "emergency",
+    "complaintFamily": "trauma",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 5,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog took a bad fall and now seems painful and weak.",
+    "symptomKeys": [
+      "trauma"
+    ],
+    "turnFocusSymptoms": [
+      "trauma"
+    ],
+    "expectedMustScreen": [
+      "active_bleeding",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has your dog ever had this before?"
+    ],
+    "idealQuestionCategories": [
+      "trauma_mechanism",
+      "bleeding_screen",
+      "mobility_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "major_trauma_screen"
+  },
+  {
+    "id": "trauma_006",
+    "category": "emergency",
+    "complaintFamily": "trauma",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 7,
+      "weightLbs": 18,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog was bitten during a fight and I am worried about internal injury.",
+    "symptomKeys": [
+      "trauma"
+    ],
+    "turnFocusSymptoms": [
+      "trauma"
+    ],
+    "expectedMustScreen": [
+      "active_bleeding",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has your dog ever had this before?"
+    ],
+    "idealQuestionCategories": [
+      "trauma_mechanism",
+      "bleeding_screen",
+      "mobility_screen",
+      "breathing_distress_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "major_trauma_screen"
+  },
+  {
+    "id": "urinary_blockage_001",
+    "category": "emergency",
+    "complaintFamily": "urinary_blockage",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 4,
+      "weightLbs": 48,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps straining to pee and almost nothing comes out.",
+    "symptomKeys": [
+      "urination_problem"
+    ],
+    "turnFocusSymptoms": [
+      "urination_problem"
+    ],
+    "expectedMustScreen": [
+      "straining_with_no_urine",
+      "collapse_or_weakness",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What food does your dog eat?"
+    ],
+    "idealQuestionCategories": [
+      "urinary_obstruction_screen",
+      "urine_output",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "urinary_obstruction_screen"
+  },
+  {
+    "id": "urinary_blockage_002",
+    "category": "emergency",
+    "complaintFamily": "urinary_blockage",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 7,
+      "weightLbs": 18,
+      "sexNeuter": "intact male"
+    },
+    "initialMessage": "My dog is trying to urinate over and over but barely passes anything.",
+    "symptomKeys": [
+      "urination_problem"
+    ],
+    "turnFocusSymptoms": [
+      "urination_problem"
+    ],
+    "expectedMustScreen": [
+      "straining_with_no_urine",
+      "collapse_or_weakness",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What food does your dog eat?"
+    ],
+    "idealQuestionCategories": [
+      "urinary_obstruction_screen",
+      "urine_output",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "urinary_obstruction_screen"
+  },
+  {
+    "id": "urinary_blockage_003",
+    "category": "emergency",
+    "complaintFamily": "urinary_blockage",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 10,
+      "weightLbs": 30,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is pacing and straining to pee with very little urine.",
+    "symptomKeys": [
+      "urination_problem"
+    ],
+    "turnFocusSymptoms": [
+      "urination_problem"
+    ],
+    "expectedMustScreen": [
+      "straining_with_no_urine",
+      "collapse_or_weakness",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What food does your dog eat?"
+    ],
+    "idealQuestionCategories": [
+      "urinary_obstruction_screen",
+      "urine_output",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "urinary_obstruction_screen"
+  },
+  {
+    "id": "urinary_blockage_004",
+    "category": "emergency",
+    "complaintFamily": "urinary_blockage",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 2,
+      "weightLbs": 48,
+      "sexNeuter": "intact male"
+    },
+    "initialMessage": "My dog keeps straining to pee and almost nothing comes out.",
+    "symptomKeys": [
+      "urination_problem"
+    ],
+    "turnFocusSymptoms": [
+      "urination_problem"
+    ],
+    "expectedMustScreen": [
+      "straining_with_no_urine",
+      "collapse_or_weakness",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What food does your dog eat?"
+    ],
+    "idealQuestionCategories": [
+      "urinary_obstruction_screen",
+      "urine_output",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "urinary_obstruction_screen"
+  },
+  {
+    "id": "urinary_blockage_005",
+    "category": "emergency",
+    "complaintFamily": "urinary_blockage",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is trying to urinate over and over but barely passes anything.",
+    "symptomKeys": [
+      "urination_problem"
+    ],
+    "turnFocusSymptoms": [
+      "urination_problem"
+    ],
+    "expectedMustScreen": [
+      "straining_with_no_urine",
+      "collapse_or_weakness",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What food does your dog eat?"
+    ],
+    "idealQuestionCategories": [
+      "urinary_obstruction_screen",
+      "urine_output",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "urinary_obstruction_screen"
+  },
+  {
+    "id": "heat_stroke_001",
+    "category": "emergency",
+    "complaintFamily": "heat_stroke",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 1,
+      "weightLbs": 18,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog overheated outside and is panting hard.",
+    "symptomKeys": [
+      "heat_intolerance"
+    ],
+    "turnFocusSymptoms": [
+      "heat_intolerance"
+    ],
+    "expectedMustScreen": [
+      "heat_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has the appetite changed this week?"
+    ],
+    "idealQuestionCategories": [
+      "heat_exposure_screen",
+      "collapse_screen",
+      "gum_color_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "heat_illness_screen"
+  },
+  {
+    "id": "heat_stroke_002",
+    "category": "emergency",
+    "complaintFamily": "heat_stroke",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 2,
+      "weightLbs": 22,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog was out in the heat and now looks weak and distressed.",
+    "symptomKeys": [
+      "heat_intolerance"
+    ],
+    "turnFocusSymptoms": [
+      "heat_intolerance"
+    ],
+    "expectedMustScreen": [
+      "heat_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has the appetite changed this week?"
+    ],
+    "idealQuestionCategories": [
+      "heat_exposure_screen",
+      "collapse_screen",
+      "gum_color_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "heat_illness_screen"
+  },
+  {
+    "id": "heat_stroke_003",
+    "category": "emergency",
+    "complaintFamily": "heat_stroke",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 3,
+      "weightLbs": 28,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog got too hot in the sun and is now breathing fast and acting sick.",
+    "symptomKeys": [
+      "heat_intolerance"
+    ],
+    "turnFocusSymptoms": [
+      "heat_intolerance"
+    ],
+    "expectedMustScreen": [
+      "heat_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has the appetite changed this week?"
+    ],
+    "idealQuestionCategories": [
+      "heat_exposure_screen",
+      "collapse_screen",
+      "gum_color_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "heat_illness_screen"
+  },
+  {
+    "id": "heat_stroke_004",
+    "category": "emergency",
+    "complaintFamily": "heat_stroke",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 5,
+      "weightLbs": 34,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog overheated outside and is panting hard.",
+    "symptomKeys": [
+      "heat_intolerance"
+    ],
+    "turnFocusSymptoms": [
+      "heat_intolerance"
+    ],
+    "expectedMustScreen": [
+      "heat_exposure",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "Has the appetite changed this week?"
+    ],
+    "idealQuestionCategories": [
+      "heat_exposure_screen",
+      "collapse_screen",
+      "gum_color_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "emergency_vet_now",
+    "recommendedFirstModule": "heat_illness_screen"
+  },
+  {
+    "id": "vomiting_and_lethargy_001",
+    "category": "urgent_same_day",
+    "complaintFamily": "vomiting_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 4,
+      "weightLbs": 25,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has been vomiting and seems very tired today.",
+    "symptomKeys": [
+      "vomiting",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting",
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "gum_color_screen",
+      "energy_change"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "vomiting_lethargy_module"
+  },
+  {
+    "id": "vomiting_and_lethargy_002",
+    "category": "urgent_same_day",
+    "complaintFamily": "vomiting_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 7,
+      "weightLbs": 84,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog threw up several times and is much less active than usual.",
+    "symptomKeys": [
+      "vomiting",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting",
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "gum_color_screen",
+      "energy_change"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "vomiting_lethargy_module"
+  },
+  {
+    "id": "vomiting_and_lethargy_003",
+    "category": "urgent_same_day",
+    "complaintFamily": "vomiting_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 10,
+      "weightLbs": 20,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is vomiting and acting lethargic since this morning.",
+    "symptomKeys": [
+      "vomiting",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting",
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "gum_color_screen",
+      "energy_change"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "vomiting_lethargy_module"
+  },
+  {
+    "id": "vomiting_and_lethargy_004",
+    "category": "urgent_same_day",
+    "complaintFamily": "vomiting_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 2,
+      "weightLbs": 74,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has been vomiting and seems very tired today.",
+    "symptomKeys": [
+      "vomiting",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting",
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "gum_color_screen",
+      "energy_change"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "vomiting_lethargy_module"
+  },
+  {
+    "id": "vomiting_and_lethargy_005",
+    "category": "urgent_same_day",
+    "complaintFamily": "vomiting_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 5,
+      "weightLbs": 58,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog threw up several times and is much less active than usual.",
+    "symptomKeys": [
+      "vomiting",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting",
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "gum_color_screen",
+      "energy_change"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "vomiting_lethargy_module"
+  },
+  {
+    "id": "vomiting_and_lethargy_006",
+    "category": "urgent_same_day",
+    "complaintFamily": "vomiting_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 8,
+      "weightLbs": 72,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is vomiting and acting lethargic since this morning.",
+    "symptomKeys": [
+      "vomiting",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting",
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "gum_color_screen",
+      "energy_change"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "vomiting_lethargy_module"
+  },
+  {
+    "id": "vomiting_and_lethargy_007",
+    "category": "urgent_same_day",
+    "complaintFamily": "vomiting_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 7,
+      "weightLbs": 28,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has been vomiting and seems very tired today.",
+    "symptomKeys": [
+      "vomiting",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting",
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "gum_color_screen",
+      "energy_change"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "vomiting_lethargy_module"
+  },
+  {
+    "id": "bloody_diarrhea_001",
+    "category": "urgent_same_day",
+    "complaintFamily": "bloody_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 3,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has diarrhea with blood in it.",
+    "symptomKeys": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "gi_bleeding_screen",
+      "hydration_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "gi_bleeding_module"
+  },
+  {
+    "id": "bloody_diarrhea_002",
+    "category": "urgent_same_day",
+    "complaintFamily": "bloody_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 6,
+      "weightLbs": 56,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog passed bloody stool and seems uncomfortable.",
+    "symptomKeys": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "gi_bleeding_screen",
+      "hydration_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "gi_bleeding_module"
+  },
+  {
+    "id": "bloody_diarrhea_003",
+    "category": "urgent_same_day",
+    "complaintFamily": "bloody_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 11,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has bloody diarrhea and is going outside a lot.",
+    "symptomKeys": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "gi_bleeding_screen",
+      "hydration_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "gi_bleeding_module"
+  },
+  {
+    "id": "bloody_diarrhea_004",
+    "category": "urgent_same_day",
+    "complaintFamily": "bloody_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 2,
+      "weightLbs": 34,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has diarrhea with blood in it.",
+    "symptomKeys": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "gi_bleeding_screen",
+      "hydration_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "gi_bleeding_module"
+  },
+  {
+    "id": "bloody_diarrhea_005",
+    "category": "urgent_same_day",
+    "complaintFamily": "bloody_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 6,
+      "weightLbs": 18,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog passed bloody stool and seems uncomfortable.",
+    "symptomKeys": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "gi_bleeding_screen",
+      "hydration_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "gi_bleeding_module"
+  },
+  {
+    "id": "bloody_diarrhea_006",
+    "category": "urgent_same_day",
+    "complaintFamily": "bloody_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 8,
+      "weightLbs": 28,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has bloody diarrhea and is going outside a lot.",
+    "symptomKeys": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "gi_bleeding_screen",
+      "hydration_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "gi_bleeding_module"
+  },
+  {
+    "id": "bloody_diarrhea_007",
+    "category": "urgent_same_day",
+    "complaintFamily": "bloody_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 12,
+      "weightLbs": 52,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has diarrhea with blood in it.",
+    "symptomKeys": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "blood_in_stool",
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "gi_bleeding_screen",
+      "hydration_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "gi_bleeding_module"
+  },
+  {
+    "id": "eye_injury_001",
+    "category": "urgent_same_day",
+    "complaintFamily": "eye_injury",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 5,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog scratched an eye and now it looks painful.",
+    "symptomKeys": [
+      "eye_discharge"
+    ],
+    "turnFocusSymptoms": [
+      "eye_discharge"
+    ],
+    "expectedMustScreen": [
+      "vision_loss_or_eye_trauma",
+      "eye_swelling",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "eye_emergency_screen",
+      "vision_screen",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "eye_injury_module"
+  },
+  {
+    "id": "eye_injury_002",
+    "category": "urgent_same_day",
+    "complaintFamily": "eye_injury",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 7,
+      "weightLbs": 18,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog may have injured an eye and keeps squinting.",
+    "symptomKeys": [
+      "eye_discharge"
+    ],
+    "turnFocusSymptoms": [
+      "eye_discharge"
+    ],
+    "expectedMustScreen": [
+      "vision_loss_or_eye_trauma",
+      "eye_swelling",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "eye_emergency_screen",
+      "vision_screen",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "eye_injury_module"
+  },
+  {
+    "id": "eye_injury_003",
+    "category": "urgent_same_day",
+    "complaintFamily": "eye_injury",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 8,
+      "weightLbs": 68,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has sudden eye discharge after rubbing at the eye.",
+    "symptomKeys": [
+      "eye_discharge"
+    ],
+    "turnFocusSymptoms": [
+      "eye_discharge"
+    ],
+    "expectedMustScreen": [
+      "vision_loss_or_eye_trauma",
+      "eye_swelling",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "eye_emergency_screen",
+      "vision_screen",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "eye_injury_module"
+  },
+  {
+    "id": "eye_injury_004",
+    "category": "urgent_same_day",
+    "complaintFamily": "eye_injury",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 3,
+      "weightLbs": 80,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog scratched an eye and now it looks painful.",
+    "symptomKeys": [
+      "eye_discharge"
+    ],
+    "turnFocusSymptoms": [
+      "eye_discharge"
+    ],
+    "expectedMustScreen": [
+      "vision_loss_or_eye_trauma",
+      "eye_swelling",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "eye_emergency_screen",
+      "vision_screen",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "eye_injury_module"
+  },
+  {
+    "id": "eye_injury_005",
+    "category": "urgent_same_day",
+    "complaintFamily": "eye_injury",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 5,
+      "weightLbs": 60,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog may have injured an eye and keeps squinting.",
+    "symptomKeys": [
+      "eye_discharge"
+    ],
+    "turnFocusSymptoms": [
+      "eye_discharge"
+    ],
+    "expectedMustScreen": [
+      "vision_loss_or_eye_trauma",
+      "eye_swelling",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "eye_emergency_screen",
+      "vision_screen",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "eye_injury_module"
+  },
+  {
+    "id": "eye_injury_006",
+    "category": "urgent_same_day",
+    "complaintFamily": "eye_injury",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has sudden eye discharge after rubbing at the eye.",
+    "symptomKeys": [
+      "eye_discharge"
+    ],
+    "turnFocusSymptoms": [
+      "eye_discharge"
+    ],
+    "expectedMustScreen": [
+      "vision_loss_or_eye_trauma",
+      "eye_swelling",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "eye_emergency_screen",
+      "vision_screen",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "eye_injury_module"
+  },
+  {
+    "id": "non_weight_bearing_limp_001",
+    "category": "urgent_same_day",
+    "complaintFamily": "non_weight_bearing_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 4,
+      "weightLbs": 16,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog will not put weight on one leg.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "mobility_screen",
+      "limp_location",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "limp_severity_module"
+  },
+  {
+    "id": "non_weight_bearing_limp_002",
+    "category": "urgent_same_day",
+    "complaintFamily": "non_weight_bearing_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 6,
+      "weightLbs": 62,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog suddenly started limping and is holding the leg up.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "mobility_screen",
+      "limp_location",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "limp_severity_module"
+  },
+  {
+    "id": "non_weight_bearing_limp_003",
+    "category": "urgent_same_day",
+    "complaintFamily": "non_weight_bearing_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 9,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is non-weight-bearing on a back leg after playing.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "mobility_screen",
+      "limp_location",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "limp_severity_module"
+  },
+  {
+    "id": "non_weight_bearing_limp_004",
+    "category": "urgent_same_day",
+    "complaintFamily": "non_weight_bearing_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 2,
+      "weightLbs": 90,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog will not put weight on one leg.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "mobility_screen",
+      "limp_location",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "limp_severity_module"
+  },
+  {
+    "id": "non_weight_bearing_limp_005",
+    "category": "urgent_same_day",
+    "complaintFamily": "non_weight_bearing_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 3,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog suddenly started limping and is holding the leg up.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "mobility_screen",
+      "limp_location",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "limp_severity_module"
+  },
+  {
+    "id": "non_weight_bearing_limp_006",
+    "category": "urgent_same_day",
+    "complaintFamily": "non_weight_bearing_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 6,
+      "weightLbs": 56,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is non-weight-bearing on a back leg after playing.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "mobility_screen",
+      "limp_location",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "limp_severity_module"
+  },
+  {
+    "id": "non_weight_bearing_limp_007",
+    "category": "urgent_same_day",
+    "complaintFamily": "non_weight_bearing_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 11,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog will not put weight on one leg.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "mobility_screen",
+      "limp_location",
+      "trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "limp_severity_module"
+  },
+  {
+    "id": "wound_or_bite_001",
+    "category": "urgent_same_day",
+    "complaintFamily": "wound_or_bite",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 5,
+      "weightLbs": 58,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has a bite wound from another dog.",
+    "symptomKeys": [
+      "wound_skin_issue"
+    ],
+    "turnFocusSymptoms": [
+      "wound_skin_issue"
+    ],
+    "expectedMustScreen": [
+      "wound_depth_or_bleeding",
+      "fracture_or_bone_exposure",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "wound_severity",
+      "bleeding_screen",
+      "bite_trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "wound_bite_module"
+  },
+  {
+    "id": "wound_or_bite_002",
+    "category": "urgent_same_day",
+    "complaintFamily": "wound_or_bite",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 8,
+      "weightLbs": 72,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has an open wound on the side that looks painful.",
+    "symptomKeys": [
+      "wound_skin_issue"
+    ],
+    "turnFocusSymptoms": [
+      "wound_skin_issue"
+    ],
+    "expectedMustScreen": [
+      "wound_depth_or_bleeding",
+      "fracture_or_bone_exposure",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "wound_severity",
+      "bleeding_screen",
+      "bite_trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "wound_bite_module"
+  },
+  {
+    "id": "wound_or_bite_003",
+    "category": "urgent_same_day",
+    "complaintFamily": "wound_or_bite",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 7,
+      "weightLbs": 28,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog was bitten and now has a raw wound that is oozing.",
+    "symptomKeys": [
+      "wound_skin_issue"
+    ],
+    "turnFocusSymptoms": [
+      "wound_skin_issue"
+    ],
+    "expectedMustScreen": [
+      "wound_depth_or_bleeding",
+      "fracture_or_bone_exposure",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "wound_severity",
+      "bleeding_screen",
+      "bite_trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "wound_bite_module"
+  },
+  {
+    "id": "wound_or_bite_004",
+    "category": "urgent_same_day",
+    "complaintFamily": "wound_or_bite",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 2,
+      "weightLbs": 72,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has a bite wound from another dog.",
+    "symptomKeys": [
+      "wound_skin_issue"
+    ],
+    "turnFocusSymptoms": [
+      "wound_skin_issue"
+    ],
+    "expectedMustScreen": [
+      "wound_depth_or_bleeding",
+      "fracture_or_bone_exposure",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "wound_severity",
+      "bleeding_screen",
+      "bite_trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "wound_bite_module"
+  },
+  {
+    "id": "wound_or_bite_005",
+    "category": "urgent_same_day",
+    "complaintFamily": "wound_or_bite",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 5,
+      "weightLbs": 14,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has an open wound on the side that looks painful.",
+    "symptomKeys": [
+      "wound_skin_issue"
+    ],
+    "turnFocusSymptoms": [
+      "wound_skin_issue"
+    ],
+    "expectedMustScreen": [
+      "wound_depth_or_bleeding",
+      "fracture_or_bone_exposure",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "wound_severity",
+      "bleeding_screen",
+      "bite_trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "wound_bite_module"
+  },
+  {
+    "id": "wound_or_bite_006",
+    "category": "urgent_same_day",
+    "complaintFamily": "wound_or_bite",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 7,
+      "weightLbs": 26,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog was bitten and now has a raw wound that is oozing.",
+    "symptomKeys": [
+      "wound_skin_issue"
+    ],
+    "turnFocusSymptoms": [
+      "wound_skin_issue"
+    ],
+    "expectedMustScreen": [
+      "wound_depth_or_bleeding",
+      "fracture_or_bone_exposure",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "wound_severity",
+      "bleeding_screen",
+      "bite_trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "wound_bite_module"
+  },
+  {
+    "id": "wound_or_bite_007",
+    "category": "urgent_same_day",
+    "complaintFamily": "wound_or_bite",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 12,
+      "weightLbs": 36,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has a bite wound from another dog.",
+    "symptomKeys": [
+      "wound_skin_issue"
+    ],
+    "turnFocusSymptoms": [
+      "wound_skin_issue"
+    ],
+    "expectedMustScreen": [
+      "wound_depth_or_bleeding",
+      "fracture_or_bone_exposure",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "wound_severity",
+      "bleeding_screen",
+      "bite_trauma_history"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "wound_bite_module"
+  },
+  {
+    "id": "painful_abdomen_without_collapse_001",
+    "category": "urgent_same_day",
+    "complaintFamily": "painful_abdomen_without_collapse",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog seems painful in the belly but has not collapsed.",
+    "symptomKeys": [
+      "swollen_abdomen"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "abdominal_distension",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "pain_severity",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "abdominal_pain_module"
+  },
+  {
+    "id": "painful_abdomen_without_collapse_002",
+    "category": "urgent_same_day",
+    "complaintFamily": "painful_abdomen_without_collapse",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 8,
+      "weightLbs": 38,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog cries when I touch the abdomen and seems uncomfortable.",
+    "symptomKeys": [
+      "swollen_abdomen"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "abdominal_distension",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "pain_severity",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "abdominal_pain_module"
+  },
+  {
+    "id": "painful_abdomen_without_collapse_003",
+    "category": "urgent_same_day",
+    "complaintFamily": "painful_abdomen_without_collapse",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 9,
+      "weightLbs": 96,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog looks tucked up and painful through the belly today.",
+    "symptomKeys": [
+      "swollen_abdomen"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "abdominal_distension",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "pain_severity",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "abdominal_pain_module"
+  },
+  {
+    "id": "painful_abdomen_without_collapse_004",
+    "category": "urgent_same_day",
+    "complaintFamily": "painful_abdomen_without_collapse",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 2,
+      "weightLbs": 22,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog seems painful in the belly but has not collapsed.",
+    "symptomKeys": [
+      "swollen_abdomen"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "abdominal_distension",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "pain_severity",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "abdominal_pain_module"
+  },
+  {
+    "id": "painful_abdomen_without_collapse_005",
+    "category": "urgent_same_day",
+    "complaintFamily": "painful_abdomen_without_collapse",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 4,
+      "weightLbs": 55,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog cries when I touch the abdomen and seems uncomfortable.",
+    "symptomKeys": [
+      "swollen_abdomen"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "abdominal_distension",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "pain_severity",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "abdominal_pain_module"
+  },
+  {
+    "id": "painful_abdomen_without_collapse_006",
+    "category": "urgent_same_day",
+    "complaintFamily": "painful_abdomen_without_collapse",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 7,
+      "weightLbs": 65,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog looks tucked up and painful through the belly today.",
+    "symptomKeys": [
+      "swollen_abdomen"
+    ],
+    "turnFocusSymptoms": [
+      "swollen_abdomen"
+    ],
+    "expectedMustScreen": [
+      "abdominal_distension",
+      "repeated_vomiting",
+      "collapse_or_weakness",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "abdominal_emergency_screen",
+      "pain_severity",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "same_day_or_urgent_exam",
+    "recommendedFirstModule": "abdominal_pain_module"
+  },
+  {
+    "id": "mild_itching_001",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_itching",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 4,
+      "weightLbs": 55,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has mild itching but is otherwise acting normal.",
+    "symptomKeys": [
+      "excessive_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "emergency_allergy_screen",
+      "itch_location",
+      "skin_changes"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "itching_module"
+  },
+  {
+    "id": "mild_itching_002",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_itching",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 7,
+      "weightLbs": 65,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog keeps scratching a little but is eating and playing normally.",
+    "symptomKeys": [
+      "excessive_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "emergency_allergy_screen",
+      "itch_location",
+      "skin_changes"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "itching_module"
+  },
+  {
+    "id": "mild_itching_003",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_itching",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 10,
+      "weightLbs": 82,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has some mild itchiness on and off this week.",
+    "symptomKeys": [
+      "excessive_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "emergency_allergy_screen",
+      "itch_location",
+      "skin_changes"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "itching_module"
+  },
+  {
+    "id": "mild_itching_004",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_itching",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 1,
+      "weightLbs": 30,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has mild itching but is otherwise acting normal.",
+    "symptomKeys": [
+      "excessive_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "emergency_allergy_screen",
+      "itch_location",
+      "skin_changes"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "itching_module"
+  },
+  {
+    "id": "mild_itching_005",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_itching",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 4,
+      "weightLbs": 48,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps scratching a little but is eating and playing normally.",
+    "symptomKeys": [
+      "excessive_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "emergency_allergy_screen",
+      "itch_location",
+      "skin_changes"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "itching_module"
+  },
+  {
+    "id": "mild_itching_006",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_itching",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 7,
+      "weightLbs": 18,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has some mild itchiness on and off this week.",
+    "symptomKeys": [
+      "excessive_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "emergency_allergy_screen",
+      "itch_location",
+      "skin_changes"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "itching_module"
+  },
+  {
+    "id": "mild_itching_007",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_itching",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 10,
+      "weightLbs": 30,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has mild itching but is otherwise acting normal.",
+    "symptomKeys": [
+      "excessive_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "repeated_vomiting"
+    ],
+    "badFirstQuestions": [
+      "How old is your dog?",
+      "Can you tell me more?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "emergency_allergy_screen",
+      "itch_location",
+      "skin_changes"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "itching_module"
+  },
+  {
+    "id": "mild_limp_001",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 4,
+      "weightLbs": 25,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has a mild limp after a long walk.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "limp_location",
+      "limp_timing",
+      "weight_bearing"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_limp_module"
+  },
+  {
+    "id": "mild_limp_002",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 7,
+      "weightLbs": 84,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is favoring one leg a little but still walks on it.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "limp_location",
+      "limp_timing",
+      "weight_bearing"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_limp_module"
+  },
+  {
+    "id": "mild_limp_003",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 10,
+      "weightLbs": 20,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog seems a bit stiff and mildly lame after resting.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "limp_location",
+      "limp_timing",
+      "weight_bearing"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_limp_module"
+  },
+  {
+    "id": "mild_limp_004",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 2,
+      "weightLbs": 74,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has a mild limp after a long walk.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "limp_location",
+      "limp_timing",
+      "weight_bearing"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_limp_module"
+  },
+  {
+    "id": "mild_limp_005",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 5,
+      "weightLbs": 58,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is favoring one leg a little but still walks on it.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "limp_location",
+      "limp_timing",
+      "weight_bearing"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_limp_module"
+  },
+  {
+    "id": "mild_limp_006",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 8,
+      "weightLbs": 72,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog seems a bit stiff and mildly lame after resting.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "limp_location",
+      "limp_timing",
+      "weight_bearing"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_limp_module"
+  },
+  {
+    "id": "mild_limp_007",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_limp",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 7,
+      "weightLbs": 28,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has a mild limp after a long walk.",
+    "symptomKeys": [
+      "limping"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "fracture_or_bone_exposure",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "limp_location",
+      "limp_timing",
+      "weight_bearing"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_limp_module"
+  },
+  {
+    "id": "eating_less_001",
+    "category": "routine_unclear",
+    "complaintFamily": "eating_less",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 4,
+      "weightLbs": 16,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is eating less than usual but still interested in treats.",
+    "symptomKeys": [
+      "not_eating"
+    ],
+    "turnFocusSymptoms": [
+      "not_eating"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "appetite_duration",
+      "hydration_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "reduced_appetite_module"
+  },
+  {
+    "id": "eating_less_002",
+    "category": "routine_unclear",
+    "complaintFamily": "eating_less",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 6,
+      "weightLbs": 62,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has a lower appetite over the last day or two.",
+    "symptomKeys": [
+      "not_eating"
+    ],
+    "turnFocusSymptoms": [
+      "not_eating"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "appetite_duration",
+      "hydration_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "reduced_appetite_module"
+  },
+  {
+    "id": "eating_less_003",
+    "category": "routine_unclear",
+    "complaintFamily": "eating_less",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 9,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is picky with meals but not completely refusing food.",
+    "symptomKeys": [
+      "not_eating"
+    ],
+    "turnFocusSymptoms": [
+      "not_eating"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "appetite_duration",
+      "hydration_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "reduced_appetite_module"
+  },
+  {
+    "id": "eating_less_004",
+    "category": "routine_unclear",
+    "complaintFamily": "eating_less",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 2,
+      "weightLbs": 90,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is eating less than usual but still interested in treats.",
+    "symptomKeys": [
+      "not_eating"
+    ],
+    "turnFocusSymptoms": [
+      "not_eating"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "appetite_duration",
+      "hydration_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "reduced_appetite_module"
+  },
+  {
+    "id": "eating_less_005",
+    "category": "routine_unclear",
+    "complaintFamily": "eating_less",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 3,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has a lower appetite over the last day or two.",
+    "symptomKeys": [
+      "not_eating"
+    ],
+    "turnFocusSymptoms": [
+      "not_eating"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "appetite_duration",
+      "hydration_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "reduced_appetite_module"
+  },
+  {
+    "id": "eating_less_006",
+    "category": "routine_unclear",
+    "complaintFamily": "eating_less",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 6,
+      "weightLbs": 56,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is picky with meals but not completely refusing food.",
+    "symptomKeys": [
+      "not_eating"
+    ],
+    "turnFocusSymptoms": [
+      "not_eating"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "appetite_duration",
+      "hydration_screen",
+      "vomiting_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "reduced_appetite_module"
+  },
+  {
+    "id": "ear_scratching_001",
+    "category": "routine_unclear",
+    "complaintFamily": "ear_scratching",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 5,
+      "weightLbs": 60,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps scratching one ear.",
+    "symptomKeys": [
+      "ear_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "ear_scratching"
+    ],
+    "expectedMustScreen": [
+      "head_tilt_balance",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "ear_discharge",
+      "head_tilt_balance",
+      "itch_location"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "ear_scratching_module"
+  },
+  {
+    "id": "ear_scratching_002",
+    "category": "routine_unclear",
+    "complaintFamily": "ear_scratching",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has been pawing at an ear and shaking the head some.",
+    "symptomKeys": [
+      "ear_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "ear_scratching"
+    ],
+    "expectedMustScreen": [
+      "head_tilt_balance",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "ear_discharge",
+      "head_tilt_balance",
+      "itch_location"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "ear_scratching_module"
+  },
+  {
+    "id": "ear_scratching_003",
+    "category": "routine_unclear",
+    "complaintFamily": "ear_scratching",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 8,
+      "weightLbs": 64,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps scratching around the ears and seems annoyed.",
+    "symptomKeys": [
+      "ear_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "ear_scratching"
+    ],
+    "expectedMustScreen": [
+      "head_tilt_balance",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "ear_discharge",
+      "head_tilt_balance",
+      "itch_location"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "ear_scratching_module"
+  },
+  {
+    "id": "ear_scratching_004",
+    "category": "routine_unclear",
+    "complaintFamily": "ear_scratching",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 3,
+      "weightLbs": 26,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog keeps scratching one ear.",
+    "symptomKeys": [
+      "ear_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "ear_scratching"
+    ],
+    "expectedMustScreen": [
+      "head_tilt_balance",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "ear_discharge",
+      "head_tilt_balance",
+      "itch_location"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "ear_scratching_module"
+  },
+  {
+    "id": "ear_scratching_005",
+    "category": "routine_unclear",
+    "complaintFamily": "ear_scratching",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 4,
+      "weightLbs": 22,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has been pawing at an ear and shaking the head some.",
+    "symptomKeys": [
+      "ear_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "ear_scratching"
+    ],
+    "expectedMustScreen": [
+      "head_tilt_balance",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "ear_discharge",
+      "head_tilt_balance",
+      "itch_location"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "ear_scratching_module"
+  },
+  {
+    "id": "ear_scratching_006",
+    "category": "routine_unclear",
+    "complaintFamily": "ear_scratching",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 9,
+      "weightLbs": 24,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog keeps scratching around the ears and seems annoyed.",
+    "symptomKeys": [
+      "ear_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "ear_scratching"
+    ],
+    "expectedMustScreen": [
+      "head_tilt_balance",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "ear_discharge",
+      "head_tilt_balance",
+      "itch_location"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "ear_scratching_module"
+  },
+  {
+    "id": "ear_scratching_007",
+    "category": "routine_unclear",
+    "complaintFamily": "ear_scratching",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 11,
+      "weightLbs": 32,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps scratching one ear.",
+    "symptomKeys": [
+      "ear_scratching"
+    ],
+    "turnFocusSymptoms": [
+      "ear_scratching"
+    ],
+    "expectedMustScreen": [
+      "head_tilt_balance",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "ear_discharge",
+      "head_tilt_balance",
+      "itch_location"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "ear_scratching_module"
+  },
+  {
+    "id": "occasional_vomiting_001",
+    "category": "routine_unclear",
+    "complaintFamily": "occasional_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 6,
+      "weightLbs": 18,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog vomited once and otherwise seems okay.",
+    "symptomKeys": [
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "dietary_change"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "vomiting_module"
+  },
+  {
+    "id": "occasional_vomiting_002",
+    "category": "routine_unclear",
+    "complaintFamily": "occasional_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 8,
+      "weightLbs": 28,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has had occasional vomiting but is still drinking.",
+    "symptomKeys": [
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "dietary_change"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "vomiting_module"
+  },
+  {
+    "id": "occasional_vomiting_003",
+    "category": "routine_unclear",
+    "complaintFamily": "occasional_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 12,
+      "weightLbs": 52,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog threw up earlier and now seems mostly normal.",
+    "symptomKeys": [
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "dietary_change"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "vomiting_module"
+  },
+  {
+    "id": "occasional_vomiting_004",
+    "category": "routine_unclear",
+    "complaintFamily": "occasional_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 3,
+      "weightLbs": 108,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog vomited once and otherwise seems okay.",
+    "symptomKeys": [
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "dietary_change"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "vomiting_module"
+  },
+  {
+    "id": "occasional_vomiting_005",
+    "category": "routine_unclear",
+    "complaintFamily": "occasional_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 4,
+      "weightLbs": 16,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has had occasional vomiting but is still drinking.",
+    "symptomKeys": [
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "dietary_change"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "vomiting_module"
+  },
+  {
+    "id": "occasional_vomiting_006",
+    "category": "routine_unclear",
+    "complaintFamily": "occasional_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 6,
+      "weightLbs": 62,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog threw up earlier and now seems mostly normal.",
+    "symptomKeys": [
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "dietary_change"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "vomiting_module"
+  },
+  {
+    "id": "occasional_vomiting_007",
+    "category": "routine_unclear",
+    "complaintFamily": "occasional_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 9,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog vomited once and otherwise seems okay.",
+    "symptomKeys": [
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "repeated_vomiting",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vomiting_severity",
+      "hydration_screen",
+      "dietary_change"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "vomiting_module"
+  },
+  {
+    "id": "mild_diarrhea_001",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 5,
+      "weightLbs": 58,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has mild diarrhea but is otherwise okay.",
+    "symptomKeys": [
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "stool_blood_screen",
+      "stool_consistency",
+      "hydration_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_diarrhea_module"
+  },
+  {
+    "id": "mild_diarrhea_002",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 8,
+      "weightLbs": 72,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has softer stool today and still wants to eat.",
+    "symptomKeys": [
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "stool_blood_screen",
+      "stool_consistency",
+      "hydration_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_diarrhea_module"
+  },
+  {
+    "id": "mild_diarrhea_003",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "French Bulldog",
+      "ageYears": 7,
+      "weightLbs": 28,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has a mild bout of diarrhea with no other big changes.",
+    "symptomKeys": [
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "stool_blood_screen",
+      "stool_consistency",
+      "hydration_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_diarrhea_module"
+  },
+  {
+    "id": "mild_diarrhea_004",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Boxer",
+      "ageYears": 2,
+      "weightLbs": 72,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has mild diarrhea but is otherwise okay.",
+    "symptomKeys": [
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "stool_blood_screen",
+      "stool_consistency",
+      "hydration_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_diarrhea_module"
+  },
+  {
+    "id": "mild_diarrhea_005",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 5,
+      "weightLbs": 14,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has softer stool today and still wants to eat.",
+    "symptomKeys": [
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "stool_blood_screen",
+      "stool_consistency",
+      "hydration_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_diarrhea_module"
+  },
+  {
+    "id": "mild_diarrhea_006",
+    "category": "routine_unclear",
+    "complaintFamily": "mild_diarrhea",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 7,
+      "weightLbs": 26,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has a mild bout of diarrhea with no other big changes.",
+    "symptomKeys": [
+      "diarrhea"
+    ],
+    "turnFocusSymptoms": [
+      "diarrhea"
+    ],
+    "expectedMustScreen": [
+      "bloody_stool_or_vomit",
+      "not_drinking",
+      "collapse_or_weakness",
+      "pale_or_blue_gums"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "stool_blood_screen",
+      "stool_consistency",
+      "hydration_screen"
+    ],
+    "expectedUrgency": "non_emergency_unless_red_flags",
+    "recommendedFirstModule": "mild_diarrhea_module"
+  },
+  {
+    "id": "itching_and_vomiting_001",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "itching_and_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is itchy and also vomited today.",
+    "symptomKeys": [
+      "excessive_scratching",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "repeated_vomiting",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "vomiting_severity",
+      "emergency_allergy_screen",
+      "itch_location"
+    ],
+    "expectedUrgency": "same_day_if_red_flags_otherwise_question_first",
+    "recommendedFirstModule": "itching_vomiting_split_module"
+  },
+  {
+    "id": "itching_and_vomiting_002",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "itching_and_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 8,
+      "weightLbs": 38,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog keeps scratching and has thrown up a couple of times.",
+    "symptomKeys": [
+      "excessive_scratching",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "repeated_vomiting",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "vomiting_severity",
+      "emergency_allergy_screen",
+      "itch_location"
+    ],
+    "expectedUrgency": "same_day_if_red_flags_otherwise_question_first",
+    "recommendedFirstModule": "itching_vomiting_split_module"
+  },
+  {
+    "id": "itching_and_vomiting_003",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "itching_and_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 9,
+      "weightLbs": 96,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog started itching and then vomited later the same day.",
+    "symptomKeys": [
+      "excessive_scratching",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "repeated_vomiting",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "vomiting_severity",
+      "emergency_allergy_screen",
+      "itch_location"
+    ],
+    "expectedUrgency": "same_day_if_red_flags_otherwise_question_first",
+    "recommendedFirstModule": "itching_vomiting_split_module"
+  },
+  {
+    "id": "itching_and_vomiting_004",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "itching_and_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 2,
+      "weightLbs": 22,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is itchy and also vomited today.",
+    "symptomKeys": [
+      "excessive_scratching",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "vomiting"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "repeated_vomiting",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "vomiting_severity",
+      "emergency_allergy_screen",
+      "itch_location"
+    ],
+    "expectedUrgency": "same_day_if_red_flags_otherwise_question_first",
+    "recommendedFirstModule": "itching_vomiting_split_module"
+  },
+  {
+    "id": "itching_and_vomiting_005",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "itching_and_vomiting",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 4,
+      "weightLbs": 55,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps scratching and has thrown up a couple of times.",
+    "symptomKeys": [
+      "excessive_scratching",
+      "vomiting"
+    ],
+    "turnFocusSymptoms": [
+      "excessive_scratching"
+    ],
+    "expectedMustScreen": [
+      "facial_swelling",
+      "breathing_difficulty",
+      "repeated_vomiting",
+      "collapse_or_weakness"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "vomiting_severity",
+      "emergency_allergy_screen",
+      "itch_location"
+    ],
+    "expectedUrgency": "same_day_if_red_flags_otherwise_question_first",
+    "recommendedFirstModule": "itching_vomiting_split_module"
+  },
+  {
+    "id": "limping_and_lethargy_001",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "limping_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 5,
+      "weightLbs": 24,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is limping and also seems unusually tired.",
+    "symptomKeys": [
+      "limping",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "mobility_screen",
+      "collapse_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_worsening_or_non_weight_bearing",
+    "recommendedFirstModule": "limping_lethargy_split_module"
+  },
+  {
+    "id": "limping_and_lethargy_002",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "limping_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 8,
+      "weightLbs": 38,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is lame on one leg and much less active today.",
+    "symptomKeys": [
+      "limping",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "mobility_screen",
+      "collapse_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_worsening_or_non_weight_bearing",
+    "recommendedFirstModule": "limping_lethargy_split_module"
+  },
+  {
+    "id": "limping_and_lethargy_003",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "limping_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 9,
+      "weightLbs": 96,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has a limp and feels more weak and tired than normal.",
+    "symptomKeys": [
+      "limping",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "mobility_screen",
+      "collapse_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_worsening_or_non_weight_bearing",
+    "recommendedFirstModule": "limping_lethargy_split_module"
+  },
+  {
+    "id": "limping_and_lethargy_004",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "limping_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 2,
+      "weightLbs": 22,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog is limping and also seems unusually tired.",
+    "symptomKeys": [
+      "limping",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "mobility_screen",
+      "collapse_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_worsening_or_non_weight_bearing",
+    "recommendedFirstModule": "limping_lethargy_split_module"
+  },
+  {
+    "id": "limping_and_lethargy_005",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "limping_and_lethargy",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 4,
+      "weightLbs": 55,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is lame on one leg and much less active today.",
+    "symptomKeys": [
+      "limping",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "limping"
+    ],
+    "expectedMustScreen": [
+      "non_weight_bearing",
+      "collapse_or_weakness",
+      "pale_or_blue_gums",
+      "breathing_difficulty"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "bucket_split",
+      "mobility_screen",
+      "collapse_screen",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_worsening_or_non_weight_bearing",
+    "recommendedFirstModule": "limping_lethargy_split_module"
+  },
+  {
+    "id": "drinking_more_and_weight_loss_001",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "drinking_more_and_weight_loss",
+    "pet": {
+      "species": "dog",
+      "breed": "Dachshund",
+      "ageYears": 5,
+      "weightLbs": 14,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is drinking a lot more and losing weight.",
+    "symptomKeys": [
+      "drinking_more",
+      "weight_loss"
+    ],
+    "turnFocusSymptoms": [
+      "drinking_more"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "repeated_vomiting",
+      "not_drinking",
+      "intact_female_discharge"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "endocrine_discrimination",
+      "weight_change",
+      "urination_change",
+      "spay_status_screen"
+    ],
+    "expectedUrgency": "prompt_veterinary_workup",
+    "recommendedFirstModule": "polydipsia_weight_loss_module"
+  },
+  {
+    "id": "drinking_more_and_weight_loss_002",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "drinking_more_and_weight_loss",
+    "pet": {
+      "species": "dog",
+      "breed": "Beagle",
+      "ageYears": 7,
+      "weightLbs": 26,
+      "sexNeuter": "intact female"
+    },
+    "initialMessage": "My dog seems thirstier than usual and is getting thinner.",
+    "symptomKeys": [
+      "drinking_more",
+      "weight_loss"
+    ],
+    "turnFocusSymptoms": [
+      "weight_loss"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "repeated_vomiting",
+      "not_drinking",
+      "intact_female_discharge"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "endocrine_discrimination",
+      "weight_change",
+      "urination_change",
+      "spay_status_screen"
+    ],
+    "expectedUrgency": "prompt_veterinary_workup",
+    "recommendedFirstModule": "polydipsia_weight_loss_module"
+  },
+  {
+    "id": "drinking_more_and_weight_loss_003",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "drinking_more_and_weight_loss",
+    "pet": {
+      "species": "dog",
+      "breed": "Poodle",
+      "ageYears": 12,
+      "weightLbs": 36,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is drinking excessively and has dropped weight over a few weeks.",
+    "symptomKeys": [
+      "drinking_more",
+      "weight_loss"
+    ],
+    "turnFocusSymptoms": [
+      "drinking_more"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "repeated_vomiting",
+      "not_drinking",
+      "intact_female_discharge"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "endocrine_discrimination",
+      "weight_change",
+      "urination_change",
+      "spay_status_screen"
+    ],
+    "expectedUrgency": "prompt_veterinary_workup",
+    "recommendedFirstModule": "polydipsia_weight_loss_module"
+  },
+  {
+    "id": "drinking_more_and_weight_loss_004",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "drinking_more_and_weight_loss",
+    "pet": {
+      "species": "dog",
+      "breed": "Cocker Spaniel",
+      "ageYears": 3,
+      "weightLbs": 36,
+      "sexNeuter": "intact female"
+    },
+    "initialMessage": "My dog is drinking a lot more and losing weight.",
+    "symptomKeys": [
+      "drinking_more",
+      "weight_loss"
+    ],
+    "turnFocusSymptoms": [
+      "weight_loss"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "repeated_vomiting",
+      "not_drinking",
+      "intact_female_discharge"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "endocrine_discrimination",
+      "weight_change",
+      "urination_change",
+      "spay_status_screen"
+    ],
+    "expectedUrgency": "prompt_veterinary_workup",
+    "recommendedFirstModule": "polydipsia_weight_loss_module"
+  },
+  {
+    "id": "drinking_more_and_weight_loss_005",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "drinking_more_and_weight_loss",
+    "pet": {
+      "species": "dog",
+      "breed": "Mixed Breed",
+      "ageYears": 4,
+      "weightLbs": 25,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog seems thirstier than usual and is getting thinner.",
+    "symptomKeys": [
+      "drinking_more",
+      "weight_loss"
+    ],
+    "turnFocusSymptoms": [
+      "drinking_more"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "repeated_vomiting",
+      "not_drinking",
+      "intact_female_discharge"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "endocrine_discrimination",
+      "weight_change",
+      "urination_change",
+      "spay_status_screen"
+    ],
+    "expectedUrgency": "prompt_veterinary_workup",
+    "recommendedFirstModule": "polydipsia_weight_loss_module"
+  },
+  {
+    "id": "coughing_and_tiredness_001",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "coughing_and_tiredness",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 5,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog has been coughing and is more tired than usual.",
+    "symptomKeys": [
+      "coughing",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "coughing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "coughing_blood"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "respiratory_vs_systemic_split",
+      "breathing_distress_screen",
+      "cough_character",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_breathing_changes",
+    "recommendedFirstModule": "cough_lethargy_module"
+  },
+  {
+    "id": "coughing_and_tiredness_002",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "coughing_and_tiredness",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 7,
+      "weightLbs": 18,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog keeps coughing and seems worn out on walks.",
+    "symptomKeys": [
+      "coughing",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "coughing_blood"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "respiratory_vs_systemic_split",
+      "breathing_distress_screen",
+      "cough_character",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_breathing_changes",
+    "recommendedFirstModule": "cough_lethargy_module"
+  },
+  {
+    "id": "coughing_and_tiredness_003",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "coughing_and_tiredness",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 8,
+      "weightLbs": 68,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog is coughing and acting lethargic compared with normal.",
+    "symptomKeys": [
+      "coughing",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "coughing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "coughing_blood"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "respiratory_vs_systemic_split",
+      "breathing_distress_screen",
+      "cough_character",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_breathing_changes",
+    "recommendedFirstModule": "cough_lethargy_module"
+  },
+  {
+    "id": "coughing_and_tiredness_004",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "coughing_and_tiredness",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 3,
+      "weightLbs": 80,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My dog has been coughing and is more tired than usual.",
+    "symptomKeys": [
+      "coughing",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "lethargy"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "coughing_blood"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "respiratory_vs_systemic_split",
+      "breathing_distress_screen",
+      "cough_character",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_breathing_changes",
+    "recommendedFirstModule": "cough_lethargy_module"
+  },
+  {
+    "id": "coughing_and_tiredness_005",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "coughing_and_tiredness",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 5,
+      "weightLbs": 60,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My dog keeps coughing and seems worn out on walks.",
+    "symptomKeys": [
+      "coughing",
+      "lethargy"
+    ],
+    "turnFocusSymptoms": [
+      "coughing"
+    ],
+    "expectedMustScreen": [
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "collapse_or_weakness",
+      "coughing_blood"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "How old is your dog?",
+      "What breed is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "respiratory_vs_systemic_split",
+      "breathing_distress_screen",
+      "cough_character",
+      "gum_color_screen"
+    ],
+    "expectedUrgency": "same_day_if_breathing_changes",
+    "recommendedFirstModule": "cough_lethargy_module"
+  },
+  {
+    "id": "old_dog_vague_weakness_001",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "old_dog_vague_weakness",
+    "pet": {
+      "species": "dog",
+      "breed": "Rottweiler",
+      "ageYears": 10,
+      "weightLbs": 72,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My older dog just seems weak and not quite right.",
+    "symptomKeys": [
+      "unknown_concern"
+    ],
+    "turnFocusSymptoms": [
+      "unknown_concern"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vague_weakness_screen",
+      "gum_color_screen",
+      "breathing_distress_screen",
+      "last_normal"
+    ],
+    "expectedUrgency": "same_day_if_collapse_or_pale_gums",
+    "recommendedFirstModule": "senior_vague_weakness_module"
+  },
+  {
+    "id": "old_dog_vague_weakness_002",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "old_dog_vague_weakness",
+    "pet": {
+      "species": "dog",
+      "breed": "Pug",
+      "ageYears": 11,
+      "weightLbs": 18,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My older dog seems vaguely weak today.",
+    "symptomKeys": [
+      "unknown_concern"
+    ],
+    "turnFocusSymptoms": [
+      "unknown_concern"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vague_weakness_screen",
+      "gum_color_screen",
+      "breathing_distress_screen",
+      "last_normal"
+    ],
+    "expectedUrgency": "same_day_if_collapse_or_pale_gums",
+    "recommendedFirstModule": "senior_vague_weakness_module"
+  },
+  {
+    "id": "old_dog_vague_weakness_003",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "old_dog_vague_weakness",
+    "pet": {
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "ageYears": 12,
+      "weightLbs": 68,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My older dog seems off, weak, and not like normal.",
+    "symptomKeys": [
+      "unknown_concern"
+    ],
+    "turnFocusSymptoms": [
+      "unknown_concern"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vague_weakness_screen",
+      "gum_color_screen",
+      "breathing_distress_screen",
+      "last_normal"
+    ],
+    "expectedUrgency": "same_day_if_collapse_or_pale_gums",
+    "recommendedFirstModule": "senior_vague_weakness_module"
+  },
+  {
+    "id": "old_dog_vague_weakness_004",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "old_dog_vague_weakness",
+    "pet": {
+      "species": "dog",
+      "breed": "Golden Retriever",
+      "ageYears": 13,
+      "weightLbs": 80,
+      "sexNeuter": "spayed female"
+    },
+    "initialMessage": "My older dog just seems weak and not quite right.",
+    "symptomKeys": [
+      "unknown_concern"
+    ],
+    "turnFocusSymptoms": [
+      "unknown_concern"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vague_weakness_screen",
+      "gum_color_screen",
+      "breathing_distress_screen",
+      "last_normal"
+    ],
+    "expectedUrgency": "same_day_if_collapse_or_pale_gums",
+    "recommendedFirstModule": "senior_vague_weakness_module"
+  },
+  {
+    "id": "old_dog_vague_weakness_005",
+    "category": "confusing_multi_symptom",
+    "complaintFamily": "old_dog_vague_weakness",
+    "pet": {
+      "species": "dog",
+      "breed": "German Shepherd",
+      "ageYears": 14,
+      "weightLbs": 60,
+      "sexNeuter": "neutered male"
+    },
+    "initialMessage": "My older dog seems vaguely weak today.",
+    "symptomKeys": [
+      "unknown_concern"
+    ],
+    "turnFocusSymptoms": [
+      "unknown_concern"
+    ],
+    "expectedMustScreen": [
+      "collapse_or_weakness",
+      "breathing_difficulty",
+      "pale_or_blue_gums",
+      "not_drinking"
+    ],
+    "badFirstQuestions": [
+      "Can you tell me more?",
+      "What breed is your dog?",
+      "How old is your dog?"
+    ],
+    "idealQuestionCategories": [
+      "vague_weakness_screen",
+      "gum_color_screen",
+      "breathing_distress_screen",
+      "last_normal"
+    ],
+    "expectedUrgency": "same_day_if_collapse_or_pale_gums",
+    "recommendedFirstModule": "senior_vague_weakness_module"
+  }
+]
