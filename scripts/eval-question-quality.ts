@@ -20,8 +20,8 @@ const CATEGORY_KEYS = [
   "repeatedQuestionBehavior",
   "genericWording",
   "reportUsefulnessValue",
-];
-const CATEGORY_LABELS = {
+] as const;
+const CATEGORY_LABELS: Record<(typeof CATEGORY_KEYS)[number], string> = {
   questionSpecificity: "question specificity",
   urgencyChangingValue: "urgency-changing value",
   emergencyRedFlagCoverage: "emergency red-flag coverage",
@@ -165,7 +165,7 @@ const REPORT_STRONG_CATEGORIES = new Set([
   "vomiting_severity",
   "wound_severity",
 ]);
-const MODULE_DESCRIPTIONS = {
+const MODULE_DESCRIPTIONS: Record<string, string> = {
   collapse_shock_screen:
     "Add a collapse and shock opener that checks responsiveness, gum color, and breathing before other detail questions.",
   respiratory_distress_screen:
@@ -217,7 +217,184 @@ const MODULE_DESCRIPTIONS = {
   senior_vague_weakness_module:
     "Add an older-dog vague-weakness opener that screens responsiveness, breathing, gum color, and last-normal time first.",
 };
-const QUESTION_SIGNAL_MAP = {
+type ScoreCategoryKey = (typeof CATEGORY_KEYS)[number];
+type CaseCategory = keyof typeof REQUIRED_CATEGORY_MINIMUMS;
+type CategoryCountMap = Record<string, number>;
+type CategoryScoreMap = Record<ScoreCategoryKey, number>;
+
+interface FixturePet {
+  species: string;
+  breed: string;
+  ageYears: number;
+  weightLbs: number;
+  sexNeuter: string;
+}
+
+interface EvalFixtureCase {
+  id: string;
+  category: CaseCategory | string;
+  complaintFamily: string;
+  pet: FixturePet;
+  initialMessage: string;
+  expectedMustScreen: string[];
+  badFirstQuestions: string[];
+  idealQuestionCategories: string[];
+  expectedUrgency: string;
+  symptomKeys: string[];
+  turnFocusSymptoms: string[];
+  recommendedFirstModule: string;
+}
+
+interface QuestionSignalDefinition {
+  questionCategories: string[];
+  mustScreenTags: string[];
+  missedScreenPattern?: string | null;
+}
+
+interface QuestionSignals extends QuestionSignalDefinition {
+  missedScreenPattern: string | null;
+}
+
+interface QuestionDefinition {
+  data_type?: string;
+  critical?: boolean;
+  [key: string]: unknown;
+}
+
+interface SessionState {
+  answered_questions: string[];
+  last_question_asked: string | null;
+  [key: string]: unknown;
+}
+
+interface TriageEngineModule {
+  createSession: () => SessionState;
+  addSymptoms: (session: SessionState, symptomKeys: string[]) => SessionState;
+  getQuestionText: (questionId: string) => string;
+  getSymptomPriorityScore: (symptomKey: string) => number;
+}
+
+interface QuestionSelectionModule {
+  getNextQuestionAvoidingRepeat: (
+    session: SessionState,
+    symptomKeys: string[]
+  ) => string | null | undefined;
+}
+
+interface ClinicalMatrixModule {
+  FOLLOW_UP_QUESTIONS: Record<string, QuestionDefinition>;
+}
+
+interface QuestionRuntime
+  extends TriageEngineModule,
+    QuestionSelectionModule,
+    ClinicalMatrixModule {}
+
+interface CaseEvaluationResult {
+  caseDefinition: EvalFixtureCase;
+  questionId: string | null;
+  questionText: string;
+  questionCategories: string[];
+  mustScreenHits: string[];
+  missedMustScreen: string[];
+  idealCategoryHits: string[];
+  isGeneric: boolean;
+  repeated: boolean;
+  scores: CategoryScoreMap;
+  averageScore: number;
+  weakPatterns: string[];
+}
+
+interface ComplaintFamilyAccumulator {
+  count: number;
+  totalScore: number;
+  weakCases: number;
+  missedScreens: number;
+  genericCases: number;
+  questionIds: Set<string>;
+  recommendedFirstModule: string;
+}
+
+interface ComplaintFamilySummary {
+  complaintFamily: string;
+  averageScore: number;
+  count: number;
+  weakCases: number;
+  missedScreens: number;
+  genericCases: number;
+  questionIds: string[];
+  recommendedFirstModule: string;
+}
+
+interface RecommendedModuleAccumulator {
+  count: number;
+  complaintFamilies: string[];
+  weakestScore: number;
+}
+
+interface RecommendedModuleSummary {
+  moduleId: string;
+  count: number;
+  weakestScore: number;
+  complaintFamilies: string[];
+  description: string;
+}
+
+interface FrequencyAccumulatorEntry {
+  count: number;
+  cases: string[];
+  complaintFamilies: Set<string>;
+  questionIds: Set<string>;
+}
+
+type FrequencySummaryItem<LabelKey extends string> = Record<LabelKey, string> & {
+  count: number;
+  cases: string[];
+  complaintFamilies: string[];
+  questionIds: string[];
+};
+
+interface EvaluationSummary {
+  totalCases: number;
+  categoryCounts: CategoryCountMap;
+  averageQuestionScore: number;
+  genericQuestionRate: number;
+  emergencyRedFlagMissRate: number;
+  firstQuestionEmergencyScreenRate: number;
+  repeatedQuestionRate: number;
+  categoryScores: CategoryScoreMap;
+  weakPatterns: FrequencySummaryItem<"pattern">[];
+  missedRedFlagPatterns: FrequencySummaryItem<"pattern">[];
+  complaintFamilySummaries: ComplaintFamilySummary[];
+  worstComplaintFamilies: ComplaintFamilySummary[];
+  recommendedFirstModules: RecommendedModuleSummary[];
+}
+
+interface EvaluationReport {
+  fixturePath: string;
+  cases: EvalFixtureCase[];
+  caseResults: CaseEvaluationResult[];
+  summary: EvaluationSummary;
+}
+
+interface RunEvaluationOptions {
+  fixturePath?: string;
+}
+
+interface ResolveHookContext {
+  parentURL?: string;
+}
+
+type ResolveFunction = (
+  specifier: string,
+  context: ResolveHookContext,
+  defaultResolve: ResolveFunction
+) => unknown;
+
+type EmitWarningValue = string | Error;
+type EmitWarningFunction = (warning: EmitWarningValue, ...args: unknown[]) => void;
+
+const QUESTION_SIGNAL_MAP: Record<string, QuestionSignalDefinition> = {
   abdomen_onset: {
     questionCategories: ["abdominal_emergency_screen", "gdv_screen", "timeline"],
     mustScreenTags: ["abdominal_distension"],
@@ -493,9 +670,25 @@ const QUESTION_SIGNAL_MAP = {
 };
 
 let hooksRegistered = false;
-let runtimePromise = null;
+let runtimePromise: Promise<QuestionRuntime> | null = null;
 
-function normalizeText(value) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (!isRecord(error) || typeof error.code !== "string") {
+    return undefined;
+  }
+
+  return error.code;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeText(value: unknown): string {
   return String(value)
     .trim()
     .toLowerCase()
@@ -504,45 +697,45 @@ function normalizeText(value) {
     .replace(/\s+/g, " ");
 }
 
-function uniqueStrings(values) {
+function uniqueStrings(values: readonly unknown[]): string[] {
   return [
     ...new Set(
       values
-        .filter((value) => value !== null && value !== undefined)
-        .map((value) => String(value).trim())
+        .filter((value: unknown) => value !== null && value !== undefined)
+        .map((value: unknown) => String(value).trim())
         .filter(Boolean)
     ),
   ];
 }
 
-function average(values) {
+function average(values: readonly number[]): number {
   if (values.length === 0) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  return values.reduce((sum: number, value: number) => sum + value, 0) / values.length;
 }
 
-function round(value) {
+function round(value: number): number {
   return Number(value.toFixed(2));
 }
 
-function clampScore(value) {
+function clampScore(value: number): number {
   return Math.max(0, Math.min(3, value));
 }
 
-function rate(numerator, denominator) {
+function rate(numerator: number, denominator: number): number {
   if (denominator <= 0) return 0;
   return numerator / denominator;
 }
 
-function formatScore(value) {
+function formatScore(value: number): string {
   return `${value.toFixed(2)} / 3.00`;
 }
 
-function formatPercent(value) {
+function formatPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
-function normalizeCaseDefinition(rawCase, index) {
-  if (!rawCase || typeof rawCase !== "object") {
+function normalizeCaseDefinition(rawCase: unknown, index: number): EvalFixtureCase {
+  if (!isRecord(rawCase)) {
     throw new Error(`Case at index ${index} must be an object`);
   }
 
@@ -551,17 +744,17 @@ function normalizeCaseDefinition(rawCase, index) {
   const complaintFamily = String(rawCase.complaintFamily ?? "").trim();
   const initialMessage = String(rawCase.initialMessage ?? "").trim();
   const expectedUrgency = String(rawCase.expectedUrgency ?? "").trim();
-  const expectedMustScreen = uniqueStrings(rawCase.expectedMustScreen ?? []);
-  const badFirstQuestions = uniqueStrings(rawCase.badFirstQuestions ?? []);
+  const expectedMustScreen = uniqueStrings(asArray(rawCase.expectedMustScreen));
+  const badFirstQuestions = uniqueStrings(asArray(rawCase.badFirstQuestions));
   const idealQuestionCategories = uniqueStrings(
-    rawCase.idealQuestionCategories ?? []
+    asArray(rawCase.idealQuestionCategories)
   );
-  const symptomKeys = uniqueStrings(rawCase.symptomKeys ?? []);
-  const turnFocusSymptoms = uniqueStrings(rawCase.turnFocusSymptoms ?? []);
+  const symptomKeys = uniqueStrings(asArray(rawCase.symptomKeys));
+  const turnFocusSymptoms = uniqueStrings(asArray(rawCase.turnFocusSymptoms));
   const recommendedFirstModule = String(
     rawCase.recommendedFirstModule ?? ""
   ).trim();
-  const pet = rawCase.pet ?? {};
+  const pet = isRecord(rawCase.pet) ? rawCase.pet : {};
 
   if (!category) throw new Error(`Case "${id}" is missing category`);
   if (!complaintFamily) throw new Error(`Case "${id}" is missing complaintFamily`);
@@ -602,14 +795,14 @@ function normalizeCaseDefinition(rawCase, index) {
   };
 }
 
-function countByCategory(cases) {
-  return cases.reduce((counts, caseDefinition) => {
+function countByCategory(cases: EvalFixtureCase[]): CategoryCountMap {
+  return cases.reduce((counts: CategoryCountMap, caseDefinition: EvalFixtureCase) => {
     counts[caseDefinition.category] = (counts[caseDefinition.category] ?? 0) + 1;
     return counts;
   }, {});
 }
 
-function validateCaseSet(cases) {
+function validateCaseSet(cases: EvalFixtureCase[]): void {
   if (cases.length < 150) {
     throw new Error(`Expected at least 150 question-quality cases, found ${cases.length}`);
   }
@@ -637,15 +830,15 @@ function validateCaseSet(cases) {
   }
 }
 
-function loadCases(fixturePath = FIXTURE_PATH) {
+function loadCases(fixturePath: string = FIXTURE_PATH): EvalFixtureCase[] {
   if (!fs.existsSync(fixturePath)) {
     throw new Error(`Question-quality fixture not found: ${fixturePath}`);
   }
 
-  const rawFixture = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+  const rawFixture: unknown = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
   const rawCases = Array.isArray(rawFixture)
     ? rawFixture
-    : Array.isArray(rawFixture?.cases)
+    : isRecord(rawFixture) && Array.isArray(rawFixture.cases)
       ? rawFixture.cases
       : null;
 
@@ -667,7 +860,11 @@ function registerTypeScriptHooks() {
   hooksRegistered = true;
 
   registerHooks({
-    resolve(specifier, context, defaultResolve) {
+    resolve(
+      specifier: string,
+      context: ResolveHookContext,
+      defaultResolve: ResolveFunction
+    ) {
       if (specifier.startsWith("@/")) {
         const mappedPath = path.join(ROOT, "src", specifier.slice(2));
         for (const candidate of [
@@ -713,24 +910,17 @@ function registerTypeScriptHooks() {
   });
 }
 
-async function withFilteredRuntimeWarnings(work) {
-  const originalEmitWarning = process.emitWarning;
-  process.emitWarning = function patchedEmitWarning(warning, ...args) {
+async function withFilteredRuntimeWarnings<T>(work: () => Promise<T>): Promise<T> {
+  const originalEmitWarning = process.emitWarning.bind(
+    process
+  ) as unknown as EmitWarningFunction;
+  process.emitWarning = ((warning: EmitWarningValue, ...args: unknown[]) => {
     const primaryArg = args[0];
-    const warningCode =
-      (warning && typeof warning === "object" && warning.code) ||
-      (primaryArg &&
-      typeof primaryArg === "object" &&
-      !Array.isArray(primaryArg) &&
-      primaryArg.code
-        ? primaryArg.code
-        : null);
+    const warningCode = getErrorCode(warning) || getErrorCode(primaryArg);
     const warningText =
       typeof warning === "string"
         ? warning
-        : warning && typeof warning.message === "string"
-          ? warning.message
-          : "";
+        : warning.message;
 
     if (
       warningCode === "MODULE_TYPELESS_PACKAGE_JSON" ||
@@ -739,8 +929,8 @@ async function withFilteredRuntimeWarnings(work) {
       return;
     }
 
-    return originalEmitWarning.call(process, warning, ...args);
-  };
+    originalEmitWarning(warning, ...args);
+  }) as unknown as typeof process.emitWarning;
 
   try {
     return await work();
@@ -749,8 +939,8 @@ async function withFilteredRuntimeWarnings(work) {
   }
 }
 
-async function loadQuestionRuntime() {
-  if (runtimePromise) {
+async function loadQuestionRuntime(): Promise<QuestionRuntime> {
+  if (runtimePromise !== null) {
     return runtimePromise;
   }
 
@@ -758,17 +948,17 @@ async function loadQuestionRuntime() {
     registerTypeScriptHooks();
 
     return withFilteredRuntimeWarnings(async () => {
-      const triageEngine = await import(
+      const triageEngine = (await import(
         pathToFileURL(path.join(ROOT, "src", "lib", "triage-engine.ts")).href
-      );
-      const questionSelection = await import(
+      )) as TriageEngineModule;
+      const questionSelection = (await import(
         pathToFileURL(
           path.join(ROOT, "src", "lib", "symptom-chat", "answer-coercion.ts")
         ).href
-      );
-      const clinicalMatrix = await import(
+      )) as QuestionSelectionModule;
+      const clinicalMatrix = (await import(
         pathToFileURL(path.join(ROOT, "src", "lib", "clinical-matrix.ts")).href
-      );
+      )) as ClinicalMatrixModule;
 
       return {
         createSession: triageEngine.createSession,
@@ -785,10 +975,10 @@ async function loadQuestionRuntime() {
   return runtimePromise;
 }
 
-function inferSignalsFromQuestionText(questionText) {
+function inferSignalsFromQuestionText(questionText: string): QuestionSignalDefinition {
   const lower = questionText.toLowerCase();
-  const questionCategories = [];
-  const mustScreenTags = [];
+  const questionCategories: string[] = [];
+  const mustScreenTags: string[] = [];
 
   if (lower.includes("gum")) {
     questionCategories.push("gum_color_screen");
@@ -858,8 +1048,13 @@ function inferSignalsFromQuestionText(questionText) {
   };
 }
 
-function getQuestionSignals(questionId, questionText) {
-  const mappedSignals = QUESTION_SIGNAL_MAP[questionId] ?? {
+function getQuestionSignals(
+  questionId: string | null,
+  questionText: string
+): QuestionSignals {
+  const mappedSignals: QuestionSignalDefinition = (questionId
+    ? QUESTION_SIGNAL_MAP[questionId]
+    : null) ?? {
     questionCategories: [],
     mustScreenTags: [],
   };
@@ -878,7 +1073,11 @@ function getQuestionSignals(questionId, questionText) {
   };
 }
 
-function isGenericQuestion(questionText, badFirstQuestions, questionCategories) {
+function isGenericQuestion(
+  questionText: string,
+  badFirstQuestions: string[],
+  questionCategories: string[]
+): boolean {
   if (!questionText) return true;
 
   const normalizedQuestion = normalizeText(questionText);
@@ -898,12 +1097,12 @@ function isGenericQuestion(questionText, badFirstQuestions, questionCategories) 
 }
 
 function scoreQuestionSpecificity(
-  questionDef,
-  isGeneric,
-  idealCategoryHits,
-  mustScreenHits,
-  questionCategories
-) {
+  questionDef: QuestionDefinition | null,
+  isGeneric: boolean,
+  idealCategoryHits: string[],
+  mustScreenHits: string[],
+  questionCategories: string[]
+): number {
   if (!questionDef) return 0;
   if (isGeneric) return 0;
 
@@ -918,7 +1117,11 @@ function scoreQuestionSpecificity(
   return clampScore(score);
 }
 
-function scoreUrgencyChangingValue(questionDef, mustScreenHits, questionCategories) {
+function scoreUrgencyChangingValue(
+  questionDef: QuestionDefinition | null,
+  mustScreenHits: string[],
+  questionCategories: string[]
+): number {
   if (!questionDef) return 0;
   if (mustScreenHits.length > 0) return 3;
   if (
@@ -932,11 +1135,11 @@ function scoreUrgencyChangingValue(questionDef, mustScreenHits, questionCategori
 }
 
 function scoreEmergencyRedFlagCoverage(
-  caseDefinition,
-  mustScreenHits,
-  questionDef,
-  questionCategories
-) {
+  caseDefinition: EvalFixtureCase,
+  mustScreenHits: string[],
+  questionDef: QuestionDefinition | null,
+  questionCategories: string[]
+): number {
   if (!questionDef) return 0;
   if (caseDefinition.expectedMustScreen.length === 0) return 3;
   if (mustScreenHits.includes(caseDefinition.expectedMustScreen[0])) return 3;
@@ -950,7 +1153,11 @@ function scoreEmergencyRedFlagCoverage(
   return 0;
 }
 
-function scoreConcernBucketDiscrimination(questionDef, idealCategoryHits, questionCategories) {
+function scoreConcernBucketDiscrimination(
+  questionDef: QuestionDefinition | null,
+  idealCategoryHits: string[],
+  questionCategories: string[]
+): number {
   if (!questionDef) return 0;
   if (
     idealCategoryHits.length > 0 &&
@@ -963,7 +1170,11 @@ function scoreConcernBucketDiscrimination(questionDef, idealCategoryHits, questi
   return 0;
 }
 
-function scoreOwnerAnswerability(questionDef, questionText, questionCategories) {
+function scoreOwnerAnswerability(
+  questionDef: QuestionDefinition | null,
+  questionText: string,
+  questionCategories: string[]
+): number {
   if (!questionDef || !questionText) return 0;
 
   if (
@@ -985,11 +1196,16 @@ function scoreOwnerAnswerability(questionDef, questionText, questionCategories) 
   return wordCount <= 18 ? 2 : 1;
 }
 
-function scoreRepeatedQuestionBehavior(repeated) {
+function scoreRepeatedQuestionBehavior(repeated: boolean): number {
   return repeated ? 0 : 3;
 }
 
-function scoreGenericWording(isGeneric, questionCategories, idealCategoryHits, mustScreenHits) {
+function scoreGenericWording(
+  isGeneric: boolean,
+  questionCategories: string[],
+  idealCategoryHits: string[],
+  mustScreenHits: string[]
+): number {
   if (isGeneric) return 0;
   if (questionCategories.includes("open_clarification")) return 1;
   if (idealCategoryHits.length > 0 || mustScreenHits.length > 0) return 3;
@@ -997,11 +1213,11 @@ function scoreGenericWording(isGeneric, questionCategories, idealCategoryHits, m
 }
 
 function scoreReportUsefulnessValue(
-  questionDef,
-  questionCategories,
-  idealCategoryHits,
-  mustScreenHits
-) {
+  questionDef: QuestionDefinition | null,
+  questionCategories: string[],
+  idealCategoryHits: string[],
+  mustScreenHits: string[]
+): number {
   if (!questionDef) return 0;
   if (
     (questionDef.data_type === "boolean" ||
@@ -1023,7 +1239,12 @@ function scoreReportUsefulnessValue(
   return 1;
 }
 
-function buildWeakPatternLabel(questionId, questionSignals, mustScreenMiss, isGeneric) {
+function buildWeakPatternLabel(
+  questionId: string | null,
+  questionSignals: QuestionSignals,
+  mustScreenMiss: boolean,
+  isGeneric: boolean
+): string | null {
   if (isGeneric) {
     return "generic-first-question";
   }
@@ -1070,10 +1291,15 @@ function buildWeakPatternLabel(questionId, questionSignals, mustScreenMiss, isGe
   return "missed-first-emergency-screen";
 }
 
-function addFrequencyEntry(map, key, caseDefinition, questionId) {
+function addFrequencyEntry(
+  map: Map<string, FrequencyAccumulatorEntry>,
+  key: string | null,
+  caseDefinition: EvalFixtureCase,
+  questionId: string | null
+): void {
   if (!key) return;
 
-  const current = map.get(key) ?? {
+  const current: FrequencyAccumulatorEntry = map.get(key) ?? {
     count: 0,
     cases: [],
     complaintFamilies: new Set(),
@@ -1090,7 +1316,11 @@ function addFrequencyEntry(map, key, caseDefinition, questionId) {
   map.set(key, current);
 }
 
-function summarizeFrequencyMap(map, limit, labelKey) {
+function summarizeFrequencyMap<LabelKey extends string>(
+  map: Map<string, FrequencyAccumulatorEntry>,
+  limit: number,
+  labelKey: LabelKey
+): Array<FrequencySummaryItem<LabelKey>> {
   return [...map.entries()]
     .sort((left, right) => {
       if (right[1].count !== left[1].count) {
@@ -1099,16 +1329,22 @@ function summarizeFrequencyMap(map, limit, labelKey) {
       return String(left[0]).localeCompare(String(right[0]));
     })
     .slice(0, limit)
-    .map(([label, entry]) => ({
-      [labelKey]: label,
-      count: entry.count,
-      cases: entry.cases,
-      complaintFamilies: [...entry.complaintFamilies].sort(),
-      questionIds: [...entry.questionIds].sort(),
-    }));
+    .map(
+      ([label, entry]) =>
+        ({
+          [labelKey]: label,
+          count: entry.count,
+          cases: entry.cases,
+          complaintFamilies: [...entry.complaintFamilies].sort(),
+          questionIds: [...entry.questionIds].sort(),
+        }) as FrequencySummaryItem<LabelKey>
+    );
 }
 
-function evaluateCase(caseDefinition, runtime) {
+function evaluateCase(
+  caseDefinition: EvalFixtureCase,
+  runtime: QuestionRuntime
+): CaseEvaluationResult {
   let session = runtime.createSession();
   session = runtime.addSymptoms(session, caseDefinition.symptomKeys);
 
@@ -1116,20 +1352,24 @@ function evaluateCase(caseDefinition, runtime) {
     caseDefinition.turnFocusSymptoms.length > 0
       ? caseDefinition.turnFocusSymptoms
       : caseDefinition.symptomKeys;
-  const questionId = runtime.getNextQuestionAvoidingRepeat(
+  const selectedQuestionId = runtime.getNextQuestionAvoidingRepeat(
     session,
     preferredSymptoms
   );
+  const questionId =
+    typeof selectedQuestionId === "string" && selectedQuestionId.trim()
+      ? selectedQuestionId
+      : null;
   const questionText = questionId ? runtime.getQuestionText(questionId) : "";
   const questionDef = questionId ? runtime.FOLLOW_UP_QUESTIONS[questionId] ?? null : null;
-  const questionSignals = getQuestionSignals(questionId, questionText);
-  const mustScreenHits = caseDefinition.expectedMustScreen.filter((tag) =>
+  const questionSignals: QuestionSignals = getQuestionSignals(questionId, questionText);
+  const mustScreenHits = caseDefinition.expectedMustScreen.filter((tag: string) =>
     questionSignals.mustScreenTags.includes(tag)
   );
   const missedMustScreen = caseDefinition.expectedMustScreen.filter(
-    (tag) => !mustScreenHits.includes(tag)
+    (tag: string) => !mustScreenHits.includes(tag)
   );
-  const idealCategoryHits = caseDefinition.idealQuestionCategories.filter((tag) =>
+  const idealCategoryHits = caseDefinition.idealQuestionCategories.filter((tag: string) =>
     questionSignals.questionCategories.includes(tag)
   );
   const isGeneric = isGenericQuestion(
@@ -1137,8 +1377,9 @@ function evaluateCase(caseDefinition, runtime) {
     caseDefinition.badFirstQuestions,
     questionSignals.questionCategories
   );
-  const repeated = Boolean(questionId) && (() => {
-    const replaySession = {
+  const repeated = questionId
+    ? (() => {
+    const replaySession: SessionState = {
       ...session,
       answered_questions: session.answered_questions.includes(questionId)
         ? [...session.answered_questions]
@@ -1149,9 +1390,10 @@ function evaluateCase(caseDefinition, runtime) {
       runtime.getNextQuestionAvoidingRepeat(replaySession, preferredSymptoms) ===
       questionId
     );
-  })();
+      })()
+    : false;
 
-  const scores = {
+  const scores: CategoryScoreMap = {
     questionSpecificity: scoreQuestionSpecificity(
       questionDef,
       isGeneric,
@@ -1195,7 +1437,9 @@ function evaluateCase(caseDefinition, runtime) {
     ),
   };
 
-  const averageScore = round(average(CATEGORY_KEYS.map((key) => scores[key])));
+  const averageScore = round(
+    average(CATEGORY_KEYS.map((key: ScoreCategoryKey) => scores[key]))
+  );
   const mustScreenMiss = mustScreenHits.length === 0;
   const weakPatterns = uniqueStrings([
     buildWeakPatternLabel(questionId, questionSignals, mustScreenMiss, isGeneric),
@@ -1222,12 +1466,14 @@ function evaluateCase(caseDefinition, runtime) {
   };
 }
 
-function summarizeComplaintFamilies(caseResults) {
-  const grouped = new Map();
+function summarizeComplaintFamilies(
+  caseResults: CaseEvaluationResult[]
+): ComplaintFamilySummary[] {
+  const grouped = new Map<string, ComplaintFamilyAccumulator>();
 
   for (const result of caseResults) {
     const complaintFamily = result.caseDefinition.complaintFamily;
-    const current = grouped.get(complaintFamily) ?? {
+    const current: ComplaintFamilyAccumulator = grouped.get(complaintFamily) ?? {
       count: 0,
       totalScore: 0,
       weakCases: 0,
@@ -1266,8 +1512,10 @@ function summarizeComplaintFamilies(caseResults) {
     });
 }
 
-function summarizeRecommendedModules(complaintFamilySummaries) {
-  const moduleMap = new Map();
+function summarizeRecommendedModules(
+  complaintFamilySummaries: ComplaintFamilySummary[]
+): RecommendedModuleSummary[] {
+  const moduleMap = new Map<string, RecommendedModuleAccumulator>();
 
   for (const summary of complaintFamilySummaries) {
     if (summary.averageScore >= 2 && summary.missedScreens === 0) {
@@ -1277,7 +1525,7 @@ function summarizeRecommendedModules(complaintFamilySummaries) {
     const moduleId = summary.recommendedFirstModule;
     if (!moduleId) continue;
 
-    const current = moduleMap.get(moduleId) ?? {
+    const current: RecommendedModuleAccumulator = moduleMap.get(moduleId) ?? {
       count: 0,
       complaintFamilies: [],
       weakestScore: 3,
@@ -1296,7 +1544,7 @@ function summarizeRecommendedModules(complaintFamilySummaries) {
       count: entry.count,
       weakestScore: round(entry.weakestScore),
       complaintFamilies: entry.complaintFamilies.sort(),
-      description: MODULE_DESCRIPTIONS[moduleId] || "No description available.",
+      description: MODULE_DESCRIPTIONS[moduleId] ?? "No description available.",
     }))
     .sort((left, right) => {
       if (right.count !== left.count) {
@@ -1306,9 +1554,12 @@ function summarizeRecommendedModules(complaintFamilySummaries) {
     });
 }
 
-function aggregateResults(cases, caseResults) {
-  const weakPatternMap = new Map();
-  const missedScreenMap = new Map();
+function aggregateResults(
+  cases: EvalFixtureCase[],
+  caseResults: CaseEvaluationResult[]
+): EvaluationSummary {
+  const weakPatternMap = new Map<string, FrequencyAccumulatorEntry>();
+  const missedScreenMap = new Map<string, FrequencyAccumulatorEntry>();
 
   for (const result of caseResults) {
     for (const weakPattern of result.weakPatterns) {
@@ -1324,7 +1575,7 @@ function aggregateResults(cases, caseResults) {
       key,
       round(average(caseResults.map((result) => result.scores[key]))),
     ])
-  );
+  ) as CategoryScoreMap;
   const complaintFamilySummaries = summarizeComplaintFamilies(caseResults);
 
   return {
@@ -1360,7 +1611,9 @@ function aggregateResults(cases, caseResults) {
   };
 }
 
-async function runEvaluation(options = {}) {
+async function runEvaluation(
+  options: RunEvaluationOptions = {}
+): Promise<EvaluationReport> {
   const runtime = await loadQuestionRuntime();
   const fixturePath = options.fixturePath || FIXTURE_PATH;
   const cases = loadCases(fixturePath);
@@ -1376,8 +1629,8 @@ async function runEvaluation(options = {}) {
   };
 }
 
-function formatSummary(report) {
-  const lines = [];
+function formatSummary(report: EvaluationReport): string {
+  const lines: string[] = [];
   lines.push("PAWVITAL QUESTION INTELLIGENCE BASELINE");
   lines.push("=======================================");
   lines.push(`Fixture: ${report.fixturePath}`);
@@ -1448,7 +1701,7 @@ function formatSummary(report) {
   return `${lines.join("\n")}\n`;
 }
 
-async function main() {
+async function main(): Promise<void> {
   const report = await runEvaluation();
   process.stdout.write(formatSummary(report));
 }
