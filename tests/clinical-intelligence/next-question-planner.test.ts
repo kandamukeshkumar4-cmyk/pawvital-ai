@@ -7,6 +7,7 @@ import {
   updateRedFlagStatus,
   recordAnsweredQuestion,
   recordAskedQuestion,
+  recordSkippedQuestion,
 } from "@/lib/clinical-intelligence/case-state-update";
 
 import {
@@ -251,6 +252,21 @@ describe("Already-known skipIfAnswered values reduce score", () => {
 
     expect(breakdown["alreadyKnownPenalty"]).toBeLessThan(0);
   });
+
+  it("penalizes cards where skipIfAnswered is an answered question ID", () => {
+    let state = makeState();
+    state = recordAnsweredQuestion(state, "emergency_global_screen", "breathing_difficulty", "no");
+
+    const dependentCard: ClinicalQuestionCard = {
+      ...MOCK_SKIN_CARD,
+      id: "skin_followup_after_emergency",
+      skipIfAnswered: ["emergency_global_screen"],
+    };
+
+    const breakdown = buildQuestionScoreBreakdown(dependentCard, state);
+
+    expect(breakdown["alreadyKnownPenalty"]).toBeLessThan(0);
+  });
 });
 
 describe("Highest scoring question is selected", () => {
@@ -453,11 +469,38 @@ describe("filterAnsweredOrAskedQuestions", () => {
     expect(filtered.some((c) => c.id === "emergency_global_screen")).toBe(false);
   });
 
+  it("filters out cards whose skipIfAnswered dependency is an answered question ID", () => {
+    let state = makeState();
+    state = recordAnsweredQuestion(state, "emergency_global_screen", "breathing_difficulty", "no");
+
+    const dependentCard: ClinicalQuestionCard = {
+      ...MOCK_SKIN_CARD,
+      id: "skin_followup_after_emergency",
+      skipIfAnswered: ["emergency_global_screen"],
+    };
+
+    const filtered = filterAnsweredOrAskedQuestions([dependentCard], state);
+
+    expect(filtered).toHaveLength(0);
+  });
+
   it("filters out asked cards by default", () => {
     let state = makeState();
     state = recordAskedQuestion(state, "emergency_global_screen");
 
     const filtered = filterAnsweredOrAskedQuestions(MOCK_CARDS, state);
+
+    expect(filtered.some((c) => c.id === "emergency_global_screen")).toBe(false);
+  });
+
+  it("filters out skipped cards even when clarification repeats are allowed", () => {
+    let state = makeState();
+    state = recordSkippedQuestion(state, "emergency_global_screen");
+    state = recordAskedQuestion(state, "emergency_global_screen");
+
+    const filtered = filterAnsweredOrAskedQuestions(MOCK_CARDS, state, {
+      allowClarification: true,
+    });
 
     expect(filtered.some((c) => c.id === "emergency_global_screen")).toBe(false);
   });
@@ -471,6 +514,28 @@ describe("filterAnsweredOrAskedQuestions", () => {
     });
 
     expect(filtered.some((c) => c.id === "emergency_global_screen")).toBe(true);
+  });
+});
+
+describe("Question score red-flag uncertainty", () => {
+  it("treats not_sure red flags as unresolved for emergency value", () => {
+    let state = makeState();
+    state = updateRedFlagStatus(state, "blue_gums", {
+      status: "not_sure",
+      source: "explicit_answer",
+      turn: 1,
+    });
+
+    const redFlagCard: ClinicalQuestionCard = {
+      ...MOCK_SKIN_CARD,
+      id: "blue_gums_followup",
+      phase: "characterize",
+      screensRedFlags: ["blue_gums"],
+    };
+
+    const breakdown = buildQuestionScoreBreakdown(redFlagCard, state);
+
+    expect(breakdown["emergencyValue"]).toBeGreaterThan(0);
   });
 });
 
