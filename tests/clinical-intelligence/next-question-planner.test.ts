@@ -575,24 +575,57 @@ describe("getCandidateQuestionCards", () => {
 });
 
 describe("Off-topic fallback when module cards exhausted", () => {
-  it("returns a non-module card when all module cards are answered", () => {
+  it("returns a non-module fallback card when all module cards are answered (not no_valid_questions)", () => {
     let state = createInitialClinicalCaseState("skin");
 
-    state = recordAnsweredQuestion(state, "skin_location_distribution", "skin_location", "abdomen");
+    for (const card of MOCK_CARDS) {
+      if (card.complaintFamilies.includes("skin")) {
+        state = recordAnsweredQuestion(state, card.id, card.skipIfAnswered[0] || "answered", "yes");
+      }
+    }
 
     const result = planNextClinicalQuestion(state);
 
     expect("type" in result).toBe(false);
     const planned = result as PlannedQuestion;
-    expect(planned.questionId).not.toBe("skin_location_distribution");
+    const selectedCard = MOCK_CARDS.find((c) => c.id === planned.questionId);
+    expect(selectedCard).toBeDefined();
+    expect(selectedCard!.complaintFamilies.includes("skin")).toBe(false);
   });
 
-  it("includes offTopicPenalty in scoreBreakdown for non-module cards", () => {
-    const state = createInitialClinicalCaseState("gi");
+  it("returns a valid fallback even when module AND emergency cards are exhausted", () => {
+    let state = createInitialClinicalCaseState("skin");
 
-    const breakdown = buildQuestionScoreBreakdown(MOCK_SKIN_CARD, state);
+    for (const card of MOCK_CARDS) {
+      if (card.complaintFamilies.includes("skin") || card.complaintFamilies.includes("emergency")) {
+        state = recordAnsweredQuestion(state, card.id, card.skipIfAnswered[0] || "answered", "yes");
+      }
+    }
 
-    expect(breakdown["offTopicPenalty"]).toBeLessThan(0);
+    const result = planNextClinicalQuestion(state);
+
+    expect("type" in result).toBe(false);
+    const planned = result as PlannedQuestion;
+    const selectedCard = MOCK_CARDS.find((c) => c.id === planned.questionId);
+    expect(selectedCard).toBeDefined();
+    expect(selectedCard!.complaintFamilies.includes("skin")).toBe(false);
+    expect(selectedCard!.complaintFamilies.includes("emergency")).toBe(false);
+  });
+
+  it("includes offTopicPenalty in scoreBreakdown for non-module fallback cards", () => {
+    let state = createInitialClinicalCaseState("skin");
+
+    for (const card of MOCK_CARDS) {
+      if (card.complaintFamilies.includes("skin") || card.complaintFamilies.includes("emergency")) {
+        state = recordAnsweredQuestion(state, card.id, card.skipIfAnswered[0] || "answered", "yes");
+      }
+    }
+
+    const result = planNextClinicalQuestion(state);
+
+    expect("type" in result).toBe(false);
+    const planned = result as PlannedQuestion;
+    expect(planned.scoreBreakdown["offTopicPenalty"]).toBeLessThan(0);
   });
 
   it("module cards outrank off-topic cards when both are available", () => {
@@ -602,5 +635,25 @@ describe("Off-topic fallback when module cards exhausted", () => {
     const skinScore = scoreQuestionCard(MOCK_SKIN_CARD, state);
 
     expect(giScore).toBeGreaterThan(skinScore);
+  });
+
+  it("emergency-screen cards still outrank module-matching cards", () => {
+    const state = createInitialClinicalCaseState("gi");
+
+    const emergencyScore = scoreQuestionCard(MOCK_EMERGENCY_CARD, state);
+    const giScore = scoreQuestionCard(MOCK_GI_CARD, state);
+
+    expect(emergencyScore).toBeGreaterThan(giScore);
+  });
+
+  it("planner selects emergency card over module card when both are candidates", () => {
+    const state = createInitialClinicalCaseState("skin");
+
+    const result = planNextClinicalQuestion(state);
+
+    expect("type" in result).toBe(false);
+    const planned = result as PlannedQuestion;
+    const selectedCard = MOCK_CARDS.find((c) => c.id === planned.questionId);
+    expect(selectedCard!.phase).toBe("emergency_screen");
   });
 });
