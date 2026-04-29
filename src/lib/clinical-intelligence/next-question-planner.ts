@@ -267,6 +267,13 @@ export function selectHighestScoringQuestion(
 export function fallbackToSafeEmergencyQuestion(
   caseState: ClinicalCaseState
 ): PlannedQuestion | PlannerFallbackResult {
+  if (caseState.currentUrgency === "emergency") {
+    return {
+      type: "emergency_handoff",
+      reason: "Current urgency is emergency — handoff to vet recommended",
+    };
+  }
+
   const emergencyCards = getAllQuestionCards().filter(
     (c) => c.phase === "emergency_screen"
   );

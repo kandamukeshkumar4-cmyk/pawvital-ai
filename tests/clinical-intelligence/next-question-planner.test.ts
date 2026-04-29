@@ -363,6 +363,19 @@ describe("Current emergency urgency does not produce routine questions", () => {
       expect(card?.phase).toBe("emergency_screen");
     }
   });
+
+  it("fallback helper returns emergency_handoff when urgency is already emergency", () => {
+    let state = makeState();
+    state = updateRedFlagStatus(state, "blue_gums", {
+      status: "positive",
+      source: "explicit_answer",
+      turn: 1,
+    });
+
+    const result = fallbackToSafeEmergencyQuestion(state);
+
+    expect(result).toHaveProperty("type", "emergency_handoff");
+  });
 });
 
 describe("Fallback works when no candidate cards are valid", () => {
