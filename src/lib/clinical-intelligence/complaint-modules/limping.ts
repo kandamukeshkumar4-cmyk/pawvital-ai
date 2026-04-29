@@ -110,9 +110,9 @@ export const limpingMobilityPainModule: ComplaintModule = {
     {
       id: "limping_severe_pain",
       ifAnySignalPresent: [
-        "possible_abdominal_pain",
-        "possible_neuro_emergency",
-        "possible_heat_stroke",
+        "severe_pain_unresponsive",
+        "yelps_on_movement",
+        "dragging_limbs",
       ],
       result: "emergency",
     },

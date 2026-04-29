@@ -207,6 +207,58 @@ describe("Complaint Modules MVP", () => {
     });
   });
 
+  describe("14. Limping severe-pain stop condition uses limping-relevant signals only", () => {
+    it("limping_severe_pain does not reference abdominal, neuro, or heat-stroke signals", () => {
+      const severePainCondition = limpingMobilityPainModule.stopConditions.find(
+        (c) => c.id === "limping_severe_pain"
+      );
+      expect(severePainCondition).toBeDefined();
+      const signals = severePainCondition!.ifAnySignalPresent || [];
+      expect(signals).not.toContain("possible_abdominal_pain");
+      expect(signals).not.toContain("possible_neuro_emergency");
+      expect(signals).not.toContain("possible_heat_stroke");
+    });
+
+    it("limping_severe_pain references limping-specific pain signals", () => {
+      const severePainCondition = limpingMobilityPainModule.stopConditions.find(
+        (c) => c.id === "limping_severe_pain"
+      );
+      const signals = severePainCondition!.ifAnySignalPresent || [];
+      expect(signals.some((s) => s.includes("pain") || s.includes("yelp") || s.includes("drag"))).toBe(true);
+    });
+  });
+
+  describe("15. Limping emergency stop conditions cover severe pain, trauma, and non-weight-bearing", () => {
+    it("has emergency stop for non-weight-bearing or trauma", () => {
+      const condition = limpingMobilityPainModule.stopConditions.find(
+        (c) => c.id === "limping_non_weight_bearing_or_trauma"
+      );
+      expect(condition).toBeDefined();
+      expect(condition!.result).toBe("emergency");
+      const flags = condition!.ifRedFlagPositive || [];
+      expect(flags).toContain("non_weight_bearing");
+      expect(flags).toContain("severe_trauma");
+    });
+
+    it("has emergency stop for severe pain", () => {
+      const condition = limpingMobilityPainModule.stopConditions.find(
+        (c) => c.id === "limping_severe_pain"
+      );
+      expect(condition).toBeDefined();
+      expect(condition!.result).toBe("emergency");
+    });
+
+    it("has emergency stop for fracture suspicion", () => {
+      const condition = limpingMobilityPainModule.stopConditions.find(
+        (c) => c.id === "limping_fracture_suspicion"
+      );
+      expect(condition).toBeDefined();
+      expect(condition!.result).toBe("emergency");
+      const flags = condition!.ifRedFlagPositive || [];
+      expect(flags).toContain("obvious_fracture");
+    });
+  });
+
   describe("Helper functions", () => {
     it("getComplaintModuleById returns correct module", () => {
       expect(getComplaintModuleById("skin_itching_allergy")?.id).toBe("skin_itching_allergy");
