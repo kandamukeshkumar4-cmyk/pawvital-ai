@@ -119,7 +119,7 @@ export function getCandidateQuestionCards(
   caseState: ClinicalCaseState,
   options?: PlannerOptions
 ): ClinicalQuestionCard[] {
-  let cards = getAllQuestionCards();
+  let cards = [...getAllQuestionCards()];
 
   if (caseState.activeComplaintModule || options?.activeComplaintModule) {
     const activeModule = options?.activeComplaintModule ?? caseState.activeComplaintModule;
