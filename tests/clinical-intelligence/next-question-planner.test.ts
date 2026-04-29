@@ -553,15 +553,13 @@ describe("Question score red-flag uncertainty", () => {
 });
 
 describe("getCandidateQuestionCards", () => {
-  it("returns cards filtered by active complaint module", () => {
+  it("returns all valid cards, not only module-matching ones", () => {
     const state = createInitialClinicalCaseState("gi");
 
     const candidates = getCandidateQuestionCards(state);
 
-    const hasEmergency = candidates.some((c) => c.complaintFamilies.includes("emergency"));
-    const hasGi = candidates.some((c) => c.complaintFamilies.includes("gi"));
-
-    expect(hasEmergency || hasGi).toBe(true);
+    const hasSkin = candidates.some((c) => c.complaintFamilies.includes("skin"));
+    expect(hasSkin).toBe(true);
   });
 
   it("excludes answered and asked cards", () => {
@@ -573,5 +571,36 @@ describe("getCandidateQuestionCards", () => {
 
     expect(candidates.some((c) => c.id === "emergency_global_screen")).toBe(false);
     expect(candidates.some((c) => c.id === "gum_color_check")).toBe(false);
+  });
+});
+
+describe("Off-topic fallback when module cards exhausted", () => {
+  it("returns a non-module card when all module cards are answered", () => {
+    let state = createInitialClinicalCaseState("skin");
+
+    state = recordAnsweredQuestion(state, "skin_location_distribution", "skin_location", "abdomen");
+
+    const result = planNextClinicalQuestion(state);
+
+    expect("type" in result).toBe(false);
+    const planned = result as PlannedQuestion;
+    expect(planned.questionId).not.toBe("skin_location_distribution");
+  });
+
+  it("includes offTopicPenalty in scoreBreakdown for non-module cards", () => {
+    const state = createInitialClinicalCaseState("gi");
+
+    const breakdown = buildQuestionScoreBreakdown(MOCK_SKIN_CARD, state);
+
+    expect(breakdown["offTopicPenalty"]).toBeLessThan(0);
+  });
+
+  it("module cards outrank off-topic cards when both are available", () => {
+    const state = createInitialClinicalCaseState("gi");
+
+    const giScore = scoreQuestionCard(MOCK_GI_CARD, state);
+    const skinScore = scoreQuestionCard(MOCK_SKIN_CARD, state);
+
+    expect(giScore).toBeGreaterThan(skinScore);
   });
 });

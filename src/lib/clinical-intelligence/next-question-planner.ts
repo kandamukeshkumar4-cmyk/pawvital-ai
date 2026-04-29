@@ -127,28 +127,11 @@ export function getCandidateQuestionCards(
   caseState: ClinicalCaseState,
   options?: PlannerOptions
 ): ClinicalQuestionCard[] {
-  let cards = [...getAllQuestionCards()];
+  const cards = [...getAllQuestionCards()];
 
-  if (caseState.activeComplaintModule || options?.activeComplaintModule) {
-    const activeModule = options?.activeComplaintModule ?? caseState.activeComplaintModule;
-    if (activeModule) {
-      const moduleCards = cards.filter((c) =>
-        c.complaintFamilies.includes(activeModule)
-      );
-      const emergencyCards = cards.filter((c) =>
-        c.complaintFamilies.includes("emergency")
-      );
-      cards = [...emergencyCards, ...moduleCards.filter(
-        (c) => !c.complaintFamilies.includes("emergency")
-      )];
-    }
-  }
-
-  cards = filterAnsweredOrAskedQuestions(cards, caseState, {
+  return filterAnsweredOrAskedQuestions(cards, caseState, {
     allowClarification: options?.allowClarification,
   });
-
-  return cards;
 }
 
 export function buildQuestionScoreBreakdown(
