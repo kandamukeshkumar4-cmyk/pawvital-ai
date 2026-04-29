@@ -66,6 +66,9 @@ function shouldSkipDueToAnsweredDependencies(
   caseState: ClinicalCaseState
 ): boolean {
   for (const depKey of card.skipIfAnswered) {
+    if (caseState.answeredQuestionIds.includes(depKey)) {
+      return true;
+    }
     if (depKey in caseState.explicitAnswers) {
       return true;
     }
