@@ -99,26 +99,11 @@ export const limpingMobilityPainModule: ComplaintModule = {
       id: "limping_non_weight_bearing_or_trauma",
       ifRedFlagPositive: [
         "non_weight_bearing",
-        "severe_trauma",
-        "open_fracture",
+        "post_trauma_lameness",
         "collapse",
         "pale_gums",
         "blue_gums",
       ],
-      result: "emergency",
-    },
-    {
-      id: "limping_severe_pain",
-      ifAnySignalPresent: [
-        "severe_pain_unresponsive",
-        "yelps_on_movement",
-        "dragging_limbs",
-      ],
-      result: "emergency",
-    },
-    {
-      id: "limping_fracture_suspicion",
-      ifRedFlagPositive: ["obvious_fracture", "bone_visible", "severe_swelling"],
       result: "emergency",
     },
     {
@@ -150,7 +135,7 @@ export const limpingMobilityPainModule: ComplaintModule = {
 
   safetyNotes: [
     "Complete non-weight-bearing after trauma suggests fracture or severe soft-tissue injury; escalate immediately to a veterinarian.",
-    "Open fracture or bone visibility is an emergency requiring immediate veterinary attention.",
+    "Severe swelling or obvious deformity after trauma is an emergency requiring immediate veterinary attention.",
     "Collapse or pale gums during a mobility workup indicates systemic compromise; escalate immediately to a veterinary clinic.",
     "Neurological signs (dragging limbs, loss of proprioception) with back pain may indicate spinal emergency; seek veterinary care.",
     "Severe pain unresponsive to rest requires prompt veterinary evaluation.",

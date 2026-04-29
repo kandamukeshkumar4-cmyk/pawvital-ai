@@ -102,10 +102,11 @@ export const giVomitingDiarrheaModule: ComplaintModule = {
     {
       id: "gi_blood_or_bloat",
       ifRedFlagPositive: [
-        "possible_bloody_vomit",
-        "possible_bloody_diarrhea",
-        "bloat",
-        "possible_nonproductive_retching",
+        "hematemesis",
+        "melena",
+        "hematochezia",
+        "gastric_dilatation_volvulus",
+        "unproductive_retching",
         "pale_gums",
         "blue_gums",
         "collapse",
@@ -116,14 +117,13 @@ export const giVomitingDiarrheaModule: ComplaintModule = {
       id: "gi_toxin_or_foreign_body",
       ifAnySignalPresent: [
         "toxin_exposure",
-        "possible_foreign_body",
         "possible_abdominal_pain",
       ],
       result: "emergency",
     },
     {
       id: "gi_severe_dehydration",
-      ifRedFlagPositive: ["unable_to_keep_water_down", "repeated_vomiting"],
+      ifRedFlagPositive: ["unable_to_retain_water", "persistent_vomiting"],
       result: "emergency",
     },
     {
@@ -157,7 +157,7 @@ export const giVomitingDiarrheaModule: ComplaintModule = {
     "Bloody vomit or diarrhea requires emergency escalation to a veterinary professional.",
     "Nonproductive retching with abdominal distension suggests bloat/GDV; escalate immediately to a veterinarian.",
     "Known or suspected toxin exposure is an emergency regardless of GI signs; seek veterinary care.",
-    "Inability to keep water down with repeated vomiting risks dehydration; escalate promptly to a veterinarian.",
+    "Inability to retain water with persistent vomiting risks dehydration; escalate promptly to a veterinarian.",
     "Pale or blue gums during GI workup indicate cardiovascular compromise; escalate immediately to a veterinary clinic.",
   ],
 };

@@ -10,6 +10,9 @@ import {
 } from "@/lib/clinical-intelligence/complaint-modules";
 
 import { getAllQuestionCards } from "@/lib/clinical-intelligence/question-card-registry";
+import { EMERGENCY_RED_FLAG_IDS } from "@/lib/clinical-intelligence/emergency-red-flags";
+import * as fs from "fs";
+import * as path from "path";
 
 describe("Complaint Modules MVP", () => {
   describe("1. All three modules exist", () => {
@@ -215,28 +218,16 @@ describe("Complaint Modules MVP", () => {
     });
   });
 
-  describe("14. Limping severe-pain stop condition uses limping-relevant signals only", () => {
-    it("limping_severe_pain does not reference abdominal, neuro, or heat-stroke signals", () => {
-      const severePainCondition = limpingMobilityPainModule.stopConditions.find(
+  describe("14. Limping does not use dead severe-pain signal IDs", () => {
+    it("has no limping_severe_pain stop condition with fake signals", () => {
+      const condition = limpingMobilityPainModule.stopConditions.find(
         (c) => c.id === "limping_severe_pain"
       );
-      expect(severePainCondition).toBeDefined();
-      const signals = severePainCondition!.ifAnySignalPresent || [];
-      expect(signals).not.toContain("possible_abdominal_pain");
-      expect(signals).not.toContain("possible_neuro_emergency");
-      expect(signals).not.toContain("possible_heat_stroke");
-    });
-
-    it("limping_severe_pain references limping-specific pain signals", () => {
-      const severePainCondition = limpingMobilityPainModule.stopConditions.find(
-        (c) => c.id === "limping_severe_pain"
-      );
-      const signals = severePainCondition!.ifAnySignalPresent || [];
-      expect(signals.some((s) => s.includes("pain") || s.includes("yelp") || s.includes("drag"))).toBe(true);
+      expect(condition).toBeUndefined();
     });
   });
 
-  describe("15. Limping emergency stop conditions cover severe pain, trauma, and non-weight-bearing", () => {
+  describe("15. Limping emergency stop conditions cover trauma and non-weight-bearing only", () => {
     it("has emergency stop for non-weight-bearing or trauma", () => {
       const condition = limpingMobilityPainModule.stopConditions.find(
         (c) => c.id === "limping_non_weight_bearing_or_trauma"
@@ -245,25 +236,62 @@ describe("Complaint Modules MVP", () => {
       expect(condition!.result).toBe("emergency");
       const flags = condition!.ifRedFlagPositive || [];
       expect(flags).toContain("non_weight_bearing");
-      expect(flags).toContain("severe_trauma");
+      expect(flags).toContain("post_trauma_lameness");
     });
 
-    it("has emergency stop for severe pain", () => {
-      const condition = limpingMobilityPainModule.stopConditions.find(
-        (c) => c.id === "limping_severe_pain"
-      );
-      expect(condition).toBeDefined();
-      expect(condition!.result).toBe("emergency");
-    });
-
-    it("has emergency stop for fracture suspicion", () => {
+    it("does not use a fracture-suspicion stop with fake red-flag IDs", () => {
       const condition = limpingMobilityPainModule.stopConditions.find(
         (c) => c.id === "limping_fracture_suspicion"
       );
-      expect(condition).toBeDefined();
-      expect(condition!.result).toBe("emergency");
-      const flags = condition!.ifRedFlagPositive || [];
-      expect(flags).toContain("obvious_fracture");
+      expect(condition).toBeUndefined();
+    });
+  });
+
+  describe("16. Stop-condition IDs are validated against real emitted or canonical flags", () => {
+    it("no module references a fake red-flag or signal ID", () => {
+      const allCards = getAllQuestionCards();
+      const emittedRedFlags = new Set<string>();
+      for (const card of allCards) {
+        for (const flag of card.screensRedFlags) {
+          emittedRedFlags.add(flag);
+        }
+      }
+      const canonicalRedFlags = new Set<string>(EMERGENCY_RED_FLAG_IDS);
+      const validRedFlags = new Set([...emittedRedFlags, ...canonicalRedFlags]);
+
+      // Parse clinical-signal-detector IDs from source so the test stays in sync
+      const detectorPath = path.join(
+        process.cwd(),
+        "src/lib/clinical-intelligence/clinical-signal-detector.ts"
+      );
+      const detectorSource = fs.readFileSync(detectorPath, "utf-8");
+      const signalIds = new Set<string>();
+      const signalRegex = /id:\s*"([^"]+)"/g;
+      let match: RegExpExecArray | null;
+      while ((match = signalRegex.exec(detectorSource)) !== null) {
+        signalIds.add(match[1]);
+      }
+
+      // Pre-existing issue not fixed in this ticket (skin.ts not in allowed files)
+      const knownPreExisting = new Set<string>(["facial_swelling"]);
+
+      const invalids: string[] = [];
+      for (const mod of getComplaintModules()) {
+        for (const condition of mod.stopConditions) {
+          for (const flag of condition.ifRedFlagPositive || []) {
+            if (!validRedFlags.has(flag) && !knownPreExisting.has(flag)) {
+              invalids.push(`${mod.id}.${condition.id} redFlag: ${flag}`);
+            }
+          }
+          for (const signal of condition.ifAnySignalPresent || []) {
+            if (!signalIds.has(signal)) {
+              invalids.push(`${mod.id}.${condition.id} signal: ${signal}`);
+            }
+          }
+        }
+      }
+
+      expect(invalids).toHaveLength(0);
     });
   });
 
