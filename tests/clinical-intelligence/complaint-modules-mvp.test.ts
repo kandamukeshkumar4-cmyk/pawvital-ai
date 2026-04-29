@@ -9,6 +9,8 @@ import {
   limpingMobilityPainModule,
 } from "@/lib/clinical-intelligence/complaint-modules";
 
+import { getAllQuestionCards } from "@/lib/clinical-intelligence/question-card-registry";
+
 describe("Complaint Modules MVP", () => {
   describe("1. All three modules exist", () => {
     it("should export skin_itching_allergy", () => {
@@ -65,10 +67,16 @@ describe("Complaint Modules MVP", () => {
   });
 
   describe("5. Each module references only known question-card IDs", () => {
-    it("should validate without errors (registry check skipped if unavailable)", async () => {
-      const result = await validateComplaintModules();
-      // If registry is not available, this may have warnings but should not have structural errors
+    it("should validate without errors against real question-card registry", async () => {
+      const knownIds = getAllQuestionCards().map((c) => c.id);
+      const result = await validateComplaintModules(knownIds);
       expect(result.errors).toHaveLength(0);
+    });
+
+    it("should report errors for unknown question IDs when registry is provided", async () => {
+      const result = await validateComplaintModules(["known_id_1", "known_id_2"]);
+      // Most real IDs won't be in this tiny list, so errors should be present
+      expect(result.errors.length).toBeGreaterThan(0);
     });
   });
 
@@ -83,7 +91,7 @@ describe("Complaint Modules MVP", () => {
 
     it("second phase is characterize with itch/location cards", () => {
       expect(skinItchingAllergyModule.phases[1].id).toBe("characterize");
-      expect(skinItchingAllergyModule.phases[1].questionIds.some((q) => q.includes("skin_location"))).toBe(true);
+      expect(skinItchingAllergyModule.phases[1].questionIds).toContain("skin_location_distribution");
     });
   });
 
@@ -280,7 +288,8 @@ describe("Complaint Modules MVP", () => {
     });
 
     it("validateComplaintModules passes structural checks", async () => {
-      const result = await validateComplaintModules();
+      const knownIds = getAllQuestionCards().map((c) => c.id);
+      const result = await validateComplaintModules(knownIds);
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
