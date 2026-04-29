@@ -53,6 +53,9 @@ function isQuestionAlreadyAnswered(
   }
 
   for (const depKey of card.skipIfAnswered) {
+    if (caseState.answeredQuestionIds.includes(depKey)) {
+      return true;
+    }
     if (depKey in caseState.explicitAnswers) {
       return true;
     }
@@ -81,9 +84,10 @@ function getUnknownRedFlagsForCard(
   caseState: ClinicalCaseState
 ): string[] {
   return card.screensRedFlags.filter(
-    (flagId) =>
-      !caseState.redFlagStatus[flagId] ||
-      caseState.redFlagStatus[flagId].status === "unknown"
+    (flagId) => {
+      const entry = caseState.redFlagStatus[flagId];
+      return !entry || entry.status === "unknown" || entry.status === "not_sure";
+    }
   );
 }
 
@@ -104,9 +108,10 @@ export function filterAnsweredOrAskedQuestions(
   return cards.filter((card) => {
     const isAnswered = isQuestionAlreadyAnswered(card, caseState);
     const isAsked = caseState.askedQuestionIds.includes(card.id);
-    const isSkipped = shouldSkipDueToAnsweredDependencies(card, caseState);
+    const isSkipped = caseState.skippedQuestionIds.includes(card.id);
+    const isSkippedDueToDeps = shouldSkipDueToAnsweredDependencies(card, caseState);
 
-    if (isAnswered || isSkipped) {
+    if (isAnswered || isSkipped || isSkippedDueToDeps) {
       return false;
     }
 
@@ -297,14 +302,10 @@ export function planNextClinicalQuestion(
   options?: PlannerOptions
 ): PlannedQuestion | PlannerFallbackResult {
   if (caseState.currentUrgency === "emergency") {
-    const emergencyResult = fallbackToSafeEmergencyQuestion(caseState);
-    if ("type" in emergencyResult) {
-      return {
-        type: "emergency_handoff",
-        reason: "Current urgency is emergency — handoff to vet recommended",
-      };
-    }
-    return emergencyResult;
+    return {
+      type: "emergency_handoff",
+      reason: "Current urgency is emergency — handoff to vet recommended",
+    };
   }
 
   const candidates = getCandidateQuestionCards(caseState, options);
