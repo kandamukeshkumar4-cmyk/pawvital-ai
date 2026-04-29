@@ -4,7 +4,8 @@ const path = require("node:path");
 const { fileURLToPath, pathToFileURL } = require("node:url");
 const { registerHooks } = require("node:module");
 
-const ROOT = process.cwd();
+const SCRIPT_DIR = __dirname;
+const ROOT = path.resolve(SCRIPT_DIR, "..");
 const FIXTURE_PATH = path.join(
   ROOT,
   "tests",
