@@ -404,6 +404,51 @@ describe("Fallback works when no candidate cards are valid", () => {
       expect(card?.phase).toBe("emergency_screen");
     }
   });
+
+  it("fallbackToSafeEmergencyQuestion returns only unresolved screened red flags", () => {
+    let state = makeState();
+    state = updateRedFlagStatus(state, "blue_gums", {
+      status: "negative",
+      source: "explicit_answer",
+      turn: 1,
+    });
+
+    const result = fallbackToSafeEmergencyQuestion(state);
+
+    expect("type" in result).toBe(false);
+    const planned = result as PlannedQuestion;
+    expect(planned.screenedRedFlags).not.toContain("blue_gums");
+    expect(planned.screenedRedFlags).toEqual(
+      expect.arrayContaining(["breathing_difficulty", "stridor_present"])
+    );
+  });
+});
+
+describe("Planner rejects non-positive candidates", () => {
+  it("returns no_valid_questions when penalties leave no positive-value candidate", () => {
+    const lowValueCard: ClinicalQuestionCard = {
+      ...MOCK_REPORT_CARD,
+      id: "low_value_general_followup",
+      complaintFamilies: ["general"],
+      phase: "handoff_detail",
+      ownerAnswerability: 0,
+      urgencyImpact: 0,
+      discriminativeValue: 0,
+      reportValue: 0,
+      skipIfAnswered: [],
+    };
+    jest.spyOn(registry, "getAllQuestionCards").mockReturnValueOnce([lowValueCard]);
+
+    const state = createInitialClinicalCaseState("skin");
+
+    const result = planNextClinicalQuestion(state, { maxQuestionsPerTurn: 0 });
+
+    expect(result).toHaveProperty("type", "no_valid_questions");
+    expect(result).toHaveProperty(
+      "reason",
+      "No positive-value candidate questions remaining after scoring"
+    );
+  });
 });
 
 describe("Does not generate new question text", () => {

@@ -276,7 +276,7 @@ export function fallbackToSafeEmergencyQuestion(
       shortReason: card.shortReason,
       score,
       scoreBreakdown: breakdown,
-      screenedRedFlags: card.screensRedFlags,
+      screenedRedFlags: getUnknownRedFlagsForCard(card, caseState),
       selectedBecause: "emergency_screen",
     };
   }
@@ -315,10 +315,10 @@ export function planNextClinicalQuestion(
 
   const best = selectHighestScoringQuestion(scored);
 
-  if (!best) {
+  if (!best || best.score <= 0) {
     return {
       type: "no_valid_questions",
-      reason: "No valid candidate questions remaining after scoring",
+      reason: "No positive-value candidate questions remaining after scoring",
     };
   }
 
