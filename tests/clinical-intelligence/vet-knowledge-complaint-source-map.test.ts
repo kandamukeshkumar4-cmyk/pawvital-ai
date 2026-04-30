@@ -3,7 +3,6 @@ import {
   getComplaintSourceMapEntry,
   getComplaintSourceMapForModule,
   validateComplaintSourceMap,
-  type ComplaintSourceMapEntry,
 } from "@/lib/clinical-intelligence/vet-knowledge/complaint-source-map";
 import { getComplaintModuleById, getComplaintModules } from "@/lib/clinical-intelligence/complaint-modules";
 import { planRetrieval } from "@/lib/clinical-intelligence/vet-knowledge/retrieval-planner";
@@ -37,9 +36,9 @@ describe("vet knowledge complaint source map", () => {
 
   describe("mapped module IDs exist in complaint module registry", () => {
     it.each(ALL_MODULE_IDS)("module %s exists in registry", (moduleId) => {
-      const module = getComplaintModuleById(moduleId);
+      const complaintModule = getComplaintModuleById(moduleId);
 
-      expect(module).toBeDefined();
+      expect(complaintModule).toBeDefined();
     });
 
     it("all registered modules have a map entry", () => {
@@ -48,8 +47,8 @@ describe("vet knowledge complaint source map", () => {
         getAllComplaintSourceMapEntries().map((e) => e.complaintModuleId)
       );
 
-      for (const module of registeredModules) {
-        expect(mappedIds.has(module.id)).toBe(true);
+      for (const complaintModule of registeredModules) {
+        expect(mappedIds.has(complaintModule.id)).toBe(true);
       }
     });
   });

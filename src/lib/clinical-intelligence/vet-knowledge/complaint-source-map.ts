@@ -225,18 +225,18 @@ export function validateComplaintSourceMap(): {
   const warnings: string[] = [];
 
   for (const entry of COMPLAINT_SOURCE_MAP) {
-    const module = getComplaintModuleById(entry.complaintModuleId);
+    const complaintModule = getComplaintModuleById(entry.complaintModuleId);
 
-    if (!module) {
+    if (!complaintModule) {
       errors.push(
         `complaint module "${entry.complaintModuleId}" does not exist in registry`
       );
       continue;
     }
 
-    if (module.displayNameForLogs !== entry.displayName) {
+    if (complaintModule.displayNameForLogs !== entry.displayName) {
       warnings.push(
-        `display name mismatch for "${entry.complaintModuleId}": map says "${entry.displayName}", registry says "${module.displayNameForLogs}"`
+        `display name mismatch for "${entry.complaintModuleId}": map says "${entry.displayName}", registry says "${complaintModule.displayNameForLogs}"`
       );
     }
 
@@ -266,10 +266,10 @@ export function validateComplaintSourceMap(): {
   const registeredModules = getComplaintModules();
   const mappedIds = new Set(COMPLAINT_SOURCE_MAP.map((e) => e.complaintModuleId));
 
-  for (const module of registeredModules) {
-    if (!mappedIds.has(module.id)) {
+  for (const complaintModule of registeredModules) {
+    if (!mappedIds.has(complaintModule.id)) {
       warnings.push(
-        `complaint module "${module.id}" is not mapped in complaint source map`
+        `complaint module "${complaintModule.id}" is not mapped in complaint source map`
       );
     }
   }
