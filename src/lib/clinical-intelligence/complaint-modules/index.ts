@@ -2,11 +2,17 @@ import type { ComplaintModule } from "./types";
 import { skinItchingAllergyModule } from "./skin";
 import { giVomitingDiarrheaModule } from "./gi";
 import { limpingMobilityPainModule } from "./limping";
+import { respiratoryDistressModule } from "./respiratory";
+import { seizureCollapseNeuroModule } from "./seizure-collapse";
+import { urinaryObstructionModule } from "./urinary";
 
 const ALL_MODULES: ComplaintModule[] = [
   skinItchingAllergyModule,
   giVomitingDiarrheaModule,
   limpingMobilityPainModule,
+  respiratoryDistressModule,
+  seizureCollapseNeuroModule,
+  urinaryObstructionModule,
 ];
 
 const MODULE_BY_ID = new Map<string, ComplaintModule>();
@@ -197,4 +203,7 @@ export {
   skinItchingAllergyModule,
   giVomitingDiarrheaModule,
   limpingMobilityPainModule,
+  respiratoryDistressModule,
+  seizureCollapseNeuroModule,
+  urinaryObstructionModule,
 };
