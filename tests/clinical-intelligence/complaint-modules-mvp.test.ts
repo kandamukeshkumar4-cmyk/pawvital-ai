@@ -195,6 +195,18 @@ describe("Complaint Modules MVP", () => {
     });
   });
 
+  describe("11b. Boundary-aware matching rejects short triggers inside unrelated words", () => {
+    it("does not match 'rash' inside 'trash'", () => {
+      const matches = findComplaintModulesForText("trash");
+      expect(matches.map((m) => m.id)).not.toContain("skin_itching_allergy");
+    });
+
+    it("does not match 'lame' inside 'inflamed'", () => {
+      const matches = findComplaintModulesForText("inflamed");
+      expect(matches.map((m) => m.id)).not.toContain("limping_mobility_pain");
+    });
+  });
+
   describe("12. No diagnosis or treatment language appears in module metadata", () => {
     it("validation reports no diagnosis/treatment language errors", async () => {
       const result = await validateComplaintModules();

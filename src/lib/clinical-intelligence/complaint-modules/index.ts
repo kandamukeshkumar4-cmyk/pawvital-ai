@@ -31,12 +31,21 @@ export function getComplaintModuleById(id: string): ComplaintModule | undefined 
   return MODULE_BY_ID.get(id);
 }
 
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function matchesWithWordBoundaries(text: string, phrase: string): boolean {
+  const escaped = escapeRegExp(phrase);
+  const regex = new RegExp(`\\b${escaped}\\b`, "i");
+  return regex.test(text);
+}
+
 export function findComplaintModulesForText(text: string): ComplaintModule[] {
-  const lower = text.toLowerCase();
   const matches: ComplaintModule[] = [];
   for (const m of ALL_MODULES) {
-    const hit = m.triggers.some((t) => lower.includes(t.toLowerCase()))
-      || m.aliases.some((a) => lower.includes(a.toLowerCase()));
+    const hit = m.triggers.some((t) => matchesWithWordBoundaries(text, t))
+      || m.aliases.some((a) => matchesWithWordBoundaries(text, a));
     if (hit) {
       matches.push(m);
     }
