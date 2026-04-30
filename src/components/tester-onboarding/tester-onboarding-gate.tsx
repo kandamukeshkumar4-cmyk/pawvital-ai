@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Card from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { hasTesterConsent, recordTesterConsent } from "@/lib/tester-consent";
@@ -24,18 +24,22 @@ function subscribeToTesterConsent() {
   return () => {};
 }
 
+function subscribeToHydration() {
+  return () => {};
+}
+
 export default function TesterOnboardingGate({
   children,
 }: TesterOnboardingGateProps) {
   const { activePet, user, userDataLoaded } = useAppStore();
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false
+  );
   const [acknowledgedSubjectId, setAcknowledgedSubjectId] = useState<
     string | null
   >(null);
-
-  useEffect(() => {
-    setHasHydrated(true);
-  }, []);
 
   const consentSubjectId = getConsentSubjectId(user?.id);
   const ready = !isSupabaseConfigured || userDataLoaded;

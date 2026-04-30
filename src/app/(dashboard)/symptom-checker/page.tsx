@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import {
   Stethoscope,
   AlertTriangle,
@@ -90,6 +90,10 @@ const quickSymptoms = [
   "Blood in stool",
   "Swollen abdomen",
 ];
+
+function subscribeToHydration() {
+  return () => {};
+}
 
 // --- Components ---
 
@@ -213,7 +217,11 @@ function ChatBubble({
 
 export default function SymptomCheckerPage() {
   const { activePet } = useAppStore();
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -256,10 +264,6 @@ export default function SymptomCheckerPage() {
   const displayPetBreed = hasHydrated ? pet.breed : "Unknown";
   const displayPetAgeYears = hasHydrated ? pet.age_years : 4;
   const displayPetWeight = hasHydrated ? pet.weight : 50;
-
-  useEffect(() => {
-    setHasHydrated(true);
-  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
