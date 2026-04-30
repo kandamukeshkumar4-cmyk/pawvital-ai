@@ -5,6 +5,7 @@ import { limpingMobilityPainModule } from "./limping";
 import { respiratoryDistressModule } from "./respiratory";
 import { seizureCollapseNeuroModule } from "./seizure-collapse";
 import { urinaryObstructionModule } from "./urinary";
+import { toxinPoisoningExposureModule } from "./toxin-exposure";
 
 const ALL_MODULES: ComplaintModule[] = [
   skinItchingAllergyModule,
@@ -13,6 +14,7 @@ const ALL_MODULES: ComplaintModule[] = [
   respiratoryDistressModule,
   seizureCollapseNeuroModule,
   urinaryObstructionModule,
+  toxinPoisoningExposureModule,
 ];
 
 const MODULE_BY_ID = new Map<string, ComplaintModule>();
@@ -206,4 +208,5 @@ export {
   respiratoryDistressModule,
   seizureCollapseNeuroModule,
   urinaryObstructionModule,
+  toxinPoisoningExposureModule,
 };
