@@ -155,6 +155,46 @@ const COMPLAINT_SOURCE_MAP: ComplaintSourceMapEntry[] = [
       "Internal vet-reviewed notes cover toxin exposure as a clinical signal across multiple complaint modules.",
     ],
   },
+  {
+    complaintModuleId: "bloat_gdv",
+    displayName: "Bloat / GDV / Abdominal Distension",
+    vetKnowledgeFamilies: ["gastrointestinal", "emergency"],
+    relevantRedFlags: [
+      "gastric_dilatation_volvulus",
+      "unproductive_retching",
+      "rapid_onset_distension",
+      "bloat_with_restlessness",
+      "distended_abdomen_painful",
+      "collapse",
+      "pale_gums",
+    ],
+    retrievalIntent: "internal_reasoning",
+    citationIntent: "owner_visible_citation",
+    rationaleNotes: [
+      "Bloat/GDV complaints map directly to Cornell GDV/bloat and emergency triage sources.",
+      "Unproductive retching and rapid abdominal distension are mapped as emergency red flags.",
+      "Owner-visible citations should use Cornell GDV/bloat or AAHA emergency signs when relevant.",
+    ],
+  },
+  {
+    complaintModuleId: "collapse_weakness",
+    displayName: "Collapse / Weakness / Fainting",
+    vetKnowledgeFamilies: ["emergency", "respiratory"],
+    relevantRedFlags: [
+      "collapse",
+      "unresponsive",
+      "pale_gums",
+      "blue_gums",
+      "breathing_difficulty",
+    ],
+    retrievalIntent: "internal_reasoning",
+    citationIntent: "owner_visible_citation",
+    rationaleNotes: [
+      "Collapse/weakness complaints map to emergency triage sources and respiratory compromise screens.",
+      "Gum color, breathing difficulty, collapse, and unresponsiveness are urgency-changing red flags.",
+      "Owner-visible citations should use AAHA emergency signs for collapse or breathing difficulty awareness.",
+    ],
+  },
 ];
 
 const MODULE_ID_TO_ENTRY = new Map<string, ComplaintSourceMapEntry>(
