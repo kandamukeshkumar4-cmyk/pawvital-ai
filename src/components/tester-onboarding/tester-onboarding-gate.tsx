@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Card from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { hasTesterConsent, recordTesterConsent } from "@/lib/tester-consent";
@@ -28,15 +28,20 @@ export default function TesterOnboardingGate({
   children,
 }: TesterOnboardingGateProps) {
   const { activePet, user, userDataLoaded } = useAppStore();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [acknowledgedSubjectId, setAcknowledgedSubjectId] = useState<
     string | null
   >(null);
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   const consentSubjectId = getConsentSubjectId(user?.id);
   const ready = !isSupabaseConfigured || userDataLoaded;
   const storedAcknowledged = useSyncExternalStore(
     subscribeToTesterConsent,
-    () => (ready ? hasTesterConsent(user?.id) : false),
+    () => (ready && hasHydrated ? hasTesterConsent(user?.id) : false),
     () => false
   );
 
@@ -61,7 +66,7 @@ export default function TesterOnboardingGate({
     return (
       <div className="mx-auto max-w-5xl">
         <TesterBoundaryCard
-          petName={activePet?.name ?? "your dog"}
+          petName={hasHydrated ? activePet?.name ?? "your dog" : "your dog"}
           onAcknowledge={handleAcknowledge}
         />
       </div>

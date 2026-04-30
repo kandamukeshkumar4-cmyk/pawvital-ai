@@ -213,6 +213,7 @@ function ChatBubble({
 
 export default function SymptomCheckerPage() {
   const { activePet } = useAppStore();
+  const [hasHydrated, setHasHydrated] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -251,6 +252,14 @@ export default function SymptomCheckerPage() {
     weight: 50,
     existing_conditions: [],
   };
+  const displayPetName = hasHydrated ? pet.name : "your dog";
+  const displayPetBreed = hasHydrated ? pet.breed : "Unknown";
+  const displayPetAgeYears = hasHydrated ? pet.age_years : 4;
+  const displayPetWeight = hasHydrated ? pet.weight : 50;
+
+  useEffect(() => {
+    setHasHydrated(true);
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -752,7 +761,7 @@ export default function SymptomCheckerPage() {
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900">
-                  Tell me what&apos;s going on with {pet.name}
+                  Tell me what&apos;s going on with {displayPetName}
                 </h2>
                 <p className="text-sm text-gray-500">
                   I&apos;ll guide a dog-only symptom check, ask focused follow-up
@@ -794,7 +803,9 @@ export default function SymptomCheckerPage() {
                   <button
                     key={s}
                     onClick={() =>
-                      sendMessage(`${pet.name} has been ${s.toLowerCase()}`)
+                      sendMessage(
+                        `${hasHydrated ? pet.name : "My dog"} has been ${s.toLowerCase()}`,
+                      )
                     }
                     className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors"
                   >
@@ -816,10 +827,10 @@ export default function SymptomCheckerPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
-                  Dog symptom check for {pet.name}
+                  Dog symptom check for {displayPetName}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {pet.breed}, {pet.age_years}y, {pet.weight} lbs
+                  {displayPetBreed}, {displayPetAgeYears}y, {displayPetWeight} lbs
                 </p>
               </div>
               {!report && (
@@ -964,7 +975,7 @@ export default function SymptomCheckerPage() {
                       onKeyDown={handleKeyDown}
                       placeholder={
                         messages.length === 0
-                          ? `Describe what's going on with ${pet.name} or attach a photo...`
+                          ? `Describe what's going on with ${displayPetName} or attach a photo...`
                           : "Type your answer or attach a photo..."
                       }
                       rows={2}
@@ -1038,7 +1049,7 @@ export default function SymptomCheckerPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Describe what's going on with ${pet.name} or attach a photo...`}
+                  placeholder={`Describe what's going on with ${displayPetName} or attach a photo...`}
                   rows={2}
                   className="min-w-0 flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
