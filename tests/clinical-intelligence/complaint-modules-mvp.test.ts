@@ -272,14 +272,11 @@ describe("Complaint Modules MVP", () => {
         signalIds.add(match[1]);
       }
 
-      // Pre-existing issue not fixed in this ticket (skin.ts not in allowed files)
-      const knownPreExisting = new Set<string>(["facial_swelling"]);
-
       const invalids: string[] = [];
       for (const mod of getComplaintModules()) {
         for (const condition of mod.stopConditions) {
           for (const flag of condition.ifRedFlagPositive || []) {
-            if (!validRedFlags.has(flag) && !knownPreExisting.has(flag)) {
+            if (!validRedFlags.has(flag)) {
               invalids.push(`${mod.id}.${condition.id} redFlag: ${flag}`);
             }
           }
@@ -292,6 +289,16 @@ describe("Complaint Modules MVP", () => {
       }
 
       expect(invalids).toHaveLength(0);
+    });
+
+    it("no stop condition references the non-canonical facial_swelling ID", () => {
+      for (const mod of getComplaintModules()) {
+        for (const condition of mod.stopConditions) {
+          for (const flag of condition.ifRedFlagPositive || []) {
+            expect(flag).not.toBe("facial_swelling");
+          }
+        }
+      }
     });
   });
 

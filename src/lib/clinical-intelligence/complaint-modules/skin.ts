@@ -96,7 +96,7 @@ export const skinItchingAllergyModule: ComplaintModule = {
     {
       id: "skin_facial_swelling_or_breathing",
       ifRedFlagPositive: [
-        "facial_swelling",
+        "face_swelling",
         "breathing_difficulty",
         "collapse",
         "pale_gums",
