@@ -149,6 +149,11 @@ describe("Complaint Modules MVP", () => {
       const matches = findComplaintModulesForText("looks like an allergic reaction");
       expect(matches.map((m) => m.id)).toContain("skin_itching_allergy");
     });
+
+    it("matches 'bumps on my dog' after leading-space fix", () => {
+      const matches = findComplaintModulesForText("bumps on my dog");
+      expect(matches.map((m) => m.id)).toContain("skin_itching_allergy");
+    });
   });
 
   describe("10. Trigger matching finds vomiting/diarrhea cases", () => {

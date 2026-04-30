@@ -12,7 +12,7 @@ export const skinItchingAllergyModule: ComplaintModule = {
     "allergy",
     "allergic",
     "hives",
-    " bumps",
+    "bumps",
     "red skin",
     "chewing paws",
     "licking paws",
