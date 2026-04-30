@@ -6,6 +6,8 @@ import { respiratoryDistressModule } from "./respiratory";
 import { seizureCollapseNeuroModule } from "./seizure-collapse";
 import { urinaryObstructionModule } from "./urinary";
 import { toxinPoisoningExposureModule } from "./toxin-exposure";
+import { bloatGdvModule } from "./bloat-gdv";
+import { collapseWeaknessModule } from "./collapse-weakness";
 
 const ALL_MODULES: ComplaintModule[] = [
   skinItchingAllergyModule,
@@ -15,6 +17,8 @@ const ALL_MODULES: ComplaintModule[] = [
   seizureCollapseNeuroModule,
   urinaryObstructionModule,
   toxinPoisoningExposureModule,
+  bloatGdvModule,
+  collapseWeaknessModule,
 ];
 
 const MODULE_BY_ID = new Map<string, ComplaintModule>();
@@ -209,4 +213,6 @@ export {
   seizureCollapseNeuroModule,
   urinaryObstructionModule,
   toxinPoisoningExposureModule,
+  bloatGdvModule,
+  collapseWeaknessModule,
 };
