@@ -16,14 +16,16 @@ const ALL_MODULE_IDS = [
   "seizure_collapse_neuro",
   "urinary_obstruction",
   "toxin_poisoning_exposure",
+  "bloat_gdv",
+  "collapse_weakness",
 ];
 
 describe("vet knowledge complaint source map", () => {
   describe("all complaint modules are mapped", () => {
-    it("exports entries for all 7 complaint modules", () => {
+    it("exports entries for all 9 complaint modules", () => {
       const entries = getAllComplaintSourceMapEntries();
 
-      expect(entries.length).toBe(7);
+      expect(entries.length).toBe(9);
     });
 
     it.each(ALL_MODULE_IDS)("maps module %s", (moduleId) => {
@@ -106,6 +108,19 @@ describe("vet knowledge complaint source map", () => {
       expect(entry?.vetKnowledgeFamilies).toContain("gastrointestinal");
       expect(entry?.vetKnowledgeFamilies).toContain("emergency");
     });
+
+    it("bloat_gdv maps to gastrointestinal and emergency families", () => {
+      const entry = getComplaintSourceMapEntry("bloat_gdv");
+
+      expect(entry?.vetKnowledgeFamilies).toContain("gastrointestinal");
+      expect(entry?.vetKnowledgeFamilies).toContain("emergency");
+    });
+
+    it("collapse_weakness maps to emergency family", () => {
+      const entry = getComplaintSourceMapEntry("collapse_weakness");
+
+      expect(entry?.vetKnowledgeFamilies).toContain("emergency");
+    });
   });
 
   describe("red flags are relevant to each module", () => {
@@ -147,6 +162,18 @@ describe("vet knowledge complaint source map", () => {
       const entry = getComplaintSourceMapEntry("toxin_poisoning_exposure");
 
       expect(entry?.relevantRedFlags).toContain("toxin_confirmed");
+    });
+
+    it("bloat_gdv includes unproductive_retching red flag", () => {
+      const entry = getComplaintSourceMapEntry("bloat_gdv");
+
+      expect(entry?.relevantRedFlags).toContain("unproductive_retching");
+    });
+
+    it("collapse_weakness includes collapse red flag", () => {
+      const entry = getComplaintSourceMapEntry("collapse_weakness");
+
+      expect(entry?.relevantRedFlags).toContain("collapse");
     });
   });
 
