@@ -5,6 +5,8 @@ const PET_ONBOARDING_DISMISSED_KEY = "pawvital_pet_onboarding_dismissed";
 const SMOKE_SEED_STORAGE_KEY = "pawvital_browser_mobile_smoke_seeded";
 const TESTER_CONSENT_STORAGE_KEY = "pawvital_tester_acknowledgements";
 const TESTER_CONSENT_VERSION = "2026-04-private-tester-rc-v1";
+const HYDRATION_WARNING_PATTERN =
+  /hydration|did not match|server rendered html|text content does not match/i;
 
 const DEMO_DOG = {
   age_months: 0,
@@ -101,6 +103,23 @@ async function seedDemoState(page: Page, options: { consent: boolean }) {
       version: TESTER_CONSENT_VERSION,
     }
   );
+}
+
+function trackHydrationWarnings(page: Page) {
+  const warnings: string[] = [];
+
+  page.on("console", (message) => {
+    if (message.type() !== "warning" && message.type() !== "error") {
+      return;
+    }
+
+    const text = message.text();
+    if (HYDRATION_WARNING_PATTERN.test(text)) {
+      warnings.push(text);
+    }
+  });
+
+  return warnings;
 }
 
 async function installEmergencyMocks(page: Page) {
@@ -243,6 +262,7 @@ async function installMildMocks(page: Page) {
 test("tester onboarding smoke shows the boundary once and skips it for returning users", async ({
   page,
 }) => {
+  const hydrationWarnings = trackHydrationWarnings(page);
   await seedDemoState(page, { consent: false });
   await page.goto("/symptom-checker");
 
@@ -271,11 +291,14 @@ test("tester onboarding smoke shows the boundary once and skips it for returning
   await expect(
     page.getByText("Tell me what's going on with Buddy")
   ).toBeVisible();
+
+  expect(hydrationWarnings).toEqual([]);
 });
 
 test("emergency result-flow smoke shows urgency, opens a non-demo report, and submits feedback", async ({
   page,
 }) => {
+  const hydrationWarnings = trackHydrationWarnings(page);
   const feedbackSubmissions = await installEmergencyMocks(page);
   await seedDemoState(page, { consent: true });
   await page.goto("/symptom-checker");
@@ -320,11 +343,13 @@ test("emergency result-flow smoke shows urgency, opens a non-demo report, and su
     symptomCheckId: "smoke-emergency-report",
     surface: "result_page",
   });
+  expect(hydrationWarnings).toEqual([]);
 });
 
 test("mild result-flow smoke keeps the question flow understandable and submits feedback", async ({
   page,
 }) => {
+  const hydrationWarnings = trackHydrationWarnings(page);
   const feedbackSubmissions = await installMildMocks(page);
   await seedDemoState(page, { consent: true });
   await page.goto("/symptom-checker");
@@ -372,4 +397,5 @@ test("mild result-flow smoke keeps the question flow understandable and submits 
     symptomCheckId: "smoke-mild-report",
     surface: "result_page",
   });
+  expect(hydrationWarnings).toEqual([]);
 });

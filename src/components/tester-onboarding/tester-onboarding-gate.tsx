@@ -24,10 +24,19 @@ function subscribeToTesterConsent() {
   return () => {};
 }
 
+function subscribeToHydration() {
+  return () => {};
+}
+
 export default function TesterOnboardingGate({
   children,
 }: TesterOnboardingGateProps) {
   const { activePet, user, userDataLoaded } = useAppStore();
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false
+  );
   const [acknowledgedSubjectId, setAcknowledgedSubjectId] = useState<
     string | null
   >(null);
@@ -36,7 +45,7 @@ export default function TesterOnboardingGate({
   const ready = !isSupabaseConfigured || userDataLoaded;
   const storedAcknowledged = useSyncExternalStore(
     subscribeToTesterConsent,
-    () => (ready ? hasTesterConsent(user?.id) : false),
+    () => (ready && hasHydrated ? hasTesterConsent(user?.id) : false),
     () => false
   );
 
@@ -61,7 +70,7 @@ export default function TesterOnboardingGate({
     return (
       <div className="mx-auto max-w-5xl">
         <TesterBoundaryCard
-          petName={activePet?.name ?? "your dog"}
+          petName={hasHydrated ? activePet?.name ?? "your dog" : "your dog"}
           onAcknowledge={handleAcknowledge}
         />
       </div>
