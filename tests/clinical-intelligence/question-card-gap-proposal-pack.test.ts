@@ -212,12 +212,12 @@ const CANDIDATE_PROPOSALS: readonly CandidateProposal[] = [
 
 describe("Question Card Gap Proposal Pack (VET-1429K packaging)", () => {
   it("locks the current live registry counts in the proposal doc", () => {
-    expect(getAllQuestionCards()).toHaveLength(19);
+    expect(getAllQuestionCards()).toHaveLength(26);
     expect(EMERGENCY_RED_FLAG_IDS).toHaveLength(35);
     expect(KNOWN_SIGNAL_IDS).toHaveLength(14);
 
     expect(PROPOSAL_DOC).toContain(
-      "19 question cards, 35 canonical red flags, 14 clinical signals."
+      "26 question cards, 35 canonical red flags, 14 clinical signals."
     );
     expect(PROPOSAL_DOC).not.toContain("37 canonical red flags");
   });
@@ -251,14 +251,36 @@ describe("Question Card Gap Proposal Pack (VET-1429K packaging)", () => {
     ]);
   });
 
-  it("does not register any proposed question cards yet", () => {
-    const proposedIds = Array.from(
+  it("does not register any proposed question cards that are still pending implementation", () => {
+    const allProposedIds = Array.from(
       new Set(
         CANDIDATE_PROPOSALS.flatMap((candidate) => candidate.proposedCardIds)
       )
     );
 
-    for (const proposedId of proposedIds) {
+    // 7 cards were implemented by VET-1432K
+    const implementedByVet1432K = new Set([
+      "heat_exposure_check",
+      "brachycephalic_breed_check",
+      "panting_excess_check",
+      "trauma_mechanism_check",
+      "wound_characterization_check",
+      "bleeding_volume_check",
+      "laceration_depth_check",
+    ]);
+
+    // Verify implemented cards ARE now registered
+    for (const id of implementedByVet1432K) {
+      expect(getQuestionCardById(id)).toBeDefined();
+    }
+
+    // Verify remaining proposed cards are still NOT registered
+    const stillPending = allProposedIds.filter(
+      (id) => !implementedByVet1432K.has(id)
+    );
+    expect(stillPending).toHaveLength(17);
+
+    for (const proposedId of stillPending) {
       expect(getQuestionCardById(proposedId)).toBeUndefined();
     }
   });
