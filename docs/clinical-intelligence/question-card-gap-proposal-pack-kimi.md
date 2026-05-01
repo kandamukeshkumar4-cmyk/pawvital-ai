@@ -11,7 +11,9 @@
 
 VET-1424K identified eight candidate complaint-module areas that are **blocked** because they lack dedicated question-card coverage. This document converts those blockers into exact, implementation-ready question-card proposals.
 
-**Current registry:** 19 question cards, 35 canonical red flags, 14 clinical signals.
+**Current registry:** 26 question cards, 35 canonical red flags, 14 clinical signals.
+
+*Note: 7 of the 24 proposed cards were implemented by VET-1432K (`heat_exposure_check`, `brachycephalic_breed_check`, `panting_excess_check`, `trauma_mechanism_check`, `wound_characterization_check`, `bleeding_volume_check`, `laceration_depth_check`). The remaining 17 proposed cards are still pending implementation.*
 **Rule:** Every proposed ID below is prefixed with `(PROPOSED)` in this document. None are registered in `question-card-registry.ts` at the time of writing.
 
 ---
