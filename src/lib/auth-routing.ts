@@ -4,6 +4,7 @@ export const DEFAULT_AUTH_REDIRECT = "/dashboard";
 export const RESET_PASSWORD_PATH = "/reset-password";
 
 export const PROTECTED_PATH_PREFIXES = [
+  "/paw-hub",
   "/dashboard",
   "/symptom-checker",
   "/triage",

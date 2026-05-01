@@ -27,7 +27,8 @@ import { useAppStore } from "@/store/app-store";
 import { useAuth } from "@/hooks/useSupabase";
 
 const navItems = [
-  { href: "/dashboard", icon: Activity, label: "Dashboard" },
+  { href: "/paw-hub", icon: Activity, label: "Paw Hub" },
+  { href: "/dashboard", icon: Heart, label: "Dashboard" },
   { href: "/pets", icon: PawPrint, label: "My Dogs" },
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
   { href: "/triage", icon: Moon, label: "Late-Night Triage" },
