@@ -53,7 +53,7 @@ export const brachycephalicBreedCheck: ClinicalQuestionCard = {
 
   answerType: "boolean",
 
-  skipIfAnswered: ["heat_exposure_check"],
+  skipIfAnswered: [],
 
   sourceIds: ["internal_pending_review"],
 };
@@ -239,7 +239,7 @@ export const lacerationDepthCheck: ClinicalQuestionCard = {
     "Not sure",
   ],
 
-  skipIfAnswered: ["wound_characterization_check"],
+  skipIfAnswered: [],
 
   sourceIds: ["internal_pending_review"],
   safetyNotes: [

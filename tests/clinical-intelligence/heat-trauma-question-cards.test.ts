@@ -253,6 +253,46 @@ describe("VET-1432K Heatstroke and Trauma Question Cards", () => {
     });
   });
 
+  describe("reachability review fixes (VET-1434K)", () => {
+    it("brachycephalic_breed_check is NOT skipped after heat_exposure_check is answered", () => {
+      const brachy = getQuestionCardById("brachycephalic_breed_check")!;
+      expect(brachy.skipIfAnswered).not.toContain("heat_exposure_check");
+    });
+
+    it("brachycephalic_breed_check has an empty skipIfAnswered array", () => {
+      const brachy = getQuestionCardById("brachycephalic_breed_check")!;
+      expect(brachy.skipIfAnswered).toEqual([]);
+    });
+
+    it("laceration_depth_check is NOT skipped after wound_characterization_check is answered", () => {
+      const depth = getQuestionCardById("laceration_depth_check")!;
+      expect(depth.skipIfAnswered).not.toContain("wound_characterization_check");
+    });
+
+    it("laceration_depth_check has an empty skipIfAnswered array", () => {
+      const depth = getQuestionCardById("laceration_depth_check")!;
+      expect(depth.skipIfAnswered).toEqual([]);
+    });
+
+    it("heat_exposure_check and brachycephalic_breed_check are independently askable", () => {
+      const heat = getQuestionCardById("heat_exposure_check")!;
+      const brachy = getQuestionCardById("brachycephalic_breed_check")!;
+
+      // Both are history-phase cards; neither should suppress the other
+      expect(heat.skipIfAnswered).not.toContain("brachycephalic_breed_check");
+      expect(brachy.skipIfAnswered).not.toContain("heat_exposure_check");
+    });
+
+    it("wound_characterization_check and laceration_depth_check are independently askable", () => {
+      const wound = getQuestionCardById("wound_characterization_check")!;
+      const depth = getQuestionCardById("laceration_depth_check")!;
+
+      // Both are non-emergency cards; neither should suppress the other
+      expect(wound.skipIfAnswered).not.toContain("laceration_depth_check");
+      expect(depth.skipIfAnswered).not.toContain("wound_characterization_check");
+    });
+  });
+
   describe("cross-registry consistency", () => {
     it("new card IDs do not collide with any existing card IDs", () => {
       const allCards = getAllQuestionCards();
