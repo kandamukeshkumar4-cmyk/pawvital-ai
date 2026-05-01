@@ -1,0 +1,169 @@
+name: Clinical Automation Gates
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: clinical-automation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clinical-automation-gates:
+    name: Clinical Automation Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Prepare clinical automation artifacts
+        run: mkdir -p data/clinical-automation
+
+      - name: Run clinical PR risk classifier
+        id: risk
+        shell: bash
+        run: |
+          set +e
+          node scripts/clinical-pr-risk-classifier.mjs --json \
+            > data/clinical-automation/risk-classifier.json
+          exit_code=$?
+          set -e
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          cat data/clinical-automation/risk-classifier.json
+
+      - name: Run clinical required-check mapper
+        id: required
+        shell: bash
+        run: |
+          set +e
+          node scripts/clinical-pr-required-checks.mjs --json \
+            > data/clinical-automation/required-checks.json
+          exit_code=$?
+          set -e
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          cat data/clinical-automation/required-checks.json
+
+      - name: Run PR isolation check
+        id: isolation
+        shell: bash
+        run: |
+          set +e
+          node scripts/pr-isolation-check.mjs --json \
+            > data/clinical-automation/pr-isolation.json
+          exit_code=$?
+          set -e
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          cat data/clinical-automation/pr-isolation.json
+
+      - name: Clinical automation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinical-automation-gate-artifacts
+          if-no-files-found: error
+          path: data/clinical-automation/*.json
+
+      - name: Write clinical automation summary
+        if: always()
+        shell: bash
+        run: |
+          node <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          function readJson(fileName) {
+            const filePath = path.join("data", "clinical-automation", fileName);
+            try {
+              return JSON.parse(fs.readFileSync(filePath, "utf8"));
+            } catch (error) {
+              return {
+                status: "error",
+                summary: `Could not read ${fileName}: ${error.message}`,
+              };
+            }
+          }
+
+          const risk = readJson("risk-classifier.json");
+          const required = readJson("required-checks.json");
+          const isolation = readJson("pr-isolation.json");
+
+          const requiredCommands = Array.isArray(required.requiredSuites)
+            ? required.requiredSuites.map((suite) => `- \`${suite.command}\``)
+            : ["- None"];
+
+          console.log("## Clinical Automation Gates");
+          console.log("");
+          console.log(`- Risk classifier: **${risk.status ?? "unknown"}** - ${risk.summary ?? "No summary"}`);
+          console.log(`- Required checks: **${required.status ?? "unknown"}** - ${required.summary ?? "No summary"}`);
+          console.log(`- PR isolation: **${isolation.status ?? "unknown"}** - ${isolation.summary ?? "No summary"}`);
+          console.log("");
+          console.log("### Required suites suggested by changed files");
+          console.log(requiredCommands.join("\n"));
+          console.log("");
+          console.log("### Clinical automation artifacts");
+          console.log("Uploaded as `clinical-automation-gate-artifacts`.");
+          NODE
+
+      - name: Enforce clinical automation blockers
+        if: always()
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+
+          function readJson(fileName) {
+            const filePath = path.join("data", "clinical-automation", fileName);
+            try {
+              return JSON.parse(fs.readFileSync(filePath, "utf8"));
+            } catch (error) {
+              throw new Error(`Missing or invalid ${fileName}: ${error.message}`);
+            }
+          }
+
+          const risk = readJson("risk-classifier.json");
+          const required = readJson("required-checks.json");
+          const isolation = readJson("pr-isolation.json");
+          const blockers = [];
+
+          if (required.status === "fail") {
+            blockers.push("Required clinical suite mapping failed.");
+          }
+
+          const blockingRiskFindings = (risk.findings ?? []).filter(
+            (finding) => finding.code !== "protected_workflow"
+          );
+          for (const finding of blockingRiskFindings) {
+            if (finding.severity === "fail") {
+              blockers.push(`Risk classifier failure: ${finding.code}`);
+            }
+          }
+
+          const blockingIsolationFailures = (isolation.failures ?? []).filter(
+            (finding) => finding.code !== "protected_workflow"
+          );
+          for (const finding of blockingIsolationFailures) {
+            blockers.push(`PR isolation failure: ${finding.code}`);
+          }
+
+          if ((risk.matches?.protectedWorkflowFiles ?? []).length > 0) {
+            console.log("Protected workflow files changed. This is reported for explicit maintainer review and is not auto-blocked in the initial wiring phase.");
+          }
+
+          if (blockers.length > 0) {
+            console.error(blockers.join("\n"));
+            process.exit(1);
+          }
+
+          console.log("Clinical automation hard blockers passed.");
+          NODE

@@ -102,21 +102,27 @@ Malformed options such as `--file` without a following path fail fast.
 
 ## Future Workflow Wiring
 
-This ticket does not edit `.github/workflows`.
+`VET-1427C` wires these scripts into
+`.github/workflows/clinical-automation-gates.yml`.
 
-The intended future workflow shape is:
+The workflow runs on pull requests targeting `master` and executes:
 
 ```bash
 node scripts/clinical-pr-risk-classifier.mjs --json
 node scripts/clinical-pr-required-checks.mjs --json
-node scripts/pr-isolation-check.mjs --json --owned-path <pattern> ...
+node scripts/pr-isolation-check.mjs --json
 ```
 
-Recommended future job outputs:
+Current workflow behavior:
 
-- risk classification artifact or PR comment
-- required-suite list for selective gate execution
-- hard fail when temp artifacts or spillover appear
+- uploads `clinical-automation-gate-artifacts`
+- writes a GitHub job summary with risk, required-check, and isolation output
+- fails on temp artifacts and missing required-suite definitions
+- reports protected workflow changes for explicit maintainer review without
+  auto-blocking during the initial wiring phase
+
+Future stricter workflow phases can add ticket-owned path declarations through
+PR metadata and then make unrelated spillover fail closed.
 
 ## Manual Branch Protection / Ruleset Settings
 
