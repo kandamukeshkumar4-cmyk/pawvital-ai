@@ -195,6 +195,47 @@ const COMPLAINT_SOURCE_MAP: ComplaintSourceMapEntry[] = [
       "Owner-visible citations should use AAHA emergency signs for collapse or breathing difficulty awareness.",
     ],
   },
+  {
+    complaintModuleId: "heatstroke_heat_exposure",
+    displayName: "Heatstroke / Heat Exposure",
+    vetKnowledgeFamilies: ["emergency"],
+    relevantRedFlags: [
+      "heatstroke_signs",
+      "brachycephalic_heat",
+      "collapse",
+      "breathing_difficulty",
+      "pale_gums",
+      "blue_gums",
+    ],
+    retrievalIntent: "internal_reasoning",
+    citationIntent: "owner_visible_citation",
+    rationaleNotes: [
+      "Heatstroke complaints map to emergency triage sources covering systemic compromise and breathing difficulty.",
+      "Red flags (heatstroke_signs, brachycephalic_heat, collapse, breathing difficulty, gum color changes) map to Merck XABCDE and AAHA emergency signs.",
+      "Owner-visible citations should use AAHA emergency signs for heatstroke recognition when systemic red flags are present.",
+    ],
+  },
+  {
+    complaintModuleId: "trauma_bleeding_wound",
+    displayName: "Trauma / Bleeding / Wound",
+    vetKnowledgeFamilies: ["trauma", "emergency", "bleeding"],
+    relevantRedFlags: [
+      "large_blood_volume",
+      "wound_deep_bleeding",
+      "collapse",
+      "unresponsive",
+      "pale_gums",
+      "blue_gums",
+      "breathing_difficulty",
+    ],
+    retrievalIntent: "internal_reasoning",
+    citationIntent: "owner_visible_citation",
+    rationaleNotes: [
+      "Trauma/bleeding complaints map to Merck XABCDE triage (exsanguination, circulation) and AAHA emergency signs.",
+      "Large blood volume and deep bleeding red flags map directly to Merck XABCDE exsanguination guidance.",
+      "Owner-visible citations should use AAHA emergency signs for severe bleeding recognition when relevant red flags are present.",
+    ],
+  },
 ];
 
 const MODULE_ID_TO_ENTRY = new Map<string, ComplaintSourceMapEntry>(

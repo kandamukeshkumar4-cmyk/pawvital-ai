@@ -17,6 +17,8 @@ const ACTIVE_MODULE_IDS = [
   "toxin_poisoning_exposure",
   "bloat_gdv",
   "collapse_weakness",
+  "heatstroke_heat_exposure",
+  "trauma_bleeding_wound",
 ];
 
 const FUTURE_PENDING_IDS: string[] = [];
@@ -25,9 +27,9 @@ const ALL_MODULE_IDS = [...ACTIVE_MODULE_IDS, ...FUTURE_PENDING_IDS];
 
 describe("vet knowledge coverage gap registry", () => {
   describe("all modules are covered", () => {
-    it("exports entries for all 9 complaint modules (all active)", () => {
+    it("exports entries for all 11 complaint modules (all active)", () => {
       const entries = getAllCoverageEntries();
-      expect(entries.length).toBe(9);
+      expect(entries.length).toBe(11);
     });
 
     it.each(ALL_MODULE_IDS)("covers module %s", (moduleId) => {

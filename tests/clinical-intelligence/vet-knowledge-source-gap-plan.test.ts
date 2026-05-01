@@ -22,6 +22,8 @@ const ALL_MODULE_IDS = [
   "toxin_poisoning_exposure",
   "bloat_gdv",
   "collapse_weakness",
+  "heatstroke_heat_exposure",
+  "trauma_bleeding_wound",
 ];
 
 const VALID_PUBLISHERS = new Set([
@@ -34,9 +36,9 @@ const VALID_PUBLISHERS = new Set([
 
 describe("vet knowledge source gap plan", () => {
   describe("all active complaint modules represented", () => {
-    it("exports entries for all 9 active complaint modules", () => {
+    it("exports entries for all 11 active complaint modules", () => {
       const entries = getAllGapEntries();
-      expect(entries.length).toBe(9);
+      expect(entries.length).toBe(11);
     });
 
     it.each(ALL_MODULE_IDS)("module %s has a gap plan entry", (moduleId) => {
@@ -111,6 +113,16 @@ describe("vet knowledge source gap plan", () => {
 
     it("collapse_weakness is partial coverage", () => {
       const entry = getGapByModuleId("collapse_weakness");
+      expect(entry?.coverageStatus).toBe("partial");
+    });
+
+    it("heatstroke_heat_exposure is partial coverage", () => {
+      const entry = getGapByModuleId("heatstroke_heat_exposure");
+      expect(entry?.coverageStatus).toBe("partial");
+    });
+
+    it("trauma_bleeding_wound is partial coverage", () => {
+      const entry = getGapByModuleId("trauma_bleeding_wound");
       expect(entry?.coverageStatus).toBe("partial");
     });
 
