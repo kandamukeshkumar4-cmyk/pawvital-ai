@@ -18,14 +18,16 @@ const ALL_MODULE_IDS = [
   "toxin_poisoning_exposure",
   "bloat_gdv",
   "collapse_weakness",
+  "heatstroke_heat_exposure",
+  "trauma_bleeding_wound",
 ];
 
 describe("vet knowledge complaint source map", () => {
   describe("all complaint modules are mapped", () => {
-    it("exports entries for all 9 complaint modules", () => {
+    it("exports entries for all 11 complaint modules", () => {
       const entries = getAllComplaintSourceMapEntries();
 
-      expect(entries.length).toBe(9);
+      expect(entries.length).toBe(11);
     });
 
     it.each(ALL_MODULE_IDS)("maps module %s", (moduleId) => {

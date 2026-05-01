@@ -175,6 +175,38 @@ const COVERAGE_GAP_REGISTRY: CoverageGapEntry[] = [
       "Do not attempt to feed or give water to an unconscious pet.",
     ],
   },
+  {
+    complaintModuleId: "heatstroke_heat_exposure",
+    status: "active",
+    sourceCoverage: "partial",
+    ownerVisibleCitationCoverage: "emergency_only",
+    missingSourceNeeds: [
+      "dedicated heatstroke source",
+      "brachycephalic breed heat risk guidance",
+      "cooling protocol reference",
+    ],
+    recommendedPublisherTypes: ["Merck", "Cornell", "AAHA"],
+    safetyNotes: [
+      "Heat exposure with heavy panting or collapse can become life-threatening quickly; escalate immediately to a veterinary professional.",
+      "Pale or blue gums during heat exposure indicate severe compromise; seek immediate veterinary attention.",
+    ],
+  },
+  {
+    complaintModuleId: "trauma_bleeding_wound",
+    status: "active",
+    sourceCoverage: "partial",
+    ownerVisibleCitationCoverage: "emergency_only",
+    missingSourceNeeds: [
+      "dedicated trauma and wound care source",
+      "bleeding severity assessment guidance",
+      "bite wound infection risk reference",
+    ],
+    recommendedPublisherTypes: ["Merck", "Cornell", "AAHA"],
+    safetyNotes: [
+      "Large-volume or spurting bleeding is an emergency; apply firm pressure and seek immediate veterinary care.",
+      "Deep or penetrating wounds may involve hidden internal injury; escalate to a veterinary professional promptly.",
+    ],
+  },
 ];
 
 const MODULE_ID_TO_ENTRY = new Map<string, CoverageGapEntry>(
