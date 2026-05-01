@@ -11,7 +11,7 @@
 
 VET-1424K identified eight candidate complaint-module areas that are **blocked** because they lack dedicated question-card coverage. This document converts those blockers into exact, implementation-ready question-card proposals.
 
-**Current registry:** 19 question cards, 37 canonical red flags, 14 clinical signals.  
+**Current registry:** 19 question cards, 35 canonical red flags, 14 clinical signals.
 **Rule:** Every proposed ID below is prefixed with `(PROPOSED)` in this document. None are registered in `question-card-registry.ts` at the time of writing.
 
 ---
@@ -25,11 +25,11 @@ VET-1424K identified eight candidate complaint-module areas that are **blocked**
 | 3 | appetite / weight-loss / drinking-more | 3 | needs red flags + signals | Medium |
 | 4 | post-vaccination reaction | 3 | needs red flags | Medium |
 | 5 | abdominal pain (not GI/bloat) | 3 | needs red flags | Medium |
-| 6 | wound / skin overlap (trauma prep) | 3 | needs red flags + signals | Medium |
+| 6 | wound / skin overlap (trauma prep) | 3 | **ready** (existing red flags + signal) | Medium |
 | 7 | heatstroke / heat exposure | 3 | **ready** (existing red flags + signals) | **Highest** |
 | 8 | trauma / bleeding / wound | 3 | **ready** (existing red flags + signals) | **Highest** |
 
-**Total proposed question cards:** 22 (some cards are shared across candidates; see §5 for deduplicated list).
+**Total proposed question cards:** 24 (shared usage is reflected in the candidate mappings in §4).
 
 ---
 
@@ -384,7 +384,7 @@ VET-1424K identified eight candidate complaint-module areas that are **blocked**
 
 ### 3.6 Wound / Skin Overlap (Trauma Prep)
 
-**Current blocker:** `blocked_missing_question_cards`, `blocked_missing_red_flags`, `blocked_missing_signals`  
+**Current blocker:** `blocked_missing_question_cards` only
 **Existing usable cards:** `skin_location_distribution`, `skin_changes_check`, `skin_exposure_check`, `emergency_global_screen`, `gum_color_check`, `collapse_weakness_check`  
 **Existing usable red flags:** `large_blood_volume`, `wound_deep_bleeding`  
 **Existing usable signals:** `possible_trauma`
@@ -551,7 +551,7 @@ VET-1424K identified eight candidate complaint-module areas that are **blocked**
 
 ## 4. Deduplicated Proposed Card Inventory
 
-The following 15 unique question cards are proposed (shared cards counted once):
+The following 24 unique question cards are proposed:
 
 | # | Proposed ID | Phase | Answer Type | Primary Candidate(s) |
 |---|-------------|-------|-------------|----------------------|
@@ -580,19 +580,7 @@ The following 15 unique question cards are proposed (shared cards counted once):
 | 23 | `panting_excess_check` | emergency_screen | boolean | heatstroke |
 | 24 | `trauma_mechanism_check` | history | choice | trauma |
 
-*(Note: `wound_characterization_check` and `bleeding_volume_check` are shared between §3.6 and §3.8. Counting shared cards once gives 22 unique IDs, but the table above lists 24 because `wound_characterization_check` and `bleeding_volume_check` appear in both contexts. The true deduplicated count is **22**.)*
-
-Wait — recounting:
-- Eye: 4
-- Ear: 4
-- Appetite: 3
-- Post-vax: 3
-- Abdomen: 3
-- Wound (shared): 3 (`wound_characterization_check`, `bleeding_volume_check`, `laceration_depth_check`)
-- Heatstroke: 3
-- Trauma: 1 new (`trauma_mechanism_check`) + 2 shared = 3
-
-Unique count = 4 + 4 + 3 + 3 + 3 + 3 + 3 + 1 = **22 unique proposed cards**.
+The table above lists each proposed ID once. Shared usage across wound/skin overlap and trauma is reflected in the "Primary Candidate(s)" column, but the deduplicated proposed-card total remains **24**.
 
 ---
 
