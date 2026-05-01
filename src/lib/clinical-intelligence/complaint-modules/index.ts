@@ -8,6 +8,8 @@ import { urinaryObstructionModule } from "./urinary";
 import { toxinPoisoningExposureModule } from "./toxin-exposure";
 import { bloatGdvModule } from "./bloat-gdv";
 import { collapseWeaknessModule } from "./collapse-weakness";
+import { heatstrokeHeatExposureModule } from "./heatstroke";
+import { traumaBleedingWoundModule } from "./trauma-bleeding";
 
 const ALL_MODULES: ComplaintModule[] = [
   skinItchingAllergyModule,
@@ -19,6 +21,8 @@ const ALL_MODULES: ComplaintModule[] = [
   toxinPoisoningExposureModule,
   bloatGdvModule,
   collapseWeaknessModule,
+  heatstrokeHeatExposureModule,
+  traumaBleedingWoundModule,
 ];
 
 const MODULE_BY_ID = new Map<string, ComplaintModule>();
@@ -215,4 +219,6 @@ export {
   toxinPoisoningExposureModule,
   bloatGdvModule,
   collapseWeaknessModule,
+  heatstrokeHeatExposureModule,
+  traumaBleedingWoundModule,
 };
