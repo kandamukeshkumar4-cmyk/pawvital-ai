@@ -33,6 +33,16 @@ import { urinaryStrainingOutput } from "./question-cards/urinary";
 
 import { neuroSeizureDuration } from "./question-cards/neuro";
 
+import {
+  heatExposureCheck,
+  brachycephalicBreedCheck,
+  pantingExcessCheck,
+  traumaMechanismCheck,
+  woundCharacterizationCheck,
+  bleedingVolumeCheck,
+  lacerationDepthCheck,
+} from "./question-cards/heat-trauma";
+
 const SOURCE_CARDS: readonly ClinicalQuestionCard[] = [
   emergencyGlobalScreen,
   gumColorCheck,
@@ -53,6 +63,13 @@ const SOURCE_CARDS: readonly ClinicalQuestionCard[] = [
   limpingTraumaOnset,
   urinaryStrainingOutput,
   neuroSeizureDuration,
+  heatExposureCheck,
+  brachycephalicBreedCheck,
+  pantingExcessCheck,
+  traumaMechanismCheck,
+  woundCharacterizationCheck,
+  bleedingVolumeCheck,
+  lacerationDepthCheck,
 ];
 
 function cloneQuestionCard(card: ClinicalQuestionCard): ClinicalQuestionCard {
