@@ -6,13 +6,16 @@ import {
   AlertCircle,
   Bell,
   ClipboardList,
-  Plus,
   PawPrint,
   ShieldAlert,
   Stethoscope,
   Clock,
   Pill,
   TrendingUp,
+  Moon,
+  Heart,
+  ClipboardCheck,
+  QrCode,
 } from "lucide-react";
 import Card from "@/components/ui/card";
 import { buttonClassName } from "@/components/ui/button";
@@ -27,6 +30,30 @@ const quickActions = [
     icon: Stethoscope,
     label: "Check Symptoms",
     color: "bg-green-50 text-green-600 border-green-200",
+  },
+  {
+    href: "/triage",
+    icon: Moon,
+    label: "Late-Night Triage",
+    color: "bg-indigo-50 text-indigo-600 border-indigo-200",
+  },
+  {
+    href: "/quality-of-life",
+    icon: Heart,
+    label: "Quality of Life",
+    color: "bg-pink-50 text-pink-600 border-pink-200",
+  },
+  {
+    href: "/vet-prep",
+    icon: ClipboardCheck,
+    label: "Vet Visit Prep",
+    color: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  },
+  {
+    href: "/emergency-card",
+    icon: QrCode,
+    label: "Emergency Card",
+    color: "bg-red-50 text-red-600 border-red-200",
   },
   {
     href: "/history",
@@ -45,12 +72,6 @@ const quickActions = [
     icon: Bell,
     label: "Reminders",
     color: "bg-amber-50 text-amber-600 border-amber-200",
-  },
-  {
-    href: "/journal",
-    icon: Plus,
-    label: "Add Journal Entry",
-    color: "bg-pink-50 text-pink-600 border-pink-200",
   },
 ];
 
@@ -251,7 +272,7 @@ export default function DashboardPage() {
           <h2 className="text-sm font-medium text-gray-500 mb-4 uppercase tracking-wide">
             Quick Actions
           </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2 max-h-[400px] overflow-y-auto">
             {quickActions.map((action) => (
               <a key={action.href} href={action.href} target="_top">
                 <div

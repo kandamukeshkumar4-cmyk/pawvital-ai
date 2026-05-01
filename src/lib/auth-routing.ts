@@ -6,6 +6,10 @@ export const RESET_PASSWORD_PATH = "/reset-password";
 export const PROTECTED_PATH_PREFIXES = [
   "/dashboard",
   "/symptom-checker",
+  "/triage",
+  "/quality-of-life",
+  "/vet-prep",
+  "/emergency-card",
   "/supplements",
   "/reminders",
   "/journal",

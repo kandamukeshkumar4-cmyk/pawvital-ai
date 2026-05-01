@@ -18,6 +18,9 @@ import {
   ChevronRight,
   BarChart3,
   PawPrint,
+  Moon,
+  ClipboardCheck,
+  QrCode,
 } from "lucide-react";
 import { filterPrivateTesterNavItems } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
@@ -27,6 +30,10 @@ const navItems = [
   { href: "/dashboard", icon: Activity, label: "Dashboard" },
   { href: "/pets", icon: PawPrint, label: "My Dogs" },
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
+  { href: "/triage", icon: Moon, label: "Late-Night Triage" },
+  { href: "/quality-of-life", icon: Heart, label: "Quality of Life" },
+  { href: "/vet-prep", icon: ClipboardCheck, label: "Vet Visit Prep" },
+  { href: "/emergency-card", icon: QrCode, label: "Emergency Card" },
   { href: "/history", icon: Clock, label: "History" },
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/supplements", icon: Pill, label: "Supplements" },
