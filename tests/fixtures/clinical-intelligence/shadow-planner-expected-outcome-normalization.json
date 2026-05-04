@@ -374,5 +374,289 @@
     "redFlagCoverageExpectation": "complete",
     "genericQuestionScoring": "include",
     "notes": "Mixed symptom wording can reasonably open trauma_bleeding_wound as alternate complaint-module matches while keeping the primary safety screen in scope. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+  },
+  {
+    "caseId": "edge_heat_mild_after_walk_vs_hard_panting",
+    "acceptableModuleIds": [
+      "heatstroke_heat_exposure",
+      "respiratory_distress"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "complete",
+    "genericQuestionScoring": "include",
+    "notes": "This edge-case row keeps heatstroke_heat_exposure and respiratory_distress as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+  },
+  {
+    "caseId": "edge_heat_not_sure_breathing_or_panting",
+    "acceptableModuleIds": [
+      "heatstroke_heat_exposure",
+      "respiratory_distress"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps heatstroke_heat_exposure and respiratory_distress as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_trauma_small_scrape_vs_steady_bleed",
+    "acceptableModuleIds": [
+      "trauma_bleeding_wound",
+      "limping_mobility_pain"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "complete",
+    "genericQuestionScoring": "include",
+    "notes": "This edge-case row keeps trauma_bleeding_wound and limping_mobility_pain as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+  },
+  {
+    "caseId": "edge_trauma_repeat_bleeding_avoidance",
+    "acceptableModuleIds": [
+      "trauma_bleeding_wound",
+      "limping_mobility_pain"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "complete",
+    "genericQuestionScoring": "include",
+    "notes": "This edge-case row keeps trauma_bleeding_wound and limping_mobility_pain as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The merged edge-case fixture already carries repeated-question context for this row, but that setup does not widen the accepted complaint-module set. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+  },
+  {
+    "caseId": "edge_urinary_frequent_trips_vs_no_output",
+    "acceptableModuleIds": [
+      "urinary_obstruction"
+    ],
+    "ambiguityDisposition": "strict_primary",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps the primary complaint module as the only accepted module match for the current fixture wording. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_urinary_repeat_straining_avoidance",
+    "acceptableModuleIds": [
+      "urinary_obstruction"
+    ],
+    "ambiguityDisposition": "strict_primary",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps the primary complaint module as the only accepted module match for the current fixture wording. The merged edge-case fixture already carries repeated-question context for this row, but that setup does not widen the accepted complaint-module set. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_bloat_ate_fast_vs_unproductive_gagging",
+    "acceptableModuleIds": [
+      "bloat_gdv",
+      "gi_vomiting_diarrhea"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps bloat_gdv and gi_vomiting_diarrhea as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_bloat_not_sure_belly_size",
+    "acceptableModuleIds": [
+      "bloat_gdv"
+    ],
+    "ambiguityDisposition": "strict_primary",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps the primary complaint module as the only accepted module match for the current fixture wording. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_respiratory_excited_vs_resting_fast_breath",
+    "acceptableModuleIds": [
+      "respiratory_distress",
+      "heatstroke_heat_exposure"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps respiratory_distress and heatstroke_heat_exposure as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_respiratory_repeat_breathing_avoidance",
+    "acceptableModuleIds": [
+      "respiratory_distress",
+      "collapse_weakness"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps respiratory_distress and collapse_weakness as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The merged edge-case fixture already carries repeated-question context for this row, but that setup does not widen the accepted complaint-module set. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_collapse_tired_vs_cannot_stand",
+    "acceptableModuleIds": [
+      "collapse_weakness",
+      "heatstroke_heat_exposure"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps collapse_weakness and heatstroke_heat_exposure as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_collapse_not_sure_faint_or_slip",
+    "acceptableModuleIds": [
+      "collapse_weakness",
+      "seizure_collapse_neuro"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps collapse_weakness and seizure_collapse_neuro as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_seizure_shiver_vs_uncontrolled_shaking",
+    "acceptableModuleIds": [
+      "seizure_collapse_neuro",
+      "collapse_weakness"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps seizure_collapse_neuro and collapse_weakness as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_seizure_repeat_duration_avoidance",
+    "acceptableModuleIds": [
+      "seizure_collapse_neuro"
+    ],
+    "ambiguityDisposition": "strict_primary",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps the primary complaint module as the only accepted module match for the current fixture wording. The merged edge-case fixture already carries repeated-question context for this row, but that setup does not widen the accepted complaint-module set. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_toxin_unknown_amount_vs_none_seen",
+    "acceptableModuleIds": [
+      "toxin_poisoning_exposure",
+      "gi_vomiting_diarrhea"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps toxin_poisoning_exposure and gi_vomiting_diarrhea as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_toxin_repeat_exposure_avoidance",
+    "acceptableModuleIds": [
+      "toxin_poisoning_exposure",
+      "collapse_weakness"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps toxin_poisoning_exposure and collapse_weakness as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The merged edge-case fixture already carries repeated-question context for this row, but that setup does not widen the accepted complaint-module set. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_gi_one_vomit_vs_cannot_keep_water",
+    "acceptableModuleIds": [
+      "gi_vomiting_diarrhea"
+    ],
+    "ambiguityDisposition": "strict_primary",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps the primary complaint module as the only accepted module match for the current fixture wording. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_gi_blood_or_food_color_unclear",
+    "acceptableModuleIds": [
+      "gi_vomiting_diarrhea",
+      "toxin_poisoning_exposure"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps gi_vomiting_diarrhea and toxin_poisoning_exposure as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_skin_hives_vs_regular_itch",
+    "acceptableModuleIds": [
+      "skin_itching_allergy"
+    ],
+    "ambiguityDisposition": "strict_primary",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps the primary complaint module as the only accepted module match for the current fixture wording. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_skin_repeat_location_avoidance",
+    "acceptableModuleIds": [
+      "skin_itching_allergy"
+    ],
+    "ambiguityDisposition": "strict_primary",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "complete",
+    "genericQuestionScoring": "include",
+    "notes": "This edge-case row keeps the primary complaint module as the only accepted module match for the current fixture wording. The merged edge-case fixture already carries repeated-question context for this row, but that setup does not widen the accepted complaint-module set. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+  },
+  {
+    "caseId": "edge_limping_sore_vs_no_weight",
+    "acceptableModuleIds": [
+      "limping_mobility_pain",
+      "trauma_bleeding_wound"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps limping_mobility_pain and trauma_bleeding_wound as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_limping_not_sure_pain_or_weakness",
+    "acceptableModuleIds": [
+      "limping_mobility_pain",
+      "collapse_weakness"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "complete",
+    "genericQuestionScoring": "include",
+    "notes": "This edge-case row keeps limping_mobility_pain and collapse_weakness as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+  },
+  {
+    "caseId": "edge_multi_vomit_weak_heat_toxin",
+    "acceptableModuleIds": [
+      "toxin_poisoning_exposure",
+      "collapse_weakness",
+      "heatstroke_heat_exposure",
+      "gi_vomiting_diarrhea"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This edge-case row keeps toxin_poisoning_exposure, collapse_weakness, heatstroke_heat_exposure, and gi_vomiting_diarrhea as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. Emergency-screen alignment is sufficient even if the first planned question differs from one specific card. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
+  },
+  {
+    "caseId": "edge_multi_diarrhea_limping_cut",
+    "acceptableModuleIds": [
+      "limping_mobility_pain",
+      "trauma_bleeding_wound",
+      "gi_vomiting_diarrhea"
+    ],
+    "ambiguityDisposition": "allow_module_alternatives",
+    "emergencyAlignmentDisposition": "question_match_required",
+    "redFlagCoverageExpectation": "complete",
+    "genericQuestionScoring": "include",
+    "notes": "This edge-case row keeps limping_mobility_pain, trauma_bleeding_wound, and gi_vomiting_diarrhea as acceptable complaint-module matches because the merged edge-case fixture already regards that overlap as clinically acceptable on the first turn. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
   }
 ]

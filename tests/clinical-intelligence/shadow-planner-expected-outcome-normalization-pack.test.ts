@@ -1,3 +1,4 @@
+import edgeCases from "../fixtures/clinical-intelligence/shadow-planner-edge-case-scenarios.json";
 import normalizationRows from "../fixtures/clinical-intelligence/shadow-planner-expected-outcome-normalization.json";
 import outcomes from "../fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json";
 import scenarios from "../fixtures/clinical-intelligence/shadow-planner-scenarios.json";
@@ -29,6 +30,18 @@ type ShadowPlannerExpectedOutcome = {
   expectedComplaintModuleId: string;
   acceptablePlannedQuestionIds: string[];
   shouldScreenEmergencyEarlier: boolean;
+};
+
+type ShadowPlannerEdgeCaseScenario = {
+  caseId: string;
+  expectedPrimaryComplaintModuleIds: string[];
+  acceptablePlannedQuestionIds: string[];
+  shouldPreferEmergencyScreen: boolean;
+  repeatedQuestionSetup: {
+    askedQuestionIds: string[];
+    answeredQuestionIds: string[];
+  } | null;
+  isConfusingMultiSymptom: boolean;
 };
 
 type ShadowPlannerExpectedOutcomeNormalization = {
@@ -64,23 +77,22 @@ const OWNER_FACING_CLAIM_PATTERNS = [
 
 const scenarioFixture = scenarios as ShadowPlannerScenario[];
 const outcomeFixture = outcomes as ShadowPlannerExpectedOutcome[];
+const edgeScenarioFixture = edgeCases as ShadowPlannerEdgeCaseScenario[];
 const normalizationFixture =
   normalizationRows as ShadowPlannerExpectedOutcomeNormalization[];
 
-function getScenarioByCaseId(caseId: string): ShadowPlannerScenario {
-  const scenario = scenarioFixture.find((row) => row.caseId === caseId);
-  if (!scenario) {
-    throw new Error(`Missing scenario for ${caseId}`);
-  }
-  return scenario;
+function getScenarioByCaseId(caseId: string): ShadowPlannerScenario | null {
+  return scenarioFixture.find((row) => row.caseId === caseId) ?? null;
 }
 
-function getOutcomeByCaseId(caseId: string): ShadowPlannerExpectedOutcome {
-  const outcome = outcomeFixture.find((row) => row.caseId === caseId);
-  if (!outcome) {
-    throw new Error(`Missing expected outcome for ${caseId}`);
-  }
-  return outcome;
+function getOutcomeByCaseId(caseId: string): ShadowPlannerExpectedOutcome | null {
+  return outcomeFixture.find((row) => row.caseId === caseId) ?? null;
+}
+
+function getEdgeScenarioByCaseId(
+  caseId: string
+): ShadowPlannerEdgeCaseScenario | null {
+  return edgeScenarioFixture.find((row) => row.caseId === caseId) ?? null;
 }
 
 function getNormalizationRow(
@@ -93,10 +105,68 @@ function getNormalizationRow(
   return row;
 }
 
+function getExpectedModuleIds(caseId: string): string[] {
+  const outcome = getOutcomeByCaseId(caseId);
+  if (outcome) {
+    return [outcome.expectedComplaintModuleId];
+  }
+
+  const edgeScenario = getEdgeScenarioByCaseId(caseId);
+  if (edgeScenario) {
+    return edgeScenario.expectedPrimaryComplaintModuleIds;
+  }
+
+  throw new Error(`Missing source fixture row for ${caseId}`);
+}
+
+function getAcceptableQuestionIds(caseId: string): string[] {
+  const outcome = getOutcomeByCaseId(caseId);
+  if (outcome) {
+    return outcome.acceptablePlannedQuestionIds;
+  }
+
+  const edgeScenario = getEdgeScenarioByCaseId(caseId);
+  if (edgeScenario) {
+    return edgeScenario.acceptablePlannedQuestionIds;
+  }
+
+  throw new Error(`Missing source fixture row for ${caseId}`);
+}
+
+function shouldPreferEmergency(caseId: string): boolean {
+  const outcome = getOutcomeByCaseId(caseId);
+  if (outcome) {
+    return outcome.shouldScreenEmergencyEarlier;
+  }
+
+  const edgeScenario = getEdgeScenarioByCaseId(caseId);
+  if (edgeScenario) {
+    return edgeScenario.shouldPreferEmergencyScreen;
+  }
+
+  throw new Error(`Missing source fixture row for ${caseId}`);
+}
+
+function isConfusingMultiSymptom(caseId: string): boolean {
+  const scenario = getScenarioByCaseId(caseId);
+  if (scenario) {
+    return scenario.isConfusingMultiSymptom;
+  }
+
+  const edgeScenario = getEdgeScenarioByCaseId(caseId);
+  if (edgeScenario) {
+    return edgeScenario.isConfusingMultiSymptom;
+  }
+
+  throw new Error(`Missing source fixture row for ${caseId}`);
+}
+
 describe("shadow planner expected outcome normalization pack", () => {
-  it("packages one normalization row for every expected outcome row", () => {
-    expect(normalizationFixture).toHaveLength(33);
-    expect(normalizationFixture).toHaveLength(outcomeFixture.length);
+  it("packages one normalization row for every base expected outcome row and edge-case scenario row", () => {
+    expect(normalizationFixture).toHaveLength(57);
+    expect(normalizationFixture).toHaveLength(
+      outcomeFixture.length + edgeScenarioFixture.length
+    );
 
     const caseIds = new Set<string>();
     const registeredModuleIds = new Set(
@@ -109,12 +179,18 @@ describe("shadow planner expected outcome normalization pack", () => {
       expect(caseIds.has(row.caseId)).toBe(false);
       caseIds.add(row.caseId);
 
-      const outcome = getOutcomeByCaseId(row.caseId);
+      const expectedModuleIds = getExpectedModuleIds(row.caseId);
 
       expect(row.acceptableModuleIds.length).toBeGreaterThan(0);
-      expect(row.acceptableModuleIds).toContain(outcome.expectedComplaintModuleId);
+      expect(row.acceptableModuleIds).toEqual(
+        expect.arrayContaining(expectedModuleIds)
+      );
       expect(row.notes.trim()).toBe(row.notes);
       expect(row.notes.length).toBeGreaterThan(20);
+
+      if (row.caseId.startsWith("edge_")) {
+        expect(row.acceptableModuleIds).toEqual(expectedModuleIds);
+      }
 
       for (const moduleId of row.acceptableModuleIds) {
         expect(registeredModuleIds.has(moduleId)).toBe(true);
@@ -122,39 +198,32 @@ describe("shadow planner expected outcome normalization pack", () => {
     }
   });
 
-  it("normalizes every confusing multi-symptom row and preserves strict primary handling for non-confusers", () => {
-    const confuserRows = normalizationFixture.filter((row) => {
-      const scenario = getScenarioByCaseId(row.caseId);
-      return scenario.isConfusingMultiSymptom;
-    });
+  it("normalizes ambiguity across the merged 57-case eval surface without collapsing valid edge-case alternatives", () => {
+    const confuserRows = normalizationFixture.filter((row) =>
+      isConfusingMultiSymptom(row.caseId)
+    );
     const strictPrimaryRows = normalizationFixture.filter(
       (row) => row.ambiguityDisposition === "strict_primary"
     );
+    const allowAlternativeRows = normalizationFixture.filter(
+      (row) => row.ambiguityDisposition === "allow_module_alternatives"
+    );
 
-    expect(confuserRows).toHaveLength(15);
+    expect(confuserRows).toHaveLength(31);
+    expect(allowAlternativeRows).toHaveLength(29);
 
     for (const row of confuserRows) {
       expect(row.ambiguityDisposition).not.toBe("strict_primary");
     }
 
     for (const row of strictPrimaryRows) {
-      const scenario = getScenarioByCaseId(row.caseId);
-      expect(scenario.isConfusingMultiSymptom).toBe(false);
-      expect(row.acceptableModuleIds).toEqual([
-        getOutcomeByCaseId(row.caseId).expectedComplaintModuleId,
-      ]);
+      expect(isConfusingMultiSymptom(row.caseId)).toBe(false);
+      expect(row.acceptableModuleIds).toEqual(getExpectedModuleIds(row.caseId));
     }
 
     expect(
-      normalizationFixture.filter(
-        (row) => row.ambiguityDisposition === "allow_module_alternatives"
-      )
-    ).toHaveLength(12);
-
-    expect(
-      getNormalizationRow(
-        "heatstroke_heat_exposure_03_heat_plus_vomit_confuser"
-      ).acceptableModuleIds
+      getNormalizationRow("heatstroke_heat_exposure_03_heat_plus_vomit_confuser")
+        .acceptableModuleIds
     ).toEqual(
       expect.arrayContaining([
         "heatstroke_heat_exposure",
@@ -194,9 +263,8 @@ describe("shadow planner expected outcome normalization pack", () => {
     );
 
     expect(
-      getNormalizationRow(
-        "urinary_obstruction_02_accidents_blood_straining"
-      ).ambiguityDisposition
+      getNormalizationRow("urinary_obstruction_02_accidents_blood_straining")
+        .ambiguityDisposition
     ).toBe("same_module_only");
     expect(
       getNormalizationRow("respiratory_distress_02_cough_and_blue_tongue")
@@ -206,26 +274,68 @@ describe("shadow planner expected outcome normalization pack", () => {
       getNormalizationRow("gi_vomiting_diarrhea_02_bloody_diarrhea")
         .ambiguityDisposition
     ).toBe("same_module_only");
+
+    expect(
+      getNormalizationRow("edge_heat_not_sure_breathing_or_panting")
+        .acceptableModuleIds
+    ).toEqual(
+      expect.arrayContaining([
+        "heatstroke_heat_exposure",
+        "respiratory_distress",
+      ])
+    );
+    expect(
+      getNormalizationRow("edge_multi_vomit_weak_heat_toxin")
+        .acceptableModuleIds
+    ).toEqual(
+      expect.arrayContaining([
+        "toxin_poisoning_exposure",
+        "collapse_weakness",
+        "heatstroke_heat_exposure",
+        "gi_vomiting_diarrhea",
+      ])
+    );
+
+    const limpingEdgeScenario = getEdgeScenarioByCaseId(
+      "edge_limping_sore_vs_no_weight"
+    );
+    if (!limpingEdgeScenario) {
+      throw new Error("Missing edge_limping_sore_vs_no_weight");
+    }
+
+    expect(limpingEdgeScenario.isConfusingMultiSymptom).toBe(false);
+    expect(
+      getNormalizationRow("edge_limping_sore_vs_no_weight")
+        .ambiguityDisposition
+    ).toBe("allow_module_alternatives");
+    expect(
+      getNormalizationRow("edge_limping_sore_vs_no_weight")
+        .acceptableModuleIds
+    ).toEqual(
+      expect.arrayContaining([
+        "limping_mobility_pain",
+        "trauma_bleeding_wound",
+      ])
+    );
   });
 
-  it("marks emergency-alignment-only rows directly from the expected outcome emergency signal", () => {
+  it("marks emergency-alignment-only rows directly from the merged emergency preference signal", () => {
     const alignmentOnlyRows = normalizationFixture.filter(
       (row) => row.emergencyAlignmentDisposition === "alignment_only_ok"
     );
 
-    expect(alignmentOnlyRows).toHaveLength(23);
+    expect(alignmentOnlyRows).toHaveLength(39);
 
     for (const row of normalizationFixture) {
-      const outcome = getOutcomeByCaseId(row.caseId);
       expect(row.emergencyAlignmentDisposition).toBe(
-        outcome.shouldScreenEmergencyEarlier
+        shouldPreferEmergency(row.caseId)
           ? "alignment_only_ok"
           : "question_match_required"
       );
     }
   });
 
-  it("marks partial red-flag coverage and generic scoring exclusions only where the canonical global emergency screen is already acceptable", () => {
+  it("marks partial red-flag coverage and generic scoring exclusions only where the merged source already accepts the global emergency screen", () => {
     const partialRows = normalizationFixture.filter(
       (row) => row.redFlagCoverageExpectation === "partial"
     );
@@ -233,13 +343,12 @@ describe("shadow planner expected outcome normalization pack", () => {
       (row) => row.genericQuestionScoring === "exclude_for_now"
     );
 
-    expect(partialRows).toHaveLength(28);
-    expect(excludedGenericRows).toHaveLength(28);
+    expect(partialRows).toHaveLength(46);
+    expect(excludedGenericRows).toHaveLength(46);
 
     for (const row of normalizationFixture) {
-      const outcome = getOutcomeByCaseId(row.caseId);
       const acceptsGlobalEmergencyScreen =
-        outcome.acceptablePlannedQuestionIds.includes("emergency_global_screen");
+        getAcceptableQuestionIds(row.caseId).includes("emergency_global_screen");
 
       expect(row.redFlagCoverageExpectation).toBe(
         acceptsGlobalEmergencyScreen ? "partial" : "complete"
