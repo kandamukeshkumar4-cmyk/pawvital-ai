@@ -298,7 +298,10 @@ function classifyFailedCase(
 
   return {
     caseId: caseResult.caseId,
-    complaintModuleId: caseResult.expected.complaintModuleId,
+    complaintModuleId:
+      caseResult.actual.complaintModuleId ??
+      caseResult.expected.acceptableComplaintModuleIds[0] ??
+      "unknown_complaint_module",
     plannedQuestionId: caseResult.actual.plannedQuestionId,
     selectedBecause: caseResult.actual.selectedBecause,
     classifications: classificationsList,
