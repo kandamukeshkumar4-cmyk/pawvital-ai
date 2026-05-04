@@ -131,6 +131,23 @@ All current failures fall into quality/report-only buckets, led by:
 - red-flag coverage reporting
 - a small routine-case emergency over-selection subset
 
+## How to use this triage pack
+
+This output is meant to route the next fix ticket, not to justify a broad planner rewrite.
+
+Use it this way:
+
+1. If any case lands in `safety_blocker`, stop and open the next ticket against the concrete safety condition first.
+2. If a case is only in `quality_report_only_gap`, keep the follow-up scoped to eval setup, acceptable-set normalization, or coverage audit work.
+3. If `repeated_question_setup_gap` or `generic_question_metric_setup_gap` dominate, normalize the harness before changing planner logic.
+4. If `missing_question_card_coverage` or `red_flag_screen_coverage_gap` dominate after setup is fixed, treat that as targeted card-pack or expectation-audit work.
+
+For the current pack, the operational implication is narrow:
+
+- do not treat the `33` failed cases as `33` planner regressions
+- do not open a broad runtime planner integration or rewrite ticket
+- do start with harness normalization and coverage auditing, because those are the dominant deterministic causes
+
 ## Top complaint modules affected
 
 All current complaint modules tie at `3` failed cases each:
