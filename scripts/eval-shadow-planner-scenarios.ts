@@ -71,10 +71,23 @@ const edgeScenarios = JSON.parse(
     "utf8"
   )
 );
+const normalizationRows = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      process.cwd(),
+      "tests",
+      "fixtures",
+      "clinical-intelligence",
+      "shadow-planner-expected-outcome-normalization.json"
+    ),
+    "utf8"
+  )
+);
 const report = evaluateShadowPlannerScenarios({
   scenarios,
   expectedOutcomes,
   edgeScenarios,
+  normalizationRows,
 });
 
 if (${options.json ? "true" : "false"}) {

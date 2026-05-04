@@ -65,6 +65,42 @@ export interface ShadowPlannerScenarioEvalExpected {
   shouldAvoidRepeatedQuestion: boolean;
 }
 
+export type ShadowPlannerScenarioEvalAmbiguityDisposition =
+  | "strict_primary"
+  | "same_module_only"
+  | "allow_module_alternatives";
+
+export type ShadowPlannerScenarioEvalEmergencyAlignmentDisposition =
+  | "question_match_required"
+  | "alignment_only_ok";
+
+export type ShadowPlannerScenarioEvalRedFlagCoverageExpectation =
+  | "complete"
+  | "partial";
+
+export type ShadowPlannerScenarioEvalGenericQuestionScoring =
+  | "include"
+  | "exclude_for_now";
+
+export interface ShadowPlannerExpectedOutcomeNormalizationFixture {
+  caseId: string;
+  acceptableModuleIds: string[];
+  ambiguityDisposition: ShadowPlannerScenarioEvalAmbiguityDisposition;
+  emergencyAlignmentDisposition: ShadowPlannerScenarioEvalEmergencyAlignmentDisposition;
+  redFlagCoverageExpectation: ShadowPlannerScenarioEvalRedFlagCoverageExpectation;
+  genericQuestionScoring: ShadowPlannerScenarioEvalGenericQuestionScoring;
+  notes: string;
+}
+
+export interface ShadowPlannerScenarioEvalNormalizedExpected
+  extends ShadowPlannerScenarioEvalExpected {
+  ambiguityDisposition: ShadowPlannerScenarioEvalAmbiguityDisposition;
+  emergencyAlignmentDisposition: ShadowPlannerScenarioEvalEmergencyAlignmentDisposition;
+  redFlagCoverageExpectation: ShadowPlannerScenarioEvalRedFlagCoverageExpectation;
+  genericQuestionScoring: ShadowPlannerScenarioEvalGenericQuestionScoring;
+  notes: string;
+}
+
 export interface ShadowPlannerScenarioEvalActual {
   complaintModuleId: string | null;
   plannerComplaintFamily: string | null;
@@ -84,12 +120,15 @@ export interface ShadowPlannerScenarioEvalFailedCase {
   expected: ShadowPlannerScenarioEvalExpected;
   actual: ShadowPlannerScenarioEvalActual;
   reason: string;
+  rawReason?: string;
+  normalizedReason?: string;
 }
 
 export interface ShadowPlannerScenarioEvalCaseResult {
   caseId: string;
   fixtureKind: ShadowPlannerScenarioFixtureKind;
   expected: ShadowPlannerScenarioEvalExpected;
+  normalizedExpected?: ShadowPlannerScenarioEvalNormalizedExpected;
   actual: ShadowPlannerScenarioEvalActual;
   complaintModuleMatched: boolean;
   acceptableQuestionMatched: boolean;
@@ -102,12 +141,22 @@ export interface ShadowPlannerScenarioEvalCaseResult {
   requiredRedFlagCount: number;
   failures: string[];
   passed: boolean;
+  normalizedComplaintModuleMatched?: boolean;
+  normalizedAcceptableQuestionMatched?: boolean;
+  normalizedSelectedBecauseMatched?: boolean;
+  normalizedEmergencyScreenAligned?: boolean;
+  normalizedRepeatedQuestionAvoided?: boolean;
+  normalizedGenericQuestionAvoided?: boolean;
+  normalizedMatchedRequiredRedFlags?: string[];
+  normalizedMissingRequiredRedFlags?: string[];
+  normalizedRequiredRedFlagCount?: number;
+  normalizedFailures?: string[];
+  normalizedPassed?: boolean;
+  rawReason?: string;
+  normalizedReason?: string;
 }
 
-export interface ShadowPlannerScenarioEvalSummary {
-  totalCases: number;
-  baseCaseCount: number;
-  edgeCaseCount: number;
+export interface ShadowPlannerScenarioEvalMetricSet {
   complaintModuleMatchCount: number;
   complaintModuleMatchRate: number;
   acceptableQuestionCount: number;
@@ -124,7 +173,18 @@ export interface ShadowPlannerScenarioEvalSummary {
   screenedRequiredRedFlagCount: number;
   totalRequiredRedFlagCount: number;
   redFlagScreenCoverageRate: number;
+}
+
+export interface ShadowPlannerScenarioEvalSummary
+  extends ShadowPlannerScenarioEvalMetricSet {
+  totalCases: number;
+  baseCaseCount: number;
+  edgeCaseCount: number;
   failedCases: ShadowPlannerScenarioEvalFailedCase[];
+  rawMetrics?: ShadowPlannerScenarioEvalMetricSet;
+  normalizedMetrics?: ShadowPlannerScenarioEvalMetricSet;
+  rawFailedCaseCount?: number;
+  normalizedFailedCaseCount?: number;
 }
 
 export interface ShadowPlannerScenarioEvalReport {
@@ -135,6 +195,7 @@ export interface ShadowPlannerScenarioEvalReport {
 export interface EvaluateShadowPlannerScenarioCaseInput {
   scenario: ShadowPlannerScenarioFixture;
   expectedOutcome: ShadowPlannerExpectedOutcomeFixture;
+  normalizationRow?: ShadowPlannerExpectedOutcomeNormalizationFixture;
   existingQuestionId?: string | null;
   buildCaseState?: (
     scenario: ShadowPlannerScenarioFixture,
@@ -146,6 +207,7 @@ export interface EvaluateShadowPlannerScenariosInput {
   scenarios: readonly ShadowPlannerScenarioFixture[];
   expectedOutcomes: readonly ShadowPlannerExpectedOutcomeFixture[];
   edgeScenarios?: readonly ShadowPlannerEdgeCaseScenarioFixture[];
+  normalizationRows?: readonly ShadowPlannerExpectedOutcomeNormalizationFixture[];
   existingQuestionId?: string | null;
   buildCaseState?: (
     scenario: ShadowPlannerScenarioFixture,
@@ -331,6 +393,34 @@ function buildExpectedDescriptorFromOutcome(
   };
 }
 
+function buildNormalizedExpectedDescriptor(
+  expected: ShadowPlannerScenarioEvalExpected,
+  normalizationRow?: ShadowPlannerExpectedOutcomeNormalizationFixture
+): ShadowPlannerScenarioEvalNormalizedExpected {
+  return {
+    acceptableComplaintModuleIds: normalizationRow
+      ? [...normalizationRow.acceptableModuleIds]
+      : [...expected.acceptableComplaintModuleIds],
+    acceptableQuestionIds: [...expected.acceptableQuestionIds],
+    acceptableSelectedBecause: [...expected.acceptableSelectedBecause],
+    mustScreenRedFlags: [...expected.mustScreenRedFlags],
+    shouldBeatGenericQuestion:
+      normalizationRow?.genericQuestionScoring === "exclude_for_now"
+        ? false
+        : expected.shouldBeatGenericQuestion,
+    shouldScreenEmergencyEarlier: expected.shouldScreenEmergencyEarlier,
+    shouldAvoidRepeatedQuestion: expected.shouldAvoidRepeatedQuestion,
+    ambiguityDisposition:
+      normalizationRow?.ambiguityDisposition ?? "strict_primary",
+    emergencyAlignmentDisposition:
+      normalizationRow?.emergencyAlignmentDisposition ?? "question_match_required",
+    redFlagCoverageExpectation:
+      normalizationRow?.redFlagCoverageExpectation ?? "complete",
+    genericQuestionScoring: normalizationRow?.genericQuestionScoring ?? "include",
+    notes: normalizationRow?.notes ?? "",
+  };
+}
+
 function buildExpectedDescriptorFromEdgeScenario(
   scenario: ShadowPlannerEdgeCaseScenarioFixture
 ): ShadowPlannerScenarioEvalExpected {
@@ -400,7 +490,8 @@ function formatFailure(
   plannedQuestionId: string | null,
   selectedBecause: SelectedBecause | null,
   missingRequiredRedFlags: readonly string[],
-  existingQuestionId: string
+  existingQuestionId: string,
+  includeGenericBaselineRepeat: boolean
 ): string[] {
   const failures: string[] = [];
 
@@ -418,13 +509,26 @@ function formatFailure(
     );
   }
 
-  if (plannedQuestionId === existingQuestionId) {
+  if (includeGenericBaselineRepeat && plannedQuestionId === existingQuestionId) {
     failures.push(
       `Planned question repeated the generic baseline "${existingQuestionId}"`
     );
   }
 
   return failures;
+}
+
+function buildNormalizationMap(
+  normalizationRows: readonly ShadowPlannerExpectedOutcomeNormalizationFixture[]
+): Map<string, ShadowPlannerExpectedOutcomeNormalizationFixture> {
+  assertUniqueCaseIds(normalizationRows, "Normalization rows");
+
+  return new Map(
+    normalizationRows.map((normalizationRow) => [
+      normalizationRow.caseId,
+      normalizationRow,
+    ])
+  );
 }
 
 function buildActualDescriptor(
@@ -473,69 +577,109 @@ interface EvaluateNormalizedShadowPlannerScenarioInput {
   fixtureKind: ShadowPlannerScenarioFixtureKind;
   ownerText: string;
   expected: ShadowPlannerScenarioEvalExpected;
+  normalizedExpected: ShadowPlannerScenarioEvalNormalizedExpected;
   existingQuestionId: string;
   caseState: ClinicalCaseState;
 }
 
-function evaluateNormalizedShadowPlannerScenario(
-  input: EvaluateNormalizedShadowPlannerScenarioInput
-): ShadowPlannerScenarioEvalCaseResult {
-  const integration = buildShadowPlannerComplaintIntegration({
-    ownerText: input.ownerText,
-    existingQuestionId: input.existingQuestionId,
-    caseState: input.caseState,
-  });
-  const actual = buildActualDescriptor(input.caseId, integration);
+interface ShadowPlannerScenarioEvalModeResult {
+  complaintModuleMatched: boolean;
+  acceptableQuestionMatched: boolean;
+  selectedBecauseMatched: boolean;
+  emergencyScreenAligned: boolean;
+  repeatedQuestionAvoided: boolean;
+  genericQuestionAvoided: boolean;
+  matchedRequiredRedFlags: string[];
+  missingRequiredRedFlags: string[];
+  requiredRedFlagCount: number;
+  failures: string[];
+  passed: boolean;
+}
 
+interface EvaluateExpectationModeInput {
+  expected:
+    | ShadowPlannerScenarioEvalExpected
+    | ShadowPlannerScenarioEvalNormalizedExpected;
+  actual: ShadowPlannerScenarioEvalActual;
+  existingQuestionId: string;
+  repeatedQuestionAvoidedSignal: boolean;
+  includeGenericBaselineRepeat: boolean;
+  allowEmergencyAlignmentQuestionMatch: boolean;
+  redFlagCoverageExpectation: ShadowPlannerScenarioEvalRedFlagCoverageExpectation;
+}
+
+function evaluateExpectationMode(
+  input: EvaluateExpectationModeInput
+): ShadowPlannerScenarioEvalModeResult {
   const complaintModuleMatched =
-    actual.complaintModuleId !== null &&
-    input.expected.acceptableComplaintModuleIds.includes(actual.complaintModuleId);
-  const acceptableQuestionMatched =
-    actual.plannedQuestionId !== null &&
-    input.expected.acceptableQuestionIds.includes(actual.plannedQuestionId);
+    input.actual.complaintModuleId !== null &&
+    input.expected.acceptableComplaintModuleIds.includes(
+      input.actual.complaintModuleId
+    );
   const selectedBecauseMatched =
-    actual.selectedBecause !== null &&
-    input.expected.acceptableSelectedBecause.includes(actual.selectedBecause);
+    input.actual.selectedBecause !== null &&
+    input.expected.acceptableSelectedBecause.includes(
+      input.actual.selectedBecause
+    );
   const emergencyScreenAligned =
-    !input.expected.shouldScreenEmergencyEarlier || actual.emergencyScreenQuestion;
+    !input.expected.shouldScreenEmergencyEarlier ||
+    input.actual.emergencyScreenQuestion;
+  const exactQuestionMatched =
+    input.actual.plannedQuestionId !== null &&
+    input.expected.acceptableQuestionIds.includes(input.actual.plannedQuestionId);
+  const acceptableQuestionMatched =
+    exactQuestionMatched ||
+    (input.allowEmergencyAlignmentQuestionMatch &&
+      input.expected.shouldScreenEmergencyEarlier &&
+      emergencyScreenAligned &&
+      input.actual.emergencyScreenQuestion);
   const repeatedQuestionAvoided =
     !input.expected.shouldAvoidRepeatedQuestion ||
-    integration.comparison.repeatedQuestionAvoided;
+    input.repeatedQuestionAvoidedSignal;
   const genericQuestionAvoided =
     !input.expected.shouldBeatGenericQuestion ||
-    (actual.plannedQuestionId !== null &&
-      actual.plannedQuestionId !== input.existingQuestionId &&
-      !actual.genericQuestion);
-
-  const matchedRequiredRedFlags = input.expected.mustScreenRedFlags.filter(
-    (flagId) => actual.screenedRedFlags.includes(flagId)
-  );
-  const missingRequiredRedFlags = input.expected.mustScreenRedFlags.filter(
-    (flagId) => !matchedRequiredRedFlags.includes(flagId)
-  );
-
+    (input.actual.plannedQuestionId !== null &&
+      input.actual.plannedQuestionId !== input.existingQuestionId &&
+      !input.actual.genericQuestion);
   const failures = formatFailure(
-    actual.plannedQuestionId,
-    actual.selectedBecause,
-    missingRequiredRedFlags,
-    input.existingQuestionId
+    input.actual.plannedQuestionId,
+    input.actual.selectedBecause,
+    input.redFlagCoverageExpectation === "partial"
+      ? []
+      : input.expected.mustScreenRedFlags.filter(
+          (flagId) => !input.actual.screenedRedFlags.includes(flagId)
+        ),
+    input.existingQuestionId,
+    input.includeGenericBaselineRepeat
   );
+  const matchedRequiredRedFlags =
+    input.redFlagCoverageExpectation === "partial"
+      ? []
+      : input.expected.mustScreenRedFlags.filter((flagId) =>
+          input.actual.screenedRedFlags.includes(flagId)
+        );
+  const missingRequiredRedFlags =
+    input.redFlagCoverageExpectation === "partial"
+      ? []
+      : input.expected.mustScreenRedFlags.filter(
+          (flagId) => !matchedRequiredRedFlags.includes(flagId)
+        );
 
   if (!complaintModuleMatched) {
     failures.push(
-      `Complaint module mismatch: expected one of "${input.expected.acceptableComplaintModuleIds.join(", ")}", got "${actual.complaintModuleId ?? "none"}"`
+      `Complaint module mismatch: expected one of "${input.expected.acceptableComplaintModuleIds.join(", ")}", got "${input.actual.complaintModuleId ?? "none"}"`
     );
   }
 
   if (!acceptableQuestionMatched) {
     failures.push(
-      `Planned question "${actual.plannedQuestionId ?? actual.fallbackType ?? "none"}" is outside the acceptable set`
+      `Planned question "${input.actual.plannedQuestionId ?? input.actual.fallbackType ?? "none"}" is outside the acceptable set`
     );
   }
 
   if (!selectedBecauseMatched) {
     failures.push(
-      `selectedBecause "${actual.selectedBecause ?? "none"}" is outside the acceptable set`
+      `selectedBecause "${input.actual.selectedBecause ?? "none"}" is outside the acceptable set`
     );
   }
 
@@ -551,17 +695,13 @@ function evaluateNormalizedShadowPlannerScenario(
     failures.push("Generic-question avoidance expectation was not met");
   }
 
-  if (actual.fallbackType !== null) {
+  if (input.actual.fallbackType !== null) {
     failures.push(
-      `Adapter returned fallback "${actual.fallbackType}" instead of a planned question`
+      `Adapter returned fallback "${input.actual.fallbackType}" instead of a planned question`
     );
   }
 
   return {
-    caseId: input.caseId,
-    fixtureKind: input.fixtureKind,
-    expected: input.expected,
-    actual,
     complaintModuleMatched,
     acceptableQuestionMatched,
     selectedBecauseMatched,
@@ -570,9 +710,89 @@ function evaluateNormalizedShadowPlannerScenario(
     genericQuestionAvoided,
     matchedRequiredRedFlags,
     missingRequiredRedFlags,
-    requiredRedFlagCount: input.expected.mustScreenRedFlags.length,
+    requiredRedFlagCount:
+      input.redFlagCoverageExpectation === "partial"
+        ? 0
+        : input.expected.mustScreenRedFlags.length,
     failures,
     passed: failures.length === 0,
+  };
+}
+
+function evaluateNormalizedShadowPlannerScenario(
+  input: EvaluateNormalizedShadowPlannerScenarioInput
+): ShadowPlannerScenarioEvalCaseResult {
+  const integration = buildShadowPlannerComplaintIntegration({
+    ownerText: input.ownerText,
+    existingQuestionId: input.existingQuestionId,
+    caseState: input.caseState,
+  });
+  const actual = buildActualDescriptor(input.caseId, integration);
+  const repeatedQuestionAvoidedSignal = integration.comparison.repeatedQuestionAvoided;
+
+  const rawEvaluation = evaluateExpectationMode({
+    expected: input.expected,
+    actual,
+    existingQuestionId: input.existingQuestionId,
+    repeatedQuestionAvoidedSignal,
+    includeGenericBaselineRepeat: true,
+    allowEmergencyAlignmentQuestionMatch: false,
+    redFlagCoverageExpectation: "complete",
+  });
+  const normalizedEvaluation = evaluateExpectationMode({
+    expected: input.normalizedExpected,
+    actual,
+    existingQuestionId: input.existingQuestionId,
+    repeatedQuestionAvoidedSignal,
+    includeGenericBaselineRepeat:
+      input.normalizedExpected.shouldAvoidRepeatedQuestion ||
+      input.normalizedExpected.shouldBeatGenericQuestion,
+    allowEmergencyAlignmentQuestionMatch:
+      input.normalizedExpected.emergencyAlignmentDisposition ===
+      "alignment_only_ok",
+    redFlagCoverageExpectation:
+      input.normalizedExpected.redFlagCoverageExpectation,
+  });
+
+  return {
+    caseId: input.caseId,
+    fixtureKind: input.fixtureKind,
+    expected: input.expected,
+    normalizedExpected: input.normalizedExpected,
+    actual,
+    complaintModuleMatched: rawEvaluation.complaintModuleMatched,
+    acceptableQuestionMatched: rawEvaluation.acceptableQuestionMatched,
+    selectedBecauseMatched: rawEvaluation.selectedBecauseMatched,
+    emergencyScreenAligned: rawEvaluation.emergencyScreenAligned,
+    repeatedQuestionAvoided: rawEvaluation.repeatedQuestionAvoided,
+    genericQuestionAvoided: rawEvaluation.genericQuestionAvoided,
+    matchedRequiredRedFlags: rawEvaluation.matchedRequiredRedFlags,
+    missingRequiredRedFlags: rawEvaluation.missingRequiredRedFlags,
+    requiredRedFlagCount: rawEvaluation.requiredRedFlagCount,
+    failures: rawEvaluation.failures,
+    passed: rawEvaluation.passed,
+    normalizedComplaintModuleMatched:
+      normalizedEvaluation.complaintModuleMatched,
+    normalizedAcceptableQuestionMatched:
+      normalizedEvaluation.acceptableQuestionMatched,
+    normalizedSelectedBecauseMatched:
+      normalizedEvaluation.selectedBecauseMatched,
+    normalizedEmergencyScreenAligned:
+      normalizedEvaluation.emergencyScreenAligned,
+    normalizedRepeatedQuestionAvoided:
+      normalizedEvaluation.repeatedQuestionAvoided,
+    normalizedGenericQuestionAvoided:
+      normalizedEvaluation.genericQuestionAvoided,
+    normalizedMatchedRequiredRedFlags:
+      normalizedEvaluation.matchedRequiredRedFlags,
+    normalizedMissingRequiredRedFlags:
+      normalizedEvaluation.missingRequiredRedFlags,
+    normalizedRequiredRedFlagCount:
+      normalizedEvaluation.requiredRedFlagCount,
+    normalizedFailures: normalizedEvaluation.failures,
+    normalizedPassed: normalizedEvaluation.passed,
+    rawReason: rawEvaluation.failures.join("; "),
+    normalizedReason: normalizedEvaluation.failures.join("; "),
   };
 }
 
@@ -587,12 +807,17 @@ export function evaluateShadowPlannerScenarioCase(
   const buildCaseState =
     input.buildCaseState ?? buildDefaultShadowPlannerScenarioCaseState;
   const caseState = cloneCaseState(buildCaseState(input.scenario, input.expectedOutcome));
+  const expected = buildExpectedDescriptorFromOutcome(input.expectedOutcome);
 
   return evaluateNormalizedShadowPlannerScenario({
     caseId: input.scenario.caseId,
     fixtureKind: "base",
     ownerText: input.scenario.ownerText,
-    expected: buildExpectedDescriptorFromOutcome(input.expectedOutcome),
+    expected,
+    normalizedExpected: buildNormalizedExpectedDescriptor(
+      expected,
+      input.normalizationRow
+    ),
     existingQuestionId,
     caseState,
   });
@@ -610,12 +835,14 @@ function evaluateShadowPlannerEdgeScenarioCase(input: {
   const buildCaseState =
     input.buildCaseState ?? buildDefaultShadowPlannerEdgeCaseState;
   const caseState = cloneCaseState(buildCaseState(input.scenario));
+  const expected = buildExpectedDescriptorFromEdgeScenario(input.scenario);
 
   return evaluateNormalizedShadowPlannerScenario({
     caseId: input.scenario.caseId,
     fixtureKind: "edge",
     ownerText: input.scenario.ownerText,
-    expected: buildExpectedDescriptorFromEdgeScenario(input.scenario),
+    expected,
+    normalizedExpected: buildNormalizedExpectedDescriptor(expected),
     existingQuestionId,
     caseState,
   });
@@ -634,11 +861,10 @@ function buildExpectedOutcomeMap(
   );
 }
 
-function buildSummary(
-  caseResults: readonly ShadowPlannerScenarioEvalCaseResult[]
-): ShadowPlannerScenarioEvalSummary {
-  let baseCaseCount = 0;
-  let edgeCaseCount = 0;
+function buildMetricSet(
+  caseResults: readonly ShadowPlannerScenarioEvalCaseResult[],
+  mode: "raw" | "normalized"
+): ShadowPlannerScenarioEvalMetricSet {
   let complaintModuleMatchCount = 0;
   let acceptableQuestionCount = 0;
   let emergencyScreenAlignmentCount = 0;
@@ -651,72 +877,78 @@ function buildSummary(
   let totalRequiredRedFlagCount = 0;
 
   for (const caseResult of caseResults) {
-    if (caseResult.fixtureKind === "base") {
-      baseCaseCount += 1;
-    } else {
-      edgeCaseCount += 1;
-    }
+    const expected =
+      mode === "normalized"
+        ? caseResult.normalizedExpected ?? buildNormalizedExpectedDescriptor(caseResult.expected)
+        : caseResult.expected;
+    const complaintModuleMatched =
+      mode === "normalized"
+        ? caseResult.normalizedComplaintModuleMatched ?? caseResult.complaintModuleMatched
+        : caseResult.complaintModuleMatched;
+    const acceptableQuestionMatched =
+      mode === "normalized"
+        ? caseResult.normalizedAcceptableQuestionMatched ??
+          caseResult.acceptableQuestionMatched
+        : caseResult.acceptableQuestionMatched;
+    const emergencyScreenAligned =
+      mode === "normalized"
+        ? caseResult.normalizedEmergencyScreenAligned ??
+          caseResult.emergencyScreenAligned
+        : caseResult.emergencyScreenAligned;
+    const repeatedQuestionAvoided =
+      mode === "normalized"
+        ? caseResult.normalizedRepeatedQuestionAvoided ??
+          caseResult.repeatedQuestionAvoided
+        : caseResult.repeatedQuestionAvoided;
+    const genericQuestionAvoided =
+      mode === "normalized"
+        ? caseResult.normalizedGenericQuestionAvoided ??
+          caseResult.genericQuestionAvoided
+        : caseResult.genericQuestionAvoided;
+    const matchedRequiredRedFlags =
+      mode === "normalized"
+        ? caseResult.normalizedMatchedRequiredRedFlags ??
+          caseResult.matchedRequiredRedFlags
+        : caseResult.matchedRequiredRedFlags;
+    const requiredRedFlagCount =
+      mode === "normalized"
+        ? caseResult.normalizedRequiredRedFlagCount ?? caseResult.requiredRedFlagCount
+        : caseResult.requiredRedFlagCount;
 
-    if (caseResult.complaintModuleMatched) {
+    if (complaintModuleMatched) {
       complaintModuleMatchCount += 1;
     }
 
-    if (caseResult.acceptableQuestionMatched) {
+    if (acceptableQuestionMatched) {
       acceptableQuestionCount += 1;
     }
 
-    if (caseResult.expected.shouldScreenEmergencyEarlier) {
+    if (expected.shouldScreenEmergencyEarlier) {
       emergencyScreenAlignmentRelevantCases += 1;
-      if (caseResult.emergencyScreenAligned) {
+      if (emergencyScreenAligned) {
         emergencyScreenAlignmentCount += 1;
       }
     }
 
-    if (caseResult.expected.shouldAvoidRepeatedQuestion) {
+    if (expected.shouldAvoidRepeatedQuestion) {
       repeatedQuestionAvoidanceRelevantCases += 1;
-      if (caseResult.repeatedQuestionAvoided) {
+      if (repeatedQuestionAvoided) {
         repeatedQuestionAvoidanceCount += 1;
       }
     }
 
-    if (caseResult.expected.shouldBeatGenericQuestion) {
+    if (expected.shouldBeatGenericQuestion) {
       genericQuestionAvoidanceRelevantCases += 1;
-      if (caseResult.genericQuestionAvoided) {
+      if (genericQuestionAvoided) {
         genericQuestionAvoidanceCount += 1;
       }
     }
 
-    screenedRequiredRedFlagCount += caseResult.matchedRequiredRedFlags.length;
-    totalRequiredRedFlagCount += caseResult.requiredRedFlagCount;
+    screenedRequiredRedFlagCount += matchedRequiredRedFlags.length;
+    totalRequiredRedFlagCount += requiredRedFlagCount;
   }
 
-  const failedCases: ShadowPlannerScenarioEvalFailedCase[] = caseResults
-    .filter((caseResult) => !caseResult.passed)
-    .map((caseResult) => ({
-      caseId: caseResult.caseId,
-      fixtureKind: caseResult.fixtureKind,
-      expected: {
-        ...caseResult.expected,
-        acceptableComplaintModuleIds: [
-          ...caseResult.expected.acceptableComplaintModuleIds,
-        ],
-        acceptableQuestionIds: [...caseResult.expected.acceptableQuestionIds],
-        acceptableSelectedBecause: [
-          ...caseResult.expected.acceptableSelectedBecause,
-        ],
-        mustScreenRedFlags: [...caseResult.expected.mustScreenRedFlags],
-      },
-      actual: {
-        ...caseResult.actual,
-        screenedRedFlags: [...caseResult.actual.screenedRedFlags],
-      },
-      reason: caseResult.failures.join("; "),
-    }));
-
   return {
-    totalCases: caseResults.length,
-    baseCaseCount,
-    edgeCaseCount,
     complaintModuleMatchCount,
     complaintModuleMatchRate: safeRate(
       complaintModuleMatchCount,
@@ -748,7 +980,85 @@ function buildSummary(
       screenedRequiredRedFlagCount,
       totalRequiredRedFlagCount
     ),
+  };
+}
+
+function buildSummary(
+  caseResults: readonly ShadowPlannerScenarioEvalCaseResult[]
+): ShadowPlannerScenarioEvalSummary {
+  let baseCaseCount = 0;
+  let edgeCaseCount = 0;
+
+  for (const caseResult of caseResults) {
+    if (caseResult.fixtureKind === "base") {
+      baseCaseCount += 1;
+    } else {
+      edgeCaseCount += 1;
+    }
+  }
+
+  const rawMetrics = buildMetricSet(caseResults, "raw");
+  const normalizedMetrics = buildMetricSet(caseResults, "normalized");
+  const failedCases: ShadowPlannerScenarioEvalFailedCase[] = caseResults
+    .filter((caseResult) => !caseResult.passed)
+    .map((caseResult) => ({
+      caseId: caseResult.caseId,
+      fixtureKind: caseResult.fixtureKind,
+      expected: {
+        ...caseResult.expected,
+        acceptableComplaintModuleIds: [
+          ...caseResult.expected.acceptableComplaintModuleIds,
+        ],
+        acceptableQuestionIds: [...caseResult.expected.acceptableQuestionIds],
+        acceptableSelectedBecause: [
+          ...caseResult.expected.acceptableSelectedBecause,
+        ],
+        mustScreenRedFlags: [...caseResult.expected.mustScreenRedFlags],
+      },
+      actual: {
+        ...caseResult.actual,
+        screenedRedFlags: [...caseResult.actual.screenedRedFlags],
+      },
+      reason: caseResult.rawReason ?? caseResult.failures.join("; "),
+      rawReason: caseResult.rawReason ?? caseResult.failures.join("; "),
+      normalizedReason:
+        caseResult.normalizedReason ??
+        caseResult.normalizedFailures?.join("; ") ??
+        "",
+    }));
+
+  return {
+    totalCases: caseResults.length,
+    baseCaseCount,
+    edgeCaseCount,
+    complaintModuleMatchCount: rawMetrics.complaintModuleMatchCount,
+    complaintModuleMatchRate: rawMetrics.complaintModuleMatchRate,
+    acceptableQuestionCount: rawMetrics.acceptableQuestionCount,
+    acceptableQuestionRate: rawMetrics.acceptableQuestionRate,
+    emergencyScreenAlignmentCount: rawMetrics.emergencyScreenAlignmentCount,
+    emergencyScreenAlignmentRelevantCases:
+      rawMetrics.emergencyScreenAlignmentRelevantCases,
+    emergencyScreenAlignmentRate: rawMetrics.emergencyScreenAlignmentRate,
+    repeatedQuestionAvoidanceCount:
+      rawMetrics.repeatedQuestionAvoidanceCount,
+    repeatedQuestionAvoidanceRelevantCases:
+      rawMetrics.repeatedQuestionAvoidanceRelevantCases,
+    repeatedQuestionAvoidanceRate: rawMetrics.repeatedQuestionAvoidanceRate,
+    genericQuestionAvoidanceCount: rawMetrics.genericQuestionAvoidanceCount,
+    genericQuestionAvoidanceRelevantCases:
+      rawMetrics.genericQuestionAvoidanceRelevantCases,
+    genericQuestionAvoidanceRate: rawMetrics.genericQuestionAvoidanceRate,
+    screenedRequiredRedFlagCount:
+      rawMetrics.screenedRequiredRedFlagCount,
+    totalRequiredRedFlagCount: rawMetrics.totalRequiredRedFlagCount,
+    redFlagScreenCoverageRate: rawMetrics.redFlagScreenCoverageRate,
     failedCases,
+    rawMetrics,
+    normalizedMetrics,
+    rawFailedCaseCount: failedCases.length,
+    normalizedFailedCaseCount: caseResults.filter(
+      (caseResult) => !(caseResult.normalizedPassed ?? caseResult.passed)
+    ).length,
   };
 }
 
@@ -759,6 +1069,9 @@ export function evaluateShadowPlannerScenarios(
   const edgeScenarios = input.edgeScenarios ?? [];
   assertUniqueCaseIds(edgeScenarios, "Edge scenarios");
   assertNoOverlappingCaseIds(input.scenarios, edgeScenarios);
+  const normalizationRows = input.normalizationRows ?? [];
+  const normalizationMap =
+    normalizationRows.length > 0 ? buildNormalizationMap(normalizationRows) : null;
 
   const expectedOutcomeMap = buildExpectedOutcomeMap(input.expectedOutcomes);
   const baseCaseResults = input.scenarios.map((scenario) => {
@@ -766,10 +1079,19 @@ export function evaluateShadowPlannerScenarios(
     if (!expectedOutcome) {
       throw new Error(`Missing expected outcome for case "${scenario.caseId}"`);
     }
+    const normalizationRow =
+      normalizationMap?.get(scenario.caseId) ?? undefined;
+
+    if (normalizationMap && !normalizationRow) {
+      throw new Error(
+        `Missing normalization row for base scenario "${scenario.caseId}"`
+      );
+    }
 
     return evaluateShadowPlannerScenarioCase({
       scenario,
       expectedOutcome,
+      normalizationRow,
       existingQuestionId: input.existingQuestionId,
       buildCaseState: input.buildCaseState,
     });
@@ -813,47 +1135,109 @@ function formatCountLine(
 export function renderShadowPlannerScenarioEvalSummary(
   summary: ShadowPlannerScenarioEvalSummary
 ): string {
+  const rawMetrics = summary.rawMetrics ?? {
+    complaintModuleMatchCount: summary.complaintModuleMatchCount,
+    complaintModuleMatchRate: summary.complaintModuleMatchRate,
+    acceptableQuestionCount: summary.acceptableQuestionCount,
+    acceptableQuestionRate: summary.acceptableQuestionRate,
+    emergencyScreenAlignmentCount: summary.emergencyScreenAlignmentCount,
+    emergencyScreenAlignmentRelevantCases:
+      summary.emergencyScreenAlignmentRelevantCases,
+    emergencyScreenAlignmentRate: summary.emergencyScreenAlignmentRate,
+    repeatedQuestionAvoidanceCount: summary.repeatedQuestionAvoidanceCount,
+    repeatedQuestionAvoidanceRelevantCases:
+      summary.repeatedQuestionAvoidanceRelevantCases,
+    repeatedQuestionAvoidanceRate: summary.repeatedQuestionAvoidanceRate,
+    genericQuestionAvoidanceCount: summary.genericQuestionAvoidanceCount,
+    genericQuestionAvoidanceRelevantCases:
+      summary.genericQuestionAvoidanceRelevantCases,
+    genericQuestionAvoidanceRate: summary.genericQuestionAvoidanceRate,
+    screenedRequiredRedFlagCount: summary.screenedRequiredRedFlagCount,
+    totalRequiredRedFlagCount: summary.totalRequiredRedFlagCount,
+    redFlagScreenCoverageRate: summary.redFlagScreenCoverageRate,
+  };
+  const normalizedMetrics = summary.normalizedMetrics ?? rawMetrics;
   const lines = [
     "Shadow Planner Scenario Eval",
     `Total cases: ${summary.totalCases}`,
     `Base cases: ${summary.baseCaseCount}`,
     `Edge cases: ${summary.edgeCaseCount}`,
+    "Raw metrics",
     formatCountLine(
       "Complaint module match rate",
-      summary.complaintModuleMatchCount,
+      rawMetrics.complaintModuleMatchCount,
       summary.totalCases,
-      summary.complaintModuleMatchRate
+      rawMetrics.complaintModuleMatchRate
     ),
     formatCountLine(
       "Acceptable question rate",
-      summary.acceptableQuestionCount,
+      rawMetrics.acceptableQuestionCount,
       summary.totalCases,
-      summary.acceptableQuestionRate
+      rawMetrics.acceptableQuestionRate
     ),
     formatCountLine(
       "Emergency screen alignment rate",
-      summary.emergencyScreenAlignmentCount,
-      summary.emergencyScreenAlignmentRelevantCases,
-      summary.emergencyScreenAlignmentRate
+      rawMetrics.emergencyScreenAlignmentCount,
+      rawMetrics.emergencyScreenAlignmentRelevantCases,
+      rawMetrics.emergencyScreenAlignmentRate
     ),
     formatCountLine(
       "Repeated question avoidance rate",
-      summary.repeatedQuestionAvoidanceCount,
-      summary.repeatedQuestionAvoidanceRelevantCases,
-      summary.repeatedQuestionAvoidanceRate
+      rawMetrics.repeatedQuestionAvoidanceCount,
+      rawMetrics.repeatedQuestionAvoidanceRelevantCases,
+      rawMetrics.repeatedQuestionAvoidanceRate
     ),
     formatCountLine(
       "Generic question avoidance rate",
-      summary.genericQuestionAvoidanceCount,
-      summary.genericQuestionAvoidanceRelevantCases,
-      summary.genericQuestionAvoidanceRate
+      rawMetrics.genericQuestionAvoidanceCount,
+      rawMetrics.genericQuestionAvoidanceRelevantCases,
+      rawMetrics.genericQuestionAvoidanceRate
     ),
     formatCountLine(
       "Red flag screen coverage rate",
-      summary.screenedRequiredRedFlagCount,
-      summary.totalRequiredRedFlagCount,
-      summary.redFlagScreenCoverageRate
+      rawMetrics.screenedRequiredRedFlagCount,
+      rawMetrics.totalRequiredRedFlagCount,
+      rawMetrics.redFlagScreenCoverageRate
     ),
+    `Raw failed cases: ${summary.rawFailedCaseCount ?? summary.failedCases.length}`,
+    "Normalized metrics",
+    formatCountLine(
+      "Complaint module match rate",
+      normalizedMetrics.complaintModuleMatchCount,
+      summary.totalCases,
+      normalizedMetrics.complaintModuleMatchRate
+    ),
+    formatCountLine(
+      "Acceptable question rate",
+      normalizedMetrics.acceptableQuestionCount,
+      summary.totalCases,
+      normalizedMetrics.acceptableQuestionRate
+    ),
+    formatCountLine(
+      "Emergency screen alignment rate",
+      normalizedMetrics.emergencyScreenAlignmentCount,
+      normalizedMetrics.emergencyScreenAlignmentRelevantCases,
+      normalizedMetrics.emergencyScreenAlignmentRate
+    ),
+    formatCountLine(
+      "Repeated question avoidance rate",
+      normalizedMetrics.repeatedQuestionAvoidanceCount,
+      normalizedMetrics.repeatedQuestionAvoidanceRelevantCases,
+      normalizedMetrics.repeatedQuestionAvoidanceRate
+    ),
+    formatCountLine(
+      "Generic question avoidance rate",
+      normalizedMetrics.genericQuestionAvoidanceCount,
+      normalizedMetrics.genericQuestionAvoidanceRelevantCases,
+      normalizedMetrics.genericQuestionAvoidanceRate
+    ),
+    formatCountLine(
+      "Red flag screen coverage rate",
+      normalizedMetrics.screenedRequiredRedFlagCount,
+      normalizedMetrics.totalRequiredRedFlagCount,
+      normalizedMetrics.redFlagScreenCoverageRate
+    ),
+    `Normalized failed cases: ${summary.normalizedFailedCaseCount ?? summary.failedCases.length}`,
   ];
 
   if (summary.failedCases.length === 0) {
@@ -864,7 +1248,7 @@ export function renderShadowPlannerScenarioEvalSummary(
   lines.push(`Failed cases: ${summary.failedCases.length}`);
   for (const failedCase of summary.failedCases) {
     lines.push(
-      `- [${failedCase.fixtureKind}] ${failedCase.caseId}: ${failedCase.reason}`
+      `- [${failedCase.fixtureKind}] ${failedCase.caseId}: raw=${failedCase.rawReason ?? failedCase.reason}; normalized=${failedCase.normalizedReason ?? ""}`
     );
     lines.push(
       `  expected: modules=${failedCase.expected.acceptableComplaintModuleIds.join(", ")}; questions=${failedCase.expected.acceptableQuestionIds.join(", ")}`

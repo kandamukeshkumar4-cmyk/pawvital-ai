@@ -13,7 +13,7 @@ It does not change runtime wiring, live question selection, question cards, comp
 
 ## Purpose
 
-The harness runs the merged shadow planner complaint adapter against the merged base scenario pack, expected-outcome pack, and edge-case scenario pack, then reports quality metrics for the shadow-only planning path.
+The harness runs the merged shadow planner complaint adapter against the merged base scenario pack, expected-outcome pack, edge-case scenario pack, and expected-outcome normalization pack, then reports quality metrics for the shadow-only planning path.
 
 The harness is designed to answer:
 
@@ -33,6 +33,7 @@ The CLI loads:
 - `tests/fixtures/clinical-intelligence/shadow-planner-scenarios.json`
 - `tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json`
 - `tests/fixtures/clinical-intelligence/shadow-planner-edge-case-scenarios.json`
+- `tests/fixtures/clinical-intelligence/shadow-planner-expected-outcome-normalization.json`
 
 The evaluator calls:
 
@@ -50,6 +51,21 @@ Each case uses:
 
 The harness does not invent red-flag positives, does not inject LLM output, and does not expose chain-of-thought.
 
+## Raw And Normalized Metrics
+
+The structured summary now reports the raw harness output and a normalization-aware view side by side.
+
+Raw metrics preserve the original report-only scoring against the exact expected-outcome fixture.
+
+Normalized metrics layer in the normalization pack so the report can:
+
+- accept documented complaint-module alternatives on ambiguous wording
+- treat `alignment_only_ok` rows as question-aligned when emergency-first behavior is preserved
+- exclude `exclude_for_now` rows from normalized generic-question scoring
+- exclude `partial` rows from normalized full red-flag coverage scoring
+
+This keeps the safety surface visible without pretending every emergency-first global screen is a direct quality miss.
+
 ## Metrics
 
 The structured summary reports:
@@ -57,6 +73,10 @@ The structured summary reports:
 - `totalCases`
 - `baseCaseCount`
 - `edgeCaseCount`
+- `rawMetrics`
+- `normalizedMetrics`
+- `rawFailedCaseCount`
+- `normalizedFailedCaseCount`
 - `complaintModuleMatchRate`
 - `acceptableQuestionRate`
 - `emergencyScreenAlignmentRate`
@@ -68,11 +88,14 @@ The structured summary reports:
 Metric denominators are intentionally explicit inside the summary object:
 
 - base and edge case counts are reported separately while `totalCases` covers the combined run
-- module match and acceptable-question rates use all cases
+- raw module match and acceptable-question rates use all cases
+- normalized complaint-module match still uses all cases, but normalized base rows can accept documented alternate module IDs
 - emergency-screen alignment uses only cases where the fixture expects earlier emergency screening
 - repeated-question avoidance uses all base cases plus edge cases that include `repeatedQuestionSetup`
-- generic-question avoidance uses only cases where the fixture expects the shadow planner to beat a generic baseline
-- red-flag coverage uses required-flag matches over total required flags
+- raw generic-question avoidance uses cases where the fixture expects the shadow planner to beat a generic baseline
+- normalized generic-question avoidance removes rows marked `exclude_for_now`
+- raw red-flag coverage uses required-flag matches over total required flags
+- normalized red-flag coverage removes rows marked `partial` from the full-coverage denominator
 
 ## Failure Model
 
@@ -87,6 +110,14 @@ It only throws on structural invalidity, such as:
 - telemetry `ownerFacingImpact` drifting away from `"none"`
 
 Everything else is reported as metrics plus `failedCases`.
+
+Each failed-case entry now includes:
+
+- `reason` as the legacy raw failure string
+- `rawReason`
+- `normalizedReason`
+
+This preserves CLI/JSON compatibility while making it obvious which misses remain after normalization.
 
 ## CLI
 
@@ -111,8 +142,10 @@ The CLI prints a readable summary with:
 - total case count
 - base-case count
 - edge-case count
-- each required metric as count/denominator plus percentage
-- a compact failed-case list with expected and actual structured fields
+- raw metric lines as count/denominator plus percentage
+- normalized metric lines as count/denominator plus percentage
+- raw and normalized failed-case counts
+- a compact failed-case list with expected and actual structured fields plus raw/normalized reasons
 
 Tests consume the structured JSON returned by `evaluateShadowPlannerScenarios(...)` directly.
 
@@ -123,3 +156,4 @@ Tests consume the structured JSON returned by `evaluateShadowPlannerScenarios(..
 - No LLM or RAG calls
 - No raw owner text in reported failure payloads
 - Emergency handoff behavior remains preserved when the supplied case state is already `emergency`
+- Normalization is report-only and never changes planner runtime behavior
