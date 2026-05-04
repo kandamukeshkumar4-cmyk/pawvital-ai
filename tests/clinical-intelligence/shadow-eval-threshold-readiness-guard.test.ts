@@ -39,7 +39,9 @@ function readGuardDoc(): string {
 function readWorkflowFiles(): Array<{ name: string; content: string }> {
   return fs
     .readdirSync(WORKFLOW_DIR)
-    .filter((entry) => entry.endsWith(".yml"))
+    .filter(
+      (entry) => entry.endsWith(".yml") || entry.endsWith(".yaml")
+    )
     .map((name) => ({
       name,
       content: fs.readFileSync(path.join(WORKFLOW_DIR, name), "utf8"),
