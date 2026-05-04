@@ -13,7 +13,7 @@ It does not change runtime wiring, live question selection, question cards, comp
 
 ## Purpose
 
-The harness runs the merged shadow planner complaint adapter against the merged scenario and expected-outcome fixture packs, then reports quality metrics for the shadow-only planning path.
+The harness runs the merged shadow planner complaint adapter against the merged base scenario pack, expected-outcome pack, and edge-case scenario pack, then reports quality metrics for the shadow-only planning path.
 
 The harness is designed to answer:
 
@@ -32,6 +32,7 @@ The CLI loads:
 
 - `tests/fixtures/clinical-intelligence/shadow-planner-scenarios.json`
 - `tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json`
+- `tests/fixtures/clinical-intelligence/shadow-planner-edge-case-scenarios.json`
 
 The evaluator calls:
 
@@ -54,6 +55,8 @@ The harness does not invent red-flag positives, does not inject LLM output, and 
 The structured summary reports:
 
 - `totalCases`
+- `baseCaseCount`
+- `edgeCaseCount`
 - `complaintModuleMatchRate`
 - `acceptableQuestionRate`
 - `emergencyScreenAlignmentRate`
@@ -64,9 +67,10 @@ The structured summary reports:
 
 Metric denominators are intentionally explicit inside the summary object:
 
+- base and edge case counts are reported separately while `totalCases` covers the combined run
 - module match and acceptable-question rates use all cases
 - emergency-screen alignment uses only cases where the fixture expects earlier emergency screening
-- repeated-question avoidance uses only cases where repeat avoidance is expected
+- repeated-question avoidance uses all base cases plus edge cases that include `repeatedQuestionSetup`
 - generic-question avoidance uses only cases where the fixture expects the shadow planner to beat a generic baseline
 - red-flag coverage uses required-flag matches over total required flags
 
@@ -105,6 +109,8 @@ The CLI is a thin wrapper. It writes a temporary runner under the repo, compiles
 The CLI prints a readable summary with:
 
 - total case count
+- base-case count
+- edge-case count
 - each required metric as count/denominator plus percentage
 - a compact failed-case list with expected and actual structured fields
 
