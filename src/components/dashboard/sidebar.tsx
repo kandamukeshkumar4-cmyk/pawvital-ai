@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
+  AlertTriangle,
   Stethoscope,
   Clock,
   Pill,
@@ -16,41 +16,45 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   BarChart3,
   PawPrint,
-  Moon,
   ClipboardCheck,
-  QrCode,
 } from "lucide-react";
 import { filterPrivateTesterNavItems } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 import { useAuth } from "@/hooks/useSupabase";
 
-const navItems = [
-  { href: "/paw-hub", icon: Activity, label: "Paw Hub" },
-  { href: "/dashboard", icon: Heart, label: "Dashboard" },
+const primaryNav = [
+  { href: "/hooked", icon: AlertTriangle, label: "Check Now" },
+  { href: "/paw-hub", icon: Heart, label: "Today" },
+  { href: "/vet-prep", icon: ClipboardCheck, label: "Vet Prep" },
   { href: "/pets", icon: PawPrint, label: "My Dogs" },
+  { href: "/settings", icon: Settings, label: "Settings" },
+];
+
+const moreNav = [
+  { href: "/dashboard", icon: Heart, label: "Dashboard" },
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
-  { href: "/triage", icon: Moon, label: "Late-Night Triage" },
-  { href: "/quality-of-life", icon: Heart, label: "Quality of Life" },
-  { href: "/vet-prep", icon: ClipboardCheck, label: "Vet Visit Prep" },
-  { href: "/emergency-card", icon: QrCode, label: "Emergency Card" },
   { href: "/history", icon: Clock, label: "History" },
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/supplements", icon: Pill, label: "Supplements" },
   { href: "/reminders", icon: Bell, label: "Reminders" },
   { href: "/journal", icon: BookOpen, label: "Journal" },
   { href: "/community", icon: Users, label: "Paw Circle" },
-  { href: "/settings", icon: Settings, label: "Settings" },
 ];
+
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { sidebarOpen, toggleSidebar, activePet } = useAppStore();
   const { signOut } = useAuth();
   const [isDesktop, setIsDesktop] = useState(true);
+  const [moreOpen, setMoreOpen] = useState(false);
   const previousIsDesktopRef = useRef<boolean | null>(null);
-  const visibleNavItems = filterPrivateTesterNavItems(navItems);
+  const visiblePrimary = filterPrivateTesterNavItems(primaryNav);
+  const visibleMore = filterPrivateTesterNavItems(moreNav);
+  const isMoreActive = visibleMore.some((item) => pathname === item.href);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -143,30 +147,80 @@ export default function Sidebar() {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {visibleNavItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
-                  isActive
-                    ? "bg-blue-50 font-semibold text-blue-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <item.icon
-                  className={`h-5 w-5 flex-shrink-0 ${
+        <nav className="flex-1 overflow-y-auto px-3 py-4">
+          {/* Primary — always visible, large tap targets */}
+          <div className="space-y-1">
+            {visiblePrimary.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`group flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200 ${
                     isActive
-                      ? "text-blue-600"
-                      : "text-gray-400 group-hover:text-gray-600"
+                      ? "bg-blue-50 font-semibold text-blue-700"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   }`}
-                />
-                {sidebarOpen && <span className="text-sm">{item.label}</span>}
-              </Link>
-            );
-          })}
+                >
+                  <item.icon
+                    className={`h-5 w-5 flex-shrink-0 ${
+                      isActive
+                        ? "text-blue-600"
+                        : "text-gray-400 group-hover:text-gray-600"
+                    }`}
+                  />
+                  {sidebarOpen && <span className="text-sm">{item.label}</span>}
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* More — collapsed by default */}
+          {visibleMore.length > 0 && (
+            <div className="mt-4">
+              {sidebarOpen && (
+                <button
+                  type="button"
+                  onClick={() => setMoreOpen(!moreOpen)}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors ${
+                    isMoreActive && !moreOpen
+                      ? "text-blue-600"
+                      : "text-gray-400 hover:text-gray-600"
+                  }`}
+                >
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 transition-transform ${moreOpen ? "" : "-rotate-90"}`}
+                  />
+                  More
+                </button>
+              )}
+              <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen && !moreOpen ? "max-h-0 opacity-0" : "mt-1 max-h-[500px] opacity-100 space-y-0.5"}`}>
+                {visibleMore.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`group flex items-center gap-3 rounded-xl px-3 py-2 transition-all duration-200 ${
+                        isActive
+                          ? "bg-blue-50 font-semibold text-blue-700"
+                          : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <item.icon
+                        className={`h-4 w-4 flex-shrink-0 ${
+                          isActive
+                            ? "text-blue-600"
+                            : "text-gray-400 group-hover:text-gray-500"
+                        }`}
+                      />
+                      {sidebarOpen && <span className="text-sm">{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Collapse toggle */}
