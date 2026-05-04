@@ -227,12 +227,12 @@ describe("Heat/Trauma Question-Card Reachability Guard (VET-1435Q)", () => {
     });
 
     it("heatstroke readiness keeps complaint-module and vet-knowledge metadata aligned", () => {
-      const module = getComplaintModuleById(HEAT_MODULE_ID);
+      const complaintModule = getComplaintModuleById(HEAT_MODULE_ID);
       const sourceMapEntry = getComplaintSourceMapEntry(HEAT_MODULE_ID);
       const coverageEntry = getCoverageByModuleId(HEAT_MODULE_ID);
       const gapEntry = getGapByModuleId(HEAT_MODULE_ID);
 
-      expect(module).toBeDefined();
+      expect(complaintModule).toBeDefined();
       expect(sourceMapEntry).toBeDefined();
       expect(sourceMapEntry!.vetKnowledgeFamilies).toEqual(["emergency"]);
       expect(coverageEntry).toBeDefined();
@@ -247,12 +247,12 @@ describe("Heat/Trauma Question-Card Reachability Guard (VET-1435Q)", () => {
     });
 
     it("trauma readiness keeps complaint-module and vet-knowledge metadata aligned", () => {
-      const module = getComplaintModuleById(TRAUMA_MODULE_ID);
+      const complaintModule = getComplaintModuleById(TRAUMA_MODULE_ID);
       const sourceMapEntry = getComplaintSourceMapEntry(TRAUMA_MODULE_ID);
       const coverageEntry = getCoverageByModuleId(TRAUMA_MODULE_ID);
       const gapEntry = getGapByModuleId(TRAUMA_MODULE_ID);
 
-      expect(module).toBeDefined();
+      expect(complaintModule).toBeDefined();
       expect(sourceMapEntry).toBeDefined();
       expect(sourceMapEntry!.vetKnowledgeFamilies).toEqual([
         "trauma",
