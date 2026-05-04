@@ -1,0 +1,713 @@
+[
+  {
+    "caseId": "heatstroke_heat_exposure_01_hot_car_collapse",
+    "expectedComplaintModuleId": "heatstroke_heat_exposure",
+    "acceptablePlannedQuestionIds": [
+      "panting_excess_check",
+      "emergency_global_screen",
+      "breathing_difficulty_check",
+      "collapse_weakness_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "heatstroke_signs",
+      "collapse",
+      "dyspnea"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Emergency heat exposure with weakness should prefer a heat or global emergency screen before generic history."
+  },
+  {
+    "caseId": "heatstroke_heat_exposure_02_brachy_panting_after_walk",
+    "expectedComplaintModuleId": "heatstroke_heat_exposure",
+    "acceptablePlannedQuestionIds": [
+      "panting_excess_check",
+      "breathing_difficulty_check",
+      "brachycephalic_breed_check",
+      "heat_exposure_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "heatstroke_signs",
+      "brachycephalic_heat",
+      "dyspnea"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Short-nosed dog heat risk can be missed if the planner asks a broad timing question first."
+  },
+  {
+    "caseId": "heatstroke_heat_exposure_03_heat_plus_vomit_confuser",
+    "expectedComplaintModuleId": "heatstroke_heat_exposure",
+    "acceptablePlannedQuestionIds": [
+      "panting_excess_check",
+      "heat_exposure_check",
+      "emergency_global_screen",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "heatstroke_signs",
+      "persistent_vomiting"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing multi-symptom case where vomiting should not pull the first question away from heat screening. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "trauma_bleeding_wound_01_hit_by_car_pale",
+    "expectedComplaintModuleId": "trauma_bleeding_wound",
+    "acceptablePlannedQuestionIds": [
+      "emergency_global_screen",
+      "gum_color_check",
+      "bleeding_volume_check",
+      "trauma_mechanism_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "possible_trauma",
+      "pale_gums",
+      "large_blood_volume"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Trauma with gum-color concern should screen for shock-like red flags before wound detail."
+  },
+  {
+    "caseId": "trauma_bleeding_wound_02_bite_puncture_drip",
+    "expectedComplaintModuleId": "trauma_bleeding_wound",
+    "acceptablePlannedQuestionIds": [
+      "bleeding_volume_check",
+      "wound_characterization_check",
+      "trauma_mechanism_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "wound_deep_bleeding",
+      "large_blood_volume"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Bite wound wording should map to trauma and ask a high-value bleeding or wound question."
+  },
+  {
+    "caseId": "trauma_bleeding_wound_03_limping_after_fall_confuser",
+    "expectedComplaintModuleId": "trauma_bleeding_wound",
+    "acceptablePlannedQuestionIds": [
+      "trauma_mechanism_check",
+      "bleeding_volume_check",
+      "limping_weight_bearing",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "possible_trauma",
+      "large_blood_volume"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Confusing multi-symptom trauma plus limping should keep accident and bleeding candidates ahead of generic mobility follow-up. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "urinary_obstruction_01_straining_no_output",
+    "expectedComplaintModuleId": "urinary_obstruction",
+    "acceptablePlannedQuestionIds": [
+      "urinary_blockage_check",
+      "urinary_straining_output",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "urinary_obstruction",
+      "anuria",
+      "stranguria"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Little or no urine output is must-not-miss and should not be handled like routine accidents."
+  },
+  {
+    "caseId": "urinary_obstruction_02_accidents_blood_straining",
+    "expectedComplaintModuleId": "urinary_obstruction",
+    "acceptablePlannedQuestionIds": [
+      "urinary_straining_output",
+      "urinary_blockage_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "stranguria",
+      "hematuria",
+      "urinary_obstruction"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Mixed accident and blood language should still screen for output and straining. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "urinary_obstruction_03_vomit_and_no_pee_confuser",
+    "expectedComplaintModuleId": "urinary_obstruction",
+    "acceptablePlannedQuestionIds": [
+      "urinary_blockage_check",
+      "urinary_straining_output",
+      "emergency_global_screen",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "urinary_obstruction",
+      "anuria",
+      "persistent_vomiting"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing multi-symptom urinary plus GI case where no urine output must outrank a generic vomiting question. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "bloat_gdv_01_retching_swollen_belly",
+    "expectedComplaintModuleId": "bloat_gdv",
+    "acceptablePlannedQuestionIds": [
+      "bloat_retching_abdomen_check",
+      "emergency_global_screen",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "gastric_dilatation_volvulus",
+      "unproductive_retching",
+      "abdominal_distension"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Classic retching plus tight belly should go straight to the bloat screen."
+  },
+  {
+    "caseId": "bloat_gdv_02_pacing_drooling_belly",
+    "expectedComplaintModuleId": "bloat_gdv",
+    "acceptablePlannedQuestionIds": [
+      "bloat_retching_abdomen_check",
+      "emergency_global_screen",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "abdominal_distension",
+      "gastric_dilatation_volvulus"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Less explicit bloat language still needs an abdomen and retching discriminator."
+  },
+  {
+    "caseId": "bloat_gdv_03_diarrhea_plus_retching_confuser",
+    "expectedComplaintModuleId": "bloat_gdv",
+    "acceptablePlannedQuestionIds": [
+      "bloat_retching_abdomen_check",
+      "emergency_global_screen",
+      "gi_blood_check",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "unproductive_retching",
+      "abdominal_distension",
+      "gastric_dilatation_volvulus"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing multi-symptom GI wording should still prioritize bloat red-flag screening. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "respiratory_distress_01_open_mouth_breathing",
+    "expectedComplaintModuleId": "respiratory_distress",
+    "acceptablePlannedQuestionIds": [
+      "breathing_difficulty_check",
+      "emergency_global_screen",
+      "gum_color_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "dyspnea",
+      "open_mouth_breathing",
+      "tachypnea"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Clear breathing distress should prefer emergency respiratory screening."
+  },
+  {
+    "caseId": "respiratory_distress_02_cough_and_blue_tongue",
+    "expectedComplaintModuleId": "respiratory_distress",
+    "acceptablePlannedQuestionIds": [
+      "gum_color_check",
+      "breathing_difficulty_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "cyanosis",
+      "dyspnea"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Cough language with color change must not get a routine cough follow-up first. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "respiratory_distress_03_fast_breathing_after_heat_confuser",
+    "expectedComplaintModuleId": "respiratory_distress",
+    "acceptablePlannedQuestionIds": [
+      "breathing_difficulty_check",
+      "emergency_global_screen",
+      "panting_excess_check",
+      "heat_exposure_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "tachypnea",
+      "dyspnea",
+      "heatstroke_signs"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing multi-symptom respiratory plus heat case should still screen current breathing first. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "collapse_weakness_01_fainted_and_weak",
+    "expectedComplaintModuleId": "collapse_weakness",
+    "acceptablePlannedQuestionIds": [
+      "collapse_weakness_check",
+      "emergency_global_screen",
+      "gum_color_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "collapse",
+      "syncope",
+      "acute_weakness"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Collapse should be screened as must-not-miss even if the dog is awake now."
+  },
+  {
+    "caseId": "collapse_weakness_02_wobbly_pale",
+    "expectedComplaintModuleId": "collapse_weakness",
+    "acceptablePlannedQuestionIds": [
+      "gum_color_check",
+      "collapse_weakness_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "pale_gums",
+      "acute_weakness",
+      "collapse"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Weakness with pale gums should prioritize circulation red flags."
+  },
+  {
+    "caseId": "collapse_weakness_03_vomit_then_weak_confuser",
+    "expectedComplaintModuleId": "collapse_weakness",
+    "acceptablePlannedQuestionIds": [
+      "collapse_weakness_check",
+      "emergency_global_screen",
+      "gum_color_check",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "acute_weakness",
+      "collapse",
+      "persistent_vomiting"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing multi-symptom vomiting plus weakness should not start with a generic GI-only question. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "seizure_collapse_neuro_01_long_shaking",
+    "expectedComplaintModuleId": "seizure_collapse_neuro",
+    "acceptablePlannedQuestionIds": [
+      "seizure_neuro_check",
+      "neuro_seizure_duration",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "seizure",
+      "status_epilepticus"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Long shaking episode should screen seizure duration and emergency neuro flags."
+  },
+  {
+    "caseId": "seizure_collapse_neuro_02_multiple_episodes",
+    "expectedComplaintModuleId": "seizure_collapse_neuro",
+    "acceptablePlannedQuestionIds": [
+      "seizure_neuro_check",
+      "neuro_seizure_duration",
+      "collapse_weakness_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "cluster_seizures",
+      "seizure",
+      "acute_weakness"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Multiple neuro episodes need clustering and collapse red-flag screening. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "seizure_collapse_neuro_03_collapse_or_seizure_unclear",
+    "expectedComplaintModuleId": "seizure_collapse_neuro",
+    "acceptablePlannedQuestionIds": [
+      "seizure_neuro_check",
+      "collapse_weakness_check",
+      "neuro_seizure_duration",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "seizure",
+      "collapse",
+      "syncope"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing collapse versus seizure wording should still choose neuro or collapse emergency discriminators. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "toxin_poisoning_exposure_01_chocolate_and_vomit",
+    "expectedComplaintModuleId": "toxin_poisoning_exposure",
+    "acceptablePlannedQuestionIds": [
+      "toxin_exposure_check",
+      "emergency_global_screen",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "known_toxin_ingestion",
+      "suspected_toxin",
+      "persistent_vomiting"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Known exposure should keep toxin screening ahead of routine vomiting characterization. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "toxin_poisoning_exposure_02_rodent_bait_possible",
+    "expectedComplaintModuleId": "toxin_poisoning_exposure",
+    "acceptablePlannedQuestionIds": [
+      "toxin_exposure_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "suspected_toxin",
+      "known_toxin_ingestion"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Uncertain amount of suspected toxin should still screen exposure first."
+  },
+  {
+    "caseId": "toxin_poisoning_exposure_03_plant_and_wobbly_confuser",
+    "expectedComplaintModuleId": "toxin_poisoning_exposure",
+    "acceptablePlannedQuestionIds": [
+      "toxin_exposure_check",
+      "collapse_weakness_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "suspected_toxin",
+      "acute_weakness"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing multi-symptom exposure plus neuro-like signs should keep toxin exposure in the first screen set. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "gi_vomiting_diarrhea_01_repeated_vomiting",
+    "expectedComplaintModuleId": "gi_vomiting_diarrhea",
+    "acceptablePlannedQuestionIds": [
+      "gi_vomiting_frequency",
+      "gi_keep_water_down_check",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "persistent_vomiting",
+      "unable_to_retain_water"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Repeated vomiting should ask frequency or hydration stability before a broad intake question."
+  },
+  {
+    "caseId": "gi_vomiting_diarrhea_02_bloody_diarrhea",
+    "expectedComplaintModuleId": "gi_vomiting_diarrhea",
+    "acceptablePlannedQuestionIds": [
+      "gi_blood_check",
+      "gi_vomiting_frequency",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "hematochezia",
+      "persistent_vomiting"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Blood in stool should be captured as a GI red flag rather than buried after generic duration. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
+    "expectedComplaintModuleId": "gi_vomiting_diarrhea",
+    "acceptablePlannedQuestionIds": [
+      "gi_keep_water_down_check",
+      "gi_vomiting_frequency",
+      "gi_blood_check"
+    ],
+    "expectedSelectedBecause": [
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "unable_to_retain_water",
+      "persistent_vomiting"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Inability to keep water down is a high-value first question candidate in GI cases."
+  },
+  {
+    "caseId": "skin_itching_allergy_01_hives_after_sting",
+    "expectedComplaintModuleId": "skin_itching_allergy",
+    "acceptablePlannedQuestionIds": [
+      "skin_emergency_allergy_screen",
+      "emergency_global_screen",
+      "breathing_difficulty_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen"
+    ],
+    "mustScreenRedFlags": [
+      "urticaria",
+      "anaphylaxis",
+      "angioedema"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Spreading hives after a sting should screen allergy emergency flags before routine skin location."
+  },
+  {
+    "caseId": "skin_itching_allergy_02_paws_belly_itching",
+    "expectedComplaintModuleId": "skin_itching_allergy",
+    "acceptablePlannedQuestionIds": [
+      "skin_location_distribution",
+      "skin_changes_check",
+      "skin_exposure_check"
+    ],
+    "expectedSelectedBecause": [
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Routine itchy skin should prefer localizing and appearance questions, not a generic wellness prompt."
+  },
+  {
+    "caseId": "skin_itching_allergy_03_face_swelling_and_vomit_confuser",
+    "expectedComplaintModuleId": "skin_itching_allergy",
+    "acceptablePlannedQuestionIds": [
+      "skin_emergency_allergy_screen",
+      "breathing_difficulty_check",
+      "emergency_global_screen",
+      "gi_vomiting_frequency"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "angioedema",
+      "urticaria",
+      "anaphylaxis",
+      "persistent_vomiting"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": true,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Emergency or must-not-miss: Confusing multi-symptom allergy plus GI case must screen facial swelling and hives first. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  },
+  {
+    "caseId": "limping_mobility_pain_01_non_weight_bearing",
+    "expectedComplaintModuleId": "limping_mobility_pain",
+    "acceptablePlannedQuestionIds": [
+      "limping_weight_bearing",
+      "limping_trauma_onset",
+      "emergency_global_screen"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "non_weight_bearing"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Non-weight-bearing lameness should ask the weight-bearing discriminator first."
+  },
+  {
+    "caseId": "limping_mobility_pain_02_sudden_after_jump",
+    "expectedComplaintModuleId": "limping_mobility_pain",
+    "acceptablePlannedQuestionIds": [
+      "limping_weight_bearing",
+      "limping_trauma_onset",
+      "trauma_mechanism_check"
+    ],
+    "expectedSelectedBecause": [
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "post_trauma_lameness",
+      "non_weight_bearing"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Sudden onset after a jump needs mobility and trauma-onset candidates."
+  },
+  {
+    "caseId": "limping_mobility_pain_03_limping_with_wound_confuser",
+    "expectedComplaintModuleId": "limping_mobility_pain",
+    "acceptablePlannedQuestionIds": [
+      "limping_weight_bearing",
+      "limping_trauma_onset",
+      "wound_characterization_check",
+      "bleeding_volume_check"
+    ],
+    "expectedSelectedBecause": [
+      "emergency_screen",
+      "highest_information_gain"
+    ],
+    "mustScreenRedFlags": [
+      "post_trauma_lameness",
+      "non_weight_bearing",
+      "wound_deep_bleeding"
+    ],
+    "shouldBeatGenericQuestion": true,
+    "shouldScreenEmergencyEarlier": false,
+    "shouldAvoidRepeatedQuestion": true,
+    "notes": "Confusing multi-symptom lameness plus wound should avoid a generic pain question and keep mobility first. Acceptable ambiguity: mixed wording may justify multiple registry-backed first questions as long as safety-critical screening remains in front."
+  }
+]
