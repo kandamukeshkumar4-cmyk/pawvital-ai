@@ -1,8 +1,8 @@
 # Heat / Trauma Question-Card Reachability Guard (VET-1435Q)
 
-**Agent:** Qwen 3.6 Plus  
-**Branch:** `qwen/vet-1435q-heat-trauma-question-card-reachability-guard`  
-**Date:** 2026-05-04  
+**Agent:** Qwen 3.6 Plus
+**Branch:** `qwen/vet-1435q-heat-trauma-question-card-reachability-guard`
+**Date:** 2026-05-04
 **Scope:** Validation guard only. No runtime files, complaint modules, red flags, signals, or planner wiring changed.
 
 ---
