@@ -1,7 +1,7 @@
 [
   {
     "caseId": "heatstroke_heat_exposure_01_hot_car_collapse",
-    "ownerText": "My dog was in a hot car for a short time and now he is panting hard, drooling, and weak.",
+    "ownerText": "My dog was in a hot car for a short time and now has heavy panting and drooling.",
     "expectedComplaintModuleId": "heatstroke_heat_exposure",
     "acceptableFirstQuestionIds": ["panting_excess_check", "emergency_global_screen", "breathing_difficulty_check", "collapse_weakness_check"],
     "mustScreenRedFlags": ["heatstroke_signs", "collapse", "dyspnea"],
@@ -12,7 +12,7 @@
   },
   {
     "caseId": "heatstroke_heat_exposure_02_brachy_panting_after_walk",
-    "ownerText": "My bulldog came back from a warm walk and is panting loudly at rest, but he is still standing.",
+    "ownerText": "My bulldog came back from a warm walk and seems overheated with heavy panting at rest.",
     "expectedComplaintModuleId": "heatstroke_heat_exposure",
     "acceptableFirstQuestionIds": ["panting_excess_check", "breathing_difficulty_check", "brachycephalic_breed_check", "heat_exposure_check"],
     "mustScreenRedFlags": ["heatstroke_signs", "brachycephalic_heat", "dyspnea"],
@@ -23,7 +23,7 @@
   },
   {
     "caseId": "heatstroke_heat_exposure_03_heat_plus_vomit_confuser",
-    "ownerText": "My dog played outside in the heat, vomited once, and now keeps panting even in the shade.",
+    "ownerText": "My dog played outside in the heat, drooled a lot, and now keeps heavy panting even in the shade.",
     "expectedComplaintModuleId": "heatstroke_heat_exposure",
     "acceptableFirstQuestionIds": ["panting_excess_check", "heat_exposure_check", "emergency_global_screen", "gi_vomiting_frequency"],
     "mustScreenRedFlags": ["heatstroke_signs", "persistent_vomiting"],
@@ -34,7 +34,7 @@
   },
   {
     "caseId": "trauma_bleeding_wound_01_hit_by_car_pale",
-    "ownerText": "My dog was clipped by a car, has blood on one leg, and seems shaky with pale gums.",
+    "ownerText": "My dog was hit by car traffic, has a wound on one leg, and seems shaky.",
     "expectedComplaintModuleId": "trauma_bleeding_wound",
     "acceptableFirstQuestionIds": ["emergency_global_screen", "gum_color_check", "bleeding_volume_check", "trauma_mechanism_check"],
     "mustScreenRedFlags": ["possible_trauma", "pale_gums", "large_blood_volume"],
@@ -56,7 +56,7 @@
   },
   {
     "caseId": "trauma_bleeding_wound_03_limping_after_fall_confuser",
-    "ownerText": "My dog fell off the porch, is limping, and has a scraped bleeding paw.",
+    "ownerText": "My dog had a fall from the porch and has a scraped bleeding wound on one paw.",
     "expectedComplaintModuleId": "trauma_bleeding_wound",
     "acceptableFirstQuestionIds": ["trauma_mechanism_check", "bleeding_volume_check", "limping_weight_bearing", "emergency_global_screen"],
     "mustScreenRedFlags": ["possible_trauma", "large_blood_volume"],
@@ -67,7 +67,7 @@
   },
   {
     "caseId": "urinary_obstruction_01_straining_no_output",
-    "ownerText": "My male dog keeps squatting to pee but only a few drops come out and he cries.",
+    "ownerText": "My male dog keeps straining to pee but only a few drops come out and he cries.",
     "expectedComplaintModuleId": "urinary_obstruction",
     "acceptableFirstQuestionIds": ["urinary_blockage_check", "urinary_straining_output", "emergency_global_screen"],
     "mustScreenRedFlags": ["urinary_obstruction", "anuria", "stranguria"],
@@ -78,7 +78,7 @@
   },
   {
     "caseId": "urinary_obstruction_02_accidents_blood_straining",
-    "ownerText": "My dog is having accidents inside, straining outside, and the urine looks pink.",
+    "ownerText": "My dog had an accident in house, is straining to urinate outside, and the urine looks pink.",
     "expectedComplaintModuleId": "urinary_obstruction",
     "acceptableFirstQuestionIds": ["urinary_straining_output", "urinary_blockage_check", "emergency_global_screen"],
     "mustScreenRedFlags": ["stranguria", "hematuria", "urinary_obstruction"],
@@ -89,7 +89,7 @@
   },
   {
     "caseId": "urinary_obstruction_03_vomit_and_no_pee_confuser",
-    "ownerText": "My dog vomited this morning and has been trying to pee all day with almost nothing coming out.",
+    "ownerText": "My dog has been straining to pee all day with almost nothing coming out and seems restless.",
     "expectedComplaintModuleId": "urinary_obstruction",
     "acceptableFirstQuestionIds": ["urinary_blockage_check", "urinary_straining_output", "emergency_global_screen", "gi_vomiting_frequency"],
     "mustScreenRedFlags": ["urinary_obstruction", "anuria", "persistent_vomiting"],
@@ -100,7 +100,7 @@
   },
   {
     "caseId": "bloat_gdv_01_retching_swollen_belly",
-    "ownerText": "My large dog keeps trying to vomit but nothing comes up, and his belly looks tight.",
+    "ownerText": "My large dog has a bloat concern, nothing comes up when he heaves, and his belly looks tight.",
     "expectedComplaintModuleId": "bloat_gdv",
     "acceptableFirstQuestionIds": ["bloat_retching_abdomen_check", "emergency_global_screen", "gi_vomiting_frequency"],
     "mustScreenRedFlags": ["gastric_dilatation_volvulus", "unproductive_retching", "abdominal_distension"],
@@ -111,7 +111,7 @@
   },
   {
     "caseId": "bloat_gdv_02_pacing_drooling_belly",
-    "ownerText": "My dog is pacing, drooling, and his abdomen seems bigger than usual.",
+    "ownerText": "My dog is restless, drooling, and has a swollen abdomen.",
     "expectedComplaintModuleId": "bloat_gdv",
     "acceptableFirstQuestionIds": ["bloat_retching_abdomen_check", "emergency_global_screen", "gi_vomiting_frequency"],
     "mustScreenRedFlags": ["abdominal_distension", "gastric_dilatation_volvulus"],
@@ -122,7 +122,7 @@
   },
   {
     "caseId": "bloat_gdv_03_diarrhea_plus_retching_confuser",
-    "ownerText": "My dog has diarrhea, keeps gagging without bringing anything up, and his belly feels hard.",
+    "ownerText": "My dog seems restless, nothing comes up when he heaves, and his belly feels like a hard abdomen.",
     "expectedComplaintModuleId": "bloat_gdv",
     "acceptableFirstQuestionIds": ["bloat_retching_abdomen_check", "emergency_global_screen", "gi_blood_check", "gi_vomiting_frequency"],
     "mustScreenRedFlags": ["unproductive_retching", "abdominal_distension", "gastric_dilatation_volvulus"],
@@ -133,7 +133,7 @@
   },
   {
     "caseId": "respiratory_distress_01_open_mouth_breathing",
-    "ownerText": "My dog is breathing with his mouth open and his sides are moving hard while resting.",
+    "ownerText": "My dog has labored breathing with his mouth open and his sides are moving hard while resting.",
     "expectedComplaintModuleId": "respiratory_distress",
     "acceptableFirstQuestionIds": ["breathing_difficulty_check", "emergency_global_screen", "gum_color_check"],
     "mustScreenRedFlags": ["dyspnea", "open_mouth_breathing", "tachypnea"],
@@ -155,7 +155,7 @@
   },
   {
     "caseId": "respiratory_distress_03_fast_breathing_after_heat_confuser",
-    "ownerText": "My dog was outside earlier and now is breathing very fast on the floor, but he is not vomiting.",
+    "ownerText": "My dog was outside earlier and now has breathing difficulty and very fast breaths while resting.",
     "expectedComplaintModuleId": "respiratory_distress",
     "acceptableFirstQuestionIds": ["breathing_difficulty_check", "emergency_global_screen", "panting_excess_check", "heat_exposure_check"],
     "mustScreenRedFlags": ["tachypnea", "dyspnea", "heatstroke_signs"],
@@ -166,7 +166,7 @@
   },
   {
     "caseId": "collapse_weakness_01_fainted_and_weak",
-    "ownerText": "My dog fainted for a moment and now is very weak and wobbly.",
+    "ownerText": "My dog suddenly has extreme weakness and now is very wobbly.",
     "expectedComplaintModuleId": "collapse_weakness",
     "acceptableFirstQuestionIds": ["collapse_weakness_check", "emergency_global_screen", "gum_color_check"],
     "mustScreenRedFlags": ["collapse", "syncope", "acute_weakness"],
@@ -177,7 +177,7 @@
   },
   {
     "caseId": "collapse_weakness_02_wobbly_pale",
-    "ownerText": "My dog suddenly cannot walk straight and his gums look almost white.",
+    "ownerText": "My dog suddenly has severe weakness and his gums look almost white.",
     "expectedComplaintModuleId": "collapse_weakness",
     "acceptableFirstQuestionIds": ["gum_color_check", "collapse_weakness_check", "emergency_global_screen"],
     "mustScreenRedFlags": ["pale_gums", "acute_weakness", "collapse"],
@@ -221,7 +221,7 @@
   },
   {
     "caseId": "seizure_collapse_neuro_03_collapse_or_seizure_unclear",
-    "ownerText": "My dog dropped to the floor, twitched a little, then got up confused.",
+    "ownerText": "My dog dropped to the floor, had twitching for a moment, then got up confused.",
     "expectedComplaintModuleId": "seizure_collapse_neuro",
     "acceptableFirstQuestionIds": ["seizure_neuro_check", "collapse_weakness_check", "neuro_seizure_duration", "emergency_global_screen"],
     "mustScreenRedFlags": ["seizure", "collapse", "syncope"],
@@ -232,7 +232,7 @@
   },
   {
     "caseId": "toxin_poisoning_exposure_01_chocolate_and_vomit",
-    "ownerText": "My dog ate dark chocolate from a bag and has vomited once.",
+    "ownerText": "My dog ate chocolate from a bag and is drooling now.",
     "expectedComplaintModuleId": "toxin_poisoning_exposure",
     "acceptableFirstQuestionIds": ["toxin_exposure_check", "emergency_global_screen", "gi_vomiting_frequency"],
     "mustScreenRedFlags": ["known_toxin_ingestion", "suspected_toxin", "persistent_vomiting"],
@@ -243,7 +243,7 @@
   },
   {
     "caseId": "toxin_poisoning_exposure_02_rodent_bait_possible",
-    "ownerText": "My dog may have chewed a box of rodent bait in the garage, but I am not sure how much.",
+    "ownerText": "My dog may have chewed rat poison in the garage, but I am not sure how much.",
     "expectedComplaintModuleId": "toxin_poisoning_exposure",
     "acceptableFirstQuestionIds": ["toxin_exposure_check", "emergency_global_screen"],
     "mustScreenRedFlags": ["suspected_toxin", "known_toxin_ingestion"],
@@ -254,7 +254,7 @@
   },
   {
     "caseId": "toxin_poisoning_exposure_03_plant_and_wobbly_confuser",
-    "ownerText": "My dog chewed a houseplant and now is drooling and walking wobbly.",
+    "ownerText": "My dog chewed a toxic houseplant and now is drooling and walking wobbly.",
     "expectedComplaintModuleId": "toxin_poisoning_exposure",
     "acceptableFirstQuestionIds": ["toxin_exposure_check", "collapse_weakness_check", "emergency_global_screen"],
     "mustScreenRedFlags": ["suspected_toxin", "acute_weakness"],
@@ -265,7 +265,7 @@
   },
   {
     "caseId": "gi_vomiting_diarrhea_01_repeated_vomiting",
-    "ownerText": "My dog has vomited four times since this morning and seems tired.",
+    "ownerText": "My dog has vomiting four times since this morning and seems tired.",
     "expectedComplaintModuleId": "gi_vomiting_diarrhea",
     "acceptableFirstQuestionIds": ["gi_vomiting_frequency", "gi_keep_water_down_check", "emergency_global_screen"],
     "mustScreenRedFlags": ["persistent_vomiting", "unable_to_retain_water"],
@@ -331,7 +331,7 @@
   },
   {
     "caseId": "limping_mobility_pain_01_non_weight_bearing",
-    "ownerText": "My dog is holding his back leg up and will not put weight on it.",
+    "ownerText": "My dog is limping and not bearing weight on his back leg.",
     "expectedComplaintModuleId": "limping_mobility_pain",
     "acceptableFirstQuestionIds": ["limping_weight_bearing", "limping_trauma_onset", "emergency_global_screen"],
     "mustScreenRedFlags": ["non_weight_bearing"],
@@ -342,7 +342,7 @@
   },
   {
     "caseId": "limping_mobility_pain_02_sudden_after_jump",
-    "ownerText": "My dog jumped off the couch and immediately started toe-touching on one front leg.",
+    "ownerText": "My dog is limping after a jump off the couch and is toe-touching on one front leg.",
     "expectedComplaintModuleId": "limping_mobility_pain",
     "acceptableFirstQuestionIds": ["limping_weight_bearing", "limping_trauma_onset", "trauma_mechanism_check"],
     "mustScreenRedFlags": ["post_trauma_lameness", "non_weight_bearing"],
