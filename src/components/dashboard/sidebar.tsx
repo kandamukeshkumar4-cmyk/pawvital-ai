@@ -26,10 +26,10 @@ import { useAppStore } from "@/store/app-store";
 import { useAuth } from "@/hooks/useSupabase";
 
 const primaryNav = [
-  { href: "/hooked", icon: AlertTriangle, label: "Check Now" },
-  { href: "/paw-hub", icon: Heart, label: "Today" },
+  { href: "/check-now", icon: AlertTriangle, label: "Check Now" },
+  { href: "/today", icon: Heart, label: "Today" },
   { href: "/vet-prep", icon: ClipboardCheck, label: "Vet Prep" },
-  { href: "/pets", icon: PawPrint, label: "My Dogs" },
+  { href: "/my-dog", icon: PawPrint, label: "My Dogs" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 

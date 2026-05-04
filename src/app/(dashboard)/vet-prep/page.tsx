@@ -1,526 +1,254 @@
 "use client";
 
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import {
-  ClipboardCheck,
-  Calendar,
-  Pill,
-  AlertCircle,
-  FileText,
-  Copy,
-  Check,
-  Printer,
-  ChevronDown,
-  ChevronRight,
-  Stethoscope,
-  MessageSquare,
-  Camera,
+  Copy, Check, Share2, Printer,
+  FileText, Shield, Users,
 } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import { useAppStore } from "@/store/app-store";
-import type { Pet } from "@/types";
+import {
+  loadCare, getChangeScore, generateVetPacketText,
+  type CareState, type VetPacket,
+} from "@/lib/care-engine/store";
 
-interface VetPrepConcern {
-  id: string;
-  text: string;
-  priority: "high" | "medium" | "low";
-}
+const hydrate = useSyncExternalStore.bind(null, () => () => {}, () => true, () => false);
 
-interface VetPrepSection {
-  id: string;
-  title: string;
-  icon: typeof ClipboardCheck;
-  content: string;
-  items?: string[];
-  badge?: { text: string; variant: "danger" | "warning" | "info" | "success" };
-}
+type PacketType = VetPacket["type"];
 
-function buildPetSummary(pet: Pet): string {
-  const age =
-    pet.age_months > 0
-      ? `${pet.age_years} years ${pet.age_months} months`
-      : `${pet.age_years} years`;
-  const parts = [
-    `**${pet.name}** — ${pet.breed}, ${age}, ${pet.weight} ${pet.weight_unit}, ${pet.gender}${pet.is_neutered ? " (neutered)" : ""}`,
-  ];
-  if (pet.existing_conditions.length > 0) {
-    parts.push(`Known conditions: ${pet.existing_conditions.join(", ")}`);
-  }
-  if (pet.medications.length > 0) {
-    parts.push(`Current medications: ${pet.medications.join(", ")}`);
-  }
-  return parts.join("\n");
-}
-
-function buildSections(pet: Pet, concerns: VetPrepConcern[]): VetPrepSection[] {
-  const sections: VetPrepSection[] = [
-    {
-      id: "profile",
-      title: "Dog Profile",
-      icon: FileText,
-      content: buildPetSummary(pet),
-    },
-  ];
-
-  if (pet.existing_conditions.length > 0) {
-    sections.push({
-      id: "conditions",
-      title: "Known Conditions",
-      icon: AlertCircle,
-      content: `${pet.name} has the following known conditions that may be relevant to today's visit.`,
-      items: pet.existing_conditions,
-      badge: { text: `${pet.existing_conditions.length} conditions`, variant: "warning" },
-    });
-  }
-
-  if (pet.medications.length > 0) {
-    sections.push({
-      id: "medications",
-      title: "Current Medications",
-      icon: Pill,
-      content: "Current medications and supplements:",
-      items: pet.medications,
-      badge: { text: `${pet.medications.length} active`, variant: "info" },
-    });
-  }
-
-  if (concerns.length > 0) {
-    const highPriority = concerns.filter((c) => c.priority === "high");
-    const others = concerns.filter((c) => c.priority !== "high");
-    sections.push({
-      id: "concerns",
-      title: "Your Top Concerns",
-      icon: MessageSquare,
-      content:
-        highPriority.length > 0
-          ? `${highPriority.length} high-priority concern${highPriority.length > 1 ? "s" : ""} to discuss first.`
-          : "Concerns to discuss with your vet:",
-      items: [...highPriority, ...others].map(
-        (c) => `[${c.priority.toUpperCase()}] ${c.text}`,
-      ),
-      badge:
-        highPriority.length > 0
-          ? { text: `${highPriority.length} urgent`, variant: "danger" as const }
-          : undefined,
-    });
-  }
-
-  return sections;
-}
-
-const SUGGESTED_VET_QUESTIONS = [
-  "What could be causing these symptoms?",
-  "Are there any tests you'd recommend?",
-  "Could this be related to their current medications?",
-  "What should I watch for at home?",
-  "When should I bring them back if things don't improve?",
-  "Are there any dietary changes that might help?",
-  "Is this normal for their age/breed?",
-  "Should we adjust any of their current medications?",
+const PACKET_TYPES: { id: PacketType; label: string; description: string; emoji: string }[] = [
+  { id: "vet_visit", label: "Vet Visit Packet", description: "Normal appointment prep", emoji: "🏥" },
+  { id: "emergency", label: "Emergency Packet", description: "ER visit — fast context", emoji: "🚨" },
+  { id: "med_review", label: "Medication Review", description: "New med or side effect concern", emoji: "💊" },
+  { id: "quality_of_life", label: "Quality-of-Life Packet", description: "End-of-life conversation", emoji: "💛" },
+  { id: "sitter_handoff", label: "Sitter / Family Handoff", description: "Boarding, pet sitter, family member", emoji: "👥" },
 ];
 
-function CollapsibleSection({ section }: { section: VetPrepSection }) {
-  const [open, setOpen] = useState(true);
-  const Icon = section.icon;
-
-  return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-      >
-        <Icon className="h-5 w-5 text-gray-500 shrink-0" />
-        <span className="flex-1 text-sm font-semibold text-gray-900">
-          {section.title}
-        </span>
-        {section.badge && (
-          <Badge variant={section.badge.variant}>{section.badge.text}</Badge>
-        )}
-        {open ? (
-          <ChevronDown className="h-4 w-4 text-gray-400" />
-        ) : (
-          <ChevronRight className="h-4 w-4 text-gray-400" />
-        )}
-      </button>
-      {open && (
-        <div className="px-4 pb-4 border-t border-gray-100">
-          <p className="mt-3 text-sm text-gray-600 whitespace-pre-line">
-            {section.content}
-          </p>
-          {section.items && section.items.length > 0 && (
-            <ul className="mt-2 space-y-1">
-              {section.items.map((item, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-2 text-sm text-gray-700"
-                >
-                  <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-gray-400 shrink-0" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function buildPlainTextSummary(
-  pet: Pet,
-  concerns: VetPrepConcern[],
-  selectedQuestions: string[],
-): string {
-  const lines: string[] = [];
-  lines.push("=== VET VISIT PREP — PawVital ===");
-  lines.push("");
-  lines.push(`Dog: ${pet.name}`);
-  lines.push(`Breed: ${pet.breed}`);
-  const age =
-    pet.age_months > 0
-      ? `${pet.age_years}y ${pet.age_months}m`
-      : `${pet.age_years}y`;
-  lines.push(`Age: ${age}`);
-  lines.push(`Weight: ${pet.weight} ${pet.weight_unit}`);
-  lines.push(`Sex: ${pet.gender}${pet.is_neutered ? " (neutered)" : ""}`);
-
-  if (pet.existing_conditions.length > 0) {
-    lines.push("");
-    lines.push("KNOWN CONDITIONS:");
-    pet.existing_conditions.forEach((c) => lines.push(`  • ${c}`));
-  }
-
-  if (pet.medications.length > 0) {
-    lines.push("");
-    lines.push("CURRENT MEDICATIONS:");
-    pet.medications.forEach((m) => lines.push(`  • ${m}`));
-  }
-
-  if (concerns.length > 0) {
-    lines.push("");
-    lines.push("CONCERNS TO DISCUSS:");
-    concerns.forEach((c) =>
-      lines.push(`  [${c.priority.toUpperCase()}] ${c.text}`),
-    );
-  }
-
-  if (selectedQuestions.length > 0) {
-    lines.push("");
-    lines.push("QUESTIONS TO ASK THE VET:");
-    selectedQuestions.forEach((q) => lines.push(`  • ${q}`));
-  }
-
-  lines.push("");
-  lines.push(`Prepared: ${new Date().toLocaleDateString()}`);
-  lines.push("Generated by PawVital AI — pawvital.com");
-
-  return lines.join("\n");
-}
+const HANDOFF_SECTIONS = [
+  { id: "feeding", label: "Feeding Schedule", placeholder: "e.g. 1 cup kibble at 7 AM and 5 PM, no table scraps" },
+  { id: "meds", label: "Medication Instructions", placeholder: "e.g. Carprofen 75mg with breakfast, Gabapentin 100mg at 8 PM" },
+  { id: "walks", label: "Walk / Exercise Routine", placeholder: "e.g. 15 min walk morning and evening, avoid stairs" },
+  { id: "bathroom", label: "Bathroom Routine", placeholder: "e.g. Let out after meals, may have accidents overnight" },
+  { id: "anxiety", label: "Anxiety / Behavior Notes", placeholder: "e.g. Anxious during storms, paces at night — this is normal for him" },
+  { id: "emergency", label: "If Something Goes Wrong", placeholder: "e.g. Call me first. If can't reach me, take to Valley Emergency Vet" },
+];
 
 export default function VetPrepPage() {
   const { activePet } = useAppStore();
-  const [concerns, setConcerns] = useState<VetPrepConcern[]>([]);
-  const [newConcern, setNewConcern] = useState("");
-  const [newPriority, setNewPriority] = useState<VetPrepConcern["priority"]>("medium");
-  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
+  const petName = activePet?.name ?? "Cooper";
+  const ready = hydrate();
+
+  const care: CareState = useMemo(() => loadCare(petName), [petName]);
+  const cs = useMemo(() => getChangeScore(care), [care]);
+
+  const [activeTab, setActiveTab] = useState<"packet" | "handoff">("packet");
+  const [selectedType, setSelectedType] = useState<PacketType>("vet_visit");
   const [copied, setCopied] = useState(false);
-  const summaryRef = useRef<HTMLDivElement>(null);
+  const [concerns, setConcerns] = useState<string[]>([]);
+  const [newConcern, setNewConcern] = useState("");
+  const [handoffFields, setHandoffFields] = useState<Record<string, string>>({});
+  const [handoffCopied, setHandoffCopied] = useState(false);
 
-  const pet: Pet = useMemo(
-    () =>
-      activePet ?? {
-        id: "demo",
-        user_id: "demo",
-        name: "Your Dog",
-        species: "dog",
-        breed: "Unknown",
-        age_years: 7,
-        age_months: 0,
-        weight: 50,
-        weight_unit: "lbs",
-        gender: "male",
-        is_neutered: true,
-        existing_conditions: ["Arthritis"],
-        medications: ["Carprofen", "Glucosamine"],
-        created_at: "",
-        updated_at: "",
-      },
-    [activePet],
-  );
+  const packetText = useMemo(() => generateVetPacketText(care, selectedType), [care, selectedType]);
 
-  const sections = useMemo(
-    () => buildSections(pet, concerns),
-    [pet, concerns],
-  );
+  const handleCopyPacket = useCallback(async () => {
+    const full = concerns.length > 0
+      ? `${packetText}\n\nConcerns to Discuss:\n${concerns.map((c) => `  • ${c}`).join("\n")}`
+      : packetText;
+    try { await navigator.clipboard.writeText(full); } catch { /* */ }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [packetText, concerns]);
 
-  const addConcern = useCallback(() => {
+  const handleAddConcern = useCallback(() => {
     const text = newConcern.trim();
     if (!text) return;
-    setConcerns((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), text, priority: newPriority },
-    ]);
+    setConcerns((prev) => [...prev, text]);
     setNewConcern("");
-  }, [newConcern, newPriority]);
+  }, [newConcern]);
 
-  const removeConcern = useCallback((id: string) => {
-    setConcerns((prev) => prev.filter((c) => c.id !== id));
-  }, []);
-
-  const toggleQuestion = useCallback((q: string) => {
-    setSelectedQuestions((prev) =>
-      prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q],
-    );
-  }, []);
-
-  const handleCopy = useCallback(async () => {
-    const text = buildPlainTextSummary(pet, concerns, selectedQuestions);
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  const handoffText = useMemo(() => {
+    const lines = [`=== ${petName}'s Care Handoff ===`, `Generated: ${new Date().toLocaleDateString()}`, ""];
+    for (const s of HANDOFF_SECTIONS) {
+      if (handoffFields[s.id]?.trim()) {
+        lines.push(`${s.label}:`);
+        lines.push(`  ${handoffFields[s.id]}`);
+        lines.push("");
+      }
     }
-  }, [pet, concerns, selectedQuestions]);
+    lines.push("— Generated by PawVital AI");
+    return lines.join("\n");
+  }, [petName, handoffFields]);
 
-  const handlePrint = useCallback(() => {
-    window.print();
-  }, []);
+  const handleCopyHandoff = useCallback(async () => {
+    try { await navigator.clipboard.writeText(handoffText); } catch { /* */ }
+    setHandoffCopied(true);
+    setTimeout(() => setHandoffCopied(false), 2000);
+  }, [handoffText]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      addConcern();
-    }
-  };
+  if (!ready) return <div className="flex items-center justify-center py-24 text-gray-400">Loading...</div>;
+
+  const recentSymptoms = care.symptomLog.slice(0, 5);
+  const activePlans = care.plans.filter((p) => p.status === "active");
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {/* Header */}
+    <div className="mx-auto max-w-3xl space-y-6 pb-12">
       <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
-            <ClipboardCheck className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Vet Visit Prep
-            </h1>
-            <p className="text-sm text-gray-500">
-              Prepare everything your vet needs for {pet.name}&apos;s visit
-            </p>
-          </div>
-        </div>
-        <p className="text-gray-600 text-sm mt-2">
-          Build a vet-ready summary with {pet.name}&apos;s profile, conditions,
-          medications, your concerns, and questions to ask — then copy or print
-          it.
-        </p>
+        <h1 className="text-2xl font-black text-gray-900">Vet Prep</h1>
+        <p className="text-sm text-gray-500">Generate a vet-ready summary or sitter handoff for {petName}</p>
       </div>
 
-      {/* Add concerns */}
-      <Card className="p-5">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-          <MessageSquare className="h-4 w-4 text-emerald-600" />
-          What do you want to discuss?
-        </h2>
-        <p className="text-xs text-gray-500 mb-3">
-          Add your concerns — what&apos;s changed, what worries you, what you
-          want the vet to check.
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <input
-            type="text"
-            value={newConcern}
-            onChange={(e) => setNewConcern(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={`e.g. "${pet.name} has been limping more after walks"`}
-            className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-          <select
-            value={newPriority}
-            onChange={(e) =>
-              setNewPriority(e.target.value as VetPrepConcern["priority"])
-            }
-            className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-          <Button onClick={addConcern} disabled={!newConcern.trim()}>
-            Add
-          </Button>
-        </div>
+      {/* Tab switcher */}
+      <div className="flex rounded-xl bg-gray-100 p-1">
+        <button onClick={() => setActiveTab("packet")}
+          className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${activeTab === "packet" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}
+        >
+          <FileText className="inline h-4 w-4 mr-1.5" />Vet Packet
+        </button>
+        <button onClick={() => setActiveTab("handoff")}
+          className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${activeTab === "handoff" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}
+        >
+          <Users className="inline h-4 w-4 mr-1.5" />Care Handoff
+        </button>
+      </div>
 
-        {concerns.length > 0 && (
-          <ul className="mt-3 space-y-2">
-            {concerns.map((c) => (
-              <li
-                key={c.id}
-                className="flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2"
-              >
-                <Badge
-                  variant={
-                    c.priority === "high"
-                      ? "danger"
-                      : c.priority === "medium"
-                        ? "warning"
-                        : "info"
-                  }
-                >
-                  {c.priority}
-                </Badge>
-                <span className="flex-1 text-sm text-gray-800">{c.text}</span>
-                <button
-                  onClick={() => removeConcern(c.id)}
-                  className="text-gray-400 hover:text-red-500 transition-colors text-sm"
-                  aria-label="Remove concern"
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      {/* Questions to ask */}
-      <Card className="p-5">
-        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-          <Stethoscope className="h-4 w-4 text-emerald-600" />
-          Questions to Ask Your Vet
-        </h2>
-        <p className="text-xs text-gray-500 mb-3">
-          Select the questions you want to remember to ask during the
-          appointment.
-        </p>
-        <div className="grid grid-cols-1 gap-2">
-          {SUGGESTED_VET_QUESTIONS.map((q) => {
-            const selected = selectedQuestions.includes(q);
-            return (
-              <button
-                key={q}
-                onClick={() => toggleQuestion(q)}
-                className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 text-left text-sm transition-all ${
-                  selected
-                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
-                    : "border-gray-200 bg-white text-gray-700 hover:border-emerald-200 hover:bg-emerald-50/50"
+      {activeTab === "packet" && (
+        <>
+          {/* Packet type selector */}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {PACKET_TYPES.map((t) => (
+              <button key={t.id} onClick={() => setSelectedType(t.id)}
+                className={`flex items-center gap-3 rounded-xl border-2 p-3.5 text-left transition-all ${
+                  selectedType === t.id ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-indigo-200"
                 }`}
               >
-                <span
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${
-                    selected
-                      ? "border-emerald-600 bg-emerald-600"
-                      : "border-gray-300"
-                  }`}
-                >
-                  {selected && <Check className="h-3 w-3 text-white" />}
-                </span>
-                {q}
+                <span className="text-xl">{t.emoji}</span>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{t.label}</p>
+                  <p className="text-xs text-gray-500">{t.description}</p>
+                </div>
               </button>
-            );
-          })}
-        </div>
-      </Card>
+            ))}
+          </div>
 
-      {/* Generated summary */}
-      <div ref={summaryRef}>
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-emerald-600" />
-              Vet-Ready Summary
-            </h2>
+          {/* Add concerns */}
+          <Card className="p-4">
+            <p className="text-sm font-semibold text-gray-800 mb-2">Your concerns</p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCopy}
-              >
-                {copied ? (
-                  <>
-                    <Check className="mr-1 h-3 w-3" />
-                    Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-1 h-3 w-3" />
-                    Copy
-                  </>
-                )}
+              <input type="text" value={newConcern} onChange={(e) => setNewConcern(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddConcern()}
+                placeholder="e.g. Limping more after walks lately"
+                className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <Button onClick={handleAddConcern} disabled={!newConcern.trim()} size="sm">Add</Button>
+            </div>
+            {concerns.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {concerns.map((c, i) => (
+                  <li key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />{c}
+                    <button onClick={() => setConcerns((prev) => prev.filter((_, j) => j !== i))} className="ml-auto text-gray-400 hover:text-red-500 text-xs">×</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          {/* Generated packet preview */}
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-4">
+              <p className="text-sm text-white/80">{petName}&apos;s {PACKET_TYPES.find((t) => t.id === selectedType)?.label}</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xl font-black text-white">Health Score: {cs.score}/100</p>
+                <Badge variant={cs.trend === "improving" ? "success" : cs.trend === "declining" ? "danger" : "info"} className="bg-white/20 text-white">{cs.trend}</Badge>
+              </div>
+            </div>
+            <div className="p-5 space-y-3">
+              {cs.changes.length > 0 && (
+                <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                  <p className="text-xs font-bold text-amber-800 uppercase mb-1">Changes Noticed</p>
+                  {cs.changes.map((c, i) => <p key={i} className="text-sm text-amber-900">• {c}</p>)}
+                </div>
+              )}
+              {recentSymptoms.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-1">Recent Symptoms</p>
+                  {recentSymptoms.map((s) => (
+                    <p key={s.id} className="text-sm text-gray-700">{s.date.slice(5)} — {s.symptom} ({s.verdict})</p>
+                  ))}
+                </div>
+              )}
+              {activePlans.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-1">Active Care Plans</p>
+                  {activePlans.map((p) => (
+                    <p key={p.id} className="text-sm text-gray-700">{p.title} — {p.checkIns.length} check-ins</p>
+                  ))}
+                </div>
+              )}
+              {concerns.length > 0 && (
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase mb-1">Your Concerns</p>
+                  {concerns.map((c, i) => <p key={i} className="text-sm text-gray-700">• {c}</p>)}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-gray-100 px-5 py-3 flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleCopyPacket}>
+                {copied ? <><Check className="mr-1 h-3 w-3" />Copied</> : <><Copy className="mr-1 h-3 w-3" />Copy</>}
               </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="mr-1 h-3 w-3" />
-                Print
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="mr-1 h-3 w-3" />Print
+              </Button>
+              <Button size="sm">
+                <Share2 className="mr-1 h-3 w-3" />Share
               </Button>
             </div>
-          </div>
+          </Card>
+        </>
+      )}
 
-          <div className="space-y-3">
-            {sections.map((s) => (
-              <CollapsibleSection key={s.id} section={s} />
-            ))}
-
-            {selectedQuestions.length > 0 && (
-              <div className="border border-gray-200 rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                  Questions to Ask
-                </h3>
-                <ul className="space-y-1">
-                  {selectedQuestions.map((q, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm text-gray-700"
-                    >
-                      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                      {q}
-                    </li>
-                  ))}
-                </ul>
+      {activeTab === "handoff" && (
+        <>
+          <Card className="p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-bold text-gray-900">Care Handoff for {petName}</p>
+                <p className="text-xs text-gray-500">Fill out what the sitter / family member needs to know</p>
               </div>
-            )}
-          </div>
-        </Card>
-      </div>
+            </div>
+            <div className="space-y-4">
+              {HANDOFF_SECTIONS.map((s) => (
+                <div key={s.id}>
+                  <label className="text-sm font-medium text-gray-800 block mb-1">{s.label}</label>
+                  <textarea
+                    value={handoffFields[s.id] ?? ""}
+                    onChange={(e) => setHandoffFields((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                    placeholder={s.placeholder}
+                    rows={2}
+                    className="w-full resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+            </div>
+          </Card>
 
-      {/* Tips */}
-      <Card className="p-5 border-emerald-200 bg-emerald-50">
-        <h3 className="text-sm font-semibold text-emerald-900 mb-2 flex items-center gap-2">
-          <Camera className="h-4 w-4" />
-          Pro Tips for Your Visit
-        </h3>
-        <ul className="space-y-1.5 text-sm text-emerald-800">
-          <li className="flex items-start gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
-            Take photos or short videos of symptoms before the visit — limping,
-            skin issues, odd behavior
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
-            Note when symptoms started and how often they happen
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
-            Bring all medication bottles — including supplements and CBD
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
-            Write down your top 3 concerns so you don&apos;t forget in the moment
-          </li>
-        </ul>
-      </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleCopyHandoff}>
+              {handoffCopied ? <><Check className="mr-1 h-4 w-4" />Copied</> : <><Copy className="mr-1 h-4 w-4" />Copy Handoff</>}
+            </Button>
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="mr-1 h-4 w-4" />Print
+            </Button>
+            <Button>
+              <Share2 className="mr-1 h-4 w-4" />Share via Text
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

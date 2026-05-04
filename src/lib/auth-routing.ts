@@ -4,6 +4,9 @@ export const DEFAULT_AUTH_REDIRECT = "/dashboard";
 export const RESET_PASSWORD_PATH = "/reset-password";
 
 export const PROTECTED_PATH_PREFIXES = [
+  "/check-now",
+  "/today",
+  "/my-dog",
   "/hooked",
   "/paw-hub",
   "/dashboard",
