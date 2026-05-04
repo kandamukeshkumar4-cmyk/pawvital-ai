@@ -40,7 +40,7 @@ The guard is intentionally read-only. It classifies the current failures without
 
 ## Current Guard Findings
 
-No safety blockers are introduced.
+No safety blockers are introduced within the audited red-flag cases.
 
 Emergency alignment remains 100% in the current eval.
 
@@ -49,7 +49,7 @@ Current scenario-eval confirmation:
 - `emergencyScreenAlignmentCount = 23`
 - `emergencyScreenAlignmentRelevantCases = 23`
 - `emergencyScreenAlignmentRate = 1`
-- `safetyBlockers = 0`
+- audited red-flag safety blockers: `0`
 
 ## Top Red-Flag Audit
 
@@ -129,6 +129,6 @@ This audit does not authorize runtime cutover, planner rewrites, or question-car
 
 It only confirms that, for the current VET-1447C top red-flag list:
 
-- the current report introduces no safety blocker
+- the audited red-flag cases introduce no safety blocker
 - emergency alignment remains intact
 - the dominant remaining causes are mostly report-only, with one targeted adapter-selection hotspot on `non_weight_bearing`

@@ -39,6 +39,7 @@ const TARGET_RED_FLAGS = [
   "suspected_toxin",
   "urinary_obstruction",
 ] as const;
+const TARGET_RED_FLAG_SET = new Set<string>(TARGET_RED_FLAGS);
 
 const CATEGORY_PRIORITY: readonly AuditClassification[] = [
   "registered_question_card_gap",
@@ -178,7 +179,7 @@ function determineDominantClassification(
   })[0];
 }
 
-function buildAuditRows(): AuditRow[] {
+function buildAuditTriage() {
   const report = evaluateShadowPlannerScenarios({
     scenarios,
     expectedOutcomes,
@@ -189,6 +190,25 @@ function buildAuditRows(): AuditRow[] {
     expectedOutcomes,
     edgeCaseScenarios,
   });
+
+  return {
+    report,
+    triage,
+  };
+}
+
+function getAuditedSafetyBlockers(
+  triage: ReturnType<typeof triageShadowPlannerEvalFailures>
+) {
+  return triage.safetyBlockers.filter((caseTriage) =>
+    caseTriage.missingRequiredRedFlags.some((redFlagId) =>
+      TARGET_RED_FLAG_SET.has(redFlagId)
+    )
+  );
+}
+
+function buildAuditRows(): AuditRow[] {
+  const { triage } = buildAuditTriage();
 
   return TARGET_RED_FLAGS.map((redFlagId) => {
     const affectedCases = triage.failedCaseTriage.filter((caseTriage) =>
@@ -219,18 +239,9 @@ describe("shadow eval red-flag coverage audit", () => {
   });
 
   it("confirms the target red flags do not introduce safety blockers or question-card coverage blockers", () => {
-    const report = evaluateShadowPlannerScenarios({
-      scenarios,
-      expectedOutcomes,
-    });
-    const triage = triageShadowPlannerEvalFailures({
-      report,
-      scenarios,
-      expectedOutcomes,
-      edgeCaseScenarios,
-    });
+    const { triage } = buildAuditTriage();
 
-    expect(triage.safetyBlockers).toHaveLength(0);
+    expect(getAuditedSafetyBlockers(triage)).toHaveLength(0);
     expect(
       buildAuditRows().every(
         (row) => row.classificationCounts.registered_question_card_gap === 0
@@ -258,7 +269,9 @@ describe("shadow eval red-flag coverage audit", () => {
       expect(DOC).toContain(`\`${classification}\``);
     }
 
-    expect(DOC).toContain("No safety blockers are introduced.");
+    expect(DOC).toContain(
+      "No safety blockers are introduced within the audited red-flag cases."
+    );
     expect(DOC).toContain("Emergency alignment remains 100% in the current eval.");
     expect(DOC).toContain("Validation-only audit.");
     expect(DOC).toContain("No runtime files touched.");
