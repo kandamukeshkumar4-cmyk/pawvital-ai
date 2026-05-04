@@ -31,7 +31,7 @@ The intent is report-only triage for future reviewers:
   Use this class when the failed-case reason says `Emergency-screen alignment expectation was not met` or when `emergencyScreenAlignmentRate` falls because a case marked `shouldScreenEmergencyEarlier` no longer reaches an emergency-screen question.
 
 - `repeated_question_regression`
-  Use this class when the failed-case reason says `Repeated-question avoidance expectation was not met` or when the planner repeats the generic baseline instead of moving forward.
+  Use this class when the failed-case reason says `Repeated-question avoidance expectation was not met`, when `repeatedQuestionAvoidanceRate` drops, or when the planner repeats the generic baseline instead of moving forward.
 
 - `acceptable_ambiguity`
   Use this class when a confusing multi-symptom case picks a safe registry-backed alternative that preserves complaint-module detection, emergency behavior, required red-flag coverage, and repeat avoidance, but the fixture acceptable-question set is too narrow.

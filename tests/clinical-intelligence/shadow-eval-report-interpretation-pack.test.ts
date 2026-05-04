@@ -100,6 +100,32 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function getFailureClassBlock(failureClass: string): string {
+  const match = DOC.match(
+    new RegExp(
+      `- \`${escapeRegExp(failureClass)}\`\\s*[\\s\\S]*?(?=\\n- \`|\\n## )`
+    )
+  );
+
+  if (!match) {
+    throw new Error(`Missing failure class block for ${failureClass}`);
+  }
+
+  return match[0];
+}
+
+function getMetricActionRow(metric: string): string {
+  const match = DOC.match(
+    new RegExp(`^\\|\\s*\`${escapeRegExp(metric)}\`\\s*\\|.*$`, "m")
+  );
+
+  if (!match) {
+    throw new Error(`Missing metric-to-action row for ${metric}`);
+  }
+
+  return match[0];
+}
+
 describe("shadow eval report interpretation pack", () => {
   it("documents the required failure classes against the live shadow-eval harness surface", () => {
     const report = evaluateShadowPlannerScenarios({
@@ -119,14 +145,10 @@ describe("shadow eval report interpretation pack", () => {
     }
 
     for (const evidence of FAILURE_CLASS_EVIDENCE) {
+      const classBlock = getFailureClassBlock(evidence.name);
+
       for (const phrase of evidence.phrases) {
-        expect(DOC).toMatch(
-          new RegExp(
-            `\\\`${escapeRegExp(evidence.name)}\\\`[\\s\\S]*?${escapeRegExp(
-              phrase
-            )}`
-          )
-        );
+        expect(classBlock).toContain(phrase);
       }
     }
   });
@@ -138,14 +160,10 @@ describe("shadow eval report interpretation pack", () => {
     });
 
     for (const { metric, actionFragment } of REQUIRED_METRIC_ACTIONS) {
+      const metricRow = getMetricActionRow(metric);
+
       expect(report.summary).toHaveProperty(metric);
-      expect(DOC).toMatch(
-        new RegExp(
-          `\\\`${escapeRegExp(metric)}\\\`[\\s\\S]*?${escapeRegExp(
-            actionFragment
-          )}`
-        )
-      );
+      expect(metricRow).toContain(actionFragment);
     }
   });
 
