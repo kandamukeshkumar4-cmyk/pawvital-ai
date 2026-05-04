@@ -59,7 +59,23 @@ const expectedOutcomes = JSON.parse(
     "utf8"
   )
 );
-const report = evaluateShadowPlannerScenarios({ scenarios, expectedOutcomes });
+const edgeScenarios = JSON.parse(
+  fs.readFileSync(
+    path.join(
+      process.cwd(),
+      "tests",
+      "fixtures",
+      "clinical-intelligence",
+      "shadow-planner-edge-case-scenarios.json"
+    ),
+    "utf8"
+  )
+);
+const report = evaluateShadowPlannerScenarios({
+  scenarios,
+  expectedOutcomes,
+  edgeScenarios,
+});
 
 if (${options.json ? "true" : "false"}) {
   console.log(JSON.stringify(report.summary, null, 2));

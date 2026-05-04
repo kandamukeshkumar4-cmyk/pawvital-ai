@@ -33,8 +33,30 @@ export interface ShadowPlannerExpectedOutcomeFixture {
   notes: string;
 }
 
+export interface ShadowPlannerEdgeCaseRepeatedQuestionSetup {
+  askedQuestionIds: string[];
+  answeredQuestionIds: string[];
+}
+
+export interface ShadowPlannerEdgeCaseScenarioFixture {
+  caseId: string;
+  ownerText: string;
+  expectedPrimaryComplaintModuleIds: string[];
+  acceptablePlannedQuestionIds: string[];
+  mustScreenRedFlags: string[];
+  shouldPreferEmergencyScreen: boolean;
+  shouldAvoidGenericQuestion: boolean;
+  repeatedQuestionSetup: ShadowPlannerEdgeCaseRepeatedQuestionSetup | null;
+  isConfusingMultiSymptom: boolean;
+  isEmergencyVsMildContrast: boolean;
+  hasAmbiguousOwnerAnswer: boolean;
+  whyThisCaseMatters: string;
+}
+
+export type ShadowPlannerScenarioFixtureKind = "base" | "edge";
+
 export interface ShadowPlannerScenarioEvalExpected {
-  complaintModuleId: string;
+  acceptableComplaintModuleIds: string[];
   acceptableQuestionIds: string[];
   acceptableSelectedBecause: SelectedBecause[];
   mustScreenRedFlags: string[];
@@ -58,6 +80,7 @@ export interface ShadowPlannerScenarioEvalActual {
 
 export interface ShadowPlannerScenarioEvalFailedCase {
   caseId: string;
+  fixtureKind: ShadowPlannerScenarioFixtureKind;
   expected: ShadowPlannerScenarioEvalExpected;
   actual: ShadowPlannerScenarioEvalActual;
   reason: string;
@@ -65,6 +88,7 @@ export interface ShadowPlannerScenarioEvalFailedCase {
 
 export interface ShadowPlannerScenarioEvalCaseResult {
   caseId: string;
+  fixtureKind: ShadowPlannerScenarioFixtureKind;
   expected: ShadowPlannerScenarioEvalExpected;
   actual: ShadowPlannerScenarioEvalActual;
   complaintModuleMatched: boolean;
@@ -82,6 +106,8 @@ export interface ShadowPlannerScenarioEvalCaseResult {
 
 export interface ShadowPlannerScenarioEvalSummary {
   totalCases: number;
+  baseCaseCount: number;
+  edgeCaseCount: number;
   complaintModuleMatchCount: number;
   complaintModuleMatchRate: number;
   acceptableQuestionCount: number;
@@ -119,10 +145,14 @@ export interface EvaluateShadowPlannerScenarioCaseInput {
 export interface EvaluateShadowPlannerScenariosInput {
   scenarios: readonly ShadowPlannerScenarioFixture[];
   expectedOutcomes: readonly ShadowPlannerExpectedOutcomeFixture[];
+  edgeScenarios?: readonly ShadowPlannerEdgeCaseScenarioFixture[];
   existingQuestionId?: string | null;
   buildCaseState?: (
     scenario: ShadowPlannerScenarioFixture,
     expectedOutcome: ShadowPlannerExpectedOutcomeFixture
+  ) => ClinicalCaseState;
+  buildEdgeCaseState?: (
+    scenario: ShadowPlannerEdgeCaseScenarioFixture
   ) => ClinicalCaseState;
 }
 
@@ -201,16 +231,38 @@ function mapDetectedSignalToCaseStateSignal(
   };
 }
 
-export function buildDefaultShadowPlannerScenarioCaseState(
-  scenario: ShadowPlannerScenarioFixture
+function buildCaseStateFromOwnerText(
+  ownerText: string,
+  activeComplaintModule: string | null = null
 ): ClinicalCaseState {
-  const detectedSignals = detectSignals(scenario.ownerText).map(
+  const detectedSignals = detectSignals(ownerText).map(
     mapDetectedSignalToCaseStateSignal
   );
 
   return {
-    ...createInitialClinicalCaseState(),
+    ...createInitialClinicalCaseState(activeComplaintModule),
     clinicalSignals: detectedSignals,
+  };
+}
+
+export function buildDefaultShadowPlannerScenarioCaseState(
+  scenario: ShadowPlannerScenarioFixture
+): ClinicalCaseState {
+  return buildCaseStateFromOwnerText(scenario.ownerText);
+}
+
+export function buildDefaultShadowPlannerEdgeCaseState(
+  scenario: ShadowPlannerEdgeCaseScenarioFixture
+): ClinicalCaseState {
+  const repeatedQuestionSetup = scenario.repeatedQuestionSetup;
+
+  return {
+    ...buildCaseStateFromOwnerText(
+      scenario.ownerText,
+      scenario.expectedPrimaryComplaintModuleIds[0] ?? null
+    ),
+    askedQuestionIds: [...(repeatedQuestionSetup?.askedQuestionIds ?? [])],
+    answeredQuestionIds: [...(repeatedQuestionSetup?.answeredQuestionIds ?? [])],
   };
 }
 
@@ -231,17 +283,67 @@ function cloneCaseState(state: ClinicalCaseState): ClinicalCaseState {
   };
 }
 
-function buildExpectedDescriptor(
+function deriveExpectedSelectedBecause(
+  questionIds: readonly string[]
+): SelectedBecause[] {
+  let hasEmergencyScreenQuestion = false;
+  let hasNonEmergencyQuestion = false;
+
+  for (const questionId of questionIds) {
+    const questionCard = getQuestionCardById(questionId);
+    if (!questionCard) {
+      throw new Error(
+        `Expected descriptor references unregistered question "${questionId}"`
+      );
+    }
+
+    if (questionCard.phase === "emergency_screen") {
+      hasEmergencyScreenQuestion = true;
+    } else {
+      hasNonEmergencyQuestion = true;
+    }
+  }
+
+  const acceptableSelectedBecause: SelectedBecause[] = [];
+
+  if (hasEmergencyScreenQuestion) {
+    acceptableSelectedBecause.push("emergency_screen");
+  }
+
+  if (hasNonEmergencyQuestion) {
+    acceptableSelectedBecause.push("highest_information_gain");
+  }
+
+  return acceptableSelectedBecause;
+}
+
+function buildExpectedDescriptorFromOutcome(
   expectedOutcome: ShadowPlannerExpectedOutcomeFixture
 ): ShadowPlannerScenarioEvalExpected {
   return {
-    complaintModuleId: expectedOutcome.expectedComplaintModuleId,
+    acceptableComplaintModuleIds: [expectedOutcome.expectedComplaintModuleId],
     acceptableQuestionIds: [...expectedOutcome.acceptablePlannedQuestionIds],
     acceptableSelectedBecause: [...expectedOutcome.expectedSelectedBecause],
     mustScreenRedFlags: [...expectedOutcome.mustScreenRedFlags],
     shouldBeatGenericQuestion: expectedOutcome.shouldBeatGenericQuestion,
     shouldScreenEmergencyEarlier: expectedOutcome.shouldScreenEmergencyEarlier,
     shouldAvoidRepeatedQuestion: expectedOutcome.shouldAvoidRepeatedQuestion,
+  };
+}
+
+function buildExpectedDescriptorFromEdgeScenario(
+  scenario: ShadowPlannerEdgeCaseScenarioFixture
+): ShadowPlannerScenarioEvalExpected {
+  return {
+    acceptableComplaintModuleIds: [...scenario.expectedPrimaryComplaintModuleIds],
+    acceptableQuestionIds: [...scenario.acceptablePlannedQuestionIds],
+    acceptableSelectedBecause: deriveExpectedSelectedBecause(
+      scenario.acceptablePlannedQuestionIds
+    ),
+    mustScreenRedFlags: [...scenario.mustScreenRedFlags],
+    shouldBeatGenericQuestion: scenario.shouldAvoidGenericQuestion,
+    shouldScreenEmergencyEarlier: scenario.shouldPreferEmergencyScreen,
+    shouldAvoidRepeatedQuestion: scenario.repeatedQuestionSetup !== null,
   };
 }
 
@@ -279,6 +381,21 @@ function assertScenarioMatchesExpectedOutcome(
   }
 }
 
+function assertNoOverlappingCaseIds(
+  scenarios: readonly ShadowPlannerScenarioFixture[],
+  edgeScenarios: readonly ShadowPlannerEdgeCaseScenarioFixture[]
+): void {
+  const baseCaseIds = new Set(scenarios.map((scenario) => scenario.caseId));
+
+  for (const edgeScenario of edgeScenarios) {
+    if (baseCaseIds.has(edgeScenario.caseId)) {
+      throw new Error(
+        `Edge scenarios reuse base scenario caseId "${edgeScenario.caseId}"`
+      );
+    }
+  }
+}
+
 function formatFailure(
   plannedQuestionId: string | null,
   selectedBecause: SelectedBecause | null,
@@ -310,39 +427,20 @@ function formatFailure(
   return failures;
 }
 
-export function evaluateShadowPlannerScenarioCase(
-  input: EvaluateShadowPlannerScenarioCaseInput
-): ShadowPlannerScenarioEvalCaseResult {
-  const existingQuestionId =
-    input.existingQuestionId ?? DEFAULT_EXISTING_GENERIC_QUESTION_ID;
-  assertExistingQuestionIsGeneric(existingQuestionId);
-  assertScenarioMatchesExpectedOutcome(input.scenario, input.expectedOutcome);
-
-  const buildCaseState =
-    input.buildCaseState ?? buildDefaultShadowPlannerScenarioCaseState;
-  const caseState = cloneCaseState(
-    buildCaseState(input.scenario, input.expectedOutcome)
-  );
-  const integration = buildShadowPlannerComplaintIntegration({
-    ownerText: input.scenario.ownerText,
-    existingQuestionId,
-    caseState,
-  });
-
+function buildActualDescriptor(
+  caseId: string,
+  integration: ReturnType<typeof buildShadowPlannerComplaintIntegration>
+): ShadowPlannerScenarioEvalActual {
   if (integration.telemetry.ownerFacingImpact !== "none") {
     throw new Error(
-      `Shadow telemetry ownerFacingImpact must remain "none" for "${input.scenario.caseId}"`
+      `Shadow telemetry ownerFacingImpact must remain "none" for "${caseId}"`
     );
   }
 
   const plannerResult = integration.plannerResult;
   const isFallback = isPlannerFallbackResult(plannerResult);
-  const plannedQuestionId = isFallback
-    ? null
-    : plannerResult.questionId;
-  const selectedBecause = isFallback
-    ? null
-    : plannerResult.selectedBecause;
+  const plannedQuestionId = isFallback ? null : plannerResult.questionId;
+  const selectedBecause = isFallback ? null : plannerResult.selectedBecause;
   const plannedQuestionCard =
     plannedQuestionId !== null
       ? getQuestionCardById(plannedQuestionId) ?? null
@@ -350,12 +448,11 @@ export function evaluateShadowPlannerScenarioCase(
 
   if (plannedQuestionId && !plannedQuestionCard) {
     throw new Error(
-      `Planner returned unregistered question "${plannedQuestionId}" for "${input.scenario.caseId}"`
+      `Planner returned unregistered question "${plannedQuestionId}" for "${caseId}"`
     );
   }
 
-  const expected = buildExpectedDescriptor(input.expectedOutcome);
-  const actual: ShadowPlannerScenarioEvalActual = {
+  return {
     complaintModuleId: integration.activeComplaintModuleId,
     plannerComplaintFamily: integration.plannerActiveComplaintModule,
     plannedQuestionId,
@@ -369,30 +466,51 @@ export function evaluateShadowPlannerScenarioCase(
       isEmergencyScreenQuestionCard(plannedQuestionCard) ||
       selectedBecause === "emergency_screen",
   };
+}
+
+interface EvaluateNormalizedShadowPlannerScenarioInput {
+  caseId: string;
+  fixtureKind: ShadowPlannerScenarioFixtureKind;
+  ownerText: string;
+  expected: ShadowPlannerScenarioEvalExpected;
+  existingQuestionId: string;
+  caseState: ClinicalCaseState;
+}
+
+function evaluateNormalizedShadowPlannerScenario(
+  input: EvaluateNormalizedShadowPlannerScenarioInput
+): ShadowPlannerScenarioEvalCaseResult {
+  const integration = buildShadowPlannerComplaintIntegration({
+    ownerText: input.ownerText,
+    existingQuestionId: input.existingQuestionId,
+    caseState: input.caseState,
+  });
+  const actual = buildActualDescriptor(input.caseId, integration);
 
   const complaintModuleMatched =
-    actual.complaintModuleId === expected.complaintModuleId;
+    actual.complaintModuleId !== null &&
+    input.expected.acceptableComplaintModuleIds.includes(actual.complaintModuleId);
   const acceptableQuestionMatched =
     actual.plannedQuestionId !== null &&
-    expected.acceptableQuestionIds.includes(actual.plannedQuestionId);
+    input.expected.acceptableQuestionIds.includes(actual.plannedQuestionId);
   const selectedBecauseMatched =
     actual.selectedBecause !== null &&
-    expected.acceptableSelectedBecause.includes(actual.selectedBecause);
+    input.expected.acceptableSelectedBecause.includes(actual.selectedBecause);
   const emergencyScreenAligned =
-    !expected.shouldScreenEmergencyEarlier || actual.emergencyScreenQuestion;
+    !input.expected.shouldScreenEmergencyEarlier || actual.emergencyScreenQuestion;
   const repeatedQuestionAvoided =
-    !expected.shouldAvoidRepeatedQuestion ||
+    !input.expected.shouldAvoidRepeatedQuestion ||
     integration.comparison.repeatedQuestionAvoided;
   const genericQuestionAvoided =
-    !expected.shouldBeatGenericQuestion ||
+    !input.expected.shouldBeatGenericQuestion ||
     (actual.plannedQuestionId !== null &&
-      actual.plannedQuestionId !== existingQuestionId &&
+      actual.plannedQuestionId !== input.existingQuestionId &&
       !actual.genericQuestion);
 
-  const matchedRequiredRedFlags = expected.mustScreenRedFlags.filter((flagId) =>
-    actual.screenedRedFlags.includes(flagId)
+  const matchedRequiredRedFlags = input.expected.mustScreenRedFlags.filter(
+    (flagId) => actual.screenedRedFlags.includes(flagId)
   );
-  const missingRequiredRedFlags = expected.mustScreenRedFlags.filter(
+  const missingRequiredRedFlags = input.expected.mustScreenRedFlags.filter(
     (flagId) => !matchedRequiredRedFlags.includes(flagId)
   );
 
@@ -400,12 +518,12 @@ export function evaluateShadowPlannerScenarioCase(
     actual.plannedQuestionId,
     actual.selectedBecause,
     missingRequiredRedFlags,
-    existingQuestionId
+    input.existingQuestionId
   );
 
   if (!complaintModuleMatched) {
     failures.push(
-      `Complaint module mismatch: expected "${expected.complaintModuleId}", got "${actual.complaintModuleId ?? "none"}"`
+      `Complaint module mismatch: expected one of "${input.expected.acceptableComplaintModuleIds.join(", ")}", got "${actual.complaintModuleId ?? "none"}"`
     );
   }
 
@@ -421,15 +539,15 @@ export function evaluateShadowPlannerScenarioCase(
     );
   }
 
-  if (!emergencyScreenAligned && expected.shouldScreenEmergencyEarlier) {
+  if (!emergencyScreenAligned && input.expected.shouldScreenEmergencyEarlier) {
     failures.push("Emergency-screen alignment expectation was not met");
   }
 
-  if (!repeatedQuestionAvoided && expected.shouldAvoidRepeatedQuestion) {
+  if (!repeatedQuestionAvoided && input.expected.shouldAvoidRepeatedQuestion) {
     failures.push("Repeated-question avoidance expectation was not met");
   }
 
-  if (!genericQuestionAvoided && expected.shouldBeatGenericQuestion) {
+  if (!genericQuestionAvoided && input.expected.shouldBeatGenericQuestion) {
     failures.push("Generic-question avoidance expectation was not met");
   }
 
@@ -440,8 +558,9 @@ export function evaluateShadowPlannerScenarioCase(
   }
 
   return {
-    caseId: input.scenario.caseId,
-    expected,
+    caseId: input.caseId,
+    fixtureKind: input.fixtureKind,
+    expected: input.expected,
     actual,
     complaintModuleMatched,
     acceptableQuestionMatched,
@@ -451,10 +570,55 @@ export function evaluateShadowPlannerScenarioCase(
     genericQuestionAvoided,
     matchedRequiredRedFlags,
     missingRequiredRedFlags,
-    requiredRedFlagCount: expected.mustScreenRedFlags.length,
+    requiredRedFlagCount: input.expected.mustScreenRedFlags.length,
     failures,
     passed: failures.length === 0,
   };
+}
+
+export function evaluateShadowPlannerScenarioCase(
+  input: EvaluateShadowPlannerScenarioCaseInput
+): ShadowPlannerScenarioEvalCaseResult {
+  const existingQuestionId =
+    input.existingQuestionId ?? DEFAULT_EXISTING_GENERIC_QUESTION_ID;
+  assertExistingQuestionIsGeneric(existingQuestionId);
+  assertScenarioMatchesExpectedOutcome(input.scenario, input.expectedOutcome);
+
+  const buildCaseState =
+    input.buildCaseState ?? buildDefaultShadowPlannerScenarioCaseState;
+  const caseState = cloneCaseState(buildCaseState(input.scenario, input.expectedOutcome));
+
+  return evaluateNormalizedShadowPlannerScenario({
+    caseId: input.scenario.caseId,
+    fixtureKind: "base",
+    ownerText: input.scenario.ownerText,
+    expected: buildExpectedDescriptorFromOutcome(input.expectedOutcome),
+    existingQuestionId,
+    caseState,
+  });
+}
+
+function evaluateShadowPlannerEdgeScenarioCase(input: {
+  scenario: ShadowPlannerEdgeCaseScenarioFixture;
+  existingQuestionId?: string | null;
+  buildCaseState?: (scenario: ShadowPlannerEdgeCaseScenarioFixture) => ClinicalCaseState;
+}): ShadowPlannerScenarioEvalCaseResult {
+  const existingQuestionId =
+    input.existingQuestionId ?? DEFAULT_EXISTING_GENERIC_QUESTION_ID;
+  assertExistingQuestionIsGeneric(existingQuestionId);
+
+  const buildCaseState =
+    input.buildCaseState ?? buildDefaultShadowPlannerEdgeCaseState;
+  const caseState = cloneCaseState(buildCaseState(input.scenario));
+
+  return evaluateNormalizedShadowPlannerScenario({
+    caseId: input.scenario.caseId,
+    fixtureKind: "edge",
+    ownerText: input.scenario.ownerText,
+    expected: buildExpectedDescriptorFromEdgeScenario(input.scenario),
+    existingQuestionId,
+    caseState,
+  });
 }
 
 function buildExpectedOutcomeMap(
@@ -473,6 +637,8 @@ function buildExpectedOutcomeMap(
 function buildSummary(
   caseResults: readonly ShadowPlannerScenarioEvalCaseResult[]
 ): ShadowPlannerScenarioEvalSummary {
+  let baseCaseCount = 0;
+  let edgeCaseCount = 0;
   let complaintModuleMatchCount = 0;
   let acceptableQuestionCount = 0;
   let emergencyScreenAlignmentCount = 0;
@@ -485,6 +651,12 @@ function buildSummary(
   let totalRequiredRedFlagCount = 0;
 
   for (const caseResult of caseResults) {
+    if (caseResult.fixtureKind === "base") {
+      baseCaseCount += 1;
+    } else {
+      edgeCaseCount += 1;
+    }
+
     if (caseResult.complaintModuleMatched) {
       complaintModuleMatchCount += 1;
     }
@@ -522,8 +694,12 @@ function buildSummary(
     .filter((caseResult) => !caseResult.passed)
     .map((caseResult) => ({
       caseId: caseResult.caseId,
+      fixtureKind: caseResult.fixtureKind,
       expected: {
         ...caseResult.expected,
+        acceptableComplaintModuleIds: [
+          ...caseResult.expected.acceptableComplaintModuleIds,
+        ],
         acceptableQuestionIds: [...caseResult.expected.acceptableQuestionIds],
         acceptableSelectedBecause: [
           ...caseResult.expected.acceptableSelectedBecause,
@@ -539,6 +715,8 @@ function buildSummary(
 
   return {
     totalCases: caseResults.length,
+    baseCaseCount,
+    edgeCaseCount,
     complaintModuleMatchCount,
     complaintModuleMatchRate: safeRate(
       complaintModuleMatchCount,
@@ -578,9 +756,12 @@ export function evaluateShadowPlannerScenarios(
   input: EvaluateShadowPlannerScenariosInput
 ): ShadowPlannerScenarioEvalReport {
   assertUniqueCaseIds(input.scenarios, "Scenarios");
+  const edgeScenarios = input.edgeScenarios ?? [];
+  assertUniqueCaseIds(edgeScenarios, "Edge scenarios");
+  assertNoOverlappingCaseIds(input.scenarios, edgeScenarios);
 
   const expectedOutcomeMap = buildExpectedOutcomeMap(input.expectedOutcomes);
-  const caseResults = input.scenarios.map((scenario) => {
+  const baseCaseResults = input.scenarios.map((scenario) => {
     const expectedOutcome = expectedOutcomeMap.get(scenario.caseId);
     if (!expectedOutcome) {
       throw new Error(`Missing expected outcome for case "${scenario.caseId}"`);
@@ -594,11 +775,21 @@ export function evaluateShadowPlannerScenarios(
     });
   });
 
-  if (caseResults.length !== input.expectedOutcomes.length) {
+  if (baseCaseResults.length !== input.expectedOutcomes.length) {
     throw new Error(
-      `Scenario/outcome size mismatch: ${caseResults.length} scenarios vs ${input.expectedOutcomes.length} expected outcomes`
+      `Scenario/outcome size mismatch: ${baseCaseResults.length} scenarios vs ${input.expectedOutcomes.length} expected outcomes`
     );
   }
+
+  const edgeCaseResults = edgeScenarios.map((scenario) =>
+    evaluateShadowPlannerEdgeScenarioCase({
+      scenario,
+      existingQuestionId: input.existingQuestionId,
+      buildCaseState: input.buildEdgeCaseState,
+    })
+  );
+
+  const caseResults = [...baseCaseResults, ...edgeCaseResults];
 
   return {
     summary: buildSummary(caseResults),
@@ -625,6 +816,8 @@ export function renderShadowPlannerScenarioEvalSummary(
   const lines = [
     "Shadow Planner Scenario Eval",
     `Total cases: ${summary.totalCases}`,
+    `Base cases: ${summary.baseCaseCount}`,
+    `Edge cases: ${summary.edgeCaseCount}`,
     formatCountLine(
       "Complaint module match rate",
       summary.complaintModuleMatchCount,
@@ -670,9 +863,11 @@ export function renderShadowPlannerScenarioEvalSummary(
 
   lines.push(`Failed cases: ${summary.failedCases.length}`);
   for (const failedCase of summary.failedCases) {
-    lines.push(`- ${failedCase.caseId}: ${failedCase.reason}`);
     lines.push(
-      `  expected: module=${failedCase.expected.complaintModuleId}; questions=${failedCase.expected.acceptableQuestionIds.join(", ")}`
+      `- [${failedCase.fixtureKind}] ${failedCase.caseId}: ${failedCase.reason}`
+    );
+    lines.push(
+      `  expected: modules=${failedCase.expected.acceptableComplaintModuleIds.join(", ")}; questions=${failedCase.expected.acceptableQuestionIds.join(", ")}`
     );
     lines.push(
       `  actual: module=${failedCase.actual.complaintModuleId ?? "none"}; question=${failedCase.actual.plannedQuestionId ?? failedCase.actual.fallbackType ?? "none"}; selectedBecause=${failedCase.actual.selectedBecause ?? "none"}`

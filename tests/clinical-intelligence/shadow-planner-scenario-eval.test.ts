@@ -1,3 +1,4 @@
+import edgeCases from "../fixtures/clinical-intelligence/shadow-planner-edge-case-scenarios.json";
 import outcomes from "../fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json";
 import scenarios from "../fixtures/clinical-intelligence/shadow-planner-scenarios.json";
 
@@ -12,17 +13,22 @@ describe("shadow planner scenario eval harness", () => {
   it("evaluates the merged scenario and outcome packs into the required metric shape without mutating fixtures", () => {
     const scenarioClone = structuredClone(scenarios);
     const outcomeClone = structuredClone(outcomes);
+    const edgeCaseClone = structuredClone(edgeCases);
 
     const report = evaluateShadowPlannerScenarios({
       scenarios,
       expectedOutcomes: outcomes,
+      edgeScenarios: edgeCases,
     });
 
-    expect(report.summary.totalCases).toBe(33);
-    expect(report.caseResults).toHaveLength(33);
+    expect(report.summary.totalCases).toBe(57);
+    expect(report.summary.baseCaseCount).toBe(33);
+    expect(report.summary.edgeCaseCount).toBe(24);
+    expect(report.caseResults).toHaveLength(57);
     expect(report.summary.failedCases).toEqual(
       report.caseResults.filter((result) => !result.passed).map((result) => ({
         caseId: result.caseId,
+        fixtureKind: result.fixtureKind,
         expected: result.expected,
         actual: result.actual,
         reason: result.failures.join("; "),
@@ -44,6 +50,7 @@ describe("shadow planner scenario eval harness", () => {
 
     expect(scenarios).toEqual(scenarioClone);
     expect(outcomes).toEqual(outcomeClone);
+    expect(edgeCases).toEqual(edgeCaseClone);
     expect(JSON.stringify(report)).not.toContain(
       "My dog was in a hot car for a short time"
     );
@@ -53,12 +60,15 @@ describe("shadow planner scenario eval harness", () => {
     const report = evaluateShadowPlannerScenarios({
       scenarios,
       expectedOutcomes: outcomes,
+      edgeScenarios: edgeCases,
     });
 
     const rendered = renderShadowPlannerScenarioEvalSummary(report.summary);
 
     expect(rendered).toContain("Shadow Planner Scenario Eval");
     expect(rendered).toContain("Total cases:");
+    expect(rendered).toContain("Base cases:");
+    expect(rendered).toContain("Edge cases:");
     expect(rendered).toContain("Complaint module match rate:");
     expect(rendered).toContain("Failed cases:");
     expect(rendered).not.toContain(
