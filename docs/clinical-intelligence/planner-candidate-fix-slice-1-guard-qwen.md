@@ -52,23 +52,15 @@ The other repeated planner-candidate rows are intentionally outside slice 1:
 ## Global Guardrails
 
 - `repeatedQuestionEligibleCases`: `6`
-- `actual_repeated_question_failure`: `6`
+- `actual_repeated_question_failure`: `0`
 - emergency alignment: `39/39 = 100%`
 - safety blockers: `0`
 - non-repeated report-only rows reclassified as planner successes: `0`
 
-The current `actual_repeated_question_failure` rows are still:
-
-- `edge_trauma_repeat_bleeding_avoidance`
-- `edge_urinary_repeat_straining_avoidance`
-- `edge_respiratory_repeat_breathing_avoidance`
-- `edge_seizure_repeat_duration_avoidance`
-- `edge_toxin_repeat_exposure_avoidance`
-- `edge_skin_repeat_location_avoidance`
-
-That wider repeated-failure list is expected. Slice 1 does not widen to the
-other four rows because they are outside the planner-owned repeated candidate
-lane.
+The current `actual_repeated_question_failure` rows are now empty. The current
+eval reports full repeated-question avoidance across all `6` eligible repeated
+setups, and slice 1 still does not widen to non-planner rows or reclassify
+report-only rows as planner successes.
 
 ## Structured Guard Data
 
@@ -119,15 +111,8 @@ lane.
   ],
   "globalGuardrails": {
     "repeatedQuestionEligibleCases": 6,
-    "actualRepeatedQuestionFailureCount": 6,
-    "actualRepeatedQuestionFailureCaseIds": [
-      "edge_trauma_repeat_bleeding_avoidance",
-      "edge_urinary_repeat_straining_avoidance",
-      "edge_respiratory_repeat_breathing_avoidance",
-      "edge_seizure_repeat_duration_avoidance",
-      "edge_toxin_repeat_exposure_avoidance",
-      "edge_skin_repeat_location_avoidance"
-    ],
+    "actualRepeatedQuestionFailureCount": 0,
+    "actualRepeatedQuestionFailureCaseIds": [],
     "emergencyScreenAlignmentCount": 39,
     "emergencyScreenAlignmentRelevantCases": 39,
     "emergencyScreenAlignmentRate": 1,

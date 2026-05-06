@@ -158,15 +158,8 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
   ],
   globalGuardrails: {
     repeatedQuestionEligibleCases: 6,
-    actualRepeatedQuestionFailureCount: 6,
-    actualRepeatedQuestionFailureCaseIds: [
-      "edge_trauma_repeat_bleeding_avoidance",
-      "edge_urinary_repeat_straining_avoidance",
-      "edge_respiratory_repeat_breathing_avoidance",
-      "edge_seizure_repeat_duration_avoidance",
-      "edge_toxin_repeat_exposure_avoidance",
-      "edge_skin_repeat_location_avoidance",
-    ],
+    actualRepeatedQuestionFailureCount: 0,
+    actualRepeatedQuestionFailureCaseIds: [],
     emergencyScreenAlignmentCount: 39,
     emergencyScreenAlignmentRelevantCases: 39,
     emergencyScreenAlignmentRate: 1,
@@ -376,7 +369,7 @@ describe("planner candidate fix slice 1 guard", () => {
     expect(DOC).toContain("The planner-owned repeated-question slice currently contains exactly `2` rows:");
     expect(DOC).toContain("The other repeated planner-candidate rows are intentionally outside slice 1:");
     expect(DOC).toContain("`repeatedQuestionEligibleCases`: `6`");
-    expect(DOC).toContain("`actual_repeated_question_failure`: `6`");
+    expect(DOC).toContain("`actual_repeated_question_failure`: `0`");
     expect(DOC).toContain("emergency alignment: `39/39 = 100%`");
     expect(DOC).toContain("safety blockers: `0`");
     expect(DOC).toContain(
