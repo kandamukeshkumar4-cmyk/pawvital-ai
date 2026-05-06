@@ -200,6 +200,114 @@ describe("Planner never repeats an asked question", () => {
     }
     expect(result.questionId).not.toBe("emergency_global_screen");
   });
+
+  it("does not reselect bleeding_volume_check in the locked trauma repeat slice", () => {
+    const traumaRepeatCards: ClinicalQuestionCard[] = [
+      {
+        ...MOCK_EMERGENCY_CARD,
+        id: "bleeding_volume_check",
+        complaintFamilies: ["emergency", "trauma", "wound"],
+        skipIfAnswered: [],
+      },
+      MOCK_EMERGENCY_CARD,
+      {
+        ...MOCK_SKIN_CARD,
+        id: "wound_characterization_check",
+        complaintFamilies: ["emergency", "trauma", "wound"],
+        phase: "characterize",
+        urgencyImpact: 2,
+        discriminativeValue: 3,
+        reportValue: 3,
+      },
+      {
+        ...MOCK_SKIN_CARD,
+        id: "laceration_depth_check",
+        complaintFamilies: ["emergency", "trauma", "wound"],
+        phase: "discriminate",
+        ownerAnswerability: 2,
+        urgencyImpact: 2,
+        discriminativeValue: 3,
+        reportValue: 3,
+      },
+      {
+        ...MOCK_SKIN_CARD,
+        id: "limping_weight_bearing",
+        complaintFamilies: ["limping", "lameness", "musculoskeletal"],
+        ownerText:
+          "Is your pet putting any weight on the affected leg, or are they holding it completely off the ground?",
+        shortReason:
+          "Whether a pet bears weight on a limb helps distinguish minor strain from more significant injury.",
+      },
+    ];
+    jest.spyOn(registry, "getAllQuestionCards").mockReturnValueOnce(
+      traumaRepeatCards
+    );
+
+    let state = createInitialClinicalCaseState("trauma");
+    state = recordAskedQuestion(state, "bleeding_volume_check");
+    state = recordAnsweredQuestion(
+      state,
+      "bleeding_volume_check",
+      "blood_amount",
+      "Bleeding has stopped"
+    );
+
+    const result = planNextClinicalQuestion(state, {
+      activeComplaintModule: "trauma",
+    });
+
+    expect("type" in result).toBe(false);
+    if ("type" in result) {
+      return;
+    }
+
+    expect(result.questionId).not.toBe("bleeding_volume_check");
+  });
+
+  it("does not reselect skin_location_distribution in the locked skin repeat slice", () => {
+    const skinRepeatCards: ClinicalQuestionCard[] = [
+      MOCK_EMERGENCY_CARD,
+      {
+        ...MOCK_SKIN_CARD,
+        id: "skin_emergency_allergy_screen",
+        complaintFamilies: ["emergency", "skin", "allergy"],
+        phase: "emergency_screen",
+        urgencyImpact: 3,
+        discriminativeValue: 3,
+        reportValue: 3,
+        screensRedFlags: ["angioedema", "urticaria", "anaphylaxis"],
+      },
+      MOCK_SKIN_CARD,
+      {
+        ...MOCK_SKIN_CARD,
+        id: "skin_changes_check",
+        discriminativeValue: 3,
+      },
+    ];
+    jest.spyOn(registry, "getAllQuestionCards").mockReturnValueOnce(
+      skinRepeatCards
+    );
+
+    let state = createInitialClinicalCaseState("skin");
+    state = recordAskedQuestion(state, "skin_location_distribution");
+    state = recordAnsweredQuestion(
+      state,
+      "skin_location_distribution",
+      "skin_location",
+      "Paws and belly"
+    );
+
+    const result = planNextClinicalQuestion(state, {
+      activeComplaintModule: "skin",
+    });
+
+    expect("type" in result).toBe(false);
+    if ("type" in result) {
+      return;
+    }
+
+    expect(result.questionId).not.toBe("skin_location_distribution");
+  });
 });
 
 describe("Emergency-screen cards outrank routine characterization", () => {

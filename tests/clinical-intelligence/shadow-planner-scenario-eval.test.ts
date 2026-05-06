@@ -44,8 +44,8 @@ describe("shadow planner scenario eval harness", () => {
     );
     expect(report.summary.repeatedQuestionEligibleCases).toBe(6);
     expect(report.summary.repeatedQuestionAvoidanceRelevantCases).toBe(6);
-    expect(report.summary.repeatedQuestionAvoidanceCount).toBe(0);
-    expect(report.summary.repeatedQuestionAvoidanceRate).toBe(0);
+    expect(report.summary.repeatedQuestionAvoidanceCount).toBe(6);
+    expect(report.summary.repeatedQuestionAvoidanceRate).toBe(1);
     expect(report.summary.genericQuestionEligibleCases).toBe(11);
     expect(report.summary.genericQuestionAvoidanceRelevantCases).toBe(11);
     expect(report.summary.genericQuestionAvoidanceCount).toBe(0);
@@ -131,15 +131,19 @@ describe("shadow planner scenario eval harness", () => {
       "actual_generic_question_failure"
     );
 
-    const repeatedFailureCase = report.summary.failedCases.find(
+    const repeatedSetupCase = report.summary.failedCases.find(
       (result) => result.caseId === "edge_urinary_repeat_straining_avoidance"
     );
 
-    expect(repeatedFailureCase?.repeatedQuestionMetricStatus).toBe(
-      "actual_repeated_question_failure"
-    );
-    expect(repeatedFailureCase?.genericQuestionMetricStatus).toBe(
+    expect(repeatedSetupCase?.repeatedQuestionMetricStatus).toBeNull();
+    expect(repeatedSetupCase?.genericQuestionMetricStatus).toBe(
       "no_metric_setup"
+    );
+    expect(repeatedSetupCase?.rawReason).not.toContain(
+      "Repeated-question avoidance expectation was not met"
+    );
+    expect(repeatedSetupCase?.actual.plannedQuestionId).toBe(
+      "emergency_global_screen"
     );
 
     expect(report.summary.complaintModuleMatchRate).toBeGreaterThanOrEqual(0);
