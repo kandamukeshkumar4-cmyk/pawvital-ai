@@ -55,6 +55,14 @@ The harness does not invent red-flag positives, does not inject LLM output, and 
 
 The structured summary now reports the raw harness output and a normalization-aware view side by side.
 
+The top-level repeated-question and generic-question metrics are now setup-aware:
+
+- `repeatedQuestionAvoidanceRate` uses only cases with real `repeatedQuestionSetup`
+- `genericQuestionAvoidanceRate` uses only rows whose normalization entry keeps generic-question scoring in scope
+- `repeatedQuestionEligibleCases` and `genericQuestionEligibleCases` make those denominators explicit
+
+The legacy raw and normalized metric sets remain in `rawMetrics` and `normalizedMetrics`.
+
 Raw metrics preserve the original report-only scoring against the exact expected-outcome fixture.
 
 Normalized metrics layer in the normalization pack so the report can:
@@ -73,6 +81,8 @@ The structured summary reports:
 - `totalCases`
 - `baseCaseCount`
 - `edgeCaseCount`
+- `repeatedQuestionEligibleCases`
+- `genericQuestionEligibleCases`
 - `rawMetrics`
 - `normalizedMetrics`
 - `rawFailedCaseCount`
@@ -88,6 +98,8 @@ The structured summary reports:
 Metric denominators are intentionally explicit inside the summary object:
 
 - base and edge case counts are reported separately while `totalCases` covers the combined run
+- top-level repeated-question avoidance uses only cases with real `repeatedQuestionSetup`
+- top-level generic-question avoidance uses only cases whose normalization row keeps generic-question scoring in scope
 - raw module match and acceptable-question rates use all cases
 - normalized complaint-module match still uses all cases, but normalized base rows can accept documented alternate module IDs
 - emergency-screen alignment uses only cases where the fixture expects earlier emergency screening
@@ -116,6 +128,14 @@ Each failed-case entry now includes:
 - `reason` as the legacy raw failure string
 - `rawReason`
 - `normalizedReason`
+- `repeatedQuestionMetricStatus`
+- `genericQuestionMetricStatus`
+
+Metric-status fields distinguish:
+
+- `no_metric_setup`
+- `actual_repeated_question_failure`
+- `actual_generic_question_failure`
 
 This preserves CLI/JSON compatibility while making it obvious which misses remain after normalization.
 
@@ -142,10 +162,12 @@ The CLI prints a readable summary with:
 - total case count
 - base-case count
 - edge-case count
+- setup-aware repeated/generic eligible-case counts
+- setup-aware repeated/generic rate lines
 - raw metric lines as count/denominator plus percentage
 - normalized metric lines as count/denominator plus percentage
 - raw and normalized failed-case counts
-- a compact failed-case list with expected and actual structured fields plus raw/normalized reasons
+- a compact failed-case list with expected and actual structured fields, raw/normalized reasons, and setup-status labels for repeated/generic metrics
 
 Tests consume the structured JSON returned by `evaluateShadowPlannerScenarios(...)` directly.
 
