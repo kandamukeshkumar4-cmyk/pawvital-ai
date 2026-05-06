@@ -38,10 +38,23 @@ describe("shadow planner scenario eval harness", () => {
         reason: result.failures.join("; "),
         rawReason: result.failures.join("; "),
         normalizedReason: result.normalizedFailures?.join("; ") ?? "",
+        repeatedQuestionMetricStatus: result.repeatedQuestionMetricStatus,
+        genericQuestionMetricStatus: result.genericQuestionMetricStatus,
       }))
     );
+    expect(report.summary.repeatedQuestionEligibleCases).toBe(6);
+    expect(report.summary.repeatedQuestionAvoidanceRelevantCases).toBe(6);
+    expect(report.summary.repeatedQuestionAvoidanceCount).toBe(0);
+    expect(report.summary.repeatedQuestionAvoidanceRate).toBe(0);
+    expect(report.summary.genericQuestionEligibleCases).toBe(11);
+    expect(report.summary.genericQuestionAvoidanceRelevantCases).toBe(11);
+    expect(report.summary.genericQuestionAvoidanceCount).toBe(0);
+    expect(report.summary.genericQuestionAvoidanceRate).toBe(0);
     expect(report.summary.rawMetrics).toBeDefined();
     expect(report.summary.normalizedMetrics).toBeDefined();
+    expect(report.summary.rawMetrics?.repeatedQuestionAvoidanceRelevantCases).toBe(
+      39
+    );
     expect(report.summary.rawMetrics?.genericQuestionAvoidanceRelevantCases).toBe(
       57
     );
@@ -99,6 +112,35 @@ describe("shadow planner scenario eval harness", () => {
     expect(genericExcludedCase?.normalizedReason).not.toContain(
       "Generic-question avoidance expectation was not met"
     );
+    expect(genericExcludedCase?.repeatedQuestionMetricStatus).toBe(
+      "no_metric_setup"
+    );
+    expect(genericExcludedCase?.genericQuestionMetricStatus).toBe(
+      "no_metric_setup"
+    );
+
+    const genericFailureCase = report.summary.failedCases.find(
+      (result) =>
+        result.caseId === "heatstroke_heat_exposure_02_brachy_panting_after_walk"
+    );
+
+    expect(genericFailureCase?.repeatedQuestionMetricStatus).toBe(
+      "no_metric_setup"
+    );
+    expect(genericFailureCase?.genericQuestionMetricStatus).toBe(
+      "actual_generic_question_failure"
+    );
+
+    const repeatedFailureCase = report.summary.failedCases.find(
+      (result) => result.caseId === "edge_urinary_repeat_straining_avoidance"
+    );
+
+    expect(repeatedFailureCase?.repeatedQuestionMetricStatus).toBe(
+      "actual_repeated_question_failure"
+    );
+    expect(repeatedFailureCase?.genericQuestionMetricStatus).toBe(
+      "no_metric_setup"
+    );
 
     expect(report.summary.complaintModuleMatchRate).toBeGreaterThanOrEqual(0);
     expect(report.summary.complaintModuleMatchRate).toBeLessThanOrEqual(1);
@@ -136,9 +178,13 @@ describe("shadow planner scenario eval harness", () => {
     expect(rendered).toContain("Total cases:");
     expect(rendered).toContain("Base cases:");
     expect(rendered).toContain("Edge cases:");
+    expect(rendered).toContain("Setup-aware metrics");
+    expect(rendered).toContain("Repeated eligible cases:");
+    expect(rendered).toContain("Generic eligible cases:");
     expect(rendered).toContain("Raw metrics");
     expect(rendered).toContain("Normalized metrics");
     expect(rendered).toContain("Complaint module match rate:");
+    expect(rendered).toContain("metrics: repeated=");
     expect(rendered).toContain("Failed cases:");
     expect(rendered).not.toContain(
       "My dog was in a hot car for a short time"
