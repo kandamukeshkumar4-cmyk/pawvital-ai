@@ -317,16 +317,15 @@ function buildGlobalGuardrails(): GlobalGuardrails {
         "actual_repeated_question_failure"
     )
     .map((failedCase) => failedCase.caseId);
-
-  const intendedIds = new Set(
-    buildIntendedRepeatedCandidateRows().map((row) => row.caseId)
+  const failedCaseIds = new Set(
+    report.summary.failedCases.map((failedCase) => failedCase.caseId)
   );
   const reportOnlyRowsReclassifiedAsPlannerSuccesses = loadAnnotations()
     .filter(
       (annotation) =>
         annotation.primaryFailureClass === "report_only_quality_gap" &&
         !annotation.secondaryFailureClasses.includes("repeated_metric_setup_gap") &&
-        intendedIds.has(annotation.caseId)
+        !failedCaseIds.has(annotation.caseId)
     )
     .map((annotation) => annotation.caseId);
 
