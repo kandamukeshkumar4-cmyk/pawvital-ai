@@ -43,6 +43,12 @@ candidate set and its current metric-class mix.
 These categories are review buckets only. They do not authorize runtime edits in
 this ticket.
 
+They do not rank severity, approve a runtime patch, or imply that a module swap
+or question-card rewrite is already justified.
+
+They are only a planner-review routing aid for a future ticket that stays
+separate from this validation guard.
+
 - `gi_targeted_discriminator`
   The accepted GI question set already exists, but the planner still stays on
   the global emergency screen instead of the GI-specific discriminator.

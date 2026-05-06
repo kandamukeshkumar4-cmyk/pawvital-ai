@@ -236,6 +236,60 @@ const EXPECTED_TOP_FAILED_METRIC_CLASSES: readonly MetricClassCount[] = [
   { id: "fixture_ambiguity", count: 5 },
 ] as const;
 
+const EXPECTED_EDGE_CASE_CANDIDATE_ROWS = [
+  {
+    caseId: "edge_trauma_small_scrape_vs_steady_bleed",
+    selectedComplaintModule: "trauma_bleeding_wound",
+    suggestedFixCategory: "trauma_targeted_discriminator",
+    acceptablePlannedQuestionIds: [
+      "bleeding_volume_check",
+      "wound_characterization_check",
+      "laceration_depth_check",
+      "trauma_mechanism_check",
+    ],
+  },
+  {
+    caseId: "edge_trauma_repeat_bleeding_avoidance",
+    selectedComplaintModule: "limping_mobility_pain",
+    suggestedFixCategory: "trauma_targeted_discriminator",
+    acceptablePlannedQuestionIds: [
+      "wound_characterization_check",
+      "laceration_depth_check",
+      "limping_weight_bearing",
+      "limping_trauma_onset",
+    ],
+  },
+  {
+    caseId: "edge_skin_repeat_location_avoidance",
+    selectedComplaintModule: "skin_itching_allergy",
+    suggestedFixCategory: "skin_targeted_discriminator",
+    acceptablePlannedQuestionIds: ["skin_emergency_allergy_screen"],
+  },
+  {
+    caseId: "edge_limping_not_sure_pain_or_weakness",
+    selectedComplaintModule: "collapse_weakness",
+    suggestedFixCategory: "multi_symptom_planner_choice",
+    acceptablePlannedQuestionIds: [
+      "limping_weight_bearing",
+      "collapse_weakness_check",
+      "limping_trauma_onset",
+      "gum_color_check",
+    ],
+  },
+  {
+    caseId: "edge_multi_diarrhea_limping_cut",
+    selectedComplaintModule: "gi_vomiting_diarrhea",
+    suggestedFixCategory: "multi_symptom_planner_choice",
+    acceptablePlannedQuestionIds: [
+      "limping_weight_bearing",
+      "limping_trauma_onset",
+      "wound_characterization_check",
+      "bleeding_volume_check",
+      "gi_blood_check",
+    ],
+  },
+] as const;
+
 function buildEvalReport() {
   return evaluateShadowPlannerScenarios({
     scenarios,
@@ -349,6 +403,20 @@ describe("shadow eval planner improvement candidate guard", () => {
     expect(getReportOnlyRowsMislabeledAsPlannerCandidates()).toEqual([]);
   });
 
+  it("locks the reviewed edge-case candidate rows to their audited module and fix-category buckets", () => {
+    const edgeCaseCandidates = buildPlannerCandidateRows()
+      .filter((candidate) => candidate.caseId.startsWith("edge_"))
+      .map((candidate) => ({
+        caseId: candidate.caseId,
+        selectedComplaintModule: candidate.selectedComplaintModule,
+        suggestedFixCategory: candidate.suggestedFixCategory,
+        acceptablePlannedQuestionIds: candidate.acceptablePlannedQuestionIds,
+      }));
+
+    expect(edgeCaseCandidates).toHaveLength(5);
+    expect(edgeCaseCandidates).toEqual(EXPECTED_EDGE_CASE_CANDIDATE_ROWS);
+  });
+
   it("locks the candidate-only failed metric class mix and keeps the eval surface at 57 cases", () => {
     const plannerCandidates = buildPlannerCandidateRows();
     const report = buildEvalReport();
@@ -384,6 +452,12 @@ describe("shadow eval planner improvement candidate guard", () => {
       "No `report_only_quality_gap` row is mislabeled as a planner candidate."
     );
     expect(DOC).toContain("The eval CLI still reports `57` total cases.");
+    expect(DOC).toContain(
+      "They do not rank severity, approve a runtime patch, or imply that a module swap"
+    );
+    expect(DOC).toContain(
+      "or question-card rewrite is already justified."
+    );
     expect(DOC).toContain("Validation-only guard.");
     expect(DOC).toContain("No runtime files touched.");
 
