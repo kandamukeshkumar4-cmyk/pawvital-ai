@@ -1,14 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import annotations from "../fixtures/clinical-intelligence/shadow-eval-failure-annotations.json";
-import edgeScenarios from "../fixtures/clinical-intelligence/shadow-planner-edge-case-scenarios.json";
-import normalizationRows from "../fixtures/clinical-intelligence/shadow-planner-expected-outcome-normalization.json";
-import expectedOutcomes from "../fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json";
-import scenarios from "../fixtures/clinical-intelligence/shadow-planner-scenarios.json";
-
 import { triageShadowPlannerEvalFailures } from "@/lib/clinical-intelligence/shadow-planner-eval-triage";
-import { evaluateShadowPlannerScenarios } from "@/lib/clinical-intelligence/shadow-planner-scenario-eval";
+import {
+  evaluateShadowPlannerScenarios,
+  type ShadowPlannerEdgeCaseScenarioFixture,
+  type ShadowPlannerExpectedOutcomeFixture,
+  type ShadowPlannerExpectedOutcomeNormalizationFixture,
+  type ShadowPlannerScenarioFixture,
+} from "@/lib/clinical-intelligence/shadow-planner-scenario-eval";
 
 type FailureClass =
   | "fixture_ambiguity"
@@ -89,6 +89,12 @@ const PROPOSAL_DOC_PATH = path.join(
   "planner-candidate-fix-proposal-pack-kimi.md"
 );
 const PROPOSAL_DOC = fs.readFileSync(PROPOSAL_DOC_PATH, "utf8");
+const FIXTURE_DIR = path.join(
+  process.cwd(),
+  "tests",
+  "fixtures",
+  "clinical-intelligence"
+);
 
 const OWNER_FACING_CLAIM_PATTERNS = [
   /\bdiagnos(?:e|is|ed|ing)\b/i,
@@ -186,7 +192,40 @@ function extractGuardPayload(): GuardDocPayload {
   return extractJsonBlock(DOC) as GuardDocPayload;
 }
 
+function readJsonFixture<T>(fileName: string): T {
+  return JSON.parse(
+    fs.readFileSync(path.join(FIXTURE_DIR, fileName), "utf8")
+  ) as T;
+}
+
+function loadAnnotations(): AnnotationRow[] {
+  return readJsonFixture<AnnotationRow[]>(
+    "shadow-eval-failure-annotations.json"
+  );
+}
+
+function loadScenarioInputs() {
+  return {
+    scenarios: readJsonFixture<ShadowPlannerScenarioFixture[]>(
+      "shadow-planner-scenarios.json"
+    ),
+    expectedOutcomes: readJsonFixture<ShadowPlannerExpectedOutcomeFixture[]>(
+      "shadow-planner-expected-outcomes.json"
+    ),
+    edgeScenarios: readJsonFixture<ShadowPlannerEdgeCaseScenarioFixture[]>(
+      "shadow-planner-edge-case-scenarios.json"
+    ),
+    normalizationRows:
+      readJsonFixture<ShadowPlannerExpectedOutcomeNormalizationFixture[]>(
+        "shadow-planner-expected-outcome-normalization.json"
+      ),
+  };
+}
+
 function buildEvalReport() {
+  const { scenarios, expectedOutcomes, edgeScenarios, normalizationRows } =
+    loadScenarioInputs();
+
   return evaluateShadowPlannerScenarios({
     scenarios,
     expectedOutcomes,
@@ -202,7 +241,7 @@ function buildIntendedRepeatedCandidateRows(): IntendedRepeatedCandidateRow[] {
     report.summary.failedCases.map((failedCase) => [failedCase.caseId, failedCase])
   );
 
-  return (annotations as AnnotationRow[])
+  return loadAnnotations()
     .filter(
       (annotation) =>
         annotation.primaryFailureClass === "planner_improvement_candidate" &&
@@ -245,7 +284,7 @@ function buildExcludedRepeatedCandidateRows(): ExcludedRepeatedCandidateRow[] {
     buildIntendedRepeatedCandidateRows().map((row) => row.caseId)
   );
 
-  return (annotations as AnnotationRow[])
+  return loadAnnotations()
     .filter(
       (annotation) =>
         annotation.primaryFailureClass === "planner_improvement_candidate" &&
@@ -270,6 +309,7 @@ function buildExcludedRepeatedCandidateRows(): ExcludedRepeatedCandidateRow[] {
 
 function buildGlobalGuardrails(): GlobalGuardrails {
   const report = buildEvalReport();
+  const { scenarios, expectedOutcomes, edgeScenarios } = loadScenarioInputs();
   const triage = triageShadowPlannerEvalFailures({
     report,
     scenarios,
@@ -288,9 +328,7 @@ function buildGlobalGuardrails(): GlobalGuardrails {
   const intendedIds = new Set(
     buildIntendedRepeatedCandidateRows().map((row) => row.caseId)
   );
-  const reportOnlyRowsReclassifiedAsPlannerSuccesses = (
-    annotations as AnnotationRow[]
-  )
+  const reportOnlyRowsReclassifiedAsPlannerSuccesses = loadAnnotations()
     .filter(
       (annotation) =>
         annotation.primaryFailureClass === "report_only_quality_gap" &&
