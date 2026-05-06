@@ -1,0 +1,700 @@
+[
+  {
+    "caseId": "heatstroke_heat_exposure_01_hot_car_collapse",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "heatstroke_heat_exposure_02_brachy_panting_after_walk",
+    "primaryFailureClass": "red_flag_coverage_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review whether the planner should escalate to a more specific registered question that screens the missing red flags.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: heatstroke_signs, brachycephalic_heat; Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/complete/include; actual=emergency_global_screen"
+  },
+  {
+    "caseId": "heatstroke_heat_exposure_03_heat_plus_vomit_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "trauma_bleeding_wound_01_hit_by_car_pale",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "trauma_bleeding_wound_02_bite_puncture_drip",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "trauma_bleeding_wound_03_limping_after_fall_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "urinary_obstruction_01_straining_no_output",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "urinary_obstruction_02_accidents_blood_straining",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=same_module_only/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "urinary_obstruction_03_vomit_and_no_pee_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "bloat_gdv_01_retching_swollen_belly",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "bloat_gdv_02_pacing_drooling_belly",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "bloat_gdv_03_diarrhea_plus_retching_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "respiratory_distress_01_open_mouth_breathing",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "respiratory_distress_02_cough_and_blue_tongue",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=same_module_only/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "respiratory_distress_03_fast_breathing_after_heat_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "collapse_weakness_01_fainted_and_weak",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "collapse_weakness_02_wobbly_pale",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "collapse_weakness_03_vomit_then_weak_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "seizure_collapse_neuro_01_long_shaking",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "seizure_collapse_neuro_02_multiple_episodes",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "seizure_collapse_neuro_03_collapse_or_seizure_unclear",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "toxin_poisoning_exposure_01_chocolate_and_vomit",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "toxin_poisoning_exposure_02_rodent_bait_possible",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "toxin_poisoning_exposure_03_plant_and_wobbly_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "gi_vomiting_diarrhea_01_repeated_vomiting",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "gi_vomiting_diarrhea_02_bloody_diarrhea",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=same_module_only/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: unable_to_retain_water, persistent_vomiting; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; selectedBecause \"emergency_screen\" is outside the acceptable set; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/question_match_required/complete/include; actual=emergency_global_screen"
+  },
+  {
+    "caseId": "skin_itching_allergy_01_hives_after_sting",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "skin_itching_allergy_02_paws_belly_itching",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; selectedBecause \"emergency_screen\" is outside the acceptable set; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/question_match_required/complete/include; actual=emergency_global_screen"
+  },
+  {
+    "caseId": "skin_itching_allergy_03_face_swelling_and_vomit_confuser",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "limping_mobility_pain_01_non_weight_bearing",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap"
+    ],
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise until the harness carries prior asked and answered state.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
+  },
+  {
+    "caseId": "limping_mobility_pain_02_sudden_after_jump",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: post_trauma_lameness, non_weight_bearing; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; selectedBecause \"emergency_screen\" is outside the acceptable set; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/question_match_required/complete/include; actual=emergency_global_screen"
+  },
+  {
+    "caseId": "limping_mobility_pain_03_limping_with_wound_confuser",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: post_trauma_lameness, non_weight_bearing, wound_deep_bleeding; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/complete/include; actual=emergency_global_screen"
+  },
+  {
+    "caseId": "edge_heat_mild_after_walk_vs_hard_panting",
+    "primaryFailureClass": "fixture_ambiguity",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "planner_improvement_candidate"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Review the edge normalization row first; emergency alignment is already acceptable, so this case should not drive a planner fix yet.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: heatstroke_signs, brachycephalic_heat; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/complete/include; actual=emergency_global_screen; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_heat_not_sure_breathing_or_panting",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: tachypnea, open_mouth_breathing, heatstroke_signs, brachycephalic_heat; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_trauma_small_scrape_vs_steady_bleed",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: large_blood_volume, wound_deep_bleeding; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/complete/include; actual=emergency_global_screen; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_trauma_repeat_bleeding_avoidance",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: wound_deep_bleeding, non_weight_bearing, post_trauma_lameness; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; selectedBecause \"emergency_screen\" is outside the acceptable set; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/complete/include; actual=emergency_global_screen; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_urinary_frequent_trips_vs_no_output",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: urinary_obstruction, anuria, stranguria, pollakiuria; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_urinary_repeat_straining_avoidance",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: urinary_obstruction, anuria, stranguria, acute_weakness; Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_bloat_ate_fast_vs_unproductive_gagging",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: gastric_dilatation_volvulus, unproductive_retching, persistent_vomiting; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_bloat_not_sure_belly_size",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: gastric_dilatation_volvulus, unproductive_retching; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_respiratory_excited_vs_resting_fast_breath",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: tachypnea, open_mouth_breathing, heatstroke_signs; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_respiratory_repeat_breathing_avoidance",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: pale_gums, gray_gums, acute_weakness; Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_collapse_tired_vs_cannot_stand",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: acute_weakness, pale_gums, heatstroke_signs; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_collapse_not_sure_faint_or_slip",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: syncope, pale_gums; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_seizure_shiver_vs_uncontrolled_shaking",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: status_epilepticus, cluster_seizures; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_seizure_repeat_duration_avoidance",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: cluster_seizures, status_epilepticus; Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_toxin_unknown_amount_vs_none_seen",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: suspected_toxin, known_toxin_ingestion, persistent_vomiting; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_toxin_repeat_exposure_avoidance",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: acute_weakness, pale_gums; Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_gi_one_vomit_vs_cannot_keep_water",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: unable_to_retain_water, persistent_vomiting; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=strict_primary/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_gi_blood_or_food_color_unclear",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: hematochezia, persistent_vomiting, suspected_toxin; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_skin_hives_vs_regular_itch",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: urticaria, angioedema, anaphylaxis; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=strict_primary/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_skin_repeat_location_avoidance",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "repeated_metric_setup_gap",
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: urticaria, angioedema, anaphylaxis; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/question_match_required/complete/include; actual=emergency_global_screen; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_limping_sore_vs_no_weight",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: non_weight_bearing, post_trauma_lameness; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_limping_not_sure_pain_or_weakness",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: non_weight_bearing, acute_weakness, pale_gums, post_trauma_lameness; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/complete/include; actual=emergency_global_screen; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_multi_vomit_weak_heat_toxin",
+    "primaryFailureClass": "report_only_quality_gap",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "normalization",
+    "reviewerAction": "Apply the existing edge normalization row before counting this as planner debt.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Missing required screened red flags: suspected_toxin, acute_weakness, heatstroke_signs, persistent_vomiting; Planned question repeated the generic baseline \"emergency_global_screen\"; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/alignment_only_ok/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true; fixtureKind=edge"
+  },
+  {
+    "caseId": "edge_multi_diarrhea_limping_cut",
+    "primaryFailureClass": "planner_improvement_candidate",
+    "secondaryFailureClasses": [
+      "generic_metric_setup_gap",
+      "red_flag_coverage_gap",
+      "fixture_ambiguity"
+    ],
+    "patchTarget": "planner",
+    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
+    "safetyImpact": "monitor",
+    "notes": "normalizedReason=Missing required screened red flags: non_weight_bearing, post_trauma_lameness, wound_deep_bleeding, hematochezia; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; Generic-question avoidance expectation was not met; normalization=allow_module_alternatives/question_match_required/complete/include; actual=emergency_global_screen; fixtureKind=edge"
+  }
+]
+
