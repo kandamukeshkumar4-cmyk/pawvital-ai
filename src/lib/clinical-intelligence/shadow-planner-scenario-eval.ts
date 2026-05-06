@@ -752,6 +752,20 @@ function buildRepeatedQuestionMetricStatus(input: {
   return null;
 }
 
+function avoidsAskedOrAnsweredRepeat(
+  plannedQuestionId: string | null,
+  caseState: ClinicalCaseState
+): boolean {
+  if (!plannedQuestionId) {
+    return false;
+  }
+
+  return (
+    !caseState.askedQuestionIds.includes(plannedQuestionId) &&
+    !caseState.answeredQuestionIds.includes(plannedQuestionId)
+  );
+}
+
 function buildGenericQuestionMetricStatus(input: {
   eligible: boolean;
   genericQuestionAvoided: boolean;
@@ -776,7 +790,9 @@ function evaluateNormalizedShadowPlannerScenario(
     caseState: input.caseState,
   });
   const actual = buildActualDescriptor(input.caseId, integration);
-  const repeatedQuestionAvoidedSignal = integration.comparison.repeatedQuestionAvoided;
+  const repeatedQuestionAvoidedSignal = input.repeatedQuestionMetricEligible
+    ? avoidsAskedOrAnsweredRepeat(actual.plannedQuestionId, input.caseState)
+    : integration.comparison.repeatedQuestionAvoided;
 
   const rawEvaluation = evaluateExpectationMode({
     expected: input.expected,
