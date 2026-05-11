@@ -23,6 +23,8 @@ export interface PlannerOptions {
   allowClarification?: boolean;
   activeComplaintModule?: string | null;
   maxQuestionsPerTurn?: number;
+  preferredQuestionIds?: string[];
+  discouragedQuestionIds?: string[];
 }
 
 export interface PlannerFallbackResult {
@@ -43,6 +45,8 @@ const REPETITION_PENALTY = 50;
 const ALREADY_KNOWN_PENALTY = 20;
 const OFF_TOPIC_PENALTY = 15;
 const TOO_MANY_QUESTIONS_PENALTY = 10;
+const PREFERRED_QUESTION_BONUS = 20;
+const DISCOURAGED_QUESTION_PENALTY = 40;
 
 function isQuestionAlreadyAnswered(
   card: ClinicalQuestionCard,
@@ -189,6 +193,18 @@ export function buildQuestionScoreBreakdown(
     breakdown["tooManyQuestionsPenalty"] = -TOO_MANY_QUESTIONS_PENALTY;
   } else {
     breakdown["tooManyQuestionsPenalty"] = 0;
+  }
+
+  if (options?.preferredQuestionIds?.includes(card.id)) {
+    breakdown["preferredQuestionBonus"] = PREFERRED_QUESTION_BONUS;
+  } else {
+    breakdown["preferredQuestionBonus"] = 0;
+  }
+
+  if (options?.discouragedQuestionIds?.includes(card.id)) {
+    breakdown["discouragedQuestionPenalty"] = -DISCOURAGED_QUESTION_PENALTY;
+  } else {
+    breakdown["discouragedQuestionPenalty"] = 0;
   }
 
   return breakdown;
