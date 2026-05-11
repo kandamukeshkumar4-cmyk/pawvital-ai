@@ -57,6 +57,9 @@ type IntendedSliceCaseRow = {
     | "module_phase_priority";
   selectedComplaintModule: string;
   acceptableTargetQuestionIds: string[];
+  currentGuardStatus:
+    | "still_in_proposal_lane"
+    | "completed_out_of_proposal_lane";
   expectedOutcome:
     | "passed_on_accepted_non_generic_question"
     | "red_flag_coverage_gap_after_generic_avoidance";
@@ -142,6 +145,7 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
         "skin_changes_check",
         "skin_exposure_check",
       ],
+      currentGuardStatus: "completed_out_of_proposal_lane",
       expectedOutcome: "passed_on_accepted_non_generic_question",
       remainingMissingRedFlags: [],
     },
@@ -154,6 +158,7 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
         "limping_trauma_onset",
         "trauma_mechanism_check",
       ],
+      currentGuardStatus: "still_in_proposal_lane",
       expectedOutcome: "red_flag_coverage_gap_after_generic_avoidance",
       remainingMissingRedFlags: ["post_trauma_lameness"],
       expectedPlannedQuestionId: "limping_weight_bearing",
@@ -168,6 +173,7 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
         "wound_characterization_check",
         "bleeding_volume_check",
       ],
+      currentGuardStatus: "still_in_proposal_lane",
       expectedOutcome: "red_flag_coverage_gap_after_generic_avoidance",
       remainingMissingRedFlags: [
         "post_trauma_lameness",
@@ -185,6 +191,7 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
         "laceration_depth_check",
         "trauma_mechanism_check",
       ],
+      currentGuardStatus: "completed_out_of_proposal_lane",
       expectedOutcome: "passed_on_accepted_non_generic_question",
       remainingMissingRedFlags: [],
     },
@@ -351,31 +358,40 @@ function getCaseResult(caseId: string): ShadowPlannerScenarioEvalCaseResult {
 }
 
 describe("planner candidate fix slice 2A guard", () => {
-  it("locks the exact four medium-risk slice rows and the three explicit non-slice proposal rows", () => {
+  it("locks the four slice outcomes while only the two limping rows remain in the live proposal lane", () => {
     const proposalRows = extractProposalRows();
+    const activeProposalLaneCaseIds = EXPECTED_GUARD_PAYLOAD.intendedSliceCaseRows
+      .filter((row) => row.currentGuardStatus === "still_in_proposal_lane")
+      .map((row) => row.caseId);
 
     expect(
       proposalRows
-        .filter((row) => TARGET_CASE_IDS.includes(row.caseId as (typeof TARGET_CASE_IDS)[number]))
+        .filter((row) =>
+          TARGET_CASE_IDS.includes(row.caseId as (typeof TARGET_CASE_IDS)[number])
+        )
         .map((row) => row.caseId)
-    ).toEqual(TARGET_CASE_IDS);
+    ).toEqual(activeProposalLaneCaseIds);
 
     for (const expectedRow of EXPECTED_GUARD_PAYLOAD.intendedSliceCaseRows) {
       const proposalRow = proposalRows.find(
         (row) => row.caseId === expectedRow.caseId
       );
 
-      expect(proposalRow).toBeDefined();
-      expect(proposalRow?.recommendedFixOwner).toBe(
-        expectedRow.recommendedFixOwner
-      );
-      expect(proposalRow?.selectedComplaintModule).toBe(
-        expectedRow.selectedComplaintModule
-      );
-      expect(proposalRow?.acceptableTargetQuestionIds).toEqual(
-        expectedRow.acceptableTargetQuestionIds
-      );
-      expect(proposalRow?.regressionRisk).toBe("medium");
+      if (expectedRow.currentGuardStatus === "still_in_proposal_lane") {
+        expect(proposalRow).toBeDefined();
+        expect(proposalRow?.recommendedFixOwner).toBe(
+          expectedRow.recommendedFixOwner
+        );
+        expect(proposalRow?.selectedComplaintModule).toBe(
+          expectedRow.selectedComplaintModule
+        );
+        expect(proposalRow?.acceptableTargetQuestionIds).toEqual(
+          expectedRow.acceptableTargetQuestionIds
+        );
+        expect(proposalRow?.regressionRisk).toBe("medium");
+      } else {
+        expect(proposalRow).toBeUndefined();
+      }
     }
 
     expect(buildExcludedGenericCandidateRows()).toEqual(
@@ -454,9 +470,19 @@ describe("planner candidate fix slice 2A guard", () => {
     expect(doc).toContain("Validation-only guard.");
     expect(doc).toContain("No runtime files touched.");
     expect(doc).toContain(
-      "The medium-risk generic-avoidance slice currently contains exactly `4` rows:"
+      "The merged slice still drives setup-aware generic avoidance on exactly `4`"
     );
-    expect(doc).toContain("The other non-repeated generic candidates stay outside slice 2A:");
+    expect(doc).toContain("rows.");
+    expect(doc).toContain(
+      "Only `2` slice rows still appear in the live planner-candidate proposal lane:"
+    );
+    expect(doc).toContain(
+      "Two slice rows have already exited the proposal lane and now pass on accepted"
+    );
+    expect(doc).toContain("non-generic follow-ups:");
+    expect(doc).toContain(
+      "The other non-repeated generic candidates still stay outside slice 2A:"
+    );
     expect(doc).toContain("`genericQuestionEligibleCases`: `11`");
     expect(doc).toContain("`genericQuestionAvoidanceCount`: `4`");
     expect(doc).toContain("`actual_repeated_question_failure`: `0`");

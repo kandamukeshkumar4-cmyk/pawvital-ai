@@ -29,21 +29,18 @@ slice and the current non-regression baseline.
 
 ## Intended Slice
 
-The medium-risk generic-avoidance slice currently contains exactly `4` rows:
+The merged slice still drives setup-aware generic avoidance on exactly `4`
+rows.
 
-- `skin_itching_allergy_02_paws_belly_itching` stays on
-  `module_phase_priority`
+Only `2` slice rows still appear in the live planner-candidate proposal lane:
+
 - `limping_mobility_pain_02_sudden_after_jump` stays on `adapter_trigger`
 - `limping_mobility_pain_03_limping_with_wound_confuser` stays on
   `adapter_trigger`
-- `edge_trauma_small_scrape_vs_steady_bleed` stays on `planner_scoring`
 
-Inside that slice:
+These rows still remain planner-candidate follow-ups because the generic
+question is gone but red-flag coverage is still incomplete:
 
-- `skin_itching_allergy_02_paws_belly_itching` now passes on an accepted
-  non-generic skin follow-up.
-- `edge_trauma_small_scrape_vs_steady_bleed` now passes on an accepted
-  non-generic trauma follow-up.
 - `limping_mobility_pain_02_sudden_after_jump` still fails only for
   `post_trauma_lameness` red-flag coverage after moving to
   `limping_weight_bearing`.
@@ -51,9 +48,17 @@ Inside that slice:
   `post_trauma_lameness` and `non_weight_bearing` red-flag coverage after
   moving to `bleeding_volume_check`.
 
+Two slice rows have already exited the proposal lane and now pass on accepted
+non-generic follow-ups:
+
+- `skin_itching_allergy_02_paws_belly_itching` now passes on an accepted
+  non-generic skin follow-up and no longer remains in the proposal pack.
+- `edge_trauma_small_scrape_vs_steady_bleed` now passes on an accepted
+  non-generic trauma follow-up and no longer remains in the proposal pack.
+
 ## Explicit Exclusions
 
-The other non-repeated generic candidates stay outside slice 2A:
+The other non-repeated generic candidates still stay outside slice 2A:
 
 - `gi_vomiting_diarrhea_03_water_comes_back_up` stays on `fixture` with
   `low` regression risk
@@ -95,6 +100,7 @@ pack.
         "skin_changes_check",
         "skin_exposure_check"
       ],
+      "currentGuardStatus": "completed_out_of_proposal_lane",
       "expectedOutcome": "passed_on_accepted_non_generic_question",
       "remainingMissingRedFlags": []
     },
@@ -107,6 +113,7 @@ pack.
         "limping_trauma_onset",
         "trauma_mechanism_check"
       ],
+      "currentGuardStatus": "still_in_proposal_lane",
       "expectedOutcome": "red_flag_coverage_gap_after_generic_avoidance",
       "remainingMissingRedFlags": [
         "post_trauma_lameness"
@@ -123,6 +130,7 @@ pack.
         "wound_characterization_check",
         "bleeding_volume_check"
       ],
+      "currentGuardStatus": "still_in_proposal_lane",
       "expectedOutcome": "red_flag_coverage_gap_after_generic_avoidance",
       "remainingMissingRedFlags": [
         "post_trauma_lameness",
@@ -140,6 +148,7 @@ pack.
         "laceration_depth_check",
         "trauma_mechanism_check"
       ],
+      "currentGuardStatus": "completed_out_of_proposal_lane",
       "expectedOutcome": "passed_on_accepted_non_generic_question",
       "remainingMissingRedFlags": []
     }
