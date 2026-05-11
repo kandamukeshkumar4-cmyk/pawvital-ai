@@ -46,8 +46,8 @@ Emergency alignment remains 100% in the current eval.
 
 Current scenario-eval confirmation:
 
-- `emergencyScreenAlignmentCount = 23`
-- `emergencyScreenAlignmentRelevantCases = 23`
+- `emergencyScreenAlignmentCount = 24`
+- `emergencyScreenAlignmentRelevantCases = 24`
 - `emergencyScreenAlignmentRate = 1`
 - audited red-flag safety blockers: `0`
 

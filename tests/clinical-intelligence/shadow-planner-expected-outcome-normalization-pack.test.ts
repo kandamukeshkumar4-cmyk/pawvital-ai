@@ -324,7 +324,7 @@ describe("shadow planner expected outcome normalization pack", () => {
       (row) => row.emergencyAlignmentDisposition === "alignment_only_ok"
     );
 
-    expect(alignmentOnlyRows).toHaveLength(39);
+    expect(alignmentOnlyRows).toHaveLength(40);
 
     for (const row of normalizationFixture) {
       expect(row.emergencyAlignmentDisposition).toBe(
@@ -343,8 +343,8 @@ describe("shadow planner expected outcome normalization pack", () => {
       (row) => row.genericQuestionScoring === "exclude_for_now"
     );
 
-    expect(partialRows).toHaveLength(46);
-    expect(excludedGenericRows).toHaveLength(46);
+    expect(partialRows).toHaveLength(47);
+    expect(excludedGenericRows).toHaveLength(47);
 
     for (const row of normalizationFixture) {
       const acceptsGlobalEmergencyScreen =

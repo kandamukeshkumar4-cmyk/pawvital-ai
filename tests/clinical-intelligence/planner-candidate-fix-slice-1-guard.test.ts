@@ -129,10 +129,6 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
   ],
   excludedRepeatedCandidateRows: [
     {
-      caseId: "gi_vomiting_diarrhea_03_water_comes_back_up",
-      redirectedFixType: "fixture_expectation_adjustment",
-    },
-    {
       caseId: "limping_mobility_pain_02_sudden_after_jump",
       redirectedFixType: "adapter_trigger_adjustment",
     },
@@ -149,8 +145,8 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
     repeatedQuestionEligibleCases: 6,
     actualRepeatedQuestionFailureCount: 0,
     actualRepeatedQuestionFailureCaseIds: [],
-    emergencyScreenAlignmentCount: 39,
-    emergencyScreenAlignmentRelevantCases: 39,
+    emergencyScreenAlignmentCount: 40,
+    emergencyScreenAlignmentRelevantCases: 40,
     emergencyScreenAlignmentRate: 1,
     safetyBlockerCount: 0,
     reportOnlyRowsReclassifiedAsPlannerSuccesses: [],
@@ -358,7 +354,7 @@ describe("planner candidate fix slice 1 guard", () => {
     expect(DOC).toContain("The other repeated planner-candidate rows are intentionally outside slice 1:");
     expect(DOC).toContain("`repeatedQuestionEligibleCases`: `6`");
     expect(DOC).toContain("`actual_repeated_question_failure`: `0`");
-    expect(DOC).toContain("emergency alignment: `39/39 = 100%`");
+    expect(DOC).toContain("emergency alignment: `40/40 = 100%`");
     expect(DOC).toContain("safety blockers: `0`");
     expect(DOC).toContain(
       "non-repeated report-only rows reclassified as planner successes: `0`"

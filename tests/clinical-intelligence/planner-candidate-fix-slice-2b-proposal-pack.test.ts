@@ -213,7 +213,6 @@ const TELEMETRY_EXPOSURE_PATTERNS = [
 ];
 
 const REMAINING_CASE_IDS = [
-  "gi_vomiting_diarrhea_03_water_comes_back_up",
   "edge_limping_not_sure_pain_or_weakness",
   "edge_multi_diarrhea_limping_cut",
 ] as const;
@@ -242,29 +241,6 @@ const REQUIRED_VALIDATION_COMMANDS = [
 
 const EXPECTED_PAYLOAD: ProposalPackPayload = {
   remainingPlannerCandidateRows: [
-    {
-      caseId: "gi_vomiting_diarrhea_03_water_comes_back_up",
-      recommendedFixLane: "fixture_only",
-      regressionRisk: "low",
-      selectedComplaintModule: "gi_vomiting_diarrhea",
-      currentPlannedQuestionId: "emergency_global_screen",
-      acceptableTargetQuestionIds: [
-        "gi_keep_water_down_check",
-        "gi_vomiting_frequency",
-        "gi_blood_check",
-      ],
-      blockingFailureClasses: [
-        "repeated_metric_setup_gap",
-        "generic_metric_setup_gap",
-        "red_flag_coverage_gap",
-      ],
-      minimalFutureScope: [
-        "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json",
-        "tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json",
-      ],
-      followUpBoundary:
-        "Keep this in a fixture-only lane until the accepted outcome wording is reconciled; do not broaden planner scoring before the fixture mismatch is reviewed.",
-    },
     {
       caseId: "edge_limping_not_sure_pain_or_weakness",
       recommendedFixLane: "phase_priority",
@@ -360,7 +336,7 @@ const EXPECTED_PAYLOAD: ProposalPackPayload = {
     residualSlice2ACaseIds: [...RESIDUAL_CASE_IDS],
     excludedRepeatedContextCaseIds: [...EXCLUDED_REPEATED_CONTEXT_CASE_IDS],
     passedSlice2ACaseIds: [...PASSED_SLICE_TWO_A_CASE_IDS],
-    fixtureOnlyCaseIds: ["gi_vomiting_diarrhea_03_water_comes_back_up"],
+    fixtureOnlyCaseIds: [],
     plannerScoringCaseIds: [],
     phasePriorityCaseIds: ["edge_limping_not_sure_pain_or_weakness"],
     mixedSymptomRiskCaseIds: ["edge_multi_diarrhea_limping_cut"],
@@ -368,18 +344,8 @@ const EXPECTED_PAYLOAD: ProposalPackPayload = {
   },
   edgeCaseCoverage: {
     coverageSummary:
-      "Covers all five remaining non-repeated post-Slice-2A planner candidates and excludes only the two repeated-context rows assigned to a separate avoidance lane.",
+      "Covers all four remaining non-repeated post-Slice-2A planner candidates after fixture normalization and excludes only the two repeated-context rows assigned to a separate avoidance lane.",
     edgeCaseBuckets: [
-      {
-        bucket: "fixture_only",
-        caseIds: ["gi_vomiting_diarrhea_03_water_comes_back_up"],
-        edgeCaseRisk: "low",
-        asserts: [
-          "current emergency_global_screen selection",
-          "GI water-retention fixture wording mismatch",
-          "fixture-only future scope",
-        ],
-      },
       {
         bucket: "module_phase_priority",
         caseIds: ["edge_limping_not_sure_pain_or_weakness"],
@@ -428,18 +394,18 @@ const EXPECTED_PAYLOAD: ProposalPackPayload = {
     ],
   },
   globalGuardrails: {
-    plannerImprovementCandidateCount: 7,
-    remainingSlice2BCaseCount: 5,
-    remainingHigherRiskPlannerCandidateCount: 3,
+    plannerImprovementCandidateCount: 6,
+    remainingSlice2BCaseCount: 4,
+    remainingHigherRiskPlannerCandidateCount: 2,
     residualAfterSlice2ACount: 2,
     excludedRepeatedContextCandidateCount: 2,
-    genericQuestionEligibleCases: 11,
+    genericQuestionEligibleCases: 10,
     genericQuestionAvoidanceCount: 4,
     repeatedQuestionEligibleCases: 6,
     repeatedQuestionAvoidanceCount: 6,
     repeatedQuestionAvoidanceRate: 1,
-    emergencyScreenAlignmentCount: 39,
-    emergencyScreenAlignmentRelevantCases: 39,
+    emergencyScreenAlignmentCount: 40,
+    emergencyScreenAlignmentRelevantCases: 40,
     emergencyScreenAlignmentRate: 1,
     rawFailedCaseCount: 54,
     normalizedFailedCaseCount: 53,
@@ -534,7 +500,6 @@ describe("planner candidate fix slice 2B proposal pack", () => {
         )
         .map((row) => row.caseId)
     ).toEqual([
-      "gi_vomiting_diarrhea_03_water_comes_back_up",
       "limping_mobility_pain_02_sudden_after_jump",
       "limping_mobility_pain_03_limping_with_wound_confuser",
       "edge_limping_not_sure_pain_or_weakness",
@@ -642,9 +607,6 @@ describe("planner candidate fix slice 2B proposal pack", () => {
       ])
     );
 
-    expect(bucketByName.get("fixture_only")?.caseIds).toEqual([
-      "gi_vomiting_diarrhea_03_water_comes_back_up",
-    ]);
     expect(bucketByName.get("module_phase_priority")?.caseIds).toEqual([
       "edge_limping_not_sure_pain_or_weakness",
     ]);
@@ -720,8 +682,8 @@ describe("planner candidate fix slice 2B proposal pack", () => {
 
     expect(doc).toContain("Proposal pack only.");
     expect(doc).toContain("No runtime files touched.");
-    expect(doc).toContain("remaining slice-2B rows: `5`");
-    expect(doc).toContain("remaining higher-risk planner rows: `3`");
+    expect(doc).toContain("remaining slice-2B rows: `4`");
+    expect(doc).toContain("remaining higher-risk planner rows: `2`");
     expect(doc).toContain("residual after Slice 2A: `2`");
     expect(doc).toContain("standalone planner scoring rows after Slice 2A: `0`");
     expect(doc).toContain("new adapter/trigger rows after Slice 2A: `0`");

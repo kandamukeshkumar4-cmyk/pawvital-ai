@@ -20,23 +20,26 @@ VET-1462C already moved the safest generic-avoidance cases into accepted
 symptom-specific follow-ups, and VET-1463Q locked that slice boundary.
 
 This follow-up pack covers only the remaining non-repeated rows that still need
-separate planning after Slice 2A:
+separate planning after Slice 2A and fixture normalization:
 
-- `3` higher-risk planner-candidate rows still sitting on
+- `2` higher-risk planner-candidate rows still sitting on
   `emergency_global_screen`
 - `2` Slice 2A residual rows that now pick accepted non-generic questions but
   still fail for red-flag coverage
+- `1` fixture-only row normalized to `report_only_quality_gap`
+  (`gi_vomiting_diarrhea_03_water_comes_back_up`)
 
-The goal is to keep the remaining fixture-only, phase-priority, residual, and
+The goal is to keep the remaining phase-priority, residual, and
 mixed-symptom follow-ups split before any broader implementation ticket is
 opened.
 
 ## Post-Slice-2A Boundary
 
-- remaining slice-2B rows: `5`
-- remaining higher-risk planner rows: `3`
+- remaining slice-2B rows: `4`
+- remaining higher-risk planner rows: `2`
 - residual after Slice 2A: `2`
 - excluded repeated-context rows: `2`
+- fixture-only rows normalized: `1` (`gi_vomiting_diarrhea_03_water_comes_back_up`)
 - standalone planner scoring rows after Slice 2A: `0`
 - new adapter/trigger rows after Slice 2A: `0`
 
@@ -45,6 +48,10 @@ Rows already cleared by Slice 2A and therefore not included here:
 - `skin_itching_allergy_02_paws_belly_itching`
 - `edge_trauma_small_scrape_vs_steady_bleed`
 
+Fixture-only row normalized out of this pack:
+
+- `gi_vomiting_diarrhea_03_water_comes_back_up` (moved to `report_only_quality_gap`)
+
 Repeated-context rows that stay outside this pack:
 
 - `edge_trauma_repeat_bleeding_avoidance`
@@ -52,8 +59,6 @@ Repeated-context rows that stay outside this pack:
 
 ## Lane Split
 
-- `fixture_only`
-  `gi_vomiting_diarrhea_03_water_comes_back_up`
 - `phase_priority`
   `edge_limping_not_sure_pain_or_weakness`
 - `mixed_symptom_planner_scoring`
@@ -70,13 +75,15 @@ There are no new adapter/trigger rows in this pack. The two prior
 `adapter_trigger` rows now stay here only as Slice 2A residuals because they
 already moved to accepted non-generic questions.
 
+There are no remaining fixture-only rows in this pack. The only fixture-only
+candidate (`gi_vomiting_diarrhea_03_water_comes_back_up`) was normalized to
+`report_only_quality_gap` by VET-1469C.
+
 ## Edge-Case Coverage and Telemetry Hygiene
 
 This proposal pack intentionally covers every remaining non-repeated Slice 2B
-candidate row after Slice 2A:
+candidate row after Slice 2A and fixture normalization:
 
-- fixture-only GI hydration wording:
-  `gi_vomiting_diarrhea_03_water_comes_back_up`
 - module phase priority between limping and weakness:
   `edge_limping_not_sure_pain_or_weakness`
 - high-risk mixed-symptom scoring:
@@ -84,6 +91,10 @@ candidate row after Slice 2A:
 - residual red-flag coverage after accepted non-generic Slice 2A moves:
   `limping_mobility_pain_02_sudden_after_jump`
   `limping_mobility_pain_03_limping_with_wound_confuser`
+
+The fixture-only GI hydration row was normalized out of this pack:
+
+- `gi_vomiting_diarrhea_03_water_comes_back_up` → `report_only_quality_gap`
 
 The only excluded planner-candidate rows are the two repeated-context cases
 already assigned to a separate avoidance lane:
@@ -101,7 +112,6 @@ the proposal boundary.
 
 | Case ID | Lane | Current planned question | Selected complaint module | Regression risk |
 | --- | --- | --- | --- | --- |
-| `gi_vomiting_diarrhea_03_water_comes_back_up` | `fixture_only` | `emergency_global_screen` | `gi_vomiting_diarrhea` | `low` |
 | `edge_limping_not_sure_pain_or_weakness` | `phase_priority` | `emergency_global_screen` | `collapse_weakness` | `high` |
 | `edge_multi_diarrhea_limping_cut` | `mixed_symptom_planner_scoring` | `emergency_global_screen` | `gi_vomiting_diarrhea` | `high` |
 
@@ -117,28 +127,6 @@ the proposal boundary.
 ```json
 {
   "remainingPlannerCandidateRows": [
-    {
-      "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
-      "recommendedFixLane": "fixture_only",
-      "regressionRisk": "low",
-      "selectedComplaintModule": "gi_vomiting_diarrhea",
-      "currentPlannedQuestionId": "emergency_global_screen",
-      "acceptableTargetQuestionIds": [
-        "gi_keep_water_down_check",
-        "gi_vomiting_frequency",
-        "gi_blood_check"
-      ],
-      "blockingFailureClasses": [
-        "repeated_metric_setup_gap",
-        "generic_metric_setup_gap",
-        "red_flag_coverage_gap"
-      ],
-      "minimalFutureScope": [
-        "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json",
-        "tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json"
-      ],
-      "followUpBoundary": "Keep this in a fixture-only lane until the accepted outcome wording is reconciled; do not broaden planner scoring before the fixture mismatch is reviewed."
-    },
     {
       "caseId": "edge_limping_not_sure_pain_or_weakness",
       "recommendedFixLane": "phase_priority",
@@ -229,7 +217,6 @@ the proposal boundary.
   ],
   "laneSummary": {
     "remainingPlannerCandidateCaseIds": [
-      "gi_vomiting_diarrhea_03_water_comes_back_up",
       "edge_limping_not_sure_pain_or_weakness",
       "edge_multi_diarrhea_limping_cut"
     ],
@@ -245,9 +232,7 @@ the proposal boundary.
       "skin_itching_allergy_02_paws_belly_itching",
       "edge_trauma_small_scrape_vs_steady_bleed"
     ],
-    "fixtureOnlyCaseIds": [
-      "gi_vomiting_diarrhea_03_water_comes_back_up"
-    ],
+    "fixtureOnlyCaseIds": [],
     "plannerScoringCaseIds": [],
     "phasePriorityCaseIds": [
       "edge_limping_not_sure_pain_or_weakness"
@@ -258,20 +243,8 @@ the proposal boundary.
     "adapterTriggerCaseIds": []
   },
   "edgeCaseCoverage": {
-    "coverageSummary": "Covers all five remaining non-repeated post-Slice-2A planner candidates and excludes only the two repeated-context rows assigned to a separate avoidance lane.",
+    "coverageSummary": "Covers all four remaining non-repeated post-Slice-2A planner candidates after fixture normalization and excludes only the two repeated-context rows assigned to a separate avoidance lane.",
     "edgeCaseBuckets": [
-      {
-        "bucket": "fixture_only",
-        "caseIds": [
-          "gi_vomiting_diarrhea_03_water_comes_back_up"
-        ],
-        "edgeCaseRisk": "low",
-        "asserts": [
-          "current emergency_global_screen selection",
-          "GI water-retention fixture wording mismatch",
-          "fixture-only future scope"
-        ]
-      },
       {
         "bucket": "module_phase_priority",
         "caseIds": [
@@ -330,18 +303,18 @@ the proposal boundary.
     ]
   },
   "globalGuardrails": {
-    "plannerImprovementCandidateCount": 7,
-    "remainingSlice2BCaseCount": 5,
-    "remainingHigherRiskPlannerCandidateCount": 3,
+    "plannerImprovementCandidateCount": 6,
+    "remainingSlice2BCaseCount": 4,
+    "remainingHigherRiskPlannerCandidateCount": 2,
     "residualAfterSlice2ACount": 2,
     "excludedRepeatedContextCandidateCount": 2,
-    "genericQuestionEligibleCases": 11,
+    "genericQuestionEligibleCases": 10,
     "genericQuestionAvoidanceCount": 4,
     "repeatedQuestionEligibleCases": 6,
     "repeatedQuestionAvoidanceCount": 6,
     "repeatedQuestionAvoidanceRate": 1,
-    "emergencyScreenAlignmentCount": 39,
-    "emergencyScreenAlignmentRelevantCases": 39,
+    "emergencyScreenAlignmentCount": 40,
+    "emergencyScreenAlignmentRelevantCases": 40,
     "emergencyScreenAlignmentRate": 1,
     "rawFailedCaseCount": 54,
     "normalizedFailedCaseCount": 53

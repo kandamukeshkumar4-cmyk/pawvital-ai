@@ -29,7 +29,7 @@ baseline and the current non-regression contract.
 The following metrics are locked at their post-Slice 2A values:
 
 - `total cases`: `57`
-- `emergency alignment`: `39/39`
+- `emergency alignment`: `40/40`
 - `repeated avoidance`: `6/6`
 - `generic avoidance`: `4/11`
 - `safety blockers`: `0`
@@ -52,7 +52,7 @@ None of these rows may regress back to `emergency_global_screen`.
 The test file asserts:
 
 1. Total cases remain exactly 57 (33 base + 24 edge).
-2. Emergency screen alignment remains 39/39 = 100%.
+2. Emergency screen alignment remains 40/40 = 100%.
 3. Setup-aware repeated question avoidance remains 6/6 = 100%.
 4. Setup-aware generic question avoidance remains 4/11.
 5. Safety blockers remain 0.

@@ -198,12 +198,6 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
   ],
   excludedGenericCandidateRows: [
     {
-      caseId: "gi_vomiting_diarrhea_03_water_comes_back_up",
-      recommendedFixOwner: "fixture",
-      regressionRisk: "low",
-      currentPlannedQuestionId: "emergency_global_screen",
-    },
-    {
       caseId: "edge_limping_not_sure_pain_or_weakness",
       recommendedFixOwner: "module_phase_priority",
       regressionRisk: "high",
@@ -217,7 +211,7 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
     },
   ],
   globalGuardrails: {
-    genericQuestionEligibleCases: 11,
+    genericQuestionEligibleCases: 10,
     genericQuestionAvoidanceCount: 4,
     genericQuestionAvoidanceCaseIds: [...TARGET_CASE_IDS],
     repeatedQuestionEligibleCases: 6,
@@ -225,8 +219,8 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
     repeatedQuestionAvoidanceRate: 1,
     actualRepeatedQuestionFailureCount: 0,
     actualRepeatedQuestionFailureCaseIds: [],
-    emergencyScreenAlignmentCount: 39,
-    emergencyScreenAlignmentRelevantCases: 39,
+    emergencyScreenAlignmentCount: 40,
+    emergencyScreenAlignmentRelevantCases: 40,
     emergencyScreenAlignmentRate: 1,
     safetyBlockerCount: 0,
     reportOnlyRowsReclassifiedAsPlannerSuccesses: [],
@@ -483,10 +477,10 @@ describe("planner candidate fix slice 2A guard", () => {
     expect(doc).toContain(
       "The other non-repeated generic candidates still stay outside slice 2A:"
     );
-    expect(doc).toContain("`genericQuestionEligibleCases`: `11`");
+    expect(doc).toContain("`genericQuestionEligibleCases`: `10`");
     expect(doc).toContain("`genericQuestionAvoidanceCount`: `4`");
     expect(doc).toContain("`actual_repeated_question_failure`: `0`");
-    expect(doc).toContain("emergency alignment: `39/39 = 100%`");
+    expect(doc).toContain("emergency alignment: `40/40 = 100%`");
     expect(doc).toContain("safety blockers: `0`");
     expect(doc).toContain(
       "report-only rows reclassified as planner successes: `0`"

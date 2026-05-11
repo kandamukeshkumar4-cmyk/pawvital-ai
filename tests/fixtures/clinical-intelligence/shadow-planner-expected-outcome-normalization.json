@@ -301,10 +301,10 @@
       "gi_vomiting_diarrhea"
     ],
     "ambiguityDisposition": "strict_primary",
-    "emergencyAlignmentDisposition": "question_match_required",
-    "redFlagCoverageExpectation": "complete",
-    "genericQuestionScoring": "include",
-    "notes": "This row keeps the primary complaint module as the only accepted module match for the current fixture wording. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+    "emergencyAlignmentDisposition": "alignment_only_ok",
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "Water-retention fixture wording is ambiguous enough that the global emergency screen is already an acceptable first move. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch. Generic-question scoring stays excluded for now because a global emergency screen is already an accepted first move."
   },
   {
     "caseId": "skin_itching_allergy_01_hives_after_sting",

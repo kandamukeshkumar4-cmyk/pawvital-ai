@@ -46,16 +46,16 @@ describe("shadow planner scenario eval harness", () => {
     expect(report.summary.repeatedQuestionAvoidanceRelevantCases).toBe(6);
     expect(report.summary.repeatedQuestionAvoidanceCount).toBe(6);
     expect(report.summary.repeatedQuestionAvoidanceRate).toBe(1);
-    expect(report.summary.genericQuestionEligibleCases).toBe(11);
-    expect(report.summary.genericQuestionAvoidanceRelevantCases).toBe(11);
+    expect(report.summary.genericQuestionEligibleCases).toBe(10);
+    expect(report.summary.genericQuestionAvoidanceRelevantCases).toBe(10);
     expect(report.summary.genericQuestionAvoidanceCount).toBe(4);
-    expect(report.summary.genericQuestionAvoidanceRate).toBe(4 / 11);
+    expect(report.summary.genericQuestionAvoidanceRate).toBe(4 / 10);
     expect(report.summary.rawMetrics).toBeDefined();
     expect(report.summary.normalizedMetrics).toBeDefined();
-    expect(report.summary.acceptableQuestionCount).toBe(50);
-    expect(report.summary.acceptableQuestionRate).toBe(50 / 57);
-    expect(report.summary.emergencyScreenAlignmentCount).toBe(39);
-    expect(report.summary.emergencyScreenAlignmentRelevantCases).toBe(39);
+    expect(report.summary.acceptableQuestionCount).toBe(51);
+    expect(report.summary.acceptableQuestionRate).toBe(51 / 57);
+    expect(report.summary.emergencyScreenAlignmentCount).toBe(40);
+    expect(report.summary.emergencyScreenAlignmentRelevantCases).toBe(40);
     expect(report.summary.emergencyScreenAlignmentRate).toBe(1);
     expect(report.summary.rawMetrics?.repeatedQuestionAvoidanceCount).toBe(11);
     expect(report.summary.rawMetrics?.repeatedQuestionAvoidanceRelevantCases).toBe(39);
@@ -63,12 +63,12 @@ describe("shadow planner scenario eval harness", () => {
     expect(report.summary.rawMetrics?.genericQuestionAvoidanceCount).toBe(6);
     expect(report.summary.rawMetrics?.genericQuestionAvoidanceRelevantCases).toBe(57);
     expect(report.summary.rawMetrics?.genericQuestionAvoidanceRate).toBe(6 / 57);
-    expect(report.summary.normalizedMetrics?.acceptableQuestionCount).toBe(51);
-    expect(report.summary.normalizedMetrics?.acceptableQuestionRate).toBe(51 / 57);
+    expect(report.summary.normalizedMetrics?.acceptableQuestionCount).toBe(52);
+    expect(report.summary.normalizedMetrics?.acceptableQuestionRate).toBe(52 / 57);
     expect(report.summary.normalizedMetrics?.genericQuestionAvoidanceCount).toBe(4);
-    expect(report.summary.normalizedMetrics?.genericQuestionAvoidanceRelevantCases).toBe(29);
+    expect(report.summary.normalizedMetrics?.genericQuestionAvoidanceRelevantCases).toBe(28);
     expect(report.summary.normalizedMetrics?.genericQuestionAvoidanceRate).toBe(
-      4 / 29
+      4 / 28
     );
     expect(
       report.summary.normalizedMetrics?.totalRequiredRedFlagCount

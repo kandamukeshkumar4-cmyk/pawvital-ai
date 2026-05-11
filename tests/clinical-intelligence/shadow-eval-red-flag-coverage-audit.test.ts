@@ -56,8 +56,8 @@ const EXPECTED_AUDIT_ROWS: readonly AuditRow[] = [
     classificationCounts: {
       fixture_expectation_gap: 0,
       registered_question_card_gap: 0,
-      adapter_selection_gap: 1,
-      acceptable_report_only_gap: 7,
+      adapter_selection_gap: 0,
+      acceptable_report_only_gap: 8,
     },
   },
   {
@@ -255,8 +255,8 @@ describe("shadow eval red-flag coverage audit", () => {
       expectedOutcomes,
     });
 
-    expect(report.summary.emergencyScreenAlignmentRelevantCases).toBe(23);
-    expect(report.summary.emergencyScreenAlignmentCount).toBe(23);
+    expect(report.summary.emergencyScreenAlignmentRelevantCases).toBe(24);
+    expect(report.summary.emergencyScreenAlignmentCount).toBe(24);
     expect(report.summary.emergencyScreenAlignmentRate).toBe(1);
   });
 

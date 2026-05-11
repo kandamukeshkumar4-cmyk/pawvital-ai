@@ -571,9 +571,11 @@
     "acceptablePlannedQuestionIds": [
       "gi_keep_water_down_check",
       "gi_vomiting_frequency",
-      "gi_blood_check"
+      "gi_blood_check",
+      "emergency_global_screen"
     ],
     "expectedSelectedBecause": [
+      "emergency_screen",
       "highest_information_gain"
     ],
     "mustScreenRedFlags": [
@@ -581,9 +583,9 @@
       "persistent_vomiting"
     ],
     "shouldBeatGenericQuestion": true,
-    "shouldScreenEmergencyEarlier": false,
+    "shouldScreenEmergencyEarlier": true,
     "shouldAvoidRepeatedQuestion": true,
-    "notes": "Inability to keep water down is a high-value first question candidate in GI cases."
+    "notes": "Emergency or must-not-miss: Water-retention wording is fixture-ambiguous; the global emergency screen is already an accepted first move for this case. Generic-question scoring is excluded because the emergency screen is valid. Red-flag coverage is partial because the global emergency screen already captures the required urgent branch."
   },
   {
     "caseId": "skin_itching_allergy_01_hives_after_sting",

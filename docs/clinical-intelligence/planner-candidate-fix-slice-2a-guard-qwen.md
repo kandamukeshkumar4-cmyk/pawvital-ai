@@ -60,8 +60,9 @@ non-generic follow-ups:
 
 The other non-repeated generic candidates still stay outside slice 2A:
 
-- `gi_vomiting_diarrhea_03_water_comes_back_up` stays on `fixture` with
-  `low` regression risk
+- `gi_vomiting_diarrhea_03_water_comes_back_up` was normalized to
+  `report_only_quality_gap` by VET-1469C and is no longer a planner
+  improvement candidate.
 - `edge_limping_not_sure_pain_or_weakness` stays on
   `module_phase_priority` with `high` regression risk
 - `edge_multi_diarrhea_limping_cut` stays on `planner_scoring` with `high`
@@ -72,10 +73,10 @@ them off `emergency_global_screen`.
 
 ## Global Guardrails
 
-- `genericQuestionEligibleCases`: `11`
+- `genericQuestionEligibleCases`: `10`
 - `genericQuestionAvoidanceCount`: `4`
 - `actual_repeated_question_failure`: `0`
-- emergency alignment: `39/39 = 100%`
+- emergency alignment: `40/40 = 100%`
 - repeated avoidance: `6/6 = 100%`
 - safety blockers: `0`
 - report-only rows reclassified as planner successes: `0`
@@ -155,12 +156,6 @@ pack.
   ],
   "excludedGenericCandidateRows": [
     {
-      "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
-      "recommendedFixOwner": "fixture",
-      "regressionRisk": "low",
-      "currentPlannedQuestionId": "emergency_global_screen"
-    },
-    {
       "caseId": "edge_limping_not_sure_pain_or_weakness",
       "recommendedFixOwner": "module_phase_priority",
       "regressionRisk": "high",
@@ -174,7 +169,7 @@ pack.
     }
   ],
   "globalGuardrails": {
-    "genericQuestionEligibleCases": 11,
+    "genericQuestionEligibleCases": 10,
     "genericQuestionAvoidanceCount": 4,
     "genericQuestionAvoidanceCaseIds": [
       "skin_itching_allergy_02_paws_belly_itching",
@@ -187,8 +182,8 @@ pack.
     "repeatedQuestionAvoidanceRate": 1,
     "actualRepeatedQuestionFailureCount": 0,
     "actualRepeatedQuestionFailureCaseIds": [],
-    "emergencyScreenAlignmentCount": 39,
-    "emergencyScreenAlignmentRelevantCases": 39,
+    "emergencyScreenAlignmentCount": 40,
+    "emergencyScreenAlignmentRelevantCases": 40,
     "emergencyScreenAlignmentRate": 1,
     "safetyBlockerCount": 0,
     "reportOnlyRowsReclassifiedAsPlannerSuccesses": []

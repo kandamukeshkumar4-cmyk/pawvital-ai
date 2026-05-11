@@ -38,8 +38,6 @@ planner-owned follow-up lanes from VET-1458K.
 
 The other repeated planner-candidate rows are intentionally outside slice 1:
 
-- `gi_vomiting_diarrhea_03_water_comes_back_up` stays on
-  `fixture_expectation_adjustment`
 - `limping_mobility_pain_02_sudden_after_jump` stays on
   `adapter_trigger_adjustment`
 - `limping_mobility_pain_03_limping_with_wound_confuser` stays on
@@ -51,7 +49,7 @@ The other repeated planner-candidate rows are intentionally outside slice 1:
 
 - `repeatedQuestionEligibleCases`: `6`
 - `actual_repeated_question_failure`: `0`
-- emergency alignment: `39/39 = 100%`
+- emergency alignment: `40/40 = 100%`
 - safety blockers: `0`
 - non-repeated report-only rows reclassified as planner successes: `0`
 
@@ -80,10 +78,6 @@ report-only rows as planner successes.
   ],
   "excludedRepeatedCandidateRows": [
     {
-      "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
-      "redirectedFixType": "fixture_expectation_adjustment"
-    },
-    {
       "caseId": "limping_mobility_pain_02_sudden_after_jump",
       "redirectedFixType": "adapter_trigger_adjustment"
     },
@@ -100,8 +94,8 @@ report-only rows as planner successes.
     "repeatedQuestionEligibleCases": 6,
     "actualRepeatedQuestionFailureCount": 0,
     "actualRepeatedQuestionFailureCaseIds": [],
-    "emergencyScreenAlignmentCount": 39,
-    "emergencyScreenAlignmentRelevantCases": 39,
+    "emergencyScreenAlignmentCount": 40,
+    "emergencyScreenAlignmentRelevantCases": 40,
     "emergencyScreenAlignmentRate": 1,
     "safetyBlockerCount": 0,
     "reportOnlyRowsReclassifiedAsPlannerSuccesses": []

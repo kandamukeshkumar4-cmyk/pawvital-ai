@@ -17,7 +17,7 @@ annotation fixtures, routing, UI, env, infra, or workflow behavior.
 ## Purpose
 
 VET-1455K already packaged the current `57` shadow-eval cases into the
-failure-annotation fixture. This guard narrows that package to the exact `7`
+failure-annotation fixture. This guard narrows that package to the exact `6`
 rows whose primary class is `planner_improvement_candidate` so future planner
 work can stay targeted.
 
@@ -28,7 +28,6 @@ candidate set and its current metric-class mix.
 
 | Case ID | Current planned question | Acceptable planned question IDs | Selected complaint module | Failed metric classes | Suggested fix category |
 | --- | --- | --- | --- | --- | --- |
-| `gi_vomiting_diarrhea_03_water_comes_back_up` | `emergency_global_screen` | `gi_keep_water_down_check`, `gi_vomiting_frequency`, `gi_blood_check` | `gi_vomiting_diarrhea` | `repeated_metric_setup_gap`, `generic_metric_setup_gap`, `red_flag_coverage_gap` | `gi_targeted_discriminator` |
 | `limping_mobility_pain_02_sudden_after_jump` | `limping_weight_bearing` | `limping_weight_bearing`, `limping_trauma_onset`, `trauma_mechanism_check` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `red_flag_coverage_gap` | `limping_targeted_discriminator` |
 | `limping_mobility_pain_03_limping_with_wound_confuser` | `bleeding_volume_check` | `limping_weight_bearing`, `limping_trauma_onset`, `wound_characterization_check`, `bleeding_volume_check` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `red_flag_coverage_gap`, `fixture_ambiguity` | `multi_symptom_planner_choice` |
 | `edge_trauma_repeat_bleeding_avoidance` | `emergency_global_screen` | `wound_characterization_check`, `laceration_depth_check`, `limping_weight_bearing`, `limping_trauma_onset` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `generic_metric_setup_gap`, `red_flag_coverage_gap`, `fixture_ambiguity` | `trauma_targeted_discriminator` |
@@ -46,10 +45,6 @@ or question-card rewrite is already justified.
 
 They are only a planner-review routing aid for a future ticket that stays
 separate from this validation guard.
-
-- `gi_targeted_discriminator`
-  The accepted GI question set already exists, but the planner still stays on
-  the global emergency screen instead of the GI-specific discriminator.
 
 - `skin_targeted_discriminator`
   The accepted skin characterization or allergy-screen card already exists, but
@@ -70,7 +65,7 @@ separate from this validation guard.
 
 ## Current Guard Findings
 
-- planner candidates: `7`
+- planner candidates: `6`
 - safety blockers: `0`
 - report-only rows mislabeled as planner candidates: `0`
 
@@ -82,10 +77,10 @@ The eval CLI still reports `57` total cases.
 
 ## Candidate-Only Top Failed Metric Classes
 
-- `red_flag_coverage_gap`: `7`
-- `generic_metric_setup_gap`: `5`
-- `repeated_metric_setup_gap`: `5`
+- `red_flag_coverage_gap`: `6`
 - `fixture_ambiguity`: `4`
+- `generic_metric_setup_gap`: `4`
+- `repeated_metric_setup_gap`: `4`
 
 ## Guard Boundary
 

@@ -79,7 +79,6 @@ const OWNER_FACING_CLAIM_PATTERNS = [
 ];
 
 const EXPECTED_CASE_IDS = [
-  "gi_vomiting_diarrhea_03_water_comes_back_up",
   "limping_mobility_pain_02_sudden_after_jump",
   "limping_mobility_pain_03_limping_with_wound_confuser",
   "edge_limping_not_sure_pain_or_weakness",
@@ -92,7 +91,7 @@ const EXCLUDED_REPEATED_CONTEXT_CASE_IDS = [
 ] as const;
 
 const EXPECTED_OWNER_COUNTS: Record<RecommendedFixOwner, number> = {
-  fixture: 1,
+  fixture: 0,
   adapter_trigger: 2,
   planner_scoring: 1,
   module_phase_priority: 1,
@@ -109,37 +108,6 @@ const ALLOWED_VALIDATION_COMMANDS = new Set([
 ]);
 
 const EXPECTED_SLICE_TWO_PROPOSALS: readonly SliceTwoProposalRow[] = [
-  {
-    caseId: "gi_vomiting_diarrhea_03_water_comes_back_up",
-    selectedComplaintModule: "gi_vomiting_diarrhea",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptableTargetQuestionIds: [
-      "gi_keep_water_down_check",
-      "gi_vomiting_frequency",
-      "gi_blood_check",
-    ],
-    recommendedFixOwner: "fixture",
-    lowestRiskRationale:
-      "The adapter-selection gap guard already classifies this row as `fixture_text_mismatch`, so the narrowest first move is to reconcile the accepted fixture text before changing runtime scoring or trigger behavior.",
-    minimalFileScope: [
-      "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json",
-      "tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json",
-    ],
-    expectedMetricMovement: [
-      "acceptableQuestionRate: may improve if the accepted target set is reconciled to the audited owner phrase.",
-      "complaintModuleMatchRate: should stay unchanged because the selected complaint module already matches.",
-      "emergencyScreenAlignmentRate: should stay unchanged because this proposal does not rely on downgrading emergency behavior.",
-      "genericQuestionAvoidanceRate: no direct runtime movement is expected from the fixture-only follow-up.",
-    ],
-    regressionRisk: "low",
-    requiredValidationCommands: [
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-adapter-selection-gap-guard.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-failure-annotation-pack.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-planner-scenario-eval.test.ts",
-      "node scripts/eval-shadow-planner-scenarios.ts --json",
-      "npm run build",
-    ],
-  },
   {
     caseId: "limping_mobility_pain_02_sudden_after_jump",
     selectedComplaintModule: "limping_mobility_pain",
@@ -413,9 +381,9 @@ describe("planner candidate fix slice 2 proposal pack", () => {
       expect(DOC).toContain(`\`${row.regressionRisk}\``);
     }
 
-    expect(DOC).toContain("included candidate rows: `5`");
+    expect(DOC).toContain("included candidate rows: `4`");
     expect(DOC).toContain("excluded repeated-context rows: `2`");
-    expect(DOC).toContain("`fixture`: `1`");
+    expect(DOC).toContain("`fixture`: `0`");
     expect(DOC).toContain("`adapter_trigger`: `2`");
     expect(DOC).toContain("`planner_scoring`: `1`");
     expect(DOC).toContain("`module_phase_priority`: `1`");
