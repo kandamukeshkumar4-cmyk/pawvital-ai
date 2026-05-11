@@ -41,6 +41,12 @@ type RemainingFixLane =
 
 type ResidualStatus = "accepted_non_generic_question_but_red_flag_gap";
 
+type EdgeCaseCoverageBucketName =
+  | "fixture_only"
+  | "module_phase_priority"
+  | "high_risk_mixed_symptom"
+  | "residual_after_slice_2a";
+
 type AnnotationRow = {
   caseId: string;
   primaryFailureClass: FailureClass;
@@ -114,6 +120,13 @@ type ResidualSlice2ARow = {
   residualBoundary: string;
 };
 
+type EdgeCaseCoverageBucket = {
+  bucket: EdgeCaseCoverageBucketName;
+  caseIds: string[];
+  edgeCaseRisk: RegressionRisk;
+  asserts: string[];
+};
+
 type ProposalPackPayload = {
   remainingPlannerCandidateRows: RemainingPlannerCandidateRow[];
   residualSlice2ARows: ResidualSlice2ARow[];
@@ -127,6 +140,19 @@ type ProposalPackPayload = {
     phasePriorityCaseIds: string[];
     mixedSymptomRiskCaseIds: string[];
     adapterTriggerCaseIds: string[];
+  };
+  edgeCaseCoverage: {
+    coverageSummary: string;
+    edgeCaseBuckets: EdgeCaseCoverageBucket[];
+    excludedAsSeparateWork: string[];
+  };
+  telemetryHygiene: {
+    containsRuntimeTelemetry: boolean;
+    containsOwnerTelemetry: boolean;
+    containsProductionUserData: boolean;
+    containsSecretsOrEnvValues: boolean;
+    containsDeploymentIdentifiers: boolean;
+    allowedEvidence: string[];
   };
   globalGuardrails: {
     plannerImprovementCandidateCount: number;
@@ -176,6 +202,14 @@ const OWNER_FACING_CLAIM_PATTERNS = [
   /\bsteroid\b/i,
   /\bsurgery\b/i,
   /\bdos(?:e|age)\b/i,
+];
+
+const TELEMETRY_EXPOSURE_PATTERNS = [
+  /\bBearer\s+[A-Za-z0-9._-]+/i,
+  /\b(?:api[_-]?key|secret|token|password)\s*[:=]\s*["']?[^"'\s]+/i,
+  /\b(?:owner|user|patient)[_-]?(?:email|phone|address|ip|id)\s*[:=]\s*["']?[^"'\s]+/i,
+  /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i,
+  /\b(?:[A-Fa-f0-9]{32,}|eyJ[A-Za-z0-9_-]{20,})\b/,
 ];
 
 const REMAINING_CASE_IDS = [
@@ -331,6 +365,67 @@ const EXPECTED_PAYLOAD: ProposalPackPayload = {
     phasePriorityCaseIds: ["edge_limping_not_sure_pain_or_weakness"],
     mixedSymptomRiskCaseIds: ["edge_multi_diarrhea_limping_cut"],
     adapterTriggerCaseIds: [],
+  },
+  edgeCaseCoverage: {
+    coverageSummary:
+      "Covers all five remaining non-repeated post-Slice-2A planner candidates and excludes only the two repeated-context rows assigned to a separate avoidance lane.",
+    edgeCaseBuckets: [
+      {
+        bucket: "fixture_only",
+        caseIds: ["gi_vomiting_diarrhea_03_water_comes_back_up"],
+        edgeCaseRisk: "low",
+        asserts: [
+          "current emergency_global_screen selection",
+          "GI water-retention fixture wording mismatch",
+          "fixture-only future scope",
+        ],
+      },
+      {
+        bucket: "module_phase_priority",
+        caseIds: ["edge_limping_not_sure_pain_or_weakness"],
+        edgeCaseRisk: "high",
+        asserts: [
+          "limping versus collapse weakness ambiguity",
+          "current emergency_global_screen selection",
+          "phase-priority future scope",
+        ],
+      },
+      {
+        bucket: "high_risk_mixed_symptom",
+        caseIds: ["edge_multi_diarrhea_limping_cut"],
+        edgeCaseRisk: "high",
+        asserts: [
+          "mixed GI, limping, wound, and bleeding signals",
+          "current emergency_global_screen selection",
+          "planner-scoring future scope kept separate",
+        ],
+      },
+      {
+        bucket: "residual_after_slice_2a",
+        caseIds: [...RESIDUAL_CASE_IDS],
+        edgeCaseRisk: "medium",
+        asserts: [
+          "accepted non-generic question already selected",
+          "generic avoidance already satisfied",
+          "remaining red-flag coverage gap only",
+        ],
+      },
+    ],
+    excludedAsSeparateWork: [...EXCLUDED_REPEATED_CONTEXT_CASE_IDS],
+  },
+  telemetryHygiene: {
+    containsRuntimeTelemetry: false,
+    containsOwnerTelemetry: false,
+    containsProductionUserData: false,
+    containsSecretsOrEnvValues: false,
+    containsDeploymentIdentifiers: false,
+    allowedEvidence: [
+      "fixture case IDs",
+      "expected question IDs",
+      "selected module IDs",
+      "failure-class labels",
+      "aggregate eval counters",
+    ],
   },
   globalGuardrails: {
     plannerImprovementCandidateCount: 7,
@@ -519,6 +614,71 @@ describe("planner candidate fix slice 2B proposal pack", () => {
         "planner_improvement_candidate"
       );
       expect(annotation.safetyImpact).toBe("monitor");
+    }
+  });
+
+  it("documents explicit edge-case coverage and telemetry hygiene without sensitive evidence", () => {
+    const doc = readDoc(DOC_PATH);
+    const payload = extractJsonBlock<ProposalPackPayload>(doc);
+
+    expect(payload.edgeCaseCoverage).toEqual(EXPECTED_PAYLOAD.edgeCaseCoverage);
+    expect(payload.telemetryHygiene).toEqual(EXPECTED_PAYLOAD.telemetryHygiene);
+
+    const coveredCaseIds = payload.edgeCaseCoverage.edgeCaseBuckets.flatMap(
+      (bucket) => bucket.caseIds
+    );
+    expect(coveredCaseIds).toEqual([
+      ...REMAINING_CASE_IDS,
+      ...RESIDUAL_CASE_IDS,
+    ]);
+    expect(payload.edgeCaseCoverage.excludedAsSeparateWork).toEqual(
+      EXCLUDED_REPEATED_CONTEXT_CASE_IDS
+    );
+
+    const bucketByName = new Map(
+      payload.edgeCaseCoverage.edgeCaseBuckets.map((bucket) => [
+        bucket.bucket,
+        bucket,
+      ])
+    );
+
+    expect(bucketByName.get("fixture_only")?.caseIds).toEqual([
+      "gi_vomiting_diarrhea_03_water_comes_back_up",
+    ]);
+    expect(bucketByName.get("module_phase_priority")?.caseIds).toEqual([
+      "edge_limping_not_sure_pain_or_weakness",
+    ]);
+    expect(bucketByName.get("high_risk_mixed_symptom")?.caseIds).toEqual([
+      "edge_multi_diarrhea_limping_cut",
+    ]);
+    expect(bucketByName.get("residual_after_slice_2a")?.caseIds).toEqual(
+      RESIDUAL_CASE_IDS
+    );
+
+    for (const bucket of payload.edgeCaseCoverage.edgeCaseBuckets) {
+      expect(bucket.asserts.length).toBeGreaterThanOrEqual(3);
+      expect(doc).toContain(`"bucket": "${bucket.bucket}"`);
+    }
+
+    expect(payload.telemetryHygiene.containsRuntimeTelemetry).toBe(false);
+    expect(payload.telemetryHygiene.containsOwnerTelemetry).toBe(false);
+    expect(payload.telemetryHygiene.containsProductionUserData).toBe(false);
+    expect(payload.telemetryHygiene.containsSecretsOrEnvValues).toBe(false);
+    expect(payload.telemetryHygiene.containsDeploymentIdentifiers).toBe(false);
+    expect(payload.telemetryHygiene.allowedEvidence).toEqual([
+      "fixture case IDs",
+      "expected question IDs",
+      "selected module IDs",
+      "failure-class labels",
+      "aggregate eval counters",
+    ]);
+
+    expect(doc).toContain("The pack contains no runtime telemetry");
+    expect(doc).toContain("production user data");
+    expect(doc).toContain("aggregate eval counters");
+
+    for (const pattern of TELEMETRY_EXPOSURE_PATTERNS) {
+      expect(doc).not.toMatch(pattern);
     }
   });
 

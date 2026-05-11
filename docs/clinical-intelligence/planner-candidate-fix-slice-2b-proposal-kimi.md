@@ -70,6 +70,33 @@ There are no new adapter/trigger rows in this pack. The two prior
 `adapter_trigger` rows now stay here only as Slice 2A residuals because they
 already moved to accepted non-generic questions.
 
+## Edge-Case Coverage and Telemetry Hygiene
+
+This proposal pack intentionally covers every remaining non-repeated Slice 2B
+candidate row after Slice 2A:
+
+- fixture-only GI hydration wording:
+  `gi_vomiting_diarrhea_03_water_comes_back_up`
+- module phase priority between limping and weakness:
+  `edge_limping_not_sure_pain_or_weakness`
+- high-risk mixed-symptom scoring:
+  `edge_multi_diarrhea_limping_cut`
+- residual red-flag coverage after accepted non-generic Slice 2A moves:
+  `limping_mobility_pain_02_sudden_after_jump`
+  `limping_mobility_pain_03_limping_with_wound_confuser`
+
+The only excluded planner-candidate rows are the two repeated-context cases
+already assigned to a separate avoidance lane:
+
+- `edge_trauma_repeat_bleeding_avoidance`
+- `edge_skin_repeat_location_avoidance`
+
+The pack contains no runtime telemetry, owner telemetry, production user data,
+secrets, environment values, deployment identifiers, or raw application logs.
+The only evidence included is fixture case IDs, expected question IDs, selected
+module IDs, failure-class labels, and aggregate eval counters needed to lock
+the proposal boundary.
+
 ## Remaining Higher-Risk Planner Rows
 
 | Case ID | Lane | Current planned question | Selected complaint module | Regression risk |
@@ -229,6 +256,78 @@ already moved to accepted non-generic questions.
       "edge_multi_diarrhea_limping_cut"
     ],
     "adapterTriggerCaseIds": []
+  },
+  "edgeCaseCoverage": {
+    "coverageSummary": "Covers all five remaining non-repeated post-Slice-2A planner candidates and excludes only the two repeated-context rows assigned to a separate avoidance lane.",
+    "edgeCaseBuckets": [
+      {
+        "bucket": "fixture_only",
+        "caseIds": [
+          "gi_vomiting_diarrhea_03_water_comes_back_up"
+        ],
+        "edgeCaseRisk": "low",
+        "asserts": [
+          "current emergency_global_screen selection",
+          "GI water-retention fixture wording mismatch",
+          "fixture-only future scope"
+        ]
+      },
+      {
+        "bucket": "module_phase_priority",
+        "caseIds": [
+          "edge_limping_not_sure_pain_or_weakness"
+        ],
+        "edgeCaseRisk": "high",
+        "asserts": [
+          "limping versus collapse weakness ambiguity",
+          "current emergency_global_screen selection",
+          "phase-priority future scope"
+        ]
+      },
+      {
+        "bucket": "high_risk_mixed_symptom",
+        "caseIds": [
+          "edge_multi_diarrhea_limping_cut"
+        ],
+        "edgeCaseRisk": "high",
+        "asserts": [
+          "mixed GI, limping, wound, and bleeding signals",
+          "current emergency_global_screen selection",
+          "planner-scoring future scope kept separate"
+        ]
+      },
+      {
+        "bucket": "residual_after_slice_2a",
+        "caseIds": [
+          "limping_mobility_pain_02_sudden_after_jump",
+          "limping_mobility_pain_03_limping_with_wound_confuser"
+        ],
+        "edgeCaseRisk": "medium",
+        "asserts": [
+          "accepted non-generic question already selected",
+          "generic avoidance already satisfied",
+          "remaining red-flag coverage gap only"
+        ]
+      }
+    ],
+    "excludedAsSeparateWork": [
+      "edge_trauma_repeat_bleeding_avoidance",
+      "edge_skin_repeat_location_avoidance"
+    ]
+  },
+  "telemetryHygiene": {
+    "containsRuntimeTelemetry": false,
+    "containsOwnerTelemetry": false,
+    "containsProductionUserData": false,
+    "containsSecretsOrEnvValues": false,
+    "containsDeploymentIdentifiers": false,
+    "allowedEvidence": [
+      "fixture case IDs",
+      "expected question IDs",
+      "selected module IDs",
+      "failure-class labels",
+      "aggregate eval counters"
+    ]
   },
   "globalGuardrails": {
     "plannerImprovementCandidateCount": 7,
