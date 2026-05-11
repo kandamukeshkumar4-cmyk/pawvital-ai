@@ -80,10 +80,8 @@ const OWNER_FACING_CLAIM_PATTERNS = [
 
 const EXPECTED_CASE_IDS = [
   "gi_vomiting_diarrhea_03_water_comes_back_up",
-  "skin_itching_allergy_02_paws_belly_itching",
   "limping_mobility_pain_02_sudden_after_jump",
   "limping_mobility_pain_03_limping_with_wound_confuser",
-  "edge_trauma_small_scrape_vs_steady_bleed",
   "edge_limping_not_sure_pain_or_weakness",
   "edge_multi_diarrhea_limping_cut",
 ] as const;
@@ -96,8 +94,8 @@ const EXCLUDED_REPEATED_CONTEXT_CASE_IDS = [
 const EXPECTED_OWNER_COUNTS: Record<RecommendedFixOwner, number> = {
   fixture: 1,
   adapter_trigger: 2,
-  planner_scoring: 2,
-  module_phase_priority: 2,
+  planner_scoring: 1,
+  module_phase_priority: 1,
   question_card_metadata: 0,
 };
 
@@ -143,39 +141,9 @@ const EXPECTED_SLICE_TWO_PROPOSALS: readonly SliceTwoProposalRow[] = [
     ],
   },
   {
-    caseId: "skin_itching_allergy_02_paws_belly_itching",
-    selectedComplaintModule: "skin_itching_allergy",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptableTargetQuestionIds: [
-      "skin_location_distribution",
-      "skin_changes_check",
-      "skin_exposure_check",
-    ],
-    recommendedFixOwner: "module_phase_priority",
-    lowestRiskRationale:
-      "The complaint module already matches, the accepted skin cards already exist, and this row does not need repeated-answer carryover. The narrowest next move is to raise the skin characterization phase ahead of the generic fallback.",
-    minimalFileScope: [
-      "src/lib/clinical-intelligence/next-question-planner.ts",
-      "src/lib/clinical-intelligence/complaint-modules/skin.ts",
-    ],
-    expectedMetricMovement: [
-      "acceptableQuestionRate: should improve if a skin-specific first-turn question replaces emergency_global_screen.",
-      "genericQuestionAvoidanceRate: should improve because this row currently over-selects the generic fallback.",
-      "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
-      "emergencyScreenAlignmentRate: should stay unchanged because this row is not proposing a weaker emergency path.",
-    ],
-    regressionRisk: "medium",
-    requiredValidationCommands: [
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-failure-annotation-pack.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-planner-scenario-eval.test.ts",
-      "node scripts/eval-shadow-planner-scenarios.ts --json",
-      "npm run build",
-    ],
-  },
-  {
     caseId: "limping_mobility_pain_02_sudden_after_jump",
     selectedComplaintModule: "limping_mobility_pain",
-    currentPlannedQuestionId: "emergency_global_screen",
+    currentPlannedQuestionId: "limping_weight_bearing",
     acceptableTargetQuestionIds: [
       "limping_weight_bearing",
       "limping_trauma_onset",
@@ -189,8 +157,8 @@ const EXPECTED_SLICE_TWO_PROPOSALS: readonly SliceTwoProposalRow[] = [
       "src/lib/clinical-intelligence/complaint-modules/limping.ts",
     ],
     expectedMetricMovement: [
-      "acceptableQuestionRate: should improve if the limping trigger surface routes this row to an accepted target question.",
-      "genericQuestionAvoidanceRate: should improve if emergency_global_screen stops winning first turn.",
+      "acceptableQuestionRate: should stay unchanged because the current first turn already lands inside the accepted target set.",
+      "genericQuestionAvoidanceRate: should stay unchanged because this row no longer selects emergency_global_screen.",
       "redFlagScreenCoverageRate: may improve if the selected limping-specific question carries the missing case red-flag screens.",
       "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
       "emergencyScreenAlignmentRate: should stay unchanged because the fix owner is trigger-surface narrowing, not emergency downgrading.",
@@ -208,7 +176,7 @@ const EXPECTED_SLICE_TWO_PROPOSALS: readonly SliceTwoProposalRow[] = [
   {
     caseId: "limping_mobility_pain_03_limping_with_wound_confuser",
     selectedComplaintModule: "limping_mobility_pain",
-    currentPlannedQuestionId: "emergency_global_screen",
+    currentPlannedQuestionId: "bleeding_volume_check",
     acceptableTargetQuestionIds: [
       "limping_weight_bearing",
       "limping_trauma_onset",
@@ -223,8 +191,8 @@ const EXPECTED_SLICE_TWO_PROPOSALS: readonly SliceTwoProposalRow[] = [
       "src/lib/clinical-intelligence/complaint-modules/limping.ts",
     ],
     expectedMetricMovement: [
-      "acceptableQuestionRate: should improve if mixed limping and wound wording routes this row to an accepted target question.",
-      "genericQuestionAvoidanceRate: should improve if emergency_global_screen stops winning first turn.",
+      "acceptableQuestionRate: should stay unchanged because the current first turn already lands inside the accepted target set.",
+      "genericQuestionAvoidanceRate: should stay unchanged because this row no longer selects emergency_global_screen.",
       "redFlagScreenCoverageRate: may improve if the chosen limping or wound follow-up carries the missing case red-flag screens.",
       "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
       "emergencyScreenAlignmentRate: should stay unchanged because the trigger fix should not weaken emergency handling.",
@@ -232,38 +200,6 @@ const EXPECTED_SLICE_TWO_PROPOSALS: readonly SliceTwoProposalRow[] = [
     regressionRisk: "medium",
     requiredValidationCommands: [
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-adapter-selection-gap-guard.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-red-flag-coverage-audit.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-failure-annotation-pack.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-planner-scenario-eval.test.ts",
-      "node scripts/eval-shadow-planner-scenarios.ts --json",
-      "npm run build",
-    ],
-  },
-  {
-    caseId: "edge_trauma_small_scrape_vs_steady_bleed",
-    selectedComplaintModule: "trauma_bleeding_wound",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptableTargetQuestionIds: [
-      "bleeding_volume_check",
-      "wound_characterization_check",
-      "laceration_depth_check",
-      "trauma_mechanism_check",
-    ],
-    recommendedFixOwner: "planner_scoring",
-    lowestRiskRationale:
-      "The accepted trauma questions already exist and the module match is already correct, so the narrowest runtime move is to rebalance scoring until a bleeding or wound card outranks the generic fallback.",
-    minimalFileScope: [
-      "src/lib/clinical-intelligence/next-question-planner.ts",
-    ],
-    expectedMetricMovement: [
-      "acceptableQuestionRate: should improve if a trauma-specific first-turn question replaces emergency_global_screen.",
-      "genericQuestionAvoidanceRate: should improve because this row currently over-selects the generic fallback.",
-      "redFlagScreenCoverageRate: may improve if bleeding-specific screening outranks the blanket fallback.",
-      "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
-      "emergencyScreenAlignmentRate: should stay unchanged because the scoring fix should not weaken emergency behavior.",
-    ],
-    regressionRisk: "medium",
-    requiredValidationCommands: [
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-red-flag-coverage-audit.test.ts",
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-failure-annotation-pack.test.ts",
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-planner-scenario-eval.test.ts",
@@ -432,7 +368,6 @@ describe("planner candidate fix slice 2 proposal pack", () => {
     expect(countByOwner(proposalRows)).toEqual(EXPECTED_OWNER_COUNTS);
 
     for (const row of proposalRows) {
-      expect(row.currentPlannedQuestionId).toBe("emergency_global_screen");
       expect(row.acceptableTargetQuestionIds).toEqual(
         getAcceptableQuestionIds(row.caseId)
       );
@@ -478,12 +413,12 @@ describe("planner candidate fix slice 2 proposal pack", () => {
       expect(DOC).toContain(`\`${row.regressionRisk}\``);
     }
 
-    expect(DOC).toContain("included candidate rows: `7`");
+    expect(DOC).toContain("included candidate rows: `5`");
     expect(DOC).toContain("excluded repeated-context rows: `2`");
     expect(DOC).toContain("`fixture`: `1`");
     expect(DOC).toContain("`adapter_trigger`: `2`");
-    expect(DOC).toContain("`planner_scoring`: `2`");
-    expect(DOC).toContain("`module_phase_priority`: `2`");
+    expect(DOC).toContain("`planner_scoring`: `1`");
+    expect(DOC).toContain("`module_phase_priority`: `1`");
     expect(DOC).toContain("`question_card_metadata`: `0`");
     expect(DOC).toContain("Proposal pack only.");
     expect(DOC).toContain("No runtime files touched.");

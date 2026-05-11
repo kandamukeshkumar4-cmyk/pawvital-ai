@@ -412,6 +412,8 @@ describe("Score breakdown includes all formula parts", () => {
     expect(breakdown).toHaveProperty("alreadyKnownPenalty");
     expect(breakdown).toHaveProperty("offTopicPenalty");
     expect(breakdown).toHaveProperty("tooManyQuestionsPenalty");
+    expect(breakdown).toHaveProperty("preferredQuestionBonus");
+    expect(breakdown).toHaveProperty("discouragedQuestionPenalty");
   });
 
   it("score equals sum of breakdown values", () => {
@@ -808,5 +810,50 @@ describe("Off-topic fallback when module cards exhausted", () => {
     const planned = result as PlannedQuestion;
     const selectedCard = MOCK_CARDS.find((c) => c.id === planned.questionId);
     expect(selectedCard!.phase).toBe("emergency_screen");
+  });
+});
+
+describe("Adapter-provided candidate routing hints", () => {
+  it("adds preferred and discouraged scoring terms for targeted generic-avoidance slices", () => {
+    const state = createInitialClinicalCaseState("skin");
+    const breakdown = buildQuestionScoreBreakdown(MOCK_SKIN_CARD, state, {
+      activeComplaintModule: "skin",
+      preferredQuestionIds: ["skin_location_distribution"],
+      discouragedQuestionIds: ["emergency_global_screen"],
+    });
+    const discouragedBreakdown = buildQuestionScoreBreakdown(
+      MOCK_EMERGENCY_CARD,
+      state,
+      {
+        activeComplaintModule: "skin",
+        preferredQuestionIds: ["skin_location_distribution"],
+        discouragedQuestionIds: ["emergency_global_screen"],
+      }
+    );
+
+    expect(breakdown["preferredQuestionBonus"]).toBeGreaterThan(0);
+    expect(discouragedBreakdown["discouragedQuestionPenalty"]).toBeLessThan(0);
+  });
+
+  it("lets a preferred skin follow-up beat a discouraged generic emergency screen", () => {
+    const state = createInitialClinicalCaseState("skin");
+
+    const result = planNextClinicalQuestion(state, {
+      activeComplaintModule: "skin",
+      preferredQuestionIds: ["skin_location_distribution"],
+      discouragedQuestionIds: [
+        "emergency_global_screen",
+        "gum_color_check",
+        "bloat_retching_abdomen_check",
+      ],
+    });
+
+    expect("type" in result).toBe(false);
+    if ("type" in result) {
+      return;
+    }
+
+    expect(result.questionId).toBe("skin_location_distribution");
+    expect(result.selectedBecause).toBe("highest_information_gain");
   });
 });

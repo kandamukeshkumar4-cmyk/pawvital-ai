@@ -115,17 +115,6 @@ const PLANNER_OWNED_FIX_TYPES = new Set<ProposedFixType>([
 const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
   intendedRepeatedCandidateRows: [
     {
-      caseId: "skin_itching_allergy_02_paws_belly_itching",
-      proposedFixType: "module_phase_priority_adjustment",
-      currentPlannedQuestionId: "emergency_global_screen",
-      selectedComplaintModule: "skin_itching_allergy",
-      acceptableTargetQuestionIds: [
-        "skin_location_distribution",
-        "skin_changes_check",
-        "skin_exposure_check",
-      ],
-    },
-    {
       caseId: "edge_trauma_repeat_bleeding_avoidance",
       proposedFixType: "scoring_weight_adjustment",
       currentPlannedQuestionId: "emergency_global_screen",
@@ -365,7 +354,7 @@ describe("planner candidate fix slice 1 guard", () => {
     expect(payload).toEqual(EXPECTED_GUARD_PAYLOAD);
     expect(DOC).toContain("Validation-only guard.");
     expect(DOC).toContain("No runtime files touched.");
-    expect(DOC).toContain("The planner-owned repeated-question slice currently contains exactly `2` rows:");
+    expect(DOC).toContain("The planner-owned repeated-question slice currently contains exactly `1` row:");
     expect(DOC).toContain("The other repeated planner-candidate rows are intentionally outside slice 1:");
     expect(DOC).toContain("`repeatedQuestionEligibleCases`: `6`");
     expect(DOC).toContain("`actual_repeated_question_failure`: `0`");

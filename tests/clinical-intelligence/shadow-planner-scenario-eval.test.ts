@@ -48,19 +48,28 @@ describe("shadow planner scenario eval harness", () => {
     expect(report.summary.repeatedQuestionAvoidanceRate).toBe(1);
     expect(report.summary.genericQuestionEligibleCases).toBe(11);
     expect(report.summary.genericQuestionAvoidanceRelevantCases).toBe(11);
-    expect(report.summary.genericQuestionAvoidanceCount).toBe(0);
-    expect(report.summary.genericQuestionAvoidanceRate).toBe(0);
+    expect(report.summary.genericQuestionAvoidanceCount).toBe(4);
+    expect(report.summary.genericQuestionAvoidanceRate).toBe(4 / 11);
     expect(report.summary.rawMetrics).toBeDefined();
     expect(report.summary.normalizedMetrics).toBeDefined();
-    expect(report.summary.rawMetrics?.repeatedQuestionAvoidanceRelevantCases).toBe(
-      39
+    expect(report.summary.acceptableQuestionCount).toBe(50);
+    expect(report.summary.acceptableQuestionRate).toBe(50 / 57);
+    expect(report.summary.emergencyScreenAlignmentCount).toBe(39);
+    expect(report.summary.emergencyScreenAlignmentRelevantCases).toBe(39);
+    expect(report.summary.emergencyScreenAlignmentRate).toBe(1);
+    expect(report.summary.rawMetrics?.repeatedQuestionAvoidanceCount).toBe(11);
+    expect(report.summary.rawMetrics?.repeatedQuestionAvoidanceRelevantCases).toBe(39);
+    expect(report.summary.rawMetrics?.repeatedQuestionAvoidanceRate).toBe(11 / 39);
+    expect(report.summary.rawMetrics?.genericQuestionAvoidanceCount).toBe(6);
+    expect(report.summary.rawMetrics?.genericQuestionAvoidanceRelevantCases).toBe(57);
+    expect(report.summary.rawMetrics?.genericQuestionAvoidanceRate).toBe(6 / 57);
+    expect(report.summary.normalizedMetrics?.acceptableQuestionCount).toBe(51);
+    expect(report.summary.normalizedMetrics?.acceptableQuestionRate).toBe(51 / 57);
+    expect(report.summary.normalizedMetrics?.genericQuestionAvoidanceCount).toBe(4);
+    expect(report.summary.normalizedMetrics?.genericQuestionAvoidanceRelevantCases).toBe(29);
+    expect(report.summary.normalizedMetrics?.genericQuestionAvoidanceRate).toBe(
+      4 / 29
     );
-    expect(report.summary.rawMetrics?.genericQuestionAvoidanceRelevantCases).toBe(
-      57
-    );
-    expect(
-      report.summary.normalizedMetrics?.genericQuestionAvoidanceRelevantCases
-    ).toBe(29);
     expect(
       report.summary.normalizedMetrics?.totalRequiredRedFlagCount
     ).toBe(
@@ -158,6 +167,8 @@ describe("shadow planner scenario eval harness", () => {
     expect(report.summary.genericQuestionAvoidanceRate).toBeLessThanOrEqual(1);
     expect(report.summary.redFlagScreenCoverageRate).toBeGreaterThanOrEqual(0);
     expect(report.summary.redFlagScreenCoverageRate).toBeLessThanOrEqual(1);
+    expect(report.summary.rawFailedCaseCount).toBe(54);
+    expect(report.summary.normalizedFailedCaseCount).toBe(53);
 
     expect(scenarios).toEqual(scenarioClone);
     expect(outcomes).toEqual(outcomeClone);
@@ -213,5 +224,51 @@ describe("shadow planner scenario eval harness", () => {
         expect.stringContaining("emergency_handoff"),
       ])
     );
+  });
+
+  it("moves the slice-2A generic-avoidance cases onto accepted non-generic questions", () => {
+    const report = evaluateShadowPlannerScenarios({
+      scenarios,
+      expectedOutcomes: outcomes,
+      edgeScenarios: edgeCases,
+      normalizationRows,
+    });
+
+    const targetCaseIds = new Set([
+      "skin_itching_allergy_02_paws_belly_itching",
+      "limping_mobility_pain_02_sudden_after_jump",
+      "limping_mobility_pain_03_limping_with_wound_confuser",
+      "edge_trauma_small_scrape_vs_steady_bleed",
+    ]);
+    const targetResults = report.caseResults.filter((result) =>
+      targetCaseIds.has(result.caseId)
+    );
+
+    expect(targetResults).toHaveLength(4);
+
+    for (const result of targetResults) {
+      expect(result.actual.plannedQuestionId).not.toBe(
+        "emergency_global_screen"
+      );
+      expect(result.acceptableQuestionMatched).toBe(true);
+      expect(result.genericQuestionAvoided).toBe(true);
+      expect(result.actual.selectedBecause).toBeTruthy();
+    }
+
+    const limpingJump = targetResults.find(
+      (result) => result.caseId === "limping_mobility_pain_02_sudden_after_jump"
+    );
+    const limpingWound = targetResults.find(
+      (result) =>
+        result.caseId === "limping_mobility_pain_03_limping_with_wound_confuser"
+    );
+
+    expect(limpingJump?.missingRequiredRedFlags).toEqual([
+      "post_trauma_lameness",
+    ]);
+    expect(limpingWound?.missingRequiredRedFlags).toEqual([
+      "post_trauma_lameness",
+      "non_weight_bearing",
+    ]);
   });
 });

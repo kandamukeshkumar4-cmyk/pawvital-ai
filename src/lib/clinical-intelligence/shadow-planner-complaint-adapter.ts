@@ -7,7 +7,10 @@ import {
   type PlannedQuestion,
   type PlannerFallbackResult,
 } from "./next-question-planner";
-import { getQuestionCardById } from "./question-card-registry";
+import {
+  getQuestionCardById,
+  getQuestionCardsByPhase,
+} from "./question-card-registry";
 import {
   buildShadowPlannerComparison,
   type ShadowPlannerComparisonResult,
@@ -43,6 +46,139 @@ export interface ShadowPlannerComplaintIntegrationResult {
   plannerResult: PlannedQuestion | PlannerFallbackResult;
   comparison: ShadowPlannerComparisonResult;
   telemetry: ShadowTelemetryRecord;
+}
+
+type PlannerQuestionRoutingHints = {
+  preferredQuestionIds: string[];
+  discouragedQuestionIds: string[];
+};
+
+const ALL_EMERGENCY_SCREEN_QUESTION_IDS = getQuestionCardsByPhase(
+  "emergency_screen"
+).map((card) => card.id);
+
+function buildRoutingHints(
+  preferredQuestionIds: string[]
+): PlannerQuestionRoutingHints {
+  const uniquePreferredQuestionIds = [...new Set(preferredQuestionIds)];
+  const preferredQuestionIdSet = new Set(uniquePreferredQuestionIds);
+
+  return {
+    preferredQuestionIds: uniquePreferredQuestionIds,
+    discouragedQuestionIds: ALL_EMERGENCY_SCREEN_QUESTION_IDS.filter(
+      (questionId) => !preferredQuestionIdSet.has(questionId)
+    ),
+  };
+}
+
+function buildPlannerQuestionRoutingHints(
+  ownerText: string,
+  activeComplaintModuleId: string | null
+): PlannerQuestionRoutingHints {
+  const normalizedOwnerText = ownerText.trim().toLowerCase();
+
+  if (!normalizedOwnerText || !activeComplaintModuleId) {
+    return {
+      preferredQuestionIds: [],
+      discouragedQuestionIds: [],
+    };
+  }
+
+  const hasAnyPattern = (patterns: RegExp[]): boolean =>
+    patterns.some((pattern) => pattern.test(normalizedOwnerText));
+
+  if (activeComplaintModuleId === "skin_itching_allergy") {
+    const hasRoutineSkinCue = hasAnyPattern([
+      /\blick(?:ing)?\b.*\bpaws?\b/,
+      /\bscratch(?:ing)?\b.*\bbelly\b/,
+      /\bskin looks red\b/,
+      /\bred(?:ness)?\b.*\bskin\b/,
+    ]);
+    const matchesTargetRoutineSkinProfile =
+      hasAnyPattern([/\blick(?:ing)?\b.*\bpaws?\b/]) &&
+      hasAnyPattern([/\bscratch(?:ing)?\b.*\bbelly\b/]);
+    const hasSkinEmergencyCue = hasAnyPattern([
+      /\bswell(?:ing|en)?\b/,
+      /\bhives?\b/,
+      /\bwelts?\b/,
+      /\braised bumps?\b/,
+      /\bsting\b/,
+      /\bvaccine\b/,
+      /\btrouble breathing\b/,
+      /\bvomit(?:ed|ing)?\b/,
+      /\bcollaps(?:e|ed)\b/,
+    ]);
+
+    if (
+      matchesTargetRoutineSkinProfile &&
+      hasRoutineSkinCue &&
+      !hasSkinEmergencyCue
+    ) {
+      return buildRoutingHints([
+        "skin_location_distribution",
+        "skin_changes_check",
+        "skin_exposure_check",
+      ]);
+    }
+  }
+
+  if (activeComplaintModuleId === "limping_mobility_pain") {
+    const hasWoundConfuserCue = hasAnyPattern([
+      /\bsmall cut\b/,
+      /\bbetween the toes\b/,
+      /\bthrough brush\b/,
+      /\bcut\b.*\btoes?\b/,
+    ]);
+
+    if (hasWoundConfuserCue) {
+      return buildRoutingHints([
+        "limping_weight_bearing",
+        "limping_trauma_onset",
+        "wound_characterization_check",
+        "bleeding_volume_check",
+      ]);
+    }
+
+    const hasSuddenLimpingCue = hasAnyPattern([
+      /\btoe-touch(?:ing)?\b/,
+      /\bafter a jump\b/,
+      /\bjump(?:ed)? off\b/,
+      /\boff the couch\b/,
+      /\blimping\b.*\bafter\b/,
+    ]);
+
+    if (hasSuddenLimpingCue) {
+      return buildRoutingHints([
+        "limping_weight_bearing",
+        "limping_trauma_onset",
+        "trauma_mechanism_check",
+      ]);
+    }
+  }
+
+  if (activeComplaintModuleId === "trauma_bleeding_wound") {
+    const hasModerateBleedingCue = hasAnyPattern([
+      /\bsteady line of blood\b/,
+      /\bsteady drip\b/,
+      /\bscrap(?:e|ed)\b/,
+      /\bfence\b/,
+      /\bsmall\b.*\bscrape\b/,
+    ]);
+
+    if (hasModerateBleedingCue) {
+      return buildRoutingHints([
+        "bleeding_volume_check",
+        "wound_characterization_check",
+        "laceration_depth_check",
+        "trauma_mechanism_check",
+      ]);
+    }
+  }
+
+  return {
+    preferredQuestionIds: [],
+    discouragedQuestionIds: [],
+  };
 }
 
 function isPlannerFallbackResult(
@@ -100,9 +236,15 @@ export function buildShadowPlannerComplaintIntegration(
     input.caseState.activeComplaintModule;
   const plannerActiveComplaintModule =
     resolveShadowPlannerComplaintFamily(activeComplaintModuleId);
+  const routingHints = buildPlannerQuestionRoutingHints(
+    input.ownerText,
+    activeComplaintModuleId
+  );
 
   const plannerResult = planNextClinicalQuestion(input.caseState, {
     activeComplaintModule: plannerActiveComplaintModule,
+    preferredQuestionIds: routingHints.preferredQuestionIds,
+    discouragedQuestionIds: routingHints.discouragedQuestionIds,
   });
 
   const shadowPlannedQuestion = toShadowPlannedQuestion(plannerResult);

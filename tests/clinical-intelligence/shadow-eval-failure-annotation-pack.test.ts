@@ -129,7 +129,7 @@ describe("shadow eval failure annotation pack", () => {
     );
     const annotationCaseIds = new Set<string>();
 
-    expect(annotationFixture).toHaveLength(57);
+    expect(annotationFixture).toHaveLength(54);
     expect(annotationFixture).toHaveLength(evalReport.summary.failedCases.length);
 
     for (const annotation of annotationFixture) {
@@ -159,15 +159,15 @@ describe("shadow eval failure annotation pack", () => {
     }
   });
 
-  it("tracks the live failed-case order from the current 57-case summary", () => {
+  it("tracks the live failed-case order from the current 54-case summary", () => {
     expect(annotationFixture.map((annotation) => annotation.caseId)).toEqual(
       evalReport.summary.failedCases.map((failedCase) => failedCase.caseId)
     );
   });
 
   it("preserves the deterministic primary split with zero adapter or blocker rows", () => {
-    expect(countByPrimaryFailureClass("report_only_quality_gap")).toBe(46);
-    expect(countByPrimaryFailureClass("planner_improvement_candidate")).toBe(9);
+    expect(countByPrimaryFailureClass("report_only_quality_gap")).toBe(45);
+    expect(countByPrimaryFailureClass("planner_improvement_candidate")).toBe(7);
     expect(countByPrimaryFailureClass("red_flag_coverage_gap")).toBe(1);
     expect(countByPrimaryFailureClass("fixture_ambiguity")).toBe(1);
     expect(countByPrimaryFailureClass("adapter_selection_gap")).toBe(0);
@@ -178,7 +178,7 @@ describe("shadow eval failure annotation pack", () => {
       annotationFixture.filter(
         (annotation) => annotation.safetyImpact === "monitor"
       )
-    ).toHaveLength(9);
+    ).toHaveLength(8);
     expect(
       annotationFixture.filter(
         (annotation) => annotation.safetyImpact === "blocker"
@@ -187,10 +187,10 @@ describe("shadow eval failure annotation pack", () => {
   });
 
   it("keeps repeat and generic setup debt visible as secondary classifications", () => {
-    expect(countBySecondaryFailureClass("repeated_metric_setup_gap")).toBe(39);
-    expect(countBySecondaryFailureClass("generic_metric_setup_gap")).toBe(29);
+    expect(countBySecondaryFailureClass("repeated_metric_setup_gap")).toBe(37);
+    expect(countBySecondaryFailureClass("generic_metric_setup_gap")).toBe(25);
     expect(countBySecondaryFailureClass("red_flag_coverage_gap")).toBe(27);
-    expect(countBySecondaryFailureClass("fixture_ambiguity")).toBe(31);
+    expect(countBySecondaryFailureClass("fixture_ambiguity")).toBe(30);
   });
 
   it("routes representative cases into the expected reviewer lanes", () => {

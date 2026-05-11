@@ -89,41 +89,21 @@ const EXPECTED_PLANNER_CANDIDATES: readonly PlannerCandidateGuardRow[] = [
     safetyImpact: "monitor",
   },
   {
-    caseId: "skin_itching_allergy_02_paws_belly_itching",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptablePlannedQuestionIds: [
-      "skin_location_distribution",
-      "skin_changes_check",
-      "skin_exposure_check",
-    ],
-    selectedComplaintModule: "skin_itching_allergy",
-    failedMetricClasses: [
-      "repeated_metric_setup_gap",
-      "generic_metric_setup_gap",
-    ],
-    suggestedFixCategory: "skin_targeted_discriminator",
-    safetyImpact: "none",
-  },
-  {
     caseId: "limping_mobility_pain_02_sudden_after_jump",
-    currentPlannedQuestionId: "emergency_global_screen",
+    currentPlannedQuestionId: "limping_weight_bearing",
     acceptablePlannedQuestionIds: [
       "limping_weight_bearing",
       "limping_trauma_onset",
       "trauma_mechanism_check",
     ],
     selectedComplaintModule: "limping_mobility_pain",
-    failedMetricClasses: [
-      "repeated_metric_setup_gap",
-      "generic_metric_setup_gap",
-      "red_flag_coverage_gap",
-    ],
+    failedMetricClasses: ["repeated_metric_setup_gap", "red_flag_coverage_gap"],
     suggestedFixCategory: "limping_targeted_discriminator",
     safetyImpact: "monitor",
   },
   {
     caseId: "limping_mobility_pain_03_limping_with_wound_confuser",
-    currentPlannedQuestionId: "emergency_global_screen",
+    currentPlannedQuestionId: "bleeding_volume_check",
     acceptablePlannedQuestionIds: [
       "limping_weight_bearing",
       "limping_trauma_onset",
@@ -133,29 +113,10 @@ const EXPECTED_PLANNER_CANDIDATES: readonly PlannerCandidateGuardRow[] = [
     selectedComplaintModule: "limping_mobility_pain",
     failedMetricClasses: [
       "repeated_metric_setup_gap",
-      "generic_metric_setup_gap",
       "red_flag_coverage_gap",
       "fixture_ambiguity",
     ],
     suggestedFixCategory: "multi_symptom_planner_choice",
-    safetyImpact: "monitor",
-  },
-  {
-    caseId: "edge_trauma_small_scrape_vs_steady_bleed",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptablePlannedQuestionIds: [
-      "bleeding_volume_check",
-      "wound_characterization_check",
-      "laceration_depth_check",
-      "trauma_mechanism_check",
-    ],
-    selectedComplaintModule: "trauma_bleeding_wound",
-    failedMetricClasses: [
-      "generic_metric_setup_gap",
-      "red_flag_coverage_gap",
-      "fixture_ambiguity",
-    ],
-    suggestedFixCategory: "trauma_targeted_discriminator",
     safetyImpact: "monitor",
   },
   {
@@ -230,24 +191,13 @@ const EXPECTED_PLANNER_CANDIDATES: readonly PlannerCandidateGuardRow[] = [
 ] as const;
 
 const EXPECTED_TOP_FAILED_METRIC_CLASSES: readonly MetricClassCount[] = [
-  { id: "generic_metric_setup_gap", count: 9 },
-  { id: "red_flag_coverage_gap", count: 8 },
-  { id: "repeated_metric_setup_gap", count: 6 },
-  { id: "fixture_ambiguity", count: 5 },
+  { id: "red_flag_coverage_gap", count: 7 },
+  { id: "generic_metric_setup_gap", count: 5 },
+  { id: "repeated_metric_setup_gap", count: 5 },
+  { id: "fixture_ambiguity", count: 4 },
 ] as const;
 
 const EXPECTED_EDGE_CASE_CANDIDATE_ROWS = [
-  {
-    caseId: "edge_trauma_small_scrape_vs_steady_bleed",
-    selectedComplaintModule: "trauma_bleeding_wound",
-    suggestedFixCategory: "trauma_targeted_discriminator",
-    acceptablePlannedQuestionIds: [
-      "bleeding_volume_check",
-      "wound_characterization_check",
-      "laceration_depth_check",
-      "trauma_mechanism_check",
-    ],
-  },
   {
     caseId: "edge_trauma_repeat_bleeding_avoidance",
     selectedComplaintModule: "limping_mobility_pain",
@@ -385,10 +335,10 @@ function getReportOnlyRowsMislabeledAsPlannerCandidates(): string[] {
 }
 
 describe("shadow eval planner improvement candidate guard", () => {
-  it("loads the failure annotation fixture and locks the exact 9 planner candidate rows", () => {
+  it("loads the failure annotation fixture and locks the exact 7 planner candidate rows", () => {
     const plannerCandidates = buildPlannerCandidateRows();
 
-    expect(plannerCandidates).toHaveLength(9);
+    expect(plannerCandidates).toHaveLength(7);
     expect(plannerCandidates).toEqual(EXPECTED_PLANNER_CANDIDATES);
   });
 
@@ -413,7 +363,7 @@ describe("shadow eval planner improvement candidate guard", () => {
         acceptablePlannedQuestionIds: candidate.acceptablePlannedQuestionIds,
       }));
 
-    expect(edgeCaseCandidates).toHaveLength(5);
+    expect(edgeCaseCandidates).toHaveLength(4);
     expect(edgeCaseCandidates).toEqual(EXPECTED_EDGE_CASE_CANDIDATE_ROWS);
   });
 
