@@ -72,7 +72,7 @@ them off `emergency_global_screen`.
 
 ## Global Guardrails
 
-- `genericQuestionEligibleCases`: `11`
+- `genericQuestionEligibleCases`: `10`
 - `genericQuestionAvoidanceCount`: `4`
 - `actual_repeated_question_failure`: `0`
 - emergency alignment: `39/39 = 100%`
@@ -174,7 +174,7 @@ pack.
     }
   ],
   "globalGuardrails": {
-    "genericQuestionEligibleCases": 11,
+    "genericQuestionEligibleCases": 10,
     "genericQuestionAvoidanceCount": 4,
     "genericQuestionAvoidanceCaseIds": [
       "skin_itching_allergy_02_paws_belly_itching",

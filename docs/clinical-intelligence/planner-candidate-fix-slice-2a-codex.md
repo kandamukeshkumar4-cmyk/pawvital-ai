@@ -54,12 +54,15 @@ cards for four medium-risk generic-avoidance cases:
 Fresh `node scripts/eval-shadow-planner-scenarios.ts --json` metrics:
 
 - acceptable question rate: `50/57` (`0.8771929824561403`)
-- generic avoidance: `4/11` (`0.36363636363636365`)
+- generic avoidance: `4/10` (`0.4`)
 - repeated avoidance: `6/6` (`1`)
 - emergency alignment: `39/39` (`1`)
 - red-flag coverage: `42/170` (`0.24705882352941178`)
 - raw failed cases: `54`
 - normalized failed cases: `53`
+
+VET-1469C later excluded the normalized fixture-only GI row from generic
+question scoring, changing only the denominator from `11` to `10`.
 
 ## Notes
 

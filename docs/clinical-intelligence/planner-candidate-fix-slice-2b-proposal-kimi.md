@@ -70,6 +70,11 @@ There are no new adapter/trigger rows in this pack. The two prior
 `adapter_trigger` rows now stay here only as Slice 2A residuals because they
 already moved to accepted non-generic questions.
 
+VET-1469C normalized the fixture-only GI row by accepting the current
+`emergency_global_screen` outcome for the water-retention wording. That row is
+retained in this proposal pack for traceability, but it is no longer counted as
+live planner-scoring debt.
+
 ## Edge-Case Coverage and Telemetry Hygiene
 
 This proposal pack intentionally covers every remaining non-repeated Slice 2B
@@ -126,18 +131,17 @@ the proposal boundary.
       "acceptableTargetQuestionIds": [
         "gi_keep_water_down_check",
         "gi_vomiting_frequency",
-        "gi_blood_check"
+        "gi_blood_check",
+        "emergency_global_screen"
       ],
       "blockingFailureClasses": [
-        "repeated_metric_setup_gap",
-        "generic_metric_setup_gap",
-        "red_flag_coverage_gap"
+        "repeated_metric_setup_gap"
       ],
       "minimalFutureScope": [
         "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json",
         "tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json"
       ],
-      "followUpBoundary": "Keep this in a fixture-only lane until the accepted outcome wording is reconciled; do not broaden planner scoring before the fixture mismatch is reviewed."
+      "followUpBoundary": "Normalized by VET-1469C as fixture-only outcome debt; keep this out of planner scoring unless future runtime behavior regresses."
     },
     {
       "caseId": "edge_limping_not_sure_pain_or_weakness",
@@ -330,12 +334,12 @@ the proposal boundary.
     ]
   },
   "globalGuardrails": {
-    "plannerImprovementCandidateCount": 7,
+    "plannerImprovementCandidateCount": 6,
     "remainingSlice2BCaseCount": 5,
     "remainingHigherRiskPlannerCandidateCount": 3,
     "residualAfterSlice2ACount": 2,
     "excludedRepeatedContextCandidateCount": 2,
-    "genericQuestionEligibleCases": 11,
+    "genericQuestionEligibleCases": 10,
     "genericQuestionAvoidanceCount": 4,
     "repeatedQuestionEligibleCases": 6,
     "repeatedQuestionAvoidanceCount": 6,

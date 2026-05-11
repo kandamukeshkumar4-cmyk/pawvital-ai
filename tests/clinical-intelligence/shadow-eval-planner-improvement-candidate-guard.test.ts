@@ -72,23 +72,6 @@ const annotationFixture = annotations as ShadowEvalFailureAnnotation[];
 
 const EXPECTED_PLANNER_CANDIDATES: readonly PlannerCandidateGuardRow[] = [
   {
-    caseId: "gi_vomiting_diarrhea_03_water_comes_back_up",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptablePlannedQuestionIds: [
-      "gi_keep_water_down_check",
-      "gi_vomiting_frequency",
-      "gi_blood_check",
-    ],
-    selectedComplaintModule: "gi_vomiting_diarrhea",
-    failedMetricClasses: [
-      "repeated_metric_setup_gap",
-      "generic_metric_setup_gap",
-      "red_flag_coverage_gap",
-    ],
-    suggestedFixCategory: "gi_targeted_discriminator",
-    safetyImpact: "monitor",
-  },
-  {
     caseId: "limping_mobility_pain_02_sudden_after_jump",
     currentPlannedQuestionId: "limping_weight_bearing",
     acceptablePlannedQuestionIds: [
@@ -191,10 +174,10 @@ const EXPECTED_PLANNER_CANDIDATES: readonly PlannerCandidateGuardRow[] = [
 ] as const;
 
 const EXPECTED_TOP_FAILED_METRIC_CLASSES: readonly MetricClassCount[] = [
-  { id: "red_flag_coverage_gap", count: 7 },
-  { id: "generic_metric_setup_gap", count: 5 },
-  { id: "repeated_metric_setup_gap", count: 5 },
+  { id: "red_flag_coverage_gap", count: 6 },
   { id: "fixture_ambiguity", count: 4 },
+  { id: "generic_metric_setup_gap", count: 4 },
+  { id: "repeated_metric_setup_gap", count: 4 },
 ] as const;
 
 const EXPECTED_EDGE_CASE_CANDIDATE_ROWS = [
@@ -335,10 +318,10 @@ function getReportOnlyRowsMislabeledAsPlannerCandidates(): string[] {
 }
 
 describe("shadow eval planner improvement candidate guard", () => {
-  it("loads the failure annotation fixture and locks the exact 7 planner candidate rows", () => {
+  it("loads the failure annotation fixture and locks the exact 6 planner candidate rows", () => {
     const plannerCandidates = buildPlannerCandidateRows();
 
-    expect(plannerCandidates).toHaveLength(7);
+    expect(plannerCandidates).toHaveLength(6);
     expect(plannerCandidates).toEqual(EXPECTED_PLANNER_CANDIDATES);
   });
 

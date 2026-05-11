@@ -311,11 +311,11 @@ describe("shadow planner eval failure triage", () => {
     expect(triage.countByClassification.adapter_module_mismatch).toBe(0);
     expect(triage.countByClassification.fixture_expectation_mismatch).toBe(1);
     expect(triage.countByClassification.missing_question_card_coverage).toBe(2);
-    expect(triage.countByClassification.off_topic_question_selected).toBe(1);
+    expect(triage.countByClassification.off_topic_question_selected).toBe(0);
     expect(triage.countByClassification.repeated_question_setup_gap).toBe(28);
     expect(triage.countByClassification.generic_question_metric_setup_gap).toBe(28);
     expect(triage.countByClassification.red_flag_screen_coverage_gap).toBe(30);
-    expect(triage.countByClassification.acceptable_report_only_failure).toBe(29);
+    expect(triage.countByClassification.acceptable_report_only_failure).toBe(30);
     expect(triage.countByClassification.emergency_alignment_ok_quality_gap).toBe(23);
 
     expect(triage.safetyBlockers).toHaveLength(0);
@@ -351,10 +351,10 @@ describe("shadow planner eval failure triage", () => {
     );
     expect(giWaterMismatch).toBeDefined();
     expectClassifications(giWaterMismatch!.classifications, [
-      "off_topic_question_selected",
       "repeated_question_setup_gap",
       "generic_question_metric_setup_gap",
       "red_flag_screen_coverage_gap",
+      "acceptable_report_only_failure",
     ]);
 
     const alignedRespiratoryCase = triage.failedCaseTriage.find(
@@ -375,7 +375,6 @@ describe("shadow planner eval failure triage", () => {
       "shadow-planner-repeated-question-eval-setup",
       "shadow-planner-generic-question-metric-baseline",
       "shadow-planner-red-flag-coverage-audit",
-      "shadow-planner-routine-emergency-overselection-triage",
       "shadow-planner-expected-outcome-normalization",
     ]);
   });

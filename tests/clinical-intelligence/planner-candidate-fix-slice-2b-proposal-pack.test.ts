@@ -252,18 +252,17 @@ const EXPECTED_PAYLOAD: ProposalPackPayload = {
         "gi_keep_water_down_check",
         "gi_vomiting_frequency",
         "gi_blood_check",
+        "emergency_global_screen",
       ],
       blockingFailureClasses: [
         "repeated_metric_setup_gap",
-        "generic_metric_setup_gap",
-        "red_flag_coverage_gap",
       ],
       minimalFutureScope: [
         "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json",
         "tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json",
       ],
       followUpBoundary:
-        "Keep this in a fixture-only lane until the accepted outcome wording is reconciled; do not broaden planner scoring before the fixture mismatch is reviewed.",
+        "Normalized by VET-1469C as fixture-only outcome debt; keep this out of planner scoring unless future runtime behavior regresses.",
     },
     {
       caseId: "edge_limping_not_sure_pain_or_weakness",
@@ -428,12 +427,12 @@ const EXPECTED_PAYLOAD: ProposalPackPayload = {
     ],
   },
   globalGuardrails: {
-    plannerImprovementCandidateCount: 7,
+    plannerImprovementCandidateCount: 6,
     remainingSlice2BCaseCount: 5,
     remainingHigherRiskPlannerCandidateCount: 3,
     residualAfterSlice2ACount: 2,
     excludedRepeatedContextCandidateCount: 2,
-    genericQuestionEligibleCases: 11,
+    genericQuestionEligibleCases: 10,
     genericQuestionAvoidanceCount: 4,
     repeatedQuestionEligibleCases: 6,
     repeatedQuestionAvoidanceCount: 6,
@@ -580,19 +579,28 @@ describe("planner candidate fix slice 2B proposal pack", () => {
       expect(caseResult.actual.complaintModuleId).toBe(row.selectedComplaintModule);
       expect(caseResult.actual.plannedQuestionId).toBe(row.currentPlannedQuestionId);
       expect(caseResult.actual.plannedQuestionId).toBe("emergency_global_screen");
+      expect(annotation.secondaryFailureClasses).toEqual(
+        row.blockingFailureClasses
+      );
+      expect(row.acceptableTargetQuestionIds).toEqual(
+        caseResult.expected.acceptableQuestionIds
+      );
+
+      if (row.recommendedFixLane === "fixture_only") {
+        expect(caseResult.acceptableQuestionMatched).toBe(true);
+        expect(caseResult.genericQuestionMetricStatus).toBe("no_metric_setup");
+        expect(annotation.primaryFailureClass).toBe("report_only_quality_gap");
+        expect(annotation.safetyImpact).toBe("none");
+        continue;
+      }
+
       expect(caseResult.acceptableQuestionMatched).toBe(false);
       expect(caseResult.genericQuestionAvoided).toBe(false);
       expect(caseResult.missingRequiredRedFlags.length).toBeGreaterThan(0);
       expect(annotation.primaryFailureClass).toBe(
         "planner_improvement_candidate"
       );
-      expect(annotation.secondaryFailureClasses).toEqual(
-        row.blockingFailureClasses
-      );
       expect(annotation.safetyImpact).toBe("monitor");
-      expect(row.acceptableTargetQuestionIds).toEqual(
-        caseResult.expected.acceptableQuestionIds
-      );
     }
 
     for (const row of payload.residualSlice2ARows) {

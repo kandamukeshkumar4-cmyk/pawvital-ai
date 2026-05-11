@@ -217,7 +217,7 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
     },
   ],
   globalGuardrails: {
-    genericQuestionEligibleCases: 11,
+    genericQuestionEligibleCases: 10,
     genericQuestionAvoidanceCount: 4,
     genericQuestionAvoidanceCaseIds: [...TARGET_CASE_IDS],
     repeatedQuestionEligibleCases: 6,
@@ -483,7 +483,7 @@ describe("planner candidate fix slice 2A guard", () => {
     expect(doc).toContain(
       "The other non-repeated generic candidates still stay outside slice 2A:"
     );
-    expect(doc).toContain("`genericQuestionEligibleCases`: `11`");
+    expect(doc).toContain("`genericQuestionEligibleCases`: `10`");
     expect(doc).toContain("`genericQuestionAvoidanceCount`: `4`");
     expect(doc).toContain("`actual_repeated_question_failure`: `0`");
     expect(doc).toContain("emergency alignment: `39/39 = 100%`");

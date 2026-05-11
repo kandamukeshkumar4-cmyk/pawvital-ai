@@ -70,23 +70,6 @@ const OWNER_FACING_CLAIM_PATTERNS = [
 
 const EXPECTED_PROPOSALS: readonly ProposalRow[] = [
   {
-    caseId: "gi_vomiting_diarrhea_03_water_comes_back_up",
-    ownerTextSummary:
-      "Water comes back up after drinking, with loose stool still present.",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptableTargetQuestionIds: [
-      "gi_keep_water_down_check",
-      "gi_vomiting_frequency",
-      "gi_blood_check",
-    ],
-    whyCurrentQuestionIsWeak:
-      "The current question stays generic even though the accepted GI targets already cover the water-retention concern more directly. The existing adapter-selection guard also routes this row into an expectation-mismatch lane before a planner-selection defect.",
-    proposedFixType: "fixture_expectation_adjustment",
-    riskLevel: "low",
-    requiredFutureValidation:
-      "Rerun the adapter-selection gap guard, the failure-annotation pack, and the scenario eval to confirm this row leaves the planner-candidate lane without changing emergency alignment.",
-  },
-  {
     caseId: "limping_mobility_pain_02_sudden_after_jump",
     ownerTextSummary: "Toe-touching limp after a jump off furniture.",
     currentPlannedQuestionId: "emergency_global_screen",
@@ -225,11 +208,11 @@ function getPlannerCandidateCaseIds(): string[] {
 }
 
 describe("planner candidate fix proposal pack", () => {
-  it("covers exactly the 7 planner-improvement candidate caseIds from the failure annotation pack", () => {
+  it("covers exactly the 6 planner-improvement candidate caseIds from the failure annotation pack", () => {
     const proposalRows = extractProposalRows();
     const expectedCaseIds = getPlannerCandidateCaseIds();
 
-    expect(expectedCaseIds).toHaveLength(7);
+    expect(expectedCaseIds).toHaveLength(6);
     expect(proposalRows.map((row) => row.caseId)).toEqual(expectedCaseIds);
   });
 
@@ -267,7 +250,7 @@ describe("planner candidate fix proposal pack", () => {
       proposalRows.filter(
         (row) => row.proposedFixType === "fixture_expectation_adjustment"
       )
-    ).toHaveLength(1);
+    ).toHaveLength(0);
     expect(
       proposalRows.filter(
         (row) => row.proposedFixType === "adapter_trigger_adjustment"
@@ -281,11 +264,11 @@ describe("planner candidate fix proposal pack", () => {
     expect(DOC).toContain("## Planner-Owned Proposal Lanes");
     expect(DOC).toContain("## Non-Planner Follow-Up Lanes");
     expect(DOC).toContain("Planner-owned proposals: `3`");
-    expect(DOC).toContain("Non-planner follow-up proposals: `4`");
+    expect(DOC).toContain("Non-planner follow-up proposals: `3`");
     expect(DOC).toContain("`scoring_weight_adjustment`: `2`");
     expect(DOC).toContain("`module_phase_priority_adjustment`: `1`");
     expect(DOC).toContain("`question_card_metadata_adjustment`: `1`");
-    expect(DOC).toContain("`fixture_expectation_adjustment`: `1`");
+    expect(DOC).toContain("`fixture_expectation_adjustment`: `0`");
     expect(DOC).toContain("`adapter_trigger_adjustment`: `2`");
     expect(DOC).toContain("Proposal pack only.");
     expect(DOC).toContain("No runtime files touched.");

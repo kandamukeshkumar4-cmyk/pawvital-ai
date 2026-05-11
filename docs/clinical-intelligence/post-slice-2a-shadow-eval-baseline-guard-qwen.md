@@ -31,7 +31,7 @@ The following metrics are locked at their post-Slice 2A values:
 - `total cases`: `57`
 - `emergency alignment`: `39/39`
 - `repeated avoidance`: `6/6`
-- `generic avoidance`: `4/11`
+- `generic avoidance`: `4/10`
 - `safety blockers`: `0`
 - `Slice 2A locked wins`: `4`
 - `report-only rows reclassified`: `0`
@@ -54,7 +54,7 @@ The test file asserts:
 1. Total cases remain exactly 57 (33 base + 24 edge).
 2. Emergency screen alignment remains 39/39 = 100%.
 3. Setup-aware repeated question avoidance remains 6/6 = 100%.
-4. Setup-aware generic question avoidance remains 4/11.
+4. Setup-aware generic question avoidance remains 4/10 after VET-1469C excludes the normalized fixture-only GI row from generic scoring.
 5. Safety blockers remain 0.
 6. All four Slice 2A win cases avoid the generic question and match acceptable questions.
 7. No report-only quality gap rows are reclassified as safety blockers.
