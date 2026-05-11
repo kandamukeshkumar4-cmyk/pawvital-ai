@@ -87,22 +87,6 @@ const EXPECTED_PROPOSALS: readonly ProposalRow[] = [
       "Rerun the adapter-selection gap guard, the failure-annotation pack, and the scenario eval to confirm this row leaves the planner-candidate lane without changing emergency alignment.",
   },
   {
-    caseId: "skin_itching_allergy_02_paws_belly_itching",
-    ownerTextSummary: "Persistent paw licking and belly scratching with red skin.",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptableTargetQuestionIds: [
-      "skin_location_distribution",
-      "skin_changes_check",
-      "skin_exposure_check",
-    ],
-    whyCurrentQuestionIsWeak:
-      "The generic emergency screen skips the ordinary skin-localization phase even though the case does not require an emergency-first question and the accepted targets already define a narrower next step.",
-    proposedFixType: "module_phase_priority_adjustment",
-    riskLevel: "medium",
-    requiredFutureValidation:
-      "Rerun the scenario eval and failure-annotation pack, then confirm that a skin-localization question is selected before any generic emergency fallback.",
-  },
-  {
     caseId: "limping_mobility_pain_02_sudden_after_jump",
     ownerTextSummary: "Toe-touching limp after a jump off furniture.",
     currentPlannedQuestionId: "emergency_global_screen",
@@ -135,23 +119,6 @@ const EXPECTED_PROPOSALS: readonly ProposalRow[] = [
     riskLevel: "medium",
     requiredFutureValidation:
       "Rerun the adapter-selection gap guard, the scenario eval, and the failure-annotation pack to confirm the mixed limping and wound trigger surface produces one of the accepted target questions.",
-  },
-  {
-    caseId: "edge_trauma_small_scrape_vs_steady_bleed",
-    ownerTextSummary: "A small scrape escalates into a steady line of blood.",
-    currentPlannedQuestionId: "emergency_global_screen",
-    acceptableTargetQuestionIds: [
-      "bleeding_volume_check",
-      "wound_characterization_check",
-      "laceration_depth_check",
-      "trauma_mechanism_check",
-    ],
-    whyCurrentQuestionIsWeak:
-      "The generic emergency screen does not help choose among the already accepted bleeding and wound prompts. The steady-bleed signal needs to outrank the blanket fallback.",
-    proposedFixType: "scoring_weight_adjustment",
-    riskLevel: "medium",
-    requiredFutureValidation:
-      "Rerun the scenario eval, the failure-annotation pack, and the red-flag coverage audit to confirm that a trauma-specific target question wins while required bleeding coverage stays complete.",
   },
   {
     caseId: "edge_trauma_repeat_bleeding_avoidance",
@@ -258,11 +225,11 @@ function getPlannerCandidateCaseIds(): string[] {
 }
 
 describe("planner candidate fix proposal pack", () => {
-  it("covers exactly the 9 planner-improvement candidate caseIds from the failure annotation pack", () => {
+  it("covers exactly the 7 planner-improvement candidate caseIds from the failure annotation pack", () => {
     const proposalRows = extractProposalRows();
     const expectedCaseIds = getPlannerCandidateCaseIds();
 
-    expect(expectedCaseIds).toHaveLength(9);
+    expect(expectedCaseIds).toHaveLength(7);
     expect(proposalRows.map((row) => row.caseId)).toEqual(expectedCaseIds);
   });
 
@@ -285,12 +252,12 @@ describe("planner candidate fix proposal pack", () => {
       proposalRows.filter(
         (row) => row.proposedFixType === "scoring_weight_adjustment"
       )
-    ).toHaveLength(3);
+    ).toHaveLength(2);
     expect(
       proposalRows.filter(
         (row) => row.proposedFixType === "module_phase_priority_adjustment"
       )
-    ).toHaveLength(2);
+    ).toHaveLength(1);
     expect(
       proposalRows.filter(
         (row) => row.proposedFixType === "question_card_metadata_adjustment"
@@ -313,10 +280,10 @@ describe("planner candidate fix proposal pack", () => {
 
     expect(DOC).toContain("## Planner-Owned Proposal Lanes");
     expect(DOC).toContain("## Non-Planner Follow-Up Lanes");
-    expect(DOC).toContain("Planner-owned proposals: `5`");
+    expect(DOC).toContain("Planner-owned proposals: `3`");
     expect(DOC).toContain("Non-planner follow-up proposals: `4`");
-    expect(DOC).toContain("`scoring_weight_adjustment`: `3`");
-    expect(DOC).toContain("`module_phase_priority_adjustment`: `2`");
+    expect(DOC).toContain("`scoring_weight_adjustment`: `2`");
+    expect(DOC).toContain("`module_phase_priority_adjustment`: `1`");
     expect(DOC).toContain("`question_card_metadata_adjustment`: `1`");
     expect(DOC).toContain("`fixture_expectation_adjustment`: `1`");
     expect(DOC).toContain("`adapter_trigger_adjustment`: `2`");

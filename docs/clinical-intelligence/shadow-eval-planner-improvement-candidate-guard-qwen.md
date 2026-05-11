@@ -16,8 +16,8 @@ annotation fixtures, routing, UI, env, infra, or workflow behavior.
 
 ## Purpose
 
-VET-1455K already packaged the current `57` failed shadow-eval rows into the
-failure-annotation fixture. This guard narrows that package to the exact `9`
+VET-1455K already packaged the current `57` shadow-eval cases into the
+failure-annotation fixture. This guard narrows that package to the exact `7`
 rows whose primary class is `planner_improvement_candidate` so future planner
 work can stay targeted.
 
@@ -29,10 +29,8 @@ candidate set and its current metric-class mix.
 | Case ID | Current planned question | Acceptable planned question IDs | Selected complaint module | Failed metric classes | Suggested fix category |
 | --- | --- | --- | --- | --- | --- |
 | `gi_vomiting_diarrhea_03_water_comes_back_up` | `emergency_global_screen` | `gi_keep_water_down_check`, `gi_vomiting_frequency`, `gi_blood_check` | `gi_vomiting_diarrhea` | `repeated_metric_setup_gap`, `generic_metric_setup_gap`, `red_flag_coverage_gap` | `gi_targeted_discriminator` |
-| `skin_itching_allergy_02_paws_belly_itching` | `emergency_global_screen` | `skin_location_distribution`, `skin_changes_check`, `skin_exposure_check` | `skin_itching_allergy` | `repeated_metric_setup_gap`, `generic_metric_setup_gap` | `skin_targeted_discriminator` |
-| `limping_mobility_pain_02_sudden_after_jump` | `emergency_global_screen` | `limping_weight_bearing`, `limping_trauma_onset`, `trauma_mechanism_check` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `generic_metric_setup_gap`, `red_flag_coverage_gap` | `limping_targeted_discriminator` |
-| `limping_mobility_pain_03_limping_with_wound_confuser` | `emergency_global_screen` | `limping_weight_bearing`, `limping_trauma_onset`, `wound_characterization_check`, `bleeding_volume_check` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `generic_metric_setup_gap`, `red_flag_coverage_gap`, `fixture_ambiguity` | `multi_symptom_planner_choice` |
-| `edge_trauma_small_scrape_vs_steady_bleed` | `emergency_global_screen` | `bleeding_volume_check`, `wound_characterization_check`, `laceration_depth_check`, `trauma_mechanism_check` | `trauma_bleeding_wound` | `generic_metric_setup_gap`, `red_flag_coverage_gap`, `fixture_ambiguity` | `trauma_targeted_discriminator` |
+| `limping_mobility_pain_02_sudden_after_jump` | `limping_weight_bearing` | `limping_weight_bearing`, `limping_trauma_onset`, `trauma_mechanism_check` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `red_flag_coverage_gap` | `limping_targeted_discriminator` |
+| `limping_mobility_pain_03_limping_with_wound_confuser` | `bleeding_volume_check` | `limping_weight_bearing`, `limping_trauma_onset`, `wound_characterization_check`, `bleeding_volume_check` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `red_flag_coverage_gap`, `fixture_ambiguity` | `multi_symptom_planner_choice` |
 | `edge_trauma_repeat_bleeding_avoidance` | `emergency_global_screen` | `wound_characterization_check`, `laceration_depth_check`, `limping_weight_bearing`, `limping_trauma_onset` | `limping_mobility_pain` | `repeated_metric_setup_gap`, `generic_metric_setup_gap`, `red_flag_coverage_gap`, `fixture_ambiguity` | `trauma_targeted_discriminator` |
 | `edge_skin_repeat_location_avoidance` | `emergency_global_screen` | `skin_emergency_allergy_screen` | `skin_itching_allergy` | `repeated_metric_setup_gap`, `generic_metric_setup_gap`, `red_flag_coverage_gap` | `skin_targeted_discriminator` |
 | `edge_limping_not_sure_pain_or_weakness` | `emergency_global_screen` | `limping_weight_bearing`, `collapse_weakness_check`, `limping_trauma_onset`, `gum_color_check` | `collapse_weakness` | `generic_metric_setup_gap`, `red_flag_coverage_gap`, `fixture_ambiguity` | `multi_symptom_planner_choice` |
@@ -72,7 +70,7 @@ separate from this validation guard.
 
 ## Current Guard Findings
 
-- planner candidates: `9`
+- planner candidates: `7`
 - safety blockers: `0`
 - report-only rows mislabeled as planner candidates: `0`
 
@@ -84,10 +82,10 @@ The eval CLI still reports `57` total cases.
 
 ## Candidate-Only Top Failed Metric Classes
 
-- `generic_metric_setup_gap`: `9`
-- `red_flag_coverage_gap`: `8`
-- `repeated_metric_setup_gap`: `6`
-- `fixture_ambiguity`: `5`
+- `red_flag_coverage_gap`: `7`
+- `generic_metric_setup_gap`: `5`
+- `repeated_metric_setup_gap`: `5`
+- `fixture_ambiguity`: `4`
 
 ## Guard Boundary
 

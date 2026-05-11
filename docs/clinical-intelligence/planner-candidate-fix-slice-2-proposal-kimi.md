@@ -16,16 +16,17 @@ fixtures, routing, UI, env, infra, or workflows.
 
 ## Purpose
 
-VET-1458K already proposed follow-up owners for all `9`
-`planner_improvement_candidate` rows. This slice narrows that pack to the next
-`7` implementation-ready rows that do not need a repeated-context first move.
+VET-1458K already proposed follow-up owners for all `7`
+current `planner_improvement_candidate` rows. This slice narrows that pack to
+the next `5` implementation-ready rows that do not need a repeated-context
+first move.
 
 The goal is to keep the next runtime tickets split by the lowest-risk fix owner
 instead of stacking unrelated planner, adapter, and fixture work together.
 
 ## Slice Boundary
 
-- included candidate rows: `7`
+- included candidate rows: `5`
 - excluded repeated-context rows: `2`
 - `edge_trauma_repeat_bleeding_avoidance`
 - `edge_skin_repeat_location_avoidance`
@@ -34,8 +35,8 @@ instead of stacking unrelated planner, adapter, and fixture work together.
 
 - `fixture`: `1`
 - `adapter_trigger`: `2`
-- `planner_scoring`: `2`
-- `module_phase_priority`: `2`
+- `planner_scoring`: `1`
+- `module_phase_priority`: `1`
 - `question_card_metadata`: `0`
 
 ## Summary Table
@@ -43,10 +44,8 @@ instead of stacking unrelated planner, adapter, and fixture work together.
 | Case ID | Recommended fix owner | Minimal file scope | Regression risk |
 | --- | --- | --- | --- |
 | `gi_vomiting_diarrhea_03_water_comes_back_up` | `fixture` | `tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json`, `tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json` | `low` |
-| `skin_itching_allergy_02_paws_belly_itching` | `module_phase_priority` | `src/lib/clinical-intelligence/next-question-planner.ts`, `src/lib/clinical-intelligence/complaint-modules/skin.ts` | `medium` |
 | `limping_mobility_pain_02_sudden_after_jump` | `adapter_trigger` | `src/lib/clinical-intelligence/shadow-planner-complaint-adapter.ts`, `src/lib/clinical-intelligence/complaint-modules/limping.ts` | `medium` |
 | `limping_mobility_pain_03_limping_with_wound_confuser` | `adapter_trigger` | `src/lib/clinical-intelligence/shadow-planner-complaint-adapter.ts`, `src/lib/clinical-intelligence/complaint-modules/limping.ts` | `medium` |
-| `edge_trauma_small_scrape_vs_steady_bleed` | `planner_scoring` | `src/lib/clinical-intelligence/next-question-planner.ts` | `medium` |
 | `edge_limping_not_sure_pain_or_weakness` | `module_phase_priority` | `src/lib/clinical-intelligence/next-question-planner.ts`, `src/lib/clinical-intelligence/complaint-modules/limping.ts`, `src/lib/clinical-intelligence/complaint-modules/collapse-weakness.ts` | `high` |
 | `edge_multi_diarrhea_limping_cut` | `planner_scoring` | `src/lib/clinical-intelligence/next-question-planner.ts` | `high` |
 
@@ -88,38 +87,9 @@ validation commands are locked in the structured proposal block below.
     ]
   },
   {
-    "caseId": "skin_itching_allergy_02_paws_belly_itching",
-    "selectedComplaintModule": "skin_itching_allergy",
-    "currentPlannedQuestionId": "emergency_global_screen",
-    "acceptableTargetQuestionIds": [
-      "skin_location_distribution",
-      "skin_changes_check",
-      "skin_exposure_check"
-    ],
-    "recommendedFixOwner": "module_phase_priority",
-    "lowestRiskRationale": "The complaint module already matches, the accepted skin cards already exist, and this row does not need repeated-answer carryover. The narrowest next move is to raise the skin characterization phase ahead of the generic fallback.",
-    "minimalFileScope": [
-      "src/lib/clinical-intelligence/next-question-planner.ts",
-      "src/lib/clinical-intelligence/complaint-modules/skin.ts"
-    ],
-    "expectedMetricMovement": [
-      "acceptableQuestionRate: should improve if a skin-specific first-turn question replaces emergency_global_screen.",
-      "genericQuestionAvoidanceRate: should improve because this row currently over-selects the generic fallback.",
-      "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
-      "emergencyScreenAlignmentRate: should stay unchanged because this row is not proposing a weaker emergency path."
-    ],
-    "regressionRisk": "medium",
-    "requiredValidationCommands": [
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-failure-annotation-pack.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-planner-scenario-eval.test.ts",
-      "node scripts/eval-shadow-planner-scenarios.ts --json",
-      "npm run build"
-    ]
-  },
-  {
     "caseId": "limping_mobility_pain_02_sudden_after_jump",
     "selectedComplaintModule": "limping_mobility_pain",
-    "currentPlannedQuestionId": "emergency_global_screen",
+    "currentPlannedQuestionId": "limping_weight_bearing",
     "acceptableTargetQuestionIds": [
       "limping_weight_bearing",
       "limping_trauma_onset",
@@ -132,8 +102,8 @@ validation commands are locked in the structured proposal block below.
       "src/lib/clinical-intelligence/complaint-modules/limping.ts"
     ],
     "expectedMetricMovement": [
-      "acceptableQuestionRate: should improve if the limping trigger surface routes this row to an accepted target question.",
-      "genericQuestionAvoidanceRate: should improve if emergency_global_screen stops winning first turn.",
+      "acceptableQuestionRate: should stay unchanged because the current first turn already lands inside the accepted target set.",
+      "genericQuestionAvoidanceRate: should stay unchanged because this row no longer selects emergency_global_screen.",
       "redFlagScreenCoverageRate: may improve if the selected limping-specific question carries the missing case red-flag screens.",
       "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
       "emergencyScreenAlignmentRate: should stay unchanged because the fix owner is trigger-surface narrowing, not emergency downgrading."
@@ -151,7 +121,7 @@ validation commands are locked in the structured proposal block below.
   {
     "caseId": "limping_mobility_pain_03_limping_with_wound_confuser",
     "selectedComplaintModule": "limping_mobility_pain",
-    "currentPlannedQuestionId": "emergency_global_screen",
+    "currentPlannedQuestionId": "bleeding_volume_check",
     "acceptableTargetQuestionIds": [
       "limping_weight_bearing",
       "limping_trauma_onset",
@@ -165,8 +135,8 @@ validation commands are locked in the structured proposal block below.
       "src/lib/clinical-intelligence/complaint-modules/limping.ts"
     ],
     "expectedMetricMovement": [
-      "acceptableQuestionRate: should improve if mixed limping and wound wording routes this row to an accepted target question.",
-      "genericQuestionAvoidanceRate: should improve if emergency_global_screen stops winning first turn.",
+      "acceptableQuestionRate: should stay unchanged because the current first turn already lands inside the accepted target set.",
+      "genericQuestionAvoidanceRate: should stay unchanged because this row no longer selects emergency_global_screen.",
       "redFlagScreenCoverageRate: may improve if the chosen limping or wound follow-up carries the missing case red-flag screens.",
       "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
       "emergencyScreenAlignmentRate: should stay unchanged because the trigger fix should not weaken emergency handling."
@@ -174,37 +144,6 @@ validation commands are locked in the structured proposal block below.
     "regressionRisk": "medium",
     "requiredValidationCommands": [
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-adapter-selection-gap-guard.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-red-flag-coverage-audit.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-failure-annotation-pack.test.ts",
-      "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-planner-scenario-eval.test.ts",
-      "node scripts/eval-shadow-planner-scenarios.ts --json",
-      "npm run build"
-    ]
-  },
-  {
-    "caseId": "edge_trauma_small_scrape_vs_steady_bleed",
-    "selectedComplaintModule": "trauma_bleeding_wound",
-    "currentPlannedQuestionId": "emergency_global_screen",
-    "acceptableTargetQuestionIds": [
-      "bleeding_volume_check",
-      "wound_characterization_check",
-      "laceration_depth_check",
-      "trauma_mechanism_check"
-    ],
-    "recommendedFixOwner": "planner_scoring",
-    "lowestRiskRationale": "The accepted trauma questions already exist and the module match is already correct, so the narrowest runtime move is to rebalance scoring until a bleeding or wound card outranks the generic fallback.",
-    "minimalFileScope": [
-      "src/lib/clinical-intelligence/next-question-planner.ts"
-    ],
-    "expectedMetricMovement": [
-      "acceptableQuestionRate: should improve if a trauma-specific first-turn question replaces emergency_global_screen.",
-      "genericQuestionAvoidanceRate: should improve because this row currently over-selects the generic fallback.",
-      "redFlagScreenCoverageRate: may improve if bleeding-specific screening outranks the blanket fallback.",
-      "complaintModuleMatchRate: should stay unchanged because the complaint module already matches.",
-      "emergencyScreenAlignmentRate: should stay unchanged because the scoring fix should not weaken emergency behavior."
-    ],
-    "regressionRisk": "medium",
-    "requiredValidationCommands": [
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-red-flag-coverage-audit.test.ts",
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-eval-failure-annotation-pack.test.ts",
       "npm test -- --runTestsByPath tests/clinical-intelligence/shadow-planner-scenario-eval.test.ts",

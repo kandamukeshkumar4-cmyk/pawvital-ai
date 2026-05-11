@@ -26,14 +26,12 @@ and the current non-regression baseline.
 
 ## Intended Slice
 
-The planner-owned repeated-question slice currently contains exactly `2` rows:
+The planner-owned repeated-question slice currently contains exactly `1` row:
 
-- `skin_itching_allergy_02_paws_belly_itching` stays on
-  `module_phase_priority_adjustment`
 - `edge_trauma_repeat_bleeding_avoidance` stays on
   `scoring_weight_adjustment`
 
-These are the only repeated-question planner-candidate rows that stay in the
+This is the only repeated-question planner-candidate row that stays in the
 planner-owned follow-up lanes from VET-1458K.
 
 ## Explicit Exclusions
@@ -67,17 +65,6 @@ report-only rows as planner successes.
 ```json
 {
   "intendedRepeatedCandidateRows": [
-    {
-      "caseId": "skin_itching_allergy_02_paws_belly_itching",
-      "proposedFixType": "module_phase_priority_adjustment",
-      "currentPlannedQuestionId": "emergency_global_screen",
-      "selectedComplaintModule": "skin_itching_allergy",
-      "acceptableTargetQuestionIds": [
-        "skin_location_distribution",
-        "skin_changes_check",
-        "skin_exposure_check"
-      ]
-    },
     {
       "caseId": "edge_trauma_repeat_bleeding_avoidance",
       "proposedFixType": "scoring_weight_adjustment",

@@ -95,24 +95,24 @@ const EXPECTED_AUDIT_ROWS: readonly AuditRow[] = [
   },
   {
     redFlagId: "large_blood_volume",
-    totalCases: 3,
+    totalCases: 1,
     dominantClassification: "acceptable_report_only_gap",
     classificationCounts: {
       fixture_expectation_gap: 0,
       registered_question_card_gap: 0,
       adapter_selection_gap: 0,
-      acceptable_report_only_gap: 3,
+      acceptable_report_only_gap: 1,
     },
   },
   {
     redFlagId: "non_weight_bearing",
-    totalCases: 3,
-    dominantClassification: "adapter_selection_gap",
+    totalCases: 2,
+    dominantClassification: "acceptable_report_only_gap",
     classificationCounts: {
       fixture_expectation_gap: 0,
       registered_question_card_gap: 0,
-      adapter_selection_gap: 2,
-      acceptable_report_only_gap: 1,
+      adapter_selection_gap: 0,
+      acceptable_report_only_gap: 2,
     },
   },
   {

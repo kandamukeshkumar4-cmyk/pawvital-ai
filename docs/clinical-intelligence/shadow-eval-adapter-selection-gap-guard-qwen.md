@@ -40,8 +40,8 @@ work is allowed?"
 | Case ID | Audited red flag | Expected module | Actual module | Actual selected question | Owner phrase trigger | Classification | Recommended fix owner | Reviewed interpretation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `gi_vomiting_diarrhea_03_water_comes_back_up` | `persistent_vomiting` | `gi_vomiting_diarrhea` | `gi_vomiting_diarrhea` | `emergency_global_screen` | `comes back up soon after` | `fixture_text_mismatch` | `expected_outcome_fixture` | The module and family already match. The reviewed trigger language lines up directly with the water-retention question, so the current persistent-vomiting labeling is best treated as a fixture-text mismatch rather than a family-remap gap. |
-| `limping_mobility_pain_02_sudden_after_jump` | `non_weight_bearing` | `limping_mobility_pain` | `limping_mobility_pain` | `emergency_global_screen` | `toe-touching` | `missing_module_trigger` | `adapter_trigger_surface` | The limping module already matches and the owner wording already contains the weight-bearing discriminator. The next fix should target adapter-side trigger or selection behavior, not fixture drift. |
-| `limping_mobility_pain_03_limping_with_wound_confuser` | `non_weight_bearing` | `limping_mobility_pain` | `limping_mobility_pain` | `emergency_global_screen` | `small cut between the toes` | `missing_module_trigger` | `adapter_trigger_surface` | The case is multi-symptom, but the live eval still keeps the limping module. The current miss is the question-selection trigger surface, not a complaint-family remap and not a question-card coverage hole. |
+| `limping_mobility_pain_02_sudden_after_jump` | `non_weight_bearing` | `limping_mobility_pain` | `limping_mobility_pain` | `limping_weight_bearing` | `toe-touching` | `missing_module_trigger` | `adapter_trigger_surface` | The limping module already matches and the live eval now reaches an accepted limping-specific question, but the reviewed trigger still stays in the adapter-side follow-up lane rather than becoming planner debt. |
+| `limping_mobility_pain_03_limping_with_wound_confuser` | `non_weight_bearing` | `limping_mobility_pain` | `limping_mobility_pain` | `bleeding_volume_check` | `small cut between the toes` | `missing_module_trigger` | `adapter_trigger_surface` | The case is multi-symptom, and the live eval now stays inside the accepted wound-versus-limping set. The remaining reviewed gap is still the trigger surface, not a complaint-family remap and not a question-card coverage hole. |
 
 ## Classification Totals
 
@@ -59,7 +59,8 @@ No question-card gaps are confirmed for these audited cases.
 The current audited rows are all still quality-only, report-only failures:
 
 - each row keeps the expected complaint module
-- each row currently over-selects `emergency_global_screen`
+- each row stays inside the reviewed report-only lane without introducing a
+  safety blocker
 - each row keeps the future fix narrow instead of implying a planner rewrite
 
 ## What The Guard Rejects

@@ -307,19 +307,19 @@ describe("shadow planner eval failure triage", () => {
       edgeCaseScenarios,
     });
 
-    expect(triage.totalFailedCases).toBe(33);
+    expect(triage.totalFailedCases).toBe(31);
     expect(triage.countByClassification.adapter_module_mismatch).toBe(0);
     expect(triage.countByClassification.fixture_expectation_mismatch).toBe(1);
     expect(triage.countByClassification.missing_question_card_coverage).toBe(2);
-    expect(triage.countByClassification.off_topic_question_selected).toBe(4);
-    expect(triage.countByClassification.repeated_question_setup_gap).toBe(33);
-    expect(triage.countByClassification.generic_question_metric_setup_gap).toBe(33);
-    expect(triage.countByClassification.red_flag_screen_coverage_gap).toBe(31);
-    expect(triage.countByClassification.acceptable_report_only_failure).toBe(28);
+    expect(triage.countByClassification.off_topic_question_selected).toBe(1);
+    expect(triage.countByClassification.repeated_question_setup_gap).toBe(28);
+    expect(triage.countByClassification.generic_question_metric_setup_gap).toBe(28);
+    expect(triage.countByClassification.red_flag_screen_coverage_gap).toBe(30);
+    expect(triage.countByClassification.acceptable_report_only_failure).toBe(29);
     expect(triage.countByClassification.emergency_alignment_ok_quality_gap).toBe(23);
 
     expect(triage.safetyBlockers).toHaveLength(0);
-    expect(triage.qualityReportOnlyGaps).toHaveLength(33);
+    expect(triage.qualityReportOnlyGaps).toHaveLength(31);
     expect(triage.context.standardScenarioRepeatedSetupCount).toBe(0);
     expect(triage.context.edgeCaseScenarioRepeatedSetupCount).toBe(6);
 
@@ -345,13 +345,16 @@ describe("shadow planner eval failure triage", () => {
       "acceptable_report_only_failure",
     ]);
 
-    const routineSkinCase = triage.failedCaseTriage.find(
+    const giWaterMismatch = triage.failedCaseTriage.find(
       (caseTriage) =>
-        caseTriage.caseId === "skin_itching_allergy_02_paws_belly_itching"
+        caseTriage.caseId === "gi_vomiting_diarrhea_03_water_comes_back_up"
     );
-    expect(routineSkinCase).toBeDefined();
-    expectClassifications(routineSkinCase!.classifications, [
+    expect(giWaterMismatch).toBeDefined();
+    expectClassifications(giWaterMismatch!.classifications, [
       "off_topic_question_selected",
+      "repeated_question_setup_gap",
+      "generic_question_metric_setup_gap",
+      "red_flag_screen_coverage_gap",
     ]);
 
     const alignedRespiratoryCase = triage.failedCaseTriage.find(
