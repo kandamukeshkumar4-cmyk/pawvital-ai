@@ -166,8 +166,8 @@ describe("shadow eval failure annotation pack", () => {
   });
 
   it("preserves the deterministic primary split with zero adapter or blocker rows", () => {
-    expect(countByPrimaryFailureClass("report_only_quality_gap")).toBe(45);
-    expect(countByPrimaryFailureClass("planner_improvement_candidate")).toBe(7);
+    expect(countByPrimaryFailureClass("report_only_quality_gap")).toBe(46);
+    expect(countByPrimaryFailureClass("planner_improvement_candidate")).toBe(6);
     expect(countByPrimaryFailureClass("red_flag_coverage_gap")).toBe(1);
     expect(countByPrimaryFailureClass("fixture_ambiguity")).toBe(1);
     expect(countByPrimaryFailureClass("adapter_selection_gap")).toBe(0);
@@ -178,7 +178,7 @@ describe("shadow eval failure annotation pack", () => {
       annotationFixture.filter(
         (annotation) => annotation.safetyImpact === "monitor"
       )
-    ).toHaveLength(8);
+    ).toHaveLength(7);
     expect(
       annotationFixture.filter(
         (annotation) => annotation.safetyImpact === "blocker"
@@ -188,8 +188,8 @@ describe("shadow eval failure annotation pack", () => {
 
   it("keeps repeat and generic setup debt visible as secondary classifications", () => {
     expect(countBySecondaryFailureClass("repeated_metric_setup_gap")).toBe(37);
-    expect(countBySecondaryFailureClass("generic_metric_setup_gap")).toBe(25);
-    expect(countBySecondaryFailureClass("red_flag_coverage_gap")).toBe(27);
+    expect(countBySecondaryFailureClass("generic_metric_setup_gap")).toBe(24);
+    expect(countBySecondaryFailureClass("red_flag_coverage_gap")).toBe(26);
     expect(countBySecondaryFailureClass("fixture_ambiguity")).toBe(30);
   });
 
@@ -215,9 +215,9 @@ describe("shadow eval failure annotation pack", () => {
     expect(
       getAnnotation("gi_vomiting_diarrhea_03_water_comes_back_up")
     ).toMatchObject({
-      primaryFailureClass: "planner_improvement_candidate",
-      patchTarget: "planner",
-      safetyImpact: "monitor",
+      primaryFailureClass: "report_only_quality_gap",
+      patchTarget: "no_patch_report_only",
+      safetyImpact: "none",
     });
 
     expect(

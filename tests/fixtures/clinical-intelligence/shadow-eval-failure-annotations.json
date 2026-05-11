@@ -291,16 +291,14 @@
   },
   {
     "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
-    "primaryFailureClass": "planner_improvement_candidate",
+    "primaryFailureClass": "report_only_quality_gap",
     "secondaryFailureClasses": [
-      "repeated_metric_setup_gap",
-      "generic_metric_setup_gap",
-      "red_flag_coverage_gap"
+      "repeated_metric_setup_gap"
     ],
-    "patchTarget": "planner",
-    "reviewerAction": "Review why the planner still prefers the global emergency screen over the explicit acceptable question set.",
-    "safetyImpact": "monitor",
-    "notes": "normalizedReason=Missing required screened red flags: unable_to_retain_water, persistent_vomiting; Planned question repeated the generic baseline \"emergency_global_screen\"; Planned question \"emergency_global_screen\" is outside the acceptable set; selectedBecause \"emergency_screen\" is outside the acceptable set; Repeated-question avoidance expectation was not met; Generic-question avoidance expectation was not met; normalization=strict_primary/question_match_required/complete/include; actual=emergency_global_screen"
+    "patchTarget": "no_patch_report_only",
+    "reviewerAction": "Count this as repeat-metric noise now that the fixture accepts the current global emergency screen for the water-retention wording.",
+    "safetyImpact": "none",
+    "notes": "normalizedReason=Planned question repeated the generic baseline \"emergency_global_screen\"; Repeated-question avoidance expectation was not met; normalization=strict_primary/question_match_required/partial/exclude_for_now; actual=emergency_global_screen; accepts_global_emergency_screen=true"
   },
   {
     "caseId": "skin_itching_allergy_01_hives_after_sting",

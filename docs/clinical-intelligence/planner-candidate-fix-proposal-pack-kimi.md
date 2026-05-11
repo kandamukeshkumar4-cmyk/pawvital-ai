@@ -16,7 +16,7 @@ modules, fixtures, routing, UI, env, infra, or workflows.
 
 ## Purpose
 
-The shadow-eval failure annotation pack currently marks `7` rows as
+The shadow-eval failure annotation pack currently marks `6` rows as
 `planner_improvement_candidate`. Those rows still need implementation-ready
 follow-up proposals, but they should not all be routed into planner-owned work
 by default.
@@ -34,11 +34,11 @@ true planner selection problem with a fixture or adapter correction.
 ## Proposal Split
 
 - Planner-owned proposals: `3`
-- Non-planner follow-up proposals: `4`
+- Non-planner follow-up proposals: `3`
 - `scoring_weight_adjustment`: `2`
 - `module_phase_priority_adjustment`: `1`
 - `question_card_metadata_adjustment`: `1`
-- `fixture_expectation_adjustment`: `1`
+- `fixture_expectation_adjustment`: `0`
 - `adapter_trigger_adjustment`: `2`
 
 Planner-owned proposals in this pack use only:
@@ -64,29 +64,18 @@ Non-planner follow-up proposals in this pack use only:
 
 | Case ID | Proposed fix type | Why this should not start as a planner rewrite |
 | --- | --- | --- |
-| `gi_vomiting_diarrhea_03_water_comes_back_up` | `fixture_expectation_adjustment` | The adapter-selection guard already classifies this row as a fixture-text mismatch, so the next follow-up should reconcile the accepted expectation before planner scoring is changed. |
 | `limping_mobility_pain_02_sudden_after_jump` | `adapter_trigger_adjustment` | The adapter-selection guard already marks this row as a missing trigger-surface case because the limping module matches and the owner wording already carries the weight-bearing clue. |
 | `limping_mobility_pain_03_limping_with_wound_confuser` | `adapter_trigger_adjustment` | The adapter-selection guard already routes this row to trigger-surface follow-up rather than a planner score change. |
 | `edge_skin_repeat_location_avoidance` | `question_card_metadata_adjustment` | The repeat setup already says location was answered. The remaining gap is whether the specific follow-up card surfaces strongly enough after that answered context. |
+
+VET-1469C normalized `gi_vomiting_diarrhea_03_water_comes_back_up` as
+fixture-only outcome debt, so it is no longer part of the live
+`planner_improvement_candidate` set.
 
 ## Structured Proposal Data
 
 ```json
 [
-  {
-    "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
-    "ownerTextSummary": "Water comes back up after drinking, with loose stool still present.",
-    "currentPlannedQuestionId": "emergency_global_screen",
-    "acceptableTargetQuestionIds": [
-      "gi_keep_water_down_check",
-      "gi_vomiting_frequency",
-      "gi_blood_check"
-    ],
-    "whyCurrentQuestionIsWeak": "The current question stays generic even though the accepted GI targets already cover the water-retention concern more directly. The existing adapter-selection guard also routes this row into an expectation-mismatch lane before a planner-selection defect.",
-    "proposedFixType": "fixture_expectation_adjustment",
-    "riskLevel": "low",
-    "requiredFutureValidation": "Rerun the adapter-selection gap guard, the failure-annotation pack, and the scenario eval to confirm this row leaves the planner-candidate lane without changing emergency alignment."
-  },
   {
     "caseId": "limping_mobility_pain_02_sudden_after_jump",
     "ownerTextSummary": "Toe-touching limp after a jump off furniture.",

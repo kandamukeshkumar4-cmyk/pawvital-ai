@@ -129,10 +129,6 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
   ],
   excludedRepeatedCandidateRows: [
     {
-      caseId: "gi_vomiting_diarrhea_03_water_comes_back_up",
-      redirectedFixType: "fixture_expectation_adjustment",
-    },
-    {
       caseId: "limping_mobility_pain_02_sudden_after_jump",
       redirectedFixType: "adapter_trigger_adjustment",
     },

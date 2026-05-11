@@ -86,6 +86,10 @@ const EXPECTED_CASE_IDS = [
   "edge_multi_diarrhea_limping_cut",
 ] as const;
 
+const COMPLETED_FIXTURE_CASE_IDS = [
+  "gi_vomiting_diarrhea_03_water_comes_back_up",
+] as const;
+
 const EXCLUDED_REPEATED_CONTEXT_CASE_IDS = [
   "edge_trauma_repeat_bleeding_avoidance",
   "edge_skin_repeat_location_avoidance",
@@ -117,19 +121,22 @@ const EXPECTED_SLICE_TWO_PROPOSALS: readonly SliceTwoProposalRow[] = [
       "gi_keep_water_down_check",
       "gi_vomiting_frequency",
       "gi_blood_check",
+      "emergency_global_screen",
     ],
     recommendedFixOwner: "fixture",
     lowestRiskRationale:
-      "The adapter-selection gap guard already classifies this row as `fixture_text_mismatch`, so the narrowest first move is to reconcile the accepted fixture text before changing runtime scoring or trigger behavior.",
+      "VET-1469C normalized this as fixture-only outcome debt by accepting the current emergency screen before the remaining GI-specific discriminator.",
     minimalFileScope: [
+      "tests/fixtures/clinical-intelligence/shadow-planner-scenarios.json",
       "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json",
+      "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcome-normalization.json",
       "tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json",
     ],
     expectedMetricMovement: [
-      "acceptableQuestionRate: may improve if the accepted target set is reconciled to the audited owner phrase.",
-      "complaintModuleMatchRate: should stay unchanged because the selected complaint module already matches.",
-      "emergencyScreenAlignmentRate: should stay unchanged because this proposal does not rely on downgrading emergency behavior.",
-      "genericQuestionAvoidanceRate: no direct runtime movement is expected from the fixture-only follow-up.",
+      "acceptableQuestionRate: improves because the accepted target set now includes the audited emergency screen first move.",
+      "complaintModuleMatchRate: stays unchanged because the selected complaint module already matches.",
+      "emergencyScreenAlignmentRate: should stay unchanged because this normalization does not downgrade emergency behavior.",
+      "genericQuestionAvoidanceRate: denominator narrows because the fixture-only row is excluded from generic scoring.",
     ],
     regressionRisk: "low",
     requiredValidationCommands: [
@@ -341,7 +348,7 @@ function countByOwner(
 }
 
 describe("planner candidate fix slice 2 proposal pack", () => {
-  it("covers exactly the requested seven VET-1458K candidates and excludes the repeated-context rows", () => {
+  it("covers exactly the requested VET-1458K candidates and excludes the repeated-context rows", () => {
     const proposalRows = extractJsonBlock<SliceTwoProposalRow[]>(DOC);
     const priorRows = extractJsonBlock<PriorProposalRow[]>(PRIOR_DOC);
     const priorSubsetCaseIds = priorRows
@@ -354,7 +361,14 @@ describe("planner candidate fix slice 2 proposal pack", () => {
       );
 
     expect(proposalRows.map((row) => row.caseId)).toEqual(EXPECTED_CASE_IDS);
-    expect(priorSubsetCaseIds).toEqual(EXPECTED_CASE_IDS);
+    expect(priorSubsetCaseIds).toEqual(
+      EXPECTED_CASE_IDS.filter(
+        (caseId) =>
+          !COMPLETED_FIXTURE_CASE_IDS.includes(
+            caseId as (typeof COMPLETED_FIXTURE_CASE_IDS)[number]
+          )
+      )
+    );
 
     for (const excludedCaseId of EXCLUDED_REPEATED_CONTEXT_CASE_IDS) {
       expect(proposalRows.map((row) => row.caseId)).not.toContain(excludedCaseId);
@@ -398,7 +412,13 @@ describe("planner candidate fix slice 2 proposal pack", () => {
       const priorRow = priorRowMap.get(row.caseId);
 
       if (!priorRow) {
-        throw new Error(`Missing prior proposal row for ${row.caseId}`);
+        expect(row.caseId).toBe("gi_vomiting_diarrhea_03_water_comes_back_up");
+        expect(row.recommendedFixOwner).toBe("fixture");
+        expect(row.regressionRisk).toBe("low");
+        expect(DOC).toContain(`\`${row.caseId}\``);
+        expect(DOC).toContain(`\`${row.recommendedFixOwner}\``);
+        expect(DOC).toContain(`\`${row.regressionRisk}\``);
+        continue;
       }
 
       expect(row.recommendedFixOwner).toBe(

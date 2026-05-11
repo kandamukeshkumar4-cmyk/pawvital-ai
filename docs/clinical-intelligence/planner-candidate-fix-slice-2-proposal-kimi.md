@@ -16,10 +16,9 @@ fixtures, routing, UI, env, infra, or workflows.
 
 ## Purpose
 
-VET-1458K already proposed follow-up owners for all `7`
-current `planner_improvement_candidate` rows. This slice narrows that pack to
-the next `5` implementation-ready rows that do not need a repeated-context
-first move.
+VET-1458K originally proposed follow-up owners for `7` candidate rows. This
+slice narrows that pack to the next `5` implementation-ready rows that do not
+need a repeated-context first move.
 
 The goal is to keep the next runtime tickets split by the lowest-risk fix owner
 instead of stacking unrelated planner, adapter, and fixture work together.
@@ -30,6 +29,10 @@ instead of stacking unrelated planner, adapter, and fixture work together.
 - excluded repeated-context rows: `2`
 - `edge_trauma_repeat_bleeding_avoidance`
 - `edge_skin_repeat_location_avoidance`
+
+VET-1469C normalized `gi_vomiting_diarrhea_03_water_comes_back_up` as
+fixture-only outcome debt; this historical proposal keeps that row documented
+as the completed fixture-owned lane.
 
 ## Owner Split
 
@@ -43,7 +46,7 @@ instead of stacking unrelated planner, adapter, and fixture work together.
 
 | Case ID | Recommended fix owner | Minimal file scope | Regression risk |
 | --- | --- | --- | --- |
-| `gi_vomiting_diarrhea_03_water_comes_back_up` | `fixture` | `tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json`, `tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json` | `low` |
+| `gi_vomiting_diarrhea_03_water_comes_back_up` | `fixture` | `tests/fixtures/clinical-intelligence/shadow-planner-scenarios.json`, `tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json`, `tests/fixtures/clinical-intelligence/shadow-planner-expected-outcome-normalization.json`, `tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json` | `low` |
 | `limping_mobility_pain_02_sudden_after_jump` | `adapter_trigger` | `src/lib/clinical-intelligence/shadow-planner-complaint-adapter.ts`, `src/lib/clinical-intelligence/complaint-modules/limping.ts` | `medium` |
 | `limping_mobility_pain_03_limping_with_wound_confuser` | `adapter_trigger` | `src/lib/clinical-intelligence/shadow-planner-complaint-adapter.ts`, `src/lib/clinical-intelligence/complaint-modules/limping.ts` | `medium` |
 | `edge_limping_not_sure_pain_or_weakness` | `module_phase_priority` | `src/lib/clinical-intelligence/next-question-planner.ts`, `src/lib/clinical-intelligence/complaint-modules/limping.ts`, `src/lib/clinical-intelligence/complaint-modules/collapse-weakness.ts` | `high` |
@@ -63,19 +66,22 @@ validation commands are locked in the structured proposal block below.
     "acceptableTargetQuestionIds": [
       "gi_keep_water_down_check",
       "gi_vomiting_frequency",
-      "gi_blood_check"
+      "gi_blood_check",
+      "emergency_global_screen"
     ],
     "recommendedFixOwner": "fixture",
-    "lowestRiskRationale": "The adapter-selection gap guard already classifies this row as `fixture_text_mismatch`, so the narrowest first move is to reconcile the accepted fixture text before changing runtime scoring or trigger behavior.",
+    "lowestRiskRationale": "VET-1469C normalized this as fixture-only outcome debt by accepting the current emergency screen before the remaining GI-specific discriminator.",
     "minimalFileScope": [
+      "tests/fixtures/clinical-intelligence/shadow-planner-scenarios.json",
       "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcomes.json",
+      "tests/fixtures/clinical-intelligence/shadow-planner-expected-outcome-normalization.json",
       "tests/fixtures/clinical-intelligence/shadow-eval-failure-annotations.json"
     ],
     "expectedMetricMovement": [
-      "acceptableQuestionRate: may improve if the accepted target set is reconciled to the audited owner phrase.",
-      "complaintModuleMatchRate: should stay unchanged because the selected complaint module already matches.",
-      "emergencyScreenAlignmentRate: should stay unchanged because this proposal does not rely on downgrading emergency behavior.",
-      "genericQuestionAvoidanceRate: no direct runtime movement is expected from the fixture-only follow-up."
+      "acceptableQuestionRate: improves because the accepted target set now includes the audited emergency screen first move.",
+      "complaintModuleMatchRate: stays unchanged because the selected complaint module already matches.",
+      "emergencyScreenAlignmentRate: should stay unchanged because this normalization does not downgrade emergency behavior.",
+      "genericQuestionAvoidanceRate: denominator narrows because the fixture-only row is excluded from generic scoring."
     ],
     "regressionRisk": "low",
     "requiredValidationCommands": [

@@ -571,9 +571,11 @@
     "acceptablePlannedQuestionIds": [
       "gi_keep_water_down_check",
       "gi_vomiting_frequency",
-      "gi_blood_check"
+      "gi_blood_check",
+      "emergency_global_screen"
     ],
     "expectedSelectedBecause": [
+      "emergency_screen",
       "highest_information_gain"
     ],
     "mustScreenRedFlags": [

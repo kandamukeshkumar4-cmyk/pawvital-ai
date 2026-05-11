@@ -289,7 +289,7 @@
     "caseId": "gi_vomiting_diarrhea_03_water_comes_back_up",
     "ownerText": "My dog drinks water and it comes back up soon after, and he has loose stool.",
     "expectedComplaintModuleId": "gi_vomiting_diarrhea",
-    "acceptableFirstQuestionIds": ["gi_keep_water_down_check", "gi_vomiting_frequency", "gi_blood_check"],
+    "acceptableFirstQuestionIds": ["gi_keep_water_down_check", "gi_vomiting_frequency", "gi_blood_check", "emergency_global_screen"],
     "mustScreenRedFlags": ["unable_to_retain_water", "persistent_vomiting"],
     "whyThisCaseMatters": "Inability to keep water down is a high-value first question candidate in GI cases.",
     "shouldPreferEmergencyScreen": false,

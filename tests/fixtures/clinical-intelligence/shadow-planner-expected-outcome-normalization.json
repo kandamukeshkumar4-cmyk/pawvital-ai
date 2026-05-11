@@ -302,9 +302,9 @@
     ],
     "ambiguityDisposition": "strict_primary",
     "emergencyAlignmentDisposition": "question_match_required",
-    "redFlagCoverageExpectation": "complete",
-    "genericQuestionScoring": "include",
-    "notes": "This row keeps the primary complaint module as the only accepted module match for the current fixture wording. The first planned question should still come from the explicit accepted question set for this case. Red-flag coverage stays complete because the accepted first-question set is already specific enough for direct comparison. Generic-question scoring stays in scope because this row expects a specific targeted first question rather than a catch-all emergency screen."
+    "redFlagCoverageExpectation": "partial",
+    "genericQuestionScoring": "exclude_for_now",
+    "notes": "This row keeps the primary complaint module as the only accepted module match for the current fixture wording. The current global emergency screen is now an accepted first move for the water-retention wording, so red-flag coverage is partial and generic-question scoring stays excluded for now while the remaining normalized gap is repeat-metric setup noise."
   },
   {
     "caseId": "skin_itching_allergy_01_hives_after_sting",

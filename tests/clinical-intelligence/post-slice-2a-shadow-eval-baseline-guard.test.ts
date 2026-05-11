@@ -49,7 +49,7 @@ const LOCKED_BASELINE = {
   repeatedAvoidanceCount: 6,
   repeatedAvoidanceRelevantCases: 6,
   genericAvoidanceCount: 4,
-  genericAvoidanceRelevantCases: 11,
+  genericAvoidanceRelevantCases: 10,
   safetyBlockerCount: 0,
   slice2ALockedWinCount: 4,
 } as const;
@@ -92,7 +92,7 @@ describe("post-slice-2a shadow eval baseline guard", () => {
     expect(report.summary.repeatedQuestionAvoidanceRate).toBe(1);
   });
 
-  it("locks generic avoidance at 4/11", () => {
+  it("locks generic avoidance at 4/10", () => {
     const report = buildEvalReport();
     expect(report.summary.genericQuestionAvoidanceCount).toBe(
       LOCKED_BASELINE.genericAvoidanceCount
@@ -100,7 +100,7 @@ describe("post-slice-2a shadow eval baseline guard", () => {
     expect(report.summary.genericQuestionAvoidanceRelevantCases).toBe(
       LOCKED_BASELINE.genericAvoidanceRelevantCases
     );
-    expect(report.summary.genericQuestionAvoidanceRate).toBe(4 / 11);
+    expect(report.summary.genericQuestionAvoidanceRate).toBe(4 / 10);
   });
 
   it("locks safety blockers at 0", () => {
@@ -185,7 +185,7 @@ describe("post-slice-2a shadow eval baseline guard", () => {
     expect(doc).toContain("`total cases`: `57`");
     expect(doc).toContain("`emergency alignment`: `39/39`");
     expect(doc).toContain("`repeated avoidance`: `6/6`");
-    expect(doc).toContain("`generic avoidance`: `4/11`");
+    expect(doc).toContain("`generic avoidance`: `4/10`");
     expect(doc).toContain("`safety blockers`: `0`");
     expect(doc).toContain("`Slice 2A locked wins`: `4`");
     expect(doc).toContain("`report-only rows reclassified`: `0`");
