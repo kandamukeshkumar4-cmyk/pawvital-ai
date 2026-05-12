@@ -10,12 +10,24 @@ function getCaseMemory(session: TriageSession) {
   return session.case_memory ?? createSession().case_memory!;
 }
 
+function getFallbackPendingQuestionId(session: TriageSession): string | undefined {
+  const lastQuestionAsked = session.last_question_asked;
+  if (!lastQuestionAsked) {
+    return undefined;
+  }
+
+  return (session.answered_questions ?? []).includes(lastQuestionAsked)
+    ? undefined
+    : lastQuestionAsked;
+}
+
 export function getPendingQuestionState(
   session: TriageSession
 ): PendingQuestionStateSnapshot {
   const caseMemory = getCaseMemory(session);
   return {
-    pendingQuestionId: caseMemory.pending_question_id ?? session.last_question_asked,
+    pendingQuestionId:
+      caseMemory.pending_question_id ?? getFallbackPendingQuestionId(session),
     questionAskedCounts: { ...(caseMemory.question_asked_counts ?? {}) },
     clarificationAttempts: { ...(caseMemory.clarification_attempts ?? {}) },
   };
