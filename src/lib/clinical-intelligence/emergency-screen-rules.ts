@@ -90,6 +90,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
     clinicalSignalIds: [],
     screenQuestionIds: [
       "gi_keep_water_down_check",
+      "gi_vomiting_frequency",
       "emergency_global_screen",
     ],
     reasonCode: "gi_water_retention_screen_required",
@@ -336,7 +337,7 @@ const MODULE_RULE_CATEGORIES: Record<string, readonly EmergencySentinelCategory[
   ],
   respiratory_distress: ["airway_breathing", "circulation_shock"],
   seizure_collapse_neuro: ["neurologic", "circulation_shock"],
-  urinary_obstruction: ["urinary_obstruction"],
+  urinary_obstruction: ["urinary_obstruction", "circulation_shock"],
   toxin_poisoning_exposure: ["toxin", "circulation_shock", "bloat_gdv", "neurologic"],
   bloat_gdv: ["bloat_gdv", "circulation_shock"],
   collapse_weakness: ["circulation_shock", "airway_breathing", "neurologic"],

@@ -97,6 +97,7 @@ bloat_retching_abdomen_check
 urinary_blockage_check
 seizure_neuro_check
 skin_emergency_allergy_screen
+gi_vomiting_frequency
 gi_blood_check
 gi_keep_water_down_check
 panting_excess_check

@@ -139,6 +139,28 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("asks vomiting-frequency screening when only persistent vomiting remains unresolved", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("gi_vomiting_diarrhea"),
+      [
+        "hematemesis",
+        "melena",
+        "hematochezia",
+        "unable_to_retain_water",
+      ],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("gi_vomiting_frequency");
+      expect(decision.missingRedFlags).toEqual(
+        expect.arrayContaining(["persistent_vomiting"]),
+      );
+    }
+  });
+
   it("asks the urinary obstruction screen for little or no urine risk", () => {
     const state = createInitialClinicalCaseState("urinary_obstruction");
 
@@ -148,6 +170,21 @@ describe("Emergency sentinel scaffold", () => {
     if (decision.action === "ask_emergency_screen") {
       expect(decision.questionId).toBe("urinary_blockage_check");
       expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["urinary_blockage"]));
+    }
+  });
+
+  it("keeps shock screening active for urinary complaints after urinary flags resolve", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("urinary_obstruction"),
+      ["urinary_blockage", "no_urine_24h"],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("collapse_weakness_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["collapse"]));
     }
   });
 

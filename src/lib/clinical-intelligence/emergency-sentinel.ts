@@ -17,6 +17,7 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   collapse_weakness_check: ["collapse", "unresponsive"],
   gi_blood_check: ["hematemesis", "melena", "hematochezia"],
   gi_keep_water_down_check: ["unable_to_retain_water"],
+  gi_vomiting_frequency: ["persistent_vomiting"],
   toxin_exposure_check: ["toxin_confirmed", "rat_poison_confirmed", "toxin_with_symptoms"],
   bloat_retching_abdomen_check: [
     "gastric_dilatation_volvulus",
