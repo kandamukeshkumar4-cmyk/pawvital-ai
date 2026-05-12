@@ -1,6 +1,7 @@
 import { recordAnswer } from "@/lib/triage-engine";
 import type { TriageSession } from "@/lib/triage-engine";
 import { getStateSnapshot, observeTransition } from "./observer";
+import { clearPendingQuestion } from "@/lib/symptom-chat/pending-question-state";
 
 export interface TransitionToAnsweredInput {
   session: TriageSession;
@@ -38,6 +39,8 @@ export function transitionToAnswered(
       },
     };
   }
+
+  updated = clearPendingQuestion(updated, questionId);
 
   updated = observeTransition(updated, {
     before: beforeState,
