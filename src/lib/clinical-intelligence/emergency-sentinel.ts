@@ -124,7 +124,9 @@ export function evaluateEmergencySentinel(
     };
   }
 
-  const signalMatch = matches.find((match) => match.clinicalSignalIds.length > 0);
+  const signalMatch = matches.find(
+    (match) => match.clinicalSignalIds.length > 0 && match.unresolvedRedFlags.length > 0,
+  );
   if (signalMatch) {
     return {
       action: "ask_emergency_screen",
@@ -173,7 +175,9 @@ export function chooseEmergencyScreenQuestion(
 ): string | undefined {
   const rules = getApplicableRules(state, complaintModule);
   const matches = matchEmergencyRules(state, rules);
-  const signalMatch = matches.find((match) => match.clinicalSignalIds.length > 0);
+  const signalMatch = matches.find(
+    (match) => match.clinicalSignalIds.length > 0 && match.unresolvedRedFlags.length > 0,
+  );
   if (signalMatch) {
     return chooseQuestionId(state, signalMatch.rule, signalMatch.unresolvedRedFlags);
   }

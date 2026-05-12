@@ -218,6 +218,23 @@ describe("Emergency sentinel scaffold", () => {
     expect(state.explicitAnswers).toEqual({});
   });
 
+  it("ignores stale clinical signals after required red flags are resolved negative", () => {
+    const withSignal = addClinicalSignal(createInitialClinicalCaseState("respiratory_distress"), {
+      id: "possible_breathing_difficulty",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "breathing sounded scary earlier",
+      turnDetected: 1,
+    });
+    const resolvedState = resolveRedFlags(withSignal, [
+      "breathing_difficulty",
+      "blue_gums",
+      "stridor_present",
+    ]);
+
+    expect(evaluateEmergencySentinel(resolvedState).action).toBe("proceed_to_module");
+  });
+
   it("does not emit forbidden clinical claim wording", () => {
     const decisions = [
       evaluateEmergencySentinel(withRedFlag(createInitialClinicalCaseState("collapse_weakness"), "collapse", "positive")),
