@@ -39,6 +39,9 @@ export const PROTECTED_CONTROL_STATE_KEYS = [
   "extracted_answers",
   "unresolved_question_ids",
   "clarification_reasons",
+  "pending_question_id",
+  "question_asked_counts",
+  "clarification_attempts",
   "last_question_asked",
 ] as const;
 
@@ -54,6 +57,9 @@ export interface ProtectedConversationState {
   extracted_answers: Record<string, string | boolean | number>;
   unresolved_question_ids: string[];
   clarification_reasons: Record<string, string>;
+  pending_question_id?: string;
+  question_asked_counts: Record<string, number>;
+  clarification_attempts: Record<string, number>;
   last_question_asked?: string;
 }
 
@@ -71,6 +77,11 @@ export function getProtectedConversationState(
       session.case_memory?.unresolved_question_ids ?? [],
     clarification_reasons:
       session.case_memory?.clarification_reasons ?? {},
+    pending_question_id: session.case_memory?.pending_question_id,
+    question_asked_counts:
+      session.case_memory?.question_asked_counts ?? {},
+    clarification_attempts:
+      session.case_memory?.clarification_attempts ?? {},
     last_question_asked: session.last_question_asked,
   };
 }
@@ -148,6 +159,23 @@ function sameReasonMap(
   return beforeKeys.every((key) => before[key] === after[key]);
 }
 
+function sameNumberMap(
+  before: Record<string, number>,
+  after: Record<string, number>
+): boolean {
+  const beforeKeys = Object.keys(before).sort();
+  const afterKeys = Object.keys(after).sort();
+
+  if (
+    beforeKeys.length !== afterKeys.length ||
+    beforeKeys.some((key, index) => key !== afterKeys[index])
+  ) {
+    return false;
+  }
+
+  return beforeKeys.every((key) => before[key] === after[key]);
+}
+
 /**
  * VET-900: Detect whether protected control state has been mutated.
  * Compares a pre-operation snapshot against the current session state.
@@ -189,6 +217,22 @@ export function hasControlStateChanged(
       before.clarification_reasons,
       after.clarification_reasons
     )
+  ) {
+    return true;
+  }
+
+  if (before.pending_question_id !== after.pending_question_id) {
+    return true;
+  }
+
+  if (
+    !sameNumberMap(before.question_asked_counts, after.question_asked_counts)
+  ) {
+    return true;
+  }
+
+  if (
+    !sameNumberMap(before.clarification_attempts, after.clarification_attempts)
   ) {
     return true;
   }
@@ -258,6 +302,9 @@ export function mergeCompressionResult(
       // Protected: never comes from compression output
       unresolved_question_ids: protectedState.unresolved_question_ids,
       clarification_reasons: protectedState.clarification_reasons,
+      pending_question_id: protectedState.pending_question_id,
+      question_asked_counts: protectedState.question_asked_counts,
+      clarification_attempts: protectedState.clarification_attempts,
       // Only these fields come from compression
       compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
       compression_model: compressed.model,
@@ -497,6 +544,9 @@ export function ensureStructuredCaseMemory(
     red_flag_notes: existing?.red_flag_notes || [],
     unresolved_question_ids: existing?.unresolved_question_ids || [],
     clarification_reasons: existing?.clarification_reasons || {},
+    pending_question_id: existing?.pending_question_id,
+    question_asked_counts: existing?.question_asked_counts || {},
+    clarification_attempts: existing?.clarification_attempts || {},
     timeline_notes: existing?.timeline_notes || [],
     visual_evidence: existing?.visual_evidence || [],
     retrieval_evidence: existing?.retrieval_evidence || [],
@@ -708,6 +758,7 @@ export function syncStructuredCaseMemoryQuestions(
   missingQuestionIds: string[]
 ): TriageSession {
   const memory = ensureStructuredCaseMemory(session);
+  const answeredQuestionIds = new Set(session.answered_questions ?? []);
 
   // VET-900: Merge — not overwrite — unresolved_question_ids.
   // Previous implementation discarded existing unresolved IDs, destroying
@@ -719,7 +770,7 @@ export function syncStructuredCaseMemoryQuestions(
       ...missingQuestionIds,
     ],
     12
-  );
+  ).filter((questionId) => !answeredQuestionIds.has(questionId));
 
   // VET-900: Protect ALL control state fields from clobber.
   // answered_questions, extracted_answers, last_question_asked live on session;
@@ -732,6 +783,11 @@ export function syncStructuredCaseMemoryQuestions(
     last_question_asked: session.last_question_asked,
     case_memory: {
       ...memory,
+      pending_question_id:
+        memory.pending_question_id &&
+        answeredQuestionIds.has(memory.pending_question_id)
+          ? undefined
+          : memory.pending_question_id,
       unresolved_question_ids: mergedUnresolved,
     },
   };

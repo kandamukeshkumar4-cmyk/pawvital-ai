@@ -11,6 +11,7 @@ import {
   transitionToAsked,
   transitionToConfirmed,
 } from "@/lib/conversation-state";
+import { markPendingQuestionAsked } from "@/lib/symptom-chat/pending-question-state";
 import { sanitizeSessionForClient } from "@/lib/symptom-chat/context-helpers";
 import {
   buildQuestionPhrasingContext,
@@ -95,7 +96,7 @@ function prepareSessionForQuestionResponse(
   needsClarificationQuestionId: string | null
 ): TriageSession {
   if (needsClarificationQuestionId) {
-    return session;
+    return markPendingQuestionAsked(session, nextQuestionId);
   }
 
   const withConfirmedTransition = shouldConfirmSufficientData(session)
@@ -105,8 +106,13 @@ function prepareSessionForQuestionResponse(
       })
     : session;
 
+  const withPendingState = markPendingQuestionAsked(
+    withConfirmedTransition,
+    nextQuestionId
+  );
+
   return transitionToAsked({
-    session: withConfirmedTransition,
+    session: withPendingState,
     questionId: nextQuestionId,
     reason: "next_question_selected",
   });

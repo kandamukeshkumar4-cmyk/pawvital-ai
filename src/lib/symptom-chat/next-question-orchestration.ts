@@ -10,6 +10,11 @@ import {
 } from "@/lib/symptom-memory";
 import { getNextQuestionAvoidingRepeat } from "@/lib/symptom-chat/answer-coercion";
 import { didVisualEvidenceInfluenceQuestion } from "@/lib/symptom-chat/report-helpers";
+import {
+  getPendingQuestionId,
+  getQuestionAskedCount,
+} from "@/lib/symptom-chat/pending-question-state";
+import { MAX_PENDING_QUESTION_ASKS } from "@/lib/symptom-chat/repeat-loop-guard";
 
 interface OrchestrateNextQuestionInput {
   session: TriageSession;
@@ -70,18 +75,25 @@ export function orchestrateNextQuestion(
 function resolveNeedsClarificationQuestionId(
   input: OrchestrateNextQuestionInput
 ): string | null {
-  const lastQuestionAsked = input.session.last_question_asked;
-  if (!lastQuestionAsked || input.pendingQResolvedThisTurn) {
+  const pendingQuestionId = getPendingQuestionId(input.session);
+  if (!pendingQuestionId || input.pendingQResolvedThisTurn) {
+    return null;
+  }
+
+  if (
+    getQuestionAskedCount(input.session, pendingQuestionId) >=
+    MAX_PENDING_QUESTION_ASKS
+  ) {
     return null;
   }
 
   const clarificationReasons =
     input.session.case_memory?.clarification_reasons ?? {};
   const wasPreviouslyUnresolved =
-    clarificationReasons[lastQuestionAsked] ||
-    input.incomingUnresolvedIds.includes(lastQuestionAsked);
+    clarificationReasons[pendingQuestionId] ||
+    input.incomingUnresolvedIds.includes(pendingQuestionId);
 
-  return wasPreviouslyUnresolved ? lastQuestionAsked : null;
+  return wasPreviouslyUnresolved ? pendingQuestionId : null;
 }
 
 function recordRepeatSuppressionTelemetry(
