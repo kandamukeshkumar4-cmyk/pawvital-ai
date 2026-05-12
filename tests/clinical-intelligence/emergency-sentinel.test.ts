@@ -335,6 +335,26 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("asks seizure duration screening when only post-ictal recovery risk remains unresolved", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("seizure_collapse_neuro"),
+      [
+        "seizure_activity",
+        "seizure_prolonged",
+        "sudden_paralysis",
+      ],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("neuro_seizure_duration");
+      expect(decision.questionId).not.toBe("seizure_neuro_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["post_ictal_prolonged"]));
+    }
+  });
+
   it("asks the bleeding screen for trauma or deep wound risk", () => {
     const state = createInitialClinicalCaseState("trauma_bleeding_wound");
 

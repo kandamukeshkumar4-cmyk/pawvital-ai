@@ -33,8 +33,8 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   seizure_neuro_check: [
     "seizure_activity",
     "seizure_prolonged",
-    "post_ictal_prolonged",
   ],
+  neuro_seizure_duration: ["seizure_prolonged", "post_ictal_prolonged"],
   skin_emergency_allergy_screen: [
     "face_swelling",
     "hives_widespread",

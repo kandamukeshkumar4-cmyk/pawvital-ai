@@ -210,6 +210,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
     ],
     screenQuestionIds: [
       "seizure_neuro_check",
+      "neuro_seizure_duration",
       "collapse_weakness_check",
       "emergency_global_screen",
     ],
