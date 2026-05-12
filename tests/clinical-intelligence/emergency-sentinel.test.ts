@@ -365,6 +365,38 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("keeps trauma mechanism confirmation active for high-risk trauma signals", () => {
+    const screensResolved = resolveRedFlags(
+      createInitialClinicalCaseState("trauma_bleeding_wound"),
+      [
+        "large_blood_volume",
+        "wound_deep_bleeding",
+        "collapse",
+        "unresponsive",
+        "pale_gums",
+        "blue_gums",
+        "breathing_difficulty",
+        "stridor_present",
+      ],
+    );
+    const state = addClinicalSignal(screensResolved, {
+      id: "possible_trauma",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "hit by a car but no visible bleeding",
+      turnDetected: 1,
+    });
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("trauma_mechanism_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["possible_trauma"]));
+    }
+    expect(state.explicitAnswers).toEqual({});
+  });
+
   it("uses panting_excess_check instead of heat_exposure_check for heat emergency screening", () => {
     const state = createInitialClinicalCaseState("heatstroke_heat_exposure");
 

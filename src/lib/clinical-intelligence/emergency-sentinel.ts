@@ -42,6 +42,7 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   ],
   panting_excess_check: ["heatstroke_signs"],
   brachycephalic_breed_check: ["brachycephalic_heat"],
+  trauma_mechanism_check: ["possible_trauma"],
   bleeding_volume_check: ["large_blood_volume", "wound_deep_bleeding"],
   laceration_depth_check: [],
   emergency_global_screen: [],
@@ -87,6 +88,7 @@ const SIGNAL_RED_FLAG_FOCUS: Record<string, readonly string[]> = {
     "rapid_onset_distension",
     "distended_abdomen_painful",
   ],
+  possible_trauma: ["possible_trauma"],
   possible_neuro_emergency: [
     "seizure_activity",
     "seizure_prolonged",

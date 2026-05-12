@@ -12,6 +12,7 @@ export type EmergencySentinelCategory =
   | "neurologic"
   | "limping_weight_bearing"
   | "limping_trauma"
+  | "trauma_mechanism"
   | "trauma_bleeding"
   | "heat_stroke"
   | "allergic_reaction";
@@ -239,6 +240,21 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
     reasonCode: "limping_trauma_screen_required",
   },
   {
+    category: "trauma_mechanism",
+    requiredRedFlags: [
+      "possible_trauma",
+    ],
+    clinicalSignalIds: [
+      "possible_trauma",
+    ],
+    screenQuestionIds: [
+      "trauma_mechanism_check",
+      "emergency_global_screen",
+    ],
+    triggerOnlyOnClinicalSignal: true,
+    reasonCode: "trauma_mechanism_screen_required",
+  },
+  {
     category: "trauma_bleeding",
     requiredRedFlags: [
       "large_blood_volume",
@@ -345,7 +361,12 @@ const MODULE_RULE_CATEGORIES: Record<string, readonly EmergencySentinelCategory[
   bloat_gdv: ["bloat_gdv", "circulation_shock"],
   collapse_weakness: ["circulation_shock", "airway_breathing", "neurologic"],
   heatstroke_heat_exposure: ["heat_stroke", "airway_breathing", "circulation_shock"],
-  trauma_bleeding_wound: ["trauma_bleeding", "airway_breathing", "circulation_shock"],
+  trauma_bleeding_wound: [
+    "trauma_mechanism",
+    "trauma_bleeding",
+    "airway_breathing",
+    "circulation_shock",
+  ],
 };
 
 export function getEmergencyScreenRules(): readonly EmergencyScreenRule[] {
