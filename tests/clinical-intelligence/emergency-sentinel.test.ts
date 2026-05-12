@@ -485,6 +485,26 @@ describe("Emergency sentinel scaffold", () => {
     expect(state.explicitAnswers).toEqual({});
   });
 
+  it("prioritizes the question tied to the triggering clinical signal", () => {
+    const state = addClinicalSignal(createInitialClinicalCaseState("heatstroke_heat_exposure"), {
+      id: "possible_breathing_difficulty",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "breathing looks labored after heat exposure",
+      turnDetected: 1,
+    });
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("breathing_difficulty_check");
+      expect(decision.questionId).not.toBe("panting_excess_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["heatstroke_signs"]));
+    }
+    expect(state.explicitAnswers).toEqual({});
+  });
+
   it("uses skin systemic signals for targeted confirmation after skin screens resolve", () => {
     const withSkinScreensResolved = resolveRedFlags(
       createInitialClinicalCaseState("skin_itching_allergy"),

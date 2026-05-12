@@ -46,6 +46,52 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   emergency_global_screen: [],
 };
 
+const SIGNAL_RED_FLAG_FOCUS: Record<string, readonly string[]> = {
+  possible_breathing_difficulty: [
+    "breathing_difficulty",
+    "stridor_present",
+    "allergic_with_breathing",
+  ],
+  possible_collapse_or_weakness: [
+    "collapse",
+    "unresponsive",
+    "sudden_paralysis",
+  ],
+  possible_heat_stroke: ["heatstroke_signs"],
+  toxin_exposure: [
+    "toxin_confirmed",
+    "rat_poison_confirmed",
+    "toxin_with_symptoms",
+  ],
+  possible_bloody_vomit: ["hematemesis", "melena", "hematochezia"],
+  possible_bloody_diarrhea: ["hematemesis", "melena", "hematochezia"],
+  possible_nonproductive_retching: [
+    "gastric_dilatation_volvulus",
+    "unproductive_retching",
+    "rapid_onset_distension",
+    "bloat_with_restlessness",
+    "distended_abdomen_painful",
+  ],
+  possible_bloat_gdv: [
+    "gastric_dilatation_volvulus",
+    "unproductive_retching",
+    "rapid_onset_distension",
+    "bloat_with_restlessness",
+    "distended_abdomen_painful",
+  ],
+  possible_abdominal_pain: [
+    "gastric_dilatation_volvulus",
+    "rapid_onset_distension",
+    "distended_abdomen_painful",
+  ],
+  possible_neuro_emergency: [
+    "seizure_activity",
+    "seizure_prolonged",
+    "post_ictal_prolonged",
+    "sudden_paralysis",
+  ],
+};
+
 export type EmergencySentinelDecision =
   | {
       action: "emergency_result";
@@ -138,9 +184,20 @@ export function evaluateEmergencySentinel(
     (match) => match.clinicalSignalIds.length > 0 && match.unresolvedRedFlags.length > 0,
   );
   if (signalMatch) {
+    const signalFocusedRedFlags = getSignalFocusedRedFlags(
+      signalMatch.clinicalSignalIds,
+      signalMatch.unresolvedRedFlags,
+    );
+
     return {
       action: "ask_emergency_screen",
-      questionId: chooseQuestionId(state, signalMatch.rule, signalMatch.unresolvedRedFlags),
+      questionId: chooseQuestionId(
+        state,
+        signalMatch.rule,
+        signalFocusedRedFlags.length > 0
+          ? signalFocusedRedFlags
+          : signalMatch.unresolvedRedFlags,
+      ),
       reason: signalMatch.rule.reasonCode,
       missingRedFlags: signalMatch.unresolvedRedFlags,
     };
@@ -274,6 +331,24 @@ function chooseQuestionId(
 
 function isRegisteredQuestionId(questionId: string): boolean {
   return QUESTION_ID_PATTERN.test(questionId) && Boolean(getQuestionCardById(questionId));
+}
+
+function getSignalFocusedRedFlags(
+  clinicalSignalIds: readonly string[],
+  unresolvedRedFlags: readonly string[],
+): string[] {
+  const unresolved = new Set(unresolvedRedFlags);
+  const focused = new Set<string>();
+
+  for (const signalId of clinicalSignalIds) {
+    for (const redFlagId of SIGNAL_RED_FLAG_FOCUS[signalId] ?? []) {
+      if (unresolved.has(redFlagId)) {
+        focused.add(redFlagId);
+      }
+    }
+  }
+
+  return [...focused];
 }
 
 function getPositiveEmergencyRedFlags(state: ClinicalCaseState): string[] {
