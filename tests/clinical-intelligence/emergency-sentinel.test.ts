@@ -505,6 +505,39 @@ describe("Emergency sentinel scaffold", () => {
     expect(state.explicitAnswers).toEqual({});
   });
 
+  it("maps gum-color clinical signals directly to gum screening", () => {
+    const state = addClinicalSignal(createInitialClinicalCaseState("collapse_weakness"), {
+      id: "possible_pale_gums",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "gums looked very pale",
+      turnDetected: 1,
+    });
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("gum_color_check");
+      expect(decision.questionId).not.toBe("collapse_weakness_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["pale_gums"]));
+    }
+  });
+
+  it("uses signal-focused selection in the question-only helper", () => {
+    const state = addClinicalSignal(createInitialClinicalCaseState("heatstroke_heat_exposure"), {
+      id: "possible_breathing_difficulty",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "breathing looks labored after heat exposure",
+      turnDetected: 1,
+    });
+
+    expect(chooseEmergencyScreenQuestion(state, "heatstroke_heat_exposure")).toBe(
+      "breathing_difficulty_check",
+    );
+  });
+
   it("uses skin systemic signals for targeted confirmation after skin screens resolve", () => {
     const withSkinScreensResolved = resolveRedFlags(
       createInitialClinicalCaseState("skin_itching_allergy"),

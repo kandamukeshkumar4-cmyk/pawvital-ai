@@ -83,6 +83,10 @@ actions only: the selected action, registered question ID when screening is
 needed, internal reason codes, matched categories, and red-flag IDs needed by
 the next deterministic step.
 
+The emergency rule tables are static internal constants. Question IDs are not
+accepted from owner input, are shape-checked before registry lookup, and are not
+used to build SQL, prompts, telemetry payloads, or external requests.
+
 ## Registered Question Cards
 
 The sentinel returns only registered question-card IDs:

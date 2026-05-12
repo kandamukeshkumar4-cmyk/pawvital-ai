@@ -57,6 +57,8 @@ const SIGNAL_RED_FLAG_FOCUS: Record<string, readonly string[]> = {
     "unresponsive",
     "sudden_paralysis",
   ],
+  possible_pale_gums: ["pale_gums"],
+  possible_blue_gums: ["blue_gums"],
   possible_heat_stroke: ["heatstroke_signs"],
   toxin_exposure: [
     "toxin_confirmed",
@@ -246,7 +248,18 @@ export function chooseEmergencyScreenQuestion(
     (match) => match.clinicalSignalIds.length > 0 && match.unresolvedRedFlags.length > 0,
   );
   if (signalMatch) {
-    return chooseQuestionId(state, signalMatch.rule, signalMatch.unresolvedRedFlags);
+    const signalFocusedRedFlags = getSignalFocusedRedFlags(
+      signalMatch.clinicalSignalIds,
+      signalMatch.unresolvedRedFlags,
+    );
+
+    return chooseQuestionId(
+      state,
+      signalMatch.rule,
+      signalFocusedRedFlags.length > 0
+        ? signalFocusedRedFlags
+        : signalMatch.unresolvedRedFlags,
+    );
   }
 
   const unresolvedMatch = matches.find((match) => match.unresolvedRedFlags.length > 0);
