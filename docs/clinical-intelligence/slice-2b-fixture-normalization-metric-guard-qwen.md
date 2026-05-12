@@ -36,13 +36,13 @@ baseline and the current non-regression metrics.
 | Current primary class | `report_only_quality_gap` |
 | Generic question scoring | `exclude_for_now` |
 | Red-flag coverage expectation | `partial` |
-| Emergency alignment disposition | `alignment_only_ok` |
+| Emergency alignment disposition | `question_match_required` |
 
-The normalization is justified because the global emergency screen is already
-an accepted first move for this fixture-ambiguous case. Generic-question
-scoring is excluded because the emergency screen is valid. Red-flag coverage
-is partial because the global emergency screen already captures the required
-urgent branch.
+The normalization is justified because this fixture-ambiguous case is no longer
+a planner implementation candidate, while the expected first-question match
+remains locked to the normalization fixture row. Generic-question scoring is
+excluded for now. Red-flag coverage is partial because the global emergency
+screen already captures the required urgent branch.
 
 ## Global Guardrails
 
@@ -71,7 +71,7 @@ report-only row is mislabeled as a safety blocker.
     "currentPrimaryFailureClass": "report_only_quality_gap",
     "genericQuestionScoring": "exclude_for_now",
     "redFlagCoverageExpectation": "partial",
-    "emergencyAlignmentDisposition": "alignment_only_ok"
+    "emergencyAlignmentDisposition": "question_match_required"
   },
   "globalGuardrails": {
     "totalCases": 57,

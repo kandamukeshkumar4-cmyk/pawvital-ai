@@ -140,7 +140,7 @@ const EXPECTED_GUARD_PAYLOAD: GuardDocPayload = {
     currentPrimaryFailureClass: "report_only_quality_gap",
     genericQuestionScoring: "exclude_for_now",
     redFlagCoverageExpectation: "partial",
-    emergencyAlignmentDisposition: "alignment_only_ok",
+    emergencyAlignmentDisposition: "question_match_required",
   },
   globalGuardrails: {
     totalCases: LOCKED_BASELINE.totalCases,
@@ -189,6 +189,23 @@ describe("slice 2B fixture normalization metric guard", () => {
     expect(annotation?.patchTarget).toBe("no_patch_report_only");
   });
 
+  it("locks the normalized case guard payload to the normalization fixture row", () => {
+    const normalizationRow = (
+      normalizationRows as ShadowPlannerExpectedOutcomeNormalizationFixture[]
+    ).find((row) => row.caseId === NORMALIZED_CASE_ID);
+
+    expect(normalizationRow).toBeDefined();
+    expect(EXPECTED_GUARD_PAYLOAD.normalizedCase.genericQuestionScoring).toBe(
+      normalizationRow?.genericQuestionScoring
+    );
+    expect(EXPECTED_GUARD_PAYLOAD.normalizedCase.redFlagCoverageExpectation).toBe(
+      normalizationRow?.redFlagCoverageExpectation
+    );
+    expect(
+      EXPECTED_GUARD_PAYLOAD.normalizedCase.emergencyAlignmentDisposition
+    ).toBe(normalizationRow?.emergencyAlignmentDisposition);
+  });
+
   it("locks planner candidates at 6", () => {
     expect(countByPrimaryFailureClass("planner_improvement_candidate")).toBe(
       LOCKED_BASELINE.plannerCandidateCount
@@ -206,7 +223,7 @@ describe("slice 2B fixture normalization metric guard", () => {
     expect(triage.safetyBlockers.length).toBe(LOCKED_BASELINE.safetyBlockerCount);
   });
 
-  it("locks emergency alignment at 40/40", () => {
+  it("locks emergency alignment at 39/39", () => {
     const report = buildEvalReport();
     expect(report.summary.emergencyScreenAlignmentCount).toBe(
       LOCKED_BASELINE.emergencyAlignmentCount
