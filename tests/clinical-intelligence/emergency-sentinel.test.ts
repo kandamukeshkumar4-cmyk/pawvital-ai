@@ -80,6 +80,24 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("returns emergency result for confirmed bloat flags", () => {
+    const state = withRedFlag(
+      createInitialClinicalCaseState("bloat_gdv"),
+      "gastric_dilatation_volvulus",
+      "positive",
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("emergency_result");
+    if (decision.action === "emergency_result") {
+      expect(decision.matchedRedFlags).toEqual(
+        expect.arrayContaining(["gastric_dilatation_volvulus"]),
+      );
+    }
+    expect(isEmergencyPositive(state)).toBe(true);
+  });
+
   it("asks the toxin screen for unresolved toxin exposure risk", () => {
     const state = createInitialClinicalCaseState("toxin_poisoning_exposure");
 
@@ -161,6 +179,24 @@ describe("Emergency sentinel scaffold", () => {
     if (decision.action === "ask_emergency_screen") {
       expect(decision.questionId).toBe("limping_weight_bearing");
       expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["non_weight_bearing"]));
+    }
+  });
+
+  it("reports sentinel-only emergency flags as positive", () => {
+    const state = withRedFlag(
+      createInitialClinicalCaseState("limping_mobility_pain"),
+      "non_weight_bearing",
+      "positive",
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(isEmergencyPositive(state)).toBe(true);
+    expect(decision.action).toBe("emergency_result");
+    if (decision.action === "emergency_result") {
+      expect(decision.matchedRedFlags).toEqual(
+        expect.arrayContaining(["non_weight_bearing"]),
+      );
     }
   });
 
@@ -319,6 +355,38 @@ describe("Emergency sentinel scaffold", () => {
     expect(decision.action).toBe("ask_emergency_screen");
     if (decision.action === "ask_emergency_screen") {
       expect(decision.questionId).toBe("bloat_retching_abdomen_check");
+    }
+    expect(state.explicitAnswers).toEqual({});
+  });
+
+  it("uses skin systemic signals for targeted confirmation after skin screens resolve", () => {
+    const withSkinScreensResolved = resolveRedFlags(
+      createInitialClinicalCaseState("skin_itching_allergy"),
+      [
+        "face_swelling",
+        "hives_widespread",
+        "allergic_with_breathing",
+        "breathing_difficulty",
+        "collapse",
+        "pale_gums",
+        "blue_gums",
+        "stridor_present",
+        "unresponsive",
+      ],
+    );
+    const state = addClinicalSignal(withSkinScreensResolved, {
+      id: "toxin_exposure",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "may have gotten into something outside",
+      turnDetected: 2,
+    });
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("toxin_exposure_check");
     }
     expect(state.explicitAnswers).toEqual({});
   });

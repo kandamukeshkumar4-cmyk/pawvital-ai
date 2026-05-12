@@ -19,6 +19,7 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   gi_keep_water_down_check: ["unable_to_retain_water"],
   toxin_exposure_check: ["toxin_confirmed", "rat_poison_confirmed", "toxin_with_symptoms"],
   bloat_retching_abdomen_check: [
+    "gastric_dilatation_volvulus",
     "unproductive_retching",
     "rapid_onset_distension",
     "bloat_with_restlessness",
@@ -77,17 +78,20 @@ export function matchEmergencyRules(
   rules: readonly EmergencyScreenRule[] = getApplicableRules(state),
 ): EmergencyRuleMatch[] {
   return rules.map((rule) => {
-    const positiveRedFlags = rule.requiredRedFlags.filter(
-      (redFlagId) => state.redFlagStatus[redFlagId]?.status === "positive",
-    );
-    const unresolvedRedFlags = rule.requiredRedFlags.filter((redFlagId) => {
-      const status = state.redFlagStatus[redFlagId]?.status;
-      return !status || status === "unknown" || status === "not_sure";
-    });
     const clinicalSignalIds = state.clinicalSignals
       .filter((signal) => rule.clinicalSignalIds.includes(signal.id))
       .filter((signal) => signal.severity === "high" || signal.severity === "critical")
       .map((signal) => signal.id);
+    const positiveRedFlags = rule.requiredRedFlags.filter(
+      (redFlagId) => state.redFlagStatus[redFlagId]?.status === "positive",
+    );
+    const unresolvedRedFlags =
+      rule.triggerOnlyOnClinicalSignal && clinicalSignalIds.length === 0
+        ? []
+        : rule.requiredRedFlags.filter((redFlagId) => {
+            const status = state.redFlagStatus[redFlagId]?.status;
+            return !status || status === "unknown" || status === "not_sure";
+          });
 
     return {
       rule,
@@ -273,8 +277,12 @@ function isRegisteredQuestionId(questionId: string): boolean {
 }
 
 function getPositiveEmergencyRedFlags(state: ClinicalCaseState): string[] {
+  const sentinelRedFlagIds = new Set(
+    getEmergencyScreenRules().flatMap((rule) => rule.requiredRedFlags),
+  );
+
   return Object.entries(state.redFlagStatus)
     .filter(([, entry]) => entry.status === "positive")
     .map(([redFlagId]) => redFlagId)
-    .filter((redFlagId) => isEmergencyRedFlagId(redFlagId));
+    .filter((redFlagId) => isEmergencyRedFlagId(redFlagId) || sentinelRedFlagIds.has(redFlagId));
 }

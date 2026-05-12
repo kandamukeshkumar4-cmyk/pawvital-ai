@@ -5,6 +5,9 @@ export type EmergencySentinelCategory =
   | "gi_water_retention"
   | "bloat_gdv"
   | "toxin"
+  | "skin_toxin_signal"
+  | "skin_gi_blood_signal"
+  | "skin_bloat_signal"
   | "urinary_obstruction"
   | "neurologic"
   | "limping_weight_bearing"
@@ -19,6 +22,7 @@ export interface EmergencyScreenRule {
   clinicalSignalIds: readonly string[];
   screenQuestionIds: readonly string[];
   reason: string;
+  triggerOnlyOnClinicalSignal?: boolean;
 }
 
 const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
@@ -97,6 +101,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
   {
     category: "bloat_gdv",
     requiredRedFlags: [
+      "gastric_dilatation_volvulus",
       "unproductive_retching",
       "rapid_onset_distension",
       "bloat_with_restlessness",
@@ -130,6 +135,56 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
     ],
     reason:
       "Known or suspected toxin exposure can change urgency immediately.",
+  },
+  {
+    category: "skin_toxin_signal",
+    requiredRedFlags: [
+      "toxin_confirmed",
+      "toxin_with_symptoms",
+    ],
+    clinicalSignalIds: [
+      "toxin_exposure",
+    ],
+    screenQuestionIds: [
+      "toxin_exposure_check",
+      "emergency_global_screen",
+    ],
+    reason:
+      "Possible toxin exposure with skin signs needs confirmation.",
+    triggerOnlyOnClinicalSignal: true,
+  },
+  {
+    category: "skin_gi_blood_signal",
+    requiredRedFlags: [
+      "hematemesis",
+      "hematochezia",
+    ],
+    clinicalSignalIds: [
+      "possible_bloody_vomit",
+    ],
+    screenQuestionIds: [
+      "gi_blood_check",
+      "emergency_global_screen",
+    ],
+    reason:
+      "Blood with skin signs needs confirmation.",
+    triggerOnlyOnClinicalSignal: true,
+  },
+  {
+    category: "skin_bloat_signal",
+    requiredRedFlags: [
+      "unproductive_retching",
+    ],
+    clinicalSignalIds: [
+      "possible_nonproductive_retching",
+    ],
+    screenQuestionIds: [
+      "bloat_retching_abdomen_check",
+      "emergency_global_screen",
+    ],
+    reason:
+      "Nonproductive retching with skin signs needs confirmation.",
+    triggerOnlyOnClinicalSignal: true,
   },
   {
     category: "urinary_obstruction",
@@ -275,7 +330,14 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
 ];
 
 const MODULE_RULE_CATEGORIES: Record<string, readonly EmergencySentinelCategory[]> = {
-  skin_itching_allergy: ["allergic_reaction", "airway_breathing", "circulation_shock"],
+  skin_itching_allergy: [
+    "allergic_reaction",
+    "airway_breathing",
+    "circulation_shock",
+    "skin_toxin_signal",
+    "skin_gi_blood_signal",
+    "skin_bloat_signal",
+  ],
   gi_vomiting_diarrhea: [
     "gi_blood",
     "gi_water_retention",
