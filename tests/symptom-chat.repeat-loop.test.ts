@@ -7,6 +7,7 @@ import {
   getProtectedConversationState,
   mergeCompressionResult,
 } from "@/lib/symptom-memory";
+import { getPendingQuestionId } from "@/lib/symptom-chat/pending-question-state";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
@@ -432,6 +433,26 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     expect(payload.session.case_memory?.unresolved_question_ids ?? []).not.toContain(
       "cough_duration"
     );
+  });
+
+  it("does not resurrect an answered last question as pending fallback state", () => {
+    let session = createSession();
+    session = seedPendingQuestion(session, "cough_duration", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+      unresolved: false,
+    });
+    session = {
+      ...session,
+      answered_questions: ["cough_duration"],
+      extracted_answers: { cough_duration: "For about two days." },
+      case_memory: {
+        ...session.case_memory!,
+        pending_question_id: undefined,
+      },
+    };
+
+    expect(getPendingQuestionId(session)).toBeUndefined();
   });
 
   it("preserves pending question state and ask counts across compression", () => {
