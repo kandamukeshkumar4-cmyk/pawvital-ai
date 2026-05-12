@@ -87,6 +87,11 @@ The emergency rule tables are static internal constants. Question IDs are not
 accepted from owner input, are shape-checked before registry lookup, and are not
 used to build SQL, prompts, telemetry payloads, or external requests.
 
+The regression suite also locks the scaffold boundary: helper calls must not
+mutate case state, `getEmergencyScreenRules()` must return defensive copies, and
+the source files must remain free of prompt, model, RAG, telemetry, and database
+hooks.
+
 ## Registered Question Cards
 
 The sentinel returns only registered question-card IDs:

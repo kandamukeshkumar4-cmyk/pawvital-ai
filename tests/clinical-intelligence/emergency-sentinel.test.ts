@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import {
   evaluateEmergencySentinel,
   getEmergencyScreenRules,
@@ -671,5 +673,55 @@ describe("Emergency sentinel scaffold", () => {
     expect(serialized).not.toMatch(/telemetry/i);
     expect(serialized).not.toMatch(/ownerText/);
     expect(serialized).not.toMatch(/sourceIds/);
+  });
+
+  it("does not mutate case state while evaluating emergency screens", () => {
+    const state = addClinicalSignal(createInitialClinicalCaseState("heatstroke_heat_exposure"), {
+      id: "possible_pale_gums",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "gums looked very pale after heat exposure",
+      turnDetected: 1,
+    });
+    const before = JSON.stringify(state);
+
+    evaluateEmergencySentinel(state);
+    chooseEmergencyScreenQuestion(state, "heatstroke_heat_exposure");
+    getMissingEmergencyRedFlags(state, "heatstroke_heat_exposure");
+
+    expect(JSON.stringify(state)).toBe(before);
+    expect(state.explicitAnswers).toEqual({});
+  });
+
+  it("returns defensive copies of emergency rules", () => {
+    const mutableRules = getEmergencyScreenRules() as Array<{
+      screenQuestionIds: string[];
+      requiredRedFlags: string[];
+      clinicalSignalIds: string[];
+    }>;
+    mutableRules[0].screenQuestionIds.push("__invalid_question_id");
+    mutableRules[0].requiredRedFlags.push("__invalid_red_flag");
+    mutableRules[0].clinicalSignalIds.push("__invalid_signal");
+
+    const freshRules = getEmergencyScreenRules();
+
+    expect(freshRules[0].screenQuestionIds).not.toContain("__invalid_question_id");
+    expect(freshRules[0].requiredRedFlags).not.toContain("__invalid_red_flag");
+    expect(freshRules[0].clinicalSignalIds).not.toContain("__invalid_signal");
+  });
+
+  it("keeps scaffold source free of prompt, model, RAG, telemetry, and database hooks", () => {
+    const sourceFiles = [
+      "src/lib/clinical-intelligence/emergency-screen-rules.ts",
+      "src/lib/clinical-intelligence/emergency-sentinel.ts",
+    ];
+
+    for (const sourceFile of sourceFiles) {
+      const source = readFileSync(sourceFile, "utf8");
+
+      expect(source).not.toMatch(
+        /\b(sql|select|insert|update|delete|prompt|telemetry|rag|model|fetch|openai|supabase|appendShadow|emit)\b/i,
+      );
+    }
   });
 });
