@@ -25,6 +25,8 @@ export interface EmergencyScreenRule {
   triggerOnlyOnClinicalSignal?: boolean;
 }
 
+const QUESTION_ID_PATTERN = /^[a-z0-9_]+$/;
+
 const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
   {
     category: "airway_breathing",
@@ -351,7 +353,13 @@ export function getEmergencyScreenRules(): readonly EmergencyScreenRule[] {
     ...rule,
     requiredRedFlags: [...rule.requiredRedFlags],
     clinicalSignalIds: [...rule.clinicalSignalIds],
-    screenQuestionIds: [...rule.screenQuestionIds],
+    screenQuestionIds: rule.screenQuestionIds.map((questionId) => {
+      if (!QUESTION_ID_PATTERN.test(questionId)) {
+        throw new Error(`Unsafe emergency sentinel question ID: ${questionId}`);
+      }
+
+      return questionId;
+    }),
   }));
 }
 

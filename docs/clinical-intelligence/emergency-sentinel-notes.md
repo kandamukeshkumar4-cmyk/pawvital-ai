@@ -92,6 +92,11 @@ mutate case state, `getEmergencyScreenRules()` must return defensive copies, and
 the source files must remain free of prompt, model, RAG, telemetry, and database
 hooks.
 
+All VET-1402 tests are additive. No existing route, benchmark, planner, or
+question-card assertions were relaxed for this scaffold. Rule question IDs are
+shape-checked in `getEmergencyScreenRules()` before cloning and are registry
+checked again before any sentinel helper returns a question ID.
+
 ## Registered Question Cards
 
 The sentinel returns only registered question-card IDs:
