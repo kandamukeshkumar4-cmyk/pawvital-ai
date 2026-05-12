@@ -216,7 +216,7 @@ const MODULE_RULE_CATEGORIES: Record<string, readonly EmergencySentinelCategory[
   skin_itching_allergy: ["allergic_reaction", "airway_breathing", "circulation_shock"],
   gi_vomiting_diarrhea: ["bloat_gdv", "toxin", "circulation_shock"],
   limping_mobility_pain: ["trauma_bleeding", "circulation_shock"],
-  respiratory_distress: ["airway_breathing"],
+  respiratory_distress: ["airway_breathing", "circulation_shock"],
   seizure_collapse_neuro: ["neurologic", "circulation_shock"],
   urinary_obstruction: ["urinary_obstruction"],
   toxin_poisoning_exposure: ["toxin", "neurologic"],

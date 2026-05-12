@@ -164,11 +164,40 @@ describe("Emergency sentinel scaffold", () => {
     );
     const resolvedState = resolveRedFlags(
       createInitialClinicalCaseState("respiratory_distress"),
-      ["breathing_difficulty", "blue_gums", "stridor_present"],
+      [
+        "breathing_difficulty",
+        "blue_gums",
+        "stridor_present",
+        "collapse",
+        "unresponsive",
+        "pale_gums",
+      ],
     );
 
     expect(evaluateEmergencySentinel(unresolvedState).action).toBe("ask_emergency_screen");
     expect(evaluateEmergencySentinel(resolvedState).action).toBe("proceed_to_module");
+  });
+
+  it("keeps collapse screening active for respiratory complaints after airway flags resolve", () => {
+    const withAirwayResolved = resolveRedFlags(
+      createInitialClinicalCaseState("respiratory_distress"),
+      ["breathing_difficulty", "blue_gums", "stridor_present"],
+    );
+    const withSignal = addClinicalSignal(withAirwayResolved, {
+      id: "possible_collapse_or_weakness",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "nearly collapsed while breathing hard",
+      turnDetected: 2,
+    });
+
+    const decision = evaluateEmergencySentinel(withSignal);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("collapse_weakness_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["collapse"]));
+    }
   });
 
   it("chooses a screen for the remaining unresolved red flags instead of repeating a resolved one", () => {
@@ -230,6 +259,9 @@ describe("Emergency sentinel scaffold", () => {
       "breathing_difficulty",
       "blue_gums",
       "stridor_present",
+      "collapse",
+      "unresponsive",
+      "pale_gums",
     ]);
 
     expect(evaluateEmergencySentinel(resolvedState).action).toBe("proceed_to_module");
