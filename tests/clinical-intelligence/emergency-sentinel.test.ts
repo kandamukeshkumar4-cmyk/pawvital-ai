@@ -400,6 +400,7 @@ describe("Emergency sentinel scaffold", () => {
         moduleId,
       );
       expect(questionId).toBeDefined();
+      expect(questionId).toMatch(/^[a-z0-9_]+$/);
       expect(getQuestionCardById(questionId!)).toBeDefined();
     }
   });
@@ -409,8 +410,19 @@ describe("Emergency sentinel scaffold", () => {
 
     for (const rule of rules) {
       for (const questionId of rule.screenQuestionIds) {
+        expect(questionId).toMatch(/^[a-z0-9_]+$/);
         expect(getQuestionCardById(questionId)).toBeDefined();
       }
     }
+  });
+
+  it("does not emit prompt or telemetry payload fields", () => {
+    const decision = evaluateEmergencySentinel(createInitialClinicalCaseState("gi_vomiting_diarrhea"));
+    const serialized = JSON.stringify(decision);
+
+    expect(serialized).not.toMatch(/prompt/i);
+    expect(serialized).not.toMatch(/telemetry/i);
+    expect(serialized).not.toMatch(/ownerText/);
+    expect(serialized).not.toMatch(/sourceIds/);
   });
 });

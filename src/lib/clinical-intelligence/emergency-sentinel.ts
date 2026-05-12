@@ -9,6 +9,7 @@ import {
 } from "./emergency-screen-rules";
 
 const FALLBACK_QUESTION_ID = "emergency_global_screen";
+const QUESTION_ID_PATTERN = /^[a-z0-9_]+$/;
 
 const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   breathing_difficulty_check: ["breathing_difficulty", "stridor_present", "allergic_with_breathing"],
@@ -234,7 +235,7 @@ function chooseQuestionId(
     return (
       coveredRedFlags.some((redFlagId) => unresolved.has(redFlagId)) &&
       !coveredRedFlags.some((redFlagId) => state.redFlagStatus[redFlagId]?.status === "negative") &&
-      getQuestionCardById(questionId)
+      isRegisteredQuestionId(questionId)
     );
   });
 
@@ -246,7 +247,7 @@ function chooseQuestionId(
     const coveredRedFlags = QUESTION_RED_FLAG_COVERAGE[questionId] ?? [];
     return (
       coveredRedFlags.some((redFlagId) => unresolved.has(redFlagId)) &&
-      getQuestionCardById(questionId)
+      isRegisteredQuestionId(questionId)
     );
   });
 
@@ -255,16 +256,20 @@ function chooseQuestionId(
   }
 
   for (const questionId of rule.screenQuestionIds) {
-    if (getQuestionCardById(questionId)) {
+    if (isRegisteredQuestionId(questionId)) {
       return questionId;
     }
   }
 
-  if (getQuestionCardById(FALLBACK_QUESTION_ID)) {
+  if (isRegisteredQuestionId(FALLBACK_QUESTION_ID)) {
     return FALLBACK_QUESTION_ID;
   }
 
   throw new Error("Emergency sentinel fallback question card is not registered.");
+}
+
+function isRegisteredQuestionId(questionId: string): boolean {
+  return QUESTION_ID_PATTERN.test(questionId) && Boolean(getQuestionCardById(questionId));
 }
 
 function getPositiveEmergencyRedFlags(state: ClinicalCaseState): string[] {

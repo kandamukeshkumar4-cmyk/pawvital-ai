@@ -73,8 +73,15 @@ proceed_to_module only after required active-complaint sentinel red flags are re
 ```
 
 Returned question IDs are validated through `getQuestionCardById(id)`.
-If a specific card is missing from the registry, the sentinel falls back to
+They must also match the internal question-card ID shape before lookup. If a
+specific card is missing from the registry, the sentinel falls back to
 `emergency_global_screen`.
+
+The sentinel does not build prompts, call models, call RAG, write telemetry, or
+return owner copy from the question-card registry. It returns compact structured
+actions only: the selected action, registered question ID when screening is
+needed, matched categories, and red-flag IDs needed by the next deterministic
+step.
 
 ## Registered Question Cards
 
@@ -90,8 +97,13 @@ bloat_retching_abdomen_check
 urinary_blockage_check
 seizure_neuro_check
 skin_emergency_allergy_screen
+gi_blood_check
+gi_keep_water_down_check
 panting_excess_check
 bleeding_volume_check
+laceration_depth_check
+limping_weight_bearing
+limping_trauma_onset
 ```
 
 Heat screening uses `panting_excess_check`, `breathing_difficulty_check`,
