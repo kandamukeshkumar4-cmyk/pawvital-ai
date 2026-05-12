@@ -24,6 +24,8 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
     "distended_abdomen_painful",
   ],
   urinary_blockage_check: ["urinary_blockage", "no_urine_24h"],
+  limping_weight_bearing: ["non_weight_bearing"],
+  limping_trauma_onset: ["post_trauma_lameness"],
   seizure_neuro_check: [
     "seizure_activity",
     "seizure_prolonged",

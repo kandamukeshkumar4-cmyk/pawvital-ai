@@ -133,6 +133,53 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("keeps shock screening active for toxin exposure cases", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("toxin_poisoning_exposure"),
+      [
+        "toxin_confirmed",
+        "rat_poison_confirmed",
+        "toxin_with_symptoms",
+      ],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("collapse_weakness_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["collapse"]));
+    }
+  });
+
+  it("asks limping weight-bearing screening before proceeding through limping complaints", () => {
+    const state = createInitialClinicalCaseState("limping_mobility_pain");
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("limping_weight_bearing");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["non_weight_bearing"]));
+    }
+  });
+
+  it("asks limping trauma-onset screening after weight-bearing risk resolves negative", () => {
+    const state = withRedFlag(
+      createInitialClinicalCaseState("limping_mobility_pain"),
+      "non_weight_bearing",
+      "negative",
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("limping_trauma_onset");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["post_trauma_lameness"]));
+    }
+  });
+
   it("asks the neuro screen for unresolved seizure risk", () => {
     const state = createInitialClinicalCaseState("seizure_collapse_neuro");
 

@@ -7,6 +7,8 @@ export type EmergencySentinelCategory =
   | "toxin"
   | "urinary_obstruction"
   | "neurologic"
+  | "limping_weight_bearing"
+  | "limping_trauma"
   | "trauma_bleeding"
   | "heat_stroke"
   | "allergic_reaction";
@@ -166,6 +168,32 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "Seizures, failure to return to normal, or sudden paralysis require emergency screening.",
   },
   {
+    category: "limping_weight_bearing",
+    requiredRedFlags: [
+      "non_weight_bearing",
+    ],
+    clinicalSignalIds: [],
+    screenQuestionIds: [
+      "limping_weight_bearing",
+      "emergency_global_screen",
+    ],
+    reason:
+      "A pet not putting weight on a limb can change urgency.",
+  },
+  {
+    category: "limping_trauma",
+    requiredRedFlags: [
+      "post_trauma_lameness",
+    ],
+    clinicalSignalIds: [],
+    screenQuestionIds: [
+      "limping_trauma_onset",
+      "emergency_global_screen",
+    ],
+    reason:
+      "Sudden limping after trauma can change urgency.",
+  },
+  {
     category: "trauma_bleeding",
     requiredRedFlags: [
       "large_blood_volume",
@@ -255,11 +283,15 @@ const MODULE_RULE_CATEGORIES: Record<string, readonly EmergencySentinelCategory[
     "toxin",
     "circulation_shock",
   ],
-  limping_mobility_pain: ["trauma_bleeding", "circulation_shock"],
+  limping_mobility_pain: [
+    "limping_weight_bearing",
+    "limping_trauma",
+    "circulation_shock",
+  ],
   respiratory_distress: ["airway_breathing", "circulation_shock"],
   seizure_collapse_neuro: ["neurologic", "circulation_shock"],
   urinary_obstruction: ["urinary_obstruction"],
-  toxin_poisoning_exposure: ["toxin", "neurologic"],
+  toxin_poisoning_exposure: ["toxin", "circulation_shock", "bloat_gdv", "neurologic"],
   bloat_gdv: ["bloat_gdv", "circulation_shock"],
   collapse_weakness: ["circulation_shock", "airway_breathing", "neurologic"],
   heatstroke_heat_exposure: ["heat_stroke", "airway_breathing", "circulation_shock"],
