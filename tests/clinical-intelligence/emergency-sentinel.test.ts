@@ -504,6 +504,29 @@ describe("Emergency sentinel scaffold", () => {
     expect(state.explicitAnswers).toEqual({});
   });
 
+  it("uses signal-matched rules when no active complaint module is known", () => {
+    const baseState: ClinicalCaseState = {
+      ...createInitialClinicalCaseState("bloat_gdv"),
+      activeComplaintModule: null,
+    };
+    const state = addClinicalSignal(baseState, {
+      id: "possible_nonproductive_retching",
+      type: "owner_language",
+      severity: "critical",
+      evidenceText: "tries to vomit but nothing comes up",
+      turnDetected: 1,
+    });
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("bloat_retching_abdomen_check");
+      expect(decision.questionId).not.toBe("breathing_difficulty_check");
+    }
+    expect(state.explicitAnswers).toEqual({});
+  });
+
   it("prioritizes the question tied to the triggering clinical signal", () => {
     const state = addClinicalSignal(createInitialClinicalCaseState("heatstroke_heat_exposure"), {
       id: "possible_breathing_difficulty",

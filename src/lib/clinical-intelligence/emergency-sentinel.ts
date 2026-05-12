@@ -3,6 +3,7 @@ import { isEmergencyRedFlagId } from "./emergency-red-flags";
 import { getQuestionCardById } from "./question-card-registry";
 import {
   getEmergencyScreenRules,
+  hasRuleCategoriesForModule,
   getRuleCategoriesForModule,
   type EmergencyScreenRule,
   type EmergencySentinelCategory,
@@ -294,10 +295,11 @@ function getApplicableRules(
   complaintModule?: ComplaintModuleInput,
 ): readonly EmergencyScreenRule[] {
   const moduleId = getComplaintModuleId(complaintModule) ?? state.activeComplaintModule;
-  const categories = getRuleCategoriesForModule(moduleId);
-  const rulesByCategory = new Map(
-    getEmergencyScreenRules().map((rule) => [rule.category, rule]),
-  );
+  const allRules = getEmergencyScreenRules();
+  const rulesByCategory = new Map(allRules.map((rule) => [rule.category, rule]));
+  const categories = hasRuleCategoriesForModule(moduleId)
+    ? getRuleCategoriesForModule(moduleId)
+    : getFallbackRuleCategoriesForSignals(state, allRules);
 
   return categories
     .map((category) => rulesByCategory.get(category))
@@ -310,6 +312,22 @@ function getComplaintModuleId(complaintModule?: ComplaintModuleInput): string | 
   }
 
   return typeof complaintModule === "string" ? complaintModule : complaintModule.id;
+}
+
+function getFallbackRuleCategoriesForSignals(
+  state: ClinicalCaseState,
+  allRules: readonly EmergencyScreenRule[],
+): readonly EmergencySentinelCategory[] {
+  const highOrCriticalSignalIds = new Set(
+    state.clinicalSignals
+      .filter((signal) => signal.severity === "high" || signal.severity === "critical")
+      .map((signal) => signal.id),
+  );
+  const signalCategories = allRules
+    .filter((rule) => rule.clinicalSignalIds.some((signalId) => highOrCriticalSignalIds.has(signalId)))
+    .map((rule) => rule.category);
+
+  return [...new Set([...signalCategories, ...getRuleCategoriesForModule(null)])];
 }
 
 function chooseQuestionId(

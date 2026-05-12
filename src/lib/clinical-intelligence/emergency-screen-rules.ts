@@ -372,3 +372,7 @@ export function getRuleCategoriesForModule(
 
   return MODULE_RULE_CATEGORIES[moduleId] ?? ["airway_breathing", "circulation_shock"];
 }
+
+export function hasRuleCategoriesForModule(moduleId?: string | null): boolean {
+  return Boolean(moduleId && Object.prototype.hasOwnProperty.call(MODULE_RULE_CATEGORIES, moduleId));
+}
