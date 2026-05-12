@@ -21,7 +21,7 @@ export interface EmergencyScreenRule {
   requiredRedFlags: readonly string[];
   clinicalSignalIds: readonly string[];
   screenQuestionIds: readonly string[];
-  reason: string;
+  reasonCode: string;
   triggerOnlyOnClinicalSignal?: boolean;
 }
 
@@ -42,8 +42,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "gum_color_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Breathing difficulty or blue gums can change urgency immediately.",
+    reasonCode: "airway_breathing_screen_required",
   },
   {
     category: "circulation_shock",
@@ -63,8 +62,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "gum_color_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Collapse, unresponsiveness, or abnormal gum color can indicate emergency risk.",
+    reasonCode: "circulation_shock_screen_required",
   },
   {
     category: "gi_blood",
@@ -81,8 +79,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "gi_blood_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Blood in vomit or stool can change urgency quickly.",
+    reasonCode: "gi_blood_screen_required",
   },
   {
     category: "gi_water_retention",
@@ -95,8 +92,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "gi_keep_water_down_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Repeated vomiting or inability to keep water down can change urgency quickly.",
+    reasonCode: "gi_water_retention_screen_required",
   },
   {
     category: "bloat_gdv",
@@ -116,8 +112,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "bloat_retching_abdomen_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Unproductive retching with a swollen or painful abdomen can become urgent quickly.",
+    reasonCode: "bloat_gdv_screen_required",
   },
   {
     category: "toxin",
@@ -133,8 +128,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "toxin_exposure_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Known or suspected toxin exposure can change urgency immediately.",
+    reasonCode: "toxin_screen_required",
   },
   {
     category: "skin_toxin_signal",
@@ -149,8 +143,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "toxin_exposure_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Possible toxin exposure with skin signs needs confirmation.",
+    reasonCode: "skin_toxin_signal_confirmation_required",
     triggerOnlyOnClinicalSignal: true,
   },
   {
@@ -166,8 +159,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "gi_blood_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Blood with skin signs needs confirmation.",
+    reasonCode: "skin_gi_blood_signal_confirmation_required",
     triggerOnlyOnClinicalSignal: true,
   },
   {
@@ -182,8 +174,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "bloat_retching_abdomen_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Nonproductive retching with skin signs needs confirmation.",
+    reasonCode: "skin_bloat_signal_confirmation_required",
     triggerOnlyOnClinicalSignal: true,
   },
   {
@@ -199,8 +190,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "urinary_blockage_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Straining with little or no urine can become an emergency within hours.",
+    reasonCode: "urinary_obstruction_screen_required",
   },
   {
     category: "neurologic",
@@ -219,8 +209,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "collapse_weakness_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Seizures, failure to return to normal, or sudden paralysis require emergency screening.",
+    reasonCode: "neurologic_screen_required",
   },
   {
     category: "limping_weight_bearing",
@@ -232,8 +221,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "limping_weight_bearing",
       "emergency_global_screen",
     ],
-    reason:
-      "A pet not putting weight on a limb can change urgency.",
+    reasonCode: "limping_weight_bearing_screen_required",
   },
   {
     category: "limping_trauma",
@@ -245,8 +233,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "limping_trauma_onset",
       "emergency_global_screen",
     ],
-    reason:
-      "Sudden limping after trauma can change urgency.",
+    reasonCode: "limping_trauma_screen_required",
   },
   {
     category: "trauma_bleeding",
@@ -274,8 +261,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "breathing_difficulty_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Trauma with bleeding, collapse, breathing difficulty, or abnormal gums requires emergency screening.",
+    reasonCode: "trauma_bleeding_screen_required",
   },
   {
     category: "heat_stroke",
@@ -299,8 +285,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "gum_color_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Heat exposure with heavy panting, collapse, breathing difficulty, or abnormal gums needs emergency screening.",
+    reasonCode: "heat_stroke_screen_required",
   },
   {
     category: "allergic_reaction",
@@ -324,8 +309,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
       "gum_color_check",
       "emergency_global_screen",
     ],
-    reason:
-      "Rapid swelling, hives, breathing difficulty, or collapse needs emergency screening.",
+    reasonCode: "allergic_reaction_screen_required",
   },
 ];
 

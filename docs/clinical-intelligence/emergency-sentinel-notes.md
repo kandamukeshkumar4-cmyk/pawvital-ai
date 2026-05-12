@@ -80,8 +80,8 @@ specific card is missing from the registry, the sentinel falls back to
 The sentinel does not build prompts, call models, call RAG, write telemetry, or
 return owner copy from the question-card registry. It returns compact structured
 actions only: the selected action, registered question ID when screening is
-needed, matched categories, and red-flag IDs needed by the next deterministic
-step.
+needed, internal reason codes, matched categories, and red-flag IDs needed by
+the next deterministic step.
 
 ## Registered Question Cards
 

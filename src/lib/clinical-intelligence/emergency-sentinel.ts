@@ -140,7 +140,7 @@ export function evaluateEmergencySentinel(
     return {
       action: "ask_emergency_screen",
       questionId: chooseQuestionId(state, signalMatch.rule, signalMatch.unresolvedRedFlags),
-      reason: signalMatch.rule.reason,
+      reason: signalMatch.rule.reasonCode,
       missingRedFlags: signalMatch.unresolvedRedFlags,
     };
   }
@@ -150,7 +150,7 @@ export function evaluateEmergencySentinel(
     return {
       action: "ask_emergency_screen",
       questionId: chooseQuestionId(state, unresolvedMatch.rule, unresolvedMatch.unresolvedRedFlags),
-      reason: unresolvedMatch.rule.reason,
+      reason: unresolvedMatch.rule.reasonCode,
       missingRedFlags: unresolvedMatch.unresolvedRedFlags,
     };
   }
