@@ -10,6 +10,35 @@ import {
 
 const FALLBACK_QUESTION_ID = "emergency_global_screen";
 
+const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
+  breathing_difficulty_check: ["breathing_difficulty", "stridor_present", "allergic_with_breathing"],
+  gum_color_check: ["blue_gums", "pale_gums"],
+  collapse_weakness_check: ["collapse", "unresponsive"],
+  toxin_exposure_check: ["toxin_confirmed", "rat_poison_confirmed", "toxin_with_symptoms"],
+  bloat_retching_abdomen_check: [
+    "unproductive_retching",
+    "rapid_onset_distension",
+    "bloat_with_restlessness",
+    "distended_abdomen_painful",
+  ],
+  urinary_blockage_check: ["urinary_blockage", "no_urine_24h"],
+  seizure_neuro_check: [
+    "seizure_activity",
+    "seizure_prolonged",
+    "post_ictal_prolonged",
+    "sudden_paralysis",
+  ],
+  skin_emergency_allergy_screen: [
+    "face_swelling",
+    "hives_widespread",
+    "allergic_with_breathing",
+  ],
+  panting_excess_check: ["heatstroke_signs", "brachycephalic_heat"],
+  bleeding_volume_check: ["large_blood_volume"],
+  laceration_depth_check: ["wound_deep_bleeding"],
+  emergency_global_screen: [],
+};
+
 export type EmergencySentinelDecision =
   | {
       action: "emergency_result";
@@ -99,7 +128,7 @@ export function evaluateEmergencySentinel(
   if (signalMatch) {
     return {
       action: "ask_emergency_screen",
-      questionId: chooseQuestionId(signalMatch.rule.screenQuestionIds),
+      questionId: chooseQuestionId(state, signalMatch.rule, signalMatch.unresolvedRedFlags),
       reason: signalMatch.rule.reason,
       missingRedFlags: signalMatch.unresolvedRedFlags,
     };
@@ -109,7 +138,7 @@ export function evaluateEmergencySentinel(
   if (unresolvedMatch) {
     return {
       action: "ask_emergency_screen",
-      questionId: chooseQuestionId(unresolvedMatch.rule.screenQuestionIds),
+      questionId: chooseQuestionId(state, unresolvedMatch.rule, unresolvedMatch.unresolvedRedFlags),
       reason: unresolvedMatch.rule.reason,
       missingRedFlags: unresolvedMatch.unresolvedRedFlags,
     };
@@ -146,12 +175,12 @@ export function chooseEmergencyScreenQuestion(
   const matches = matchEmergencyRules(state, rules);
   const signalMatch = matches.find((match) => match.clinicalSignalIds.length > 0);
   if (signalMatch) {
-    return chooseQuestionId(signalMatch.rule.screenQuestionIds);
+    return chooseQuestionId(state, signalMatch.rule, signalMatch.unresolvedRedFlags);
   }
 
   const unresolvedMatch = matches.find((match) => match.unresolvedRedFlags.length > 0);
   if (unresolvedMatch) {
-    return chooseQuestionId(unresolvedMatch.rule.screenQuestionIds);
+    return chooseQuestionId(state, unresolvedMatch.rule, unresolvedMatch.unresolvedRedFlags);
   }
 
   return undefined;
@@ -186,8 +215,38 @@ function getComplaintModuleId(complaintModule?: ComplaintModuleInput): string | 
   return typeof complaintModule === "string" ? complaintModule : complaintModule.id;
 }
 
-function chooseQuestionId(questionIds: readonly string[]): string {
-  for (const questionId of questionIds) {
+function chooseQuestionId(
+  state: ClinicalCaseState,
+  rule: EmergencyScreenRule,
+  unresolvedRedFlags: readonly string[],
+): string {
+  const unresolved = new Set(unresolvedRedFlags);
+  const cleanSpecificQuestionId = rule.screenQuestionIds.find((questionId) => {
+    const coveredRedFlags = QUESTION_RED_FLAG_COVERAGE[questionId] ?? [];
+    return (
+      coveredRedFlags.some((redFlagId) => unresolved.has(redFlagId)) &&
+      !coveredRedFlags.some((redFlagId) => state.redFlagStatus[redFlagId]?.status === "negative") &&
+      getQuestionCardById(questionId)
+    );
+  });
+
+  if (cleanSpecificQuestionId) {
+    return cleanSpecificQuestionId;
+  }
+
+  const fallbackSpecificQuestionId = rule.screenQuestionIds.find((questionId) => {
+    const coveredRedFlags = QUESTION_RED_FLAG_COVERAGE[questionId] ?? [];
+    return (
+      coveredRedFlags.some((redFlagId) => unresolved.has(redFlagId)) &&
+      getQuestionCardById(questionId)
+    );
+  });
+
+  if (fallbackSpecificQuestionId) {
+    return fallbackSpecificQuestionId;
+  }
+
+  for (const questionId of rule.screenQuestionIds) {
     if (getQuestionCardById(questionId)) {
       return questionId;
     }

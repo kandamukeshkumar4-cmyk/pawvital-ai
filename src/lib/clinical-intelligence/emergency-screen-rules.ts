@@ -151,6 +151,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
     ],
     screenQuestionIds: [
       "bleeding_volume_check",
+      "laceration_depth_check",
       "gum_color_check",
       "collapse_weakness_check",
       "breathing_difficulty_check",

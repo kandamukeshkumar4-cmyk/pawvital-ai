@@ -171,6 +171,22 @@ describe("Emergency sentinel scaffold", () => {
     expect(evaluateEmergencySentinel(resolvedState).action).toBe("proceed_to_module");
   });
 
+  it("chooses a screen for the remaining unresolved red flags instead of repeating a resolved one", () => {
+    const state = withRedFlag(
+      createInitialClinicalCaseState("respiratory_distress"),
+      "breathing_difficulty",
+      "negative",
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("gum_color_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["blue_gums"]));
+    }
+  });
+
   it("never downgrades current emergency urgency", () => {
     const state: ClinicalCaseState = {
       ...createInitialClinicalCaseState("skin_itching_allergy"),
