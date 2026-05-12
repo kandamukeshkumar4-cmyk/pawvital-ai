@@ -207,6 +207,38 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("keeps GI blood screening active for toxin exposure cases", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("toxin_poisoning_exposure"),
+      [
+        "toxin_confirmed",
+        "rat_poison_confirmed",
+        "toxin_with_symptoms",
+        "collapse",
+        "unresponsive",
+        "pale_gums",
+        "blue_gums",
+        "unproductive_retching",
+        "rapid_onset_distension",
+        "bloat_with_restlessness",
+        "distended_abdomen_painful",
+        "gastric_dilatation_volvulus",
+        "seizure_activity",
+        "seizure_prolonged",
+        "post_ictal_prolonged",
+        "sudden_paralysis",
+      ],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("gi_blood_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["hematemesis"]));
+    }
+  });
+
   it("asks limping weight-bearing screening before proceeding through limping complaints", () => {
     const state = createInitialClinicalCaseState("limping_mobility_pain");
 
@@ -295,6 +327,22 @@ describe("Emergency sentinel scaffold", () => {
       expect(decision.missingRedFlags).toEqual(
         expect.arrayContaining(["large_blood_volume", "wound_deep_bleeding"]),
       );
+    }
+  });
+
+  it("keeps bleeding-volume screening when wound-deep bleeding remains unresolved", () => {
+    const state = withRedFlag(
+      createInitialClinicalCaseState("trauma_bleeding_wound"),
+      "large_blood_volume",
+      "negative",
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("bleeding_volume_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["wound_deep_bleeding"]));
     }
   });
 
@@ -391,11 +439,11 @@ describe("Emergency sentinel scaffold", () => {
   });
 
   it("chooses a screen for the remaining unresolved red flags instead of repeating a resolved one", () => {
-    const state = withRedFlag(
+    const state = withRedFlag(withRedFlag(
       createInitialClinicalCaseState("respiratory_distress"),
       "breathing_difficulty",
       "negative",
-    );
+    ), "stridor_present", "negative");
 
     const decision = evaluateEmergencySentinel(state);
 

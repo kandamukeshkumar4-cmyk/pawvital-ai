@@ -41,8 +41,8 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   ],
   panting_excess_check: ["heatstroke_signs"],
   brachycephalic_breed_check: ["brachycephalic_heat"],
-  bleeding_volume_check: ["large_blood_volume"],
-  laceration_depth_check: ["wound_deep_bleeding"],
+  bleeding_volume_check: ["large_blood_volume", "wound_deep_bleeding"],
+  laceration_depth_check: [],
   emergency_global_screen: [],
 };
 
@@ -239,7 +239,6 @@ function chooseQuestionId(
     const coveredRedFlags = QUESTION_RED_FLAG_COVERAGE[questionId] ?? [];
     return (
       coveredRedFlags.some((redFlagId) => unresolved.has(redFlagId)) &&
-      !coveredRedFlags.some((redFlagId) => state.redFlagStatus[redFlagId]?.status === "negative") &&
       isRegisteredQuestionId(questionId)
     );
   });
