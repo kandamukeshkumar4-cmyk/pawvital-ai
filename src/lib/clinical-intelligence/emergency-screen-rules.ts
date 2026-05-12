@@ -281,6 +281,7 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
     ],
     screenQuestionIds: [
       "panting_excess_check",
+      "brachycephalic_breed_check",
       "breathing_difficulty_check",
       "collapse_weakness_check",
       "gum_color_check",

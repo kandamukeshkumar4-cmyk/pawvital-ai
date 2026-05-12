@@ -265,6 +265,25 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("asks collapse screening when only sudden paralysis remains unresolved", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("seizure_collapse_neuro"),
+      [
+        "seizure_activity",
+        "seizure_prolonged",
+        "post_ictal_prolonged",
+      ],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("collapse_weakness_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["sudden_paralysis"]));
+    }
+  });
+
   it("asks the bleeding screen for trauma or deep wound risk", () => {
     const state = createInitialClinicalCaseState("trauma_bleeding_wound");
 
@@ -289,6 +308,28 @@ describe("Emergency sentinel scaffold", () => {
       expect(decision.questionId).toBe("panting_excess_check");
       expect(decision.questionId).not.toBe("heat_exposure_check");
       expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["heatstroke_signs"]));
+    }
+  });
+
+  it("asks brachycephalic breed screening when that heat risk remains unresolved", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("heatstroke_heat_exposure"),
+      [
+        "heatstroke_signs",
+        "collapse",
+        "breathing_difficulty",
+        "pale_gums",
+        "blue_gums",
+      ],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("brachycephalic_breed_check");
+      expect(decision.questionId).not.toBe("panting_excess_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["brachycephalic_heat"]));
     }
   });
 

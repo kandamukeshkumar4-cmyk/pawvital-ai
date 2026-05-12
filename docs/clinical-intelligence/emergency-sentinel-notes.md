@@ -101,6 +101,7 @@ gi_vomiting_frequency
 gi_blood_check
 gi_keep_water_down_check
 panting_excess_check
+brachycephalic_breed_check
 bleeding_volume_check
 laceration_depth_check
 limping_weight_bearing
