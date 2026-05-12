@@ -100,6 +100,23 @@ describe("Emergency sentinel scaffold", () => {
     expect(isEmergencyPositive(state)).toBe(true);
   });
 
+  it("honors positive canonical emergency red flags outside active module rules", () => {
+    const state = withRedFlag(
+      createInitialClinicalCaseState("skin_itching_allergy"),
+      "vomit_blood",
+      "positive",
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("emergency_result");
+    if (decision.action === "emergency_result") {
+      expect(decision.matchedCategory).toBe("global_red_flag");
+      expect(decision.matchedRedFlags).toEqual(expect.arrayContaining(["vomit_blood"]));
+    }
+    expect(isEmergencyPositive(state)).toBe(true);
+  });
+
   it("asks the toxin screen for unresolved toxin exposure risk", () => {
     const state = createInitialClinicalCaseState("toxin_poisoning_exposure");
 

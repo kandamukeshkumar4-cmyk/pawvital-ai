@@ -98,7 +98,7 @@ export type EmergencySentinelDecision =
   | {
       action: "emergency_result";
       urgency: "emergency";
-      matchedCategory: EmergencySentinelCategory | "current_urgency";
+      matchedCategory: EmergencySentinelCategory | "current_urgency" | "global_red_flag";
       matchedRedFlags: string[];
       evidence: string[];
     }
@@ -167,6 +167,19 @@ export function evaluateEmergencySentinel(
       matchedCategory: positiveMatch.rule.category,
       matchedRedFlags: getPositiveEmergencyRedFlags(state),
       evidence: positiveMatch.positiveRedFlags.map((redFlagId) =>
+        state.redFlagStatus[redFlagId]?.evidenceText ?? redFlagId
+      ),
+    };
+  }
+
+  const positiveEmergencyRedFlags = getPositiveEmergencyRedFlags(state);
+  if (positiveEmergencyRedFlags.length > 0) {
+    return {
+      action: "emergency_result",
+      urgency: "emergency",
+      matchedCategory: "global_red_flag",
+      matchedRedFlags: positiveEmergencyRedFlags,
+      evidence: positiveEmergencyRedFlags.map((redFlagId) =>
         state.redFlagStatus[redFlagId]?.evidenceText ?? redFlagId
       ),
     };
