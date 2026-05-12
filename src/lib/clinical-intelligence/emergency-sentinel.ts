@@ -14,6 +14,8 @@ const QUESTION_RED_FLAG_COVERAGE: Record<string, readonly string[]> = {
   breathing_difficulty_check: ["breathing_difficulty", "stridor_present", "allergic_with_breathing"],
   gum_color_check: ["blue_gums", "pale_gums"],
   collapse_weakness_check: ["collapse", "unresponsive"],
+  gi_blood_check: ["hematemesis", "melena", "hematochezia"],
+  gi_keep_water_down_check: ["unable_to_retain_water"],
   toxin_exposure_check: ["toxin_confirmed", "rat_poison_confirmed", "toxin_with_symptoms"],
   bloat_retching_abdomen_check: [
     "unproductive_retching",

@@ -92,6 +92,35 @@ describe("Emergency sentinel scaffold", () => {
     }
   });
 
+  it("asks GI blood screening before proceeding through GI complaints", () => {
+    const state = createInitialClinicalCaseState("gi_vomiting_diarrhea");
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("gi_blood_check");
+      expect(decision.missingRedFlags).toEqual(expect.arrayContaining(["hematemesis"]));
+    }
+  });
+
+  it("asks water-retention screening after GI blood flags resolve negative", () => {
+    const state = resolveRedFlags(
+      createInitialClinicalCaseState("gi_vomiting_diarrhea"),
+      ["hematemesis", "melena", "hematochezia"],
+    );
+
+    const decision = evaluateEmergencySentinel(state);
+
+    expect(decision.action).toBe("ask_emergency_screen");
+    if (decision.action === "ask_emergency_screen") {
+      expect(decision.questionId).toBe("gi_keep_water_down_check");
+      expect(decision.missingRedFlags).toEqual(
+        expect.arrayContaining(["unable_to_retain_water"]),
+      );
+    }
+  });
+
   it("asks the urinary obstruction screen for little or no urine risk", () => {
     const state = createInitialClinicalCaseState("urinary_obstruction");
 

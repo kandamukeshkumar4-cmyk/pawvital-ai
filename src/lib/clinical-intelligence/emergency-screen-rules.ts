@@ -1,6 +1,8 @@
 export type EmergencySentinelCategory =
   | "airway_breathing"
   | "circulation_shock"
+  | "gi_blood"
+  | "gi_water_retention"
   | "bloat_gdv"
   | "toxin"
   | "urinary_obstruction"
@@ -57,6 +59,38 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
     ],
     reason:
       "Collapse, unresponsiveness, or abnormal gum color can indicate emergency risk.",
+  },
+  {
+    category: "gi_blood",
+    requiredRedFlags: [
+      "hematemesis",
+      "melena",
+      "hematochezia",
+    ],
+    clinicalSignalIds: [
+      "possible_bloody_vomit",
+      "possible_bloody_diarrhea",
+    ],
+    screenQuestionIds: [
+      "gi_blood_check",
+      "emergency_global_screen",
+    ],
+    reason:
+      "Blood in vomit or stool can change urgency quickly.",
+  },
+  {
+    category: "gi_water_retention",
+    requiredRedFlags: [
+      "unable_to_retain_water",
+      "persistent_vomiting",
+    ],
+    clinicalSignalIds: [],
+    screenQuestionIds: [
+      "gi_keep_water_down_check",
+      "emergency_global_screen",
+    ],
+    reason:
+      "Repeated vomiting or inability to keep water down can change urgency quickly.",
   },
   {
     category: "bloat_gdv",
@@ -214,7 +248,13 @@ const EMERGENCY_SCREEN_RULES: readonly EmergencyScreenRule[] = [
 
 const MODULE_RULE_CATEGORIES: Record<string, readonly EmergencySentinelCategory[]> = {
   skin_itching_allergy: ["allergic_reaction", "airway_breathing", "circulation_shock"],
-  gi_vomiting_diarrhea: ["bloat_gdv", "toxin", "circulation_shock"],
+  gi_vomiting_diarrhea: [
+    "gi_blood",
+    "gi_water_retention",
+    "bloat_gdv",
+    "toxin",
+    "circulation_shock",
+  ],
   limping_mobility_pain: ["trauma_bleeding", "circulation_shock"],
   respiratory_distress: ["airway_breathing", "circulation_shock"],
   seizure_collapse_neuro: ["neurologic", "circulation_shock"],
