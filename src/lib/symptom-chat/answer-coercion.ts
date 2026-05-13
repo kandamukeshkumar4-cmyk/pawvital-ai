@@ -681,6 +681,13 @@ export function shouldPersistRawPendingAnswer(
     return false;
   }
 
+  if (
+    shouldEscalateForUnknown(questionId) &&
+    coerceCanonicalUnknownReply(rawMessage) !== null
+  ) {
+    return false;
+  }
+
   if (isShortUnknownResponse(normalizedMessage)) {
     return (
       !isReproductiveStatusQuestion(questionId) &&
