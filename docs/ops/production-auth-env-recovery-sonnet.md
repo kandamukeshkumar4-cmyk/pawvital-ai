@@ -138,9 +138,15 @@ curl -s https://pawvital-ai.vercel.app/login \
       echo "$url: $result hits"
     done
 
-# Also check the stale ref is gone
-curl -s https://pawvital-ai.vercel.app/_next/static/chunks/*.js 2>/dev/null \
-  | grep -c "cvkdmbgujgcfuqtqgtxv" || echo "stale ref: 0 (good)"
+# Also check the stale ref is gone (reuse the chunk URLs extracted from the HTML above)
+curl -s https://pawvital-ai.vercel.app/login \
+  | grep -oE '"[^"]*_next[^"]*\.js"' \
+  | head -5 \
+  | while read jsFile; do
+      url=$(echo $jsFile | tr -d '"')
+      stale=$(curl -s "https://pawvital-ai.vercel.app$url" | grep -c "cvkdmbgujgcfuqtqgtxv" || true)
+      if [ "$stale" -gt 0 ]; then echo "FAIL: stale ref in $url"; else echo "OK: $url"; fi
+    done
 ```
 
 Expected: at least one JS chunk contains `gswjpmgxidofwmjngavh`; none contain `cvkdmbgujgcfuqtqgtxv`.
