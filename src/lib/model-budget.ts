@@ -29,6 +29,19 @@ export function createModelBudgetState(
   };
 }
 
+export function hasNonEmptyModelBudgetState(
+  state: ModelBudgetState | undefined
+): boolean {
+  if (!state) {
+    return false;
+  }
+
+  return (
+    Object.keys(state.callCounts ?? {}).length > 0 ||
+    Object.keys(state.circuitOpen ?? {}).length > 0
+  );
+}
+
 export function getModelBudgetPolicy(feature: ModelFeature): ModelBudgetPolicy {
   const config = getModelFeatureConfig(feature);
   return {

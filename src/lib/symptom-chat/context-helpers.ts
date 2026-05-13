@@ -12,6 +12,7 @@ import {
   type ImageMeta,
 } from "@/lib/image-gate";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
+import { hasNonEmptyModelBudgetState } from "@/lib/model-budget";
 import { isInternalTelemetry } from "@/lib/sidecar-observability";
 import {
   coerceAnswerForQuestion,
@@ -741,7 +742,9 @@ export function sanitizeSessionForClient(
 
   const safeMemory = { ...session.case_memory };
   delete safeMemory.clarification_reasons;
-  delete safeMemory.model_budget_state;
+  if (!hasNonEmptyModelBudgetState(safeMemory.model_budget_state)) {
+    delete safeMemory.model_budget_state;
+  }
   const sanitizedMemory = {
     ...safeMemory,
     service_observations: sanitizeServiceObservationsForClient(

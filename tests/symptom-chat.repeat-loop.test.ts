@@ -541,7 +541,10 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     expect(
       payload.session.case_memory?.clarification_attempts?.cough_type
     ).toBe(1);
-    expect(payload.session.case_memory?.model_budget_state).toBeUndefined();
+    expect(
+      payload.session.case_memory?.model_budget_state?.callCounts
+        ?.second_opinion
+    ).toBe(1);
   });
 
   it("fails closed to the repeat guard when the second-opinion session budget is exhausted", async () => {
@@ -578,6 +581,108 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     expect(payload.session.extracted_answers.cough_type).toBeUndefined();
     expect(payload.session.answered_questions).not.toContain("cough_type");
     expect(payload.session.case_memory?.pending_question_id).not.toBe("cough_type");
-    expect(payload.session.case_memory?.model_budget_state).toBeUndefined();
+    expect(
+      payload.session.case_memory?.model_budget_state?.callCounts
+        ?.second_opinion
+    ).toBe(2);
+  });
+
+  it("preserves second-opinion budget state across stateless turns and blocks the third model call", async () => {
+    process.env.SECOND_OPINION_EXTRACTOR = "on";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          answered: true,
+          questionId: "cough_type",
+          answerValue: "dry_honking",
+          confidence: 0.9,
+          ownerPhrase: "honking",
+          needsClarification: false,
+        })
+      )
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          answered: true,
+          questionId: "cough_type",
+          answerValue: "dry_honking",
+          confidence: 0.9,
+          ownerPhrase: "goose honk",
+          needsClarification: false,
+        })
+      );
+
+    let firstSession = createSession();
+    firstSession = addSymptoms(firstSession, ["coughing"]);
+    firstSession = seedPendingQuestion(firstSession, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+      unresolved: true,
+    });
+
+    const firstTurn = await postTurn(firstSession, "It has a honking sound.");
+
+    expect(firstTurn.response.status).toBe(200);
+    expect(mockComplete).toHaveBeenCalledTimes(1);
+    expect(
+      firstTurn.payload.session.case_memory?.model_budget_state?.callCounts
+        ?.second_opinion
+    ).toBe(1);
+
+    let secondSession = firstTurn.payload.session as TriageSession;
+    secondSession = {
+      ...secondSession,
+      answered_questions: secondSession.answered_questions.filter(
+        (questionId) => questionId !== "cough_type"
+      ),
+      extracted_answers: Object.fromEntries(
+        Object.entries(secondSession.extracted_answers).filter(
+          ([questionId]) => questionId !== "cough_type"
+        )
+      ),
+    };
+    secondSession = seedPendingQuestion(secondSession, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+      unresolved: true,
+    });
+
+    const secondTurn = await postTurn(secondSession, "More of a goose honk.");
+
+    expect(secondTurn.response.status).toBe(200);
+    expect(mockComplete).toHaveBeenCalledTimes(2);
+    expect(
+      secondTurn.payload.session.case_memory?.model_budget_state?.callCounts
+        ?.second_opinion
+    ).toBe(2);
+
+    let thirdSession = secondTurn.payload.session as TriageSession;
+    thirdSession = {
+      ...thirdSession,
+      answered_questions: thirdSession.answered_questions.filter(
+        (questionId) => questionId !== "cough_type"
+      ),
+      extracted_answers: Object.fromEntries(
+        Object.entries(thirdSession.extracted_answers).filter(
+          ([questionId]) => questionId !== "cough_type"
+        )
+      ),
+    };
+    thirdSession = seedPendingQuestion(thirdSession, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+      unresolved: true,
+    });
+
+    const thirdTurn = await postTurn(thirdSession, "Not sure.");
+
+    expect(thirdTurn.response.status).toBe(200);
+    expect(mockComplete).toHaveBeenCalledTimes(2);
+    expect(
+      thirdTurn.payload.session.case_memory?.model_budget_state?.callCounts
+        ?.second_opinion
+    ).toBe(2);
   });
 });
