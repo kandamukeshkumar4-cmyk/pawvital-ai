@@ -6827,6 +6827,29 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(response.status).toBe(200);
     });
 
+    it("VET-1424: long duration replies resolve on the fast path before extraction", async () => {
+      const session = createSession();
+      const sessionWithSymptom = addSymptoms(session, ["vomiting"]);
+      sessionWithSymptom.last_question_asked = "vomit_duration";
+      sessionWithSymptom.case_memory = {
+        ...sessionWithSymptom.case_memory!,
+        turn_count: 1,
+        unresolved_question_ids: ["vomit_duration"],
+      };
+
+      const longReply =
+        "He has been vomiting since Monday night, so it has been about two days now overall.";
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(sessionWithSymptom, longReply));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
+      expect(payload.session.answered_questions).toContain("vomit_duration");
+      expect(payload.session.extracted_answers.vomit_duration).toBe(longReply);
+    });
+
     it("VET-900: 'started last Monday' records as duration text", async () => {
       const session = createSession();
       const sessionWithSymptom = addSymptoms(session, ["vomiting"]);

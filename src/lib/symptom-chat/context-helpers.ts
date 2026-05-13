@@ -16,9 +16,14 @@ import { isInternalTelemetry } from "@/lib/sidecar-observability";
 import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   coerceAnswerForQuestion,
+  coerceChoiceAnswerFromIntent,
+  normalizeChoiceLabel,
+  normalizeIntentText,
   questionAllowsCanonicalUnknown,
+  shouldEscalateForUnknown,
   shouldClarifyAmbiguousReplyForQuestion,
 } from "@/lib/symptom-chat/answer-coercion";
+import { sanitizeAnswerForQuestion } from "@/lib/symptom-chat/answer-extraction";
 import { extractSymptomsFromKeywords } from "@/lib/symptom-chat/extraction-helpers";
 
 const SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS = new Set([
@@ -40,7 +45,7 @@ const SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS = new Set([
 
 const EXTENDED_FOLLOW_UP_UNKNOWN_PATTERNS = [
   /\bi (?:do not|don't|dont) (?:really )?know\b/,
-  /\bi(?: am|'m)? not sure\b/,
+  /\bi(?: am|'m)? not (?:really )?sure\b/,
   /\b(?:do not|don't|dont) remember\b/,
   /\b(?:did not|didn't|didnt) (?:really )?(?:look|notice)\b/,
   /\b(?:can(?:not|'t)|cant) (?:really )?(?:tell|pinpoint|judge|describe)\b/,
@@ -80,6 +85,127 @@ function coerceExtendedFollowUpUnknown(
   )
     ? "unknown"
     : null;
+}
+
+const PENDING_FAST_PATH_STRING_ENTITY_QUESTION_IDS = new Set([
+  "which_leg",
+  "wound_location",
+]);
+
+function questionLooksDurationLike(question: {
+  question_text?: string;
+  extraction_hint?: string;
+}): boolean {
+  const combinedText =
+    `${question.question_text || ""} ${question.extraction_hint || ""}`.toLowerCase();
+  return /\b(duration|how long|when did|when does|onset|started|going on|timing|frequency)\b/.test(
+    combinedText
+  );
+}
+
+function hasDurationLikeSignal(normalizedMessage: string): boolean {
+  return /\b((?:about|around|roughly|approximately|maybe|almost)\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|few|several)\s*(hour|day|week|month|year)s?\b|\b(couple of\s*(hour|day|week|month|year)s?|today|yesterday|tonight|this morning|last night|since|for\s+\w+|sudden|suddenly|gradual|gradually)\b/.test(
+    normalizedMessage
+  );
+}
+
+function coercePendingFastPathAnswer(
+  questionId: string,
+  rawMessage: string
+): string | boolean | number | null {
+  if (PENDING_FAST_PATH_STRING_ENTITY_QUESTION_IDS.has(questionId)) {
+    return sanitizeAnswerForQuestion(questionId, rawMessage);
+  }
+
+  return coerceAnswerForQuestion(questionId, rawMessage);
+}
+
+function hasLongUnknownLikeReply(rawMessage: string): boolean {
+  const normalized = normalizeExtendedUnknownReply(rawMessage);
+  return (
+    normalized.length > 0 &&
+    EXTENDED_FOLLOW_UP_UNKNOWN_PATTERNS.some((pattern) =>
+      pattern.test(normalized)
+    )
+  );
+}
+
+function startsWithAnchoredBooleanCue(normalizedMessage: string): boolean {
+  return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely|no|nope|nah|not really|not at all|no way|it's not|its not|not)\b/.test(
+    normalizedMessage
+  );
+}
+
+function messageMatchesChoiceLabel(
+  question: {
+    choices?: readonly string[];
+  },
+  normalizedMessage: string
+): boolean {
+  return Array.isArray(question.choices)
+    ? question.choices.some((choice) =>
+        normalizedMessage.includes(normalizeChoiceLabel(String(choice)))
+      )
+    : false;
+}
+
+function shouldAllowPendingUnknownFastPath(
+  questionId: string,
+  question: {
+    data_type: "boolean" | "string" | "number" | "choice";
+    choices?: readonly string[];
+  },
+  rawMessage: string
+): boolean {
+  return (
+    questionAllowsCanonicalUnknown(question) &&
+    !shouldClarifyAmbiguousReplyForQuestion(questionId) &&
+    !shouldEscalateForUnknown(questionId) &&
+    hasLongUnknownLikeReply(rawMessage)
+  );
+}
+
+function shouldAllowLongPendingAnswerFastPath(
+  questionId: string,
+  question: {
+    data_type: "boolean" | "string" | "number" | "choice";
+    question_text?: string;
+    extraction_hint?: string;
+    choices?: readonly string[];
+  },
+  rawMessage: string,
+  normalizedMessage: string,
+  coercedAnswer: string | boolean | number
+): boolean {
+  if (question.data_type === "boolean") {
+    return (
+      typeof coercedAnswer === "boolean" &&
+      startsWithAnchoredBooleanCue(normalizedMessage)
+    );
+  }
+
+  if (question.data_type === "choice") {
+    return (
+      typeof coercedAnswer === "string" &&
+      (coerceChoiceAnswerFromIntent(questionId, rawMessage) !== null ||
+        messageMatchesChoiceLabel(question, normalizedMessage) ||
+        startsWithAnchoredBooleanCue(normalizedMessage))
+    );
+  }
+
+  if (question.data_type !== "string" || typeof coercedAnswer !== "string") {
+    return false;
+  }
+
+  if (
+    questionLooksDurationLike(question) &&
+    (hasDurationLikeSignal(normalizedMessage) ||
+      shouldAllowPendingUnknownFastPath(questionId, question, rawMessage))
+  ) {
+    return true;
+  }
+
+  return PENDING_FAST_PATH_STRING_ENTITY_QUESTION_IDS.has(questionId);
 }
 
 export function buildCompactImageSignalContext(
@@ -360,14 +486,14 @@ export function getDeterministicFastPathExtraction(
   const question = FOLLOW_UP_QUESTIONS[pendingQuestionId];
   if (!question) return null;
 
+  const normalizedMessage = normalizeIntentText(trimmed);
+
   const words = trimmed.split(/\s+/).filter(Boolean);
   const looksShortAnswer =
     trimmed.length <= 80 &&
     words.length <= 12 &&
     !/[\n\r]/.test(trimmed) &&
     (question.data_type !== "string" || !/[.!?].+[.!?]/.test(trimmed));
-
-  if (!looksShortAnswer) return null;
 
   if (
     questionAllowsCanonicalUnknown(question) &&
@@ -384,6 +510,15 @@ export function getDeterministicFastPathExtraction(
     }
   }
 
+  if (shouldAllowPendingUnknownFastPath(pendingQuestionId, question, trimmed)) {
+    return {
+      symptoms: [],
+      answers: {
+        [pendingQuestionId]: "unknown",
+      },
+    };
+  }
+
   const newKeywordSymptoms = extractSymptomsFromKeywords(trimmed).filter(
     (symptom) => !session.known_symptoms.includes(symptom)
   );
@@ -391,8 +526,26 @@ export function getDeterministicFastPathExtraction(
     return null;
   }
 
-  const coercedAnswer = coerceAnswerForQuestion(pendingQuestionId, trimmed);
-  if (coercedAnswer === null) return null;
+  const coercedAnswer = coercePendingFastPathAnswer(
+    pendingQuestionId,
+    trimmed
+  );
+  if (coercedAnswer === null) {
+    return null;
+  }
+
+  if (
+    !looksShortAnswer &&
+    !shouldAllowLongPendingAnswerFastPath(
+      pendingQuestionId,
+      question,
+      trimmed,
+      normalizedMessage,
+      coercedAnswer
+    )
+  ) {
+    return null;
+  }
 
   return {
     symptoms: [],
