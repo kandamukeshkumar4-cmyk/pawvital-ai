@@ -5272,19 +5272,16 @@ describe("VET-725: asked-state regression pack", () => {
     expect(payload1.session.last_question_asked).toBe("vomit_duration");
 
     const askedOnTurn1 = payload1.session.last_question_asked;
+    mockExtractWithQwen.mockClear();
 
-    // The second-turn message must NOT be caught by the deterministic fast path
-    // (getDeterministicFastPathExtraction). The fast path only fires when
-    // looksShortAnswer is true — which requires no multi-sentence pattern
-    // (/[.!?].+[.!?]/ must not match). Using two complete sentences here forces
-    // looksShortAnswer=false so the fast path returns null and extractWithQwen
-    // runs. The mock returning "not-json" is therefore live, causing extraction
-    // to fail and triggering the pending-recovery raw-text fallback path to
-    // close vomit_duration via shouldPersistRawPendingAnswer/sanitizePendingRawAnswer.
+    // After VET-1424, long anchored duration replies should resolve before
+    // extraction fallback/recovery logic. Keep the invalid extractor mock here
+    // to prove the route no longer depends on broken structured extraction for
+    // this common owner answer shape.
     mockExtractWithQwen.mockResolvedValueOnce("not-json");
 
     const secondTurnMessage =
-      "He has been vomiting for about two days. It started on Monday night.";
+      "He has been vomiting since Monday night, so it has been about two days now overall.";
     const response2 = await POST(
       makeTextOnlyRequest(payload1.session, secondTurnMessage)
     );
@@ -5293,7 +5290,7 @@ describe("VET-725: asked-state regression pack", () => {
     expect(response2.status).toBe(200);
     assertVet725AskedStatePayloadSafe(payload2);
     expect(payload2.type).toBe("question");
-    // The raw-text fallback records the sanitized full message as the answer
+    expect(mockExtractWithQwen).not.toHaveBeenCalled();
     expect(payload2.session.extracted_answers.vomit_duration).toBe(secondTurnMessage);
     expect(payload2.session.answered_questions).toContain(askedOnTurn1);
     expect(payload2.session.last_question_asked).not.toBe(askedOnTurn1);

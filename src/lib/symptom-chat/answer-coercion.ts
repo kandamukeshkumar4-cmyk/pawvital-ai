@@ -71,6 +71,7 @@ export function coerceAnswerForQuestion(
 ): string | boolean | number | null {
   const question = FOLLOW_UP_QUESTIONS[questionId];
   const message = rawMessage.trim();
+  const normalized = normalizeIntentText(message);
   const lower = message.toLowerCase();
 
   if (!question || !message) return null;
@@ -91,18 +92,19 @@ export function coerceAnswerForQuestion(
       }
     }
 
-    const words = lower.split(/\s+/).filter(Boolean);
+    const words = normalized.split(/\s+/).filter(Boolean);
     if (
-      /(^|\b)(yes|yeah|yep|true)\b/.test(lower) ||
+      hasLeadingAffirmativeCue(normalized) ||
       (words.length <= 3 &&
-        /^(it is|he is|she is|there is|does|has|is)$/.test(lower))
+        /^(it is|he is|she is|there is|does|has|is)$/.test(normalized))
     ) {
       return true;
     }
     if (
-      /(^|\b)(no|nope|none|not really|false)\b/.test(lower) ||
+      hasLeadingNegativeCue(normalized) ||
+      isShortNegativeResponse(normalized) ||
       (words.length <= 4 &&
-        /^(doesn't|doesnt|isn't|isnt|hasn't|hasnt|not)$/.test(lower))
+        /^(doesn't|doesnt|isn't|isnt|hasn't|hasnt|not)$/.test(normalized))
     ) {
       return false;
     }
@@ -248,6 +250,31 @@ function isShortNegativeResponse(lower: string): boolean {
   );
 }
 
+function hasLeadingAffirmativeCue(normalized: string): boolean {
+  return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely)\b/.test(
+    normalized
+  );
+}
+
+function hasLeadingNegativeCue(normalized: string): boolean {
+  return /^(no|nope|nah|false)\b/.test(normalized);
+}
+
+export function coerceCanonicalUnknownReply(
+  rawMessage: string
+): "unknown" | null {
+  const normalized = normalizeIntentText(rawMessage);
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^(skip|pass|prefer not to say|rather not say)$/.test(normalized)) {
+    return "unknown";
+  }
+
+  return coerceAmbiguousReplyToUnknown(rawMessage);
+}
+
 function isShortUnknownResponse(lower: string): boolean {
   const normalized = normalizeIntentText(lower);
   return /^(i don't know|i dont know|dont know|do not know|not sure|unsure|unknown|can't tell|cant tell|cannot tell|maybe)$/.test(
@@ -292,7 +319,7 @@ export function shouldClarifyAmbiguousReplyForQuestion(
 function isAmbiguousFollowUpReply(rawMessage: string): boolean {
   const normalized = normalizeIntentText(rawMessage);
   return (
-    coerceAmbiguousReplyToUnknown(rawMessage) !== null ||
+    coerceCanonicalUnknownReply(rawMessage) !== null ||
     /\bi (?:do not|don't|dont) (?:really )?know\b/.test(normalized) ||
     /\bi(?: am|'m)? not sure\b/.test(normalized) ||
     /\b(?:can(?:not|'t)|cant) (?:really )?tell\b/.test(normalized) ||
@@ -337,7 +364,7 @@ export function coerceChoiceAnswerFromIntent(
     questionAllowsCanonicalUnknown(question) &&
     !shouldClarifyAmbiguousReplyForQuestion(questionId)
   ) {
-    const unknownCoercion = coerceAmbiguousReplyToUnknown(rawMessage);
+    const unknownCoercion = coerceCanonicalUnknownReply(rawMessage);
     if (unknownCoercion !== null) {
       return unknownCoercion;
     }
@@ -489,6 +516,28 @@ export function coerceChoiceAnswerFromIntent(
         ["none"],
         ["absent"],
       ]);
+    }
+  }
+
+  if (questionId === "trauma_mobility") {
+    if (
+      /\b(can(?:not|'t)? walk|cannot walk|unable to walk|won't walk|wont walk|can't stand|cannot stand|unable to stand|won't stand|wont stand|dragging)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["inability", "stand"]]);
+    }
+
+    if (
+      /\b(can still walk|can walk|still walking|walking slowly|walking carefully|walks but limps)\b/.test(
+        lower
+      )
+    ) {
+      return pickChoiceByPriority(choices, [["walking"]]);
+    }
+
+    if (/\b(limping|hobbling|favoring it)\b/.test(lower)) {
+      return pickChoiceByPriority(choices, [["limping"]]);
     }
   }
 

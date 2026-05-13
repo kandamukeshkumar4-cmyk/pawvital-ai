@@ -1,7 +1,8 @@
-import {
-  createSession,
-  type TriageSession,
-} from "@/lib/triage-engine";
+jest.mock("@/lib/nvidia-models", () => ({
+  extractWithQwen: jest.fn(),
+}));
+
+import { createSession, type TriageSession } from "@/lib/triage-engine";
 import { getDeterministicFastPathExtraction } from "@/lib/symptom-chat/context-helpers";
 
 function buildPendingSession(

@@ -13,9 +13,9 @@ import {
 } from "@/lib/image-gate";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
 import { isInternalTelemetry } from "@/lib/sidecar-observability";
-import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   coerceAnswerForQuestion,
+  coerceCanonicalUnknownReply,
   coerceChoiceAnswerFromIntent,
   normalizeChoiceLabel,
   normalizeIntentText,
@@ -23,7 +23,10 @@ import {
   shouldEscalateForUnknown,
   shouldClarifyAmbiguousReplyForQuestion,
 } from "@/lib/symptom-chat/answer-coercion";
-import { sanitizeAnswerForQuestion } from "@/lib/symptom-chat/answer-extraction";
+import {
+  deriveDeterministicAnswerForQuestion,
+  sanitizeAnswerForQuestion,
+} from "@/lib/symptom-chat/answer-extraction";
 import { extractSymptomsFromKeywords } from "@/lib/symptom-chat/extraction-helpers";
 
 const SAFE_FOLLOW_UP_UNKNOWN_QUESTION_IDS = new Set([
@@ -90,6 +93,13 @@ function coerceExtendedFollowUpUnknown(
 const PENDING_FAST_PATH_STRING_ENTITY_QUESTION_IDS = new Set([
   "which_leg",
   "wound_location",
+  "toxin_exposure",
+  "vomit_content",
+]);
+
+const PENDING_FAST_PATH_DERIVED_QUESTION_IDS = new Set([
+  "weight_bearing",
+  "trauma_mobility",
 ]);
 
 function questionLooksDurationLike(question: {
@@ -113,6 +123,16 @@ function coercePendingFastPathAnswer(
   questionId: string,
   rawMessage: string
 ): string | boolean | number | null {
+  if (PENDING_FAST_PATH_DERIVED_QUESTION_IDS.has(questionId)) {
+    const deterministicAnswer = deriveDeterministicAnswerForQuestion(
+      questionId,
+      rawMessage
+    );
+    if (deterministicAnswer !== null) {
+      return deterministicAnswer;
+    }
+  }
+
   if (PENDING_FAST_PATH_STRING_ENTITY_QUESTION_IDS.has(questionId)) {
     return sanitizeAnswerForQuestion(questionId, rawMessage);
   }
@@ -131,7 +151,7 @@ function hasLongUnknownLikeReply(rawMessage: string): boolean {
 }
 
 function startsWithAnchoredBooleanCue(normalizedMessage: string): boolean {
-  return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely|no|nope|nah|not really|not at all|no way|it's not|its not|not)\b/.test(
+  return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely|no|nope|nah|false)\b/.test(
     normalizedMessage
   );
 }
@@ -177,17 +197,25 @@ function shouldAllowLongPendingAnswerFastPath(
   normalizedMessage: string,
   coercedAnswer: string | boolean | number
 ): boolean {
+  const deterministicAnswer = PENDING_FAST_PATH_DERIVED_QUESTION_IDS.has(
+    questionId
+  )
+    ? deriveDeterministicAnswerForQuestion(questionId, rawMessage)
+    : null;
+
   if (question.data_type === "boolean") {
     return (
       typeof coercedAnswer === "boolean" &&
-      startsWithAnchoredBooleanCue(normalizedMessage)
+      (startsWithAnchoredBooleanCue(normalizedMessage) ||
+        deterministicAnswer !== null)
     );
   }
 
   if (question.data_type === "choice") {
     return (
       typeof coercedAnswer === "string" &&
-      (coerceChoiceAnswerFromIntent(questionId, rawMessage) !== null ||
+      (deterministicAnswer !== null ||
+        coerceChoiceAnswerFromIntent(questionId, rawMessage) !== null ||
         messageMatchesChoiceLabel(question, normalizedMessage) ||
         startsWithAnchoredBooleanCue(normalizedMessage))
     );
@@ -199,6 +227,7 @@ function shouldAllowLongPendingAnswerFastPath(
 
   if (
     questionLooksDurationLike(question) &&
+    !/[.!?].+[.!?]/.test(rawMessage) &&
     (hasDurationLikeSignal(normalizedMessage) ||
       shouldAllowPendingUnknownFastPath(questionId, question, rawMessage))
   ) {
@@ -499,7 +528,7 @@ export function getDeterministicFastPathExtraction(
     questionAllowsCanonicalUnknown(question) &&
     !shouldClarifyAmbiguousReplyForQuestion(pendingQuestionId)
   ) {
-    const unknownCoercion = coerceAmbiguousReplyToUnknown(trimmed);
+    const unknownCoercion = coerceCanonicalUnknownReply(trimmed);
     if (unknownCoercion !== null) {
       return {
         symptoms: [],
