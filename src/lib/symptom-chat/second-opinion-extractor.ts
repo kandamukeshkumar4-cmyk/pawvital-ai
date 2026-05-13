@@ -234,7 +234,12 @@ export async function extractSecondOpinionPendingAnswer({
       : { status: "skipped" };
   }
 
-  const question = FOLLOW_UP_QUESTIONS[pendingQuestionId];
+  if (!pendingQuestionId) {
+    return { status: "skipped", reason: "no_pending_question" };
+  }
+
+  const activePendingQuestionId = pendingQuestionId;
+  const question = FOLLOW_UP_QUESTIONS[activePendingQuestionId];
   if (!question) {
     return { status: "rejected", reason: "unsafe_inference" };
   }
@@ -243,7 +248,7 @@ export async function extractSecondOpinionPendingAnswer({
     const rawResponse = await withTimeout(
       modelCaller(
         buildSecondOpinionPrompt({
-          pendingQuestionId,
+          pendingQuestionId: activePendingQuestionId,
           question,
           ownerMessage,
         })
@@ -252,7 +257,7 @@ export async function extractSecondOpinionPendingAnswer({
     );
 
     return parseSecondOpinionExtractorResponse(rawResponse, {
-      pendingQuestionId,
+      pendingQuestionId: activePendingQuestionId,
       ownerMessage,
       knownSymptomsBeforeTurn,
     });
@@ -294,7 +299,10 @@ function normalizeForPhraseMatch(value: string): string {
 }
 
 function normalizeNumberWords(value: string): string {
-  return value.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g, (word) => NUMBER_WORDS[word] ?? word);
+  return value.replace(
+    /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g,
+    (word) => NUMBER_WORDS[word] ?? word
+  );
 }
 
 function introducesNewSymptomOutsidePendingAnswer(
@@ -325,7 +333,7 @@ function normalizeAnswerValue(
     if (typeof rawValue === "boolean") {
       return rawValue;
     }
-    return coerceAnswerForQuestion(questionId, rawValue);
+    return coerceAnswerForQuestion(questionId, String(rawValue));
   }
 
   if (question.data_type === "number") {
