@@ -6,6 +6,7 @@ import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
 import {
   coerceAnswerForQuestion,
+  coerceCanonicalUnknownReply,
   coerceChoiceAnswerFromIntent,
   questionAllowsCanonicalUnknown,
   sanitizePendingRawAnswer,
@@ -75,7 +76,7 @@ function coerceFallbackAnswerForPendingQuestion(
     questionAllowsCanonicalUnknown(question) &&
     !shouldClarifyAmbiguousReplyForQuestion(questionId)
   ) {
-    const unknownCoercion = coerceAmbiguousReplyToUnknown(rawMessage);
+    const unknownCoercion = coerceCanonicalUnknownReply(rawMessage);
     if (unknownCoercion !== null) {
       return unknownCoercion;
     }
@@ -121,13 +122,15 @@ export function extractDeterministicAnswersForTurn(
   return answers;
 }
 
-function deriveDeterministicAnswerForQuestion(
+export function deriveDeterministicAnswerForQuestion(
   questionId: string,
   rawMessage: string
 ): string | boolean | number | null {
   switch (questionId) {
     case "which_leg":
-      return extractLegLocation(rawMessage);
+      return extractLegLocation(rawMessage, {
+        allowDistalLimbTerms: true,
+      });
     case "wound_location":
       return extractBodyLocation(rawMessage);
     case "limping_onset":
@@ -417,9 +420,15 @@ export function sanitizeAnswerForQuestion(
 
   switch (questionId) {
     case "which_leg":
-      return extractLegLocation(trimmed);
+      return extractLegLocation(trimmed, {
+        allowDistalLimbTerms: true,
+      });
     case "wound_location":
       return extractBodyLocation(trimmed);
+    case "toxin_exposure":
+      return sanitizePendingToxinExposure(trimmed);
+    case "vomit_content":
+      return sanitizePendingVomitContent(trimmed);
     case "limping_onset":
       return extractLimpingOnset(trimmed) ? trimmed : null;
     case "limping_progression":
@@ -439,20 +448,75 @@ export function sanitizeAnswerForQuestion(
   }
 }
 
-function extractLegLocation(rawMessage: string): string | null {
+function sanitizePendingToxinExposure(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+  const canonicalSubstances: Array<[RegExp, string]> = [
+    [/\b(ibuprofen|advil|motrin)\b/, "ibuprofen"],
+    [/\b(naproxen|aleve)\b/, "naproxen"],
+    [/\b(acetaminophen|tylenol)\b/, "acetaminophen"],
+    [/\b(aspirin)\b/, "aspirin"],
+    [/\b(rat poison|rodenticide|mouse bait|bait station)\b/, "rat poison"],
+    [/\b(xylitol)\b/, "xylitol"],
+    [/\b(chocolate|cocoa)\b/, "chocolate"],
+    [/\b(grapes|raisins)\b/, "grapes or raisins"],
+    [/\b(antifreeze|ethylene glycol)\b/, "antifreeze"],
+    [/\b(marijuana|cannabis|thc)\b/, "marijuana"],
+  ];
+
+  for (const [pattern, canonicalValue] of canonicalSubstances) {
+    if (pattern.test(lower)) {
+      return canonicalValue;
+    }
+  }
+
+  return null;
+}
+
+function sanitizePendingVomitContent(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(green bile|yellow bile|bile|bright green vomit|green vomit|green fluid|yellow fluid)\b/.test(
+      lower
+    )
+  ) {
+    return "bile";
+  }
+
+  if (/\b(foam|foamy|froth|frothy)\b/.test(lower)) {
+    return "foam";
+  }
+
+  if (/\b(food|undigested food|kibble|grass)\b/.test(lower)) {
+    return "food";
+  }
+
+  return null;
+}
+
+function extractLegLocation(
+  rawMessage: string,
+  options?: { allowDistalLimbTerms?: boolean }
+): string | null {
   const lower = rawMessage.toLowerCase();
   const side = /\bleft\b/.test(lower)
     ? "left"
     : /\bright\b/.test(lower)
       ? "right"
       : "";
+  const allowDistalLimbTerms = options?.allowDistalLimbTerms ?? false;
+  const mentionsLegContext =
+    /\bleg\b/.test(lower) ||
+    /\b(back|hind|rear|front|fore)\b/.test(lower) ||
+    (allowDistalLimbTerms &&
+      /\b(paw|foot|feet|toe|toes|digit|digits)\b/.test(lower));
   const position = /\b(back|hind|rear)\b/.test(lower)
     ? "back"
     : /\b(front|fore)\b/.test(lower)
       ? "front"
       : "";
 
-  if (!side) {
+  if (!side || !mentionsLegContext) {
     return null;
   }
 
@@ -679,6 +743,7 @@ function extractRatPoisonAccess(rawMessage: string): boolean | null {
 
 function extractToxinExposure(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
+
   if (
     /\b(rat poison|rodenticide|mouse bait|bait station|xylitol|chocolate|grapes|raisins|antifreeze|ibuprofen|naproxen|acetaminophen|marijuana|cannabis)\b/.test(
       lower
@@ -693,6 +758,14 @@ function extractToxinExposure(rawMessage: string): string | null {
 function extractWeightBearingStatus(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
+  if (
+    /\b(partial(?:ly)? weight|partially weight|partial weight|toe touching|touching toes|favoring it|limping but walking)\b/.test(
+      lower
+    )
+  ) {
+    return "partial";
+  }
+
   if (/\bnon[_\s-]?weight[_\s-]?bearing\b/.test(lower)) {
     return "non_weight_bearing";
   }
@@ -706,14 +779,6 @@ function extractWeightBearingStatus(rawMessage: string): string | null {
     )
   ) {
     return "non_weight_bearing";
-  }
-
-  if (
-    /\b(partial weight|barely putting weight|toe touching|touching toes|favoring it|limping but walking)\b/.test(
-      lower
-    )
-  ) {
-    return "partial";
   }
 
   if (/\b(putting weight|bearing weight|walking on it|still using it)\b/.test(lower)) {
@@ -761,7 +826,7 @@ function extractTraumaMobility(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
   if (
-    /\b(can'?t use (his|her|their)? ?back legs|cannot use (his|her|their)? ?back legs|dragging (himself|herself|themself)|dragging (his|her|their) back legs|paraly[sz]ed|can'?t stand|unable to stand|barely stand)\b/.test(
+    /\b(can'?t use (his|her|their)? ?back legs|cannot use (his|her|their)? ?back legs|dragging (himself|herself|themself)|dragging (his|her|their) back legs|paraly[sz]ed|can'?t stand|unable to stand|barely stand|can'?t walk|cannot walk|won't walk|wont walk)\b/.test(
       lower
     )
   ) {
@@ -772,7 +837,7 @@ function extractTraumaMobility(rawMessage: string): string | null {
     return "limping";
   }
 
-  if (/\bwalking|still walking|walking okay\b/.test(lower)) {
+  if (/\bwalking|still walking|walking okay|can still walk|can walk\b/.test(lower)) {
     return "walking";
   }
 
