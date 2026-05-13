@@ -741,6 +741,7 @@ export function sanitizeSessionForClient(
 
   const safeMemory = { ...session.case_memory };
   delete safeMemory.clarification_reasons;
+  delete safeMemory.model_budget_state;
   const sanitizedMemory = {
     ...safeMemory,
     service_observations: sanitizeServiceObservationsForClient(

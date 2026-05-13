@@ -541,5 +541,43 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     expect(
       payload.session.case_memory?.clarification_attempts?.cough_type
     ).toBe(1);
+    expect(payload.session.case_memory?.model_budget_state).toBeUndefined();
+  });
+
+  it("fails closed to the repeat guard when the second-opinion session budget is exhausted", async () => {
+    process.env.SECOND_OPINION_EXTRACTOR = "on";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+      unresolved: true,
+    });
+    session.case_memory = {
+      ...session.case_memory,
+      model_budget_state: {
+        callCounts: {
+          second_opinion: 2,
+        },
+        circuitOpen: {},
+      },
+    };
+
+    const { response, payload } = await postTurn(
+      session,
+      "It has a honking sound."
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(payload.type).toBe("cannot_assess");
+    expect(payload.session.extracted_answers.cough_type).toBeUndefined();
+    expect(payload.session.answered_questions).not.toContain("cough_type");
+    expect(payload.session.case_memory?.pending_question_id).not.toBe("cough_type");
+    expect(payload.session.case_memory?.model_budget_state).toBeUndefined();
   });
 });

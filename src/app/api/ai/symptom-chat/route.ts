@@ -124,6 +124,8 @@ import {
   extractSecondOpinionPendingAnswer,
   getSecondOpinionExtractorMode,
 } from "@/lib/symptom-chat/second-opinion-extractor";
+import { createModelBudgetState } from "@/lib/model-budget";
+import { getModelRoute } from "@/lib/model-router";
 import {
   buildAlternateObservableRecoveryResponse,
   buildImageGateMessage,
@@ -1424,7 +1426,19 @@ export async function POST(request: Request) {
           deterministicResolved: pendingQResolvedThisTurn,
           clarificationAttempts: getClarificationAttemptCount(session, pendingQ),
           knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
+          budgetState: createModelBudgetState(
+            ensureStructuredCaseMemory(session).model_budget_state
+          ),
         });
+        if (secondOpinionResult.budgetState) {
+          session = {
+            ...session,
+            case_memory: {
+              ...ensureStructuredCaseMemory(session),
+              model_budget_state: secondOpinionResult.budgetState,
+            },
+          };
+        }
         if (
           secondOpinionResult.status !== "skipped" ||
           secondOpinionResult.reason
@@ -1449,7 +1463,7 @@ export async function POST(request: Request) {
             model:
               secondOpinionResult.status === "skipped"
                 ? undefined
-                : "Qwen-3.5-122B",
+                : getModelRoute("extraction").primaryModel,
             pending_before: hadUnresolved,
             pending_after: !(
               secondOpinionMode === "on" &&

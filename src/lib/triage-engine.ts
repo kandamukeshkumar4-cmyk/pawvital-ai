@@ -23,6 +23,7 @@ import type {
   VisionClinicalEvidence,
   VisionPreprocessResult,
 } from "./clinical-evidence";
+import type { ModelBudgetState } from "./model-budget";
 
 // --- Session State ---
 
@@ -88,6 +89,7 @@ export interface StructuredCaseMemory {
   service_observations: SidecarObservation[];
   shadow_comparisons: ShadowComparisonRecord[];
   ambiguity_flags: string[];
+  model_budget_state?: ModelBudgetState;
   latest_owner_turn?: string;
   compressed_summary?: string;
   compression_model?: string;
@@ -149,6 +151,10 @@ export function createSession(): TriageSession {
       service_observations: [],
       shadow_comparisons: [],
       ambiguity_flags: [],
+      model_budget_state: {
+        callCounts: {},
+        circuitOpen: {},
+      },
     },
   };
 }

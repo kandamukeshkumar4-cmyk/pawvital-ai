@@ -2,6 +2,17 @@ import {
   FOLLOW_UP_QUESTIONS,
   type FollowUpQuestion,
 } from "@/lib/clinical-matrix";
+import {
+  createModelBudgetState,
+  getModelBudgetPolicy,
+  reserveModelBudgetCall,
+  type ModelBudgetState,
+} from "@/lib/model-budget";
+import {
+  getSecondOpinionExtractorMode as getRouterSecondOpinionExtractorMode,
+  type ModelFallbackReason,
+  type ModelFeatureMode,
+} from "@/lib/model-router";
 import { complete } from "@/lib/nvidia-models";
 import {
   coerceAnswerForQuestion,
@@ -12,7 +23,7 @@ import {
 import { sanitizeAnswerForQuestion } from "@/lib/symptom-chat/answer-extraction";
 import { extractSymptomsFromKeywords } from "@/lib/symptom-chat/extraction-helpers";
 
-export type SecondOpinionExtractorMode = "off" | "shadow" | "on";
+export type SecondOpinionExtractorMode = ModelFeatureMode;
 
 export type SecondOpinionReason =
   | "no_pending_question"
@@ -22,7 +33,11 @@ export type SecondOpinionReason =
   | "low_confidence"
   | "unsafe_inference"
   | "timeout"
-  | "provider_error";
+  | "provider_error"
+  | Extract<
+      ModelFallbackReason,
+      "budget_exceeded" | "feature_disabled" | "circuit_open"
+    >;
 
 export interface SecondOpinionAcceptedAnswer {
   answered: true;
@@ -37,10 +52,12 @@ export type SecondOpinionParseResult =
   | {
       status: "accepted";
       answer: SecondOpinionAcceptedAnswer;
+      budgetState?: ModelBudgetState;
     }
   | {
       status: "rejected";
       reason: SecondOpinionReason;
+      budgetState?: ModelBudgetState;
     };
 
 export type SecondOpinionExtractionResult =
@@ -48,12 +65,12 @@ export type SecondOpinionExtractionResult =
   | {
       status: "skipped" | "failed";
       reason?: SecondOpinionReason;
+      budgetState?: ModelBudgetState;
     };
 
 type ModelCaller = (prompt: string) => Promise<string>;
 
 const CONFIDENCE_THRESHOLD = 0.82;
-const DEFAULT_TIMEOUT_MS = 8_000;
 const STRING_ANSWER_MAX_LENGTH = 160;
 
 const NUMBER_WORDS: Record<string, string> = {
@@ -74,11 +91,7 @@ const NUMBER_WORDS: Record<string, string> = {
 export function getSecondOpinionExtractorMode(
   rawValue = process.env.SECOND_OPINION_EXTRACTOR
 ): SecondOpinionExtractorMode {
-  const normalized = rawValue?.trim().toLowerCase();
-  if (normalized === "shadow" || normalized === "on") {
-    return normalized;
-  }
-  return "off";
+  return getRouterSecondOpinionExtractorMode(rawValue);
 }
 
 export function shouldAttemptSecondOpinionExtraction({
@@ -206,7 +219,8 @@ export async function extractSecondOpinionPendingAnswer({
   deterministicResolved,
   clarificationAttempts,
   knownSymptomsBeforeTurn = [],
-  timeoutMs = DEFAULT_TIMEOUT_MS,
+  timeoutMs = getModelBudgetPolicy("second_opinion").timeoutMs,
+  budgetState,
   modelCaller = callSecondOpinionModel,
 }: {
   mode: SecondOpinionExtractorMode;
@@ -217,8 +231,10 @@ export async function extractSecondOpinionPendingAnswer({
   clarificationAttempts: number;
   knownSymptomsBeforeTurn?: string[];
   timeoutMs?: number;
+  budgetState?: ModelBudgetState;
   modelCaller?: ModelCaller;
 }): Promise<SecondOpinionExtractionResult> {
+  const shouldExposeBudgetState = budgetState !== undefined;
   const decision = shouldAttemptSecondOpinionExtraction({
     mode,
     pendingQuestionId,
@@ -230,18 +246,43 @@ export async function extractSecondOpinionPendingAnswer({
 
   if (!decision.shouldRun) {
     return decision.reason
-      ? { status: "skipped", reason: decision.reason }
-      : { status: "skipped" };
+      ? attachBudgetState(
+          { status: "skipped", reason: decision.reason },
+          shouldExposeBudgetState ? budgetState : undefined
+        )
+      : attachBudgetState(
+          { status: "skipped" },
+          shouldExposeBudgetState ? budgetState : undefined
+        );
   }
 
   if (!pendingQuestionId) {
-    return { status: "skipped", reason: "no_pending_question" };
+    return attachBudgetState(
+      { status: "skipped", reason: "no_pending_question" },
+      shouldExposeBudgetState ? budgetState : undefined
+    );
   }
 
   const activePendingQuestionId = pendingQuestionId;
   const question = FOLLOW_UP_QUESTIONS[activePendingQuestionId];
   if (!question) {
-    return { status: "rejected", reason: "unsafe_inference" };
+    return attachBudgetState(
+      { status: "rejected", reason: "unsafe_inference" },
+      shouldExposeBudgetState ? budgetState : undefined
+    );
+  }
+
+  const reservedBudget = reserveModelBudgetCall({
+    feature: "second_opinion",
+    mode,
+    state: budgetState,
+  });
+  if (!reservedBudget.allowed) {
+    return {
+      status: "skipped",
+      reason: reservedBudget.reason,
+      budgetState: reservedBudget.state,
+    };
   }
 
   try {
@@ -256,16 +297,22 @@ export async function extractSecondOpinionPendingAnswer({
       timeoutMs
     );
 
-    return parseSecondOpinionExtractorResponse(rawResponse, {
-      pendingQuestionId: activePendingQuestionId,
-      ownerMessage,
-      knownSymptomsBeforeTurn,
-    });
+    return attachBudgetState(
+      parseSecondOpinionExtractorResponse(rawResponse, {
+        pendingQuestionId: activePendingQuestionId,
+        ownerMessage,
+        knownSymptomsBeforeTurn,
+      }),
+      shouldExposeBudgetState ? reservedBudget.state : undefined
+    );
   } catch (error) {
-    return {
-      status: "failed",
-      reason: isTimeoutError(error) ? "timeout" : "provider_error",
-    };
+    return attachBudgetState(
+      {
+        status: "failed",
+        reason: isTimeoutError(error) ? "timeout" : "provider_error",
+      },
+      shouldExposeBudgetState ? reservedBudget.state : undefined
+    );
   }
 }
 
@@ -542,4 +589,18 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
 function isTimeoutError(error: unknown): boolean {
   return error instanceof Error && error.message === "second-opinion-timeout";
+}
+
+function attachBudgetState<T extends SecondOpinionExtractionResult>(
+  result: T,
+  budgetState?: ModelBudgetState
+): T {
+  if (!budgetState) {
+    return result;
+  }
+
+  return {
+    ...result,
+    budgetState: createModelBudgetState(budgetState),
+  };
 }

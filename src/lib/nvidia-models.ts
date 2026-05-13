@@ -1,205 +1,41 @@
 import OpenAI from "openai";
 import type { VisionPreprocessResult } from "./clinical-evidence";
 import { safeParseJson, stripThinkingBlocks } from "./llm-output";
+import {
+  MODELS,
+  getModelProviderChain,
+  getModelsToTry,
+  getNarrowPackRuntimeConfig,
+  getNvidiaRuntimeConfig,
+  getProviderLabel,
+  getRoleConcurrencyLimit,
+  getRoleTimeoutMs,
+  isLikelyPlaceholderKey,
+  isNarrowPackConfigured,
+  isNvidiaConfigured,
+  isNvidiaRoleConfigured,
+  isVisionPipelineConfigured,
+  resolveNvidiaApiKey,
+  type ModelProvider,
+  type ModelRole,
+} from "./model-router";
 
 // =============================================================================
 // Hybrid AI Model Client
 // Text roles can prefer the RunPod narrow pack; vision stays on NVIDIA NIM.
 // =============================================================================
 
-const NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
-type ModelProvider = "nvidia" | "narrow-pack";
-
-function readEnvKey(name: string): string | null {
-  const value = process.env[name]?.trim();
-  if (!value || isLikelyPlaceholderKey(value)) {
-    return null;
-  }
-  return value;
-}
-
-/** Per role: optional role-specific key first, then shared NVIDIA_API_KEY. */
-const ROLE_ENV_PRIORITY = {
-  extraction: ["NVIDIA_QWEN_API_KEY", "NVIDIA_API_KEY"],
-  phrasing: ["NVIDIA_API_KEY"],
-  phrasing_verifier: ["NVIDIA_API_KEY"],
-  diagnosis: ["NVIDIA_DEEPSEEK_API_KEY", "NVIDIA_API_KEY"],
-  safety: ["NVIDIA_GLM_API_KEY", "NVIDIA_API_KEY"],
-  vision_fast: ["NVIDIA_API_KEY"],
-  vision_detailed: ["NVIDIA_API_KEY"],
-  vision_deep: ["NVIDIA_KIMI_API_KEY", "NVIDIA_API_KEY"],
-} as const;
-
-// --- Model Definitions ---
-// Each model is assigned a role based on its strengths
-
-export const MODELS = {
-  // Qwen 3.5 122B — fast, accurate structured data extraction
-  // (397B available as fallback but too slow for real-time chat)
-  extraction: {
-    name: "qwen/qwen3.5-122b-a10b",
-    fallback: "qwen/qwen3.5-397b-a17b",
-    role: "Data Extraction" as const,
-  },
-  // Llama 3.3 70B — natural language, empathetic phrasing
-  phrasing: {
-    name: "meta/llama-3.3-70b-instruct",
-    fallback: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-    role: "Question Phrasing" as const,
-  },
-  phrasing_verifier: {
-    name: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-    fallback: "meta/llama-3.3-70b-instruct",
-    role: "Question Verification" as const,
-  },
-  // Nemotron Ultra 253B — NVIDIA's most powerful model for clinical diagnosis
-  // (DeepSeek V3.2 as fallback; R1/V3.1 have CUDA issues on NIM)
-  diagnosis: {
-    name: "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-    fallback: "deepseek-ai/deepseek-v3.2",
-    role: "Diagnosis Report" as const,
-  },
-  // GLM-5 — safety verification layer
-  safety: {
-    name: "z-ai/glm5",
-    fallback: null,
-    role: "Safety Verification" as const,
-  },
-  // ── 3-Tier Vision Pipeline ──
-  // Tier 1: Llama 3.2 11B Vision — fast triage + wound detection
-  vision_fast: {
-    name: "meta/llama-3.2-11b-vision-instruct",
-    fallback: "meta/llama-4-maverick-17b-128e-instruct",
-    role: "Fast Triage" as const,
-  },
-  // Tier 2: Llama 3.2 90B Vision — detailed wound feature extraction
-  vision_detailed: {
-    name: "meta/llama-3.2-90b-vision-instruct",
-    fallback: "meta/llama-4-maverick-17b-128e-instruct",
-    role: "Detailed Analysis" as const,
-  },
-  // Tier 3: Kimi K2.5 — deep clinical reasoning, 256K context, multi-image
-  vision_deep: {
-    name: "moonshotai/kimi-k2.5",
-    fallback: null,
-    role: "Deep Reasoning" as const,
-  },
-} as const;
-
-export type ModelRole = keyof typeof MODELS;
-type TextModelRole = Exclude<
-  ModelRole,
-  "vision_fast" | "vision_detailed" | "vision_deep"
->;
-
-const REQUIRED_TEXT_ROLES: TextModelRole[] = [
-  "extraction",
-  "phrasing",
-  "diagnosis",
-  "safety",
-];
-const NARROW_PACK_ROLES = new Set<TextModelRole>([
-  "extraction",
-  "phrasing",
-  "diagnosis",
-  "safety",
-]);
-
-export function isLikelyPlaceholderKey(key: string): boolean {
-  const normalized = key.trim();
-  if (!normalized) {
-    return true;
-  }
-
-  return (
-    normalized === "placeholder" ||
-    normalized === "replace-me" ||
-    normalized === "nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY" ||
-    normalized.startsWith("your_") ||
-    /replace[_-]?with/i.test(normalized)
-  );
-}
-
-export function resolveNvidiaApiKey(role: ModelRole): string | null {
-  for (const envName of ROLE_ENV_PRIORITY[role]) {
-    const value = readEnvKey(envName);
-    if (value) {
-      return value;
-    }
-  }
-
-  return null;
-}
-
-export function isNvidiaRoleConfigured(role: ModelRole): boolean {
-  return resolveNvidiaApiKey(role) !== null;
-}
-
-function isNarrowPackEnabledFlag(value: string | undefined): boolean {
-  const normalized = value?.trim().toLowerCase();
-  if (!normalized) {
-    return false;
-  }
-
-  return !["0", "false", "no", "off"].includes(normalized);
-}
-
-function resolveNarrowPackUrl(): string | null {
-  const value = readEnvKey("HF_NARROW_MODEL_PACK_URL");
-  return value ? value.replace(/\/+$/, "") : null;
-}
-
-function resolveSidecarApiKey(): string | null {
-  return readEnvKey("HF_SIDECAR_API_KEY");
-}
-
-export function isNarrowPackConfigured(): boolean {
-  return (
-    isNarrowPackEnabledFlag(process.env.NARROW_PACK_ENABLED) &&
-    resolveNarrowPackUrl() !== null &&
-    resolveSidecarApiKey() !== null
-  );
-}
-
-function canUseNarrowPack(role: ModelRole): role is TextModelRole {
-  return isNarrowPackConfigured() && NARROW_PACK_ROLES.has(role as TextModelRole);
-}
-
-export function getModelProviderChain(role: ModelRole): ModelProvider[] {
-  const providers: ModelProvider[] = [];
-
-  if (canUseNarrowPack(role)) {
-    providers.push("narrow-pack");
-  }
-  if (isNvidiaRoleConfigured(role)) {
-    providers.push("nvidia");
-  }
-
-  return providers;
-}
-
-export function isVisionPipelineConfigured(): boolean {
-  return isNvidiaRoleConfigured("vision_fast");
-}
-
-const ROLE_CONCURRENCY_LIMITS: Partial<Record<ModelRole, number>> = {
-  extraction: 2,
-  diagnosis: 1,
-  phrasing_verifier: 1,
-  vision_detailed: 1,
-  vision_deep: 1,
+export {
+  MODELS,
+  getModelProviderChain,
+  isLikelyPlaceholderKey,
+  isNarrowPackConfigured,
+  isNvidiaConfigured,
+  isNvidiaRoleConfigured,
+  isVisionPipelineConfigured,
+  resolveNvidiaApiKey,
 };
-
-const ROLE_TIMEOUT_MS: Record<ModelRole, number> = {
-  extraction: 45000,
-  phrasing: 12000,
-  phrasing_verifier: 20000,
-  diagnosis: 150000,
-  safety: 30000,
-  vision_fast: 30000,
-  vision_detailed: 90000,
-  vision_deep: 45000,
-};
+export type { ModelRole };
 
 const roleInflight = new Map<ModelRole, number>();
 const roleQueues = new Map<ModelRole, Array<() => void>>();
@@ -208,7 +44,7 @@ async function withRoleConcurrency<T>(
   role: ModelRole,
   fn: () => Promise<T>
 ): Promise<T> {
-  const limit = ROLE_CONCURRENCY_LIMITS[role];
+  const limit = getRoleConcurrencyLimit(role);
   if (!limit) return fn();
 
   const active = roleInflight.get(role) ?? 0;
@@ -249,24 +85,20 @@ function parseLooseJsonObject(input: string): Record<string, unknown> {
 
 function createClient(role: ModelRole, provider: ModelProvider): OpenAI | null {
   if (provider === "narrow-pack") {
-    if (!canUseNarrowPack(role)) {
-      return null;
-    }
+    const runtime = getNarrowPackRuntimeConfig();
+    if (!runtime) return null;
 
-    const baseURL = resolveNarrowPackUrl();
-    const apiKey = resolveSidecarApiKey();
-    if (!baseURL || !apiKey) return null;
-
-    return new OpenAI({ baseURL, apiKey });
+    return new OpenAI(runtime);
   }
 
-  const apiKey = resolveNvidiaApiKey(role);
-  if (!apiKey) return null;
+  if (provider === "grok") {
+    return null;
+  }
 
-  return new OpenAI({
-    baseURL: NVIDIA_BASE_URL,
-    apiKey,
-  });
+  const runtime = getNvidiaRuntimeConfig(role);
+  if (!runtime) return null;
+
+  return new OpenAI(runtime);
 }
 
 const clients = new Map<string, OpenAI>();
@@ -282,14 +114,6 @@ function getClient(role: ModelRole, provider: ModelProvider): OpenAI | null {
   }
 
   return clients.get(cacheKey) || null;
-}
-
-// --- Check if multi-model stack is configured ---
-
-export function isNvidiaConfigured(): boolean {
-  return REQUIRED_TEXT_ROLES.every(
-    (role) => getModelProviderChain(role).length > 0
-  );
 }
 
 function buildSystemPromptForModel(
@@ -314,19 +138,6 @@ function buildModelExtras(model: string): Record<string, unknown> {
     extras.chat_template_kwargs = { enable_thinking: false };
   }
   return extras;
-}
-
-function getModelsToTry(role: ModelRole, provider: ModelProvider): string[] {
-  if (provider === "narrow-pack") {
-    return [MODELS[role].name];
-  }
-
-  const modelsToTry: string[] = [MODELS[role].name];
-  const fallback = MODELS[role].fallback;
-  if (fallback) {
-    modelsToTry.push(fallback);
-  }
-  return modelsToTry;
 }
 
 // --- Generic completion helper ---
@@ -366,7 +177,7 @@ export async function complete({
       }
       messages.push({ role: "user", content: prompt });
 
-      const timeoutMs = ROLE_TIMEOUT_MS[role];
+      const timeoutMs = getRoleTimeoutMs(role);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -406,8 +217,7 @@ export async function complete({
       } catch (err) {
         clearTimeout(timeoutId);
         lastError = err instanceof Error ? err : new Error(String(err));
-        const providerLabel =
-          provider === "narrow-pack" ? "RunPod Narrow Pack" : "NVIDIA";
+        const providerLabel = getProviderLabel(provider);
         console.error(
           `[${providerLabel}] ${model} failed, trying next backend...`,
           lastError.message
@@ -541,7 +351,7 @@ async function callVisionModel(
 
   let lastError: Error | null = null;
   for (const model of modelsToTry) {
-    const timeoutMs = ROLE_TIMEOUT_MS[role];
+    const timeoutMs = getRoleTimeoutMs(role);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
