@@ -35,6 +35,7 @@ import {
 import {
   buildDeterministicCaseSummary,
   ensureStructuredCaseMemory,
+  type TelemetryGateEvent,
 } from "@/lib/symptom-memory";
 import { createModelBudgetState } from "@/lib/model-budget";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
@@ -81,6 +82,10 @@ const URGENCY_TO_RECOMMENDATION: Record<string, string> = {
   moderate: "vet_48h",
   low: "monitor",
 };
+const REPORT_CLAIM_SECTION_PATTERNS = [
+  /top differentials:/i,
+  /recommended diagnostics:/i,
+] as const;
 
 export interface SymptomChatMessage {
   role: string;
@@ -98,6 +103,46 @@ interface GenerateReportInput {
 
 function dedupeStrings(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function hasRemovableReportClaims(summary: string): boolean {
+  return REPORT_CLAIM_SECTION_PATTERNS.some((pattern) => pattern.test(summary));
+}
+
+function buildFinalSafetyTelemetryGateEvents(input: {
+  status: "accepted" | "shadow" | "skipped" | "rejected" | "failed";
+  generatedVetHandoffDraft: string;
+  finalVetHandoffSummary: string;
+  verifierOutput?: {
+    missedRedFlags?: string[];
+  };
+}): TelemetryGateEvent[] {
+  const gateEvents = new Set<TelemetryGateEvent>();
+
+  if (input.status === "accepted" || input.status === "shadow") {
+    gateEvents.add("grok_safety_used");
+  }
+
+  if (input.status === "failed") {
+    gateEvents.add("grok_safety_failed");
+  }
+
+  if (input.status !== "accepted") {
+    gateEvents.add("final_safety_fallback");
+  }
+
+  if ((input.verifierOutput?.missedRedFlags?.length ?? 0) > 0) {
+    gateEvents.add("missed_red_flag_detected");
+  }
+
+  if (
+    hasRemovableReportClaims(input.generatedVetHandoffDraft) &&
+    !hasRemovableReportClaims(input.finalVetHandoffSummary)
+  ) {
+    gateEvents.add("report_claim_removed");
+  }
+
+  return Array.from(gateEvents);
 }
 
 function buildEvidenceSummary(input: {
@@ -749,6 +794,11 @@ export async function generateReport({
       finalReport.async_review_scheduled = true;
     }
 
+    const generatedVetHandoffDraft = buildGeneratedVetHandoffDraft(
+      session,
+      pet,
+      finalReport
+    );
     const finalSafetyResult = await verifyFinalUrgencyAndHandoffSafety({
       mode: getFinalSafetyVerifierMode(),
       session,
@@ -758,11 +808,7 @@ export async function generateReport({
       deterministicRedFlags: Array.from(
         new Set([...context.red_flags, ...session.red_flags_triggered])
       ),
-      generatedVetHandoffDraft: buildGeneratedVetHandoffDraft(
-        session,
-        pet,
-        finalReport
-      ),
+      generatedVetHandoffDraft,
       budgetState: createModelBudgetState(
         ensureStructuredCaseMemory(session).model_budget_state
       ),
@@ -788,6 +834,12 @@ export async function generateReport({
       finalSafetyResult.reason === "budget_exceeded" ||
       finalSafetyResult.reason === "circuit_open"
     ) {
+      const finalSafetyGateEvents = buildFinalSafetyTelemetryGateEvents({
+        status: finalSafetyResult.status,
+        generatedVetHandoffDraft,
+        finalVetHandoffSummary: finalSafetyResult.vetHandoffSummary,
+        verifierOutput: finalSafetyResult.verifierOutput,
+      });
       session = appendSidecarObservation(session, {
         service: "async-review-service",
         stage: "final_safety",
@@ -809,6 +861,12 @@ export async function generateReport({
             ? `reason=${finalSafetyResult.reason}`
             : "",
           `recommendation=${finalSafetyResult.recommendation}`,
+          finalSafetyResult.verifierOutput?.missedRedFlags?.length
+            ? `missed_red_flags=${finalSafetyResult.verifierOutput.missedRedFlags.join(",")}`
+            : "",
+          finalSafetyGateEvents.length > 0
+            ? `gate_events=${finalSafetyGateEvents.join(",")}`
+            : "",
         ]
           .filter(Boolean)
           .join(" | "),

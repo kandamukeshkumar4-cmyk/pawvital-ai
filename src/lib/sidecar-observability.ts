@@ -16,6 +16,8 @@ import {
 } from "./triage-engine";
 import {
   ensureStructuredCaseMemory,
+  TELEMETRY_GATE_EVENTS,
+  type TelemetryGateEvent,
   type NormalizedTerminalOutcomeMetric,
 } from "./symptom-memory";
 
@@ -154,8 +156,41 @@ export const INTERNAL_TELEMETRY_NOTE_MARKERS = [
   "conversation_state=",
   "clarification_reason=",
   "contradiction_records=",
+  "gate_events=",
   "terminal_outcome_metric=",
 ];
+
+function parseTelemetryGateEventsFromNote(
+  note: string | undefined
+): TelemetryGateEvent[] {
+  const noteText = typeof note === "string" ? note : "";
+  const gateEventPart = noteText
+    .split(" | ")
+    .find((part) => part.startsWith("gate_events="));
+
+  if (!gateEventPart) {
+    return [];
+  }
+
+  const allowedEvents = new Set<TelemetryGateEvent>(TELEMETRY_GATE_EVENTS);
+  return gateEventPart
+    .slice("gate_events=".length)
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry): entry is TelemetryGateEvent => allowedEvents.has(entry as TelemetryGateEvent));
+}
+
+export function extractTelemetryGateEventsFromObservations(
+  observations: SidecarObservation[]
+): TelemetryGateEvent[] {
+  return Array.from(
+    new Set(
+      observations.flatMap((observation) =>
+        parseTelemetryGateEventsFromNote(observation.note)
+      )
+    )
+  );
+}
 
 function parseContradictionRecordsFromNote(
   note: string | undefined
