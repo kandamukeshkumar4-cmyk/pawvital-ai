@@ -75,6 +75,16 @@ describe("VET-1424 deterministic answer coercion", () => {
     expect(extraction).toBeNull();
   });
 
+  it("keeps unsafe pending string questions unresolved for canonical unknown skip replies", () => {
+    const session = buildPendingSession(
+      "breathing_onset",
+      ["difficulty_breathing"]
+    );
+    const extraction = getDeterministicFastPathExtraction(session, "skip");
+
+    expect(extraction).toBeNull();
+  });
+
   it("does not coerce a vague negative into a false emergency-red-flag answer", () => {
     const session = buildPendingSession("vomit_blood", ["vomiting"]);
     const extraction = getDeterministicFastPathExtraction(
@@ -165,6 +175,21 @@ describe("VET-1424 deterministic answer coercion", () => {
     const extraction = getDeterministicFastPathExtraction(
       session,
       "He can still walk on it, just slowly and carefully."
+    );
+
+    expect(extraction).toEqual({
+      symptoms: [],
+      answers: {
+        trauma_mobility: "walking",
+      },
+    });
+  });
+
+  it("treats plain can-walk replies as ambulatory mobility", () => {
+    const session = buildPendingSession("trauma_mobility", ["limping"]);
+    const extraction = getDeterministicFastPathExtraction(
+      session,
+      "He can walk, just not very fast."
     );
 
     expect(extraction).toEqual({

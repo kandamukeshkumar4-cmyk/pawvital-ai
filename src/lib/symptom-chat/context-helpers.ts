@@ -150,6 +150,12 @@ function hasLongUnknownLikeReply(rawMessage: string): boolean {
   );
 }
 
+function isExplicitCanonicalUnknownOptOut(normalizedMessage: string): boolean {
+  return /^(skip|pass|prefer not to say|rather not say)$/.test(
+    normalizedMessage
+  );
+}
+
 function startsWithAnchoredBooleanCue(normalizedMessage: string): boolean {
   return /^(yes|yeah|yep|yup|sure|correct|right|true|indeed|exactly|absolutely|definitely|no|nope|nah|false)\b/.test(
     normalizedMessage
@@ -516,6 +522,13 @@ export function getDeterministicFastPathExtraction(
   if (!question) return null;
 
   const normalizedMessage = normalizeIntentText(trimmed);
+
+  if (
+    shouldEscalateForUnknown(pendingQuestionId) &&
+    isExplicitCanonicalUnknownOptOut(normalizedMessage)
+  ) {
+    return null;
+  }
 
   const words = trimmed.split(/\s+/).filter(Boolean);
   const looksShortAnswer =

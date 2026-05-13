@@ -521,7 +521,7 @@ export function coerceChoiceAnswerFromIntent(
 
   if (questionId === "trauma_mobility") {
     if (
-      /\b(can(?:not|'t)? walk|cannot walk|unable to walk|won't walk|wont walk|can't stand|cannot stand|unable to stand|won't stand|wont stand|dragging)\b/.test(
+      /\b(can't walk|cant walk|cannot walk|unable to walk|won't walk|wont walk|can't stand|cant stand|cannot stand|unable to stand|won't stand|wont stand|dragging)\b/.test(
         lower
       )
     ) {
