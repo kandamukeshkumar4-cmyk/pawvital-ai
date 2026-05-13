@@ -74,7 +74,8 @@ function coerceFallbackAnswerForPendingQuestion(
 
   if (
     questionAllowsCanonicalUnknown(question) &&
-    !shouldClarifyAmbiguousReplyForQuestion(questionId)
+    !shouldClarifyAmbiguousReplyForQuestion(questionId) &&
+    !shouldEscalateForUnknown(questionId)
   ) {
     const unknownCoercion = coerceCanonicalUnknownReply(rawMessage);
     if (unknownCoercion !== null) {
@@ -759,7 +760,7 @@ function extractWeightBearingStatus(rawMessage: string): string | null {
   const lower = rawMessage.toLowerCase();
 
   if (
-    /\b(partial(?:ly)? weight|partially weight|partial weight|toe touching|touching toes|favoring it|limping but walking)\b/.test(
+    /\b(partial(?:ly)? weight|partially weight|partial weight|barely putting weight|toe touching|touching toes|favoring it|limping but walking)\b/.test(
       lower
     )
   ) {

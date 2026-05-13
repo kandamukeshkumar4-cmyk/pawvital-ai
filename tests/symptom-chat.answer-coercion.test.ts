@@ -4,6 +4,7 @@ jest.mock("@/lib/nvidia-models", () => ({
 
 import { createSession, type TriageSession } from "@/lib/triage-engine";
 import { getDeterministicFastPathExtraction } from "@/lib/symptom-chat/context-helpers";
+import { resolvePendingQuestionAnswer } from "@/lib/symptom-chat/answer-extraction";
 
 function buildPendingSession(
   questionId: string,
@@ -85,6 +86,18 @@ describe("VET-1424 deterministic answer coercion", () => {
     expect(extraction).toBeNull();
   });
 
+  it("keeps critical duration opt-outs unresolved in pending fallback coercion", () => {
+    const resolved = resolvePendingQuestionAnswer({
+      questionId: "seizure_duration",
+      rawMessage: "skip",
+      combinedUserSignal: "skip",
+      turnAnswers: {},
+      turnSymptoms: [],
+    });
+
+    expect(resolved).toBeNull();
+  });
+
   it("does not coerce a vague negative into a false emergency-red-flag answer", () => {
     const session = buildPendingSession("vomit_blood", ["vomiting"]);
     const extraction = getDeterministicFastPathExtraction(
@@ -160,6 +173,21 @@ describe("VET-1424 deterministic answer coercion", () => {
     const extraction = getDeterministicFastPathExtraction(
       session,
       "He is only partially weight bearing and just toe touching on that leg."
+    );
+
+    expect(extraction).toEqual({
+      symptoms: [],
+      answers: {
+        weight_bearing: "partial",
+      },
+    });
+  });
+
+  it("keeps barely putting weight replies as partial weight-bearing", () => {
+    const session = buildPendingSession("weight_bearing", ["limping"]);
+    const extraction = getDeterministicFastPathExtraction(
+      session,
+      "He is barely putting weight on it but not fully holding it up."
     );
 
     expect(extraction).toEqual({
