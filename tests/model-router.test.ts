@@ -57,6 +57,11 @@ describe("model-router registry", () => {
       fallbackModel: null,
       timeoutMs: 45000,
     });
+    expect(router.getFeatureModelRoute("grok_final_safety")).toMatchObject({
+      provider: "grok",
+      fallbackModel: null,
+      timeoutMs: 12000,
+    });
   });
 
   it("prefers role-specific NVIDIA keys and narrow-pack provider order when configured", async () => {

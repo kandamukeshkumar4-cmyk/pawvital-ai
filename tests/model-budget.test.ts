@@ -1,5 +1,5 @@
 describe("model-budget", () => {
-  it("defaults second-opinion to a bounded session cap and keeps grok blocked", async () => {
+  it("defaults second-opinion to a bounded session cap and allows one final-safety Grok call", async () => {
     const budget = await import("@/lib/model-budget");
 
     expect(budget.getModelBudgetPolicy("second_opinion")).toMatchObject({
@@ -7,7 +7,8 @@ describe("model-budget", () => {
       timeoutMs: 8000,
     });
     expect(budget.getModelBudgetPolicy("grok_final_safety")).toMatchObject({
-      maxCallsPerSession: 0,
+      maxCallsPerSession: 1,
+      timeoutMs: 12000,
     });
     expect(budget.getModelBudgetPolicy("grok_final_report")).toMatchObject({
       maxCallsPerSession: 0,
@@ -78,16 +79,32 @@ describe("model-budget", () => {
     });
   });
 
-  it("keeps grok usage blocked even if a flag is flipped on before the grok ticket lands", async () => {
+  it("allows one final-safety Grok call per session and keeps final-report Grok blocked", async () => {
     const budget = await import("@/lib/model-budget");
 
-    const attempt = budget.reserveModelBudgetCall({
+    const initial = budget.reserveModelBudgetCall({
+      feature: "grok_final_safety",
+      mode: "on",
+      state: budget.createModelBudgetState(),
+    });
+    expect(initial.allowed).toBe(true);
+
+    const second = budget.reserveModelBudgetCall({
+      feature: "grok_final_safety",
+      mode: "on",
+      state: initial.state,
+    });
+    expect(second).toMatchObject({
+      allowed: false,
+      reason: "budget_exceeded",
+    });
+
+    const finalReportAttempt = budget.reserveModelBudgetCall({
       feature: "grok_final_report",
       mode: "on",
       state: budget.createModelBudgetState(),
     });
-
-    expect(attempt).toMatchObject({
+    expect(finalReportAttempt).toMatchObject({
       allowed: false,
       reason: "budget_exceeded",
     });
