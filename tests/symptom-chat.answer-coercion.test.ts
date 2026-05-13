@@ -245,6 +245,21 @@ describe("VET-1424 deterministic answer coercion", () => {
     });
   });
 
+  it("coerces sided paw replies for pending which-leg questions", () => {
+    const session = buildPendingSession("which_leg", ["limping"]);
+    const extraction = getDeterministicFastPathExtraction(
+      session,
+      "It looks like the left paw is the one bothering him."
+    );
+
+    expect(extraction).toEqual({
+      symptoms: [],
+      answers: {
+        which_leg: "left leg",
+      },
+    });
+  });
+
   it("coerces body-part location replies for wound questions", () => {
     const session = buildPendingSession("wound_location", ["wound_skin_issue"]);
     const extraction = getDeterministicFastPathExtraction(

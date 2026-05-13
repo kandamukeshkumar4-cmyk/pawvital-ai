@@ -128,7 +128,9 @@ export function deriveDeterministicAnswerForQuestion(
 ): string | boolean | number | null {
   switch (questionId) {
     case "which_leg":
-      return extractLegLocation(rawMessage);
+      return extractLegLocation(rawMessage, {
+        allowDistalLimbTerms: true,
+      });
     case "wound_location":
       return extractBodyLocation(rawMessage);
     case "limping_onset":
@@ -418,7 +420,9 @@ export function sanitizeAnswerForQuestion(
 
   switch (questionId) {
     case "which_leg":
-      return extractLegLocation(trimmed);
+      return extractLegLocation(trimmed, {
+        allowDistalLimbTerms: true,
+      });
     case "wound_location":
       return extractBodyLocation(trimmed);
     case "toxin_exposure":
@@ -490,15 +494,22 @@ function sanitizePendingVomitContent(rawMessage: string): string | null {
   return null;
 }
 
-function extractLegLocation(rawMessage: string): string | null {
+function extractLegLocation(
+  rawMessage: string,
+  options?: { allowDistalLimbTerms?: boolean }
+): string | null {
   const lower = rawMessage.toLowerCase();
   const side = /\bleft\b/.test(lower)
     ? "left"
     : /\bright\b/.test(lower)
       ? "right"
       : "";
+  const allowDistalLimbTerms = options?.allowDistalLimbTerms ?? false;
   const mentionsLegContext =
-    /\bleg\b/.test(lower) || /\b(back|hind|rear|front|fore)\b/.test(lower);
+    /\bleg\b/.test(lower) ||
+    /\b(back|hind|rear|front|fore)\b/.test(lower) ||
+    (allowDistalLimbTerms &&
+      /\b(paw|foot|feet|toe|toes|digit|digits)\b/.test(lower));
   const position = /\b(back|hind|rear)\b/.test(lower)
     ? "back"
     : /\b(front|fore)\b/.test(lower)
