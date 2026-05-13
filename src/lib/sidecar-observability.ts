@@ -143,6 +143,7 @@ export const INTERNAL_TELEMETRY_STAGES = new Set([
   "extraction",
   "pending_recovery",
   "repeat_suppression",
+  "second_opinion",
   "state_transition",
   "terminal_outcome",
 ]);

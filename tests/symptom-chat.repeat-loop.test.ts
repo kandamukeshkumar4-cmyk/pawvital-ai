@@ -14,6 +14,7 @@ const mockGetRateLimitId = jest.fn();
 const mockCreateServerSupabaseClient = jest.fn();
 const mockIsNvidiaConfigured = jest.fn(() => true);
 const mockExtractWithQwen = jest.fn();
+const mockComplete = jest.fn();
 const mockPhraseWithLlama = jest.fn();
 const mockVerifyQuestionWithNemotron = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
@@ -38,6 +39,7 @@ jest.mock("@/lib/supabase-server", () => ({
 jest.mock("@/lib/nvidia-models", () => ({
   isNvidiaConfigured: (...args: unknown[]) => mockIsNvidiaConfigured(...args),
   extractWithQwen: (...args: unknown[]) => mockExtractWithQwen(...args),
+  complete: (...args: unknown[]) => mockComplete(...args),
   phraseWithLlama: (...args: unknown[]) => mockPhraseWithLlama(...args),
   verifyQuestionWithNemotron: (...args: unknown[]) =>
     mockVerifyQuestionWithNemotron(...args),
@@ -218,6 +220,7 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    delete process.env.SECOND_OPINION_EXTRACTOR;
 
     mockCheckRateLimit.mockResolvedValue({
       success: true,
@@ -237,6 +240,16 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
     mockExtractWithQwen.mockResolvedValue(
       JSON.stringify({ symptoms: [], answers: {} })
+    );
+    mockComplete.mockResolvedValue(
+      JSON.stringify({
+        answered: false,
+        questionId: "unknown",
+        answerValue: null,
+        confidence: 0,
+        ownerPhrase: "",
+        needsClarification: true,
+      })
     );
     mockPhraseWithLlama.mockImplementation(async (prompt: string) => {
       const questionId =
@@ -483,5 +496,50 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
       compressed.case_memory?.clarification_attempts?.swelling_present
     ).toBe(1);
     expect(compressed.answered_questions).toEqual(["which_leg"]);
+  });
+
+  it("uses second-opinion extraction on the first clarification retry without triggering the repeat guard", async () => {
+    process.env.SECOND_OPINION_EXTRACTOR = "on";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+      unresolved: true,
+    });
+
+    const { response, payload } = await postTurn(
+      session,
+      "It has a honking sound."
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockComplete).toHaveBeenCalledTimes(1);
+    expect(payload.type).toBe("question");
+    expect(payload.session.extracted_answers.cough_type).toBe("dry_honking");
+    expect(payload.session.answered_questions).toContain("cough_type");
+    expect(payload.session.case_memory?.pending_question_id).not.toBe(
+      "cough_type"
+    );
+    expect(payload.session.case_memory?.unresolved_question_ids ?? []).not.toContain(
+      "cough_type"
+    );
+    expect(
+      payload.session.case_memory?.clarification_attempts?.cough_type
+    ).toBe(1);
   });
 });

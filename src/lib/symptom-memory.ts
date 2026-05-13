@@ -388,7 +388,8 @@ export function buildNarrativeSnapshot(
           .join("\n- ")}`
       : "Service timeouts: none",
     // VET-706 / VET-718: Filter out internal telemetry entries from compression prompt.
-    // Telemetry entries (extraction, pending_recovery, compression, repeat_suppression, state_transition)
+    // Telemetry entries (extraction, pending_recovery, second_opinion,
+    // compression, repeat_suppression, state_transition)
     // are internal observability data and should not influence the compression prompt.
     (() => {
       const telemetryEventTypes = [
@@ -396,6 +397,7 @@ export function buildNarrativeSnapshot(
         "contradiction_detection",
         "extraction",
         "pending_recovery",
+        "second_opinion",
         "repeat_suppression",
         "state_transition",
       ];
@@ -839,6 +841,7 @@ export function shouldCompressCaseMemory(
 export type ConversationTelemetryEventType =
   | "extraction"
   | "pending_recovery"
+  | "second_opinion"
   | "compression"
   | "repeat_suppression"
   | "contradiction_detection"
@@ -862,7 +865,8 @@ export type RecoverySource =
   | "combined_signal"
   | "raw_fallback"
   | "unresolved"
-  | "fast_path";
+  | "fast_path"
+  | "second_opinion";
 
 /**
  * Internal telemetry event shape for conversation observability.
@@ -933,16 +937,25 @@ export function recordConversationTelemetry(
   const caseMemory = ensureStructuredCaseMemory(session);
 
   // Map telemetry outcome to SidecarObservation outcome
-  const mappedOutcome: "success" | "timeout" | "error" | "fallback" | "shadow" =
-    event.outcome === "error" || event.outcome === "failure"
-      ? "error"
-      : event.outcome === "timeout"
-        ? "timeout"
-        : event.outcome === "fallback"
-          ? "fallback"
-          : event.outcome === "shadow"
-            ? "shadow"
-            : "success";
+  let mappedOutcome: "success" | "timeout" | "error" | "fallback" | "shadow";
+  if (event.reason === "timeout" || event.outcome === "timeout") {
+    mappedOutcome = "timeout";
+  } else if (
+    event.outcome === "error" ||
+    event.outcome === "failure" ||
+    event.outcome === "second_opinion_failed"
+  ) {
+    mappedOutcome = "error";
+  } else if (
+    event.outcome === "fallback" ||
+    event.outcome === "second_opinion_rejected"
+  ) {
+    mappedOutcome = "fallback";
+  } else if (event.outcome === "shadow") {
+    mappedOutcome = "shadow";
+  } else {
+    mappedOutcome = "success";
+  }
 
   const telemetryEvent: SidecarObservation = {
     // Using async-review-service as a compatible service name for internal telemetry

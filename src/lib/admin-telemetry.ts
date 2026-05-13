@@ -14,6 +14,7 @@ const PIPELINE_TELEMETRY_STAGES = new Set([
   "extraction",
   "pending_recovery",
   "repeat_suppression",
+  "second_opinion",
 ] as const);
 
 const SIDECAR_SERVICES: SidecarServiceName[] = [
@@ -27,7 +28,8 @@ const SIDECAR_SERVICES: SidecarServiceName[] = [
 type PipelineTelemetryStage =
   | "extraction"
   | "pending_recovery"
-  | "repeat_suppression";
+  | "repeat_suppression"
+  | "second_opinion";
 
 type TelemetryAvailability = "available" | "unavailable";
 

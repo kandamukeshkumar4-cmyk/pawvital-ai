@@ -91,6 +91,7 @@ import {
 } from "@/lib/symptom-chat/answer-extraction";
 import {
   clearPendingQuestion,
+  getClarificationAttemptCount,
   getPendingQuestionId,
   markPendingQuestionClarificationAttempt,
   pruneAnsweredQuestionState,
@@ -119,6 +120,10 @@ import {
   deriveSymptomsFromImageEvidence,
 } from "@/lib/symptom-chat/report-helpers";
 import { decideRepeatLoopGuard } from "@/lib/symptom-chat/repeat-loop-guard";
+import {
+  extractSecondOpinionPendingAnswer,
+  getSecondOpinionExtractorMode,
+} from "@/lib/symptom-chat/second-opinion-extractor";
 import {
   buildAlternateObservableRecoveryResponse,
   buildImageGateMessage,
@@ -1407,77 +1412,140 @@ export async function POST(request: Request) {
           pending_after: false,
         });
       } else {
-        const repeatLoopDecision = decideRepeatLoopGuard(
-          session,
-          pendingQ,
-          pet.name || "your dog",
-          getQuestionText(pendingQ)
-        );
+        const secondOpinionMode = getSecondOpinionExtractorMode();
+        const secondOpinionResult = await extractSecondOpinionPendingAnswer({
+          mode: secondOpinionMode,
+          pendingQuestionId: pendingQ,
+          ownerMessage: lastUserMessage.content,
+          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+            mergedAnswers,
+            pendingQ
+          ),
+          deterministicResolved: pendingQResolvedThisTurn,
+          clarificationAttempts: getClarificationAttemptCount(session, pendingQ),
+          knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
+        });
+        if (
+          secondOpinionResult.status !== "skipped" ||
+          secondOpinionResult.reason
+        ) {
+          const secondOpinionTelemetryOutcome =
+            secondOpinionResult.status === "accepted"
+              ? "second_opinion_used"
+              : secondOpinionResult.status === "failed"
+                ? "second_opinion_failed"
+                : "second_opinion_rejected";
 
-        session = markPendingQuestionClarificationAttempt(session, pendingQ);
-
-        if (repeatLoopDecision.kind === "cannot_assess") {
-          session = transitionToEscalation({
-            session,
-            redFlags: [repeatLoopDecision.redFlag],
-            reason: "owner_cannot_assess_critical_indicator",
-          });
-          session = clearPendingQuestion(session, pendingQ);
-          console.log(
-            `[Engine] Repeat-loop guard escalated critical pending question "${pendingQ}" after ${repeatLoopDecision.askedCount} asks`
-          );
           session = recordConversationTelemetry(session, {
-            event: "pending_recovery",
+            event: "second_opinion",
             turn_count: session.case_memory?.turn_count ?? 0,
             question_id: pendingQ,
-            outcome: "escalation",
-            source: "unresolved",
-            reason: repeatLoopDecision.reason,
+            outcome: secondOpinionTelemetryOutcome,
+            source: "second_opinion",
+            reason:
+              secondOpinionResult.status === "accepted"
+                ? undefined
+                : secondOpinionResult.reason,
+            model:
+              secondOpinionResult.status === "skipped"
+                ? undefined
+                : "Qwen-3.5-122B",
             pending_before: hadUnresolved,
-            pending_after: false,
+            pending_after: !(
+              secondOpinionMode === "on" &&
+              secondOpinionResult.status === "accepted"
+            ),
           });
-          terminalOutcome = repeatLoopDecision.outcome;
-        } else if (repeatLoopDecision.kind === "record_unknown") {
+        }
+
+        if (
+          secondOpinionMode === "on" &&
+          secondOpinionResult.status === "accepted"
+        ) {
           session = transitionToAnswered({
             session,
             questionId: pendingQ,
-            value: repeatLoopDecision.value,
+            value: secondOpinionResult.answer.answerValue,
             reason: "pending_question_recovered",
           });
           session = pruneAnsweredQuestionState(session);
           pendingQResolvedThisTurn = true;
           console.log(
-            `[Engine] Repeat-loop guard recorded unknown for non-critical pending question "${pendingQ}" after ${repeatLoopDecision.askedCount} asks`
+            `[Engine] Resolved pending question "${pendingQ}" via second_opinion (signal: "${lastUserMessage.content.substring(0, 80)}")`
           );
-          session = recordConversationTelemetry(session, {
-            event: "pending_recovery",
-            turn_count: session.case_memory?.turn_count ?? 0,
-            question_id: pendingQ,
-            outcome: "success",
-            source: "unresolved",
-            reason: repeatLoopDecision.reason,
-            pending_before: hadUnresolved,
-            pending_after: false,
-          });
         } else {
-          session = transitionToNeedsClarification({
+          const repeatLoopDecision = decideRepeatLoopGuard(
             session,
-            questionId: pendingQ,
-            reason: "pending_recovery_failed",
-          });
-          console.log(
-            `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
+            pendingQ,
+            pet.name || "your dog",
+            getQuestionText(pendingQ)
           );
-          session = recordConversationTelemetry(session, {
-            event: "pending_recovery",
-            turn_count: session.case_memory?.turn_count ?? 0,
-            question_id: pendingQ,
-            outcome: isAmbiguousReply ? "needs_clarification" : "failure",
-            source: "unresolved",
-            reason: repeatLoopDecision.reason,
-            pending_before: hadUnresolved,
-            pending_after: true,
-          });
+
+          session = markPendingQuestionClarificationAttempt(session, pendingQ);
+
+          if (repeatLoopDecision.kind === "cannot_assess") {
+            session = transitionToEscalation({
+              session,
+              redFlags: [repeatLoopDecision.redFlag],
+              reason: "owner_cannot_assess_critical_indicator",
+            });
+            session = clearPendingQuestion(session, pendingQ);
+            console.log(
+              `[Engine] Repeat-loop guard escalated critical pending question "${pendingQ}" after ${repeatLoopDecision.askedCount} asks`
+            );
+            session = recordConversationTelemetry(session, {
+              event: "pending_recovery",
+              turn_count: session.case_memory?.turn_count ?? 0,
+              question_id: pendingQ,
+              outcome: "escalation",
+              source: "unresolved",
+              reason: repeatLoopDecision.reason,
+              pending_before: hadUnresolved,
+              pending_after: false,
+            });
+            terminalOutcome = repeatLoopDecision.outcome;
+          } else if (repeatLoopDecision.kind === "record_unknown") {
+            session = transitionToAnswered({
+              session,
+              questionId: pendingQ,
+              value: repeatLoopDecision.value,
+              reason: "pending_question_recovered",
+            });
+            session = pruneAnsweredQuestionState(session);
+            pendingQResolvedThisTurn = true;
+            console.log(
+              `[Engine] Repeat-loop guard recorded unknown for non-critical pending question "${pendingQ}" after ${repeatLoopDecision.askedCount} asks`
+            );
+            session = recordConversationTelemetry(session, {
+              event: "pending_recovery",
+              turn_count: session.case_memory?.turn_count ?? 0,
+              question_id: pendingQ,
+              outcome: "success",
+              source: "unresolved",
+              reason: repeatLoopDecision.reason,
+              pending_before: hadUnresolved,
+              pending_after: false,
+            });
+          } else {
+            session = transitionToNeedsClarification({
+              session,
+              questionId: pendingQ,
+              reason: "pending_recovery_failed",
+            });
+            console.log(
+              `[Engine] Pending question "${pendingQ}" still unresolved after extraction and deterministic fallback`
+            );
+            session = recordConversationTelemetry(session, {
+              event: "pending_recovery",
+              turn_count: session.case_memory?.turn_count ?? 0,
+              question_id: pendingQ,
+              outcome: isAmbiguousReply ? "needs_clarification" : "failure",
+              source: "unresolved",
+              reason: repeatLoopDecision.reason,
+              pending_before: hadUnresolved,
+              pending_after: true,
+            });
+          }
         }
       }
     }
