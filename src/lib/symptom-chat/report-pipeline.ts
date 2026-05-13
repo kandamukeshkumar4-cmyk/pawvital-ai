@@ -36,6 +36,7 @@ import {
   buildDeterministicCaseSummary,
   ensureStructuredCaseMemory,
 } from "@/lib/symptom-memory";
+import { createModelBudgetState } from "@/lib/model-budget";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
   describeLiveTrafficDecision,
@@ -56,6 +57,10 @@ import {
   safetyVerify,
   shouldScheduleAsyncConsultReview,
 } from "./report-helpers";
+import {
+  getFinalSafetyVerifierMode,
+  verifyFinalUrgencyAndHandoffSafety,
+} from "./final-safety-verifier";
 
 const useNvidia = isNvidiaConfigured();
 const EMPTY_RETRIEVAL_BUNDLE: RetrievalBundle = {
@@ -397,7 +402,7 @@ function applyHighStakesProvenanceGuard(
   };
 }
 
-function buildVetHandoffSummary(
+function buildGeneratedVetHandoffDraft(
   session: TriageSession,
   pet: PetProfile,
   report: Record<string, unknown>
@@ -744,12 +749,72 @@ export async function generateReport({
       finalReport.async_review_scheduled = true;
     }
 
-    finalReport.vet_handoff_summary = buildVetHandoffSummary(
+    const finalSafetyResult = await verifyFinalUrgencyAndHandoffSafety({
+      mode: getFinalSafetyVerifierMode(),
       session,
       pet,
-      finalReport
-    );
+      report: finalReport,
+      deterministicUrgency: context.highest_urgency,
+      deterministicRedFlags: Array.from(
+        new Set([...context.red_flags, ...session.red_flags_triggered])
+      ),
+      generatedVetHandoffDraft: buildGeneratedVetHandoffDraft(
+        session,
+        pet,
+        finalReport
+      ),
+      budgetState: createModelBudgetState(
+        ensureStructuredCaseMemory(session).model_budget_state
+      ),
+    });
+
+    if (finalSafetyResult.budgetState) {
+      session = {
+        ...session,
+        case_memory: {
+          ...ensureStructuredCaseMemory(session),
+          model_budget_state: finalSafetyResult.budgetState,
+        },
+      };
+    }
+
+    finalReport.severity = finalSafetyResult.severity;
+    finalReport.recommendation = finalSafetyResult.recommendation;
+    finalReport.vet_handoff_summary = finalSafetyResult.vetHandoffSummary;
     finalReport.system_observability = buildClientObservabilitySnapshot(session);
+
+    if (
+      finalSafetyResult.status !== "skipped" ||
+      finalSafetyResult.reason === "budget_exceeded" ||
+      finalSafetyResult.reason === "circuit_open"
+    ) {
+      session = appendSidecarObservation(session, {
+        service: "async-review-service",
+        stage: "final_safety",
+        latencyMs: 0,
+        outcome:
+          finalSafetyResult.status === "accepted"
+            ? "success"
+            : finalSafetyResult.status === "shadow"
+              ? "shadow"
+              : finalSafetyResult.status === "failed"
+                ? "error"
+                : "fallback",
+        shadowMode: finalSafetyResult.status === "shadow",
+        fallbackUsed: finalSafetyResult.status !== "accepted",
+        note: [
+          "feature=grok_final_safety",
+          `status=${finalSafetyResult.status}`,
+          finalSafetyResult.reason
+            ? `reason=${finalSafetyResult.reason}`
+            : "",
+          `recommendation=${finalSafetyResult.recommendation}`,
+        ]
+          .filter(Boolean)
+          .join(" | "),
+      });
+    }
+
     const persistedShadowTelemetrySnapshot =
       buildInternalShadowTelemetrySnapshot(session);
 

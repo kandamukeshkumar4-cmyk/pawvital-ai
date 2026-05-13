@@ -2,7 +2,7 @@
 
 ## Scope
 
-This slice centralizes model/provider routing, feature-flag parsing, timeout defaults, and deterministic session budgets without enabling any new Grok behavior.
+This slice centralizes model/provider routing, feature-flag parsing, timeout defaults, and deterministic session budgets. VET-1426 later enables only the final-safety verifier path behind the existing Grok safety flag and session budget.
 
 It does not change:
 
@@ -31,7 +31,7 @@ Current feature flags:
 Closed-by-default behavior:
 
 - all feature flags default to `off`
-- Grok flags are parsed but not enabled by budget policy
+- Grok flags stay parsed with live behavior disabled by default
 - provider lookup fails closed when no configured backend is available
 
 ## Budget
@@ -41,13 +41,14 @@ Closed-by-default behavior:
 Current session caps:
 
 - `second_opinion`: `2`
-- `grok_final_safety`: `0`
+- `grok_final_safety`: `1`
 - `grok_final_report`: `0`
 
 Current timeout defaults:
 
 - `second_opinion`: `8000ms`
-- Grok placeholders remain defined but blocked by zero-call budgets
+- `grok_final_safety`: `12000ms`
+- `grok_final_report`: `20000ms`
 
 Supported closed-fallback reasons:
 
@@ -80,4 +81,5 @@ Behavior:
 - emergency guidance does not depend on router availability
 - no model route may downgrade deterministic emergency state
 - router failure still falls back to deterministic handling
-- Grok remains budget-blocked until a dedicated follow-up ticket explicitly enables it
+- `grok_final_report` remains budget-blocked until a dedicated follow-up ticket explicitly enables it
+- `grok_final_safety` is limited to one final-stage verification call per session and still defaults to `off`

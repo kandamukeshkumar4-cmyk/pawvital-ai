@@ -81,6 +81,13 @@ interface ModelFeatureRuntimeSettings {
   timeoutMs: number;
 }
 
+interface ModelFeatureRouteSettings {
+  fallbackModel: string | null;
+  modelEnvName?: string;
+  primaryModel: string;
+  provider: ModelProvider;
+}
+
 const ROLE_ENV_PRIORITY: Record<ModelRole, readonly string[]> = {
   extraction: ["NVIDIA_QWEN_API_KEY", "NVIDIA_API_KEY"],
   phrasing: ["NVIDIA_API_KEY"],
@@ -142,7 +149,7 @@ const FEATURE_RUNTIME_SETTINGS: Record<ModelFeature, ModelFeatureRuntimeSettings
   grok_final_safety: {
     defaultMode: "off",
     envName: "GROK_FINAL_SAFETY",
-    maxCallsPerSession: 0,
+    maxCallsPerSession: 1,
     timeoutMs: 12000,
   },
   grok_final_report: {
@@ -150,6 +157,23 @@ const FEATURE_RUNTIME_SETTINGS: Record<ModelFeature, ModelFeatureRuntimeSettings
     envName: "GROK_FINAL_REPORT",
     maxCallsPerSession: 0,
     timeoutMs: 20000,
+  },
+};
+
+const FEATURE_ROUTE_SETTINGS: Partial<
+  Record<ModelFeature, ModelFeatureRouteSettings>
+> = {
+  grok_final_safety: {
+    provider: "grok",
+    primaryModel: "grok-3-mini",
+    fallbackModel: null,
+    modelEnvName: "XAI_GROK_FINAL_SAFETY_MODEL",
+  },
+  grok_final_report: {
+    provider: "grok",
+    primaryModel: "grok-3-mini",
+    fallbackModel: null,
+    modelEnvName: "XAI_GROK_FINAL_REPORT_MODEL",
   },
 };
 
@@ -181,6 +205,15 @@ function normalizeFeatureMode(rawValue: string | undefined): ModelFeatureMode {
     return normalized;
   }
   return "off";
+}
+
+function readConfiguredText(name: string | undefined): string | null {
+  if (!name) {
+    return null;
+  }
+
+  const value = process.env[name]?.trim();
+  return value ? value : null;
 }
 
 function isNarrowPackRole(role: ModelRole): role is TextModelRole {
@@ -242,6 +275,26 @@ export function getGrokFinalReportMode(
 
 export function getModelFeatureConfig(feature: ModelFeature) {
   return FEATURE_RUNTIME_SETTINGS[feature];
+}
+
+export function getFeatureModelRoute(feature: ModelFeature): {
+  fallbackModel: string | null;
+  primaryModel: string;
+  provider: ModelProvider;
+  timeoutMs: number;
+} | null {
+  const route = FEATURE_ROUTE_SETTINGS[feature];
+  if (!route) {
+    return null;
+  }
+
+  return {
+    provider: route.provider,
+    primaryModel:
+      readConfiguredText(route.modelEnvName) ?? route.primaryModel,
+    fallbackModel: route.fallbackModel,
+    timeoutMs: FEATURE_RUNTIME_SETTINGS[feature].timeoutMs,
+  };
 }
 
 export function resolveNvidiaApiKey(role: ModelRole): string | null {

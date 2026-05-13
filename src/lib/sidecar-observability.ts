@@ -141,6 +141,7 @@ export const INTERNAL_TELEMETRY_STAGES = new Set([
   "compression",
   "contradiction_detection",
   "extraction",
+  "final_safety",
   "pending_recovery",
   "repeat_suppression",
   "second_opinion",

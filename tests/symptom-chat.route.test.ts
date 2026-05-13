@@ -28,6 +28,7 @@ const mockParseVisionForMatrix = jest.fn();
 const mockImageGuardrail = jest.fn();
 const mockDiagnoseWithDeepSeek = jest.fn();
 const mockVerifyWithGLM = jest.fn();
+const mockCompleteWithGrok = jest.fn();
 const mockDetectBreedWithNyckel = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
 const mockEvaluateImageGate = jest.fn();
@@ -81,6 +82,11 @@ jest.mock("@/lib/nvidia-models", () => ({
   runVisionPipeline: (...args: unknown[]) => mockRunVisionPipeline(...args),
   parseVisionForMatrix: (...args: unknown[]) => mockParseVisionForMatrix(...args),
   imageGuardrail: (...args: unknown[]) => mockImageGuardrail(...args),
+}));
+
+jest.mock("@/lib/xai-grok", () => ({
+  completeWithGrok: (...args: unknown[]) => mockCompleteWithGrok(...args),
+  isGrokConfigured: () => true,
 }));
 
 jest.mock("@/lib/image-gate", () => ({
@@ -9123,6 +9129,76 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         ["fallbackCount", "timeoutCount"]
       );
       expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+    });
+
+    it("runs the final-stage Grok safety verifier behind the flag and keeps the vet handoff deterministic", async () => {
+      process.env.GROK_FINAL_SAFETY = "on";
+      mockIsNvidiaConfigured.mockReturnValue(true);
+      mockVerifyWithGLM.mockResolvedValue(
+        JSON.stringify({
+          safe: true,
+          corrections: {},
+          reasoning: "Non-emergency narrative verified",
+        })
+      );
+      mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+        JSON.stringify({
+          severity: "low",
+          recommendation: "monitor",
+          title: "Acute gastrointestinal upset",
+          explanation:
+            "This pattern is more consistent with a gastrointestinal concern and should guide a vet visit if it continues.",
+          differential_diagnoses: [
+            {
+              condition: "Gastroenteritis",
+              likelihood: "moderate",
+              description: "GI inflammation can cause vomiting and appetite changes.",
+            },
+          ],
+          clinical_notes: "Monitor hydration and abdominal comfort.",
+          recommended_tests: [
+            {
+              test: "CBC",
+              reason: "Check hydration and inflammation markers",
+            },
+          ],
+          home_care: [],
+          actions: ["Offer small amounts of water."],
+          warning_signs: ["Repeated vomiting"],
+          vet_questions: ["Should we run stool or blood testing?"],
+        })
+      );
+      mockCompleteWithGrok.mockResolvedValueOnce(
+        JSON.stringify({
+          unsafeDowngradeDetected: false,
+          missedRedFlags: [],
+          diagnosisOrTreatmentClaims: [],
+          recommendedUrgencyLanguage: "same_day",
+          vetHandoffNotes: ["He keeps scratching around his ears"],
+          safeToShow: true,
+        })
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(buildModerateReportSession()));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.recommendation).toBe("vet_24h");
+      expect(payload.report.severity).toBe("high");
+      expect(payload.report.vet_handoff_summary).toContain(
+        "Owner-reported facts:"
+      );
+      expect(payload.report.vet_handoff_summary).toContain(
+        "He keeps scratching around his ears"
+      );
+      expect(payload.report.vet_handoff_summary).not.toContain("Top differentials");
+      expect(payload.report.vet_handoff_summary).not.toContain(
+        "Recommended diagnostics"
+      );
+      expect(mockCompleteWithGrok).toHaveBeenCalledTimes(1);
+      delete process.env.GROK_FINAL_SAFETY;
     });
 
     it("falls back to a fail-safe report when narrative generation fails", async () => {
