@@ -4,6 +4,7 @@ import {
   parseSecondOpinionExtractorResponse,
   shouldAttemptSecondOpinionExtraction,
 } from "@/lib/symptom-chat/second-opinion-extractor";
+import { createModelBudgetState } from "@/lib/model-budget";
 
 describe("VET-1425 second-opinion pending answer extractor", () => {
   it("defaults the feature flag to off and accepts only supported modes", () => {
@@ -400,5 +401,32 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
       status: "failed",
       reason: "provider_error",
     });
+  });
+
+  it("fails closed when the second-opinion session budget is already exhausted", async () => {
+    const modelCaller = jest.fn();
+
+    const result = await extractSecondOpinionPendingAnswer({
+      mode: "on",
+      pendingQuestionId: "vomit_duration",
+      ownerMessage: "for two days",
+      primaryExtractionFailed: true,
+      deterministicResolved: false,
+      clarificationAttempts: 1,
+      knownSymptomsBeforeTurn: ["vomiting"],
+      budgetState: {
+        ...createModelBudgetState(),
+        callCounts: {
+          second_opinion: 2,
+        },
+      },
+      modelCaller,
+    });
+
+    expect(result).toMatchObject({
+      status: "skipped",
+      reason: "budget_exceeded",
+    });
+    expect(modelCaller).not.toHaveBeenCalled();
   });
 });

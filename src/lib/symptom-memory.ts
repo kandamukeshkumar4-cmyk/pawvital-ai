@@ -14,6 +14,7 @@ import type {
   StructuredCaseMemory,
   TriageSession,
 } from "./triage-engine";
+import { createModelBudgetState } from "./model-budget";
 
 type ScalarFact = string | boolean | number;
 
@@ -558,6 +559,7 @@ export function ensureStructuredCaseMemory(
     service_observations: existing?.service_observations || [],
     shadow_comparisons: existing?.shadow_comparisons || [],
     ambiguity_flags: existing?.ambiguity_flags || [],
+    model_budget_state: createModelBudgetState(existing?.model_budget_state),
     latest_owner_turn: existing?.latest_owner_turn,
     compressed_summary: existing?.compressed_summary,
     compression_model: existing?.compression_model,
