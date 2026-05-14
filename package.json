@@ -15,6 +15,7 @@
     "smoke:browser-mobile": "node smoke/browser-mobile/run.mjs",
     "smoke:browser-mobile:install": "node smoke/browser-mobile/run.mjs --install-only",
     "tester:private": "npx ts-node --esm scripts/private-tester-admin.ts",
+    "security:secrets": "node .github/secret-scan.mjs",
     "audit:full": "npm audit",
     "audit:prod": "npm audit --omit=dev",
     "test:retrieval:live": "node -e \"const { spawnSync } = require('node:child_process'); const path = require('node:path'); const jestBin = path.join(process.cwd(), 'node_modules', 'jest', 'bin', 'jest.js'); const result = spawnSync(process.execPath, [jestBin, '--runInBand', '--runTestsByPath', 'tests/retrieval.integration.test.ts'], { stdio: 'inherit', env: { ...process.env, RUN_LIVE_RETRIEVAL_TESTS: '1' } }); process.exit(result.status ?? 1);\"",

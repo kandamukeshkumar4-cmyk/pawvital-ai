@@ -23,13 +23,13 @@ npm install
 
 ```env
 # NVIDIA NIM shared key for all models
-NVIDIA_API_KEY=nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY
+NVIDIA_API_KEY=your_nvidia_nim_key_here
 
 # Optional per-role overrides
-NVIDIA_QWEN_API_KEY=nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY
-NVIDIA_KIMI_API_KEY=nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY
-NVIDIA_DEEPSEEK_API_KEY=nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY
-NVIDIA_GLM_API_KEY=nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY
+NVIDIA_QWEN_API_KEY=your_nvidia_nim_key_here
+NVIDIA_KIMI_API_KEY=your_nvidia_nim_key_here
+NVIDIA_DEEPSEEK_API_KEY=your_nvidia_nim_key_here
+NVIDIA_GLM_API_KEY=your_nvidia_nim_key_here
 ```
 
 3. If you run the optional Hugging Face sidecars locally, copy `.env.sidecars.example` into the sidecar environment you use for those services.

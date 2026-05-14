@@ -82,8 +82,7 @@ describe("model-router registry", () => {
   });
 
   it("treats placeholder keys as unavailable and fails closed when no provider is configured", async () => {
-    process.env.NVIDIA_API_KEY =
-      "nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY";
+    process.env.NVIDIA_API_KEY = "your_nvidia_nim_key_here";
 
     const router = await import("@/lib/model-router");
 

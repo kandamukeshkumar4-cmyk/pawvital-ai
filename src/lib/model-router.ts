@@ -238,7 +238,7 @@ export function isLikelyPlaceholderKey(key: string): boolean {
   return (
     normalized === "placeholder" ||
     normalized === "replace-me" ||
-    normalized === "nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY" ||
+    normalized === "your_nvidia_nim_key_here" ||
     normalized.startsWith("your_") ||
     /replace[_-]?with/i.test(normalized)
   );
