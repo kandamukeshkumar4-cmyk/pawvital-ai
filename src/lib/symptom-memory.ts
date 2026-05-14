@@ -849,6 +849,22 @@ export type ConversationTelemetryEventType =
   | "contradiction_detection"
   | "terminal_outcome";
 
+export const TELEMETRY_GATE_EVENTS = [
+  "repeat_loop_detected",
+  "pending_question_resolved",
+  "coercion_used",
+  "second_opinion_used",
+  "second_opinion_failed",
+  "second_opinion_rejected",
+  "grok_safety_used",
+  "grok_safety_failed",
+  "missed_red_flag_detected",
+  "report_claim_removed",
+  "final_safety_fallback",
+] as const;
+
+export type TelemetryGateEvent = (typeof TELEMETRY_GATE_EVENTS)[number];
+
 export interface NormalizedTerminalOutcomeMetric {
   terminal_state: "cannot_assess" | "out_of_scope";
   reason_code: string;
@@ -919,6 +935,8 @@ export interface ConversationTelemetryEvent {
   contradiction_records?: NormalizedContradictionRecord[];
   /** Normalized terminal outcome metric for durable internal telemetry */
   terminal_outcome_metric?: NormalizedTerminalOutcomeMetric;
+  /** Stable internal gate events used by rollout regression checks */
+  gate_events?: TelemetryGateEvent[];
   /** Timestamp for the event */
   timestamp?: number;
 }
@@ -1059,6 +1077,9 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
       )}`
     );
   }
+  if (event.gate_events?.length) {
+    parts.push(`gate_events=${Array.from(new Set(event.gate_events)).join(",")}`);
+  }
 
   return parts.join(" | ");
 }
@@ -1092,6 +1113,7 @@ function emitTelemetryLog(event: ConversationTelemetryEvent): void {
     contradiction_ids: event.contradiction_ids,
     contradiction_records: event.contradiction_records,
     terminal_outcome_metric: event.terminal_outcome_metric,
+    gate_events: event.gate_events,
   };
 
   if (event.outcome === "error" || event.outcome === "failure") {

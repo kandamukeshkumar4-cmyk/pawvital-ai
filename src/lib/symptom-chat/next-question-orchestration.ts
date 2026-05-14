@@ -118,6 +118,7 @@ function recordRepeatSuppressionTelemetry(
     outcome: "success",
     reason: "repeat_of_last_asked_question_suppressed",
     repeat_prevented: true,
+    gate_events: ["repeat_loop_detected"],
   });
 }
 

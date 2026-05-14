@@ -1241,6 +1241,7 @@ export async function POST(request: Request) {
       deterministicSupplementalAnswers,
       extracted.answers || {}
     );
+    const pendingQuestionBeforeTurn = getPendingQuestionId(session);
 
     for (const [key, value] of Object.entries(mergedAnswers)) {
       if (value !== null && value !== undefined && value !== "") {
@@ -1287,13 +1288,50 @@ export async function POST(request: Request) {
     // the answer (e.g. user said "no", "nothing", "I don't know"), force-
     // record the user's raw text so the question is marked answered.
     const pendingQ = getPendingQuestionId(session);
+    const pendingTelemetryQuestionId = pendingQ ?? pendingQuestionBeforeTurn;
     const pendingQWasAnsweredBeforeTurn =
-      pendingQ !== undefined && answerKeysBeforeTurn.has(pendingQ);
+      pendingTelemetryQuestionId !== undefined &&
+      answerKeysBeforeTurn.has(pendingTelemetryQuestionId);
     let pendingQResolvedThisTurn = Boolean(
-      pendingQ &&
+      pendingTelemetryQuestionId &&
         !pendingQWasAnsweredBeforeTurn &&
-        session.answered_questions.includes(pendingQ)
+        session.answered_questions.includes(pendingTelemetryQuestionId)
     );
+    const pendingRecoveredViaTurnAnswers = Boolean(
+      pendingTelemetryQuestionId &&
+        pendingQResolvedThisTurn &&
+        Object.prototype.hasOwnProperty.call(
+          mergedAnswers,
+          pendingTelemetryQuestionId
+        )
+    );
+
+    if (pendingTelemetryQuestionId && pendingRecoveredViaTurnAnswers) {
+      const pendingWasUnresolved =
+        incomingUnresolvedIds.includes(pendingTelemetryQuestionId) ||
+        (session.case_memory?.unresolved_question_ids ?? []).includes(
+          pendingTelemetryQuestionId
+        );
+      session = recordConversationTelemetry(session, {
+        event: "pending_recovery",
+        turn_count: session.case_memory?.turn_count ?? 0,
+        question_id: pendingTelemetryQuestionId,
+        outcome: "success",
+        source: usedFastPath ? "fast_path" : "structured",
+        pending_before: pendingWasUnresolved,
+        pending_after: false,
+        gate_events: [
+          "pending_question_resolved",
+          ...(usedFastPath ||
+          Object.prototype.hasOwnProperty.call(
+            deterministicSupplementalAnswers,
+            pendingTelemetryQuestionId
+          )
+            ? ["coercion_used" as const]
+            : []),
+        ],
+      });
+    }
 
     if (
       pendingQ &&
@@ -1321,6 +1359,7 @@ export async function POST(request: Request) {
         (session.case_memory?.unresolved_question_ids ?? []).includes(pendingQ);
       const isAmbiguousReply =
         coerceAmbiguousReplyToUnknown(lastUserMessage.content) !== null;
+
       const criticalInfoDecision = evaluateCriticalInfoRule({
         questionId: pendingQ,
         rawMessage: lastUserMessage.content,
@@ -1412,6 +1451,13 @@ export async function POST(request: Request) {
           source: pendingAnswer.source as RecoverySource,
           pending_before: hadUnresolved,
           pending_after: false,
+          gate_events: [
+            "pending_question_resolved",
+            ...(pendingAnswer.source === "direct_coercion" ||
+            pendingAnswer.source === "combined_signal"
+              ? ["coercion_used" as const]
+              : []),
+          ],
         });
       } else {
         const secondOpinionMode = getSecondOpinionExtractorMode();
@@ -1469,6 +1515,13 @@ export async function POST(request: Request) {
               secondOpinionMode === "on" &&
               secondOpinionResult.status === "accepted"
             ),
+            gate_events: [
+              secondOpinionTelemetryOutcome,
+              ...(secondOpinionMode === "on" &&
+              secondOpinionResult.status === "accepted"
+                ? ["pending_question_resolved" as const]
+                : []),
+            ],
           });
         }
 
@@ -1516,6 +1569,7 @@ export async function POST(request: Request) {
               reason: repeatLoopDecision.reason,
               pending_before: hadUnresolved,
               pending_after: false,
+              gate_events: ["repeat_loop_detected"],
             });
             terminalOutcome = repeatLoopDecision.outcome;
           } else if (repeatLoopDecision.kind === "record_unknown") {
@@ -1539,6 +1593,10 @@ export async function POST(request: Request) {
               reason: repeatLoopDecision.reason,
               pending_before: hadUnresolved,
               pending_after: false,
+              gate_events: [
+                "repeat_loop_detected",
+                "pending_question_resolved",
+              ],
             });
           } else {
             session = transitionToNeedsClarification({
@@ -1558,6 +1616,7 @@ export async function POST(request: Request) {
               reason: repeatLoopDecision.reason,
               pending_before: hadUnresolved,
               pending_after: true,
+              gate_events: ["repeat_loop_detected"],
             });
           }
         }
