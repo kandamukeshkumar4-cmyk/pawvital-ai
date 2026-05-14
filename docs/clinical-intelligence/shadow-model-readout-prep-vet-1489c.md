@@ -1,164 +1,167 @@
 # VET-1489C Shadow Model Readout Prep
 
-## Production State
+## Production
 
-- **Production commit**: `2b4249f535762d4207be018c769e2b69674edbe4`
-- **Production deployment ID**: `dpl_CytjMQn2TEsquS36x3tmqZ5Tnwo8`
-- **Production alias**: `pawvital-ai.vercel.app`
-- **Deployment status**: Ready
-- **GitHub commit status**: success (both Vercel contexts green)
-- **Deployed**: 2026-05-13T22:29:21-04:00
+- Production commit: `2b4249f535762d4207be018c769e2b69674edbe4`
+- Deployment ID: `dpl_CytjMQn2TEsquS36x3tmqZ5Tnwo8`
+- Deployment alias: `https://pawvital-ai.vercel.app`
+- Deployment status: `Ready`
+- GitHub master status: `success`
 
-## Shadow Flag Values (Production)
+## Flags
 
-| Flag | Expected | Actual | Match |
-|------|----------|--------|-------|
-| SECOND_OPINION_EXTRACTOR | shadow | shadow | YES |
-| GROK_FINAL_SAFETY | shadow | shadow | YES |
-| GROK_FINAL_REPORT | off | off | YES |
-| MODEL_ROUTER_VERSION | v1 | v1 | YES |
-| XAI_GROK_FINAL_SAFETY_MODEL | grok-4.3 | grok-4.3 | YES |
-| XAI_GROK_FINAL_REPORT_MODEL | grok-4.3 | grok-4.3 | YES |
+- `SECOND_OPINION_EXTRACTOR=shadow`
+- `GROK_FINAL_SAFETY=shadow`
+- `GROK_FINAL_REPORT=off`
+- `MODEL_ROUTER_VERSION=v1`
+- `XAI_GROK_FINAL_SAFETY_MODEL=grok-4.3`
+- `XAI_GROK_FINAL_REPORT_MODEL=grok-4.3`
 
-## Provider Secret Presence
+These match the expected VET-1488 shadow rollout config.
 
-| Secret | Present | Required By |
-|--------|---------|-------------|
-| XAI_API_KEY | NO | GROK_FINAL_SAFETY shadow |
-| GROK_API_KEY | NO | GROK_FINAL_SAFETY shadow (fallback) |
-| NVIDIA_QWEN_API_KEY | YES | SECOND_OPINION_EXTRACTOR shadow |
-| NVIDIA_GLM_API_KEY | YES | Safety verify (GLM-5) |
-| NVIDIA_DEEPSEEK_API_KEY | YES | Model router |
-| NVIDIA_KIMI_API_KEY | YES | Model router |
-| NVIDIA_VISION_API_KEY | YES | Vision sidecar |
+## Secret Presence
 
-## Shadow Call Capability
+- `XAI_API_KEY`: missing
+- `GROK_API_KEY`: missing
 
-### Second-opinion extractor (SECOND_OPINION_EXTRACTOR=shadow)
+Because both xAI secret names are missing in Vercel production, Grok final
+safety shadow cannot collect real verifier outputs right now. The current
+production setup only exercises deterministic fallback and missing-provider
+paths for the Grok shadow stream.
 
-- **Can run real shadow calls**: YES
-- **Provider**: NVIDIA NIM (Qwen 3.5 122B)
-- **API key**: NVIDIA_QWEN_API_KEY present in production
-- **Behavior**: Makes real extraction calls in shadow mode, discards results, logs telemetry internally
-- **Timeout**: 8s feature-level, 45s model-level
+## Shadow Capability
 
-### Grok final safety (GROK_FINAL_SAFETY=shadow)
+### Second-opinion shadow
 
-- **Can run real shadow calls**: NO
-- **Provider**: XAI (Grok)
-- **API key**: XAI_API_KEY and GROK_API_KEY both missing
-- **Behavior**: Will fail closed on every request; shadow telemetry will record provider-key-missing failures
-- **Expected telemetry**: `grok_final_safety: { status: "shadow", error: "missing_api_key" }` or equivalent fail-closed fallback
+- Real shadow calls can run if the existing NVIDIA-backed second-opinion path is
+  configured in production.
+- Owner-visible output must remain unchanged.
+- Expected observable outcomes:
+  - `second_opinion_used`
+  - `second_opinion_failed`
+  - `second_opinion_rejected`
 
-### Grok final report (GROK_FINAL_REPORT=off)
+### Grok final-safety shadow
 
-- **Active**: NO (correctly off)
-- **No shadow calls expected**
+- Real shadow calls cannot run until one valid server-only xAI key is present.
+- Current observable outcomes are limited to internal fallback/failure telemetry.
+- Expected observable outcomes in the current missing-secret state:
+  - `grok_safety_failed`
+  - `final_safety_fallback`
+- Expected observable outcomes after a real xAI secret is added:
+  - `grok_safety_used`
+  - `grok_safety_failed`
+  - `missed_red_flag_detected`
+  - `report_claim_removed`
+  - `final_safety_fallback`
 
-## Telemetry Events Expected During Readout
+## Owner-Visible Safety
 
-### Observable (second-opinion shadow)
+- Telemetry events are internal only.
+- Sidecar/debug markers stay out of owner-facing payloads.
+- Model fallback reasons stay internal only.
+- `GROK_FINAL_REPORT` remains off.
 
-- `second_opinion_extraction: { status: "shadow", provider: "nvidia", model: "qwen3.5-122b" }`
-- Extraction accuracy vs. deterministic extractor
-- Budget cap enforcement events
-- Fallback reasons when budget is exceeded
+The internal-only guarantee is covered by the telemetry gate tests and the
+existing shadow rollout docs:
 
-### Observable (Grok safety shadow — fail-closed)
+- `tests/symptom-chat.telemetry-gate.test.ts`
+- `docs/clinical-intelligence/repeat-loop-hallucination-telemetry-gate-codex.md`
+- `docs/clinical-intelligence/shadow-model-rollout-config-codex.md`
 
-- `grok_final_safety: { status: "shadow", error: "..." }` on every request
-- Fail-closed reason: missing XAI_API_KEY
-- No actual Grok model responses until key is added
+## Auth And Private-Tester Env Drift
 
-### Fallback reasons expected
+Observed in the pulled production env:
 
-- Model router fallback: budget cap exceeded
-- Grok safety fallback: provider key missing
-- Second-opinion fallback: timeout (8s), model error, budget cap
+- `NEXT_PUBLIC_SUPABASE_URL` points at the active `gswjpmgxidofwmjngavh` host,
+  but the stored value includes a trailing newline character.
+- `SUPABASE_URL` still points at the stale
+  `cvkdmbgujgcfuqtqgtxv.supabase.co` host.
+- `NEXT_PUBLIC_PRIVATE_TESTER_MODE` and `PRIVATE_TESTER_MODE` pull as `false`
+  with trailing newline characters.
+- `NEXT_PUBLIC_PRIVATE_TESTER_INVITE_ONLY=1` and
+  `PRIVATE_TESTER_INVITE_ONLY=1`.
+- `NEXT_PUBLIC_PRIVATE_TESTER_FREE_ACCESS=1` and
+  `PRIVATE_TESTER_FREE_ACCESS=1`.
+- `NEXT_PUBLIC_PRIVATE_TESTER_GUEST_SYMPTOM_CHECKER=0` and
+  `PRIVATE_TESTER_GUEST_SYMPTOM_CHECKER=0`.
 
-## Owner-Visible Leakage Check
+This drift does not change the shadow-model verdict by itself, but it is real
+production env hygiene debt and should be cleaned before broader rollout
+confidence claims.
 
-- Telemetry gate tests: **8/8 PASSED** — internal telemetry events do not leak into owner-facing payloads
-- Route sentinels: **30/30 PASSED** — no debug/telemetry markers in response payloads
-- Symptom-chat full suite: **511/511 PASSED** — no payload shape regression
-- No owner-visible behavior change introduced
+## Validation
 
-## Validation Results
+- telemetry gate: PASS
+- model router and budget: PASS
+- symptom-chat route suite: PASS
+- build: PASS
+- dangerous benchmark: PASS
+- release gate: PASS
 
-| Gate | Result | Details |
-|------|--------|---------|
-| Telemetry gate | PASS | 8/8, internal-only telemetry confirmed |
-| Model router + budget | PASS | 8/8, budget caps enforced |
-| Symptom-chat route suite | PASS | 511/511 across 11 suites |
-| Build | PASS | Next.js production build clean |
-| Release gate | PASS | 226 frozen cases, 0 failures, 0 warnings |
-| Route sentinels | PASS | 30/30, emergency recall intact |
-| Dangerous benchmark | SKIP | Requires live RunPod (no pod provisioned) |
+## Readout Start Condition
 
-## Readout Start Decision
+Start the 48-72h shadow readout only when all of the following are true:
 
-### PARTIAL START
+- production alias is `Ready`
+- production commit matches current `master`
+- `SECOND_OPINION_EXTRACTOR=shadow`
+- `GROK_FINAL_SAFETY=shadow`
+- `GROK_FINAL_REPORT=off`
+- `MODEL_ROUTER_VERSION=v1`
+- at least one valid server-only xAI key exists:
+  - `XAI_API_KEY`, or
+  - `GROK_API_KEY`
+- dangerous benchmark passes
+- release gate passes
+- no owner-visible telemetry leakage is observed
 
-The 48-72h shadow readout window **can start for second-opinion extraction** but is **HOLD for Grok final safety**.
+## Readout Hold Condition
 
-### What can start now
+Hold the readout if any of the following are true:
 
-- **Second-opinion extractor shadow**: NVIDIA_QWEN_API_KEY is present, shadow mode is active, real extraction calls will run alongside the deterministic extractor with results discarded and telemetry captured internally.
+- both `XAI_API_KEY` and `GROK_API_KEY` are missing
+- Grok shadow is expected but only deterministic fallback is executing
+- fallback rate cannot be separated from missing-secret behavior
+- required internal telemetry events are missing
+- unsafe downgrade count is greater than `0`
+- emergency recall regresses
+- owner-visible telemetry/debug leakage appears
+- budget-cap behavior is unclear
+- production env drift undermines rollout confidence
 
-### What is on HOLD
+## Current Decision
 
-- **Grok final safety shadow**: XAI_API_KEY and GROK_API_KEY are both missing from production. Grok shadow calls will fail closed on every request. No real Grok safety verification telemetry can be collected until a provider key is added.
+Do not start the 48-72h Grok shadow readout window yet.
 
-### Hold reasons (Grok safety shadow)
+Current hold reasons:
 
-1. XAI_API_KEY not present in Vercel production environment
-2. GROK_API_KEY not present in Vercel production environment (fallback)
-3. Without either key, shadow mode records only failure telemetry, not actual model comparison data
-4. The 48-72h readout for Grok safety requires real model responses to be meaningful
+1. `XAI_API_KEY` is missing in Vercel production.
+2. `GROK_API_KEY` is missing in Vercel production.
+3. Grok final-safety shadow cannot collect real verifier outputs.
+4. Any current Grok shadow telemetry would be dominated by missing-secret
+   fallback behavior rather than real model comparison data.
+5. Production auth env drift is still present in `SUPABASE_URL` and in several
+   newline-tainted public/private tester flag values.
 
-### Not blocked
+## Required Next Step
 
-- Dangerous benchmark skipped (RunPod pod not provisioned) — this does not block the shadow readout because the route sentinels and release gate cover the same emergency-safety invariants locally. The dangerous benchmark is an integration test against live sidecar infrastructure, which is independent of shadow model rollout.
+Add the correct server-only xAI secret to Vercel production:
 
-## Required Actions to Unblock Grok Shadow
+- `XAI_API_KEY`, or
+- `GROK_API_KEY`
 
-1. Obtain an XAI API key with access to `grok-4.3` (or the model specified in XAI_GROK_FINAL_SAFETY_MODEL)
-2. Add `XAI_API_KEY` to Vercel production environment:
-   ```
-   vercel env add XAI_API_KEY production --scope kandasubbarao4-5462s-projects
-   ```
-3. Redeploy production (or wait for next master merge to trigger auto-deploy)
-4. Verify Grok shadow telemetry switches from fail-closed errors to real model responses
-5. Restart the 48-72h Grok safety readout window from the point where real responses begin
+After that:
 
-## Next Ticket Recommendation
-
-- **If second-opinion readout is sufficient to proceed**: After 48-72h, open **VET-1490C** to analyze second-opinion shadow telemetry and decide whether to promote `SECOND_OPINION_EXTRACTOR=on`.
-- **If Grok safety readout is required before any promotion**: Add XAI_API_KEY to production first, then wait an additional 48-72h for Grok telemetry, then open **VET-1490C** covering both shadow streams.
-- **If both must be evaluated together**: HOLD until XAI_API_KEY is added, then start the combined 48-72h window.
-
-## Verification Commands Used
-
-```bash
-git fetch origin master --prune
-git rev-parse HEAD                    # 2b4249f535762d4207be018c769e2b69674edbe4
-git rev-parse origin/master           # 2b4249f535762d4207be018c769e2b69674edbe4
-gh pr list --state open --limit 50    # (none)
-vercel inspect https://pawvital-ai.vercel.app --scope kandasubbarao4-5462s-projects
-gh api repos/kandamukeshkumar4-cmyk/pawvital-ai/commits/master/status
-
-npm test -- --runTestsByPath tests/symptom-chat.telemetry-gate.test.ts
-npm test -- --runTestsByPath tests/model-router.test.ts tests/model-budget.test.ts
-npm test -- --testPathPatterns=symptom-chat --runInBand
-npm run build
-npm run eval:benchmark:release-gate
-npm run eval:benchmark:route-sentinels
-```
+1. redeploy production
+2. repull production env
+3. rerun this gate
+4. only then start the 48-72h Grok shadow readout window
 
 ## Notes
 
-- Shadow only. No live model promotion.
+- Shadow only.
+- No live model promotion.
 - No runtime clinical behavior change.
-- No Grok final report (GROK_FINAL_REPORT=off confirmed).
-- No secret values exposed in this document.
-- Temp env file `.env.prod-check-temp` was pulled for inspection and should be deleted after file lock releases.
+- No Grok final report.
+- No secret values are recorded in this document.
