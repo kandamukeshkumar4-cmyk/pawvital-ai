@@ -10,6 +10,7 @@ import { replaceWithBrowser } from "@/lib/browser-navigation";
 
 const AUTH_CALLBACK_PATH = "/api/auth/callback";
 const BROWSER_CALLBACK_PATH = "/auth/callback";
+const INTERNAL_BASE_URL = "https://pawvital.local";
 
 function isRecoveryFlow(value: string | null) {
   return value === "recovery";
@@ -72,9 +73,26 @@ function buildQueryRecoveryRedirect(url: URL) {
   }
 
   callbackUrl.searchParams.set("type", "recovery");
-  callbackUrl.searchParams.set("next", buildRecoveryRedirectPath(redirectTarget));
+  callbackUrl.searchParams.set(
+    "next",
+    isResetPasswordRedirectTarget(redirectTarget)
+      ? redirectTarget
+      : buildRecoveryRedirectPath(redirectTarget)
+  );
 
   return `${callbackUrl.pathname}${callbackUrl.search}`;
+}
+
+function isResetPasswordRedirectTarget(target: string | null): target is string {
+  if (!target) {
+    return false;
+  }
+
+  try {
+    return new URL(target, INTERNAL_BASE_URL).pathname === RESET_PASSWORD_PATH;
+  } catch {
+    return false;
+  }
 }
 
 function getRecoveryRedirectFromCurrentUrl() {

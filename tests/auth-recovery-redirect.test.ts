@@ -72,6 +72,66 @@ describe("recovery redirect guard", () => {
     );
   });
 
+  it("does not double-wrap recovery codes that already target reset-password", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?code=recovery-code&type=recovery&next=%2Freset-password%3Fredirect%3D%252Fhistory"
+    );
+
+    render(React.createElement(RecoveryRedirect));
+
+    await waitFor(() => expect(mockReplaceWithBrowser).toHaveBeenCalledTimes(1));
+
+    const destination = new URL(
+      mockReplaceWithBrowser.mock.calls[0][0],
+      window.location.origin
+    );
+    expect(destination.pathname).toBe("/api/auth/callback");
+    expect(destination.searchParams.get("next")).toBe(
+      "/reset-password?redirect=%2Fhistory"
+    );
+  });
+
+  it("drops unsafe external redirect targets from recovery codes", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?code=recovery-code&type=recovery&redirect=https%3A%2F%2Fevil.example%2Fsteal"
+    );
+
+    render(React.createElement(RecoveryRedirect));
+
+    await waitFor(() => expect(mockReplaceWithBrowser).toHaveBeenCalledTimes(1));
+
+    const destination = new URL(
+      mockReplaceWithBrowser.mock.calls[0][0],
+      window.location.origin
+    );
+    expect(destination.searchParams.get("next")).toBe("/reset-password");
+    expect(destination.href).not.toContain("evil.example");
+  });
+
+  it("does not reroute incomplete recovery hashes", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/#access_token=test-token&type=recovery"
+    );
+
+    render(React.createElement(RecoveryRedirect));
+
+    expect(mockReplaceWithBrowser).not.toHaveBeenCalled();
+  });
+
+  it("does not reroute recovery query links without a verifier", () => {
+    window.history.replaceState({}, "", "/?type=recovery");
+
+    render(React.createElement(RecoveryRedirect));
+
+    expect(mockReplaceWithBrowser).not.toHaveBeenCalled();
+  });
+
   it("does not reroute non-recovery auth hashes", () => {
     window.history.replaceState(
       {},
