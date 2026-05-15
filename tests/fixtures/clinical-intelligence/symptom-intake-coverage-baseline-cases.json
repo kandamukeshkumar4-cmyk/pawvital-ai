@@ -1,0 +1,245 @@
+[
+  {
+    "id": "scooting_on_carpet",
+    "ownerPhrase": "My dog is scooting on carpet after going outside.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_rear_end_discomfort",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "butt_licking",
+    "ownerPhrase": "She keeps butt licking and seems bothered back there.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_rear_end_discomfort",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "foul_smell_rear_end",
+    "ownerPhrase": "There is a foul smell near rear end and he keeps turning around.",
+    "expectedClassification": "unknown_concern_fallback_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "none",
+    "notes": "Weak owner-language concern should be retained as an unknown concern instead of being dropped.",
+    "noOpUnsafeBecause": "A no-op would lose a localized discomfort or discharge clue before intake can ask a broad follow-up."
+  },
+  {
+    "id": "drooling_a_lot",
+    "ownerPhrase": "My dog is drooling a lot and won't settle.",
+    "expectedClassification": "unknown_concern_fallback_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "emergency_screen_needed",
+    "notes": "Weakly mapped owner phrase should fall back to an unknown concern with safety screening.",
+    "noOpUnsafeBecause": "A no-op would drop an ingestion, mouth, or breathing-adjacent clue that may need fast screening.",
+    "safetyReason": "Heavy drooling with restlessness needs an emergency screen before intake handles it as low signal."
+  },
+  {
+    "id": "eating_rocks",
+    "ownerPhrase": "He keeps eating rocks in the yard.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_pica_ingestion",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "ate_a_sock",
+    "ownerPhrase": "My dog ate a sock this morning.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_foreign_object_ingestion",
+    "safetyConcern": "emergency_screen_needed",
+    "notes": "Missing family baseline only; does not claim current runtime support.",
+    "safetyReason": "Swallowed-object language needs an emergency screen instead of disappearing from intake."
+  },
+  {
+    "id": "eating_dirt",
+    "ownerPhrase": "She has started eating dirt from the planter.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_pica_ingestion",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "head_pressing",
+    "ownerPhrase": "My dog is head pressing against the wall.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_neuro_behavior_change",
+    "safetyConcern": "emergency_screen_needed",
+    "notes": "Missing family baseline only; does not claim current runtime support.",
+    "safetyReason": "Head-pressing language should trigger emergency screening before intake continues."
+  },
+  {
+    "id": "circling",
+    "ownerPhrase": "He keeps circling the room and seems confused.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_neuro_balance_behavior",
+    "safetyConcern": "emergency_screen_needed",
+    "notes": "Missing family baseline only; does not claim current runtime support.",
+    "safetyReason": "Circling with confusion needs emergency screening rather than silent fallback."
+  },
+  {
+    "id": "staring_at_wall",
+    "ownerPhrase": "She is staring at wall for long stretches.",
+    "expectedClassification": "clarification_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "clarification_needed",
+    "notes": "Ambiguous behavior phrase needs intake clarification before any family claim.",
+    "safetyReason": "Clarification is needed to separate normal fixation from a concerning behavior change."
+  },
+  {
+    "id": "arched_back",
+    "ownerPhrase": "My dog has an arched back and walks stiffly.",
+    "expectedClassification": "unknown_concern_fallback_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "clarification_needed",
+    "notes": "Posture language is weakly mapped and should be retained for follow-up.",
+    "noOpUnsafeBecause": "A no-op would drop a pain-adjacent posture clue before intake asks where and when it started.",
+    "safetyReason": "Clarification is needed because posture plus stiffness may reflect a time-sensitive pain pattern."
+  },
+  {
+    "id": "reluctant_to_move",
+    "ownerPhrase": "He is reluctant to move and just stands in one place.",
+    "expectedClassification": "unknown_concern_fallback_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "clarification_needed",
+    "notes": "General movement reluctance should not be dropped when it fails direct mapping.",
+    "noOpUnsafeBecause": "A no-op would lose a mobility or weakness clue before the owner can clarify severity.",
+    "safetyReason": "Clarification is needed to distinguish mild hesitation from severe mobility change."
+  },
+  {
+    "id": "appetite_increased",
+    "ownerPhrase": "His appetite increased a lot this week.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_increased_appetite_hunger",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "always_hungry",
+    "ownerPhrase": "My dog is always hungry even after meals.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_increased_appetite_hunger",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "weight_gain",
+    "ownerPhrase": "She has sudden weight gain and seems heavier around the middle.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_weight_gain_body_change",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "trouble_swallowing",
+    "ownerPhrase": "My dog is having trouble swallowing his food.",
+    "expectedClassification": "unknown_concern_fallback_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "emergency_screen_needed",
+    "notes": "Swallowing language needs at least unknown-concern capture when direct mapping is absent.",
+    "noOpUnsafeBecause": "A no-op would lose an airway or mouth-adjacent clue before screening can happen.",
+    "safetyReason": "Trouble swallowing should be screened for urgent breathing, choking, or distress signals."
+  },
+  {
+    "id": "gagging_when_swallowing",
+    "ownerPhrase": "He is gagging when swallowing water.",
+    "expectedClassification": "unknown_concern_fallback_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "emergency_screen_needed",
+    "notes": "Gagging tied to swallowing should not be dropped by symptom intake.",
+    "noOpUnsafeBecause": "A no-op would miss a swallow-linked distress clue before intake can screen severity.",
+    "safetyReason": "Gagging while swallowing needs emergency screening for breathing or choking-adjacent signs."
+  },
+  {
+    "id": "paw_pad_cut",
+    "ownerPhrase": "There is a paw pad cut after our walk.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_paw_pad_nail_injury",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "limping_after_stepping_on_something",
+    "ownerPhrase": "My dog is limping after stepping on something sharp.",
+    "expectedClassification": "mapped_symptom",
+    "expectedCanonicalSymptom": "limping",
+    "proposedFamilyId": null,
+    "safetyConcern": "none",
+    "notes": "Already maps to the broad limping symptom, but the object-step detail is worth preserving for future coverage."
+  },
+  {
+    "id": "broken_nail",
+    "ownerPhrase": "She has a broken nail and is holding up the paw.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_paw_pad_nail_injury",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "tail_limp",
+    "ownerPhrase": "His tail limp and hanging lower than usual.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_tail_mobility_pain",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "tail_base_pain",
+    "ownerPhrase": "He yelps when I touch the tail base pain area.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_tail_mobility_pain",
+    "safetyConcern": "none",
+    "notes": "Missing family baseline only; does not claim current runtime support."
+  },
+  {
+    "id": "voice_changed",
+    "ownerPhrase": "My dog's voice changed and his bark sounds different.",
+    "expectedClassification": "clarification_needed",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": null,
+    "safetyConcern": "clarification_needed",
+    "notes": "Voice change is ambiguous without breathing, swallow, or cough detail.",
+    "safetyReason": "Clarification is needed to decide whether airway-adjacent screening should happen."
+  },
+  {
+    "id": "noisy_breathing_stridor",
+    "ownerPhrase": "My dog has noisy breathing / stridor when resting.",
+    "expectedClassification": "mapped_symptom",
+    "expectedCanonicalSymptom": "difficulty_breathing",
+    "proposedFamilyId": null,
+    "safetyConcern": "emergency_screen_needed",
+    "notes": "Already maps to the broad breathing symptom; this phrase should remain an emergency watch case.",
+    "safetyReason": "Noisy breathing at rest needs emergency screening before normal intake flow."
+  },
+  {
+    "id": "acute_deafness",
+    "ownerPhrase": "My dog has acute deafness and suddenly is not reacting to sounds.",
+    "expectedClassification": "missing_family",
+    "expectedCanonicalSymptom": null,
+    "proposedFamilyId": "proposed_hearing_change",
+    "safetyConcern": "clarification_needed",
+    "notes": "Missing family baseline only; does not claim current runtime support.",
+    "safetyReason": "Sudden hearing change needs clarification and associated-sign screening."
+  }
+]
