@@ -62,8 +62,7 @@ describe("nvidia-models configuration", () => {
   });
 
   it("treats placeholder values as unavailable", async () => {
-    process.env.NVIDIA_API_KEY =
-      "nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY";
+    process.env.NVIDIA_API_KEY = "your_nvidia_nim_key_here";
 
     const models = await import("@/lib/nvidia-models");
     expect(models.isLikelyPlaceholderKey(process.env.NVIDIA_API_KEY)).toBe(true);

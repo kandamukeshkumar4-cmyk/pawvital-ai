@@ -6,20 +6,25 @@ _USE_COLOR = sys.stdout.isatty() and os.getenv("NO_COLOR") is None
 _REASONING_COLOR = "\033[90m" if _USE_COLOR else ""
 _RESET_COLOR = "\033[0m" if _USE_COLOR else ""
 
+api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_GLM_API_KEY")
+if not api_key:
+  print("Set NVIDIA_API_KEY or NVIDIA_GLM_API_KEY before running this smoke test.", file=sys.stderr)
+  sys.exit(1)
+
 client = OpenAI(
-  base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = "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"
+  base_url="https://integrate.api.nvidia.com/v1",
+  api_key=api_key,
 )
 
 
 completion = client.chat.completions.create(
   model="z-ai/glm5",
-  messages=[{"role":"user","content":"Hello! Can you confirm you are connected?"}],
+  messages=[{"role": "user", "content": "Hello! Can you confirm you are connected?"}],
   temperature=1,
   top_p=1,
   max_tokens=16384,
-  extra_body={"chat_template_kwargs":{"enable_thinking":True,"clear_thinking":False}},
-  stream=True
+  extra_body={"chat_template_kwargs": {"enable_thinking": True, "clear_thinking": False}},
+  stream=True,
 )
 
 for chunk in completion:

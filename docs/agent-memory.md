@@ -9,7 +9,7 @@
 
 1. Role-specific key when set: `NVIDIA_QWEN_API_KEY` (extraction), `NVIDIA_DEEPSEEK_API_KEY` (diagnosis), `NVIDIA_GLM_API_KEY` (safety), `NVIDIA_KIMI_API_KEY` (vision_deep).
 2. Else `NVIDIA_API_KEY`.
-3. Placeholder values (e.g. `nvapi-REPLACE_WITH_YOUR_REAL_NVIDIA_NIM_KEY`) count as unset.
+3. Placeholder values (e.g. `your_nvidia_nim_key_here`) count as unset.
 
 Phrasing / phrasing_verifier / vision_fast / vision_detailed use the shared key only unless a future override is added.
 
