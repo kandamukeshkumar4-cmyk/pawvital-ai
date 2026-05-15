@@ -129,9 +129,10 @@ export default function RecoveryRedirect() {
     if (!redirect) {
       return;
     }
+    const redirectTarget = redirect;
 
     async function completeRedirect() {
-      if (redirect.hydrateCurrentHash && isSupabaseConfigured) {
+      if (redirectTarget.hydrateCurrentHash && isSupabaseConfigured) {
         try {
           await createRecoveryClient().auth.getSession();
         } catch {
@@ -139,7 +140,7 @@ export default function RecoveryRedirect() {
         }
       }
 
-      replaceWithBrowser(redirect.href);
+      replaceWithBrowser(redirectTarget.href);
     }
 
     void completeRedirect();
