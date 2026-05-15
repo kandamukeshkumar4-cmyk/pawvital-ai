@@ -1,0 +1,112 @@
+name: Shadow Readout Scheduler
+
+on:
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run even before the configured not-before timestamp"
+        required: false
+        default: "false"
+      not_before:
+        description: "UTC timestamp when the VET-1492C readout window opens"
+        required: false
+        default: "2026-05-17T03:06:00Z"
+      window_end:
+        description: "UTC timestamp when the 72h readout window ends"
+        required: false
+        default: "2026-05-18T03:06:00Z"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  readout:
+    name: Check production shadow readout window
+    runs-on: ubuntu-latest
+    env:
+      SHADOW_READOUT_URL: https://pawvital-ai.vercel.app/api/ai/shadow-rollout
+      SHADOW_READOUT_NOT_BEFORE: ${{ github.event.inputs.not_before || '2026-05-17T03:06:00Z' }}
+      SHADOW_READOUT_WINDOW_END: ${{ github.event.inputs.window_end || '2026-05-18T03:06:00Z' }}
+      SHADOW_READOUT_FORCE: ${{ github.event.inputs.force || 'false' }}
+      SHADOW_ROLLOUT_SECRET: ${{ secrets.HF_SIDECAR_API_KEY || secrets.ASYNC_REVIEW_WEBHOOK_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Run scheduled readout
+        id: readout
+        run: node scripts/shadow-readout-scheduler.mjs
+
+      - name: Upload readout artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vet-1492c-shadow-readout-scheduled-artifacts
+          path: |
+            data/shadow-readout/vet-1492c-scheduled-readout.json
+            data/shadow-readout/vet-1492c-scheduled-readout.md
+
+      - name: Create or update readout issue
+        if: steps.readout.outputs.due == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require("fs");
+            const title = "${{ steps.readout.outputs.issue_title }}";
+            const markdownPath = "${{ steps.readout.outputs.markdown_path }}";
+            const jsonPath = "${{ steps.readout.outputs.json_path }}";
+            const reportMarkdown = fs.readFileSync(markdownPath, "utf8");
+            const reportJson = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+            const body = [
+              "## VET-1492C Scheduled Shadow Readout",
+              "",
+              "The configured 48h shadow readout window has opened.",
+              "",
+              `Status: \`${reportJson.status}\``,
+              `Decision: \`${reportJson.decision}\``,
+              `Report count: \`${reportJson.readout?.reportCount ?? 0}\``,
+              `Warning: \`${reportJson.readout?.warning ?? "null"}\``,
+              "",
+              "Run the formal VET-1492C rerun if this report shows meaningful production sessions. Keep flags in shadow/off otherwise.",
+              "",
+              "<details><summary>Scheduler report</summary>",
+              "",
+              reportMarkdown,
+              "",
+              "</details>"
+            ].join("\n");
+
+            const { owner, repo } = context.repo;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title && !issue.pull_request);
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+              core.notice(`Updated existing readout issue #${existing.number}`);
+            } else {
+              const { data: issue } = await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+              core.notice(`Created readout issue #${issue.number}`);
+            }

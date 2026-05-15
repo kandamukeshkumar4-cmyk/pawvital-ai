@@ -24,6 +24,99 @@ describe("shadow rollout baseline persistence", () => {
     jest.clearAllMocks();
     mockReadShadowLoadTestSummary.mockResolvedValue(null);
     mockShouldPreferShadowTelemetryFileStore.mockReturnValue(false);
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(false);
+  });
+
+  it("treats zero persisted symptom checks as a healthy empty readout", async () => {
+    const limit = jest.fn().mockResolvedValue({ data: [], error: null });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(0);
+    expect(snapshot.parsedReportCount).toBe(0);
+    expect(snapshot.malformedReportCount).toBe(0);
+    expect(snapshot.observationCount).toBe(0);
+    expect(snapshot.shadowComparisonCount).toBe(0);
+    expect(snapshot.warning).toBeNull();
+    expect(from).toHaveBeenCalledWith("symptom_checks");
+    expect(mockListShadowTelemetrySnapshots).not.toHaveBeenCalled();
+  });
+
+  it("builds the readout from persisted system observability in symptom checks", async () => {
+    const recordedAt = new Date().toISOString();
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-1",
+          ai_response: JSON.stringify({
+            system_observability: {
+              recentServiceCalls: [
+                {
+                  service: "async-review-service",
+                  stage: "report-review",
+                  latencyMs: 325,
+                  outcome: "shadow",
+                  shadowMode: true,
+                  fallbackUsed: false,
+                  recordedAt,
+                },
+              ],
+              recentShadowComparisons: [
+                {
+                  service: "async-review-service",
+                  usedStrategy: "nvidia-primary",
+                  shadowStrategy: "grok-final-safety-shadow",
+                  summary: "Aligned",
+                  disagreementCount: 0,
+                  recordedAt,
+                },
+              ],
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(1);
+    expect(snapshot.parsedReportCount).toBe(1);
+    expect(snapshot.malformedReportCount).toBe(0);
+    expect(snapshot.observationCount).toBe(1);
+    expect(snapshot.shadowComparisonCount).toBe(1);
+    expect(snapshot.warning).toBeNull();
+    expect(snapshot.serviceMetrics).toContainEqual(
+      expect.objectContaining({
+        service: "async-review-service",
+        observationCount: 1,
+        shadowObservationCount: 1,
+        comparisonCount: 1,
+      })
+    );
+    expect(mockListShadowTelemetrySnapshots).not.toHaveBeenCalled();
   });
 
   it("falls back to Redis telemetry when Supabase is unavailable", async () => {
