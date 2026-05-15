@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Heart, Lock } from "lucide-react";
@@ -12,10 +12,11 @@ import {
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
-import { createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createClient, createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const RECOVERY_SESSION_RETRY_MS = 150;
 const RECOVERY_SESSION_RETRY_COUNT = 10;
+type RecoverySessionSource = "cookie" | "implicit";
 
 function hasRecoveryHash() {
   if (typeof window === "undefined") {
@@ -38,6 +39,7 @@ export default function ResetPasswordPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
   const [error, setError] = useState("");
+  const recoverySessionSource = useRef<RecoverySessionSource>("cookie");
   const redirectTarget = resolvePostAuthRedirect(searchParams.get("redirect"));
 
   useEffect(() => {
@@ -47,20 +49,35 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const supabase = createRecoveryClient();
+    const cookieSupabase = createClient();
+    const implicitSupabase = createRecoveryClient();
     let mounted = true;
 
     async function loadSession() {
       const shouldRetry = hasRecoveryHash();
       let session = null;
 
-      for (let attempt = 0; attempt < (shouldRetry ? RECOVERY_SESSION_RETRY_COUNT : 1); attempt += 1) {
+      const {
+        data: { session: cookieSession },
+      } = await cookieSupabase.auth.getSession();
+
+      if (cookieSession) {
+        session = cookieSession;
+        recoverySessionSource.current = "cookie";
+      }
+
+      for (
+        let attempt = 0;
+        !session && attempt < (shouldRetry ? RECOVERY_SESSION_RETRY_COUNT : 1);
+        attempt += 1
+      ) {
         const {
           data: { session: currentSession },
-        } = await supabase.auth.getSession();
+        } = await implicitSupabase.auth.getSession();
 
         if (currentSession) {
           session = currentSession;
+          recoverySessionSource.current = "implicit";
           break;
         }
 
@@ -83,9 +100,11 @@ export default function ResetPasswordPage() {
       }
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    function handleAuthStateChange(
+      source: RecoverySessionSource,
+      event: string,
+      session: unknown
+    ) {
       if (!mounted) {
         return;
       }
@@ -98,6 +117,7 @@ export default function ResetPasswordPage() {
       ) {
         setSessionReady(Boolean(session));
         if (session) {
+          recoverySessionSource.current = source;
           setError("");
         }
       }
@@ -105,13 +125,25 @@ export default function ResetPasswordPage() {
       if (event === "SIGNED_OUT" && !session) {
         setSessionReady(false);
       }
+    }
+
+    const {
+      data: { subscription: cookieSubscription },
+    } = cookieSupabase.auth.onAuthStateChange((event, session) => {
+      handleAuthStateChange("cookie", event, session);
+    });
+    const {
+      data: { subscription: implicitSubscription },
+    } = implicitSupabase.auth.onAuthStateChange((event, session) => {
+      handleAuthStateChange("implicit", event, session);
     });
 
     void loadSession();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      cookieSubscription.unsubscribe();
+      implicitSubscription.unsubscribe();
     };
   }, []);
 
@@ -138,7 +170,10 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      const supabase = createRecoveryClient();
+      const supabase =
+        recoverySessionSource.current === "cookie"
+          ? createClient()
+          : createRecoveryClient();
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });

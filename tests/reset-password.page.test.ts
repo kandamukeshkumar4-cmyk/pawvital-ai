@@ -6,10 +6,14 @@ import ResetPasswordPage from "@/app/(auth)/reset-password/page";
 
 const mockReplaceWithBrowser = jest.fn();
 const mockSearchParams = new URLSearchParams();
-const mockGetSession = jest.fn();
-const mockOnAuthStateChange = jest.fn();
-const mockUpdateUser = jest.fn();
-const mockSignOut = jest.fn();
+const mockCookieGetSession = jest.fn();
+const mockCookieOnAuthStateChange = jest.fn();
+const mockCookieUpdateUser = jest.fn();
+const mockCookieSignOut = jest.fn();
+const mockImplicitGetSession = jest.fn();
+const mockImplicitOnAuthStateChange = jest.fn();
+const mockImplicitUpdateUser = jest.fn();
+const mockImplicitSignOut = jest.fn();
 
 jest.mock("next/link", () => {
   const ReactActual = jest.requireActual<typeof import("react")>("react");
@@ -38,12 +42,22 @@ jest.mock("@/lib/browser-navigation", () => ({
 }));
 
 jest.mock("@/lib/supabase", () => ({
+  createClient: () => ({
+    auth: {
+      getSession: (...args: unknown[]) => mockCookieGetSession(...args),
+      onAuthStateChange: (...args: unknown[]) =>
+        mockCookieOnAuthStateChange(...args),
+      signOut: (...args: unknown[]) => mockCookieSignOut(...args),
+      updateUser: (...args: unknown[]) => mockCookieUpdateUser(...args),
+    },
+  }),
   createRecoveryClient: () => ({
     auth: {
-      getSession: (...args: unknown[]) => mockGetSession(...args),
-      onAuthStateChange: (...args: unknown[]) => mockOnAuthStateChange(...args),
-      signOut: (...args: unknown[]) => mockSignOut(...args),
-      updateUser: (...args: unknown[]) => mockUpdateUser(...args),
+      getSession: (...args: unknown[]) => mockImplicitGetSession(...args),
+      onAuthStateChange: (...args: unknown[]) =>
+        mockImplicitOnAuthStateChange(...args),
+      signOut: (...args: unknown[]) => mockImplicitSignOut(...args),
+      updateUser: (...args: unknown[]) => mockImplicitUpdateUser(...args),
     },
   }),
   isSupabaseConfigured: true,
@@ -59,7 +73,16 @@ describe("reset password page", () => {
     mockSearchParams.set("redirect", "/symptom-checker");
     window.history.replaceState({}, "", "/reset-password?redirect=%2Fsymptom-checker");
     window.location.hash = "";
-    mockOnAuthStateChange.mockReturnValue({
+    mockCookieGetSession.mockResolvedValue({ data: { session: null } });
+    mockImplicitGetSession.mockResolvedValue({ data: { session: null } });
+    mockCookieOnAuthStateChange.mockReturnValue({
+      data: {
+        subscription: {
+          unsubscribe: jest.fn(),
+        },
+      },
+    });
+    mockImplicitOnAuthStateChange.mockReturnValue({
       data: {
         subscription: {
           unsubscribe: jest.fn(),
@@ -80,7 +103,8 @@ describe("reset password page", () => {
       "/reset-password?redirect=%2Fsymptom-checker#access_token=test-token&refresh_token=test-refresh&token_type=bearer"
     );
 
-    mockGetSession
+    mockCookieGetSession.mockResolvedValue({ data: { session: null } });
+    mockImplicitGetSession
       .mockResolvedValueOnce({ data: { session: null } })
       .mockResolvedValueOnce({
         data: {
@@ -107,7 +131,8 @@ describe("reset password page", () => {
   });
 
   it("shows the invalid-link state when no recovery session arrives", async () => {
-    mockGetSession.mockResolvedValue({ data: { session: null } });
+    mockCookieGetSession.mockResolvedValue({ data: { session: null } });
+    mockImplicitGetSession.mockResolvedValue({ data: { session: null } });
 
     render(React.createElement(ResetPasswordPage));
 
@@ -118,8 +143,8 @@ describe("reset password page", () => {
     );
   });
 
-  it("routes successful reset back through login with the original redirect", async () => {
-    mockGetSession.mockResolvedValue({
+  it("updates cookie-backed recovery sessions and returns through login", async () => {
+    mockCookieGetSession.mockResolvedValue({
       data: {
         session: {
           access_token: "session-token",
@@ -127,8 +152,8 @@ describe("reset password page", () => {
         },
       },
     });
-    mockUpdateUser.mockResolvedValue({ error: null });
-    mockSignOut.mockResolvedValue({ error: null });
+    mockCookieUpdateUser.mockResolvedValue({ error: null });
+    mockCookieSignOut.mockResolvedValue({ error: null });
 
     render(React.createElement(ResetPasswordPage));
 
@@ -149,7 +174,55 @@ describe("reset password page", () => {
         "/login?redirect=%2Fsymptom-checker&reason=password_updated"
       )
     );
-    expect(mockUpdateUser).toHaveBeenCalledWith({ password: "new-password-1" });
-    expect(mockSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(mockCookieUpdateUser).toHaveBeenCalledWith({
+      password: "new-password-1",
+    });
+    expect(mockCookieSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(mockImplicitUpdateUser).not.toHaveBeenCalled();
+  });
+
+  it("updates implicit hash recovery sessions with the implicit client", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/reset-password?redirect=%2Fhistory#access_token=test-token&refresh_token=test-refresh&token_type=bearer"
+    );
+    mockSearchParams.set("redirect", "/history");
+    mockCookieGetSession.mockResolvedValue({ data: { session: null } });
+    mockImplicitGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "session-token",
+          user: { id: "user-1" },
+        },
+      },
+    });
+    mockImplicitUpdateUser.mockResolvedValue({ error: null });
+    mockImplicitSignOut.mockResolvedValue({ error: null });
+
+    render(React.createElement(ResetPasswordPage));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Update Password" })).toBeTruthy()
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("At least 8 characters"), {
+      target: { value: "new-password-1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repeat your new password"), {
+      target: { value: "new-password-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update Password" }));
+
+    await waitFor(() =>
+      expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
+        "/login?redirect=%2Fhistory&reason=password_updated"
+      )
+    );
+    expect(mockImplicitUpdateUser).toHaveBeenCalledWith({
+      password: "new-password-1",
+    });
+    expect(mockImplicitSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(mockCookieUpdateUser).not.toHaveBeenCalled();
   });
 });
