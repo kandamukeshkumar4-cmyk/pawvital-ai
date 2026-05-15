@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import * as React from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import ResetPasswordPage from "@/app/(auth)/reset-password/page";
 
 const mockReplaceWithBrowser = jest.fn();
@@ -9,6 +9,7 @@ const mockSearchParams = new URLSearchParams();
 const mockGetSession = jest.fn();
 const mockOnAuthStateChange = jest.fn();
 const mockUpdateUser = jest.fn();
+const mockSignOut = jest.fn();
 
 jest.mock("next/link", () => {
   const ReactActual = jest.requireActual<typeof import("react")>("react");
@@ -41,6 +42,7 @@ jest.mock("@/lib/supabase", () => ({
     auth: {
       getSession: (...args: unknown[]) => mockGetSession(...args),
       onAuthStateChange: (...args: unknown[]) => mockOnAuthStateChange(...args),
+      signOut: (...args: unknown[]) => mockSignOut(...args),
       updateUser: (...args: unknown[]) => mockUpdateUser(...args),
     },
   }),
@@ -51,6 +53,10 @@ describe("reset password page", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    Array.from(mockSearchParams.keys()).forEach((key) => {
+      mockSearchParams.delete(key);
+    });
+    mockSearchParams.set("redirect", "/symptom-checker");
     window.history.replaceState({}, "", "/reset-password?redirect=%2Fsymptom-checker");
     window.location.hash = "";
     mockOnAuthStateChange.mockReturnValue({
@@ -110,5 +116,40 @@ describe("reset password page", () => {
         screen.getByText("This password reset link is invalid or has expired.")
       ).toBeTruthy()
     );
+  });
+
+  it("routes successful reset back through login with the original redirect", async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "session-token",
+          user: { id: "user-1" },
+        },
+      },
+    });
+    mockUpdateUser.mockResolvedValue({ error: null });
+    mockSignOut.mockResolvedValue({ error: null });
+
+    render(React.createElement(ResetPasswordPage));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Update Password" })).toBeTruthy()
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("At least 8 characters"), {
+      target: { value: "new-password-1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repeat your new password"), {
+      target: { value: "new-password-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update Password" }));
+
+    await waitFor(() =>
+      expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
+        "/login?redirect=%2Fsymptom-checker&reason=password_updated"
+      )
+    );
+    expect(mockUpdateUser).toHaveBeenCalledWith({ password: "new-password-1" });
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: "local" });
   });
 });

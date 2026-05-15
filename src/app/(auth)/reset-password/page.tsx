@@ -8,6 +8,7 @@ import Button, { buttonClassName } from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
+  buildLoginPath,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
@@ -146,7 +147,10 @@ export default function ResetPasswordPage() {
         throw updateError;
       }
 
-      replaceWithBrowser(redirectTarget);
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      replaceWithBrowser(
+        buildLoginPath(redirectTarget, { reason: "password_updated" })
+      );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to update password";
       setError(message);
