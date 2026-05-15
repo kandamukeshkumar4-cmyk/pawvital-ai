@@ -43,8 +43,11 @@ function buildHashRecoveryRedirect(url: URL) {
   const redirectTarget =
     sanitizeRedirectTarget(url.searchParams.get("redirect")) ||
     sanitizeRedirectTarget(url.searchParams.get("next"));
+  const recoveryPath = isResetPasswordRedirectTarget(redirectTarget)
+    ? redirectTarget
+    : buildRecoveryRedirectPath(redirectTarget);
 
-  return `${buildRecoveryRedirectPath(redirectTarget)}${hash}`;
+  return `${recoveryPath}${hash}`;
 }
 
 function buildQueryRecoveryRedirect(url: URL) {

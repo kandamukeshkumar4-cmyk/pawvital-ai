@@ -49,6 +49,22 @@ describe("recovery redirect guard", () => {
     );
   });
 
+  it("does not double-wrap recovery hashes that already target reset-password", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/?next=%2Freset-password%3Fredirect%3D%252Fhistory#access_token=test-token&refresh_token=test-refresh&type=recovery"
+    );
+
+    render(React.createElement(RecoveryRedirect));
+
+    await waitFor(() =>
+      expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
+        "/reset-password?redirect=%2Fhistory#access_token=test-token&refresh_token=test-refresh&type=recovery"
+      )
+    );
+  });
+
   it("hands root recovery codes to the existing auth callback route", async () => {
     window.history.replaceState(
       {},
