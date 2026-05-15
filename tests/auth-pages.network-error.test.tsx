@@ -9,6 +9,7 @@ import SignupPage from "@/app/(auth)/signup/page";
 const mockReplace = jest.fn();
 const mockSearchParams = new URLSearchParams();
 const mockCreateClient = jest.fn();
+const mockCreateRecoveryClient = jest.fn();
 
 jest.mock("next/link", () => {
   const ReactActual = jest.requireActual<typeof import("react")>("react");
@@ -35,14 +36,15 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/lib/supabase", () => ({
   createClient: () => mockCreateClient(),
+  createRecoveryClient: () => mockCreateRecoveryClient(),
   isSupabaseConfigured: true,
 }));
 
 function fillRequiredAuthFields() {
-  fireEvent.change(screen.getByLabelText("Email"), {
+  fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
     target: { value: "owner@example.com" },
   });
-  fireEvent.change(screen.getByLabelText("Password"), {
+  fireEvent.change(document.querySelector('input[type="password"]')!, {
     target: { value: "super-secret-password" },
   });
 }
@@ -50,6 +52,7 @@ function fillRequiredAuthFields() {
 describe("auth page network error handling", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCreateRecoveryClient.mockImplementation(() => mockCreateClient());
   });
 
   it("shows a friendly login message instead of the raw fetch failure", async () => {
@@ -119,7 +122,7 @@ describe("auth page network error handling", () => {
     try {
       render(React.createElement(SignupPage));
 
-      fireEvent.change(screen.getByLabelText("Full Name"), {
+      fireEvent.change(screen.getByPlaceholderText("Your name"), {
         target: { value: "Dog Parent" },
       });
       fillRequiredAuthFields();
@@ -140,7 +143,7 @@ describe("auth page network error handling", () => {
 
   it("shows the friendly network message on password reset failure", async () => {
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-    mockCreateClient.mockReturnValue({
+    mockCreateRecoveryClient.mockReturnValue({
       auth: {
         resetPasswordForEmail: jest
           .fn()
@@ -151,7 +154,7 @@ describe("auth page network error handling", () => {
     try {
       render(React.createElement(ForgotPasswordPage));
 
-      fireEvent.change(screen.getByLabelText("Email"), {
+      fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
         target: { value: "owner@example.com" },
       });
       fireEvent.click(screen.getByRole("button", { name: "Send Reset Link" }));
@@ -168,9 +171,9 @@ describe("auth page network error handling", () => {
     }
   });
 
-  it("sends password reset emails through the browser callback for PKCE recovery", async () => {
+  it("sends password reset emails through the implicit recovery client", async () => {
     const resetPasswordForEmail = jest.fn().mockResolvedValue({ error: null });
-    mockCreateClient.mockReturnValue({
+    mockCreateRecoveryClient.mockReturnValue({
       auth: {
         resetPasswordForEmail,
       },
@@ -178,7 +181,7 @@ describe("auth page network error handling", () => {
 
     render(React.createElement(ForgotPasswordPage));
 
-    fireEvent.change(screen.getByLabelText("Email"), {
+    fireEvent.change(screen.getByPlaceholderText("you@example.com"), {
       target: { value: "owner@example.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Send Reset Link" }));

@@ -30,7 +30,7 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("@/lib/supabase", () => ({
-  createClient: () => ({
+  createRecoveryClient: () => ({
     auth: {
       resetPasswordForEmail: (...args: unknown[]) =>
         mockResetPasswordForEmail(...args),
