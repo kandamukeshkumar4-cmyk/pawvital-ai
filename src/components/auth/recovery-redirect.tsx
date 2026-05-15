@@ -7,10 +7,16 @@ import {
   sanitizeRedirectTarget,
 } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
+import { createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const AUTH_CALLBACK_PATH = "/api/auth/callback";
 const BROWSER_CALLBACK_PATH = "/auth/callback";
 const INTERNAL_BASE_URL = "https://pawvital.local";
+
+interface RecoveryRedirectTarget {
+  href: string;
+  hydrateCurrentHash: boolean;
+}
 
 function isRecoveryFlow(value: string | null) {
   return value === "recovery";
@@ -24,7 +30,7 @@ function shouldIgnoreCurrentPath(pathname: string) {
   );
 }
 
-function buildHashRecoveryRedirect(url: URL) {
+function buildHashRecoveryRedirect(url: URL): RecoveryRedirectTarget | null {
   const hash = url.hash;
   if (!hash) {
     return null;
@@ -47,10 +53,13 @@ function buildHashRecoveryRedirect(url: URL) {
     ? redirectTarget
     : buildRecoveryRedirectPath(redirectTarget);
 
-  return `${recoveryPath}${hash}`;
+  return {
+    href: recoveryPath,
+    hydrateCurrentHash: true,
+  };
 }
 
-function buildQueryRecoveryRedirect(url: URL) {
+function buildQueryRecoveryRedirect(url: URL): RecoveryRedirectTarget | null {
   const flow = url.searchParams.get("flow") || url.searchParams.get("type");
   if (!isRecoveryFlow(flow)) {
     return null;
@@ -83,7 +92,10 @@ function buildQueryRecoveryRedirect(url: URL) {
       : buildRecoveryRedirectPath(redirectTarget)
   );
 
-  return `${callbackUrl.pathname}${callbackUrl.search}`;
+  return {
+    href: `${callbackUrl.pathname}${callbackUrl.search}`,
+    hydrateCurrentHash: false,
+  };
 }
 
 function isResetPasswordRedirectTarget(target: string | null): target is string {
@@ -113,10 +125,24 @@ function getRecoveryRedirectFromCurrentUrl() {
 
 export default function RecoveryRedirect() {
   useEffect(() => {
-    const redirectUrl = getRecoveryRedirectFromCurrentUrl();
-    if (redirectUrl) {
-      replaceWithBrowser(redirectUrl);
+    const redirect = getRecoveryRedirectFromCurrentUrl();
+    if (!redirect) {
+      return;
     }
+
+    async function completeRedirect() {
+      if (redirect.hydrateCurrentHash && isSupabaseConfigured) {
+        try {
+          await createRecoveryClient().auth.getSession();
+        } catch {
+          // The reset page will show the invalid-link state if hydration fails.
+        }
+      }
+
+      replaceWithBrowser(redirect.href);
+    }
+
+    void completeRedirect();
   }, []);
 
   return null;

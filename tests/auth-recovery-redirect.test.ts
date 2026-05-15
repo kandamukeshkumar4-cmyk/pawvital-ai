@@ -5,14 +5,25 @@ import { render, waitFor } from "@testing-library/react";
 import RecoveryRedirect from "@/components/auth/recovery-redirect";
 
 const mockReplaceWithBrowser = jest.fn();
+const mockGetSession = jest.fn();
 
 jest.mock("@/lib/browser-navigation", () => ({
   replaceWithBrowser: (...args: unknown[]) => mockReplaceWithBrowser(...args),
 }));
 
+jest.mock("@/lib/supabase", () => ({
+  createRecoveryClient: () => ({
+    auth: {
+      getSession: (...args: unknown[]) => mockGetSession(...args),
+    },
+  }),
+  isSupabaseConfigured: true,
+}));
+
 describe("recovery redirect guard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null });
     window.history.replaceState({}, "", "/");
     window.location.hash = "";
   });
@@ -28,9 +39,10 @@ describe("recovery redirect guard", () => {
 
     await waitFor(() =>
       expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
-        "/reset-password#access_token=test-token&refresh_token=test-refresh&type=recovery&token_type=bearer"
+        "/reset-password"
       )
     );
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 
   it("preserves protected redirect targets when recovery hashes land at root", async () => {
@@ -44,7 +56,7 @@ describe("recovery redirect guard", () => {
 
     await waitFor(() =>
       expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
-        "/reset-password?redirect=%2Fsymptom-checker#access_token=test-token&refresh_token=test-refresh&type=recovery"
+        "/reset-password?redirect=%2Fsymptom-checker"
       )
     );
   });
@@ -60,7 +72,7 @@ describe("recovery redirect guard", () => {
 
     await waitFor(() =>
       expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
-        "/reset-password?redirect=%2Fhistory#access_token=test-token&refresh_token=test-refresh&type=recovery"
+        "/reset-password?redirect=%2Fhistory"
       )
     );
   });
