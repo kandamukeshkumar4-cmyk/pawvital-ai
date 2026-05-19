@@ -14,6 +14,12 @@ const mockImplicitGetSession = jest.fn();
 const mockImplicitOnAuthStateChange = jest.fn();
 const mockImplicitUpdateUser = jest.fn();
 const mockImplicitSignOut = jest.fn();
+let cookieAuthStateChange:
+  | ((event: string, session: unknown) => void)
+  | null = null;
+let implicitAuthStateChange:
+  | ((event: string, session: unknown) => void)
+  | null = null;
 
 jest.mock("next/link", () => {
   const ReactActual = jest.requireActual<typeof import("react")>("react");
@@ -67,6 +73,8 @@ describe("reset password page", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    cookieAuthStateChange = null;
+    implicitAuthStateChange = null;
     Array.from(mockSearchParams.keys()).forEach((key) => {
       mockSearchParams.delete(key);
     });
@@ -75,19 +83,25 @@ describe("reset password page", () => {
     window.location.hash = "";
     mockCookieGetSession.mockResolvedValue({ data: { session: null } });
     mockImplicitGetSession.mockResolvedValue({ data: { session: null } });
-    mockCookieOnAuthStateChange.mockReturnValue({
-      data: {
-        subscription: {
-          unsubscribe: jest.fn(),
+    mockCookieOnAuthStateChange.mockImplementation((callback) => {
+      cookieAuthStateChange = callback as (event: string, session: unknown) => void;
+      return {
+        data: {
+          subscription: {
+            unsubscribe: jest.fn(),
+          },
         },
-      },
+      };
     });
-    mockImplicitOnAuthStateChange.mockReturnValue({
-      data: {
-        subscription: {
-          unsubscribe: jest.fn(),
+    mockImplicitOnAuthStateChange.mockImplementation((callback) => {
+      implicitAuthStateChange = callback as (event: string, session: unknown) => void;
+      return {
+        data: {
+          subscription: {
+            unsubscribe: jest.fn(),
+          },
         },
-      },
+      };
     });
   });
 
@@ -213,6 +227,13 @@ describe("reset password page", () => {
       expect(screen.getByRole("button", { name: "Update Password" })).toBeTruthy()
     );
 
+    act(() => {
+      cookieAuthStateChange?.("SIGNED_IN", {
+        access_token: "cookie-session-token",
+        user: { id: "signed-in-user" },
+      });
+    });
+
     fireEvent.change(screen.getByPlaceholderText("At least 8 characters"), {
       target: { value: "new-password-1" },
     });
@@ -232,5 +253,6 @@ describe("reset password page", () => {
     expect(mockImplicitSignOut).toHaveBeenCalledWith({ scope: "local" });
     expect(mockCookieGetSession).not.toHaveBeenCalled();
     expect(mockCookieUpdateUser).not.toHaveBeenCalled();
+    expect(implicitAuthStateChange).not.toBeNull();
   });
 });

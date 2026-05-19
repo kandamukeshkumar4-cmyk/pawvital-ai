@@ -47,6 +47,7 @@ export default function ResetPasswordPage() {
 
     const cookieSupabase = createClient();
     const implicitSupabase = createRecoveryClient();
+    const shouldUseRecoveryHash = hasRecoveryHash();
     let mounted = true;
 
     async function loadImplicitSession(shouldRetry: boolean) {
@@ -74,7 +75,6 @@ export default function ResetPasswordPage() {
     }
 
     async function loadSession() {
-      const shouldUseRecoveryHash = hasRecoveryHash();
       let session = null;
 
       if (shouldUseRecoveryHash) {
@@ -118,6 +118,10 @@ export default function ResetPasswordPage() {
       session: unknown
     ) {
       if (!mounted) {
+        return;
+      }
+
+      if (shouldUseRecoveryHash && source === "cookie") {
         return;
       }
 
