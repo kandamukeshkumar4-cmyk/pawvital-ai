@@ -703,6 +703,18 @@ function extractVomitBlood(rawMessage: string): boolean | null {
   }
 
   if (
+    /\b(no|not|haven'?t|hasn'?t|didn'?t|don'?t|without|wasn'?t|never)\b[^.?!]{0,40}\b(blood|bloody|coffee grounds?|coffee-ground)\b/.test(
+      lower
+    ) ||
+    /\b(blood|bloody|coffee grounds?|coffee-ground)\b[^.?!]{0,40}\b(not present|not there|absent|none)\b/.test(
+      lower
+    ) ||
+    /^no blood\b/.test(lower.trim())
+  ) {
+    return false;
+  }
+
+  if (
     /\b(vomit|vomiting|throwing up|threw up|throw up)\b/.test(lower) &&
     /\b(blood|bloody|coffee grounds?|coffee-ground)\b/.test(lower)
   ) {
