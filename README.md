@@ -9,7 +9,7 @@ PawVital AI is a Next.js dog symptom triage application built around a determini
 - Shared default key: `NVIDIA_API_KEY`
 - Optional role overrides: `NVIDIA_QWEN_API_KEY`, `NVIDIA_KIMI_API_KEY`, `NVIDIA_DEEPSEEK_API_KEY`, `NVIDIA_GLM_API_KEY` (each falls back to `NVIDIA_API_KEY` when unset)
 
-Runtime AI under `src/app/api/ai` uses the official OpenAI JavaScript SDK pointed at NVIDIA’s OpenAI-compatible base URL (`https://integrate.api.nvidia.com/v1`). One `NVIDIA_API_KEY` is enough for all roles unless you split billing or quotas with the optional overrides.
+Runtime AI under `src/app/api/ai` uses the official OpenAI JavaScript SDK pointed at NVIDIA's OpenAI-compatible base URL (`https://integrate.api.nvidia.com/v1`). One `NVIDIA_API_KEY` is enough for all roles unless you split billing or quotas with the optional overrides.
 
 ## Setup
 
@@ -32,9 +32,11 @@ NVIDIA_DEEPSEEK_API_KEY=your_nvidia_nim_key_here
 NVIDIA_GLM_API_KEY=your_nvidia_nim_key_here
 ```
 
-3. If you run the optional Hugging Face sidecars locally, copy `.env.sidecars.example` into the sidecar environment you use for those services.
+3. Optional direnv workflow: copy `.envrc.example` to `.envrc`, review it, run `direnv allow`, and keep `.envrc` local only. Load real values from an approved secret source such as 1Password CLI, Doppler, Infisical, Vault, or an ignored `.env.local` file.
 
-4. Start the app.
+4. If you run the optional Hugging Face sidecars locally, copy `.env.sidecars.example` into the sidecar environment you use for those services.
+
+5. Start the app.
 
 ```bash
 npm run dev
@@ -48,6 +50,13 @@ Use these commands before landing runtime changes:
 npm run lint
 npm run build
 npm test
+```
+
+Use the existing secret scanner before pushing docs, env templates, or ops
+changes:
+
+```bash
+npm run security:secrets
 ```
 
 ## Notes
