@@ -48,7 +48,13 @@ export default function ResetPasswordPage() {
     const cookieSupabase = createClient();
     const implicitSupabase = createRecoveryClient();
     const shouldUseRecoveryHash = hasRecoveryHash();
+    let selectedRecoverySessionSource: RecoverySessionSource | null = null;
     let mounted = true;
+
+    function selectRecoverySessionSource(source: RecoverySessionSource) {
+      selectedRecoverySessionSource = source;
+      recoverySessionSource.current = source;
+    }
 
     async function loadImplicitSession(shouldRetry: boolean) {
       for (
@@ -80,7 +86,7 @@ export default function ResetPasswordPage() {
       if (shouldUseRecoveryHash) {
         session = await loadImplicitSession(true);
         if (session) {
-          recoverySessionSource.current = "implicit";
+          selectRecoverySessionSource("implicit");
         }
       } else {
         const {
@@ -89,13 +95,13 @@ export default function ResetPasswordPage() {
 
         if (cookieSession) {
           session = cookieSession;
-          recoverySessionSource.current = "cookie";
+          selectRecoverySessionSource("cookie");
         }
 
         if (!session) {
           session = await loadImplicitSession(false);
           if (session) {
-            recoverySessionSource.current = "implicit";
+            selectRecoverySessionSource("implicit");
           }
         }
       }
@@ -126,6 +132,14 @@ export default function ResetPasswordPage() {
       }
 
       if (
+        !shouldUseRecoveryHash &&
+        selectedRecoverySessionSource === "cookie" &&
+        source === "implicit"
+      ) {
+        return;
+      }
+
+      if (
         event === "PASSWORD_RECOVERY" ||
         event === "SIGNED_IN" ||
         event === "TOKEN_REFRESHED" ||
@@ -133,7 +147,7 @@ export default function ResetPasswordPage() {
       ) {
         setSessionReady(Boolean(session));
         if (session) {
-          recoverySessionSource.current = source;
+          selectRecoverySessionSource(source);
           setError("");
         }
       }

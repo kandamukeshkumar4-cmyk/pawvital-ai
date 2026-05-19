@@ -195,6 +195,51 @@ describe("reset password page", () => {
     expect(mockImplicitUpdateUser).not.toHaveBeenCalled();
   });
 
+  it("keeps cookie-backed recovery selected when an unrelated implicit session emits", async () => {
+    mockCookieGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "cookie-recovery-token",
+          user: { id: "recovery-link-user" },
+        },
+      },
+    });
+    mockCookieUpdateUser.mockResolvedValue({ error: null });
+    mockCookieSignOut.mockResolvedValue({ error: null });
+
+    render(React.createElement(ResetPasswordPage));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Update Password" })).toBeTruthy()
+    );
+
+    act(() => {
+      implicitAuthStateChange?.("SIGNED_IN", {
+        access_token: "implicit-local-storage-token",
+        user: { id: "already-signed-in-user" },
+      });
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("At least 8 characters"), {
+      target: { value: "new-password-1" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Repeat your new password"), {
+      target: { value: "new-password-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update Password" }));
+
+    await waitFor(() =>
+      expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
+        "/login?redirect=%2Fsymptom-checker&reason=password_updated"
+      )
+    );
+    expect(mockCookieUpdateUser).toHaveBeenCalledWith({
+      password: "new-password-1",
+    });
+    expect(mockCookieSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(mockImplicitUpdateUser).not.toHaveBeenCalled();
+  });
+
   it("updates implicit hash recovery sessions with the implicit client even when a cookie session exists", async () => {
     window.history.replaceState(
       {},
