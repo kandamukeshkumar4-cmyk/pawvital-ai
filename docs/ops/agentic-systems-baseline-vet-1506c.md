@@ -47,10 +47,10 @@ secret-manager exports. The repo already ignores `.env*` while allowing
 
 Approved local and operator sources:
 
-- 1Password CLI
-- Doppler
-- Infisical
-- Vault
+- 1Password CLI via `op run`
+- Doppler via `doppler run`
+- Infisical via `infisical run`
+- Vault via local shell/session injection or an ignored generated env file
 - Deployment-platform secret stores, such as encrypted GitHub Actions secrets
   and Vercel environment variables
 

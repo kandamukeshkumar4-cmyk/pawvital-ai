@@ -14,3 +14,7 @@ fi
 # - Doppler: run local commands through doppler run or sync to ignored .env.local.
 # - Infisical: run local commands through infisical run or sync to ignored .env.local.
 # - Vault: inject values into the local shell/session or write an ignored local file.
+
+# Required validation before committing env or ops docs:
+# npm run security:secrets
+# git diff --check
