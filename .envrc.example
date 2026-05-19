@@ -1,0 +1,20 @@
+# PawVital local direnv template.
+# Copy this file to .envrc on your machine only. Never commit .envrc.
+# Keep real secrets in an approved secret manager or an ignored .env.local file.
+
+PATH_add node_modules/.bin
+
+# Load shell-compatible local values if present. .env.local is ignored by git.
+if [ -f .env.local ]; then
+  source_env .env.local
+fi
+
+# Approved secret source patterns:
+# - 1Password CLI: run local commands through op run or materialize .env.local outside git.
+# - Doppler: run local commands through doppler run or sync to ignored .env.local.
+# - Infisical: run local commands through infisical run or sync to ignored .env.local.
+# - Vault: inject values into the local shell/session or write an ignored local file.
+
+# Required validation before committing env or ops docs:
+# npm run security:secrets
+# git diff --check
