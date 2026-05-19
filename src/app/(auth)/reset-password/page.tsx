@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Heart, Lock } from "lucide-react";
@@ -8,13 +8,15 @@ import Button, { buttonClassName } from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
+  buildLoginPath,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
-import { createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createClient, createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const RECOVERY_SESSION_RETRY_MS = 150;
 const RECOVERY_SESSION_RETRY_COUNT = 10;
+type RecoverySessionSource = "cookie" | "implicit";
 
 function hasRecoveryHash() {
   if (typeof window === "undefined") {
@@ -22,11 +24,7 @@ function hasRecoveryHash() {
   }
 
   const hashParams = new URLSearchParams(window.location.hash.slice(1));
-  return Boolean(
-    hashParams.get("access_token") ||
-      hashParams.get("refresh_token") ||
-      hashParams.get("token_type")
-  );
+  return Boolean(hashParams.get("access_token") && hashParams.get("refresh_token"));
 }
 
 export default function ResetPasswordPage() {
@@ -37,6 +35,7 @@ export default function ResetPasswordPage() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [sessionReady, setSessionReady] = useState(false);
   const [error, setError] = useState("");
+  const recoverySessionSource = useRef<RecoverySessionSource>("cookie");
   const redirectTarget = resolvePostAuthRedirect(searchParams.get("redirect"));
 
   useEffect(() => {
@@ -46,27 +45,64 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    const supabase = createRecoveryClient();
+    const cookieSupabase = createClient();
+    const implicitSupabase = createRecoveryClient();
+    const shouldUseRecoveryHash = hasRecoveryHash();
+    let selectedRecoverySessionSource: RecoverySessionSource | null = null;
     let mounted = true;
 
-    async function loadSession() {
-      const shouldRetry = hasRecoveryHash();
-      let session = null;
+    function selectRecoverySessionSource(source: RecoverySessionSource) {
+      selectedRecoverySessionSource = source;
+      recoverySessionSource.current = source;
+    }
 
-      for (let attempt = 0; attempt < (shouldRetry ? RECOVERY_SESSION_RETRY_COUNT : 1); attempt += 1) {
+    async function loadImplicitSession(shouldRetry: boolean) {
+      for (
+        let attempt = 0;
+        attempt < (shouldRetry ? RECOVERY_SESSION_RETRY_COUNT : 1);
+        attempt += 1
+      ) {
         const {
           data: { session: currentSession },
-        } = await supabase.auth.getSession();
+        } = await implicitSupabase.auth.getSession();
 
         if (currentSession) {
-          session = currentSession;
-          break;
+          return currentSession;
         }
 
         if (attempt < RECOVERY_SESSION_RETRY_COUNT - 1) {
           await new Promise((resolve) => {
             window.setTimeout(resolve, RECOVERY_SESSION_RETRY_MS);
           });
+        }
+      }
+
+      return null;
+    }
+
+    async function loadSession() {
+      let session = null;
+
+      if (shouldUseRecoveryHash) {
+        session = await loadImplicitSession(true);
+        if (session) {
+          selectRecoverySessionSource("implicit");
+        }
+      } else {
+        const {
+          data: { session: cookieSession },
+        } = await cookieSupabase.auth.getSession();
+
+        if (cookieSession) {
+          session = cookieSession;
+          selectRecoverySessionSource("cookie");
+        }
+
+        if (!session) {
+          session = await loadImplicitSession(false);
+          if (session) {
+            selectRecoverySessionSource("implicit");
+          }
         }
       }
 
@@ -82,10 +118,24 @@ export default function ResetPasswordPage() {
       }
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    function handleAuthStateChange(
+      source: RecoverySessionSource,
+      event: string,
+      session: unknown
+    ) {
       if (!mounted) {
+        return;
+      }
+
+      if (shouldUseRecoveryHash && source === "cookie") {
+        return;
+      }
+
+      if (
+        !shouldUseRecoveryHash &&
+        selectedRecoverySessionSource === "cookie" &&
+        source === "implicit"
+      ) {
         return;
       }
 
@@ -97,6 +147,7 @@ export default function ResetPasswordPage() {
       ) {
         setSessionReady(Boolean(session));
         if (session) {
+          selectRecoverySessionSource(source);
           setError("");
         }
       }
@@ -104,13 +155,25 @@ export default function ResetPasswordPage() {
       if (event === "SIGNED_OUT" && !session) {
         setSessionReady(false);
       }
+    }
+
+    const {
+      data: { subscription: cookieSubscription },
+    } = cookieSupabase.auth.onAuthStateChange((event, session) => {
+      handleAuthStateChange("cookie", event, session);
+    });
+    const {
+      data: { subscription: implicitSubscription },
+    } = implicitSupabase.auth.onAuthStateChange((event, session) => {
+      handleAuthStateChange("implicit", event, session);
     });
 
     void loadSession();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      cookieSubscription.unsubscribe();
+      implicitSubscription.unsubscribe();
     };
   }, []);
 
@@ -137,7 +200,10 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      const supabase = createRecoveryClient();
+      const supabase =
+        recoverySessionSource.current === "cookie"
+          ? createClient()
+          : createRecoveryClient();
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -146,7 +212,10 @@ export default function ResetPasswordPage() {
         throw updateError;
       }
 
-      replaceWithBrowser(redirectTarget);
+      await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+      replaceWithBrowser(
+        buildLoginPath(redirectTarget, { reason: "password_updated" })
+      );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to update password";
       setError(message);

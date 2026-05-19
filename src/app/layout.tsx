@@ -5,6 +5,7 @@ import {
   isPrivateTesterModeEnabled,
   PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE,
 } from "@/lib/private-tester-access";
+import RecoveryRedirect from "@/components/auth/recovery-redirect";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -73,6 +74,7 @@ export default function RootLayout({
             : "0",
         }}
       >
+        <RecoveryRedirect />
         {children}
         <SpeedInsights />
       </body>

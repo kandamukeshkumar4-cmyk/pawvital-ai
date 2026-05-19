@@ -13,7 +13,7 @@ import {
   getAuthActionErrorMessage,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
   const searchParams = useSearchParams();
@@ -43,7 +43,7 @@ export default function ForgotPasswordPage() {
         setLoading(false);
         return;
       }
-      const supabase = createClient();
+      const supabase = createRecoveryClient();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: buildRecoveryPageUrl(window.location.origin, redirectTarget),
       });
