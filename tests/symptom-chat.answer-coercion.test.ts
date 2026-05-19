@@ -4,7 +4,10 @@ jest.mock("@/lib/nvidia-models", () => ({
 
 import { createSession, type TriageSession } from "@/lib/triage-engine";
 import { getDeterministicFastPathExtraction } from "@/lib/symptom-chat/context-helpers";
-import { resolvePendingQuestionAnswer } from "@/lib/symptom-chat/answer-extraction";
+import {
+  resolvePendingQuestionAnswer,
+  deriveDeterministicAnswerForQuestion,
+} from "@/lib/symptom-chat/answer-extraction";
 
 function buildPendingSession(
   questionId: string,
@@ -349,5 +352,77 @@ describe("VET-1424 deterministic answer coercion", () => {
     );
 
     expect(extraction).toBeNull();
+  });
+});
+
+describe("VET-1508C negated blood answer must not trigger false emergency", () => {
+  it.each([
+    "No, I haven't noticed any blood",
+    "I haven't seen any blood in the vomit",
+    "No blood",
+    "There is no blood in the vomit",
+    "I didn't see any blood",
+    "He hasn't vomited blood",
+    "No, there wasn't any blood",
+    "I don't see blood or coffee grounds",
+    "Not bloody, just food and yellow bile",
+    "No, I haven't noticed any blood in the vomit. It looks like partially digested food and some yellow bile.",
+  ])(
+    "extractVomitBlood returns false for negated answer: '%s'",
+    (message) => {
+      const result = deriveDeterministicAnswerForQuestion(
+        "vomit_blood",
+        message
+      );
+      expect(result).toBe(false);
+    }
+  );
+
+  it.each([
+    "Yes, I did see blood in the vomit",
+    "There is blood in the vomit",
+    "He threw up blood",
+    "The vomit had blood in it",
+    "He's been vomiting blood",
+    "It looks like coffee grounds in what he threw up",
+  ])(
+    "extractVomitBlood returns true for positive answer: '%s'",
+    (message) => {
+      const result = deriveDeterministicAnswerForQuestion(
+        "vomit_blood",
+        message
+      );
+      expect(result).toBe(true);
+    }
+  );
+
+  it("short negated blood reply resolves via fast path", () => {
+    const session = buildPendingSession("vomit_blood", ["vomiting"]);
+    const extraction = getDeterministicFastPathExtraction(
+      session,
+      "No blood at all"
+    );
+
+    expect(extraction).toEqual({
+      symptoms: [],
+      answers: {
+        vomit_blood: false,
+      },
+    });
+  });
+
+  it("short positive blood reply resolves via fast path", () => {
+    const session = buildPendingSession("vomit_blood", ["vomiting"]);
+    const extraction = getDeterministicFastPathExtraction(
+      session,
+      "Yes he threw up blood"
+    );
+
+    expect(extraction).toEqual({
+      symptoms: [],
+      answers: {
+        vomit_blood: true,
+      },
+    });
   });
 });
