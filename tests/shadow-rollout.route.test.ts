@@ -105,8 +105,14 @@ describe("shadow-rollout route", () => {
       reportCount: 12,
       parsedReportCount: 10,
       malformedReportCount: 2,
+      reportPresenceCount: 10,
+      sessionPresenceCount: 10,
       observationCount: 18,
       shadowComparisonCount: 5,
+      timeoutCount: 1,
+      fallbackCount: 2,
+      providerErrorCount: 1,
+      budgetExceededCount: 1,
       loadTest: null,
       summary: {
         overallStatus: "watch",
@@ -303,7 +309,13 @@ describe("shadow-rollout route", () => {
       expect.objectContaining({
         windowHours: 24,
         reportCount: 12,
+        reportPresenceCount: 10,
+        sessionPresenceCount: 10,
         observationCount: 18,
+        timeoutCount: 1,
+        fallbackCount: 2,
+        providerErrorCount: 1,
+        budgetExceededCount: 1,
         loadTest: null,
       })
     );
