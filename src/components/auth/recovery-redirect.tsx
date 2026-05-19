@@ -7,7 +7,6 @@ import {
   sanitizeRedirectTarget,
 } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
-import { createRecoveryClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const AUTH_CALLBACK_PATH = "/api/auth/callback";
 const BROWSER_CALLBACK_PATH = "/auth/callback";
@@ -15,7 +14,6 @@ const INTERNAL_BASE_URL = "https://pawvital.local";
 
 interface RecoveryRedirectTarget {
   href: string;
-  hydrateCurrentHash: boolean;
 }
 
 function isRecoveryFlow(value: string | null) {
@@ -54,8 +52,7 @@ function buildHashRecoveryRedirect(url: URL): RecoveryRedirectTarget | null {
     : buildRecoveryRedirectPath(redirectTarget);
 
   return {
-    href: recoveryPath,
-    hydrateCurrentHash: true,
+    href: `${recoveryPath}${hash}`,
   };
 }
 
@@ -94,7 +91,6 @@ function buildQueryRecoveryRedirect(url: URL): RecoveryRedirectTarget | null {
 
   return {
     href: `${callbackUrl.pathname}${callbackUrl.search}`,
-    hydrateCurrentHash: false,
   };
 }
 
@@ -130,20 +126,7 @@ export default function RecoveryRedirect() {
       return;
     }
     const redirectTarget = redirect;
-
-    async function completeRedirect() {
-      if (redirectTarget.hydrateCurrentHash && isSupabaseConfigured) {
-        try {
-          await createRecoveryClient().auth.getSession();
-        } catch {
-          // The reset page will show the invalid-link state if hydration fails.
-        }
-      }
-
-      replaceWithBrowser(redirectTarget.href);
-    }
-
-    void completeRedirect();
+    replaceWithBrowser(redirectTarget.href);
   }, []);
 
   return null;

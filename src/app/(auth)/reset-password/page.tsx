@@ -24,11 +24,7 @@ function hasRecoveryHash() {
   }
 
   const hashParams = new URLSearchParams(window.location.hash.slice(1));
-  return Boolean(
-    hashParams.get("access_token") ||
-      hashParams.get("refresh_token") ||
-      hashParams.get("token_type")
-  );
+  return Boolean(hashParams.get("access_token") && hashParams.get("refresh_token"));
 }
 
 export default function ResetPasswordPage() {
@@ -53,22 +49,10 @@ export default function ResetPasswordPage() {
     const implicitSupabase = createRecoveryClient();
     let mounted = true;
 
-    async function loadSession() {
-      const shouldRetry = hasRecoveryHash();
-      let session = null;
-
-      const {
-        data: { session: cookieSession },
-      } = await cookieSupabase.auth.getSession();
-
-      if (cookieSession) {
-        session = cookieSession;
-        recoverySessionSource.current = "cookie";
-      }
-
+    async function loadImplicitSession(shouldRetry: boolean) {
       for (
         let attempt = 0;
-        !session && attempt < (shouldRetry ? RECOVERY_SESSION_RETRY_COUNT : 1);
+        attempt < (shouldRetry ? RECOVERY_SESSION_RETRY_COUNT : 1);
         attempt += 1
       ) {
         const {
@@ -76,15 +60,43 @@ export default function ResetPasswordPage() {
         } = await implicitSupabase.auth.getSession();
 
         if (currentSession) {
-          session = currentSession;
-          recoverySessionSource.current = "implicit";
-          break;
+          return currentSession;
         }
 
         if (attempt < RECOVERY_SESSION_RETRY_COUNT - 1) {
           await new Promise((resolve) => {
             window.setTimeout(resolve, RECOVERY_SESSION_RETRY_MS);
           });
+        }
+      }
+
+      return null;
+    }
+
+    async function loadSession() {
+      const shouldUseRecoveryHash = hasRecoveryHash();
+      let session = null;
+
+      if (shouldUseRecoveryHash) {
+        session = await loadImplicitSession(true);
+        if (session) {
+          recoverySessionSource.current = "implicit";
+        }
+      } else {
+        const {
+          data: { session: cookieSession },
+        } = await cookieSupabase.auth.getSession();
+
+        if (cookieSession) {
+          session = cookieSession;
+          recoverySessionSource.current = "cookie";
+        }
+
+        if (!session) {
+          session = await loadImplicitSession(false);
+          if (session) {
+            recoverySessionSource.current = "implicit";
+          }
         }
       }
 

@@ -39,13 +39,13 @@ describe("recovery redirect guard", () => {
 
     await waitFor(() =>
       expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
-        "/reset-password"
+        "/reset-password#access_token=test-token&refresh_token=test-refresh&type=recovery&token_type=bearer"
       )
     );
-    expect(mockGetSession).toHaveBeenCalledTimes(1);
+    expect(mockGetSession).not.toHaveBeenCalled();
   });
 
-  it("preserves protected redirect targets when recovery hashes land at root", async () => {
+  it("preserves recovery hashes with protected redirect targets when they land at root", async () => {
     window.history.replaceState(
       {},
       "",
@@ -56,9 +56,10 @@ describe("recovery redirect guard", () => {
 
     await waitFor(() =>
       expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
-        "/reset-password?redirect=%2Fsymptom-checker"
+        "/reset-password?redirect=%2Fsymptom-checker#access_token=test-token&refresh_token=test-refresh&type=recovery"
       )
     );
+    expect(mockGetSession).not.toHaveBeenCalled();
   });
 
   it("does not double-wrap recovery hashes that already target reset-password", async () => {
@@ -72,9 +73,10 @@ describe("recovery redirect guard", () => {
 
     await waitFor(() =>
       expect(mockReplaceWithBrowser).toHaveBeenCalledWith(
-        "/reset-password?redirect=%2Fhistory"
+        "/reset-password?redirect=%2Fhistory#access_token=test-token&refresh_token=test-refresh&type=recovery"
       )
     );
+    expect(mockGetSession).not.toHaveBeenCalled();
   });
 
   it("hands root recovery codes to the existing auth callback route", async () => {

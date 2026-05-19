@@ -181,14 +181,21 @@ describe("reset password page", () => {
     expect(mockImplicitUpdateUser).not.toHaveBeenCalled();
   });
 
-  it("updates implicit hash recovery sessions with the implicit client", async () => {
+  it("updates implicit hash recovery sessions with the implicit client even when a cookie session exists", async () => {
     window.history.replaceState(
       {},
       "",
       "/reset-password?redirect=%2Fhistory#access_token=test-token&refresh_token=test-refresh&token_type=bearer"
     );
     mockSearchParams.set("redirect", "/history");
-    mockCookieGetSession.mockResolvedValue({ data: { session: null } });
+    mockCookieGetSession.mockResolvedValue({
+      data: {
+        session: {
+          access_token: "cookie-session-token",
+          user: { id: "signed-in-user" },
+        },
+      },
+    });
     mockImplicitGetSession.mockResolvedValue({
       data: {
         session: {
@@ -223,6 +230,7 @@ describe("reset password page", () => {
       password: "new-password-1",
     });
     expect(mockImplicitSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(mockCookieGetSession).not.toHaveBeenCalled();
     expect(mockCookieUpdateUser).not.toHaveBeenCalled();
   });
 });
