@@ -170,4 +170,55 @@ describe("saveSymptomReportToDB persistence verification", () => {
       recommendation: "vet_24h",
     });
   });
+
+  it("returns an insert_failed diagnostic when symptom_checks insert is rejected", async () => {
+    const insertError = {
+      code: "23503",
+      message: "insert or update on table \"symptom_checks\" violates foreign key constraint",
+      details: "Key is not present in table \"pets\".",
+      hint: "Check the selected pet id.",
+    };
+    mockSymptomCheckInsert.mockImplementationOnce(() => ({
+      select: jest.fn(() => ({
+        maybeSingle: jest.fn().mockResolvedValue({
+          data: null,
+          error: insertError,
+        }),
+      })),
+    }));
+    const { saveSymptomReportToDB } = await import("@/lib/report-storage");
+    const diagnostics: Array<Record<string, unknown>> = [];
+
+    const result = await saveSymptomReportToDB(
+      {
+        known_symptoms: ["vomiting"],
+      } as never,
+      {
+        id: "pet-1",
+        name: "Buddy",
+        breed: "Golden Retriever",
+        age_years: 4,
+        weight: 55,
+        species: "dog",
+      } as never,
+      {
+        severity: "high",
+        recommendation: "vet_24h",
+      },
+      {
+        verifiedUserId: "user-1",
+        onDiagnostic: (diagnostic) => diagnostics.push(diagnostic as Record<string, unknown>),
+      }
+    );
+
+    expect(result).toBeNull();
+    expect(diagnostics[0]).toEqual(
+      expect.objectContaining({
+        reason: "insert_failed",
+        safeError: expect.objectContaining({
+          code: "23503",
+        }),
+      })
+    );
+  });
 });

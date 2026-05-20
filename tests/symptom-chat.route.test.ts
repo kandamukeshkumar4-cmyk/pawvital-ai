@@ -48,6 +48,10 @@ const mockRetrieveVeterinaryTextEvidenceWithResult = jest.fn();
 const mockRetrieveVeterinaryImageEvidenceWithResult = jest.fn();
 const mockEnqueueAsyncReview = jest.fn();
 const mockSaveSymptomReportToDB = jest.fn();
+const mockSaveTesterFeedbackCaseLedgerToDB = jest.fn(async () => ({
+  ok: true,
+  warnings: [],
+}));
 const mockEmit = jest.fn();
 const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockEventType = {
@@ -214,6 +218,11 @@ jest.mock("@/lib/icd-10-mapper", () => ({
 jest.mock("@/lib/report-storage", () => ({
   saveSymptomReportToDB: (...args: unknown[]) =>
     mockSaveSymptomReportToDB(...args),
+}));
+
+jest.mock("@/lib/tester-feedback-storage", () => ({
+  saveTesterFeedbackCaseLedgerToDB: (...args: unknown[]) =>
+    mockSaveTesterFeedbackCaseLedgerToDB(...args),
 }));
 
 jest.mock("@/lib/events/event-bus", () => ({
@@ -545,6 +554,10 @@ describe("symptom-chat mixed text + image routing", () => {
     );
     mockEnqueueAsyncReview.mockResolvedValue(true);
     mockSaveSymptomReportToDB.mockResolvedValue(null);
+    mockSaveTesterFeedbackCaseLedgerToDB.mockResolvedValue({
+      ok: true,
+      warnings: [],
+    });
     mockDiagnoseWithDeepSeek.mockResolvedValue(
       JSON.stringify({
         severity: "medium",
@@ -5511,6 +5524,157 @@ describe("VET-725: asked-state regression pack", () => {
       expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(0);
     });
 
+    it("attempts standard final-report persistence with the verified user and saved pet id", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-standard-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-standard-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(buildModerateReportSession(), undefined, {
+          id: "pet-standard-1",
+        })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_storage_id).toBe("report-standard-1");
+      expect(mockSaveSymptomReportToDB).toHaveBeenCalledTimes(1);
+      expect(mockSaveSymptomReportToDB.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          id: "pet-standard-1",
+        })
+      );
+      expect(mockSaveSymptomReportToDB.mock.calls[0][2]).toEqual(
+        expect.objectContaining({
+          system_observability: expect.objectContaining({
+            shadowReadout: expect.any(Object),
+          }),
+        })
+      );
+      expect(mockSaveSymptomReportToDB.mock.calls[0][3]).toEqual(
+        expect.objectContaining({
+          verifiedUserId: "user-standard-1",
+        })
+      );
+    });
+
+    it("attempts emergency fail-safe report persistence with the verified user and saved pet id", async () => {
+      mockIsNvidiaConfigured.mockReturnValue(false);
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-emergency-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-emergency-failsafe-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(buildEmergencyReportSession(), undefined, {
+          id: "pet-emergency-1",
+        })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_storage_id).toBe(
+        "report-emergency-failsafe-1"
+      );
+      expect(mockSaveSymptomReportToDB).toHaveBeenCalledTimes(1);
+      expect(mockSaveSymptomReportToDB.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          id: "pet-emergency-1",
+        })
+      );
+      expect(mockSaveSymptomReportToDB.mock.calls[0][2]).toEqual(
+        expect.objectContaining({
+          report_mode: "failsafe",
+        })
+      );
+      expect(mockSaveSymptomReportToDB.mock.calls[0][3]).toEqual(
+        expect.objectContaining({
+          verifiedUserId: "user-emergency-1",
+        })
+      );
+    });
+
+    it("keeps the report saved when the nonblocking tester-feedback ledger update fails", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-standard-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-standard-1");
+      mockSaveTesterFeedbackCaseLedgerToDB.mockRejectedValueOnce(
+        new Error("ledger unavailable")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(buildModerateReportSession(), undefined, {
+          id: "pet-standard-1",
+        })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_storage_id).toBe("report-standard-1");
+      expect(payload.persistence).toEqual(
+        expect.objectContaining({
+          status: "saved",
+        })
+      );
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+    });
+
+    it("persists the outer fail-safe emergency report when report assembly throws", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-emergency-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-emergency-rescued-1");
+      jest.doMock("@/lib/evidence-chain", () => ({
+        buildStructuredEvidenceChain: jest.fn(() => {
+          throw new Error("evidence-chain unavailable");
+        }),
+      }));
+
+      try {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(
+          makeReportRequest(buildEmergencyReportSession(), undefined, {
+            id: "pet-emergency-1",
+          })
+        );
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("report");
+        expect(payload.report.report_storage_id).toBe(
+          "report-emergency-rescued-1"
+        );
+        expect(payload.persistence).toEqual(
+          expect.objectContaining({
+            status: "saved",
+          })
+        );
+        expect(mockSaveSymptomReportToDB).toHaveBeenCalledTimes(1);
+        expect(mockSaveSymptomReportToDB.mock.calls[0][1]).toEqual(
+          expect.objectContaining({
+            id: "pet-emergency-1",
+          })
+        );
+        expect(mockSaveSymptomReportToDB.mock.calls[0][3]).toEqual(
+          expect.objectContaining({
+            verifiedUserId: "user-emergency-1",
+          })
+        );
+        expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+        expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(1);
+      } finally {
+        jest.dontMock("@/lib/evidence-chain");
+      }
+    });
+
     it("returns an explicit persistence status when the report cannot be saved without a real pet link", async () => {
       mockCreateServerSupabaseClient.mockResolvedValue(
         buildAuthSupabase("user-abc-123")
@@ -5564,6 +5728,90 @@ describe("VET-725: asked-state regression pack", () => {
           safeError: expect.objectContaining({
             code: "PERSISTENCE_REQUIRES_SAVED_PET",
           }),
+        })
+      );
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+
+    it("returns a safe save_failed status when the symptom_checks insert fails", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-abc-123")
+      );
+      mockSaveSymptomReportToDB.mockImplementation(
+        async (
+          _session: unknown,
+          _pet: unknown,
+          _report: unknown,
+          options?: {
+            onDiagnostic?: (diagnostic: {
+              reason: string;
+              safeError?: {
+                code?: string | null;
+                message?: string | null;
+                details?: string | null;
+                hint?: string | null;
+              } | null;
+            }) => void;
+          }
+        ) => {
+          options?.onDiagnostic?.({
+            reason: "insert_failed",
+            safeError: {
+              code: "23503",
+              message: "Unable to save symptom check.",
+              details: "The selected pet could not be linked.",
+              hint: "Select a saved dog profile and retry.",
+            },
+          });
+          return null;
+        }
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(buildModerateReportSession(), undefined, {
+          id: "pet-abc",
+        })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.persistence).toEqual(
+        expect.objectContaining({
+          status: "save_failed",
+          message: expect.stringContaining("could not be saved to History"),
+          safeError: expect.objectContaining({
+            code: "23503",
+          }),
+        })
+      );
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+
+    it("returns a safe save_failed status when the persistence helper throws", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-abc-123")
+      );
+      mockSaveSymptomReportToDB.mockRejectedValueOnce(
+        new Error("symptom_checks insert unavailable")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(buildModerateReportSession(), undefined, {
+          id: "pet-abc",
+        })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_storage_id).toBeUndefined();
+      expect(payload.persistence).toEqual(
+        expect.objectContaining({
+          status: "save_failed",
+          message: expect.stringContaining("could not be saved to History"),
         })
       );
       expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
