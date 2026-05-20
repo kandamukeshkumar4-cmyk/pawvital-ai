@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-21T07:47:26.371Z",
+  "generatedAt": "2026-05-14T16:15:44.046Z",
   "suiteId": "wave3-freeze",
   "manifestHash": "3c30f83500279f77a44d3f7da50a51854a786a24abfa580686835d939fb98edf",
   "totalFailures": 51,
@@ -840,25 +840,25 @@
     }
   ],
   "delta": {
-    "comparedToGeneratedAt": "2026-04-21T07:31:41.623Z",
-    "previousTotalFailures": 22,
-    "totalFailureDelta": 29,
+    "comparedToGeneratedAt": "2026-05-14T12:11:20.751Z",
+    "previousTotalFailures": 51,
+    "totalFailureDelta": 0,
     "countsByStatus": {
-      "improved": 1,
-      "regressed": 1,
-      "unchanged": 0
+      "improved": 0,
+      "regressed": 0,
+      "unchanged": 2
     },
     "rootCauseChanges": [
       {
         "rootCauseBucket": "complaint normalization miss",
-        "status": "regressed",
-        "previousTotalFailures": 4,
+        "status": "unchanged",
+        "previousTotalFailures": 35,
         "currentTotalFailures": 35,
-        "deltaFailures": 31,
+        "deltaFailures": 0,
         "previousSeverityCounts": {
           "CRITICAL": 0,
-          "HIGH": 0,
-          "MEDIUM": 4
+          "HIGH": 11,
+          "MEDIUM": 24
         },
         "currentSeverityCounts": {
           "CRITICAL": 0,
@@ -867,55 +867,23 @@
         },
         "severityDelta": {
           "CRITICAL": 0,
-          "HIGH": 11,
-          "MEDIUM": 20
+          "HIGH": 0,
+          "MEDIUM": 0
         },
-        "newCaseIds": [
-          "question-behavior-change",
-          "question-constipation",
-          "question-dental-problem",
-          "question-drinking-more",
-          "question-ear-scratching",
-          "question-eye-discharge",
-          "question-generalized-stiffness",
-          "question-hair-loss",
-          "question-low-literacy-belly-big",
-          "question-low-literacy-eye-bad",
-          "question-low-literacy-leg-hurt",
-          "question-nasal-discharge",
-          "question-regurgitation",
-          "question-senior-decline",
-          "question-slang-the-runs",
-          "question-small-blood-in-stool",
-          "question-swelling-lump",
-          "question-trauma-fall-yard",
-          "question-urination-problem",
-          "question-vaccine-reaction-mild",
-          "question-weight-loss",
-          "sameday-behavior-hiding",
-          "sameday-chronic-limp-sudden-worse",
-          "sameday-dental-bleeding-gum",
-          "sameday-drinking-excessive",
-          "sameday-hair-loss-spreading",
-          "sameday-limping-non-weight-bearing",
-          "sameday-regurgitation-frequent",
-          "sameday-urinary-blood",
-          "sameday-vomiting-multiple-times",
-          "sameday-weight-loss-rapid"
-        ],
+        "newCaseIds": [],
         "resolvedCaseIds": [],
-        "compositionChanged": true
+        "compositionChanged": false
       },
       {
         "rootCauseBucket": "deterministic emergency composite not triggered",
-        "status": "improved",
-        "previousTotalFailures": 18,
+        "status": "unchanged",
+        "previousTotalFailures": 16,
         "currentTotalFailures": 16,
-        "deltaFailures": -2,
+        "deltaFailures": 0,
         "previousSeverityCounts": {
           "CRITICAL": 0,
-          "HIGH": 2,
-          "MEDIUM": 16
+          "HIGH": 1,
+          "MEDIUM": 15
         },
         "currentSeverityCounts": {
           "CRITICAL": 0,
@@ -924,15 +892,12 @@
         },
         "severityDelta": {
           "CRITICAL": 0,
-          "HIGH": -1,
-          "MEDIUM": -1
+          "HIGH": 0,
+          "MEDIUM": 0
         },
         "newCaseIds": [],
-        "resolvedCaseIds": [
-          "question-senior-arthritis-worsening",
-          "sameday-dental-bleeding-gum"
-        ],
-        "compositionChanged": true
+        "resolvedCaseIds": [],
+        "compositionChanged": false
       }
     ]
   }
