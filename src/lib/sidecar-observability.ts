@@ -139,6 +139,17 @@ interface InferShadowUrgencyInput {
   fallbackUrgency?: string | null;
 }
 
+export interface ShadowReadoutObservabilitySnapshot {
+  reportPresent: boolean;
+  sessionPresent: boolean;
+  observationCount: number;
+  shadowComparisonCount: number;
+  timeoutCount: number;
+  fallbackCount: number;
+  providerErrorCount: number;
+  budgetExceededCount: number;
+}
+
 export const INTERNAL_TELEMETRY_STAGES = new Set([
   "compression",
   "contradiction_detection",
@@ -691,6 +702,39 @@ export function buildInternalShadowTelemetrySnapshot(session: TriageSession) {
     generatedAt: new Date().toISOString(),
     recentServiceCalls: [...(memory.service_observations || [])].slice(-8),
     recentShadowComparisons: [...(memory.shadow_comparisons || [])].slice(-8),
+  };
+}
+
+export function buildShadowReadoutObservabilitySnapshot(
+  session: TriageSession
+): ShadowReadoutObservabilitySnapshot {
+  const memory = ensureStructuredCaseMemory(session);
+  const observations = memory.service_observations || [];
+  const timeoutObservationCount = observations.filter(
+    (entry) => entry.outcome === "timeout"
+  ).length;
+  const noteIncludes = (entry: SidecarObservation, marker: string) =>
+    typeof entry.note === "string" && entry.note.includes(marker);
+
+  return {
+    reportPresent: true,
+    sessionPresent: Boolean(session.case_memory),
+    observationCount: observations.length,
+    shadowComparisonCount: (memory.shadow_comparisons || []).length,
+    timeoutCount: Math.max(
+      (memory.service_timeouts || []).length,
+      timeoutObservationCount
+    ),
+    fallbackCount: observations.filter(
+      (entry) => entry.fallbackUsed && !entry.shadowMode
+    ).length,
+    providerErrorCount: observations.filter(
+      (entry) =>
+        entry.outcome === "error" || noteIncludes(entry, "reason=provider_error")
+    ).length,
+    budgetExceededCount: observations.filter((entry) =>
+      noteIncludes(entry, "reason=budget_exceeded")
+    ).length,
   };
 }
 

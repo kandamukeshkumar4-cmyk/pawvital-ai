@@ -37,6 +37,7 @@ const mockRetrieveVeterinaryTextEvidenceWithResult = jest.fn();
 const mockRetrieveVeterinaryImageEvidenceWithResult = jest.fn();
 const mockEnqueueAsyncReview = jest.fn();
 const mockSaveSymptomReportToDB = jest.fn();
+const mockAppendShadowTelemetrySnapshot = jest.fn();
 const mockEmit = jest.fn();
 
 jest.mock("@/lib/rate-limit", () => ({
@@ -175,6 +176,11 @@ jest.mock("@/lib/report-storage", () => ({
     mockSaveSymptomReportToDB(...args),
 }));
 
+jest.mock("@/lib/shadow-telemetry-store", () => ({
+  appendShadowTelemetrySnapshot: (...args: unknown[]) =>
+    mockAppendShadowTelemetrySnapshot(...args),
+}));
+
 jest.mock("@/lib/events/event-bus", () => ({
   EventType: {
     REPORT_READY: "REPORT_READY",
@@ -306,6 +312,19 @@ function buildRequest(
   });
 }
 
+function buildReportRequest(session: TriageSession, pet: PetProfile) {
+  return new Request("http://localhost/api/ai/symptom-chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "generate_report",
+      pet,
+      session,
+      messages: [{ role: "user", content: "Please generate the report." }],
+    }),
+  });
+}
+
 function expectNoInternalTelemetry(payload: ClientPayload) {
   const serialized = JSON.stringify(payload);
   const observations = payload.session.case_memory.service_observations ?? [];
@@ -339,6 +358,13 @@ async function runChat(
 ) {
   const { POST } = await import("@/app/api/ai/symptom-chat/route");
   const response = await POST(buildRequest(session, pet, message));
+  const payload = await response.json();
+  return { response, payload };
+}
+
+async function runReport(session: TriageSession, pet: PetProfile) {
+  const { POST } = await import("@/app/api/ai/symptom-chat/route");
+  const response = await POST(buildReportRequest(session, pet));
   const payload = await response.json();
   return { response, payload };
 }
@@ -435,6 +461,7 @@ describe("VET-1014 terminal payload safety pack", () => {
     });
     mockEnqueueAsyncReview.mockResolvedValue(true);
     mockSaveSymptomReportToDB.mockResolvedValue(null);
+    mockAppendShadowTelemetrySnapshot.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -524,5 +551,131 @@ describe("VET-1014 terminal payload safety pack", () => {
     expect(payload.reason_code).toBe("species_not_supported");
     expect(payload.ready_for_report).toBe(false);
     expectNoInternalTelemetry(payload);
+  });
+
+  it("persists only sanitized aggregate shadow readout fields and keeps owner report telemetry stripped", async () => {
+    const forbiddenMarkers = [
+      "recentServiceCalls",
+      "recentShadowComparisons",
+      "internal_reason_code",
+      "prompt=raw-owner-prompt",
+      "provider_payload=https://provider.example/secret-token",
+      "raw model output with provider payload",
+      "reason=provider_error",
+      "reason=budget_exceeded",
+    ];
+
+    const session = addSymptoms(createSession(), ["vomiting"]);
+    session.case_memory = {
+      ...session.case_memory!,
+      service_timeouts: [
+        {
+          service: "async-review-service",
+          stage: "final_safety",
+          reason: "timeout-hidden",
+        },
+      ],
+      service_observations: [
+        {
+          service: "async-review-service",
+          stage: "final_safety",
+          latencyMs: 1200,
+          outcome: "error",
+          shadowMode: true,
+          fallbackUsed: true,
+          note:
+            "internal_reason_code=final_safety | reason=provider_error | prompt=raw-owner-prompt | provider_payload=https://provider.example/secret-token",
+          recordedAt: "2026-05-19T00:00:00.000Z",
+        },
+        {
+          service: "async-review-service",
+          stage: "final_safety",
+          latencyMs: 0,
+          outcome: "fallback",
+          shadowMode: false,
+          fallbackUsed: true,
+          note: "reason=budget_exceeded",
+          recordedAt: "2026-05-19T00:00:01.000Z",
+        },
+      ],
+      shadow_comparisons: [
+        {
+          service: "async-review-service",
+          usedStrategy: "nvidia-primary",
+          shadowStrategy: "grok-final-safety-shadow",
+          summary: "raw model output with provider payload",
+          disagreementCount: 1,
+          recordedAt: "2026-05-19T00:00:02.000Z",
+        },
+      ],
+    };
+    mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Vomiting needs veterinary follow-up",
+        explanation: "Vomiting can worsen if hydration declines.",
+        differential_diagnoses: [],
+        clinical_notes: "Monitor hydration and energy.",
+        recommended_tests: [],
+        home_care: [],
+        actions: ["Call your veterinarian if vomiting continues."],
+        warning_signs: ["Repeated vomiting"],
+        vet_questions: [],
+        confidence: 0.7,
+      })
+    );
+    mockVerifyWithGLM.mockResolvedValueOnce(
+      JSON.stringify({
+        safe: true,
+        corrections: {},
+        reasoning: "Report is safe.",
+      })
+    );
+
+    const { response, payload } = await runReport(session, DOG);
+    const persistedReport = mockSaveSymptomReportToDB.mock.calls[0]?.[2] as
+      | { system_observability?: Record<string, unknown> }
+      | undefined;
+    const ownerTelemetry = payload.report?.system_observability as
+      | Record<string, unknown>
+      | undefined;
+    const persistedTelemetry = persistedReport?.system_observability;
+    const readout = persistedTelemetry?.shadowReadout as
+      | Record<string, unknown>
+      | undefined;
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("report");
+    expect(ownerTelemetry).toEqual({
+      timeoutCount: expect.any(Number),
+      fallbackCount: expect.any(Number),
+    });
+    expect(ownerTelemetry?.shadowReadout).toBeUndefined();
+    expect(readout).toEqual(
+      expect.objectContaining({
+        reportPresent: true,
+        sessionPresent: true,
+        observationCount: expect.any(Number),
+        shadowComparisonCount: expect.any(Number),
+        timeoutCount: expect.any(Number),
+        fallbackCount: expect.any(Number),
+        providerErrorCount: expect.any(Number),
+        budgetExceededCount: expect.any(Number),
+      })
+    );
+    expect(readout?.observationCount).toBeGreaterThanOrEqual(2);
+    expect(readout?.shadowComparisonCount).toBe(1);
+    expect(readout?.providerErrorCount).toBeGreaterThanOrEqual(1);
+    expect(readout?.budgetExceededCount).toBeGreaterThanOrEqual(1);
+    expect(persistedTelemetry?.recentServiceCalls).toBeUndefined();
+    expect(persistedTelemetry?.recentShadowComparisons).toBeUndefined();
+
+    const ownerJson = JSON.stringify(payload);
+    const persistedJson = JSON.stringify(persistedReport);
+    for (const marker of forbiddenMarkers) {
+      expect(ownerJson).not.toContain(marker);
+      expect(persistedJson).not.toContain(marker);
+    }
   });
 });

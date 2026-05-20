@@ -29,6 +29,7 @@ import {
   appendSidecarObservation,
   buildInternalShadowTelemetrySnapshot,
   buildObservabilitySnapshot,
+  buildShadowReadoutObservabilitySnapshot,
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
@@ -366,6 +367,19 @@ function buildClientObservabilitySnapshot(session: TriageSession) {
   return {
     timeoutCount: observabilitySnapshot.timeoutCount,
     fallbackCount: observabilitySnapshot.fallbackCount,
+  };
+}
+
+function buildPersistedReportWithShadowReadout(
+  report: Record<string, unknown>,
+  session: TriageSession
+) {
+  return {
+    ...report,
+    system_observability: {
+      ...buildClientObservabilitySnapshot(session),
+      shadowReadout: buildShadowReadoutObservabilitySnapshot(session),
+    },
   };
 }
 
@@ -907,7 +921,11 @@ export async function generateReport({
 
     let reportStorageId: string | null = null;
     try {
-      reportStorageId = await saveSymptomReportToDB(session, pet, finalReport);
+      reportStorageId = await saveSymptomReportToDB(
+        session,
+        pet,
+        buildPersistedReportWithShadowReadout(finalReport, session)
+      );
       if (reportStorageId) {
         finalReport.report_storage_id = reportStorageId;
         finalReport.outcome_feedback_enabled = true;

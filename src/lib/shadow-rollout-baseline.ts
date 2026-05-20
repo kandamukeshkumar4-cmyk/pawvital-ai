@@ -17,6 +17,20 @@ import type { TriageSession } from "./triage-engine";
 interface PersistedSystemObservability {
   recentServiceCalls?: unknown;
   recentShadowComparisons?: unknown;
+  timeoutCount?: unknown;
+  fallbackCount?: unknown;
+  shadowReadout?: PersistedShadowReadout;
+}
+
+interface PersistedShadowReadout {
+  reportPresent?: unknown;
+  sessionPresent?: unknown;
+  observationCount?: unknown;
+  shadowComparisonCount?: unknown;
+  timeoutCount?: unknown;
+  fallbackCount?: unknown;
+  providerErrorCount?: unknown;
+  budgetExceededCount?: unknown;
 }
 
 interface PersistedAiResponse {
@@ -43,8 +57,14 @@ export interface PersistedShadowBaselineSnapshot {
   reportCount: number;
   parsedReportCount: number;
   malformedReportCount: number;
+  reportPresenceCount: number;
+  sessionPresenceCount: number;
   observationCount: number;
   shadowComparisonCount: number;
+  timeoutCount: number;
+  fallbackCount: number;
+  providerErrorCount: number;
+  budgetExceededCount: number;
   summary: ReturnType<typeof buildShadowRolloutSummary>;
   loadTest: ShadowLoadTestSummary | null;
   serviceMetrics: PersistedShadowServiceMetrics[];
@@ -52,6 +72,17 @@ export interface PersistedShadowBaselineSnapshot {
 }
 
 type ServiceSummary = PersistedShadowBaselineSnapshot["summary"]["services"][number];
+
+interface ReadoutAggregateTotals {
+  reportPresenceCount: number;
+  sessionPresenceCount: number;
+  observationCount: number;
+  shadowComparisonCount: number;
+  timeoutCount: number;
+  fallbackCount: number;
+  providerErrorCount: number;
+  budgetExceededCount: number;
+}
 
 const SERVICE_NAMES: SidecarServiceName[] = [
   "vision-preprocess-service",
@@ -103,6 +134,74 @@ function parseReportPayload(raw: unknown): PersistedAiResponse | null {
     return null;
   }
   return null;
+}
+
+function emptyReadoutAggregateTotals(): ReadoutAggregateTotals {
+  return {
+    reportPresenceCount: 0,
+    sessionPresenceCount: 0,
+    observationCount: 0,
+    shadowComparisonCount: 0,
+    timeoutCount: 0,
+    fallbackCount: 0,
+    providerErrorCount: 0,
+    budgetExceededCount: 0,
+  };
+}
+
+function addReadoutAggregateTotals(
+  totals: ReadoutAggregateTotals,
+  next: ReadoutAggregateTotals
+): ReadoutAggregateTotals {
+  return {
+    reportPresenceCount: totals.reportPresenceCount + next.reportPresenceCount,
+    sessionPresenceCount:
+      totals.sessionPresenceCount + next.sessionPresenceCount,
+    observationCount: totals.observationCount + next.observationCount,
+    shadowComparisonCount:
+      totals.shadowComparisonCount + next.shadowComparisonCount,
+    timeoutCount: totals.timeoutCount + next.timeoutCount,
+    fallbackCount: totals.fallbackCount + next.fallbackCount,
+    providerErrorCount: totals.providerErrorCount + next.providerErrorCount,
+    budgetExceededCount: totals.budgetExceededCount + next.budgetExceededCount,
+  };
+}
+
+function countFromUnknown(value: unknown): number {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim().length > 0
+        ? Number(value)
+        : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return 0;
+  }
+  return Math.floor(parsed);
+}
+
+function normalizeReadoutAggregate(
+  observability: PersistedSystemObservability | undefined
+): ReadoutAggregateTotals | null {
+  const readout = observability?.shadowReadout;
+  if (!readout || typeof readout !== "object") {
+    return null;
+  }
+
+  return {
+    reportPresenceCount: readout.reportPresent === true ? 1 : 0,
+    sessionPresenceCount: readout.sessionPresent === true ? 1 : 0,
+    observationCount: countFromUnknown(readout.observationCount),
+    shadowComparisonCount: countFromUnknown(readout.shadowComparisonCount),
+    timeoutCount: countFromUnknown(
+      readout.timeoutCount ?? observability?.timeoutCount
+    ),
+    fallbackCount: countFromUnknown(
+      readout.fallbackCount ?? observability?.fallbackCount
+    ),
+    providerErrorCount: countFromUnknown(readout.providerErrorCount),
+    budgetExceededCount: countFromUnknown(readout.budgetExceededCount),
+  };
 }
 
 function asSidecarServiceName(value: unknown): SidecarServiceName | null {
@@ -230,16 +329,65 @@ function appendObservabilityPayload(
   recentServiceCalls: unknown[],
   recentShadowComparisons: unknown[]
 ) {
-  session.case_memory!.service_observations.push(
-    ...recentServiceCalls
-      .map((entry) => normalizeObservation(entry))
-      .filter((entry): entry is SidecarObservation => Boolean(entry))
+  const observations = recentServiceCalls
+    .map((entry) => normalizeObservation(entry))
+    .filter((entry): entry is SidecarObservation => Boolean(entry));
+  const comparisons = recentShadowComparisons
+    .map((entry) => normalizeComparison(entry))
+    .filter((entry): entry is ShadowComparisonRecord => Boolean(entry));
+
+  session.case_memory!.service_observations.push(...observations);
+  session.case_memory!.shadow_comparisons.push(...comparisons);
+
+  return { observations, comparisons };
+}
+
+function buildReadoutTotalsFromRecords(
+  observations: SidecarObservation[],
+  comparisons: ShadowComparisonRecord[],
+  reportPresenceCount: number,
+  sessionPresenceCount: number
+): ReadoutAggregateTotals {
+  const noteIncludes = (entry: SidecarObservation, marker: string) =>
+    typeof entry.note === "string" && entry.note.includes(marker);
+
+  return {
+    reportPresenceCount,
+    sessionPresenceCount,
+    observationCount: observations.length,
+    shadowComparisonCount: comparisons.length,
+    timeoutCount: observations.filter((entry) => entry.outcome === "timeout")
+      .length,
+    fallbackCount: observations.filter(
+      (entry) => entry.fallbackUsed && !entry.shadowMode
+    ).length,
+    providerErrorCount: observations.filter(
+      (entry) =>
+        entry.outcome === "error" || noteIncludes(entry, "reason=provider_error")
+    ).length,
+    budgetExceededCount: observations.filter((entry) =>
+      noteIncludes(entry, "reason=budget_exceeded")
+    ).length,
+  };
+}
+
+function buildReadoutTotalsFromSession(
+  session: TriageSession,
+  reportPresenceCount: number,
+  sessionPresenceCount: number
+): ReadoutAggregateTotals {
+  const memory = session.case_memory!;
+  const totals = buildReadoutTotalsFromRecords(
+    memory.service_observations,
+    memory.shadow_comparisons,
+    reportPresenceCount,
+    sessionPresenceCount
   );
-  session.case_memory!.shadow_comparisons.push(
-    ...recentShadowComparisons
-      .map((entry) => normalizeComparison(entry))
-      .filter((entry): entry is ShadowComparisonRecord => Boolean(entry))
-  );
+
+  return {
+    ...totals,
+    timeoutCount: Math.max(totals.timeoutCount, memory.service_timeouts.length),
+  };
 }
 
 function buildSnapshotFromSession(input: {
@@ -248,17 +396,32 @@ function buildSnapshotFromSession(input: {
   reportCount: number;
   parsedReportCount: number;
   malformedReportCount: number;
+  readoutTotals?: ReadoutAggregateTotals;
   loadTest: ShadowLoadTestSummary | null;
   warning: string | null;
 }): PersistedShadowBaselineSnapshot {
+  const readoutTotals =
+    input.readoutTotals ??
+    buildReadoutTotalsFromSession(
+      input.session,
+      input.parsedReportCount,
+      input.parsedReportCount
+    );
+
   return {
     generatedAt: new Date().toISOString(),
     windowHours: input.windowHours,
     reportCount: input.reportCount,
     parsedReportCount: input.parsedReportCount,
     malformedReportCount: input.malformedReportCount,
-    observationCount: input.session.case_memory!.service_observations.length,
-    shadowComparisonCount: input.session.case_memory!.shadow_comparisons.length,
+    reportPresenceCount: readoutTotals.reportPresenceCount,
+    sessionPresenceCount: readoutTotals.sessionPresenceCount,
+    observationCount: readoutTotals.observationCount,
+    shadowComparisonCount: readoutTotals.shadowComparisonCount,
+    timeoutCount: readoutTotals.timeoutCount,
+    fallbackCount: readoutTotals.fallbackCount,
+    providerErrorCount: readoutTotals.providerErrorCount,
+    budgetExceededCount: readoutTotals.budgetExceededCount,
     summary: buildShadowRolloutSummary(input.session, {
       loadTest: input.loadTest,
     }),
@@ -315,6 +478,7 @@ async function buildFallbackSnapshotFromRedis(
   let reportCount = 0;
   let parsedReportCount = 0;
   let malformedReportCount = 0;
+  let readoutTotals = emptyReadoutAggregateTotals();
 
   for (const entry of entries) {
     const recordedAtMs = Date.parse(entry.generatedAt);
@@ -333,10 +497,19 @@ async function buildFallbackSnapshotFromRedis(
     }
 
     parsedReportCount += 1;
-    appendObservabilityPayload(
+    const appended = appendObservabilityPayload(
       emptySession,
       entry.recentServiceCalls,
       entry.recentShadowComparisons
+    );
+    readoutTotals = addReadoutAggregateTotals(
+      readoutTotals,
+      buildReadoutTotalsFromRecords(
+        appended.observations,
+        appended.comparisons,
+        1,
+        1
+      )
     );
   }
 
@@ -346,6 +519,7 @@ async function buildFallbackSnapshotFromRedis(
     reportCount,
     parsedReportCount,
     malformedReportCount,
+    readoutTotals,
     loadTest,
     warning,
   });
@@ -440,6 +614,7 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
 
   let parsedReportCount = 0;
   let malformedReportCount = 0;
+  let readoutTotals = emptyReadoutAggregateTotals();
 
   for (const row of data || []) {
     const report = parseReportPayload((row as Record<string, unknown>).ai_response);
@@ -449,21 +624,46 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
     }
 
     parsedReportCount += 1;
-    const recentServiceCalls = Array.isArray(
-      report.system_observability?.recentServiceCalls
-    )
-      ? report.system_observability?.recentServiceCalls
-      : [];
-    const recentShadowComparisons = Array.isArray(
-      report.system_observability?.recentShadowComparisons
-    )
-      ? report.system_observability?.recentShadowComparisons
-      : [];
+    const aggregateReadout = normalizeReadoutAggregate(
+      report.system_observability
+    );
+    if (aggregateReadout) {
+      readoutTotals = addReadoutAggregateTotals(readoutTotals, aggregateReadout);
+      continue;
+    }
 
-    appendObservabilityPayload(
+    const hasRecentServiceCalls = Array.isArray(
+      report.system_observability?.recentServiceCalls
+    );
+    const hasRecentShadowComparisons = Array.isArray(
+      report.system_observability?.recentShadowComparisons
+    );
+
+    if (!hasRecentServiceCalls && !hasRecentShadowComparisons) {
+      readoutTotals = addReadoutAggregateTotals(readoutTotals, {
+        ...emptyReadoutAggregateTotals(),
+        reportPresenceCount: 1,
+      });
+      continue;
+    }
+
+    const appended = appendObservabilityPayload(
       emptySession,
-      recentServiceCalls,
-      recentShadowComparisons
+      hasRecentServiceCalls
+        ? (report.system_observability?.recentServiceCalls as unknown[])
+        : [],
+      hasRecentShadowComparisons
+        ? (report.system_observability?.recentShadowComparisons as unknown[])
+        : []
+    );
+    readoutTotals = addReadoutAggregateTotals(
+      readoutTotals,
+      buildReadoutTotalsFromRecords(
+        appended.observations,
+        appended.comparisons,
+        1,
+        1
+      )
     );
   }
 
@@ -473,6 +673,7 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
     reportCount: (data || []).length,
     parsedReportCount,
     malformedReportCount,
+    readoutTotals,
     loadTest,
     warning: null,
   });
