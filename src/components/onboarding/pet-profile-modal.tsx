@@ -80,6 +80,7 @@ export default function PetProfileModal({
   const [weightUnit, setWeightUnit] = useState<"lbs" | "kg">("lbs");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [breedSuggestions, setBreedSuggestions] = useState<{id: string; name: string}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -143,6 +144,7 @@ export default function PetProfileModal({
     e.preventDefault();
     if (!validate()) return;
     setSubmitting(true);
+    setSaveError(null);
     const uid =
       user?.id ||
       (isSupabaseConfigured ? "pending" : "demo");
@@ -157,6 +159,9 @@ export default function PetProfileModal({
     });
     try {
       await savePet(pet);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save dog profile. Please try again.";
+      setSaveError(msg);
     } finally {
       setSubmitting(false);
     }
@@ -249,6 +254,9 @@ export default function PetProfileModal({
             ]}
           />
         </div>
+        {saveError && (
+          <p className="text-sm text-red-600" role="alert">{saveError}</p>
+        )}
         <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
           <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={handleDismiss}>
             Skip for now
