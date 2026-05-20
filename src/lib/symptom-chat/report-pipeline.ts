@@ -158,6 +158,96 @@ function buildPersistenceResponse(
   }
 }
 
+async function persistFinalReportToHistory({
+  session,
+  pet,
+  report,
+  verifiedUserId,
+  highestUrgency,
+  topDiagnosis,
+}: {
+  session: TriageSession;
+  pet: PetProfile;
+  report: Record<string, unknown>;
+  verifiedUserId?: string | null;
+  highestUrgency: string;
+  topDiagnosis: string;
+}) {
+  let reportStorageId: string | null = null;
+  let persistenceDiagnostic: ReportPersistenceDiagnostic | null = null;
+
+  try {
+    reportStorageId = await saveSymptomReportToDB(
+      session,
+      pet,
+      buildPersistedReportWithShadowReadout(report, session),
+      {
+        onDiagnostic: (diagnostic) => {
+          persistenceDiagnostic = diagnostic;
+        },
+        verifiedUserId,
+      }
+    );
+  } catch (saveError) {
+    persistenceDiagnostic = { reason: "insert_failed" };
+    console.error("[DB] Failed to save triage session:", saveError);
+  }
+
+  if (reportStorageId) {
+    report.report_storage_id = reportStorageId;
+    report.outcome_feedback_enabled = true;
+
+    try {
+      const testerLedgerSave = await saveTesterFeedbackCaseLedgerToDB({
+        symptomCheckId: reportStorageId,
+        verifiedUserId,
+        pet: pet as PetProfile & { id?: string },
+        report,
+        session,
+      });
+
+      if (!testerLedgerSave.ok && testerLedgerSave.warnings.length > 0) {
+        console.warn(
+          "[TesterFeedback] Non-blocking case ledger save issue:",
+          testerLedgerSave.warnings.join("; ")
+        );
+      }
+    } catch (testerLedgerError) {
+      console.warn(
+        "[TesterFeedback] Non-blocking case ledger save failed:",
+        testerLedgerError
+      );
+    }
+  }
+
+  const persistence = buildPersistenceResponse(
+    persistenceDiagnostic,
+    reportStorageId
+  );
+
+  if (verifiedUserId && reportStorageId) {
+    emit(EventType.REPORT_READY, {
+      userId: verifiedUserId,
+      sessionId: null,
+      reportStorageId,
+      urgency: highestUrgency,
+      petName: pet.name ?? "your dog",
+    });
+
+    if (highestUrgency === "emergency" || highestUrgency === "high") {
+      emit(EventType.URGENCY_HIGH, {
+        userId: verifiedUserId,
+        sessionId: null,
+        urgency: highestUrgency as "emergency" | "high",
+        petName: pet.name ?? "your dog",
+        topDiagnosis,
+      });
+    }
+  }
+
+  return { persistence, reportStorageId };
+}
+
 function dedupeStrings(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
 }
@@ -975,81 +1065,37 @@ export async function generateReport({
       );
     }
 
-    let reportStorageId: string | null = null;
-    let persistenceDiagnostic: ReportPersistenceDiagnostic | null = null;
-    try {
-      reportStorageId = await saveSymptomReportToDB(
-        session,
-        pet,
-        buildPersistedReportWithShadowReadout(finalReport, session),
-        {
-          onDiagnostic: (diagnostic) => {
-            persistenceDiagnostic = diagnostic;
-          },
-          verifiedUserId,
-        }
-      );
-      if (reportStorageId) {
-        finalReport.report_storage_id = reportStorageId;
-        finalReport.outcome_feedback_enabled = true;
-        const testerLedgerSave = await saveTesterFeedbackCaseLedgerToDB({
-          symptomCheckId: reportStorageId,
-          verifiedUserId,
-          pet: pet as PetProfile & { id?: string },
-          report: finalReport,
-          session,
-        });
-
-        if (!testerLedgerSave.ok && testerLedgerSave.warnings.length > 0) {
-          console.warn(
-            "[TesterFeedback] Non-blocking case ledger save issue:",
-            testerLedgerSave.warnings.join("; ")
-          );
-        }
-      }
-    } catch (saveError) {
-      console.error("[DB] Failed to save triage session:", saveError);
-    }
-
-    const persistence = buildPersistenceResponse(
-      persistenceDiagnostic,
-      reportStorageId
-    );
-
-    if (verifiedUserId && reportStorageId) {
-      emit(EventType.REPORT_READY, {
-        userId: verifiedUserId,
-        sessionId: null,
-        reportStorageId,
-        urgency: context.highest_urgency,
-        petName: pet.name ?? "your dog",
-      });
-
-      if (
-        context.highest_urgency === "emergency" ||
-        context.highest_urgency === "high"
-      ) {
-        emit(EventType.URGENCY_HIGH, {
-          userId: verifiedUserId,
-          sessionId: null,
-          urgency: context.highest_urgency as "emergency" | "high",
-          petName: pet.name ?? "your dog",
-          topDiagnosis: context.top5[0]?.medical_term ?? "Unknown",
-        });
-      }
-    }
+    const { persistence } = await persistFinalReportToHistory({
+      session,
+      pet,
+      report: finalReport,
+      verifiedUserId,
+      highestUrgency: context.highest_urgency,
+      topDiagnosis: context.top5[0]?.medical_term ?? "Unknown",
+    });
 
     return NextResponse.json({ type: "report", report: finalReport, persistence });
   } catch (error) {
     console.error("Report generation failed:", error);
+    const finalReport = buildFailSafeReport({
+      session,
+      pet,
+      context,
+      reason: "generation_failed",
+    });
+    const { persistence } = await persistFinalReportToHistory({
+      session,
+      pet,
+      report: finalReport,
+      verifiedUserId,
+      highestUrgency: context.highest_urgency,
+      topDiagnosis: context.top5[0]?.medical_term ?? "Unknown",
+    });
+
     return NextResponse.json({
       type: "report",
-      report: buildFailSafeReport({
-        session,
-        pet,
-        context,
-        reason: "generation_failed",
-      }),
+      report: finalReport,
+      persistence,
     });
   }
 }
