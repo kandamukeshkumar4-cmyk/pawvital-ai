@@ -425,6 +425,23 @@ function buildEmergencyReportSession() {
   return session;
 }
 
+function buildReportBlockingEmergencySession() {
+  let session = createSession();
+  session = addSymptoms(session, [
+    "difficulty_breathing",
+    "collapse",
+    "blue_gums",
+  ]);
+  session.red_flags_triggered = ["blue_gums", "collapse"];
+  session.case_memory = {
+    ...session.case_memory!,
+    latest_owner_turn:
+      "My dog is struggling to breathe, collapsed, and has blue gums.",
+  };
+
+  return session;
+}
+
 function buildPendingQuestionSession(symptom: string, questionId: string) {
   let session = createSession();
   session = addSymptoms(session, [symptom]);
@@ -5597,6 +5614,63 @@ describe("VET-725: asked-state regression pack", () => {
           verifiedUserId: "user-emergency-1",
         })
       );
+    });
+
+    it("persists terminal emergency summaries when critical info blocks full report generation", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-terminal-1")
+      );
+      mockSaveSymptomReportToDB.mockResolvedValue("report-terminal-1");
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(buildReportBlockingEmergencySession(), undefined, {
+          id: "pet-terminal-1",
+        })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.terminal_state).toBe("cannot_assess");
+      expect(payload.reason_code).toBe(
+        "owner_cannot_assess_breathing_onset"
+      );
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.report).toEqual(
+        expect.objectContaining({
+          report_mode: "terminal_cannot_assess",
+          report_storage_id: "report-terminal-1",
+          severity: "emergency",
+          recommendation: "emergency_vet",
+        })
+      );
+      expect(payload.persistence).toEqual(
+        expect.objectContaining({
+          status: "saved",
+        })
+      );
+      expect(mockSaveSymptomReportToDB).toHaveBeenCalledTimes(1);
+      expect(mockSaveSymptomReportToDB.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          id: "pet-terminal-1",
+        })
+      );
+      expect(mockSaveSymptomReportToDB.mock.calls[0][2]).toEqual(
+        expect.objectContaining({
+          report_mode: "terminal_cannot_assess",
+          system_observability: expect.objectContaining({
+            shadowReadout: expect.any(Object),
+          }),
+        })
+      );
+      expect(mockSaveSymptomReportToDB.mock.calls[0][3]).toEqual(
+        expect.objectContaining({
+          verifiedUserId: "user-terminal-1",
+        })
+      );
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(1);
+      expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(1);
     });
 
     it("keeps the report saved when the nonblocking tester-feedback ledger update fails", async () => {
