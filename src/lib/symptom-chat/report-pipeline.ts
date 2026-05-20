@@ -206,11 +206,16 @@ async function persistFinalReportToHistory({
     report.outcome_feedback_enabled = true;
 
     try {
+      // Pass the persisted variant (includes system_observability.shadowReadout)
+      // so the tester-ledger update does not overwrite the shadow aggregate that
+      // was written during the initial insert. The owner-facing `report` object
+      // never exposes shadowReadout — only the DB row does.
+      const reportForLedger = buildPersistedReportWithShadowReadout(report, session);
       const testerLedgerSave = await saveTesterFeedbackCaseLedgerToDB({
         symptomCheckId: reportStorageId,
         verifiedUserId,
         pet: pet as PetProfile & { id?: string },
-        report,
+        report: reportForLedger,
         session,
       });
 
