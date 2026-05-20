@@ -30,6 +30,7 @@ import type { ConversationState } from "@/lib/conversation-state/types";
 import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
+import { saveTriageSession } from "@/hooks/useSupabase";
 
 // --- Types ---
 
@@ -639,6 +640,18 @@ export default function SymptomCheckerPage() {
       const data = await res.json();
       if (data.type === "report" && data.report) {
         setReport(data.report);
+        const petId = activePet?.id ?? "";
+        const symptoms = messages
+          .filter((m) => m.role === "user")
+          .map((m) => m.content)
+          .join("; ");
+        void saveTriageSession(
+          petId,
+          symptoms,
+          JSON.stringify(data.report),
+          (data.report as SymptomReport).severity,
+          (data.report as SymptomReport).recommendation,
+        );
       }
     } catch {
       setMessages((prev) => [

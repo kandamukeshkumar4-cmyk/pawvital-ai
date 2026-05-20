@@ -254,11 +254,7 @@ export function usePets() {
       return saved;
     } catch (err) {
       console.error("Failed to save pet:", err);
-      // Fallback to local state
-      const updated = filterDogPets([...pets.filter((p) => p.id !== pet.id), pet]);
-      setPets(updated);
-      setActivePet(pet);
-      return pet;
+      throw err;
     }
   }, [pets, setPets, setActivePet]);
 
@@ -299,20 +295,32 @@ export async function saveTriageSession(
 ): Promise<void> {
   if (!isSupabaseConfigured) return;
 
+  if (!petId) {
+    console.warn("[saveTriageSession] petId is missing — symptom check will not be persisted");
+    return;
+  }
+
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      console.warn("[saveTriageSession] No authenticated user — symptom check will not be persisted");
+      return;
+    }
 
-    await supabase.from("symptom_checks").insert({
+    const { error } = await supabase.from("symptom_checks").insert({
       pet_id: petId,
       symptoms,
       ai_response: report,
       severity,
       recommendation,
     });
+
+    if (error) {
+      console.error("[saveTriageSession] DB insert failed:", error);
+    }
   } catch (err) {
-    console.error("Failed to save triage session:", err);
+    console.error("[saveTriageSession] Unexpected error saving triage session:", err);
     // Non-blocking — don't throw
   }
 }

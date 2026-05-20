@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const { savePet, deletePet } = usePets();
   const [showAddPet, setShowAddPet] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [petSaveError, setPetSaveError] = useState<string | null>(null);
   const [petForm, setPetForm] = useState({
     name: "",
     breed: "",
@@ -49,6 +50,7 @@ export default function SettingsPage() {
   const handleAddPet = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setPetSaveError(null);
     const newPet: Pet = {
       id: crypto.randomUUID(),
       user_id: "demo",
@@ -67,14 +69,20 @@ export default function SettingsPage() {
       updated_at: new Date().toISOString(),
     };
 
-    await savePet(newPet);
-    setSaving(false);
-    setShowAddPet(false);
-    setPetForm({
-      name: "", breed: "", species: "dog", age_years: "", age_months: "",
-      weight: "", weight_unit: "lbs", gender: "male", is_neutered: true,
-      existing_conditions: "", medications: "",
-    });
+    try {
+      await savePet(newPet);
+      setShowAddPet(false);
+      setPetForm({
+        name: "", breed: "", species: "dog", age_years: "", age_months: "",
+        weight: "", weight_unit: "lbs", gender: "male", is_neutered: true,
+        existing_conditions: "", medications: "",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to save dog profile. Please try again.";
+      setPetSaveError(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -236,6 +244,9 @@ export default function SettingsPage() {
               </label>
             </div>
 
+            {petSaveError && (
+              <p className="text-sm text-red-600" role="alert">{petSaveError}</p>
+            )}
             <div className="flex items-center gap-3">
               <Button type="submit" loading={saving}>
                 <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save Dog"}
