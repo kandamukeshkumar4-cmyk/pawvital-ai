@@ -2,6 +2,10 @@ import { createClient } from "@supabase/supabase-js";
 import type { SymptomReport } from "@/components/symptom-report/types";
 import type { PetProfile, TriageSession } from "./triage-engine";
 import { buildThresholdProposalDraft } from "./threshold-proposals";
+import {
+  extractSafeSupabaseErrorDetails,
+  type SafeSupabaseErrorDetails,
+} from "./supabase-error";
 
 export interface OutcomeFeedbackInput {
   symptomCheckId: string;
@@ -19,6 +23,22 @@ export interface OutcomeFeedbackSaveResult {
   proposalCreated: boolean;
   structuredStored: boolean;
   warnings: string[];
+}
+
+export interface ReportPersistenceDiagnostic {
+  reason:
+    | "auth_missing"
+    | "config_unavailable"
+    | "insert_failed"
+    | "pet_lookup_failed"
+    | "pet_required"
+    | "pet_unowned";
+  safeError?: SafeSupabaseErrorDetails | null;
+}
+
+export interface SaveSymptomReportOptions {
+  onDiagnostic?: (diagnostic: ReportPersistenceDiagnostic) => void;
+  verifiedUserId?: string | null;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -45,10 +65,14 @@ function normalizeOptionalText(value: string | undefined): string | null {
 export async function saveSymptomReportToDB(
   session: TriageSession,
   pet: PetProfile,
-  report: Record<string, unknown>
+  report: Record<string, unknown>,
+  options?: SaveSymptomReportOptions
 ): Promise<string | null> {
   const supabase = getServerSupabase();
-  if (!supabase) return null;
+  if (!supabase) {
+    options?.onDiagnostic?.({ reason: "config_unavailable" });
+    return null;
+  }
 
   const urgency = (report.urgency_level as string) || (report.severity as string) || "low";
   const severityMap: Record<string, string> = {
@@ -68,7 +92,67 @@ export async function saveSymptomReportToDB(
 
   const symptoms = session.known_symptoms.join(", ") || "unknown";
   const petId = (pet as PetProfile & { id?: string }).id;
-  if (!petId || petId === "demo") return null;
+  if (!petId || petId === "demo") {
+    options?.onDiagnostic?.({
+      reason: "pet_required",
+      safeError: {
+        code: "PERSISTENCE_REQUIRES_SAVED_PET",
+        message:
+          "A saved dog profile is required before this report can be stored.",
+        details: "No persisted pet id was available for this symptom check.",
+        hint: "Save your dog profile and try again.",
+      },
+    });
+    return null;
+  }
+
+  if (!options?.verifiedUserId) {
+    options?.onDiagnostic?.({
+      reason: "auth_missing",
+      safeError: {
+        code: "AUTH_REQUIRED_FOR_PERSISTENCE",
+        message:
+          "Authenticated user context was unavailable during symptom-check persistence.",
+        details: "The server could not verify pet ownership for this report.",
+        hint: "Sign in again and retry the symptom check.",
+      },
+    });
+    return null;
+  }
+
+  const { data: ownedPet, error: petLookupError } = await supabase
+    .from("pets")
+    .select("id, user_id")
+    .eq("id", petId)
+    .maybeSingle();
+
+  if (petLookupError) {
+    options?.onDiagnostic?.({
+      reason: "pet_lookup_failed",
+      safeError: extractSafeSupabaseErrorDetails(petLookupError),
+    });
+    console.error("[DB] Failed to verify persisted pet ownership:", petLookupError);
+    return null;
+  }
+
+  const ownedPetUserId =
+    ownedPet && typeof ownedPet === "object" && typeof ownedPet.user_id === "string"
+      ? ownedPet.user_id
+      : null;
+
+  if (!ownedPet || ownedPetUserId !== options.verifiedUserId) {
+    options?.onDiagnostic?.({
+      reason: "pet_unowned",
+      safeError: {
+        code: "PET_OWNERSHIP_MISMATCH",
+        message:
+          "Authenticated user does not own the saved pet required for this report.",
+        details: "The symptom check could not be linked to the requested pet.",
+        hint: "Save or select your own dog profile and try again.",
+      },
+    });
+    return null;
+  }
 
   const { data, error } = await supabase
     .from("symptom_checks")
@@ -83,6 +167,10 @@ export async function saveSymptomReportToDB(
     .maybeSingle();
 
   if (error) {
+    options?.onDiagnostic?.({
+      reason: "insert_failed",
+      safeError: extractSafeSupabaseErrorDetails(error),
+    });
     console.error("[DB] Failed to save triage session:", error);
     return null;
   }

@@ -517,6 +517,53 @@ describe("POST /api/pets", () => {
     expect(response.status).toBe(503);
     expect(payload.error).toContain("temporarily unavailable");
   });
+
+  it("returns safe Supabase diagnostics when pet creation is rejected by policy", async () => {
+    const { supabase } = buildSupabaseMock({
+      pets: {
+        insertResult: {
+          data: null,
+          error: {
+            code: "42501",
+            message: 'new row violates row-level security policy for table "pets"',
+            details: "The authenticated role could not insert this pets row.",
+            hint: "Use the authenticated owner route instead of a client upsert.",
+          } as unknown as { message: string },
+        },
+      },
+    });
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { POST } = await import("../src/app/api/pets/route");
+    const response = await POST(
+      makeJsonRequest("http://localhost/api/pets", "POST", {
+        name: "Milo",
+        species: "dog",
+        breed: "golden retriever",
+      })
+    );
+    const payload = await readJson<{
+      error: string;
+      safeError?: {
+        code?: string | null;
+        message?: string | null;
+        details?: string | null;
+        hint?: string | null;
+      };
+    }>(response);
+
+    expect(response.status).toBe(403);
+    expect(payload.error).toContain("Failed to save dog profile");
+    expect(payload.safeError).toEqual(
+      expect.objectContaining({
+        code: "42501",
+        message:
+          'new row violates row-level security policy for table "pets"',
+        details: "The authenticated role could not insert this pets row.",
+        hint: "Use the authenticated owner route instead of a client upsert.",
+      })
+    );
+  });
 });
 
 describe("GET /api/pets", () => {

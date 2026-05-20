@@ -5511,6 +5511,64 @@ describe("VET-725: asked-state regression pack", () => {
       expect(getEmitCalls(mockEventType.URGENCY_HIGH)).toHaveLength(0);
     });
 
+    it("returns an explicit persistence status when the report cannot be saved without a real pet link", async () => {
+      mockCreateServerSupabaseClient.mockResolvedValue(
+        buildAuthSupabase("user-abc-123")
+      );
+      mockSaveSymptomReportToDB.mockImplementation(
+        async (
+          _session: unknown,
+          _pet: unknown,
+          _report: unknown,
+          options?: {
+            onDiagnostic?: (diagnostic: {
+              reason: string;
+              safeError?: {
+                code?: string | null;
+                message?: string | null;
+                details?: string | null;
+                hint?: string | null;
+              } | null;
+            }) => void;
+          }
+        ) => {
+          options?.onDiagnostic?.({
+            reason: "pet_required",
+            safeError: {
+              code: "PERSISTENCE_REQUIRES_SAVED_PET",
+              message:
+                "A saved dog profile is required before this report can be stored.",
+              details: "No persisted pet id was available for this symptom check.",
+              hint: "Save your dog profile and try again.",
+            },
+          });
+          return null;
+        }
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeReportRequest(buildModerateReportSession(), undefined, {
+          id: undefined,
+        })
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(payload.report.report_storage_id).toBeUndefined();
+      expect(payload.persistence).toEqual(
+        expect.objectContaining({
+          status: "pet_required",
+          message: expect.stringContaining("saved dog profile"),
+          safeError: expect.objectContaining({
+            code: "PERSISTENCE_REQUIRES_SAVED_PET",
+          }),
+        })
+      );
+      expect(getEmitCalls(mockEventType.REPORT_READY)).toHaveLength(0);
+    });
+
     it("emits REPORT_READY and URGENCY_HIGH for authenticated emergency reports", async () => {
       mockCreateServerSupabaseClient.mockResolvedValue(
         buildAuthSupabase("user-emergency-1")

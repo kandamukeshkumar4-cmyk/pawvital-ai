@@ -5,6 +5,10 @@ import { usePathname } from "next/navigation";
 import { buildLoginPath, buildRedirectTarget } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  formatSafeSupabaseErrorSummary,
+  type SafeSupabaseErrorDetails,
+} from "@/lib/supabase-error";
 import { DEMO_PETS_STORAGE_KEY } from "@/lib/demo-storage";
 import { useAppStore } from "@/store/app-store";
 import type { Pet, UserProfile } from "@/types";
@@ -20,6 +24,39 @@ function persistDemoPets(pets: Pet[]) {
   } catch {
     /* ignore quota */
   }
+}
+
+type PetApiPayload = {
+  error?: string;
+  pet?: Pet;
+  safeError?: SafeSupabaseErrorDetails | null;
+};
+
+function buildPetWriteBody(pet: Pet) {
+  return {
+    age_months: pet.age_months,
+    age_unit: pet.age_unit,
+    age_years: pet.age_years,
+    breed: pet.breed,
+    existing_conditions: pet.existing_conditions,
+    gender: pet.gender,
+    is_neutered: pet.is_neutered,
+    medications: pet.medications,
+    name: pet.name,
+    photo_url: pet.photo_url ?? "",
+    species: pet.species,
+    weight: pet.weight,
+    weight_unit: pet.weight_unit,
+  };
+}
+
+function buildPetApiErrorMessage(payload: PetApiPayload | null | undefined) {
+  const base =
+    typeof payload?.error === "string" && payload.error.trim().length > 0
+      ? payload.error.trim()
+      : "Failed to save dog profile.";
+  const safeSummary = formatSafeSupabaseErrorSummary(payload?.safeError);
+  return safeSummary ? `${base} ${safeSummary}` : base;
 }
 
 // ─── Auth Hook ────────────────────────────────────────────────────────────────
@@ -230,21 +267,20 @@ export function usePets() {
     }
 
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const isExistingPet = pets.some((existingPet) => existingPet.id === pet.id);
+      const response = await fetch(isExistingPet ? `/api/pets/${pet.id}` : "/api/pets", {
+        method: isExistingPet ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(buildPetWriteBody(pet)),
+      });
+      const payload = (await response.json().catch(() => null)) as PetApiPayload | null;
 
-      const petWithUser = { ...pet, user_id: user.id }; // always bind to session user
+      if (!response.ok || !payload?.pet) {
+        throw new Error(buildPetApiErrorMessage(payload));
+      }
 
-      const { data, error } = await supabase
-        .from("pets")
-        .upsert(petWithUser, { onConflict: "id" })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const saved = data as Pet;
+      const saved = payload.pet;
       const updated = filterDogPets([
         ...pets.filter((p) => p.id !== saved.id),
         saved,
@@ -269,8 +305,14 @@ export function usePets() {
     }
 
     try {
-      const supabase = createClient();
-      await supabase.from("pets").delete().eq("id", petId);
+      const response = await fetch(`/api/pets/${petId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as PetApiPayload | null;
+        throw new Error(buildPetApiErrorMessage(payload));
+      }
     } catch (err) {
       console.error("Failed to delete pet from DB:", err);
     } finally {
