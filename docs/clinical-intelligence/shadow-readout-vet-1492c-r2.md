@@ -101,6 +101,22 @@ However, the row does not contain the persisted shadow readout aggregate expecte
 
 The observed code path is consistent with the tester-feedback ledger save rewriting `symptom_checks.ai_response` from the owner report payload after the initial report save. That follow-up write preserves owner report content and feedback metadata, but does not preserve the readout aggregate in the row checked here.
 
+## Shadow Observation Evidence
+
+All five configured sidecar services returned zero observations and zero shadow comparisons for the readout window.
+
+| Service | observations | shadow_comparisons | errors | timeouts |
+| --- | --- | --- | --- | --- |
+| vision-preprocess-service | 0 | 0 | 0 | 0 |
+| text-retrieval-service | 0 | 0 | 0 | 0 |
+| image-retrieval-service | 0 | 0 | 0 | 0 |
+| multimodal-consult-service | 0 | 0 | 0 | 0 |
+| async-review-service | 0 | 0 | 0 | 0 |
+
+`SECOND_OPINION_EXTRACTOR` and `GROK_FINAL_SAFETY` are both configured in `shadow` mode. The single tester session exercised the terminal-emergency code path, but the persisted `symptom_checks.ai_response` row does not contain the `system_observability.shadowReadout` aggregate required for promotion evidence. No shadow service call reached a state where an observation or comparison was recorded and preserved.
+
+This zero-observation result is a structural blocker, not a sampling issue. Even with more sessions, observations will not accumulate until the tester-feedback ledger update is fixed to preserve `system_observability.shadowReadout` across its row rewrite.
+
 ## Owner-Visible Safety
 
 Credentialed History verification used the existing saved tester row only. It did not generate a new symptom-check report.
@@ -155,6 +171,21 @@ Recommended sequence:
 3. Run another real invited-tester traffic window.
 4. Re-run the scheduler and require non-zero `observationCount` and/or `shadowComparisonCount` before any promotion discussion.
 
+## Remaining Blockers
+
+| Blocker | Impact | Owner |
+| --- | --- | --- |
+| `symptom_checks.ai_response` tester-feedback rewrite strips `system_observability.shadowReadout` | Shadow observations cannot accumulate regardless of session count until this is fixed | VET-1518C |
+| Single-session traffic window — statistically insufficient | Cannot claim meaningful distribution-level safety signal from 1 report | Extended tester window |
+| `GROK_FINAL_REPORT` has zero shadow evidence and remains `off` | No promotion path open for final-report model | Blocked by above two |
+| `sessionPresenceCount: 0` despite `reportPresenceCount: 1` | Readout endpoint cannot derive per-session quality signal | Follows from shadowReadout aggregate loss |
+
+## Recommended Next Tickets
+
+1. **VET-1518C** — Fix tester-feedback ledger update to preserve `system_observability.shadowReadout` in `symptom_checks.ai_response`. Without this, shadow observations will never appear in the readout regardless of traffic volume. This is the highest-priority unblocking ticket for the shadow promotion path.
+2. **VET-1519C** — Extend invited-tester collection window. Aim for 5+ completed sessions from distinct credentialed accounts before the next formal readout. Do not count sessions from the same tester account twice toward the traffic target.
+3. **VET-1492C-R3** — Rerun formal shadow readout after VET-1518C ships and the extended tester window closes. Gate the R3 readout on non-zero `observationCount` before any promotion discussion begins.
+
 ## Notes
 
 - Docs/report only for this ticket.
@@ -165,3 +196,61 @@ Recommended sequence:
 - No public launch.
 - No synthetic traffic counted as organic.
 - No secret values recorded.
+
+## Appendix: Commands and Sanitized Outputs
+
+**Shadow Readout Scheduler run**
+
+```
+Run ID:        26185354742
+Trigger:       workflow_dispatch
+Started:       2026-05-20T19:34:37Z
+Status:        success (25s)
+Issue updated: #495 (comment appended)
+```
+
+**Sanitized scheduler decision block**
+
+```json
+{
+  "status": "ready_for_formal_readout",
+  "decision": "RUN FORMAL VET-1492C RERUN",
+  "due": true,
+  "reportCount": 1,
+  "warning": null
+}
+```
+
+**Sanitized scheduler readout block**
+
+```json
+{
+  "ok": true,
+  "overall_status": "insufficient_data",
+  "report_count": 1,
+  "parsed_report_count": 1,
+  "malformed_report_count": 0,
+  "observation_count": 0,
+  "shadow_comparison_count": 0,
+  "warning": null
+}
+```
+
+**Production deployment confirmed**
+
+```
+Deployment:  dpl_3C6ysNpujs8fLPPGT9M5Y8ZTW9J2
+Target:      production
+Status:      Ready
+SHA:         1e643d2d076652666d5d973f640bf31aaa45fc7e
+Source PRs:  #502 (VET-1517C), #503 (VET-1517C follow-up)
+```
+
+**Validation results**
+
+```
+git diff --check:         clean
+docs ASCII hygiene:       pass (0 non-ASCII chars)
+npm run security:secrets: pass (1026 files scanned)
+runtime files touched:    none
+```
