@@ -145,7 +145,10 @@ import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orches
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
-import { generateReport } from "@/lib/symptom-chat/report-pipeline";
+import {
+  generateReport,
+  generateTerminalOutcomeReport,
+} from "@/lib/symptom-chat/report-pipeline";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -753,16 +756,16 @@ export async function POST(request: Request) {
     if (action === "generate_report") {
       const reportBlockingCriticalInfo = findReportBlockingCriticalInfo(session);
       if (reportBlockingCriticalInfo) {
-        return NextResponse.json(
-          buildTerminalOutcomeResponse(
-            buildCannotAssessOutcome({
-              petName: pet.name || "your dog",
-              questionId: reportBlockingCriticalInfo.questionId,
-              questionText: reportBlockingCriticalInfo.questionText,
-            }),
-            session
-          )
-        );
+        return await generateTerminalOutcomeReport({
+          session,
+          pet: effectivePet,
+          terminalOutcome: buildCannotAssessOutcome({
+            petName: pet.name || "your dog",
+            questionId: reportBlockingCriticalInfo.questionId,
+            questionText: reportBlockingCriticalInfo.questionText,
+          }),
+          verifiedUserId,
+        });
       }
 
       return await generateReport({

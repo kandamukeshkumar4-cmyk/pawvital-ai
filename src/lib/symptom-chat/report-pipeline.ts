@@ -9,6 +9,7 @@ import {
   type PetProfile,
   type TriageSession,
 } from "@/lib/triage-engine";
+import type { UncertaintyTerminalOutcome } from "@/lib/clinical/uncertainty-routing";
 import { formatBreedRiskContext, getBreedRiskProfiles } from "@/lib/breed-risk";
 import { computeBayesianScore } from "@/lib/bayesian-scorer";
 import { buildStructuredEvidenceChain } from "@/lib/evidence-chain";
@@ -102,6 +103,13 @@ interface GenerateReportInput {
   messages: SymptomChatMessage[];
   image?: string;
   requestOrigin?: string;
+  verifiedUserId?: string | null;
+}
+
+interface GenerateTerminalOutcomeReportInput {
+  session: TriageSession;
+  pet: PetProfile;
+  terminalOutcome: UncertaintyTerminalOutcome;
   verifiedUserId?: string | null;
 }
 
@@ -562,6 +570,60 @@ function buildFailSafeReport(input: {
   };
 }
 
+function buildTerminalOutcomeReport(input: {
+  session: TriageSession;
+  pet: PetProfile;
+  context: ReturnType<typeof buildDiagnosisContext>;
+  terminalOutcome: UncertaintyTerminalOutcome;
+}) {
+  const { session, pet, context, terminalOutcome } = input;
+  const petName = pet.name || "your dog";
+  const highestUrgency =
+    context.highest_urgency === "emergency" ||
+    session.red_flags_triggered.length > 0
+      ? "emergency"
+      : context.highest_urgency;
+  const symptoms = session.known_symptoms.join(", ") || "symptoms not fully established";
+  const redFlags = session.red_flags_triggered.join(", ") || "none recorded";
+
+  return {
+    severity: URGENCY_TO_SEVERITY[highestUrgency] || "high",
+    recommendation:
+      URGENCY_TO_RECOMMENDATION[highestUrgency] || "vet_24h",
+    title:
+      highestUrgency === "emergency"
+        ? "Emergency Signs Need Veterinary Care"
+        : "Symptom Check Needs Veterinary Guidance",
+    explanation: `${terminalOutcome.ownerMessage} ${terminalOutcome.recommendedNextStep} PawVital could not safely complete deeper assessment because a critical sign remained unconfirmed. This is not a diagnosis or treatment plan; it preserves the safest next step and the symptoms already reported for ${petName}.`,
+    clinical_notes: `Terminal safety outcome: ${terminalOutcome.reasonCode}. Known symptoms: ${symptoms}. Red flags: ${redFlags}.`,
+    differential_diagnoses: [],
+    recommended_tests: [],
+    home_care: [],
+    actions: dedupeStrings([
+      terminalOutcome.recommendedNextStep,
+      highestUrgency === "emergency"
+        ? "Contact an emergency veterinarian now and share the reported signs."
+        : "Contact your veterinarian and share the reported signs.",
+      "Do not wait for PawVital to resolve the missing sign if symptoms are worsening.",
+    ]),
+    warning_signs: buildFailSafeWarningSigns(highestUrgency),
+    vet_questions: [
+      "When did the breathing or collapse signs start?",
+      "Have the gum color, alertness, or breathing effort changed since this summary?",
+      "What medications, toxins, trauma, or recent illness should the clinic know about?",
+    ],
+    confidence: Math.min(deriveBaselineReportConfidence(context), 0.35),
+    limitations: [
+      "A critical safety sign could not be confirmed in the symptom-check flow.",
+      "This summary is for urgency handoff only and is not a diagnosis.",
+    ],
+    vet_handoff_summary: `${petName} had a terminal symptom-check safety outcome (${terminalOutcome.reasonCode}). Reported signs: ${symptoms}. Recorded red flags: ${redFlags}. Recommended next step: ${terminalOutcome.recommendedNextStep}`,
+    report_mode: "terminal_cannot_assess",
+    terminal_state: terminalOutcome.terminalState,
+    reason_code: terminalOutcome.reasonCode,
+  };
+}
+
 function applyHighStakesProvenanceGuard(
   report: Record<string, unknown>,
   evidenceChain: Array<{
@@ -643,6 +705,48 @@ function buildGeneratedVetHandoffDraft(
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+export async function generateTerminalOutcomeReport({
+  session,
+  pet,
+  terminalOutcome,
+  verifiedUserId,
+}: GenerateTerminalOutcomeReportInput) {
+  const context = buildDiagnosisContext(session, pet);
+  const terminalReport = buildTerminalOutcomeReport({
+    session,
+    pet,
+    context,
+    terminalOutcome,
+  });
+  const topDiagnosis =
+    context.top5[0]?.name ??
+    context.top5[0]?.medical_term ??
+    terminalOutcome.reasonCode;
+
+  const { persistence } = await persistFinalReportToHistory({
+    session,
+    pet,
+    report: terminalReport,
+    verifiedUserId,
+    highestUrgency: terminalReport.severity,
+    topDiagnosis,
+  });
+
+  return NextResponse.json({
+    type: terminalOutcome.type,
+    message: terminalOutcome.ownerMessage,
+    conversationState: terminalOutcome.conversationState,
+    ready_for_report: false,
+    report: terminalReport,
+    persistence,
+    terminal_state: terminalOutcome.terminalState,
+    reason_code: terminalOutcome.reasonCode,
+    owner_message: terminalOutcome.ownerMessage,
+    recommended_next_step: terminalOutcome.recommendedNextStep,
+    session,
+  });
 }
 
 export async function generateReport({

@@ -639,7 +639,11 @@ export default function SymptomCheckerPage() {
       });
 
       const data = await res.json();
-      if (data.type === "report" && data.report) {
+      const shouldRenderReport =
+        data.type === "report" ||
+        (data.type === "cannot_assess" &&
+          data.report?.report_mode === "terminal_cannot_assess");
+      if (shouldRenderReport && data.report) {
         setReport(data.report);
         setReportPersistenceMessage(
           typeof data.persistence?.message === "string"
