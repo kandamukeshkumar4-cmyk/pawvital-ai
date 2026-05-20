@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import {
+  extractSafeSupabaseErrorDetails,
+  isMissingRelationSupabaseError,
+  isPolicySupabaseError,
+} from "@/lib/supabase-error";
+import {
   generalApiLimiter,
   checkRateLimit,
   getRateLimitId,
@@ -20,11 +25,27 @@ function errorMessage(err: unknown): string {
 }
 
 function isMissingTableError(err: unknown): boolean {
-  const message = errorMessage(err).toLowerCase();
-  return (
-    message.includes("does not exist") ||
-    message.includes("relation") ||
-    message.includes("table")
+  return isMissingRelationSupabaseError(extractSafeSupabaseErrorDetails(err));
+}
+
+function petPersistenceErrorResponse(error: unknown) {
+  const safeError = extractSafeSupabaseErrorDetails(error);
+
+  if (isMissingRelationSupabaseError(safeError)) {
+    return NextResponse.json(
+      { error: "Pets are temporarily unavailable" },
+      { status: 503 }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      error: "Failed to save dog profile.",
+      safeError,
+    },
+    {
+      status: isPolicySupabaseError(safeError) ? 403 : 500,
+    }
   );
 }
 
@@ -126,6 +147,11 @@ export async function POST(request: Request) {
       age_unit,
       weight,
       weight_unit,
+      gender,
+      is_neutered,
+      existing_conditions,
+      medications,
+      photo_url,
     } = body as Record<string, unknown>;
 
     const petName = typeof name === "string" ? name.trim() : "";
@@ -139,6 +165,22 @@ export async function POST(request: Request) {
     const petAgeUnit = typeof age_unit === "string" && age_unit.trim() ? age_unit.trim() : "years";
     const petWeight = typeof weight === "number" ? weight : Number(weight ?? 0) || 0;
     const petWeightUnit = typeof weight_unit === "string" && weight_unit.trim() ? weight_unit.trim() : "lbs";
+    const petGender =
+      gender === "female" || gender === "male" ? gender : "male";
+    const petIsNeutered =
+      typeof is_neutered === "boolean" ? is_neutered : true;
+    const petExistingConditions = Array.isArray(existing_conditions)
+      ? existing_conditions.filter(
+          (entry): entry is string => typeof entry === "string"
+        )
+      : [];
+    const petMedications = Array.isArray(medications)
+      ? medications.filter((entry): entry is string => typeof entry === "string")
+      : [];
+    const petPhotoUrl =
+      typeof photo_url === "string" && photo_url.trim().length > 0
+        ? photo_url.trim()
+        : null;
 
     if (!petName || !petBreed) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -163,21 +205,17 @@ export async function POST(request: Request) {
         age_unit: petAgeUnit,
         weight: petWeight,
         weight_unit: petWeightUnit,
-        is_neutered: true,
-        gender: "male",
+        gender: petGender,
+        is_neutered: petIsNeutered,
+        existing_conditions: petExistingConditions,
+        medications: petMedications,
+        photo_url: petPhotoUrl,
       })
       .select()
       .single();
 
     if (error) {
-      if (isMissingTableError(error)) {
-        return NextResponse.json(
-          { error: "Pets are temporarily unavailable" },
-          { status: 503 }
-        );
-      }
-
-      throw error;
+      return petPersistenceErrorResponse(error);
     }
 
     return NextResponse.json({ pet });
@@ -185,6 +223,6 @@ export async function POST(request: Request) {
     if (err instanceof Error && err.message === "DEMO_MODE") {
       return NextResponse.json({ error: "Cannot create in demo mode" }, { status: 400 });
     }
-    return NextResponse.json({ error: errorMessage(err) }, { status: 500 });
+    return petPersistenceErrorResponse(err);
   }
 }

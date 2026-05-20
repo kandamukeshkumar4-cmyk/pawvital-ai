@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { sanitizePetUpdateBody } from "@/lib/pet-update-payload";
+import {
+  extractSafeSupabaseErrorDetails,
+  isMissingRelationSupabaseError,
+  isPolicySupabaseError,
+} from "@/lib/supabase-error";
 import {
   generalApiLimiter,
   checkRateLimit,
@@ -20,11 +26,27 @@ function errorMessage(err: unknown): string {
 }
 
 function isMissingTableError(err: unknown): boolean {
-  const message = errorMessage(err).toLowerCase();
-  return (
-    message.includes("does not exist") ||
-    message.includes("relation") ||
-    message.includes("table")
+  return isMissingRelationSupabaseError(extractSafeSupabaseErrorDetails(err));
+}
+
+function petPersistenceErrorResponse(error: unknown) {
+  const safeError = extractSafeSupabaseErrorDetails(error);
+
+  if (isMissingRelationSupabaseError(safeError)) {
+    return NextResponse.json(
+      { error: "Pets are temporarily unavailable" },
+      { status: 503 }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      error: "Failed to save dog profile.",
+      safeError,
+    },
+    {
+      status: isPolicySupabaseError(safeError) ? 403 : 500,
+    }
   );
 }
 
@@ -154,41 +176,28 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const cleanBody = { ...body } as Record<string, unknown>;
-    delete cleanBody.id;
-    delete cleanBody.user_id;
-
-    if (Object.keys(cleanBody).length === 0) {
-      return NextResponse.json({ error: "Missing fields to update" }, { status: 400 });
-    }
-
-    if (typeof cleanBody.species === "string") {
-      const normalizedSpecies = cleanBody.species.trim().toLowerCase();
-      if (normalizedSpecies !== "dog") {
-        return NextResponse.json(
-          { error: "PawVital currently supports dogs only." },
-          { status: 400 }
-        );
-      }
-      cleanBody.species = "dog";
+    const sanitized = sanitizePetUpdateBody(body);
+    if (!sanitized.ok) {
+      return NextResponse.json(
+        {
+          error:
+            sanitized.error === "No valid fields to update"
+              ? "Missing fields to update"
+              : sanitized.error,
+        },
+        { status: 400 }
+      );
     }
 
     const { data: pet, error } = await supabase
       .from("pets")
-      .update(cleanBody)
+      .update(sanitized.data)
       .eq("id", id)
       .select()
       .single();
 
     if (error) {
-      if (isMissingTableError(error)) {
-        return NextResponse.json(
-          { error: "Pets are temporarily unavailable" },
-          { status: 503 }
-        );
-      }
-
-      throw error;
+      return petPersistenceErrorResponse(error);
     }
 
     return NextResponse.json({ pet });
@@ -200,7 +209,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       );
     }
 
-    return NextResponse.json({ error: errorMessage(err) }, { status: 500 });
+    return petPersistenceErrorResponse(err);
   }
 }
 

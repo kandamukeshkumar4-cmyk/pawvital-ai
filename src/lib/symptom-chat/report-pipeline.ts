@@ -22,7 +22,10 @@ import {
 import { fetchBreedProfile, isLikelyDogContext } from "@/lib/pet-enrichment";
 import { getProvenanceRegistry } from "@/lib/provenance-registry";
 import { buildReportConfidenceCalibration } from "@/lib/report-confidence";
-import { saveSymptomReportToDB } from "@/lib/report-storage";
+import {
+  saveSymptomReportToDB,
+  type ReportPersistenceDiagnostic,
+} from "@/lib/report-storage";
 import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
 import { saveTesterFeedbackCaseLedgerToDB } from "@/lib/tester-feedback-storage";
 import {
@@ -100,6 +103,59 @@ interface GenerateReportInput {
   image?: string;
   requestOrigin?: string;
   verifiedUserId?: string | null;
+}
+
+function buildPersistenceResponse(
+  diagnostic: ReportPersistenceDiagnostic | null,
+  reportStorageId: string | null
+) {
+  if (reportStorageId) {
+    return {
+      message: null,
+      safeError: null,
+      status: "saved" as const,
+    };
+  }
+
+  if (!diagnostic) {
+    return {
+      message:
+        "This report could not be saved to History. Please try again after confirming your dog profile is saved.",
+      safeError: null,
+      status: "save_failed" as const,
+    };
+  }
+
+  switch (diagnostic.reason) {
+    case "pet_required":
+      return {
+        message:
+          "This report could not be saved because no saved dog profile is linked to this session yet.",
+        safeError: diagnostic.safeError ?? null,
+        status: "pet_required" as const,
+      };
+    case "pet_unowned":
+      return {
+        message:
+          "This report could not be saved because the selected dog profile could not be verified for your account.",
+        safeError: diagnostic.safeError ?? null,
+        status: "pet_unowned" as const,
+      };
+    case "auth_missing":
+      return {
+        message:
+          "This report could not be saved because your sign-in session could not be verified.",
+        safeError: diagnostic.safeError ?? null,
+        status: "auth_required" as const,
+      };
+    default:
+      return {
+        message:
+          "This report could not be saved to History. Please try again after confirming your dog profile is saved.",
+        safeError: diagnostic.safeError ?? null,
+        status: "save_failed" as const,
+      };
+  }
 }
 
 function dedupeStrings(values: string[]): string[] {
@@ -920,11 +976,18 @@ export async function generateReport({
     }
 
     let reportStorageId: string | null = null;
+    let persistenceDiagnostic: ReportPersistenceDiagnostic | null = null;
     try {
       reportStorageId = await saveSymptomReportToDB(
         session,
         pet,
-        buildPersistedReportWithShadowReadout(finalReport, session)
+        buildPersistedReportWithShadowReadout(finalReport, session),
+        {
+          onDiagnostic: (diagnostic) => {
+            persistenceDiagnostic = diagnostic;
+          },
+          verifiedUserId,
+        }
       );
       if (reportStorageId) {
         finalReport.report_storage_id = reportStorageId;
@@ -947,6 +1010,11 @@ export async function generateReport({
     } catch (saveError) {
       console.error("[DB] Failed to save triage session:", saveError);
     }
+
+    const persistence = buildPersistenceResponse(
+      persistenceDiagnostic,
+      reportStorageId
+    );
 
     if (verifiedUserId && reportStorageId) {
       emit(EventType.REPORT_READY, {
@@ -971,7 +1039,7 @@ export async function generateReport({
       }
     }
 
-    return NextResponse.json({ type: "report", report: finalReport });
+    return NextResponse.json({ type: "report", report: finalReport, persistence });
   } catch (error) {
     console.error("Report generation failed:", error);
     return NextResponse.json({

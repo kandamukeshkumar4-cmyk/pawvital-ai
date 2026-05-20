@@ -30,7 +30,6 @@ import type { ConversationState } from "@/lib/conversation-state/types";
 import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
-import { saveTriageSession } from "@/hooks/useSupabase";
 
 // --- Types ---
 
@@ -234,6 +233,8 @@ export default function SymptomCheckerPage() {
     useState<ImageMeta | null>(null);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<SymptomReport | null>(null);
+  const [reportPersistenceMessage, setReportPersistenceMessage] =
+    useState<string | null>(null);
   const [readyForReport, setReadyForReport] = useState(false);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
@@ -640,17 +641,10 @@ export default function SymptomCheckerPage() {
       const data = await res.json();
       if (data.type === "report" && data.report) {
         setReport(data.report);
-        const petId = activePet?.id ?? "";
-        const symptoms = messages
-          .filter((m) => m.role === "user")
-          .map((m) => m.content)
-          .join("; ");
-        void saveTriageSession(
-          petId,
-          symptoms,
-          JSON.stringify(data.report),
-          (data.report as SymptomReport).severity,
-          (data.report as SymptomReport).recommendation,
+        setReportPersistenceMessage(
+          typeof data.persistence?.message === "string"
+            ? data.persistence.message
+            : null
         );
       }
     } catch {
@@ -672,6 +666,7 @@ export default function SymptomCheckerPage() {
   const startNewSession = () => {
     setMessages([]);
     setReport(null);
+    setReportPersistenceMessage(null);
     setReadyForReport(false);
     setGeneratingReport(false);
     setSessionStarted(false);
@@ -1118,7 +1113,19 @@ export default function SymptomCheckerPage() {
         {/* Full Report */}
         {report && (
           <div ref={reportRef} className="scroll-mt-4">
-            <FullReport report={report} />
+            <div className="space-y-4">
+              {reportPersistenceMessage ? (
+                <Card className="border border-amber-300 bg-amber-50 p-4">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Report save status
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-amber-900/90">
+                    {reportPersistenceMessage}
+                  </p>
+                </Card>
+              ) : null}
+              <FullReport report={report} />
+            </div>
           </div>
         )}
       </div>
