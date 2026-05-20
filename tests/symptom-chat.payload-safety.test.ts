@@ -565,7 +565,7 @@ describe("VET-1014 terminal payload safety pack", () => {
       "reason=budget_exceeded",
     ];
 
-    let session = addSymptoms(createSession(), ["vomiting"]);
+    const session = addSymptoms(createSession(), ["vomiting"]);
     session.case_memory = {
       ...session.case_memory!,
       service_timeouts: [
