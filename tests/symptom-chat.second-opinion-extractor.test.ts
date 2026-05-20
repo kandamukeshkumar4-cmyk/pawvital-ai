@@ -312,6 +312,36 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
     });
   });
 
+  it("runs the model in shadow mode and returns the accepted result", async () => {
+    // VET-1520C: shadow mode must run the model and return "accepted" so the route
+    // can record a shadow comparison. The route (not the extractor) decides whether
+    // to apply the answer.
+    const modelCaller = jest.fn().mockResolvedValue(
+      JSON.stringify({
+        answered: true,
+        questionId: "vomit_duration",
+        answerValue: "since yesterday",
+        confidence: 0.87,
+        ownerPhrase: "since yesterday",
+        needsClarification: false,
+      })
+    );
+
+    const result = await extractSecondOpinionPendingAnswer({
+      mode: "shadow",
+      pendingQuestionId: "vomit_duration",
+      ownerMessage: "It started since yesterday.",
+      primaryExtractionFailed: true,
+      deterministicResolved: false,
+      clarificationAttempts: 1,
+      knownSymptomsBeforeTurn: ["vomiting"],
+      modelCaller,
+    });
+
+    expect(result.status).toBe("accepted");
+    expect(modelCaller).toHaveBeenCalledTimes(1);
+  });
+
   it("calls the model only after trigger conditions pass", async () => {
     const modelCaller = jest.fn().mockResolvedValue(
       JSON.stringify({

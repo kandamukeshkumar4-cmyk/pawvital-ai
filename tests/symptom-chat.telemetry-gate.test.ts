@@ -24,6 +24,7 @@ const mockShouldAnalyzeWoundImage = jest.fn();
 const mockCompressCaseMemoryWithMiniMax = jest.fn();
 const mockComputeBayesianScore = jest.fn();
 const mockAppendShadowTelemetrySnapshot = jest.fn();
+const mockAppendShadowComparison = jest.fn();
 const mockIsVisionPreprocessConfigured = jest.fn(() => false);
 const mockIsMultimodalConsultConfigured = jest.fn(() => false);
 const mockIsTextRetrievalConfigured = jest.fn(() => false);
@@ -138,6 +139,22 @@ jest.mock("@/lib/shadow-telemetry-store", () => ({
   appendShadowTelemetrySnapshot: (...args: unknown[]) =>
     mockAppendShadowTelemetrySnapshot(...args),
 }));
+
+jest.mock("@/lib/sidecar-observability", () => {
+  const actual = jest.requireActual(
+    "@/lib/sidecar-observability"
+  ) as typeof import("@/lib/sidecar-observability");
+  return {
+    ...actual,
+    appendShadowComparison: (
+      session: TriageSession,
+      comparison: Parameters<typeof actual.appendShadowComparison>[1]
+    ) => {
+      mockAppendShadowComparison(session, comparison);
+      return actual.appendShadowComparison(session, comparison);
+    },
+  };
+});
 
 jest.mock("@/lib/events/event-bus", () => ({
   EventType: {
@@ -318,6 +335,14 @@ function getLatestShadowSnapshotGateEvents() {
   return extractTelemetryGateEventsFromObservations(
     latestSnapshot?.recentServiceCalls ?? []
   );
+}
+
+function getSecondOpinionShadowComparisonCalls() {
+  return mockAppendShadowComparison.mock.calls
+    .map((call) => call[1] as { shadowStrategy?: unknown })
+    .filter(
+      (comparison) => comparison.shadowStrategy === "second_opinion_extractor"
+    );
 }
 
 async function flushAsyncWork() {
@@ -503,6 +528,27 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(shadowTurn.payload.reason_code).toBe(offTurn.payload.reason_code);
       expect(shadowTurn.payload.message).toBe(offTurn.payload.message);
       expect(getGateEventsFromLogs(logSpy)).toContain("second_opinion_used");
+
+      // VET-1520C: shadow acceptance records an internal comparison while
+      // preserving the client-visible telemetry redaction boundary.
+      expect(getSecondOpinionShadowComparisonCalls()).toEqual([
+        expect.objectContaining({
+          service: "async-review-service",
+          shadowStrategy: "second_opinion_extractor",
+          usedStrategy: "deterministic_extraction_failed",
+          disagreementCount: 1,
+          summary: "q=cough_type; shadow_answer_recorded=true; conf=0.90",
+        }),
+      ]);
+      expect(JSON.stringify(getSecondOpinionShadowComparisonCalls())).not.toContain(
+        "dry_honking"
+      );
+      expect(JSON.stringify(getSecondOpinionShadowComparisonCalls())).not.toContain(
+        "honking"
+      );
+      expect(
+        shadowTurn.payload.session.case_memory?.shadow_comparisons ?? []
+      ).toHaveLength(0);
     } finally {
       logSpy.mockRestore();
     }
@@ -550,6 +596,63 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(shadowTurn.payload.reason_code).toBe(offTurn.payload.reason_code);
       expect(shadowTurn.payload.message).toBe(offTurn.payload.message);
       expect(getGateEventsFromLogs(logSpy)).toContain("second_opinion_rejected");
+
+      // VET-1520C: rejected second-opinion must NOT record a shadow comparison
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+      expect(
+        shadowTurn.payload.session.case_memory?.shadow_comparisons ?? []
+      ).toHaveLength(0);
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("Grok provider failure does not suppress second-opinion shadow comparison", async () => {
+    // VET-1520C: Grok runs during report generation; second-opinion runs during chat turns.
+    // Configuring GROK_FINAL_SAFETY=shadow with a failing Grok mock must not prevent
+    // the second-opinion shadow comparison from being recorded on a chat turn.
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.GROK_FINAL_SAFETY = "shadow";
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockCompleteWithGrok.mockRejectedValue(new Error("XAI_API_KEY missing"));
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "It has a honking sound."
+      );
+
+      expect(response.status).toBe(200);
+      // Grok is not called during chat turns; second-opinion comparison must be present
+      expect(mockCompleteWithGrok).not.toHaveBeenCalled();
+      expect(getSecondOpinionShadowComparisonCalls()).toEqual([
+        expect.objectContaining({
+          shadowStrategy: "second_opinion_extractor",
+        }),
+      ]);
+      expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
+        0
+      );
     } finally {
       logSpy.mockRestore();
     }
