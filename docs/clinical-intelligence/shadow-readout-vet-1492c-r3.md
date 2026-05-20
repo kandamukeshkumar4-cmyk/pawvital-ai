@@ -38,8 +38,8 @@ blockers for eventual model promotion.
 | Direct endpoint `generated_at` | `2026-05-20T21:32:36.683Z` |
 | Readout endpoint | `https://pawvital-ai.vercel.app/api/ai/shadow-rollout` |
 | Window hours | `24` |
-| Tester session | Schema Test Dog (Labrador Retriever, 4y) — limping, gradual onset 2 days |
-| Session outcome | Same-day veterinary care recommended — High Concern |
+| Tester session | Schema Test Dog (Labrador Retriever, 4y) -- limping, gradual onset 2 days |
+| Session outcome | Same-day veterinary care recommended -- High Concern |
 | History row visible | yes |
 
 ## Tester Session
@@ -131,13 +131,13 @@ The R2 root cause (tester-ledger rewrite stripping the aggregate) is resolved.
 Shadow comparisons require both the primary model call and the shadow model call to
 succeed and return results that can be compared. Two distinct blockers prevent this:
 
-1. **`GROK_FINAL_SAFETY` (shadow mode) — fails closed**. `XAI_API_KEY` / `GROK_API_KEY`
+1. **`GROK_FINAL_SAFETY` (shadow mode) -- fails closed**. `XAI_API_KEY` / `GROK_API_KEY`
    is not set in the Vercel production environment. Every Grok shadow call fails at the
    provider layer. The `providerErrorCount: 2` is consistent with 2 Grok shadow call
    attempts (one per shadow-mode service per session). No comparison is produced when the
    shadow provider returns an error.
 
-2. **`SECOND_OPINION_EXTRACTOR` (shadow mode)** — uses the Claude API which is available.
+2. **`SECOND_OPINION_EXTRACTOR` (shadow mode)** -- uses the Claude API which is available.
    The 3 observations likely include second-opinion extractor shadow invocations. However,
    `shadowComparisonCount: 0` suggests either the comparison logic is not recording a result
    or both legs of the comparison did not complete cleanly within the session.
@@ -147,7 +147,7 @@ succeed and return results that can be compared. Two distinct blockers prevent t
 The 5 sidecar services (vision, text, image, multimodal, async-review) are RunPod-based.
 No RunPod pods are provisioned (`narrow_model_pack: no pod provisioned`). These services
 cannot record observations without an active pod. The sidecar-level promotion gate requires
-288 healthy samples over 24 hours — not achievable without a live pod.
+288 healthy samples over 24 hours -- not achievable without a live pod.
 
 ### `shadowModeDataPresent: false`
 
@@ -182,7 +182,7 @@ VET-725 payload-safety guard confirmed active.
 | Gate | Decision | Reason |
 | --- | --- | --- |
 | `SECOND_OPINION_EXTRACTOR` | HOLD | 3 observations recorded, 0 comparisons completed; comparison path needs investigation |
-| `GROK_FINAL_SAFETY` | HOLD | Fails closed — `XAI_API_KEY` not in production |
+| `GROK_FINAL_SAFETY` | HOLD | Fails closed -- `XAI_API_KEY` not in production |
 | `GROK_FINAL_REPORT` | HOLD / remain off | No evidence; 0 traffic for this path |
 | Overall model promotion | **NOT READY** | No shadow comparisons; insufficient traffic volume |
 
@@ -190,28 +190,28 @@ VET-725 payload-safety guard confirmed active.
 
 | # | Blocker | Impact | Ticket |
 | --- | --- | --- | --- |
-| 1 | `GROK_FINAL_SAFETY` fails closed — `XAI_API_KEY` not in Vercel prod | Grok shadow cannot produce comparisons | Ops: add key or disable Grok shadow |
-| 2 | `SECOND_OPINION_EXTRACTOR` shadow — 3 observations but 0 comparisons | Comparison recording path may have a bug | VET-1520C investigation candidate |
+| 1 | `GROK_FINAL_SAFETY` fails closed -- `XAI_API_KEY` not in Vercel prod | Grok shadow cannot produce comparisons | Ops: add key or disable Grok shadow |
+| 2 | `SECOND_OPINION_EXTRACTOR` shadow -- 3 observations but 0 comparisons | Comparison recording path may have a bug | VET-1520C investigation candidate |
 | 3 | No RunPod pods provisioned | Sidecar services cannot contribute any observations | Ops: provision narrow-model-pack pod |
 | 4 | 2-session traffic window is statistically insufficient | Cannot claim distribution-level safety signal | Extended tester window (5+ sessions) |
 
 ## Recommended Next Tickets
 
-1. **VET-1520C** — Investigate why `SECOND_OPINION_EXTRACTOR` shadow produces 3 observations
+1. **VET-1520C** -- Investigate why `SECOND_OPINION_EXTRACTOR` shadow produces 3 observations
    but 0 comparisons. Check whether the comparison recording logic requires a successful
    Grok call to produce any comparison, or whether it can compare second-opinion results
    independently.
 
-2. **Ops: `XAI_API_KEY`** — Add Grok API key to Vercel production environment to enable
+2. **Ops: `XAI_API_KEY`** -- Add Grok API key to Vercel production environment to enable
    `GROK_FINAL_SAFETY` shadow comparisons. This is an ops action, not a code ticket.
    Until this key is added, Grok shadow will always fail closed and `providerErrorCount`
    will accumulate with each session.
 
-3. **Extended tester window** — Aim for 5+ completed sessions from distinct credentialed
+3. **Extended tester window** -- Aim for 5+ completed sessions from distinct credentialed
    accounts before the next formal readout. The current 2-session window is not sufficient
    for a meaningful shadow evaluation.
 
-4. **VET-1492C-R4** — Run formal shadow readout after VET-1520C investigation resolves
+4. **VET-1492C-R4** -- Run formal shadow readout after VET-1520C investigation resolves
    and the `XAI_API_KEY` ops action completes. Gate the R4 readout on
    `shadowComparisonCount > 0` before any promotion discussion begins.
 
