@@ -168,7 +168,12 @@ function addReadoutAggregateTotals(
 }
 
 function countFromUnknown(value: unknown): number {
-  const parsed = typeof value === "number" ? value : Number(value);
+  const parsed =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && value.trim().length > 0
+        ? Number(value)
+        : Number.NaN;
   if (!Number.isFinite(parsed) || parsed <= 0) {
     return 0;
   }
