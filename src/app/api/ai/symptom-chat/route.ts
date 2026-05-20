@@ -1529,6 +1529,22 @@ export async function POST(request: Request) {
         }
 
         if (
+          secondOpinionMode === "shadow" &&
+          secondOpinionResult.status === "accepted"
+        ) {
+          session = appendShadowComparison(
+            session,
+            describeShadowComparison(
+              "async-review-service",
+              "deterministic_extraction_failed",
+              "second_opinion_extractor",
+              `q=${pendingQ}; shadow_answer_recorded=true; conf=${secondOpinionResult.answer.confidence.toFixed(2)}`,
+              1
+            )
+          );
+        }
+
+        if (
           secondOpinionMode === "on" &&
           secondOpinionResult.status === "accepted"
         ) {
