@@ -48,11 +48,11 @@ describe("VET-1488 shadow model rollout config", () => {
     process.env = originalEnv;
   });
 
-  it("documents the shadow rollout flags as server-side defaults", () => {
+  it("documents NVIDIA-only shadow extractor and Grok-off defaults", () => {
     const values = parseEnvExample();
 
     expect(values.MODEL_ROUTER_VERSION).toBe("v1");
-    expect(values.SECOND_OPINION_EXTRACTOR).toBe("off");
+    expect(values.SECOND_OPINION_EXTRACTOR).toBe("shadow");
     expect(values.GROK_FINAL_SAFETY).toBe("off");
     expect(values.GROK_FINAL_REPORT).toBe("off");
   });
