@@ -549,6 +549,17 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(
         shadowTurn.payload.session.case_memory?.shadow_comparisons ?? []
       ).toHaveLength(0);
+      expect(mockAppendShadowTelemetrySnapshot).toHaveBeenCalledWith(
+        expect.objectContaining({
+          source: "chat",
+          recentShadowComparisons: [
+            expect.objectContaining({
+              shadowStrategy: "second_opinion_extractor",
+              summary: "q=cough_type; shadow_answer_recorded=true; conf=0.90",
+            }),
+          ],
+        })
+      );
     } finally {
       logSpy.mockRestore();
     }

@@ -525,6 +525,69 @@ async function buildFallbackSnapshotFromRedis(
   });
 }
 
+async function buildSupplementalChatTelemetryTotals(
+  session: TriageSession,
+  windowHours: number,
+  limit: number
+): Promise<{
+  readoutTotals: ReadoutAggregateTotals;
+  warning: string | null;
+}> {
+  let entries: Awaited<ReturnType<typeof listShadowTelemetrySnapshots>>;
+
+  try {
+    entries = await listShadowTelemetrySnapshots(limit);
+  } catch (error) {
+    const details = error instanceof Error ? error.message : String(error);
+    return {
+      readoutTotals: emptyReadoutAggregateTotals(),
+      warning: `Supplemental chat shadow telemetry read failed (${details}).`,
+    };
+  }
+
+  if (!entries) {
+    return {
+      readoutTotals: emptyReadoutAggregateTotals(),
+      warning: null,
+    };
+  }
+
+  const windowStartMs = Date.now() - windowHours * 60 * 60 * 1000;
+  let readoutTotals = emptyReadoutAggregateTotals();
+
+  for (const entry of entries) {
+    if (entry.source !== "chat") {
+      continue;
+    }
+
+    const recordedAtMs = Date.parse(entry.generatedAt);
+    if (!Number.isFinite(recordedAtMs) || recordedAtMs < windowStartMs) {
+      continue;
+    }
+
+    const appended = appendObservabilityPayload(
+      session,
+      Array.isArray(entry.recentServiceCalls)
+        ? entry.recentServiceCalls
+        : [],
+      Array.isArray(entry.recentShadowComparisons)
+        ? entry.recentShadowComparisons
+        : []
+    );
+    readoutTotals = addReadoutAggregateTotals(
+      readoutTotals,
+      buildReadoutTotalsFromRecords(
+        appended.observations,
+        appended.comparisons,
+        0,
+        0
+      )
+    );
+  }
+
+  return { readoutTotals, warning: null };
+}
+
 export function buildEmptyPersistedShadowBaselineSnapshot(
   warning: string | null = null,
   windowHours = 24
@@ -615,6 +678,7 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   let parsedReportCount = 0;
   let malformedReportCount = 0;
   let readoutTotals = emptyReadoutAggregateTotals();
+  let warning: string | null = null;
 
   for (const row of data || []) {
     const report = parseReportPayload((row as Record<string, unknown>).ai_response);
@@ -667,6 +731,20 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
     );
   }
 
+  if (isShadowTelemetryStoreConfigured()) {
+    const supplementalChatTelemetry =
+      await buildSupplementalChatTelemetryTotals(
+        emptySession,
+        windowHours,
+        limit
+      );
+    readoutTotals = addReadoutAggregateTotals(
+      readoutTotals,
+      supplementalChatTelemetry.readoutTotals
+    );
+    warning = supplementalChatTelemetry.warning;
+  }
+
   return buildSnapshotFromSession({
     session: emptySession,
     windowHours,
@@ -675,7 +753,7 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
     malformedReportCount,
     readoutTotals,
     loadTest,
-    warning: null,
+    warning,
   });
 }
 

@@ -1142,8 +1142,10 @@ export async function generateReport({
       });
     }
 
-    const persistedShadowTelemetrySnapshot =
-      buildInternalShadowTelemetrySnapshot(session);
+    const persistedShadowTelemetrySnapshot = {
+      ...buildInternalShadowTelemetrySnapshot(session),
+      source: "report" as const,
+    };
 
     const persistShadowTelemetry = async () => {
       try {

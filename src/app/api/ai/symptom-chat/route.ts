@@ -32,6 +32,7 @@ import {
 import {
   inferSupportedImageDomain,
   type ConsultOpinion,
+  type ShadowComparisonRecord,
   type ServiceTimeoutRecord,
   type VisionClinicalEvidence,
   type VisionPreprocessResult,
@@ -71,6 +72,7 @@ import {
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
+import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
 import {
   buildContradictionRecord,
   detectTextContradictions,
@@ -118,6 +120,7 @@ import {
   shouldTriggerSyncConsult,
   buildEvidenceChainNotes,
   deriveSymptomsFromImageEvidence,
+  runAfterSafely,
 } from "@/lib/symptom-chat/report-helpers";
 import { decideRepeatLoopGuard } from "@/lib/symptom-chat/repeat-loop-guard";
 import {
@@ -177,6 +180,32 @@ interface RequestBody {
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
+}
+
+function persistChatShadowTelemetrySnapshot(
+  comparison: ShadowComparisonRecord
+): void {
+  const snapshot = {
+    generatedAt: new Date().toISOString(),
+    recentServiceCalls: [],
+    recentShadowComparisons: [comparison],
+    source: "chat" as const,
+  };
+
+  const persistShadowTelemetry = async () => {
+    try {
+      await appendShadowTelemetrySnapshot(snapshot);
+    } catch (shadowTelemetryError) {
+      console.error(
+        "[ShadowTelemetry] Failed to persist chat telemetry:",
+        shadowTelemetryError
+      );
+    }
+  };
+
+  if (!runAfterSafely(persistShadowTelemetry)) {
+    void persistShadowTelemetry();
+  }
 }
 
 function humanizeEmergencySignal(signal: string): string {
@@ -1532,16 +1561,24 @@ export async function POST(request: Request) {
           secondOpinionMode === "shadow" &&
           secondOpinionResult.status === "accepted"
         ) {
+          const shadowComparison = describeShadowComparison(
+            "async-review-service",
+            "deterministic_extraction_failed",
+            "second_opinion_extractor",
+            `q=${pendingQ}; shadow_answer_recorded=true; conf=${secondOpinionResult.answer.confidence.toFixed(2)}`,
+            1
+          );
           session = appendShadowComparison(
             session,
-            describeShadowComparison(
-              "async-review-service",
-              "deterministic_extraction_failed",
-              "second_opinion_extractor",
-              `q=${pendingQ}; shadow_answer_recorded=true; conf=${secondOpinionResult.answer.confidence.toFixed(2)}`,
-              1
-            )
+            shadowComparison
           );
+          const recordedShadowComparisons =
+            session.case_memory?.shadow_comparisons || [];
+          const recordedShadowComparison =
+            recordedShadowComparisons[recordedShadowComparisons.length - 1];
+          if (recordedShadowComparison) {
+            persistChatShadowTelemetrySnapshot(recordedShadowComparison);
+          }
         }
 
         if (
