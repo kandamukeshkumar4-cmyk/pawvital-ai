@@ -33,7 +33,10 @@ const redis =
       })
     : null;
 
+export type StoredShadowTelemetrySnapshotSource = "chat" | "report";
+
 export interface StoredShadowTelemetrySnapshot {
+  source?: StoredShadowTelemetrySnapshotSource;
   generatedAt: string;
   recentServiceCalls: unknown[];
   recentShadowComparisons: unknown[];
@@ -76,7 +79,13 @@ function readJsonFile<T>(filePath: string, fallback: T): T {
 function normalizeSnapshot(
   snapshot: StoredShadowTelemetrySnapshot
 ): StoredShadowTelemetrySnapshot {
+  const source =
+    snapshot.source === "chat" || snapshot.source === "report"
+      ? snapshot.source
+      : undefined;
+
   return {
+    ...(source ? { source } : {}),
     generatedAt:
       typeof snapshot.generatedAt === "string"
         ? snapshot.generatedAt
