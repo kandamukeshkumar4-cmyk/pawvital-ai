@@ -181,6 +181,135 @@ describe("shadow rollout baseline persistence", () => {
     expect(mockListShadowTelemetrySnapshots).toHaveBeenCalledWith(100);
   });
 
+  it("surfaces supplemental chat telemetry DNS failures without leaking endpoint details", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-1",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 2,
+                shadowComparisonCount: 0,
+                providerErrorCount: 1,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    const dnsError = Object.assign(new TypeError("fetch failed"), {
+      cause: Object.assign(
+        new Error("getaddrinfo ENOTFOUND private-upstash-host.example"),
+        { code: "ENOTFOUND" }
+      ),
+    });
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockRejectedValue(dnsError);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(1);
+    expect(snapshot.observationCount).toBe(2);
+    expect(snapshot.shadowComparisonCount).toBe(0);
+    expect(snapshot.warning).toBe(
+      "Supplemental chat shadow telemetry read failed (dns_unreachable)."
+    );
+    expect(JSON.stringify(snapshot)).not.toContain("private-upstash-host");
+  });
+
+  it("merges persisted report aggregates with supplemental chat comparisons without double-counting report snapshots", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-1",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 3,
+                shadowComparisonCount: 2,
+                providerErrorCount: 1,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockResolvedValue([
+      {
+        source: "report",
+        generatedAt: new Date().toISOString(),
+        recentServiceCalls: [],
+        recentShadowComparisons: [
+          {
+            service: "async-review-service",
+            usedStrategy: "nvidia-primary",
+            shadowStrategy: "grok-final-safety-shadow",
+            summary: "report snapshot already counted",
+            disagreementCount: 2,
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+      },
+      {
+        source: "chat",
+        generatedAt: new Date().toISOString(),
+        recentServiceCalls: [],
+        recentShadowComparisons: [
+          {
+            service: "async-review-service",
+            usedStrategy: "deterministic_extraction_failed",
+            shadowStrategy: "second_opinion_extractor",
+            summary:
+              "q=cough_type; shadow_answer_recorded=true; conf=0.90; owner said honking",
+            disagreementCount: 1,
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ]);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(1);
+    expect(snapshot.observationCount).toBe(3);
+    expect(snapshot.providerErrorCount).toBe(1);
+    expect(snapshot.shadowComparisonCount).toBe(3);
+    expect(snapshot.warning).toBeNull();
+    expect(JSON.stringify(snapshot)).not.toContain("honking");
+    expect(JSON.stringify(snapshot)).not.toContain("dry_honking");
+    expect(JSON.stringify(snapshot)).not.toContain("owner said");
+  });
+
   it("ignores non-numeric persisted aggregate counts in symptom checks", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [
