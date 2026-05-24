@@ -180,6 +180,52 @@ function countFromUnknown(value: unknown): number {
   return Math.floor(parsed);
 }
 
+function readErrorField(error: unknown, field: "code" | "message"): string {
+  if (!error || typeof error !== "object") {
+    return "";
+  }
+
+  const value = (error as Record<string, unknown>)[field];
+  return typeof value === "string" ? value : "";
+}
+
+function classifyTelemetryReadError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const cause =
+    error instanceof Error && "cause" in error
+      ? (error as Error & { cause?: unknown }).cause
+      : undefined;
+  const code = readErrorField(error, "code") || readErrorField(cause, "code");
+  const causeMessage = readErrorField(cause, "message");
+  const combined = `${code} ${message} ${causeMessage}`.toLowerCase();
+
+  if (
+    code === "ENOTFOUND" ||
+    code === "EAI_AGAIN" ||
+    /\b(getaddrinfo|enotfound|eai_again)\b/.test(combined)
+  ) {
+    return "dns_unreachable";
+  }
+
+  if (
+    /\b(401|403|unauthorized|forbidden|invalid token|wrongpass)\b/.test(
+      combined
+    )
+  ) {
+    return "auth_failed";
+  }
+
+  if (
+    /\b(etimedout|econnrefused|enetunreach|network|fetch failed)\b/.test(
+      combined
+    )
+  ) {
+    return "network_unavailable";
+  }
+
+  return "unknown_error";
+}
+
 function normalizeReadoutAggregate(
   observability: PersistedSystemObservability | undefined
 ): ReadoutAggregateTotals | null {
@@ -443,7 +489,7 @@ async function buildFallbackSnapshotFromRedis(
   try {
     entries = await listShadowTelemetrySnapshots(limit);
   } catch (error) {
-    const details = error instanceof Error ? error.message : String(error);
+    const details = classifyTelemetryReadError(error);
     return buildSnapshotFromSession({
       session: emptySession,
       windowHours,
@@ -538,7 +584,7 @@ async function buildSupplementalChatTelemetryTotals(
   try {
     entries = await listShadowTelemetrySnapshots(limit);
   } catch (error) {
-    const details = error instanceof Error ? error.message : String(error);
+    const details = classifyTelemetryReadError(error);
     return {
       readoutTotals: emptyReadoutAggregateTotals(),
       warning: `Supplemental chat shadow telemetry read failed (${details}).`,
