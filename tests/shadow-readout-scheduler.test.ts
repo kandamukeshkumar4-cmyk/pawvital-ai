@@ -45,6 +45,16 @@ describe("shadow readout scheduler decision logic", () => {
         observationCount: 2,
         shadowComparisonCount: 1,
         warning: null,
+        secondOpinionTrace: {
+          total: 2,
+          eligibilityReasonCounts: { eligible: 1, feature_disabled: 1 },
+          requestOutcomeCounts: { requested: 1, not_requested: 1 },
+          acceptanceOutcomeCounts: { accepted: 1 },
+          comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+          comparisonWriteOutcomeCounts: { comparison_write_succeeded: 1 },
+          extractorReasonCounts: {},
+          readoutCountedCount: 1,
+        },
         serviceMetrics: [
           {
             service: "async-review-service",
@@ -66,5 +76,15 @@ describe("shadow readout scheduler decision logic", () => {
         timeouts: 0,
       },
     ]);
+    expect(readout.secondOpinionTrace).toEqual({
+      total: 2,
+      eligibilityReasonCounts: { eligible: 1, feature_disabled: 1 },
+      requestOutcomeCounts: { requested: 1, not_requested: 1 },
+      acceptanceOutcomeCounts: { accepted: 1 },
+      comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+      comparisonWriteOutcomeCounts: { comparison_write_succeeded: 1 },
+      extractorReasonCounts: {},
+      readoutCountedCount: 1,
+    });
   });
 });

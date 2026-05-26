@@ -578,6 +578,7 @@ describe("VET-1014 terminal payload safety pack", () => {
       "raw model output with provider payload",
       "reason=provider_error",
       "reason=budget_exceeded",
+      "owner said honking loudly",
     ];
 
     const session = addSymptoms(createSession(), ["vomiting"]);
@@ -611,6 +612,17 @@ describe("VET-1014 terminal payload safety pack", () => {
           fallbackUsed: true,
           note: "reason=budget_exceeded",
           recordedAt: "2026-05-19T00:00:01.000Z",
+        },
+        {
+          service: "async-review-service",
+          stage: "second_opinion",
+          latencyMs: 0,
+          outcome: "fallback",
+          shadowMode: false,
+          fallbackUsed: true,
+          note:
+            "eligibility_reason=eligible | request_outcome=requested | acceptance_outcome=rejected | comparison_append_outcome=not_applicable | comparison_write_outcome=not_applicable | extractor_reason=owner said honking loudly",
+          recordedAt: "2026-05-19T00:00:03.000Z",
         },
       ],
       shadow_comparisons: [
@@ -677,6 +689,16 @@ describe("VET-1014 terminal payload safety pack", () => {
         fallbackCount: expect.any(Number),
         providerErrorCount: expect.any(Number),
         budgetExceededCount: expect.any(Number),
+        secondOpinionTrace: expect.objectContaining({
+          total: 1,
+          eligibilityReasonCounts: { eligible: 1 },
+          requestOutcomeCounts: { requested: 1 },
+          acceptanceOutcomeCounts: { rejected: 1 },
+          comparisonAppendOutcomeCounts: { not_applicable: 1 },
+          comparisonWriteOutcomeCounts: { not_applicable: 1 },
+          extractorReasonCounts: { invalid_code: 1 },
+          readoutCountedCount: 0,
+        }),
       })
     );
     expect(readout?.observationCount).toBeGreaterThanOrEqual(2);
@@ -688,6 +710,7 @@ describe("VET-1014 terminal payload safety pack", () => {
 
     const ownerJson = JSON.stringify(payload);
     const persistedJson = JSON.stringify(persistedReport);
+    expect(ownerJson).not.toContain("secondOpinionTrace");
     for (const marker of forbiddenMarkers) {
       expect(ownerJson).not.toContain(marker);
       expect(persistedJson).not.toContain(marker);
