@@ -337,6 +337,16 @@ function getLatestShadowSnapshotGateEvents() {
   );
 }
 
+function getLatestShadowTelemetrySnapshot() {
+  return mockAppendShadowTelemetrySnapshot.mock.calls.at(-1)?.[0] as
+    | {
+        recentServiceCalls?: SidecarObservation[];
+        recentShadowComparisons?: unknown[];
+        source?: string;
+      }
+    | undefined;
+}
+
 function getSecondOpinionShadowComparisonCalls() {
   return mockAppendShadowComparison.mock.calls
     .map((call) => call[1] as { shadowStrategy?: unknown })
@@ -655,6 +665,108 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(storedTraceJson).toContain("extractor_reason=low_confidence");
       expect(storedTraceJson).not.toContain("dry_honking");
       expect(storedTraceJson).not.toContain("honking");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("records a sanitized not_requested trace when Bruno limping flow resolves before extractor request", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session = seedPendingQuestion(session, "trauma_mobility", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "Bruno TRACE_OWNER_SECRET can walk but he is limping."
+      );
+      const latestSnapshot = getLatestShadowTelemetrySnapshot();
+      const snapshotJson = JSON.stringify(latestSnapshot);
+      const ownerPayloadJson = JSON.stringify(payload);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers.trauma_mobility).toBe("limping");
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(latestSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentShadowComparisons: [],
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining(
+                "eligibility_reason=primary_extraction_succeeded"
+              ),
+            }),
+          ],
+        })
+      );
+      expect(snapshotJson).toContain("request_outcome=not_requested");
+      expect(snapshotJson).toContain("comparison_append_outcome=not_applicable");
+      expect(snapshotJson).toContain("comparison_write_outcome=not_applicable");
+      expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("records deterministic_coercion_succeeded when long pending answer skips the fast path", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+
+    const session = seedPendingQuestion(createSession(), "dog_age_years", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "TRACE_OWNER_SECRET The number is 5, and I am adding extra context so this is long enough to avoid the short pending answer fast path."
+      );
+      const latestSnapshot = getLatestShadowTelemetrySnapshot();
+      const snapshotJson = JSON.stringify(latestSnapshot);
+      const ownerPayloadJson = JSON.stringify(payload);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers.dog_age_years).toBe(5);
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(latestSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentShadowComparisons: [],
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining(
+                "eligibility_reason=deterministic_coercion_succeeded"
+              ),
+            }),
+          ],
+        })
+      );
+      expect(snapshotJson).toContain("request_outcome=not_requested");
+      expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
     } finally {
       logSpy.mockRestore();
     }

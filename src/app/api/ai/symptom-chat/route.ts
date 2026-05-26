@@ -128,9 +128,13 @@ import {
   buildSecondOpinionEligibilityTrace,
   extractSecondOpinionPendingAnswer,
   getSecondOpinionExtractorMode,
+  type SecondOpinionExtractorMode,
   type SecondOpinionExtractionResult,
 } from "@/lib/symptom-chat/second-opinion-extractor";
-import { createModelBudgetState } from "@/lib/model-budget";
+import {
+  createModelBudgetState,
+  type ModelBudgetState,
+} from "@/lib/model-budget";
 import { getModelRoute } from "@/lib/model-router";
 import {
   buildAlternateObservableRecoveryResponse,
@@ -236,6 +240,96 @@ function getSecondOpinionAcceptanceOutcome(
     return "failed";
   }
   return undefined;
+}
+
+async function recordSecondOpinionNotRequestedTrace({
+  session,
+  mode,
+  pendingQuestionId,
+  ownerMessage,
+  primaryExtractionFailed,
+  deterministicResolved,
+  clarificationAttempts,
+  hadUnresolved,
+  pendingAfter,
+  budgetState,
+}: {
+  session: TriageSession;
+  mode: SecondOpinionExtractorMode;
+  pendingQuestionId: string;
+  ownerMessage: string;
+  primaryExtractionFailed: boolean;
+  deterministicResolved: boolean;
+  clarificationAttempts: number;
+  hadUnresolved: boolean;
+  pendingAfter: boolean;
+  budgetState: ModelBudgetState;
+}): Promise<TriageSession> {
+  if (mode === "off") {
+    return session;
+  }
+
+  const eligibilityTrace = buildSecondOpinionEligibilityTrace({
+    mode,
+    pendingQuestionId,
+    ownerMessage,
+    primaryExtractionFailed,
+    deterministicResolved,
+    clarificationAttempts,
+    repeatGuardAlreadyFired: false,
+    budgetState,
+  });
+
+  if (eligibilityTrace.request_outcome === "requested") {
+    return session;
+  }
+
+  const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+    ...eligibilityTrace,
+    comparison_append_outcome: "not_applicable",
+    comparison_write_outcome: "not_applicable",
+    extractor_reason: eligibilityTrace.eligibility_reason,
+  };
+  let nextSession = recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: session.case_memory?.turn_count ?? 0,
+    question_id: pendingQuestionId,
+    outcome: "second_opinion_skipped",
+    source: "second_opinion",
+    reason: eligibilityTrace.eligibility_reason,
+    pending_before: hadUnresolved,
+    pending_after: pendingAfter,
+    second_opinion_trace: secondOpinionTrace,
+  });
+
+  const latestSecondOpinionTrace =
+    getLatestSecondOpinionTraceObservation(nextSession);
+  if (!latestSecondOpinionTrace) {
+    return nextSession;
+  }
+
+  const chatTelemetryPersisted = await persistChatShadowTelemetrySnapshot({
+    serviceCalls: [latestSecondOpinionTrace],
+    shadowComparisons: [],
+  });
+  if (!chatTelemetryPersisted) {
+    nextSession = recordConversationTelemetry(nextSession, {
+      event: "second_opinion",
+      turn_count: nextSession.case_memory?.turn_count ?? 0,
+      question_id: pendingQuestionId,
+      outcome: "second_opinion_failed",
+      source: "second_opinion",
+      reason: "telemetry_write_failed",
+      pending_before: hadUnresolved,
+      pending_after: pendingAfter,
+      second_opinion_trace: {
+        ...secondOpinionTrace,
+        extractor_reason: "telemetry_write_failed",
+      },
+    });
+  }
+
+  return nextSession;
 }
 
 function humanizeEmergencySignal(signal: string): string {
@@ -1393,6 +1487,26 @@ export async function POST(request: Request) {
             : []),
         ],
       });
+      session = await recordSecondOpinionNotRequestedTrace({
+        session,
+        mode: getSecondOpinionExtractorMode(),
+        pendingQuestionId: pendingTelemetryQuestionId,
+        ownerMessage: lastUserMessage.content,
+        primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+          extracted.answers || {},
+          pendingTelemetryQuestionId
+        ),
+        deterministicResolved: true,
+        clarificationAttempts: getClarificationAttemptCount(
+          session,
+          pendingTelemetryQuestionId
+        ),
+        hadUnresolved: pendingWasUnresolved,
+        pendingAfter: false,
+        budgetState: createModelBudgetState(
+          ensureStructuredCaseMemory(session).model_budget_state
+        ),
+      });
     }
 
     if (
@@ -1520,6 +1634,23 @@ export async function POST(request: Request) {
               ? ["coercion_used" as const]
               : []),
           ],
+        });
+        session = await recordSecondOpinionNotRequestedTrace({
+          session,
+          mode: getSecondOpinionExtractorMode(),
+          pendingQuestionId: pendingQ,
+          ownerMessage: lastUserMessage.content,
+          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+            extracted.answers || {},
+            pendingQ
+          ),
+          deterministicResolved: true,
+          clarificationAttempts: getClarificationAttemptCount(session, pendingQ),
+          hadUnresolved,
+          pendingAfter: false,
+          budgetState: createModelBudgetState(
+            ensureStructuredCaseMemory(session).model_budget_state
+          ),
         });
       } else {
         const secondOpinionMode = getSecondOpinionExtractorMode();
