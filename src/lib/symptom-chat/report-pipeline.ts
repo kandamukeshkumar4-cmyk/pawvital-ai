@@ -40,6 +40,8 @@ import {
 import {
   buildDeterministicCaseSummary,
   ensureStructuredCaseMemory,
+  recordConversationTelemetry,
+  type SecondOpinionTraceTelemetry,
   type TelemetryGateEvent,
 } from "@/lib/symptom-memory";
 import { createModelBudgetState } from "@/lib/model-budget";
@@ -67,6 +69,10 @@ import {
   getFinalSafetyVerifierMode,
   verifyFinalUrgencyAndHandoffSafety,
 } from "./final-safety-verifier";
+import {
+  buildSecondOpinionEligibilityTrace,
+  getSecondOpinionExtractorMode,
+} from "./second-opinion-extractor";
 
 const useNvidia = isNvidiaConfigured();
 const EMPTY_RETRIEVAL_BUNDLE: RetrievalBundle = {
@@ -527,6 +533,105 @@ function buildClientObservabilitySnapshot(session: TriageSession) {
     timeoutCount: observabilitySnapshot.timeoutCount,
     fallbackCount: observabilitySnapshot.fallbackCount,
   };
+}
+
+function getLastOwnerMessageContent(
+  messages: GenerateReportInput["messages"]
+): string {
+  return [...messages].reverse().find((message) => message.role === "user")
+    ?.content ?? "";
+}
+
+function hasSecondOpinionTrace(session: TriageSession): boolean {
+  return (session.case_memory?.service_observations ?? []).some(
+    (observation) =>
+      observation.stage === "second_opinion" &&
+      typeof observation.note === "string" &&
+      observation.note.includes("request_outcome=")
+  );
+}
+
+function findSecondOpinionReportTraceQuestionId(
+  session: TriageSession
+): string | undefined {
+  const memory = ensureStructuredCaseMemory(session);
+  const clarificationAttempts = memory.clarification_attempts ?? {};
+  const questionAskedCounts = memory.question_asked_counts ?? {};
+  const answeredQuestions = [...(session.answered_questions ?? [])].reverse();
+  const clarifiedAnswered = answeredQuestions.find(
+    (questionId) => clarificationAttempts[questionId] !== undefined
+  );
+  if (clarifiedAnswered) {
+    return clarifiedAnswered;
+  }
+
+  return (
+    answeredQuestions.find(
+      (questionId) =>
+        questionAskedCounts[questionId] !== undefined ||
+        clarificationAttempts[questionId] !== undefined
+    ) ??
+    memory.pending_question_id ??
+    session.last_question_asked
+  );
+}
+
+function appendReportSecondOpinionTraceIfMissing({
+  session,
+  ownerMessage,
+}: {
+  session: TriageSession;
+  ownerMessage: string;
+}): TriageSession {
+  const mode = getSecondOpinionExtractorMode();
+  if (mode === "off" || hasSecondOpinionTrace(session)) {
+    return session;
+  }
+
+  const memory = ensureStructuredCaseMemory(session);
+  const clarificationAttempts = memory.clarification_attempts ?? {};
+  const unresolvedQuestionIds = memory.unresolved_question_ids ?? [];
+  const questionId = findSecondOpinionReportTraceQuestionId(session);
+  const hasExtractedAnswer = questionId
+    ? Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)
+    : false;
+  const hasRecordedAnswer = questionId
+    ? (session.answered_questions ?? []).includes(questionId)
+    : false;
+
+  const eligibilityTrace = buildSecondOpinionEligibilityTrace({
+    mode,
+    pendingQuestionId: questionId,
+    ownerMessage,
+    primaryExtractionFailed: !hasExtractedAnswer,
+    deterministicResolved: hasRecordedAnswer,
+    clarificationAttempts: questionId
+      ? (clarificationAttempts[questionId] ?? 0)
+      : 0,
+    repeatGuardAlreadyFired: false,
+    budgetState: createModelBudgetState(memory.model_budget_state),
+  });
+
+  const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+    ...eligibilityTrace,
+    comparison_append_outcome: "not_applicable",
+    comparison_write_outcome: "not_applicable",
+    extractor_reason: eligibilityTrace.eligibility_reason,
+  };
+
+  return recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: memory.turn_count ?? 0,
+    question_id: questionId,
+    outcome: "second_opinion_skipped",
+    source: "second_opinion",
+    reason: eligibilityTrace.eligibility_reason,
+    pending_before: Boolean(questionId),
+    pending_after: Boolean(
+      questionId && unresolvedQuestionIds.includes(questionId)
+    ),
+    second_opinion_trace: secondOpinionTrace,
+  });
 }
 
 function buildPersistedReportWithShadowReadout(
@@ -1142,8 +1247,13 @@ export async function generateReport({
       });
     }
 
+    const reportPersistenceSession = appendReportSecondOpinionTraceIfMissing({
+      session,
+      ownerMessage: getLastOwnerMessageContent(messages),
+    });
+
     const persistedShadowTelemetrySnapshot = {
-      ...buildInternalShadowTelemetrySnapshot(session),
+      ...buildInternalShadowTelemetrySnapshot(reportPersistenceSession),
       source: "report" as const,
     };
 
@@ -1177,7 +1287,7 @@ export async function generateReport({
     }
 
     const { persistence } = await persistFinalReportToHistory({
-      session,
+      session: reportPersistenceSession,
       pet,
       report: finalReport,
       verifiedUserId,

@@ -716,4 +716,108 @@ describe("VET-1014 terminal payload safety pack", () => {
       expect(persistedJson).not.toContain(marker);
     }
   });
+
+  it("reconstructs a sanitized second-opinion report trace after client session sanitization", async () => {
+    const originalMode = process.env.SECOND_OPINION_EXTRACTOR;
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+    let session = addSymptoms(createSession(), ["limping"]);
+    session = {
+      ...session,
+      answered_questions: ["limping_onset"],
+      extracted_answers: {
+        ...session.extracted_answers,
+        limping_onset: "sudden_today",
+      },
+      last_question_asked: "limping_onset",
+      case_memory: {
+        ...session.case_memory!,
+        pending_question_id: undefined,
+        unresolved_question_ids: [],
+        question_asked_counts: {
+          ...session.case_memory!.question_asked_counts,
+          limping_onset: 2,
+        },
+        clarification_attempts: {
+          ...session.case_memory!.clarification_attempts,
+          limping_onset: 1,
+        },
+        service_observations: [],
+        shadow_comparisons: [],
+      },
+    };
+
+    mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Limping needs veterinary follow-up",
+        explanation: "A sudden limp can reflect pain or injury.",
+        differential_diagnoses: [],
+        clinical_notes: "Monitor mobility and pain.",
+        recommended_tests: [],
+        home_care: [],
+        actions: ["Limit activity and call your veterinarian."],
+        warning_signs: ["Unable to bear weight"],
+        vet_questions: [],
+        confidence: 0.7,
+      })
+    );
+    mockVerifyWithGLM.mockResolvedValueOnce(
+      JSON.stringify({
+        safe: true,
+        corrections: {},
+        reasoning: "Report is safe.",
+      })
+    );
+
+    try {
+      const { response, payload } = await runReport(session, DOG);
+      const persistedReport = mockSaveSymptomReportToDB.mock.calls[0]?.[2] as
+        | { system_observability?: Record<string, unknown> }
+        | undefined;
+      const ownerTelemetry = payload.report?.system_observability as
+        | Record<string, unknown>
+        | undefined;
+      const readout = persistedReport?.system_observability?.shadowReadout as
+        | Record<string, unknown>
+        | undefined;
+      const secondOpinionTrace = readout?.secondOpinionTrace as
+        | Record<string, unknown>
+        | undefined;
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(ownerTelemetry).toEqual({
+        timeoutCount: expect.any(Number),
+        fallbackCount: expect.any(Number),
+      });
+      expect(ownerTelemetry?.shadowReadout).toBeUndefined();
+      expect(secondOpinionTrace).toEqual(
+        expect.objectContaining({
+          total: 1,
+          eligibilityReasonCounts: { primary_extraction_succeeded: 1 },
+          requestOutcomeCounts: { not_requested: 1 },
+          comparisonAppendOutcomeCounts: { not_applicable: 1 },
+          comparisonWriteOutcomeCounts: { not_applicable: 1 },
+          extractorReasonCounts: { primary_extraction_succeeded: 1 },
+          readoutCountedCount: 0,
+        })
+      );
+
+      const ownerJson = JSON.stringify(payload);
+      const persistedJson = JSON.stringify(persistedReport);
+      expect(ownerJson).not.toContain("shadowReadout");
+      expect(ownerJson).not.toContain("secondOpinionTrace");
+      expect(ownerJson).not.toContain("eligibility_reason=");
+      expect(ownerJson).not.toContain("request_outcome=");
+      expect(persistedJson).not.toContain("Please generate the report.");
+    } finally {
+      if (originalMode === undefined) {
+        delete process.env.SECOND_OPINION_EXTRACTOR;
+      } else {
+        process.env.SECOND_OPINION_EXTRACTOR = originalMode;
+      }
+    }
+  });
 });
