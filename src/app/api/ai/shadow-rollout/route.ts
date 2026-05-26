@@ -137,6 +137,7 @@ export async function GET(request: Request) {
         fallbackCount: baseline.fallbackCount,
         providerErrorCount: baseline.providerErrorCount,
         budgetExceededCount: baseline.budgetExceededCount,
+        secondOpinionTrace: baseline.secondOpinionTrace,
         loadTest: baseline.loadTest,
         serviceMetrics: baseline.serviceMetrics,
         warning: baseline.warning,

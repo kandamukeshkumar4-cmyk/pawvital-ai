@@ -9,6 +9,12 @@ import {
   readShadowLoadTestSummary,
   shouldPreferShadowTelemetryFileStore,
 } from "./shadow-telemetry-store";
+import {
+  buildSecondOpinionTraceReadoutAggregate,
+  createEmptySecondOpinionTraceReadoutAggregate,
+  mergeSecondOpinionTraceReadoutAggregates,
+  type SecondOpinionTraceReadoutAggregate,
+} from "./second-opinion-trace-readout";
 import { buildShadowRolloutSummary } from "./shadow-rollout";
 import type { ShadowLoadTestSummary } from "./shadow-rollout";
 import { getServiceSupabase } from "./supabase-admin";
@@ -31,6 +37,7 @@ interface PersistedShadowReadout {
   fallbackCount?: unknown;
   providerErrorCount?: unknown;
   budgetExceededCount?: unknown;
+  secondOpinionTrace?: unknown;
 }
 
 interface PersistedAiResponse {
@@ -65,6 +72,7 @@ export interface PersistedShadowBaselineSnapshot {
   fallbackCount: number;
   providerErrorCount: number;
   budgetExceededCount: number;
+  secondOpinionTrace: SecondOpinionTraceReadoutAggregate;
   summary: ReturnType<typeof buildShadowRolloutSummary>;
   loadTest: ShadowLoadTestSummary | null;
   serviceMetrics: PersistedShadowServiceMetrics[];
@@ -82,6 +90,7 @@ interface ReadoutAggregateTotals {
   fallbackCount: number;
   providerErrorCount: number;
   budgetExceededCount: number;
+  secondOpinionTrace: SecondOpinionTraceReadoutAggregate;
 }
 
 const SERVICE_NAMES: SidecarServiceName[] = [
@@ -146,6 +155,7 @@ function emptyReadoutAggregateTotals(): ReadoutAggregateTotals {
     fallbackCount: 0,
     providerErrorCount: 0,
     budgetExceededCount: 0,
+    secondOpinionTrace: createEmptySecondOpinionTraceReadoutAggregate(),
   };
 }
 
@@ -164,6 +174,10 @@ function addReadoutAggregateTotals(
     fallbackCount: totals.fallbackCount + next.fallbackCount,
     providerErrorCount: totals.providerErrorCount + next.providerErrorCount,
     budgetExceededCount: totals.budgetExceededCount + next.budgetExceededCount,
+    secondOpinionTrace: mergeSecondOpinionTraceReadoutAggregates(
+      totals.secondOpinionTrace,
+      next.secondOpinionTrace
+    ),
   };
 }
 
@@ -178,6 +192,49 @@ function countFromUnknown(value: unknown): number {
     return 0;
   }
   return Math.floor(parsed);
+}
+
+function normalizeCountRecord(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const counts: Record<string, number> = {};
+  for (const [key, count] of Object.entries(value)) {
+    const normalizedKey = /^[a-z0-9_]+$/.test(key) ? key : "invalid_code";
+    counts[normalizedKey] =
+      (counts[normalizedKey] || 0) + countFromUnknown(count);
+  }
+  return counts;
+}
+
+function normalizeSecondOpinionTraceAggregate(
+  value: unknown
+): SecondOpinionTraceReadoutAggregate {
+  const empty = createEmptySecondOpinionTraceReadoutAggregate();
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return empty;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return {
+    total: countFromUnknown(candidate.total),
+    eligibilityReasonCounts: normalizeCountRecord(
+      candidate.eligibilityReasonCounts
+    ),
+    requestOutcomeCounts: normalizeCountRecord(candidate.requestOutcomeCounts),
+    acceptanceOutcomeCounts: normalizeCountRecord(
+      candidate.acceptanceOutcomeCounts
+    ),
+    comparisonAppendOutcomeCounts: normalizeCountRecord(
+      candidate.comparisonAppendOutcomeCounts
+    ),
+    comparisonWriteOutcomeCounts: normalizeCountRecord(
+      candidate.comparisonWriteOutcomeCounts
+    ),
+    extractorReasonCounts: normalizeCountRecord(candidate.extractorReasonCounts),
+    readoutCountedCount: countFromUnknown(candidate.readoutCountedCount),
+  };
 }
 
 function normalizeReadoutAggregate(
@@ -201,6 +258,9 @@ function normalizeReadoutAggregate(
     ),
     providerErrorCount: countFromUnknown(readout.providerErrorCount),
     budgetExceededCount: countFromUnknown(readout.budgetExceededCount),
+    secondOpinionTrace: normalizeSecondOpinionTraceAggregate(
+      readout.secondOpinionTrace
+    ),
   };
 }
 
@@ -368,6 +428,10 @@ function buildReadoutTotalsFromRecords(
     budgetExceededCount: observations.filter((entry) =>
       noteIncludes(entry, "reason=budget_exceeded")
     ).length,
+    secondOpinionTrace: buildSecondOpinionTraceReadoutAggregate(
+      observations,
+      comparisons
+    ),
   };
 }
 
@@ -422,6 +486,7 @@ function buildSnapshotFromSession(input: {
     fallbackCount: readoutTotals.fallbackCount,
     providerErrorCount: readoutTotals.providerErrorCount,
     budgetExceededCount: readoutTotals.budgetExceededCount,
+    secondOpinionTrace: readoutTotals.secondOpinionTrace,
     summary: buildShadowRolloutSummary(input.session, {
       loadTest: input.loadTest,
     }),

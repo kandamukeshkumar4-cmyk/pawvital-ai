@@ -46,6 +46,48 @@ function summarizeServiceMetrics(service) {
   };
 }
 
+function countRecordFrom(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([key, count]) => [key, numberFrom(count, 0)])
+      .filter(([, count]) => count > 0)
+  );
+}
+
+function summarizeSecondOpinionTrace(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      total: 0,
+      eligibilityReasonCounts: {},
+      requestOutcomeCounts: {},
+      acceptanceOutcomeCounts: {},
+      comparisonAppendOutcomeCounts: {},
+      comparisonWriteOutcomeCounts: {},
+      extractorReasonCounts: {},
+      readoutCountedCount: 0,
+    };
+  }
+
+  return {
+    total: numberFrom(value.total, 0),
+    eligibilityReasonCounts: countRecordFrom(value.eligibilityReasonCounts),
+    requestOutcomeCounts: countRecordFrom(value.requestOutcomeCounts),
+    acceptanceOutcomeCounts: countRecordFrom(value.acceptanceOutcomeCounts),
+    comparisonAppendOutcomeCounts: countRecordFrom(
+      value.comparisonAppendOutcomeCounts
+    ),
+    comparisonWriteOutcomeCounts: countRecordFrom(
+      value.comparisonWriteOutcomeCounts
+    ),
+    extractorReasonCounts: countRecordFrom(value.extractorReasonCounts),
+    readoutCountedCount: numberFrom(value.readoutCountedCount, 0),
+  };
+}
+
 function summarizePayload(payload) {
   const baseline = payload?.baseline ?? {};
   const summary = payload?.summary ?? {};
@@ -62,6 +104,9 @@ function summarizePayload(payload) {
     observationCount: numberFrom(baseline.observationCount, 0),
     shadowComparisonCount: numberFrom(baseline.shadowComparisonCount, 0),
     warning: baseline.warning ?? null,
+    secondOpinionTrace: summarizeSecondOpinionTrace(
+      baseline.secondOpinionTrace
+    ),
     serviceMetrics,
   };
 }

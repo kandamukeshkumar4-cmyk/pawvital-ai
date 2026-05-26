@@ -33,8 +33,18 @@ function sanitizeForLogs(value) {
     .replace(/Bearer\s+[^\s]+/gi, "Bearer [redacted]");
 }
 
+function formatCountRecord(counts) {
+  if (!counts || typeof counts !== "object") return "none";
+  const entries = Object.entries(counts)
+    .filter(([, count]) => Number(count) > 0)
+    .sort(([left], [right]) => left.localeCompare(right));
+  if (entries.length === 0) return "none";
+  return entries.map(([key, count]) => `${key}=${count}`).join(", ");
+}
+
 function toMarkdown(report) {
   const readout = report.readout ?? {};
+  const secondOpinionTrace = readout.secondOpinionTrace ?? {};
   const lines = [
     "# VET-1492C Scheduled Shadow Readout",
     "",
@@ -56,6 +66,17 @@ function toMarkdown(report) {
     `- observation_count: ${readout.observationCount ?? "n/a"}`,
     `- shadow_comparison_count: ${readout.shadowComparisonCount ?? "n/a"}`,
     `- warning: ${readout.warning ?? "null"}`,
+    "",
+    "## Second-Opinion Trace",
+    "",
+    `- total: ${secondOpinionTrace.total ?? 0}`,
+    `- eligibility: ${formatCountRecord(secondOpinionTrace.eligibilityReasonCounts)}`,
+    `- request_outcome: ${formatCountRecord(secondOpinionTrace.requestOutcomeCounts)}`,
+    `- acceptance_outcome: ${formatCountRecord(secondOpinionTrace.acceptanceOutcomeCounts)}`,
+    `- comparison_append: ${formatCountRecord(secondOpinionTrace.comparisonAppendOutcomeCounts)}`,
+    `- comparison_write: ${formatCountRecord(secondOpinionTrace.comparisonWriteOutcomeCounts)}`,
+    `- extractor_reason: ${formatCountRecord(secondOpinionTrace.extractorReasonCounts)}`,
+    `- readout_counted: ${secondOpinionTrace.readoutCountedCount ?? 0}`,
     "",
     "## Next Action",
     "",

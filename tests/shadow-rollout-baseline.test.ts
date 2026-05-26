@@ -349,6 +349,162 @@ describe("shadow rollout baseline persistence", () => {
     );
   });
 
+  it("surfaces sanitized second-opinion trace aggregates from supplemental chat telemetry", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "27cf6eba-0000-4000-8000-000000001533",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 0,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockResolvedValue([
+      {
+        source: "chat",
+        generatedAt: new Date().toISOString(),
+        recentServiceCalls: [
+          {
+            service: "async-review-service",
+            stage: "second_opinion",
+            latencyMs: 0,
+            outcome: "fallback",
+            shadowMode: false,
+            fallbackUsed: true,
+            note:
+              "eligibility_reason=eligible | request_outcome=requested | acceptance_outcome=rejected | comparison_append_outcome=not_applicable | comparison_write_outcome=not_applicable | extractor_reason=low_confidence",
+            recordedAt: new Date().toISOString(),
+          },
+          {
+            service: "async-review-service",
+            stage: "second_opinion",
+            latencyMs: 0,
+            outcome: "success",
+            shadowMode: false,
+            fallbackUsed: false,
+            note:
+              "eligibility_reason=primary_extraction_succeeded | request_outcome=not_requested",
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+        recentShadowComparisons: [],
+      },
+    ]);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.secondOpinionTrace).toEqual({
+      total: 2,
+      eligibilityReasonCounts: {
+        eligible: 1,
+        primary_extraction_succeeded: 1,
+      },
+      requestOutcomeCounts: {
+        requested: 1,
+        not_requested: 1,
+      },
+      acceptanceOutcomeCounts: {
+        rejected: 1,
+      },
+      comparisonAppendOutcomeCounts: {
+        not_applicable: 1,
+      },
+      comparisonWriteOutcomeCounts: {
+        not_applicable: 1,
+      },
+      extractorReasonCounts: {
+        low_confidence: 1,
+      },
+      readoutCountedCount: 0,
+    });
+  });
+
+  it("adds persisted shadowReadout second-opinion trace aggregates to the baseline", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "6c58cb09-0000-4000-8000-000000001533",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 1,
+                shadowComparisonCount: 1,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+                secondOpinionTrace: {
+                  total: 1,
+                  eligibilityReasonCounts: { eligible: 1 },
+                  requestOutcomeCounts: { requested: 1 },
+                  acceptanceOutcomeCounts: { accepted: 1 },
+                  comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+                  comparisonWriteOutcomeCounts: {
+                    comparison_write_succeeded: 1,
+                  },
+                  extractorReasonCounts: {},
+                  readoutCountedCount: 1,
+                },
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.secondOpinionTrace).toEqual({
+      total: 1,
+      eligibilityReasonCounts: { eligible: 1 },
+      requestOutcomeCounts: { requested: 1 },
+      acceptanceOutcomeCounts: { accepted: 1 },
+      comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+      comparisonWriteOutcomeCounts: { comparison_write_succeeded: 1 },
+      extractorReasonCounts: {},
+      readoutCountedCount: 1,
+    });
+  });
+
   it("ignores non-numeric persisted aggregate counts in symptom checks", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [
