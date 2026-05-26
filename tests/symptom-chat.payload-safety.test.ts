@@ -290,6 +290,18 @@ function seedInternalTelemetry(session: TriageSession): TriageSession {
       note: `clarification_reason=internal_only | ${HIDDEN_MARKER}-note`,
       recordedAt: "2026-04-13T00:00:03.000Z",
     },
+    {
+      service: "async-review-service",
+      stage: "second_opinion",
+      latencyMs: 0,
+      outcome: "fallback",
+      shadowMode: false,
+      fallbackUsed: true,
+      note:
+        `eligibility_reason=eligible | request_outcome=requested | ` +
+        `acceptance_outcome=rejected | extractor_reason=low_confidence | ${HIDDEN_MARKER}-second-opinion`,
+      recordedAt: "2026-04-13T00:00:04.000Z",
+    },
   ];
 
   return session;
@@ -348,6 +360,9 @@ function expectNoInternalTelemetry(payload: ClientPayload) {
   expect(serialized).not.toContain(HIDDEN_MARKER);
   expect(serialized).not.toContain("conversation_state=");
   expect(serialized).not.toContain("question_state=");
+  expect(serialized).not.toContain("eligibility_reason=");
+  expect(serialized).not.toContain("request_outcome=");
+  expect(serialized).not.toContain("acceptance_outcome=");
   expect(serialized).not.toContain("timeout-hidden");
 }
 

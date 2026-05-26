@@ -552,6 +552,13 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(mockAppendShadowTelemetrySnapshot).toHaveBeenCalledWith(
         expect.objectContaining({
           source: "chat",
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining("eligibility_reason=eligible"),
+            }),
+          ],
           recentShadowComparisons: [
             expect.objectContaining({
               shadowStrategy: "second_opinion_extractor",
@@ -560,6 +567,19 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
           ],
         })
       );
+      const storedAcceptedTraceJson = JSON.stringify(
+        mockAppendShadowTelemetrySnapshot.mock.calls.at(-1)?.[0]
+      );
+      expect(storedAcceptedTraceJson).toContain("request_outcome=requested");
+      expect(storedAcceptedTraceJson).toContain("acceptance_outcome=accepted");
+      expect(storedAcceptedTraceJson).toContain(
+        "comparison_append_outcome=comparison_appended"
+      );
+      expect(storedAcceptedTraceJson).toContain(
+        "comparison_write_outcome=comparison_write_succeeded"
+      );
+      expect(storedAcceptedTraceJson).not.toContain("dry_honking");
+      expect(storedAcceptedTraceJson).not.toContain("honking");
     } finally {
       logSpy.mockRestore();
     }
@@ -613,6 +633,73 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(
         shadowTurn.payload.session.case_memory?.shadow_comparisons ?? []
       ).toHaveLength(0);
+
+      const storedTraceSnapshot =
+        mockAppendShadowTelemetrySnapshot.mock.calls.at(-1)?.[0];
+      const storedTraceJson = JSON.stringify(storedTraceSnapshot);
+      expect(storedTraceSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentShadowComparisons: [],
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining("eligibility_reason=eligible"),
+            }),
+          ],
+        })
+      );
+      expect(storedTraceJson).toContain("request_outcome=requested");
+      expect(storedTraceJson).toContain("acceptance_outcome=rejected");
+      expect(storedTraceJson).toContain("extractor_reason=low_confidence");
+      expect(storedTraceJson).not.toContain("dry_honking");
+      expect(storedTraceJson).not.toContain("honking");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("records a sanitized trace write failure when rejected shadow telemetry is refused", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockAppendShadowTelemetrySnapshot.mockResolvedValueOnce(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.5,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "It has a honking sound."
+      );
+      const serializedLogs = JSON.stringify(logSpy.mock.calls);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
+        0
+      );
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+      expect(serializedLogs).toContain("telemetry_write_failed");
+      expect(serializedLogs).not.toContain("dry_honking");
+      expect(serializedLogs).not.toContain("honking");
     } finally {
       logSpy.mockRestore();
     }
@@ -664,6 +751,51 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
         0
       );
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("records a sanitized comparison write failure when chat telemetry persistence is refused", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockAppendShadowTelemetrySnapshot.mockResolvedValueOnce(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "It has a honking sound."
+      );
+      const serializedLogs = JSON.stringify(logSpy.mock.calls);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
+        0
+      );
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+      expect(serializedLogs).toContain("comparison_write_failed");
+      expect(serializedLogs).not.toContain("dry_honking");
+      expect(serializedLogs).not.toContain("honking");
     } finally {
       logSpy.mockRestore();
     }
