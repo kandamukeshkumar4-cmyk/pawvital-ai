@@ -41,6 +41,7 @@ import {
   buildDeterministicCaseSummary,
   ensureStructuredCaseMemory,
   recordConversationTelemetry,
+  type SecondOpinionTraceTelemetry,
   type TelemetryGateEvent,
 } from "@/lib/symptom-memory";
 import { createModelBudgetState } from "@/lib/model-budget";
@@ -71,7 +72,6 @@ import {
 import {
   buildSecondOpinionEligibilityTrace,
   getSecondOpinionExtractorMode,
-  type SecondOpinionTraceTelemetry,
 } from "./second-opinion-extractor";
 
 const useNvidia = isNvidiaConfigured();
@@ -555,9 +555,11 @@ function findSecondOpinionReportTraceQuestionId(
   session: TriageSession
 ): string | undefined {
   const memory = ensureStructuredCaseMemory(session);
+  const clarificationAttempts = memory.clarification_attempts ?? {};
+  const questionAskedCounts = memory.question_asked_counts ?? {};
   const answeredQuestions = [...(session.answered_questions ?? [])].reverse();
   const clarifiedAnswered = answeredQuestions.find(
-    (questionId) => memory.clarification_attempts[questionId] !== undefined
+    (questionId) => clarificationAttempts[questionId] !== undefined
   );
   if (clarifiedAnswered) {
     return clarifiedAnswered;
@@ -566,8 +568,8 @@ function findSecondOpinionReportTraceQuestionId(
   return (
     answeredQuestions.find(
       (questionId) =>
-        memory.question_asked_counts[questionId] !== undefined ||
-        memory.clarification_attempts[questionId] !== undefined
+        questionAskedCounts[questionId] !== undefined ||
+        clarificationAttempts[questionId] !== undefined
     ) ??
     memory.pending_question_id ??
     session.last_question_asked
@@ -587,6 +589,8 @@ function appendReportSecondOpinionTraceIfMissing({
   }
 
   const memory = ensureStructuredCaseMemory(session);
+  const clarificationAttempts = memory.clarification_attempts ?? {};
+  const unresolvedQuestionIds = memory.unresolved_question_ids ?? [];
   const questionId = findSecondOpinionReportTraceQuestionId(session);
   const hasExtractedAnswer = questionId
     ? Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)
@@ -602,7 +606,7 @@ function appendReportSecondOpinionTraceIfMissing({
     primaryExtractionFailed: !hasExtractedAnswer,
     deterministicResolved: hasRecordedAnswer,
     clarificationAttempts: questionId
-      ? (memory.clarification_attempts[questionId] ?? 0)
+      ? (clarificationAttempts[questionId] ?? 0)
       : 0,
     repeatGuardAlreadyFired: false,
     budgetState: createModelBudgetState(memory.model_budget_state),
@@ -624,7 +628,7 @@ function appendReportSecondOpinionTraceIfMissing({
     reason: eligibilityTrace.eligibility_reason,
     pending_before: Boolean(questionId),
     pending_after: Boolean(
-      questionId && memory.unresolved_question_ids.includes(questionId)
+      questionId && unresolvedQuestionIds.includes(questionId)
     ),
     second_opinion_trace: secondOpinionTrace,
   });
