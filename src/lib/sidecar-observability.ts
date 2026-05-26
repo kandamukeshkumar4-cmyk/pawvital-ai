@@ -167,6 +167,8 @@ export const INTERNAL_TELEMETRY_NOTE_MARKERS = [
   "conversation_state=",
   "clarification_reason=",
   "contradiction_records=",
+  "eligibility_reason=",
+  "request_outcome=",
   "gate_events=",
   "terminal_outcome_metric=",
 ];

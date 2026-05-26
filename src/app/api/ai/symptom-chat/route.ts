@@ -33,6 +33,7 @@ import {
   inferSupportedImageDomain,
   type ConsultOpinion,
   type ShadowComparisonRecord,
+  type SidecarObservation,
   type ServiceTimeoutRecord,
   type VisionClinicalEvidence,
   type VisionPreprocessResult,
@@ -55,6 +56,7 @@ import {
   ensureStructuredCaseMemory,
   recordConversationTelemetry,
   type RecoverySource,
+  type SecondOpinionTraceTelemetry,
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
 import {
@@ -120,12 +122,13 @@ import {
   shouldTriggerSyncConsult,
   buildEvidenceChainNotes,
   deriveSymptomsFromImageEvidence,
-  runAfterSafely,
 } from "@/lib/symptom-chat/report-helpers";
 import { decideRepeatLoopGuard } from "@/lib/symptom-chat/repeat-loop-guard";
 import {
+  buildSecondOpinionEligibilityTrace,
   extractSecondOpinionPendingAnswer,
   getSecondOpinionExtractorMode,
+  type SecondOpinionExtractionResult,
 } from "@/lib/symptom-chat/second-opinion-extractor";
 import { createModelBudgetState } from "@/lib/model-budget";
 import { getModelRoute } from "@/lib/model-router";
@@ -182,30 +185,57 @@ interface RequestBody {
   gateOverride?: boolean;
 }
 
-function persistChatShadowTelemetrySnapshot(
-  comparison: ShadowComparisonRecord
-): void {
+async function persistChatShadowTelemetrySnapshot({
+  serviceCalls = [],
+  shadowComparisons = [],
+}: {
+  serviceCalls?: SidecarObservation[];
+  shadowComparisons?: ShadowComparisonRecord[];
+}): Promise<boolean> {
   const snapshot = {
     generatedAt: new Date().toISOString(),
-    recentServiceCalls: [],
-    recentShadowComparisons: [comparison],
+    recentServiceCalls: serviceCalls,
+    recentShadowComparisons: shadowComparisons,
     source: "chat" as const,
   };
 
-  const persistShadowTelemetry = async () => {
-    try {
-      await appendShadowTelemetrySnapshot(snapshot);
-    } catch (shadowTelemetryError) {
-      console.error(
-        "[ShadowTelemetry] Failed to persist chat telemetry:",
-        shadowTelemetryError
-      );
-    }
-  };
-
-  if (!runAfterSafely(persistShadowTelemetry)) {
-    void persistShadowTelemetry();
+  try {
+    const persisted = await appendShadowTelemetrySnapshot(snapshot);
+    return persisted !== false;
+  } catch (shadowTelemetryError) {
+    console.error(
+      "[ShadowTelemetry] Failed to persist chat telemetry:",
+      shadowTelemetryError
+    );
+    return false;
   }
+}
+
+function getLatestSecondOpinionTraceObservation(
+  session: TriageSession
+): SidecarObservation | undefined {
+  return [...(session.case_memory?.service_observations ?? [])]
+    .reverse()
+    .find(
+      (observation) =>
+        observation.service === "async-review-service" &&
+        observation.stage === "second_opinion"
+    );
+}
+
+function getSecondOpinionAcceptanceOutcome(
+  result: SecondOpinionExtractionResult
+): SecondOpinionTraceTelemetry["acceptance_outcome"] {
+  if (result.status === "accepted") {
+    return "accepted";
+  }
+  if (result.status === "rejected") {
+    return "rejected";
+  }
+  if (result.status === "failed") {
+    return "failed";
+  }
+  return undefined;
 }
 
 function humanizeEmergencySignal(signal: string): string {
@@ -1493,20 +1523,37 @@ export async function POST(request: Request) {
         });
       } else {
         const secondOpinionMode = getSecondOpinionExtractorMode();
+        const secondOpinionPrimaryExtractionFailed =
+          !Object.prototype.hasOwnProperty.call(
+            extracted.answers || {},
+            pendingQ
+          );
+        const secondOpinionBudgetState = createModelBudgetState(
+          ensureStructuredCaseMemory(session).model_budget_state
+        );
+        const secondOpinionEligibilityTrace =
+          buildSecondOpinionEligibilityTrace({
+            mode: secondOpinionMode,
+            pendingQuestionId: pendingQ,
+            ownerMessage: lastUserMessage.content,
+            primaryExtractionFailed: secondOpinionPrimaryExtractionFailed,
+            deterministicResolved: pendingQResolvedThisTurn,
+            clarificationAttempts: getClarificationAttemptCount(
+              session,
+              pendingQ
+            ),
+            repeatGuardAlreadyFired: false,
+            budgetState: secondOpinionBudgetState,
+          });
         const secondOpinionResult = await extractSecondOpinionPendingAnswer({
           mode: secondOpinionMode,
           pendingQuestionId: pendingQ,
           ownerMessage: lastUserMessage.content,
-          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
-            mergedAnswers,
-            pendingQ
-          ),
+          primaryExtractionFailed: secondOpinionPrimaryExtractionFailed,
           deterministicResolved: pendingQResolvedThisTurn,
           clarificationAttempts: getClarificationAttemptCount(session, pendingQ),
           knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
-          budgetState: createModelBudgetState(
-            ensureStructuredCaseMemory(session).model_budget_state
-          ),
+          budgetState: secondOpinionBudgetState,
         });
         if (secondOpinionResult.budgetState) {
           session = {
@@ -1517,46 +1564,12 @@ export async function POST(request: Request) {
             },
           };
         }
-        if (
-          secondOpinionResult.status !== "skipped" ||
-          secondOpinionResult.reason
-        ) {
-          const secondOpinionTelemetryOutcome =
-            secondOpinionResult.status === "accepted"
-              ? "second_opinion_used"
-              : secondOpinionResult.status === "failed"
-                ? "second_opinion_failed"
-                : "second_opinion_rejected";
 
-          session = recordConversationTelemetry(session, {
-            event: "second_opinion",
-            turn_count: session.case_memory?.turn_count ?? 0,
-            question_id: pendingQ,
-            outcome: secondOpinionTelemetryOutcome,
-            source: "second_opinion",
-            reason:
-              secondOpinionResult.status === "accepted"
-                ? undefined
-                : secondOpinionResult.reason,
-            model:
-              secondOpinionResult.status === "skipped"
-                ? undefined
-                : getModelRoute("extraction").primaryModel,
-            pending_before: hadUnresolved,
-            pending_after: !(
-              secondOpinionMode === "on" &&
-              secondOpinionResult.status === "accepted"
-            ),
-            gate_events: [
-              secondOpinionTelemetryOutcome,
-              ...(secondOpinionMode === "on" &&
-              secondOpinionResult.status === "accepted"
-                ? ["pending_question_resolved" as const]
-                : []),
-            ],
-          });
-        }
-
+        let recordedShadowComparison: ShadowComparisonRecord | undefined;
+        let comparisonAppendOutcome: SecondOpinionTraceTelemetry["comparison_append_outcome"] =
+          "not_applicable";
+        let comparisonWriteOutcome: SecondOpinionTraceTelemetry["comparison_write_outcome"] =
+          "not_applicable";
         if (
           secondOpinionMode === "shadow" &&
           secondOpinionResult.status === "accepted"
@@ -1574,10 +1587,106 @@ export async function POST(request: Request) {
           );
           const recordedShadowComparisons =
             session.case_memory?.shadow_comparisons || [];
-          const recordedShadowComparison =
+          recordedShadowComparison =
             recordedShadowComparisons[recordedShadowComparisons.length - 1];
           if (recordedShadowComparison) {
-            persistChatShadowTelemetrySnapshot(recordedShadowComparison);
+            comparisonAppendOutcome = "comparison_appended";
+            comparisonWriteOutcome = "comparison_write_succeeded";
+          } else {
+            comparisonAppendOutcome = "comparison_append_failed";
+            comparisonWriteOutcome = "comparison_write_failed";
+          }
+        }
+
+        const secondOpinionTelemetryOutcome =
+          secondOpinionResult.status === "accepted"
+            ? "second_opinion_used"
+            : secondOpinionResult.status === "failed"
+              ? "second_opinion_failed"
+              : secondOpinionResult.status === "rejected"
+                ? "second_opinion_rejected"
+                : secondOpinionEligibilityTrace.request_outcome ===
+                    "budget_exhausted"
+                  ? "second_opinion_failed"
+                  : "second_opinion_skipped";
+        const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+          ...secondOpinionEligibilityTrace,
+          acceptance_outcome:
+            getSecondOpinionAcceptanceOutcome(secondOpinionResult),
+          comparison_append_outcome: comparisonAppendOutcome,
+          comparison_write_outcome: comparisonWriteOutcome,
+          extractor_reason:
+            secondOpinionResult.status === "accepted"
+              ? undefined
+              : secondOpinionResult.reason ??
+                secondOpinionEligibilityTrace.eligibility_reason,
+        };
+        const secondOpinionGateEvents =
+          secondOpinionResult.status === "accepted"
+            ? (["second_opinion_used"] as const)
+            : secondOpinionResult.status === "failed"
+              ? (["second_opinion_failed"] as const)
+              : secondOpinionResult.status === "rejected"
+                ? (["second_opinion_rejected"] as const)
+                : ([] as const);
+
+        session = recordConversationTelemetry(session, {
+          event: "second_opinion",
+          turn_count: session.case_memory?.turn_count ?? 0,
+          question_id: pendingQ,
+          outcome: secondOpinionTelemetryOutcome,
+          source: "second_opinion",
+          reason:
+            secondOpinionResult.status === "accepted"
+              ? undefined
+              : secondOpinionResult.reason ??
+                secondOpinionEligibilityTrace.eligibility_reason,
+          model:
+            secondOpinionResult.status === "skipped"
+              ? undefined
+              : getModelRoute("extraction").primaryModel,
+          pending_before: hadUnresolved,
+          pending_after: !(
+            secondOpinionMode === "on" &&
+            secondOpinionResult.status === "accepted"
+          ),
+          second_opinion_trace: secondOpinionTrace,
+          gate_events: [
+            ...secondOpinionGateEvents,
+            ...(secondOpinionMode === "on" &&
+            secondOpinionResult.status === "accepted"
+              ? ["pending_question_resolved" as const]
+              : []),
+          ],
+        });
+
+        const latestSecondOpinionTrace =
+          getLatestSecondOpinionTraceObservation(session);
+        if (latestSecondOpinionTrace) {
+          const chatTelemetryPersisted =
+            await persistChatShadowTelemetrySnapshot({
+              serviceCalls: [latestSecondOpinionTrace],
+              shadowComparisons: recordedShadowComparison
+                ? [recordedShadowComparison]
+                : [],
+            });
+          if (!chatTelemetryPersisted && recordedShadowComparison) {
+            session = recordConversationTelemetry(session, {
+              event: "second_opinion",
+              turn_count: session.case_memory?.turn_count ?? 0,
+              question_id: pendingQ,
+              outcome: "second_opinion_failed",
+              source: "second_opinion",
+              reason: "comparison_write_failed",
+              pending_before: hadUnresolved,
+              pending_after: true,
+              second_opinion_trace: {
+                ...secondOpinionTrace,
+                comparison_write_outcome: "comparison_write_failed",
+                extractor_reason: "comparison_write_failed",
+              },
+              gate_events: ["second_opinion_failed"],
+            });
           }
         }
 

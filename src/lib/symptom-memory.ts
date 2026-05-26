@@ -874,6 +874,21 @@ export interface NormalizedTerminalOutcomeMetric {
   question_id?: string;
 }
 
+export interface SecondOpinionTraceTelemetry {
+  active_pending_question: boolean;
+  primary_extraction_failed: boolean;
+  deterministic_coercion_failed: boolean;
+  first_clarification_attempt: boolean;
+  repeat_guard_not_fired: boolean;
+  budget_available: boolean;
+  eligibility_reason: string;
+  request_outcome: string;
+  acceptance_outcome?: string;
+  comparison_append_outcome?: string;
+  comparison_write_outcome?: string;
+  extractor_reason?: string;
+}
+
 /**
  * Recovery source for pending question resolution.
  */
@@ -935,6 +950,8 @@ export interface ConversationTelemetryEvent {
   contradiction_records?: NormalizedContradictionRecord[];
   /** Normalized terminal outcome metric for durable internal telemetry */
   terminal_outcome_metric?: NormalizedTerminalOutcomeMetric;
+  /** Sanitized second-opinion eligibility and comparison trace */
+  second_opinion_trace?: SecondOpinionTraceTelemetry;
   /** Stable internal gate events used by rollout regression checks */
   gate_events?: TelemetryGateEvent[];
   /** Timestamp for the event */
@@ -1077,11 +1094,43 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
       )}`
     );
   }
+  if (event.second_opinion_trace) {
+    appendSecondOpinionTraceNoteParts(parts, event.second_opinion_trace);
+  }
   if (event.gate_events?.length) {
     parts.push(`gate_events=${Array.from(new Set(event.gate_events)).join(",")}`);
   }
 
   return parts.join(" | ");
+}
+
+function appendSecondOpinionTraceNoteParts(
+  parts: string[],
+  trace: SecondOpinionTraceTelemetry
+): void {
+  parts.push(`active_pending_question=${trace.active_pending_question}`);
+  parts.push(`primary_extraction_failed=${trace.primary_extraction_failed}`);
+  parts.push(
+    `deterministic_coercion_failed=${trace.deterministic_coercion_failed}`
+  );
+  parts.push(`first_clarification_attempt=${trace.first_clarification_attempt}`);
+  parts.push(`repeat_guard_not_fired=${trace.repeat_guard_not_fired}`);
+  parts.push(`budget_available=${trace.budget_available}`);
+  parts.push(`eligibility_reason=${trace.eligibility_reason}`);
+  parts.push(`request_outcome=${trace.request_outcome}`);
+
+  if (trace.acceptance_outcome) {
+    parts.push(`acceptance_outcome=${trace.acceptance_outcome}`);
+  }
+  if (trace.comparison_append_outcome) {
+    parts.push(`comparison_append_outcome=${trace.comparison_append_outcome}`);
+  }
+  if (trace.comparison_write_outcome) {
+    parts.push(`comparison_write_outcome=${trace.comparison_write_outcome}`);
+  }
+  if (trace.extractor_reason) {
+    parts.push(`extractor_reason=${trace.extractor_reason}`);
+  }
 }
 
 /**
@@ -1113,6 +1162,7 @@ function emitTelemetryLog(event: ConversationTelemetryEvent): void {
     contradiction_ids: event.contradiction_ids,
     contradiction_records: event.contradiction_records,
     terminal_outcome_metric: event.terminal_outcome_metric,
+    second_opinion_trace: event.second_opinion_trace,
     gate_events: event.gate_events,
   };
 

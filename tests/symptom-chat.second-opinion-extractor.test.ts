@@ -1,4 +1,6 @@
 import {
+  SECOND_OPINION_ELIGIBILITY_REASON_CODES,
+  buildSecondOpinionEligibilityTrace,
   extractSecondOpinionPendingAnswer,
   getSecondOpinionExtractorMode,
   parseSecondOpinionExtractorResponse,
@@ -91,6 +93,68 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
         clarificationAttempts: 1,
       })
     ).toEqual({ shouldRun: false });
+  });
+
+  it("emits stable sanitized eligibility trace reason codes", () => {
+    expect(SECOND_OPINION_ELIGIBILITY_REASON_CODES).toEqual([
+      "eligible",
+      "feature_disabled",
+      "empty_owner_message",
+      "no_active_pending_question",
+      "primary_extraction_succeeded",
+      "deterministic_coercion_succeeded",
+      "not_first_clarification_attempt",
+      "repeat_guard_fired",
+      "budget_exhausted",
+      "circuit_open",
+    ]);
+
+    expect(
+      buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "It has been going on for two days.",
+        primaryExtractionFailed: true,
+        deterministicResolved: false,
+        clarificationAttempts: 1,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState(),
+      })
+    ).toEqual({
+      active_pending_question: true,
+      primary_extraction_failed: true,
+      deterministic_coercion_failed: true,
+      first_clarification_attempt: true,
+      repeat_guard_not_fired: true,
+      budget_available: true,
+      eligibility_reason: "eligible",
+      request_outcome: "requested",
+    });
+
+    const budgetExhaustedTrace = buildSecondOpinionEligibilityTrace({
+      mode: "shadow",
+      pendingQuestionId: "vomit_duration",
+      ownerMessage: "It has been going on for two days.",
+      primaryExtractionFailed: true,
+      deterministicResolved: false,
+      clarificationAttempts: 1,
+      repeatGuardAlreadyFired: false,
+      budgetState: {
+        ...createModelBudgetState(),
+        callCounts: {
+          second_opinion: 2,
+        },
+      },
+    });
+
+    expect(budgetExhaustedTrace).toEqual(
+      expect.objectContaining({
+        budget_available: false,
+        eligibility_reason: "budget_exhausted",
+        request_outcome: "budget_exhausted",
+      })
+    );
+    expect(JSON.stringify(budgetExhaustedTrace)).not.toContain("two days");
   });
 
   it("accepts a strict JSON answer anchored to the pending duration question", () => {

@@ -273,6 +273,82 @@ describe("shadow rollout baseline persistence", () => {
     );
   });
 
+  it("counts trace-only chat telemetry without manufacturing shadow comparisons", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "27cf6eba-0000-4000-8000-000000001531",
+          ai_response: JSON.stringify({
+            system_observability: {
+              timeoutCount: 0,
+              fallbackCount: 0,
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 0,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockResolvedValue([
+      {
+        source: "chat",
+        generatedAt: new Date().toISOString(),
+        recentServiceCalls: [
+          {
+            service: "async-review-service",
+            stage: "second_opinion",
+            latencyMs: 0,
+            outcome: "fallback",
+            shadowMode: false,
+            fallbackUsed: true,
+            note:
+              "eligibility_reason=eligible | request_outcome=requested | acceptance_outcome=rejected | extractor_reason=low_confidence",
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+        recentShadowComparisons: [],
+      },
+    ]);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(1);
+    expect(snapshot.parsedReportCount).toBe(1);
+    expect(snapshot.observationCount).toBe(1);
+    expect(snapshot.shadowComparisonCount).toBe(0);
+    expect(snapshot.serviceMetrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: "async-review-service",
+          observationCount: 1,
+          comparisonCount: 0,
+          fallbackRate: 1,
+        }),
+      ])
+    );
+  });
+
   it("ignores non-numeric persisted aggregate counts in symptom checks", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [

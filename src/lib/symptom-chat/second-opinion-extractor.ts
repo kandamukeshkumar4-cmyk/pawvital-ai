@@ -4,6 +4,7 @@ import {
 } from "@/lib/clinical-matrix";
 import {
   createModelBudgetState,
+  getModelBudgetCallCount,
   getModelBudgetPolicy,
   reserveModelBudgetCall,
   type ModelBudgetState,
@@ -38,6 +39,38 @@ export type SecondOpinionReason =
       ModelFallbackReason,
       "budget_exceeded" | "feature_disabled" | "circuit_open"
     >;
+
+export const SECOND_OPINION_ELIGIBILITY_REASON_CODES = [
+  "eligible",
+  "feature_disabled",
+  "empty_owner_message",
+  "no_active_pending_question",
+  "primary_extraction_succeeded",
+  "deterministic_coercion_succeeded",
+  "not_first_clarification_attempt",
+  "repeat_guard_fired",
+  "budget_exhausted",
+  "circuit_open",
+] as const;
+
+export type SecondOpinionEligibilityReasonCode =
+  (typeof SECOND_OPINION_ELIGIBILITY_REASON_CODES)[number];
+
+export type SecondOpinionRequestOutcome =
+  | "requested"
+  | "not_requested"
+  | "budget_exhausted";
+
+export interface SecondOpinionEligibilityTrace {
+  active_pending_question: boolean;
+  primary_extraction_failed: boolean;
+  deterministic_coercion_failed: boolean;
+  first_clarification_attempt: boolean;
+  repeat_guard_not_fired: boolean;
+  budget_available: boolean;
+  eligibility_reason: SecondOpinionEligibilityReasonCode;
+  request_outcome: SecondOpinionRequestOutcome;
+}
 
 export interface SecondOpinionAcceptedAnswer {
   answered: true;
@@ -126,6 +159,63 @@ export function shouldAttemptSecondOpinionExtraction({
   }
 
   return { shouldRun: true };
+}
+
+export function buildSecondOpinionEligibilityTrace({
+  mode,
+  pendingQuestionId,
+  ownerMessage,
+  primaryExtractionFailed,
+  deterministicResolved,
+  clarificationAttempts,
+  repeatGuardAlreadyFired = false,
+  budgetState,
+}: {
+  mode: SecondOpinionExtractorMode;
+  pendingQuestionId?: string;
+  ownerMessage: string;
+  primaryExtractionFailed: boolean;
+  deterministicResolved: boolean;
+  clarificationAttempts: number;
+  repeatGuardAlreadyFired?: boolean;
+  budgetState?: ModelBudgetState;
+}): SecondOpinionEligibilityTrace {
+  const normalizedBudgetState = createModelBudgetState(budgetState);
+  const activePendingQuestion = Boolean(pendingQuestionId);
+  const deterministicCoercionFailed = !deterministicResolved;
+  const firstClarificationAttempt = clarificationAttempts === 1;
+  const repeatGuardNotFired = !repeatGuardAlreadyFired;
+  const budgetAvailable = isSecondOpinionBudgetAvailable(
+    mode,
+    normalizedBudgetState
+  );
+  const eligibilityReason = resolveSecondOpinionEligibilityReason({
+    mode,
+    ownerMessage,
+    activePendingQuestion,
+    primaryExtractionFailed,
+    deterministicCoercionFailed,
+    firstClarificationAttempt,
+    repeatGuardNotFired,
+    budgetState: normalizedBudgetState,
+    budgetAvailable,
+  });
+
+  return {
+    active_pending_question: activePendingQuestion,
+    primary_extraction_failed: primaryExtractionFailed,
+    deterministic_coercion_failed: deterministicCoercionFailed,
+    first_clarification_attempt: firstClarificationAttempt,
+    repeat_guard_not_fired: repeatGuardNotFired,
+    budget_available: budgetAvailable,
+    eligibility_reason: eligibilityReason,
+    request_outcome:
+      eligibilityReason === "eligible"
+        ? "requested"
+        : eligibilityReason === "budget_exhausted"
+          ? "budget_exhausted"
+          : "not_requested",
+  };
 }
 
 export function parseSecondOpinionExtractorResponse(
@@ -314,6 +404,85 @@ export async function extractSecondOpinionPendingAnswer({
       shouldExposeBudgetState ? reservedBudget.state : undefined
     );
   }
+}
+
+function isSecondOpinionBudgetAvailable(
+  mode: SecondOpinionExtractorMode,
+  budgetState: ModelBudgetState
+): boolean {
+  if (mode === "off") {
+    return false;
+  }
+
+  if (budgetState.circuitOpen.second_opinion) {
+    return false;
+  }
+
+  const policy = getModelBudgetPolicy("second_opinion");
+  return (
+    getModelBudgetCallCount(budgetState, "second_opinion") <
+    policy.maxCallsPerSession
+  );
+}
+
+function resolveSecondOpinionEligibilityReason({
+  mode,
+  ownerMessage,
+  activePendingQuestion,
+  primaryExtractionFailed,
+  deterministicCoercionFailed,
+  firstClarificationAttempt,
+  repeatGuardNotFired,
+  budgetState,
+  budgetAvailable,
+}: {
+  mode: SecondOpinionExtractorMode;
+  ownerMessage: string;
+  activePendingQuestion: boolean;
+  primaryExtractionFailed: boolean;
+  deterministicCoercionFailed: boolean;
+  firstClarificationAttempt: boolean;
+  repeatGuardNotFired: boolean;
+  budgetState: ModelBudgetState;
+  budgetAvailable: boolean;
+}): SecondOpinionEligibilityReasonCode {
+  if (mode === "off") {
+    return "feature_disabled";
+  }
+
+  if (ownerMessage.trim().length === 0) {
+    return "empty_owner_message";
+  }
+
+  if (!activePendingQuestion) {
+    return "no_active_pending_question";
+  }
+
+  if (!primaryExtractionFailed) {
+    return "primary_extraction_succeeded";
+  }
+
+  if (!deterministicCoercionFailed) {
+    return "deterministic_coercion_succeeded";
+  }
+
+  if (!firstClarificationAttempt) {
+    return "not_first_clarification_attempt";
+  }
+
+  if (!repeatGuardNotFired) {
+    return "repeat_guard_fired";
+  }
+
+  if (budgetState.circuitOpen.second_opinion) {
+    return "circuit_open";
+  }
+
+  if (!budgetAvailable) {
+    return "budget_exhausted";
+  }
+
+  return "eligible";
 }
 
 function parseStrictJsonObject(rawResponse: string): Record<string, unknown> | null {
