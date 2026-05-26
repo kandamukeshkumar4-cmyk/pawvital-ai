@@ -181,6 +181,98 @@ describe("shadow rollout baseline persistence", () => {
     expect(mockListShadowTelemetrySnapshots).toHaveBeenCalledWith(100);
   });
 
+  it("counts stored chat comparisons when fresh reports only persist sanitized aggregate observations", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "8f9ecd7b-0000-4000-8000-00000000cfd5",
+          ai_response: JSON.stringify({
+            system_observability: {
+              timeoutCount: 0,
+              fallbackCount: 0,
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 2,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 2,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+        {
+          id: "50a0595f-0000-4000-8000-00000000a5ff",
+          ai_response: JSON.stringify({
+            system_observability: {
+              timeoutCount: 0,
+              fallbackCount: 0,
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 0,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockResolvedValue([
+      {
+        source: "chat",
+        generatedAt: new Date().toISOString(),
+        recentServiceCalls: [],
+        recentShadowComparisons: [
+          {
+            service: "async-review-service",
+            usedStrategy: "deterministic_extraction_failed",
+            shadowStrategy: "second_opinion_extractor",
+            summary: "q=vomit_duration; shadow_answer_recorded=true; conf=0.92",
+            disagreementCount: 1,
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ]);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(2);
+    expect(snapshot.parsedReportCount).toBe(2);
+    expect(snapshot.observationCount).toBe(2);
+    expect(snapshot.providerErrorCount).toBe(2);
+    expect(snapshot.shadowComparisonCount).toBe(1);
+    expect(snapshot.warning).toBeNull();
+    expect(snapshot.serviceMetrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: "async-review-service",
+          comparisonCount: 1,
+        }),
+      ])
+    );
+  });
+
   it("ignores non-numeric persisted aggregate counts in symptom checks", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [

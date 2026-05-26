@@ -75,7 +75,7 @@ jobs:
               `Report count: \`${reportJson.readout?.reportCount ?? 0}\``,
               `Warning: \`${reportJson.readout?.warning ?? "null"}\``,
               "",
-              "Run the formal VET-1492C rerun if this report shows meaningful production sessions. Keep flags in shadow/off otherwise.",
+              reportJson.nextAction ?? "Keep flags in shadow/off and continue collecting invited tester sessions.",
               "",
               "<details><summary>Scheduler report</summary>",
               "",
