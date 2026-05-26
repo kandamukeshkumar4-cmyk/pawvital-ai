@@ -517,8 +517,8 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     let session = createSession();
     session = addSymptoms(session, ["coughing"]);
     session = seedPendingQuestion(session, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
       unresolved: true,
     });
 
@@ -540,7 +540,7 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     );
     expect(
       payload.session.case_memory?.clarification_attempts?.cough_type
-    ).toBe(1);
+    ).toBe(0);
     expect(
       payload.session.case_memory?.model_budget_state?.callCounts
         ?.second_opinion
@@ -557,7 +557,7 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     session = addSymptoms(session, ["coughing"]);
     session = seedPendingQuestion(session, "cough_type", {
       askedCount: 2,
-      clarificationAttempts: 1,
+      clarificationAttempts: 0,
       unresolved: true,
     });
     session.case_memory = {
@@ -617,8 +617,8 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     let firstSession = createSession();
     firstSession = addSymptoms(firstSession, ["coughing"]);
     firstSession = seedPendingQuestion(firstSession, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
       unresolved: true,
     });
 
@@ -644,8 +644,8 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
       ),
     };
     secondSession = seedPendingQuestion(secondSession, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
       unresolved: true,
     });
 
@@ -672,7 +672,7 @@ describe("VET-1423 pending question repeat-loop guardrails", () => {
     };
     thirdSession = seedPendingQuestion(thirdSession, "cough_type", {
       askedCount: 2,
-      clarificationAttempts: 1,
+      clarificationAttempts: 0,
       unresolved: true,
     });
 

@@ -515,8 +515,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let baselineSession = createSession();
     baselineSession = addSymptoms(baselineSession, ["coughing"]);
     baselineSession = seedPendingQuestion(baselineSession, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
@@ -527,8 +527,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       let shadowSession = createSession();
       shadowSession = addSymptoms(shadowSession, ["coughing"]);
       shadowSession = seedPendingQuestion(shadowSession, "cough_type", {
-        askedCount: 2,
-        clarificationAttempts: 1,
+        askedCount: 1,
+        clarificationAttempts: 0,
       });
 
       const shadowTurn = await postTurn(shadowSession, "It has a honking sound.");
@@ -595,6 +595,114 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     }
   });
 
+  it("requests second-opinion on the first pending-question clarification before attempts are persisted", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 1,
+      clarificationAttempts: 0,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "TRACE_OWNER_SECRET It has a honking sound."
+      );
+      const latestSnapshot = getLatestShadowTelemetrySnapshot();
+      const snapshotJson = JSON.stringify(latestSnapshot);
+      const ownerPayloadJson = JSON.stringify(payload);
+
+      expect(response.status).toBe(200);
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(getGateEventsFromLogs(logSpy)).toContain("second_opinion_used");
+      expect(latestSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining("eligibility_reason=eligible"),
+            }),
+          ],
+        })
+      );
+      expect(snapshotJson).toContain("request_outcome=requested");
+      expect(snapshotJson).toContain("first_clarification_attempt=true");
+      expect(snapshotJson).not.toContain("not_first_clarification_attempt");
+      expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+      expect(snapshotJson).not.toContain("honking");
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("keeps second-opinion fail-closed after the first clarification attempt", async () => {
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 1,
+      clarificationAttempts: 1,
+    });
+
+    const { response, payload } = await postTurn(
+      session,
+      "TRACE_OWNER_SECRET It has a honking sound."
+    );
+    const latestSnapshot = getLatestShadowTelemetrySnapshot();
+    const snapshotJson = JSON.stringify(latestSnapshot);
+    const ownerPayloadJson = JSON.stringify(payload);
+
+    expect(response.status).toBe(200);
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+    expect(latestSnapshot).toEqual(
+      expect.objectContaining({
+        source: "chat",
+        recentShadowComparisons: [],
+        recentServiceCalls: [
+          expect.objectContaining({
+            service: "async-review-service",
+            stage: "second_opinion",
+            note: expect.stringContaining(
+              "eligibility_reason=not_first_clarification_attempt"
+            ),
+          }),
+        ],
+      })
+    );
+    expect(snapshotJson).toContain("request_outcome=not_requested");
+    expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+    expect(snapshotJson).not.toContain("honking");
+    expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+    expect(ownerPayloadJson).not.toContain("request_outcome=");
+    expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
+  });
+
   it("records second-opinion shadow rejection without changing the owner-facing output", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     mockExtractWithQwen.mockResolvedValue(
@@ -614,8 +722,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let baselineSession = createSession();
     baselineSession = addSymptoms(baselineSession, ["coughing"]);
     baselineSession = seedPendingQuestion(baselineSession, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
@@ -626,8 +734,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       let shadowSession = createSession();
       shadowSession = addSymptoms(shadowSession, ["coughing"]);
       shadowSession = seedPendingQuestion(shadowSession, "cough_type", {
-        askedCount: 2,
-        clarificationAttempts: 1,
+        askedCount: 1,
+        clarificationAttempts: 0,
       });
 
       const shadowTurn = await postTurn(shadowSession, "It has a honking sound.");
@@ -793,8 +901,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let session = createSession();
     session = addSymptoms(session, ["coughing"]);
     session = seedPendingQuestion(session, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
@@ -842,8 +950,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let session = createSession();
     session = addSymptoms(session, ["coughing"]);
     session = seedPendingQuestion(session, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
@@ -889,8 +997,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let session = createSession();
     session = addSymptoms(session, ["coughing"]);
     session = seedPendingQuestion(session, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
