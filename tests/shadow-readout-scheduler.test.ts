@@ -1,0 +1,70 @@
+import schedulerLogic from "../scripts/shadow-readout-scheduler-logic.cjs";
+
+const { decideStatus, nextActionForStatus, summarizePayload } = schedulerLogic;
+
+describe("shadow readout scheduler decision logic", () => {
+  it("holds when production reports and observations exist but shadow comparisons are still zero", () => {
+    const decision = decideStatus({
+      warning: null,
+      reportCount: 2,
+      observationCount: 2,
+      shadowComparisonCount: 0,
+    });
+
+    expect(decision).toEqual({
+      status: "blocked_missing_shadow_comparisons",
+      decision: "HOLD - production sessions found but no shadow comparisons recorded",
+    });
+    expect(nextActionForStatus(decision.status)).toContain(
+      "Trigger a tester flow that reaches an accepted second-opinion shadow comparison"
+    );
+  });
+
+  it("marks the scheduler ready only when shadow comparisons are present", () => {
+    const decision = decideStatus({
+      warning: null,
+      reportCount: 2,
+      observationCount: 2,
+      shadowComparisonCount: 1,
+    });
+
+    expect(decision).toEqual({
+      status: "ready_for_formal_readout",
+      decision: "RUN FORMAL VET-1492C RERUN",
+    });
+  });
+
+  it("summarizes current baseline service metric fields from the production endpoint", () => {
+    const readout = summarizePayload({
+      ok: true,
+      summary: { overallStatus: "insufficient_data" },
+      baseline: {
+        reportCount: 2,
+        parsedReportCount: 2,
+        malformedReportCount: 0,
+        observationCount: 2,
+        shadowComparisonCount: 1,
+        warning: null,
+        serviceMetrics: [
+          {
+            service: "async-review-service",
+            observationCount: 2,
+            comparisonCount: 1,
+            errorRate: 0.5,
+            timeoutRate: 0,
+          },
+        ],
+      },
+    });
+
+    expect(readout.serviceMetrics).toEqual([
+      {
+        service: "async-review-service",
+        observations: 2,
+        shadowComparisons: 1,
+        errors: 1,
+        timeouts: 0,
+      },
+    ]);
+  });
+});

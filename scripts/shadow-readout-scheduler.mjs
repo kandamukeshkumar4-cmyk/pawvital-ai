@@ -2,6 +2,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import schedulerLogic from "./shadow-readout-scheduler-logic.cjs";
 
 const DEFAULT_READOUT_URL =
   "https://pawvital-ai.vercel.app/api/ai/shadow-rollout";
@@ -11,6 +12,7 @@ const DEFAULT_JSON_OUTPUT =
   "data/shadow-readout/vet-1492c-scheduled-readout.json";
 const DEFAULT_MARKDOWN_OUTPUT =
   "data/shadow-readout/vet-1492c-scheduled-readout.md";
+const { decideStatus, nextActionForStatus, summarizePayload } = schedulerLogic;
 
 function parseBoolean(value) {
   return value === "1" || value === "true" || value === "yes";
@@ -29,54 +31,6 @@ function sanitizeForLogs(value) {
   return value
     .replace(/[A-Za-z0-9_-]{32,}/g, "[redacted-token]")
     .replace(/Bearer\s+[^\s]+/gi, "Bearer [redacted]");
-}
-
-function summarizePayload(payload) {
-  const baseline = payload?.baseline ?? {};
-  const summary = payload?.summary ?? {};
-  const serviceMetrics = Array.isArray(baseline.serviceMetrics)
-    ? baseline.serviceMetrics.map((service) => ({
-        service: service.service,
-        observations: service.observations ?? service.totalObservations ?? 0,
-        shadowComparisons:
-          service.shadowComparisons ?? service.shadowComparisonCount ?? 0,
-        errors: service.errors ?? service.errorObservations ?? 0,
-        timeouts: service.timeouts ?? service.timeoutObservations ?? 0,
-      }))
-    : [];
-
-  return {
-    ok: payload?.ok === true,
-    overallStatus: summary.overallStatus ?? null,
-    reportCount: Number(baseline.reportCount ?? 0),
-    parsedReportCount: Number(baseline.parsedReportCount ?? 0),
-    malformedReportCount: Number(baseline.malformedReportCount ?? 0),
-    observationCount: Number(baseline.observationCount ?? 0),
-    shadowComparisonCount: Number(baseline.shadowComparisonCount ?? 0),
-    warning: baseline.warning ?? null,
-    serviceMetrics,
-  };
-}
-
-function decideStatus(readout) {
-  if (readout.warning) {
-    return {
-      status: "readout_warning",
-      decision: "HOLD - telemetry readout returned a warning",
-    };
-  }
-
-  if (readout.reportCount > 0 || readout.observationCount > 0) {
-    return {
-      status: "ready_for_formal_readout",
-      decision: "RUN FORMAL VET-1492C RERUN",
-    };
-  }
-
-  return {
-    status: "healthy_empty_readout",
-    decision: "HOLD - no completed production sessions found yet",
-  };
 }
 
 function toMarkdown(report) {
@@ -240,10 +194,7 @@ async function main() {
         ...report,
         ...decision,
         readout,
-        nextAction:
-          decision.status === "ready_for_formal_readout"
-            ? "Start the formal VET-1492C rerun against this production window before any model promotion."
-            : "Keep flags in shadow/off and continue collecting invited tester sessions.",
+        nextAction: nextActionForStatus(decision.status),
       };
     } catch (error) {
       report = {
