@@ -1670,22 +1670,29 @@ export async function POST(request: Request) {
                 ? [recordedShadowComparison]
                 : [],
             });
-          if (!chatTelemetryPersisted && recordedShadowComparison) {
+          if (!chatTelemetryPersisted) {
+            const telemetryPersistenceFailureReason = recordedShadowComparison
+              ? "comparison_write_failed"
+              : "telemetry_write_failed";
             session = recordConversationTelemetry(session, {
               event: "second_opinion",
               turn_count: session.case_memory?.turn_count ?? 0,
               question_id: pendingQ,
               outcome: "second_opinion_failed",
               source: "second_opinion",
-              reason: "comparison_write_failed",
+              reason: telemetryPersistenceFailureReason,
               pending_before: hadUnresolved,
               pending_after: true,
               second_opinion_trace: {
                 ...secondOpinionTrace,
-                comparison_write_outcome: "comparison_write_failed",
-                extractor_reason: "comparison_write_failed",
+                comparison_write_outcome: recordedShadowComparison
+                  ? "comparison_write_failed"
+                  : secondOpinionTrace.comparison_write_outcome,
+                extractor_reason: telemetryPersistenceFailureReason,
               },
-              gate_events: ["second_opinion_failed"],
+              gate_events: recordedShadowComparison
+                ? ["second_opinion_failed"]
+                : [],
             });
           }
         }

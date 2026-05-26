@@ -660,6 +660,51 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     }
   });
 
+  it("records a sanitized trace write failure when rejected shadow telemetry is refused", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockAppendShadowTelemetrySnapshot.mockResolvedValueOnce(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.5,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "It has a honking sound."
+      );
+      const serializedLogs = JSON.stringify(logSpy.mock.calls);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
+        0
+      );
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+      expect(serializedLogs).toContain("telemetry_write_failed");
+      expect(serializedLogs).not.toContain("dry_honking");
+      expect(serializedLogs).not.toContain("honking");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
   it("Grok provider failure does not suppress second-opinion shadow comparison", async () => {
     // VET-1520C: Grok runs during report generation; second-opinion runs during chat turns.
     // Configuring GROK_FINAL_SAFETY=shadow with a failing Grok mock must not prevent
