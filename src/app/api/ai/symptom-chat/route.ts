@@ -227,6 +227,14 @@ function getLatestSecondOpinionTraceObservation(
     );
 }
 
+function getCurrentTurnClarificationAttemptCount(
+  session: TriageSession,
+  questionId: string
+): number {
+  // The current owner reply is counted before the repeat-loop path persists it.
+  return getClarificationAttemptCount(session, questionId) + 1;
+}
+
 function getSecondOpinionAcceptanceOutcome(
   result: SecondOpinionExtractionResult
 ): SecondOpinionTraceTelemetry["acceptance_outcome"] {
@@ -1497,7 +1505,7 @@ export async function POST(request: Request) {
           pendingTelemetryQuestionId
         ),
         deterministicResolved: true,
-        clarificationAttempts: getClarificationAttemptCount(
+        clarificationAttempts: getCurrentTurnClarificationAttemptCount(
           session,
           pendingTelemetryQuestionId
         ),
@@ -1645,7 +1653,10 @@ export async function POST(request: Request) {
             pendingQ
           ),
           deterministicResolved: true,
-          clarificationAttempts: getClarificationAttemptCount(session, pendingQ),
+          clarificationAttempts: getCurrentTurnClarificationAttemptCount(
+            session,
+            pendingQ
+          ),
           hadUnresolved,
           pendingAfter: false,
           budgetState: createModelBudgetState(
@@ -1662,6 +1673,8 @@ export async function POST(request: Request) {
         const secondOpinionBudgetState = createModelBudgetState(
           ensureStructuredCaseMemory(session).model_budget_state
         );
+        const secondOpinionClarificationAttempts =
+          getCurrentTurnClarificationAttemptCount(session, pendingQ);
         const secondOpinionEligibilityTrace =
           buildSecondOpinionEligibilityTrace({
             mode: secondOpinionMode,
@@ -1669,10 +1682,7 @@ export async function POST(request: Request) {
             ownerMessage: lastUserMessage.content,
             primaryExtractionFailed: secondOpinionPrimaryExtractionFailed,
             deterministicResolved: pendingQResolvedThisTurn,
-            clarificationAttempts: getClarificationAttemptCount(
-              session,
-              pendingQ
-            ),
+            clarificationAttempts: secondOpinionClarificationAttempts,
             repeatGuardAlreadyFired: false,
             budgetState: secondOpinionBudgetState,
           });
@@ -1682,7 +1692,7 @@ export async function POST(request: Request) {
           ownerMessage: lastUserMessage.content,
           primaryExtractionFailed: secondOpinionPrimaryExtractionFailed,
           deterministicResolved: pendingQResolvedThisTurn,
-          clarificationAttempts: getClarificationAttemptCount(session, pendingQ),
+          clarificationAttempts: secondOpinionClarificationAttempts,
           knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
           budgetState: secondOpinionBudgetState,
         });
