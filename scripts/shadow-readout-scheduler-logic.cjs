@@ -98,6 +98,9 @@ function summarizePayload(payload) {
   return {
     ok: payload?.ok === true,
     overallStatus: summary.overallStatus ?? null,
+    windowStart: baseline.windowStart ?? null,
+    latestWindowReportCreatedAt: baseline.latestWindowReportCreatedAt ?? null,
+    latestParsedReportCreatedAt: baseline.latestParsedReportCreatedAt ?? null,
     reportCount: numberFrom(baseline.reportCount, 0),
     parsedReportCount: numberFrom(baseline.parsedReportCount, 0),
     malformedReportCount: numberFrom(baseline.malformedReportCount, 0),

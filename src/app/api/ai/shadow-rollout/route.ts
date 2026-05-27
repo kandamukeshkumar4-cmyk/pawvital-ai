@@ -126,9 +126,12 @@ export async function GET(request: Request) {
       baseline: {
         generatedAt: baseline.generatedAt,
         windowHours: baseline.windowHours,
+        windowStart: baseline.windowStart,
         reportCount: baseline.reportCount,
         parsedReportCount: baseline.parsedReportCount,
         malformedReportCount: baseline.malformedReportCount,
+        latestWindowReportCreatedAt: baseline.latestWindowReportCreatedAt,
+        latestParsedReportCreatedAt: baseline.latestParsedReportCreatedAt,
         reportPresenceCount: baseline.reportPresenceCount,
         sessionPresenceCount: baseline.sessionPresenceCount,
         observationCount: baseline.observationCount,
