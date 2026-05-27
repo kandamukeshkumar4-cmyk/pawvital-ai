@@ -6,6 +6,7 @@ import {
 } from "@/lib/triage-engine";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
 import { extractTelemetryGateEventsFromObservations } from "@/lib/sidecar-observability";
+import secondOpinionQualifyingFlowMatrix from "./fixtures/second-opinion-qualifying-flow-matrix.json";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
@@ -353,6 +354,105 @@ function getSecondOpinionShadowComparisonCalls() {
     .filter(
       (comparison) => comparison.shadowStrategy === "second_opinion_extractor"
     );
+}
+
+type SecondOpinionMatrixTraceExpectation = {
+  eligibility_reason: string;
+  request_outcome: string;
+  acceptance_outcome?: string;
+  extractor_reason?: string;
+  comparison_append_outcome?: string;
+  comparison_write_outcome?: string;
+};
+
+type SecondOpinionQualifyingRouteCase = {
+  id: string;
+  description: string;
+  initialSymptoms: string[];
+  pendingQuestionId: string;
+  askedCount: number;
+  clarificationAttempts: number;
+  ownerMessage: string;
+  qwenExtraction: {
+    symptoms: string[];
+    answers: Record<string, string | boolean | number>;
+  };
+  secondOpinionModel?: {
+    response?: Record<string, unknown>;
+    rejectWith?: string;
+  };
+  expected: {
+    modelCalls: number;
+    shadowComparisons: number;
+    trace: SecondOpinionMatrixTraceExpectation;
+    ownerAnswer?: {
+      questionId: string;
+      value: string | boolean | number;
+    };
+  };
+};
+
+function buildSecondOpinionMatrixSession(
+  testCase: SecondOpinionQualifyingRouteCase
+): TriageSession {
+  let session = createSession();
+  if (testCase.initialSymptoms.length > 0) {
+    session = addSymptoms(session, testCase.initialSymptoms);
+  }
+
+  return seedPendingQuestion(session, testCase.pendingQuestionId, {
+    askedCount: testCase.askedCount,
+    clarificationAttempts: testCase.clarificationAttempts,
+  });
+}
+
+function configureSecondOpinionModelForMatrixCase(
+  testCase: SecondOpinionQualifyingRouteCase
+) {
+  if (!testCase.secondOpinionModel) {
+    return;
+  }
+
+  if (testCase.secondOpinionModel.rejectWith) {
+    mockComplete.mockRejectedValueOnce(
+      new Error(testCase.secondOpinionModel.rejectWith)
+    );
+    return;
+  }
+
+  mockComplete.mockResolvedValueOnce(
+    JSON.stringify(testCase.secondOpinionModel.response)
+  );
+}
+
+function parseTelemetryNoteParts(note: string): Record<string, string> {
+  return note.split("|").reduce<Record<string, string>>((acc, part) => {
+    const trimmedPart = part.trim();
+    const separatorIndex = trimmedPart.indexOf("=");
+    if (separatorIndex === -1) {
+      return acc;
+    }
+
+    acc[trimmedPart.slice(0, separatorIndex)] = trimmedPart.slice(
+      separatorIndex + 1
+    );
+    return acc;
+  }, {});
+}
+
+function getLatestSecondOpinionTraceParts() {
+  const latestSnapshot = getLatestShadowTelemetrySnapshot();
+  const latestTrace = latestSnapshot?.recentServiceCalls?.find(
+    (call) =>
+      call.service === "async-review-service" &&
+      call.stage === "second_opinion"
+  );
+
+  if (!latestTrace?.note) {
+    throw new Error("Expected a second-opinion trace in the latest snapshot");
+  }
+
+  return parseTelemetryNoteParts(latestTrace.note);
 }
 
 async function flushAsyncWork() {
@@ -878,6 +978,84 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     } finally {
       logSpy.mockRestore();
     }
+  });
+
+  describe("VET-1541C second-opinion qualifying route matrix", () => {
+    const routeCases =
+      secondOpinionQualifyingFlowMatrix.routeCases as SecondOpinionQualifyingRouteCase[];
+
+    it("keeps the next live tester script production-safe and aimed at requested", () => {
+      expect(
+        secondOpinionQualifyingFlowMatrix.productionSafeTesterScript.expectedTrace
+      ).toMatchObject({
+        eligibility_reason: "eligible",
+        request_outcome: "requested",
+      });
+      expect(
+        secondOpinionQualifyingFlowMatrix.productionSafeTesterScript.ownerTurns
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            text: "It has a honking sound.",
+          }),
+        ])
+      );
+
+      const ownerText =
+        secondOpinionQualifyingFlowMatrix.productionSafeTesterScript.ownerTurns
+          .map((turn) => turn.text)
+          .join(" ");
+      expect(ownerText).not.toMatch(
+        /\b(breathing trouble|blue gums|collapse|blood|seizure)\b/i
+      );
+    });
+
+    it("has at least one non-synthetic owner-turn path that requests second-opinion", () => {
+      expect(
+        routeCases.some(
+          (testCase) =>
+            testCase.expected.trace.request_outcome === "requested" &&
+            testCase.ownerMessage.length > 0 &&
+            testCase.qwenExtraction.symptoms.length > 0
+        )
+      ).toBe(true);
+    });
+
+    it.each(routeCases)("$id", async (testCase) => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockComplete.mockReset();
+      mockExtractWithQwen.mockReset();
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify(testCase.qwenExtraction)
+      );
+      configureSecondOpinionModelForMatrixCase(testCase);
+
+      const { response, payload } = await postTurn(
+        buildSecondOpinionMatrixSession(testCase),
+        testCase.ownerMessage
+      );
+      const traceParts = getLatestSecondOpinionTraceParts();
+
+      expect(response.status).toBe(200);
+      expect(mockComplete).toHaveBeenCalledTimes(testCase.expected.modelCalls);
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(
+        testCase.expected.shadowComparisons
+      );
+      expect(traceParts).toEqual(expect.objectContaining(testCase.expected.trace));
+
+      if (testCase.expected.ownerAnswer) {
+        expect(
+          payload.session.extracted_answers[
+            testCase.expected.ownerAnswer.questionId
+          ]
+        ).toBe(testCase.expected.ownerAnswer.value);
+      }
+
+      const ownerPayloadJson = JSON.stringify(payload);
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(ownerPayloadJson).not.toContain("acceptance_outcome=");
+    });
   });
 
   it("records a sanitized trace write failure when rejected shadow telemetry is refused", async () => {

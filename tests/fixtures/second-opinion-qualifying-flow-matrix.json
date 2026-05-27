@@ -1,0 +1,190 @@
+{
+  "ticket": "VET-1541C",
+  "goal": "Deterministic route-level matrix for second-opinion request qualification after VET-1536C.",
+  "routeCases": [
+    {
+      "id": "first_clarification_attempt_requested_accepted",
+      "description": "A realistic coughing owner answer reaches the first clarification turn, primary extraction misses, deterministic coercion misses, and the second-opinion extractor accepts the answer in shadow mode.",
+      "initialSymptoms": ["coughing"],
+      "pendingQuestionId": "cough_type",
+      "askedCount": 1,
+      "clarificationAttempts": 0,
+      "ownerMessage": "It has a honking sound.",
+      "qwenExtraction": {
+        "symptoms": ["coughing"],
+        "answers": {}
+      },
+      "secondOpinionModel": {
+        "response": {
+          "answered": true,
+          "questionId": "cough_type",
+          "answerValue": "dry_honking",
+          "confidence": 0.9,
+          "ownerPhrase": "honking",
+          "needsClarification": false
+        }
+      },
+      "expected": {
+        "modelCalls": 1,
+        "shadowComparisons": 1,
+        "trace": {
+          "eligibility_reason": "eligible",
+          "request_outcome": "requested",
+          "acceptance_outcome": "accepted",
+          "comparison_append_outcome": "comparison_appended",
+          "comparison_write_outcome": "comparison_write_succeeded"
+        }
+      }
+    },
+    {
+      "id": "repeated_clarification_not_requested",
+      "description": "The same owner answer on a later clarification turn must fail closed and avoid a second-opinion request.",
+      "initialSymptoms": ["coughing"],
+      "pendingQuestionId": "cough_type",
+      "askedCount": 1,
+      "clarificationAttempts": 1,
+      "ownerMessage": "It has a honking sound.",
+      "qwenExtraction": {
+        "symptoms": ["coughing"],
+        "answers": {}
+      },
+      "expected": {
+        "modelCalls": 0,
+        "shadowComparisons": 0,
+        "trace": {
+          "eligibility_reason": "not_first_clarification_attempt",
+          "request_outcome": "not_requested",
+          "comparison_append_outcome": "not_applicable",
+          "comparison_write_outcome": "not_applicable",
+          "extractor_reason": "not_first_clarification"
+        }
+      }
+    },
+    {
+      "id": "primary_extraction_success_not_requested",
+      "description": "Primary extraction already answers the active pending question, so the route records not_requested instead of spending a second-opinion call.",
+      "initialSymptoms": ["coughing"],
+      "pendingQuestionId": "cough_type",
+      "askedCount": 1,
+      "clarificationAttempts": 0,
+      "ownerMessage": "It is a dry honking cough.",
+      "qwenExtraction": {
+        "symptoms": ["coughing"],
+        "answers": {
+          "cough_type": "dry_honking"
+        }
+      },
+      "expected": {
+        "modelCalls": 0,
+        "shadowComparisons": 0,
+        "trace": {
+          "eligibility_reason": "primary_extraction_succeeded",
+          "request_outcome": "not_requested",
+          "comparison_append_outcome": "not_applicable",
+          "comparison_write_outcome": "not_applicable",
+          "extractor_reason": "primary_extraction_succeeded"
+        },
+        "ownerAnswer": {
+          "questionId": "cough_type",
+          "value": "dry_honking"
+        }
+      }
+    },
+    {
+      "id": "unresolved_ambiguity_requested_rejected",
+      "description": "Unresolved ambiguity on the first clarification turn should request second-opinion, then preserve fail-closed behavior when the model response is too low confidence.",
+      "initialSymptoms": ["coughing"],
+      "pendingQuestionId": "cough_type",
+      "askedCount": 1,
+      "clarificationAttempts": 0,
+      "ownerMessage": "It sounds odd when he coughs.",
+      "qwenExtraction": {
+        "symptoms": ["coughing"],
+        "answers": {}
+      },
+      "secondOpinionModel": {
+        "response": {
+          "answered": true,
+          "questionId": "cough_type",
+          "answerValue": "dry_honking",
+          "confidence": 0.5,
+          "ownerPhrase": "sounds odd",
+          "needsClarification": false
+        }
+      },
+      "expected": {
+        "modelCalls": 1,
+        "shadowComparisons": 0,
+        "trace": {
+          "eligibility_reason": "eligible",
+          "request_outcome": "requested",
+          "acceptance_outcome": "rejected",
+          "comparison_append_outcome": "not_applicable",
+          "comparison_write_outcome": "not_applicable",
+          "extractor_reason": "low_confidence"
+        }
+      }
+    },
+    {
+      "id": "first_clarification_requested_failed",
+      "description": "A provider failure after a qualifying first clarification turn is still a requested trace, with failed acceptance and no owner-visible leakage.",
+      "initialSymptoms": ["coughing"],
+      "pendingQuestionId": "cough_type",
+      "askedCount": 1,
+      "clarificationAttempts": 0,
+      "ownerMessage": "It has a honking sound.",
+      "qwenExtraction": {
+        "symptoms": ["coughing"],
+        "answers": {}
+      },
+      "secondOpinionModel": {
+        "rejectWith": "provider unavailable"
+      },
+      "expected": {
+        "modelCalls": 1,
+        "shadowComparisons": 0,
+        "trace": {
+          "eligibility_reason": "eligible",
+          "request_outcome": "requested",
+          "acceptance_outcome": "failed",
+          "comparison_append_outcome": "not_applicable",
+          "comparison_write_outcome": "not_applicable",
+          "extractor_reason": "provider_error"
+        }
+      }
+    }
+  ],
+  "productionSafeTesterScript": {
+    "id": "bruno-cough-honking-first-clarification",
+    "target": "Authenticated production UI only. Do not use unauthenticated API calls as proof.",
+    "profile": "Use the saved dog profile Bruno, or another already invited tester dog profile.",
+    "expectedTrace": {
+      "eligibility_reason": "eligible",
+      "request_outcome": "requested"
+    },
+    "ownerTurns": [
+      {
+        "phase": "initial complaint",
+        "text": "Coughing"
+      },
+      {
+        "phase": "first clarification answer",
+        "text": "It has a honking sound."
+      }
+    ],
+    "avoidOwnerPhrases": [
+      "breathing trouble",
+      "blue gums",
+      "collapse",
+      "blood",
+      "seizure"
+    ],
+    "adminVerification": [
+      "Confirm the production alias is Ready before the run.",
+      "Sign in with an invited tester or admin account; do not paste credentials into logs or chat.",
+      "Open the symptom checker in the authenticated UI and choose the saved dog profile.",
+      "Submit the owner turns exactly as listed, stopping if the UI asks an emergency-screen question.",
+      "After the flow, rerun the shadow readout scheduler and inspect the sanitized secondOpinionTrace aggregate for requested > 0."
+    ]
+  }
+}
