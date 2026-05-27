@@ -51,6 +51,7 @@ export const SECOND_OPINION_ELIGIBILITY_REASON_CODES = [
   "repeat_guard_fired",
   "budget_exhausted",
   "circuit_open",
+  "shadow_primary_success_sampling",
 ] as const;
 
 export type SecondOpinionEligibilityReasonCode =
@@ -134,6 +135,7 @@ export function shouldAttemptSecondOpinionExtraction({
   primaryExtractionFailed,
   deterministicResolved,
   clarificationAttempts,
+  isShadowSampling = false,
 }: {
   mode: SecondOpinionExtractorMode;
   pendingQuestionId?: string;
@@ -141,6 +143,7 @@ export function shouldAttemptSecondOpinionExtraction({
   primaryExtractionFailed: boolean;
   deterministicResolved: boolean;
   clarificationAttempts: number;
+  isShadowSampling?: boolean;
 }): { shouldRun: true } | { shouldRun: false; reason?: SecondOpinionReason } {
   if (mode === "off" || ownerMessage.trim().length === 0) {
     return { shouldRun: false };
@@ -148,6 +151,13 @@ export function shouldAttemptSecondOpinionExtraction({
 
   if (!pendingQuestionId) {
     return { shouldRun: false, reason: "no_pending_question" };
+  }
+
+  if (isShadowSampling) {
+    if (clarificationAttempts !== 0) {
+      return { shouldRun: false, reason: "not_first_clarification" };
+    }
+    return { shouldRun: true };
   }
 
   if (!primaryExtractionFailed || deterministicResolved) {
@@ -170,6 +180,7 @@ export function buildSecondOpinionEligibilityTrace({
   clarificationAttempts,
   repeatGuardAlreadyFired = false,
   budgetState,
+  isShadowSampling = false,
 }: {
   mode: SecondOpinionExtractorMode;
   pendingQuestionId?: string;
@@ -179,11 +190,14 @@ export function buildSecondOpinionEligibilityTrace({
   clarificationAttempts: number;
   repeatGuardAlreadyFired?: boolean;
   budgetState?: ModelBudgetState;
+  isShadowSampling?: boolean;
 }): SecondOpinionEligibilityTrace {
   const normalizedBudgetState = createModelBudgetState(budgetState);
   const activePendingQuestion = Boolean(pendingQuestionId);
   const deterministicCoercionFailed = !deterministicResolved;
-  const firstClarificationAttempt = clarificationAttempts === 1;
+  const firstClarificationAttempt = isShadowSampling
+    ? clarificationAttempts === 0
+    : clarificationAttempts === 1;
   const repeatGuardNotFired = !repeatGuardAlreadyFired;
   const budgetAvailable = isSecondOpinionBudgetAvailable(
     mode,
@@ -199,6 +213,7 @@ export function buildSecondOpinionEligibilityTrace({
     repeatGuardNotFired,
     budgetState: normalizedBudgetState,
     budgetAvailable,
+    isShadowSampling,
   });
 
   return {
@@ -210,7 +225,8 @@ export function buildSecondOpinionEligibilityTrace({
     budget_available: budgetAvailable,
     eligibility_reason: eligibilityReason,
     request_outcome:
-      eligibilityReason === "eligible"
+      eligibilityReason === "eligible" ||
+      eligibilityReason === "shadow_primary_success_sampling"
         ? "requested"
         : eligibilityReason === "budget_exhausted"
           ? "budget_exhausted"
@@ -312,6 +328,7 @@ export async function extractSecondOpinionPendingAnswer({
   timeoutMs = getModelBudgetPolicy("second_opinion").timeoutMs,
   budgetState,
   modelCaller = callSecondOpinionModel,
+  isShadowSampling = false,
 }: {
   mode: SecondOpinionExtractorMode;
   pendingQuestionId?: string;
@@ -323,6 +340,7 @@ export async function extractSecondOpinionPendingAnswer({
   timeoutMs?: number;
   budgetState?: ModelBudgetState;
   modelCaller?: ModelCaller;
+  isShadowSampling?: boolean;
 }): Promise<SecondOpinionExtractionResult> {
   const shouldExposeBudgetState = budgetState !== undefined;
   const decision = shouldAttemptSecondOpinionExtraction({
@@ -332,6 +350,7 @@ export async function extractSecondOpinionPendingAnswer({
     primaryExtractionFailed,
     deterministicResolved,
     clarificationAttempts,
+    isShadowSampling,
   });
 
   if (!decision.shouldRun) {
@@ -435,6 +454,7 @@ function resolveSecondOpinionEligibilityReason({
   repeatGuardNotFired,
   budgetState,
   budgetAvailable,
+  isShadowSampling = false,
 }: {
   mode: SecondOpinionExtractorMode;
   ownerMessage: string;
@@ -445,6 +465,7 @@ function resolveSecondOpinionEligibilityReason({
   repeatGuardNotFired: boolean;
   budgetState: ModelBudgetState;
   budgetAvailable: boolean;
+  isShadowSampling?: boolean;
 }): SecondOpinionEligibilityReasonCode {
   if (mode === "off") {
     return "feature_disabled";
@@ -458,12 +479,14 @@ function resolveSecondOpinionEligibilityReason({
     return "no_active_pending_question";
   }
 
-  if (!primaryExtractionFailed) {
-    return "primary_extraction_succeeded";
-  }
+  if (!isShadowSampling) {
+    if (!primaryExtractionFailed) {
+      return "primary_extraction_succeeded";
+    }
 
-  if (!deterministicCoercionFailed) {
-    return "deterministic_coercion_succeeded";
+    if (!deterministicCoercionFailed) {
+      return "deterministic_coercion_succeeded";
+    }
   }
 
   if (!firstClarificationAttempt) {
@@ -482,7 +505,7 @@ function resolveSecondOpinionEligibilityReason({
     return "budget_exhausted";
   }
 
-  return "eligible";
+  return isShadowSampling ? "shadow_primary_success_sampling" : "eligible";
 }
 
 function parseStrictJsonObject(rawResponse: string): Record<string, unknown> | null {

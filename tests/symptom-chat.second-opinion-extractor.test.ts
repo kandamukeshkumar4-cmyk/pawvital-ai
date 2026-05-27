@@ -107,6 +107,7 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
       "repeat_guard_fired",
       "budget_exhausted",
       "circuit_open",
+      "shadow_primary_success_sampling",
     ]);
 
     expect(
@@ -629,5 +630,130 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
       reason: "budget_exceeded",
     });
     expect(modelCaller).not.toHaveBeenCalled();
+  });
+
+  describe("VET-1544C shadow primary-success sampling", () => {
+    it("runs on the first primary-success answer turn when shadow sampling is enabled", () => {
+      expect(
+        shouldAttemptSecondOpinionExtraction({
+          mode: "shadow",
+          pendingQuestionId: "vomit_duration",
+          ownerMessage: "for about two days",
+          primaryExtractionFailed: false,
+          deterministicResolved: true,
+          clarificationAttempts: 0,
+          isShadowSampling: true,
+        })
+      ).toEqual({ shouldRun: true });
+    });
+
+    it("does not run shadow sampling on repeated clarification turns", () => {
+      expect(
+        shouldAttemptSecondOpinionExtraction({
+          mode: "shadow",
+          pendingQuestionId: "vomit_duration",
+          ownerMessage: "for about two days",
+          primaryExtractionFailed: false,
+          deterministicResolved: true,
+          clarificationAttempts: 1,
+          isShadowSampling: true,
+        })
+      ).toEqual({ shouldRun: false, reason: "not_first_clarification" });
+    });
+
+    it("emits a requested trace for eligible primary-success shadow sampling", () => {
+      const trace = buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "OWNER_SECRET It has been about two days.",
+        primaryExtractionFailed: false,
+        deterministicResolved: true,
+        clarificationAttempts: 0,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState(),
+        isShadowSampling: true,
+      });
+
+      expect(trace).toEqual({
+        active_pending_question: true,
+        primary_extraction_failed: false,
+        deterministic_coercion_failed: false,
+        first_clarification_attempt: true,
+        repeat_guard_not_fired: true,
+        budget_available: true,
+        eligibility_reason: "shadow_primary_success_sampling",
+        request_outcome: "requested",
+      });
+      expect(JSON.stringify(trace)).not.toContain("OWNER_SECRET");
+      expect(JSON.stringify(trace)).not.toContain("two days");
+    });
+
+    it("keeps primary-success shadow sampling inside the second-opinion budget", () => {
+      const trace = buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "for about two days",
+        primaryExtractionFailed: false,
+        deterministicResolved: true,
+        clarificationAttempts: 0,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState({
+          callCounts: { second_opinion: 2 },
+        }),
+        isShadowSampling: true,
+      });
+
+      expect(trace).toMatchObject({
+        budget_available: false,
+        eligibility_reason: "budget_exhausted",
+        request_outcome: "budget_exhausted",
+      });
+    });
+
+    it("calls the model on a primary-success turn only when shadow sampling is enabled", async () => {
+      const modelCaller = jest.fn().mockResolvedValue(
+        JSON.stringify({
+          answered: true,
+          questionId: "vomit_duration",
+          answerValue: "about two days",
+          confidence: 0.91,
+          ownerPhrase: "about two days",
+          needsClarification: false,
+        })
+      );
+
+      const result = await extractSecondOpinionPendingAnswer({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "It has been going on for about two days.",
+        primaryExtractionFailed: false,
+        deterministicResolved: true,
+        clarificationAttempts: 0,
+        knownSymptomsBeforeTurn: ["vomiting"],
+        modelCaller,
+        isShadowSampling: true,
+      });
+
+      expect(result.status).toBe("accepted");
+      expect(modelCaller).toHaveBeenCalledTimes(1);
+    });
+
+    it("preserves the existing primary-success skip when shadow sampling is not enabled", () => {
+      const trace = buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "for about two days",
+        primaryExtractionFailed: false,
+        deterministicResolved: false,
+        clarificationAttempts: 1,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState(),
+      });
+
+      expect(trace).toMatchObject({
+        eligibility_reason: "primary_extraction_succeeded",
+        request_outcome: "not_requested",
+      });
+    });
   });
 });

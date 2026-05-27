@@ -340,6 +340,182 @@ async function recordSecondOpinionNotRequestedTrace({
   return nextSession;
 }
 
+async function recordSecondOpinionShadowSample({
+  session,
+  pendingQuestionId,
+  ownerMessage,
+  primaryExtractionFailed,
+  clarificationAttempts,
+  knownSymptomsBeforeTurn,
+  primaryAnswerValue,
+  hadUnresolved,
+}: {
+  session: TriageSession;
+  pendingQuestionId: string;
+  ownerMessage: string;
+  primaryExtractionFailed: boolean;
+  clarificationAttempts: number;
+  knownSymptomsBeforeTurn: string[];
+  primaryAnswerValue: string | boolean | number;
+  hadUnresolved: boolean;
+}): Promise<TriageSession> {
+  const budgetState = createModelBudgetState(
+    ensureStructuredCaseMemory(session).model_budget_state
+  );
+  const eligibilityTrace = buildSecondOpinionEligibilityTrace({
+    mode: "shadow",
+    pendingQuestionId,
+    ownerMessage,
+    primaryExtractionFailed,
+    deterministicResolved: true,
+    clarificationAttempts,
+    repeatGuardAlreadyFired: false,
+    budgetState,
+    isShadowSampling: true,
+  });
+
+  const shadowResult = await extractSecondOpinionPendingAnswer({
+    mode: "shadow",
+    pendingQuestionId,
+    ownerMessage,
+    primaryExtractionFailed,
+    deterministicResolved: true,
+    clarificationAttempts,
+    knownSymptomsBeforeTurn,
+    budgetState,
+    isShadowSampling: true,
+  });
+
+  if (shadowResult.budgetState) {
+    session = {
+      ...session,
+      case_memory: {
+        ...ensureStructuredCaseMemory(session),
+        model_budget_state: shadowResult.budgetState,
+      },
+    };
+  }
+
+  let recordedShadowComparison: ShadowComparisonRecord | undefined;
+  let comparisonAppendOutcome: SecondOpinionTraceTelemetry["comparison_append_outcome"] =
+    "not_applicable";
+  let comparisonWriteOutcome: SecondOpinionTraceTelemetry["comparison_write_outcome"] =
+    "not_applicable";
+
+  if (shadowResult.status === "accepted") {
+    const disagreed =
+      String(primaryAnswerValue) === String(shadowResult.answer.answerValue)
+        ? 0
+        : 1;
+    const shadowComparison = describeShadowComparison(
+      "async-review-service",
+      "primary_extraction_succeeded",
+      "second_opinion_extractor",
+      `q=${pendingQuestionId}; shadow_answer_recorded=true; conf=${shadowResult.answer.confidence.toFixed(2)}; agreed=${disagreed === 0}`,
+      disagreed
+    );
+    session = appendShadowComparison(session, shadowComparison);
+    const recordedShadowComparisons =
+      session.case_memory?.shadow_comparisons ?? [];
+    recordedShadowComparison =
+      recordedShadowComparisons[recordedShadowComparisons.length - 1];
+    if (recordedShadowComparison) {
+      comparisonAppendOutcome = "comparison_appended";
+      comparisonWriteOutcome = "comparison_write_succeeded";
+    } else {
+      comparisonAppendOutcome = "comparison_append_failed";
+      comparisonWriteOutcome = "comparison_write_failed";
+    }
+  }
+
+  const telemetryOutcome =
+    shadowResult.status === "accepted"
+      ? "second_opinion_used"
+      : shadowResult.status === "failed"
+        ? "second_opinion_failed"
+        : shadowResult.status === "rejected"
+          ? "second_opinion_rejected"
+          : eligibilityTrace.request_outcome === "budget_exhausted"
+            ? "second_opinion_failed"
+            : "second_opinion_skipped";
+  const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+    ...eligibilityTrace,
+    acceptance_outcome: getSecondOpinionAcceptanceOutcome(shadowResult),
+    comparison_append_outcome: comparisonAppendOutcome,
+    comparison_write_outcome: comparisonWriteOutcome,
+    extractor_reason:
+      shadowResult.status === "accepted"
+        ? undefined
+        : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+  };
+  const gateEvents =
+    shadowResult.status === "accepted"
+      ? (["second_opinion_used"] as const)
+      : shadowResult.status === "failed"
+        ? (["second_opinion_failed"] as const)
+        : shadowResult.status === "rejected"
+          ? (["second_opinion_rejected"] as const)
+          : ([] as const);
+
+  session = recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: session.case_memory?.turn_count ?? 0,
+    question_id: pendingQuestionId,
+    outcome: telemetryOutcome,
+    source: "second_opinion",
+    reason:
+      shadowResult.status === "accepted"
+        ? undefined
+        : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+    model:
+      shadowResult.status === "skipped"
+        ? undefined
+        : getModelRoute("extraction").primaryModel,
+    pending_before: hadUnresolved,
+    pending_after: false,
+    second_opinion_trace: secondOpinionTrace,
+    gate_events: [...gateEvents],
+  });
+
+  const latestSecondOpinionTrace =
+    getLatestSecondOpinionTraceObservation(session);
+  if (!latestSecondOpinionTrace) {
+    return session;
+  }
+
+  const chatTelemetryPersisted = await persistChatShadowTelemetrySnapshot({
+    serviceCalls: [latestSecondOpinionTrace],
+    shadowComparisons: recordedShadowComparison
+      ? [recordedShadowComparison]
+      : [],
+  });
+  if (chatTelemetryPersisted) {
+    return session;
+  }
+
+  const telemetryPersistenceFailureReason = recordedShadowComparison
+    ? "comparison_write_failed"
+    : "telemetry_write_failed";
+  return recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: session.case_memory?.turn_count ?? 0,
+    question_id: pendingQuestionId,
+    outcome: "second_opinion_failed",
+    source: "second_opinion",
+    reason: telemetryPersistenceFailureReason,
+    pending_before: hadUnresolved,
+    pending_after: false,
+    second_opinion_trace: {
+      ...secondOpinionTrace,
+      comparison_write_outcome: recordedShadowComparison
+        ? "comparison_write_failed"
+        : secondOpinionTrace.comparison_write_outcome,
+      extractor_reason: telemetryPersistenceFailureReason,
+    },
+    gate_events: recordedShadowComparison ? ["second_opinion_failed"] : [],
+  });
+}
+
 function humanizeEmergencySignal(signal: string): string {
   return signal.replace(/_/g, " ").replace(/\s+/g, " ").trim();
 }
@@ -1476,6 +1652,12 @@ export async function POST(request: Request) {
         (session.case_memory?.unresolved_question_ids ?? []).includes(
           pendingTelemetryQuestionId
         );
+      const previousClarificationAttempts = getClarificationAttemptCount(
+        session,
+        pendingTelemetryQuestionId
+      );
+      const recoveredPendingAnswerValue =
+        mergedAnswers[pendingTelemetryQuestionId];
       session = recordConversationTelemetry(session, {
         event: "pending_recovery",
         turn_count: session.case_memory?.turn_count ?? 0,
@@ -1495,26 +1677,49 @@ export async function POST(request: Request) {
             : []),
         ],
       });
-      session = await recordSecondOpinionNotRequestedTrace({
-        session,
-        mode: getSecondOpinionExtractorMode(),
-        pendingQuestionId: pendingTelemetryQuestionId,
-        ownerMessage: lastUserMessage.content,
-        primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
-          extracted.answers || {},
-          pendingTelemetryQuestionId
-        ),
-        deterministicResolved: true,
-        clarificationAttempts: getCurrentTurnClarificationAttemptCount(
+      const shadowSamplingMode = getSecondOpinionExtractorMode();
+      if (
+        shadowSamplingMode === "shadow" &&
+        previousClarificationAttempts === 0 &&
+        (typeof recoveredPendingAnswerValue === "string" ||
+          typeof recoveredPendingAnswerValue === "boolean" ||
+          typeof recoveredPendingAnswerValue === "number")
+      ) {
+        session = await recordSecondOpinionShadowSample({
           session,
-          pendingTelemetryQuestionId
-        ),
-        hadUnresolved: pendingWasUnresolved,
-        pendingAfter: false,
-        budgetState: createModelBudgetState(
-          ensureStructuredCaseMemory(session).model_budget_state
-        ),
-      });
+          pendingQuestionId: pendingTelemetryQuestionId,
+          ownerMessage: lastUserMessage.content,
+          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+            extracted.answers || {},
+            pendingTelemetryQuestionId
+          ),
+          clarificationAttempts: previousClarificationAttempts,
+          knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
+          primaryAnswerValue: recoveredPendingAnswerValue,
+          hadUnresolved: pendingWasUnresolved,
+        });
+      } else {
+        session = await recordSecondOpinionNotRequestedTrace({
+          session,
+          mode: shadowSamplingMode,
+          pendingQuestionId: pendingTelemetryQuestionId,
+          ownerMessage: lastUserMessage.content,
+          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+            extracted.answers || {},
+            pendingTelemetryQuestionId
+          ),
+          deterministicResolved: true,
+          clarificationAttempts: getCurrentTurnClarificationAttemptCount(
+            session,
+            pendingTelemetryQuestionId
+          ),
+          hadUnresolved: pendingWasUnresolved,
+          pendingAfter: false,
+          budgetState: createModelBudgetState(
+            ensureStructuredCaseMemory(session).model_budget_state
+          ),
+        });
+      }
     }
 
     if (
@@ -1616,6 +1821,10 @@ export async function POST(request: Request) {
           terminalOutcome = criticalInfoDecision.outcome;
         }
       } else if (pendingAnswer !== null) {
+        const previousClarificationAttempts = getClarificationAttemptCount(
+          session,
+          pendingQ
+        );
         session = transitionToAnswered({
           session,
           questionId: pendingQ,
@@ -1643,26 +1852,46 @@ export async function POST(request: Request) {
               : []),
           ],
         });
-        session = await recordSecondOpinionNotRequestedTrace({
-          session,
-          mode: getSecondOpinionExtractorMode(),
-          pendingQuestionId: pendingQ,
-          ownerMessage: lastUserMessage.content,
-          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
-            extracted.answers || {},
-            pendingQ
-          ),
-          deterministicResolved: true,
-          clarificationAttempts: getCurrentTurnClarificationAttemptCount(
+        const shadowSamplingMode = getSecondOpinionExtractorMode();
+        if (
+          shadowSamplingMode === "shadow" &&
+          previousClarificationAttempts === 0
+        ) {
+          session = await recordSecondOpinionShadowSample({
             session,
-            pendingQ
-          ),
-          hadUnresolved,
-          pendingAfter: false,
-          budgetState: createModelBudgetState(
-            ensureStructuredCaseMemory(session).model_budget_state
-          ),
-        });
+            pendingQuestionId: pendingQ,
+            ownerMessage: lastUserMessage.content,
+            primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+              extracted.answers || {},
+              pendingQ
+            ),
+            clarificationAttempts: previousClarificationAttempts,
+            knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
+            primaryAnswerValue: pendingAnswer.value,
+            hadUnresolved,
+          });
+        } else {
+          session = await recordSecondOpinionNotRequestedTrace({
+            session,
+            mode: shadowSamplingMode,
+            pendingQuestionId: pendingQ,
+            ownerMessage: lastUserMessage.content,
+            primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+              extracted.answers || {},
+              pendingQ
+            ),
+            deterministicResolved: true,
+            clarificationAttempts: getCurrentTurnClarificationAttemptCount(
+              session,
+              pendingQ
+            ),
+            hadUnresolved,
+            pendingAfter: false,
+            budgetState: createModelBudgetState(
+              ensureStructuredCaseMemory(session).model_budget_state
+            ),
+          });
+        }
       } else {
         const secondOpinionMode = getSecondOpinionExtractorMode();
         const secondOpinionPrimaryExtractionFailed =
