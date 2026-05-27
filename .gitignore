@@ -32,9 +32,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — only *.example templates are allowed in git
 .env*
 !.env*.example
+.envrc
+# explicitly block accidental temp/check env files
+.env.prod-check-temp
+.env.production-check2
 
 # vercel
 .vercel
