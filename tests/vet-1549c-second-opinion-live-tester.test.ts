@@ -24,7 +24,9 @@ const helper = helperModule as {
   scanVisibleTextForLeakage(
     text: string
   ): Array<{ marker: string; occurrences: number }>;
-  selectSafeFollowUpAnswer(questionText: string): { id: string; text: string };
+  selectSafeFollowUpAnswer(questionText: string):
+    | { id: string; text: string }
+    | undefined;
 };
 
 describe("VET-1549C second-opinion live tester helpers", () => {
@@ -96,6 +98,11 @@ describe("VET-1549C second-opinion live tester helpers", () => {
     ).toMatchObject({
       id: "breathing_rate",
     });
+    expect(
+      helper.selectSafeFollowUpAnswer(
+        "Has your dog been exposed to a new household cleaner?"
+      )
+    ).toBeUndefined();
   });
 
   it("detects owner-visible second-opinion telemetry markers without returning raw report text", () => {

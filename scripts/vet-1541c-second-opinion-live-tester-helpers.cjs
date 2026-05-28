@@ -58,11 +58,6 @@ const SAFE_FOLLOW_UP_ANSWERS = Object.freeze([
     pattern: /gum|gums|color/i,
     text: "Gums look pink.",
   },
-  {
-    id: "safe_default",
-    pattern: /./,
-    text: "The dry honking cough is the main issue. Breathing, gum color, energy, and appetite look normal.",
-  },
 ]);
 
 const FORBIDDEN_OWNER_PHRASES = Object.freeze([
