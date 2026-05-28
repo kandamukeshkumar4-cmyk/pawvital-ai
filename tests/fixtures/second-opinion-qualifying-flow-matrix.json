@@ -61,8 +61,8 @@
       }
     },
     {
-      "id": "primary_extraction_success_not_requested",
-      "description": "Primary extraction already answers the active pending question, so the route records not_requested instead of spending a second-opinion call.",
+      "id": "primary_extraction_success_requested_accepted",
+      "description": "Primary extraction already answers the active pending question, so shadow mode samples the same turn without changing the owner-visible answer.",
       "initialSymptoms": ["coughing"],
       "pendingQuestionId": "cough_type",
       "askedCount": 1,
@@ -74,15 +74,25 @@
           "cough_type": "dry_honking"
         }
       },
+      "secondOpinionModel": {
+        "response": {
+          "answered": true,
+          "questionId": "cough_type",
+          "answerValue": "dry_honking",
+          "confidence": 0.9,
+          "ownerPhrase": "dry honking cough",
+          "needsClarification": false
+        }
+      },
       "expected": {
-        "modelCalls": 0,
-        "shadowComparisons": 0,
+        "modelCalls": 1,
+        "shadowComparisons": 1,
         "trace": {
-          "eligibility_reason": "primary_extraction_succeeded",
-          "request_outcome": "not_requested",
-          "comparison_append_outcome": "not_applicable",
-          "comparison_write_outcome": "not_applicable",
-          "extractor_reason": "primary_extraction_succeeded"
+          "eligibility_reason": "shadow_primary_success_sampling",
+          "request_outcome": "requested",
+          "acceptance_outcome": "accepted",
+          "comparison_append_outcome": "comparison_appended",
+          "comparison_write_outcome": "comparison_write_succeeded"
         },
         "ownerAnswer": {
           "questionId": "cough_type",
