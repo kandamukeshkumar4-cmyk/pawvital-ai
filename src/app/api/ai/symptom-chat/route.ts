@@ -97,6 +97,7 @@ import {
   clearPendingQuestion,
   getClarificationAttemptCount,
   getPendingQuestionId,
+  getQuestionAskedCount,
   markPendingQuestionClarificationAttempt,
   pruneAnsweredQuestionState,
 } from "@/lib/symptom-chat/pending-question-state";
@@ -233,6 +234,26 @@ function getCurrentTurnClarificationAttemptCount(
 ): number {
   // The current owner reply is counted before the repeat-loop path persists it.
   return getClarificationAttemptCount(session, questionId) + 1;
+}
+
+function getPrimarySuccessShadowSamplingAttemptCount(
+  session: TriageSession,
+  questionId: string
+): number {
+  const previousClarificationAttempts = getClarificationAttemptCount(
+    session,
+    questionId
+  );
+  if (previousClarificationAttempts === 0) {
+    return 0;
+  }
+
+  // Production first-answer turns can arrive after the clarification counter has
+  // already been incremented. Use the asked-count as the stable first-answer
+  // signal, and keep later re-asks ineligible.
+  return getQuestionAskedCount(session, questionId) === 1
+    ? 0
+    : previousClarificationAttempts;
 }
 
 function getSecondOpinionAcceptanceOutcome(
@@ -1656,6 +1677,11 @@ export async function POST(request: Request) {
         session,
         pendingTelemetryQuestionId
       );
+      const shadowSamplingClarificationAttempts =
+        getPrimarySuccessShadowSamplingAttemptCount(
+          session,
+          pendingTelemetryQuestionId
+        );
       const recoveredPendingAnswerValue =
         mergedAnswers[pendingTelemetryQuestionId];
       session = recordConversationTelemetry(session, {
@@ -1680,7 +1706,7 @@ export async function POST(request: Request) {
       const shadowSamplingMode = getSecondOpinionExtractorMode();
       if (
         shadowSamplingMode === "shadow" &&
-        previousClarificationAttempts === 0 &&
+        shadowSamplingClarificationAttempts === 0 &&
         (typeof recoveredPendingAnswerValue === "string" ||
           typeof recoveredPendingAnswerValue === "boolean" ||
           typeof recoveredPendingAnswerValue === "number")
@@ -1693,7 +1719,7 @@ export async function POST(request: Request) {
             extracted.answers || {},
             pendingTelemetryQuestionId
           ),
-          clarificationAttempts: previousClarificationAttempts,
+          clarificationAttempts: shadowSamplingClarificationAttempts,
           knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
           primaryAnswerValue: recoveredPendingAnswerValue,
           hadUnresolved: pendingWasUnresolved,
@@ -1825,6 +1851,8 @@ export async function POST(request: Request) {
           session,
           pendingQ
         );
+        const shadowSamplingClarificationAttempts =
+          getPrimarySuccessShadowSamplingAttemptCount(session, pendingQ);
         session = transitionToAnswered({
           session,
           questionId: pendingQ,
@@ -1855,7 +1883,7 @@ export async function POST(request: Request) {
         const shadowSamplingMode = getSecondOpinionExtractorMode();
         if (
           shadowSamplingMode === "shadow" &&
-          previousClarificationAttempts === 0
+          shadowSamplingClarificationAttempts === 0
         ) {
           session = await recordSecondOpinionShadowSample({
             session,
@@ -1865,7 +1893,7 @@ export async function POST(request: Request) {
               extracted.answers || {},
               pendingQ
             ),
-            clarificationAttempts: previousClarificationAttempts,
+            clarificationAttempts: shadowSamplingClarificationAttempts,
             knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
             primaryAnswerValue: pendingAnswer.value,
             hadUnresolved,
