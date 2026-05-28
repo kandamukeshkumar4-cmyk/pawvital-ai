@@ -988,7 +988,7 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(
         secondOpinionQualifyingFlowMatrix.productionSafeTesterScript.expectedTrace
       ).toMatchObject({
-        eligibility_reason: "eligible",
+        eligibility_reason: "shadow_primary_success_sampling",
         request_outcome: "requested",
       });
       expect(
@@ -996,7 +996,7 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       ).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            text: "It has a honking sound.",
+            text: "It is a dry honking cough.",
           }),
         ])
       );
