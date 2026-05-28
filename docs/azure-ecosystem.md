@@ -22,10 +22,10 @@ remain owned by the existing PawVital clinical code.
 
 | Item | Status | Notes |
 | --- | --- | --- |
-| Budget | Manual required | CLI creation is RBAC-blocked. Create `$100` budget alerts at `50/80/100%` in Azure Portal Cost Management. |
-| Service principal | Required before production wiring | Create `pawvital-sp` scoped to `pawvital-rg` with `Key Vault Secrets User`. |
-| App env | Required before production wiring | Store only `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, and `AZURE_KEY_VAULT_NAME` in Vercel and local `.env.local`. |
-| Cognitive retention | Manual required | Disable data retention/abuse monitoring where each cognitive resource and Portal blade supports it. Record any unsupported resource in this doc. |
+| Budget | Manual required | `az consumption budget list` returned no budgets, and the budget PUT for `pawvital-budget` failed with `RBACAccessDenied` on 2026-05-28. Create `$100` budget alerts at `50/80/100%` in Azure Portal Cost Management. |
+| Service principal | Done | `pawvital-sp` was created on 2026-05-28. Client ID: `a0570346-7a1e-4c3e-9806-0a01b61f97cc`. It has `Key Vault Secrets User` at the `pawvital-rg` resource-group scope. |
+| App env | Done for primary production project | The four Azure bootstrap vars are present in ignored local `.env.local` and encrypted in Vercel Production for `pawvital-ai`. They were not added to previews or `pawvital-ai-build`, so non-production surfaces stay demo-safe unless explicitly enabled. |
+| Cognitive retention | Evidence captured | The deployed Azure AI resources expose no CLI-visible resource-level "disable abuse logging" switch. Use the service-specific notes below before enabling each feature. |
 
 ## Existing Resources
 
@@ -134,6 +134,29 @@ Initial flag keys:
 
 Emergency paths must bypass Azure middleware. Azure outages or quotas must never
 block deterministic emergency guidance.
+
+## Cognitive Retention Evidence
+
+Checked on 2026-05-28 against `pawvital-speech`, `pawvital-docintel`,
+`pawvital-contentsafety`, and `pawvital-translator` with
+`az cognitiveservices account show`. The ARM properties returned no
+service-level data-retention toggle for these resources. Current service
+boundary decisions:
+
+| Service | Retention / logging decision |
+| --- | --- |
+| Speech | Use real-time speech-to-text only for AZ-005. Microsoft documents real-time speech-to-text as server-memory processing with no data stored at rest. Do not call SDK `EnableAudioLogging()`, do not add `storeAudio=true`, and do not use batch transcription without an explicit TTL/delete design. |
+| Document Intelligence | AZ-006 may use analysis output as owner/app-confirmed context only. Microsoft documents analyze inputs/results as temporary same-region storage; analyze responses are retained for 24 hours and can be purged with the Delete Analyze Result API. Implement deletion after successful extraction where the SDK/API supports it. |
+| Content Safety | Microsoft documents that input text/images are not stored during detection, are not used for training, and Azure OpenAI abuse monitoring does not apply to Content Safety payloads. Use as an I/O filter only. |
+| Translator | Microsoft documents Translator as no-trace for submitted translation data. Text translation should be preferred for AZ-007; document translation needs a separate temporary-file handling review before use. |
+
+Reference docs:
+
+- Speech to text data privacy: https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/speech-service/speech-to-text/data-privacy-security
+- Speech audio/transcription logging: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/logging-audio-transcription
+- Document Intelligence data privacy: https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/document-intelligence/data-privacy-security
+- Content Safety data privacy: https://learn.microsoft.com/en-us/azure/foundry/responsible-ai/content-safety/data-privacy
+- Translator data privacy: https://learn.microsoft.com/en-us/legal/cognitive-services/translator/data-privacy-security
 
 ## Quota And Cost Guardrails
 
