@@ -205,11 +205,11 @@
     }
   ],
   "productionSafeTesterScript": {
-    "id": "bruno-cough-honking-first-clarification",
+    "id": "vet-1549c-cough-dry-honking-primary-success",
     "target": "Authenticated production UI only. Do not use unauthenticated API calls as proof.",
     "profile": "Use the saved dog profile Bruno, or another already invited tester dog profile.",
     "expectedTrace": {
-      "eligibility_reason": "eligible",
+      "eligibility_reason": "shadow_primary_success_sampling",
       "request_outcome": "requested"
     },
     "ownerTurns": [
@@ -218,8 +218,8 @@
         "text": "Coughing"
       },
       {
-        "phase": "first clarification answer",
-        "text": "It has a honking sound."
+        "phase": "cough type answer",
+        "text": "It is a dry honking cough."
       }
     ],
     "avoidOwnerPhrases": [
@@ -234,7 +234,8 @@
       "Sign in with an invited tester or admin account; do not paste credentials into logs or chat.",
       "Open the symptom checker in the authenticated UI and choose the saved dog profile.",
       "Submit the owner turns exactly as listed, stopping if the UI asks an emergency-screen question.",
-      "After the flow, rerun the shadow readout scheduler and inspect the sanitized secondOpinionTrace aggregate for requested > 0."
+      "Continue safe non-emergency answers until the final report appears.",
+      "Scan owner-visible report and History text for forbidden telemetry/debug markers before using the run as evidence."
     ]
   }
 }
