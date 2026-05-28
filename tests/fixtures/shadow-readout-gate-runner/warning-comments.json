@@ -1,0 +1,7 @@
+[
+  {
+    "id": 301,
+    "created_at": "2026-05-28T17:00:00Z",
+    "body": "## VET-1492C Scheduled Shadow Readout\n\nStatus: `readout_warning`\nDecision: `HOLD - telemetry readout returned a warning`\nReport count: `4`\nWarning: `Supabase telemetry read failed`\n\n<details><summary>Scheduler report</summary>\n\n# VET-1492C Scheduled Shadow Readout\n\n- generated_at: 2026-05-28T17:00:00.000Z\n- status: readout_warning\n- decision: HOLD - telemetry readout returned a warning\n\n## Readout\n\n- latest_window_report_created_at: 2026-05-28T16:55:00.000Z\n- report_count: 4\n- observation_count: 2\n- shadow_comparison_count: 1\n- warning: Supabase telemetry read failed\n\n## Second-Opinion Trace\n\n- request_outcome: requested=2, not_requested=1\n\n</details>"
+  }
+]

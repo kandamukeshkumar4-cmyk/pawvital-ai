@@ -22,7 +22,7 @@ const config: Config = {
   ],
   // Skip files that import Next.js server modules in unit tests
   transformIgnorePatterns: ["/node_modules/(?!openai)"],
-  modulePathIgnorePatterns: ["<rootDir>/Roo-Code"],
+  modulePathIgnorePatterns: ["<rootDir>/Roo-Code", "<rootDir>/.tmp"],
 };
 
 export default config;

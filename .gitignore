@@ -92,6 +92,8 @@ next-env.d.ts
 !/scripts/check-emergency-sentinels.mjs
 !/scripts/rate-limit-failover-harness.ts
 !/scripts/run-rate-limit-failover-harness.cjs
+!/scripts/shadow-readout-gate-runner.mjs
+!/scripts/shadow-readout-gate-runner-logic.cjs
 
 # Generated benchmark/deployment run reports
 /data/benchmark/scorecard-*.json
