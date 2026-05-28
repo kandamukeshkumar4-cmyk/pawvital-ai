@@ -128,6 +128,26 @@ export function getSecondOpinionExtractorMode(
   return getRouterSecondOpinionExtractorMode(rawValue);
 }
 
+export function getPrimarySuccessShadowSamplingAttemptCount({
+  previousClarificationAttempts,
+  questionAskedCount,
+}: {
+  previousClarificationAttempts: number;
+  questionAskedCount?: number;
+}): number {
+  if (questionAskedCount !== undefined && questionAskedCount > 1) {
+    return Math.max(previousClarificationAttempts, 1);
+  }
+
+  if (previousClarificationAttempts === 0) {
+    return 0;
+  }
+
+  // Production first-answer turns can arrive after the clarification counter has
+  // already been incremented. Use asked-count as the stable first-answer signal.
+  return questionAskedCount === 1 ? 0 : previousClarificationAttempts;
+}
+
 export function shouldAttemptSecondOpinionExtraction({
   mode,
   pendingQuestionId,

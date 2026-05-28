@@ -2,6 +2,7 @@ import {
   SECOND_OPINION_ELIGIBILITY_REASON_CODES,
   buildSecondOpinionEligibilityTrace,
   extractSecondOpinionPendingAnswer,
+  getPrimarySuccessShadowSamplingAttemptCount,
   getSecondOpinionExtractorMode,
   parseSecondOpinionExtractorResponse,
   shouldAttemptSecondOpinionExtraction,
@@ -633,6 +634,27 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
   });
 
   describe("VET-1544C shadow primary-success sampling", () => {
+    it("uses asked-count as the stable first-answer signal", () => {
+      expect(
+        getPrimarySuccessShadowSamplingAttemptCount({
+          previousClarificationAttempts: 1,
+          questionAskedCount: 1,
+        })
+      ).toBe(0);
+      expect(
+        getPrimarySuccessShadowSamplingAttemptCount({
+          previousClarificationAttempts: 1,
+          questionAskedCount: 2,
+        })
+      ).toBe(1);
+      expect(
+        getPrimarySuccessShadowSamplingAttemptCount({
+          previousClarificationAttempts: 0,
+          questionAskedCount: 2,
+        })
+      ).toBe(1);
+    });
+
     it("runs on the first primary-success answer turn when shadow sampling is enabled", () => {
       expect(
         shouldAttemptSecondOpinionExtraction({
