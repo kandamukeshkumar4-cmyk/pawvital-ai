@@ -1308,4 +1308,89 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       "report_claim_removed"
     );
   });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // VET-1546C-R3: report-time second-opinion trace reconstruction must not
+  // suppress genuine first-answer primary-success shadow sampling.
+  //
+  // Production scheduler readout reconstructs ONE trace per report from the
+  // sanitized client session (route-time traces are stripped). The previous
+  // reconstruction selected the MOST-RECENT answered question and used the
+  // END-of-session budget state, so fresh primary-success turns reconstructed
+  // as not_requested / budget_exhausted — never requested.
+  // ────────────────────────────────────────────────────────────────────────
+  describe("VET-1546C-R3 report-time second-opinion reconstruction", () => {
+    function buildFirstAnswerPrimarySuccessReportSession(options?: {
+      budgetExhausted?: boolean;
+    }): TriageSession {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      // Genuine first-answer primary success: asked once, no clarification.
+      session = recordAnswer(session, "cough_duration", "2 days");
+      // Later question that required a clarification round (re-asked).
+      session = recordAnswer(session, "cough_type", "dry");
+
+      const memory = session.case_memory!;
+      session.case_memory = {
+        ...memory,
+        latest_owner_turn: "It is a dry honking cough for about two days.",
+        question_asked_counts: {
+          cough_duration: 1,
+          cough_type: 2,
+        },
+        clarification_attempts: {
+          cough_duration: 0,
+          cough_type: 1,
+        },
+        ...(options?.budgetExhausted
+          ? {
+              model_budget_state: {
+                callCounts: { second_opinion: 2 },
+                circuitOpen: {},
+              },
+            }
+          : {}),
+      };
+
+      return session;
+    }
+
+    it("reconstructs requested for a fresh first-answer primary-success session even when the most-recent answer was clarified", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession()
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+
+      // Owner-facing report must not leak the internal trace.
+      expect(JSON.stringify(payload.report)).not.toContain("request_outcome=");
+      expect(JSON.stringify(payload.report)).not.toContain("eligibility_reason=");
+    });
+
+    it("does not let an exhausted end-of-session budget mask the first eligible primary-success sample", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({ budgetExhausted: true })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.request_outcome).not.toBe("budget_exhausted");
+      expect(traceParts.request_outcome).toBe("requested");
+    });
+  });
 });

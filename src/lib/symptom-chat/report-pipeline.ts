@@ -552,13 +552,52 @@ function hasSecondOpinionTrace(session: TriageSession): boolean {
   );
 }
 
+function isReportPrimarySuccessShadowSample(
+  session: TriageSession,
+  questionId: string
+): boolean {
+  const memory = ensureStructuredCaseMemory(session);
+  const hasExtractedAnswer = Object.prototype.hasOwnProperty.call(
+    session.extracted_answers,
+    questionId
+  );
+  const hasRecordedAnswer = (session.answered_questions ?? []).includes(
+    questionId
+  );
+  if (!hasExtractedAnswer || !hasRecordedAnswer) {
+    return false;
+  }
+
+  const shadowSamplingClarificationAttempts =
+    getPrimarySuccessShadowSamplingAttemptCount({
+      previousClarificationAttempts:
+        memory.clarification_attempts?.[questionId] ?? 0,
+      questionAskedCount: memory.question_asked_counts?.[questionId],
+    });
+
+  return shadowSamplingClarificationAttempts === 0;
+}
+
 function findSecondOpinionReportTraceQuestionId(
   session: TriageSession
 ): string | undefined {
   const memory = ensureStructuredCaseMemory(session);
   const clarificationAttempts = memory.clarification_attempts ?? {};
   const questionAskedCounts = memory.question_asked_counts ?? {};
-  const answeredQuestions = [...(session.answered_questions ?? [])].reverse();
+  const answeredInOrder = session.answered_questions ?? [];
+
+  // VET-1546C-R3: Prefer the earliest answered question that qualifies as a
+  // genuine first-answer primary-success shadow sample. Route-time records that
+  // turn as `requested`; the reconstruction must mirror it instead of biasing
+  // toward the most-recent (often clarified) answer.
+  const primarySuccessAnswered = answeredInOrder.find((questionId) =>
+    isReportPrimarySuccessShadowSample(session, questionId)
+  );
+  if (primarySuccessAnswered) {
+    return primarySuccessAnswered;
+  }
+
+  const answeredQuestions = [...answeredInOrder].reverse();
   const clarifiedAnswered = answeredQuestions.find(
     (questionId) => clarificationAttempts[questionId] !== undefined
   );
@@ -616,6 +655,18 @@ function appendReportSecondOpinionTraceIfMissing({
       shadowSamplingClarificationAttempts === 0
   );
 
+  // VET-1546C-R3: A primary-success shadow sample corresponds to the FIRST
+  // eligible second-opinion event of the session, which by definition had
+  // budget available (call count starts at zero). Reconstructing from the
+  // exhausted end-of-session call budget would mask it as `budget_exhausted`,
+  // so reset call counts for that representative while preserving a genuinely
+  // open circuit as a real safety signal.
+  const reconstructionBudgetState = primarySuccessShadowSampling
+    ? createModelBudgetState({
+        circuitOpen: memory.model_budget_state?.circuitOpen,
+      })
+    : createModelBudgetState(memory.model_budget_state);
+
   const eligibilityTrace = buildSecondOpinionEligibilityTrace({
     mode,
     pendingQuestionId: questionId,
@@ -626,7 +677,7 @@ function appendReportSecondOpinionTraceIfMissing({
       ? shadowSamplingClarificationAttempts
       : previousClarificationAttempts,
     repeatGuardAlreadyFired: false,
-    budgetState: createModelBudgetState(memory.model_budget_state),
+    budgetState: reconstructionBudgetState,
     isShadowSampling: primarySuccessShadowSampling,
   });
 
