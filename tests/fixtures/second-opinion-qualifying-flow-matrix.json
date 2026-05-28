@@ -41,7 +41,7 @@
       "description": "The same owner answer on a later clarification turn must fail closed and avoid a second-opinion request.",
       "initialSymptoms": ["coughing"],
       "pendingQuestionId": "cough_type",
-      "askedCount": 1,
+      "askedCount": 2,
       "clarificationAttempts": 1,
       "ownerMessage": "It has a honking sound.",
       "qwenExtraction": {
@@ -67,6 +67,46 @@
       "pendingQuestionId": "cough_type",
       "askedCount": 1,
       "clarificationAttempts": 0,
+      "ownerMessage": "It is a dry honking cough.",
+      "qwenExtraction": {
+        "symptoms": ["coughing"],
+        "answers": {
+          "cough_type": "dry_honking"
+        }
+      },
+      "secondOpinionModel": {
+        "response": {
+          "answered": true,
+          "questionId": "cough_type",
+          "answerValue": "dry_honking",
+          "confidence": 0.9,
+          "ownerPhrase": "dry honking cough",
+          "needsClarification": false
+        }
+      },
+      "expected": {
+        "modelCalls": 1,
+        "shadowComparisons": 1,
+        "trace": {
+          "eligibility_reason": "shadow_primary_success_sampling",
+          "request_outcome": "requested",
+          "acceptance_outcome": "accepted",
+          "comparison_append_outcome": "comparison_appended",
+          "comparison_write_outcome": "comparison_write_succeeded"
+        },
+        "ownerAnswer": {
+          "questionId": "cough_type",
+          "value": "dry_honking"
+        }
+      }
+    },
+    {
+      "id": "production_primary_success_attempt_count_one_requested_accepted",
+      "description": "Production first-answer sessions can reach the route with clarification_attempts already at 1; primary-success shadow sampling must still request on the first asked cough-type answer.",
+      "initialSymptoms": ["coughing"],
+      "pendingQuestionId": "cough_type",
+      "askedCount": 1,
+      "clarificationAttempts": 1,
       "ownerMessage": "It is a dry honking cough.",
       "qwenExtraction": {
         "symptoms": ["coughing"],
