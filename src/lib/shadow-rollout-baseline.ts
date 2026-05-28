@@ -61,9 +61,12 @@ export interface PersistedShadowServiceMetrics {
 export interface PersistedShadowBaselineSnapshot {
   generatedAt: string;
   windowHours: number;
+  windowStart: string;
   reportCount: number;
   parsedReportCount: number;
   malformedReportCount: number;
+  latestWindowReportCreatedAt: string | null;
+  latestParsedReportCreatedAt: string | null;
   reportPresenceCount: number;
   sessionPresenceCount: number;
   observationCount: number;
@@ -192,6 +195,15 @@ function countFromUnknown(value: unknown): number {
     return 0;
   }
   return Math.floor(parsed);
+}
+
+function timestampFromUnknown(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? value : null;
 }
 
 function normalizeCountRecord(value: unknown): Record<string, number> {
@@ -457,9 +469,12 @@ function buildReadoutTotalsFromSession(
 function buildSnapshotFromSession(input: {
   session: TriageSession;
   windowHours: number;
+  windowStart?: string;
   reportCount: number;
   parsedReportCount: number;
   malformedReportCount: number;
+  latestWindowReportCreatedAt?: string | null;
+  latestParsedReportCreatedAt?: string | null;
   readoutTotals?: ReadoutAggregateTotals;
   loadTest: ShadowLoadTestSummary | null;
   warning: string | null;
@@ -475,9 +490,14 @@ function buildSnapshotFromSession(input: {
   return {
     generatedAt: new Date().toISOString(),
     windowHours: input.windowHours,
+    windowStart:
+      input.windowStart ??
+      new Date(Date.now() - input.windowHours * 60 * 60 * 1000).toISOString(),
     reportCount: input.reportCount,
     parsedReportCount: input.parsedReportCount,
     malformedReportCount: input.malformedReportCount,
+    latestWindowReportCreatedAt: input.latestWindowReportCreatedAt ?? null,
+    latestParsedReportCreatedAt: input.latestParsedReportCreatedAt ?? null,
     reportPresenceCount: readoutTotals.reportPresenceCount,
     sessionPresenceCount: readoutTotals.sessionPresenceCount,
     observationCount: readoutTotals.observationCount,
@@ -706,7 +726,7 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   try {
     const result = await supabase
       .from("symptom_checks")
-      .select("id, ai_response")
+      .select("id, created_at, ai_response")
       .gte("created_at", sinceIso)
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -744,15 +764,27 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   let malformedReportCount = 0;
   let readoutTotals = emptyReadoutAggregateTotals();
   let warning: string | null = null;
+  let latestWindowReportCreatedAt: string | null = null;
+  let latestParsedReportCreatedAt: string | null = null;
 
   for (const row of data || []) {
-    const report = parseReportPayload((row as Record<string, unknown>).ai_response);
+    const candidate = row as Record<string, unknown>;
+    const createdAt = timestampFromUnknown(candidate.created_at);
+    if (!latestWindowReportCreatedAt && createdAt) {
+      latestWindowReportCreatedAt = createdAt;
+    }
+
+    const report = parseReportPayload(candidate.ai_response);
     if (!report) {
       malformedReportCount += 1;
       continue;
     }
 
     parsedReportCount += 1;
+    if (!latestParsedReportCreatedAt && createdAt) {
+      latestParsedReportCreatedAt = createdAt;
+    }
+
     const aggregateReadout = normalizeReadoutAggregate(
       report.system_observability
     );
@@ -813,9 +845,12 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   return buildSnapshotFromSession({
     session: emptySession,
     windowHours,
+    windowStart: sinceIso,
     reportCount: (data || []).length,
     parsedReportCount,
     malformedReportCount,
+    latestWindowReportCreatedAt,
+    latestParsedReportCreatedAt,
     readoutTotals,
     loadTest,
     warning,

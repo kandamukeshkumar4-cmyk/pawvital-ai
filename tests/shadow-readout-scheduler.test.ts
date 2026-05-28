@@ -39,6 +39,9 @@ describe("shadow readout scheduler decision logic", () => {
       ok: true,
       summary: { overallStatus: "insufficient_data" },
       baseline: {
+        windowStart: "2026-05-26T02:00:00.000Z",
+        latestWindowReportCreatedAt: "2026-05-27T01:55:00.000Z",
+        latestParsedReportCreatedAt: "2026-05-27T01:55:00.000Z",
         reportCount: 2,
         parsedReportCount: 2,
         malformedReportCount: 0,
@@ -76,6 +79,13 @@ describe("shadow readout scheduler decision logic", () => {
         timeouts: 0,
       },
     ]);
+    expect(readout.windowStart).toBe("2026-05-26T02:00:00.000Z");
+    expect(readout.latestWindowReportCreatedAt).toBe(
+      "2026-05-27T01:55:00.000Z"
+    );
+    expect(readout.latestParsedReportCreatedAt).toBe(
+      "2026-05-27T01:55:00.000Z"
+    );
     expect(readout.secondOpinionTrace).toEqual({
       total: 2,
       eligibilityReasonCounts: { eligible: 1, feature_disabled: 1 },

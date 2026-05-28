@@ -102,9 +102,12 @@ describe("shadow-rollout route", () => {
     mockBuildPersistedShadowBaselineSnapshot.mockResolvedValue({
       generatedAt: "2026-04-14T00:00:00.000Z",
       windowHours: 24,
+      windowStart: "2026-04-13T00:00:00.000Z",
       reportCount: 12,
       parsedReportCount: 10,
       malformedReportCount: 2,
+      latestWindowReportCreatedAt: "2026-04-14T00:00:00.000Z",
+      latestParsedReportCreatedAt: "2026-04-13T23:00:00.000Z",
       reportPresenceCount: 10,
       sessionPresenceCount: 10,
       observationCount: 18,
@@ -308,7 +311,10 @@ describe("shadow-rollout route", () => {
     expect(payload.baseline).toEqual(
       expect.objectContaining({
         windowHours: 24,
+        windowStart: "2026-04-13T00:00:00.000Z",
         reportCount: 12,
+        latestWindowReportCreatedAt: "2026-04-14T00:00:00.000Z",
+        latestParsedReportCreatedAt: "2026-04-13T23:00:00.000Z",
         reportPresenceCount: 10,
         sessionPresenceCount: 10,
         observationCount: 18,

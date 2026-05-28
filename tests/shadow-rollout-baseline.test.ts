@@ -116,6 +116,64 @@ describe("shadow rollout baseline persistence", () => {
     expect(mockListShadowTelemetrySnapshots).not.toHaveBeenCalled();
   });
 
+  it("surfaces sanitized window high-watermarks for counted History rows", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-newest-malformed",
+          created_at: "2026-05-27T02:45:00.000Z",
+          ai_response: "{not-json",
+        },
+        {
+          id: "check-newest-parsed",
+          created_at: "2026-05-27T02:30:00.000Z",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 1,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(2);
+    expect(snapshot.parsedReportCount).toBe(1);
+    expect(snapshot.malformedReportCount).toBe(1);
+    expect(snapshot.latestWindowReportCreatedAt).toBe(
+      "2026-05-27T02:45:00.000Z"
+    );
+    expect(snapshot.latestParsedReportCreatedAt).toBe(
+      "2026-05-27T02:30:00.000Z"
+    );
+    expect(snapshot.windowStart).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+    );
+    expect(select).toHaveBeenCalledWith("id, created_at, ai_response");
+  });
+
   it("adds chat-turn shadow comparison snapshots to the live aggregate report shape", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [
