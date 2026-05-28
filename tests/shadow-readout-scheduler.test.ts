@@ -40,8 +40,13 @@ describe("shadow readout scheduler decision logic", () => {
       summary: { overallStatus: "insufficient_data" },
       baseline: {
         windowStart: "2026-05-26T02:00:00.000Z",
+        sourceTable: "symptom_checks",
+        sourceProjectRef: "gswjpmgxidofwmjngavh",
+        queryLimit: 1000,
+        rowVisibilityMode: "matched_created_at_window",
         latestWindowReportCreatedAt: "2026-05-27T01:55:00.000Z",
         latestParsedReportCreatedAt: "2026-05-27T01:55:00.000Z",
+        latestAnyReportCreatedAt: "2026-05-27T01:55:00.000Z",
         reportCount: 2,
         parsedReportCount: 2,
         malformedReportCount: 0,
@@ -80,10 +85,17 @@ describe("shadow readout scheduler decision logic", () => {
       },
     ]);
     expect(readout.windowStart).toBe("2026-05-26T02:00:00.000Z");
+    expect(readout.sourceTable).toBe("symptom_checks");
+    expect(readout.sourceProjectRef).toBe("gswjpmgxidofwmjngavh");
+    expect(readout.queryLimit).toBe(1000);
+    expect(readout.rowVisibilityMode).toBe("matched_created_at_window");
     expect(readout.latestWindowReportCreatedAt).toBe(
       "2026-05-27T01:55:00.000Z"
     );
     expect(readout.latestParsedReportCreatedAt).toBe(
+      "2026-05-27T01:55:00.000Z"
+    );
+    expect(readout.latestAnyReportCreatedAt).toBe(
       "2026-05-27T01:55:00.000Z"
     );
     expect(readout.secondOpinionTrace).toEqual({

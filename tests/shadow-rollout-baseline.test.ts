@@ -174,6 +174,59 @@ describe("shadow rollout baseline persistence", () => {
     expect(select).toHaveBeenCalledWith("id, created_at, ai_response");
   });
 
+  it("diagnoses History rows excluded by the created_at readout window", async () => {
+    const inWindowLimit = jest.fn().mockResolvedValue({ data: [], error: null });
+    const inWindowOrder = jest.fn(() => ({ limit: inWindowLimit }));
+    const inWindowGte = jest.fn(() => ({ order: inWindowOrder }));
+    const inWindowSelect = jest.fn(() => ({ gte: inWindowGte }));
+
+    const latestAnyLimit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-outside-window",
+          created_at: "2026-05-26T22:45:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const latestAnyOrder = jest.fn(() => ({ limit: latestAnyLimit }));
+    const latestAnySelect = jest.fn(() => ({ order: latestAnyOrder }));
+
+    const from = jest
+      .fn()
+      .mockReturnValueOnce({ select: inWindowSelect })
+      .mockReturnValueOnce({ select: latestAnySelect });
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const nowSpy = jest
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date("2026-05-28T01:06:39.498Z").getTime());
+
+    try {
+      const { buildPersistedShadowBaselineSnapshot } = await import(
+        "@/lib/shadow-rollout-baseline"
+      );
+      const snapshot = await buildPersistedShadowBaselineSnapshot({
+        windowHours: 24,
+        limit: 100,
+      });
+
+      expect(snapshot.reportCount).toBe(0);
+      expect(snapshot.windowStart).toBe("2026-05-27T01:06:39.498Z");
+      expect(snapshot.latestAnyReportCreatedAt).toBe(
+        "2026-05-26T22:45:00.000Z"
+      );
+      expect(snapshot.rowVisibilityMode).toBe("outside_created_at_window");
+      expect(snapshot.queryLimit).toBe(100);
+      expect(inWindowGte).toHaveBeenCalledWith(
+        "created_at",
+        "2026-05-27T01:06:39.498Z"
+      );
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("adds chat-turn shadow comparison snapshots to the live aggregate report shape", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [
