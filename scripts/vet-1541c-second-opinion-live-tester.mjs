@@ -247,6 +247,31 @@ async function waitForFinalReport(page, timeoutMs) {
   await reportHeading.waitFor({ timeout: timeoutMs });
 }
 
+async function waitForHistoryScanTarget(page, timeoutMs) {
+  return page
+    .waitForFunction(
+      () => {
+        const bodyText = document.body?.innerText || "";
+        const hasReportButton = Array.from(document.querySelectorAll("button")).some(
+          (button) => /View Full Report/i.test(button.textContent || "")
+        );
+        if (hasReportButton) return "report";
+        if (
+          /No symptom checks yet|Saved symptom-check reports are temporarily unavailable|Add a dog to see history/i.test(
+            bodyText
+          )
+        ) {
+          return "terminal";
+        }
+        return null;
+      },
+      null,
+      { timeout: timeoutMs }
+    )
+    .then((handle) => handle.jsonValue())
+    .catch(() => "timeout");
+}
+
 async function scanHistoryReport(page, options) {
   await page.goto(appUrl(options.baseUrl, "/history"), {
     waitUntil: "domcontentloaded",
@@ -265,12 +290,19 @@ async function scanHistoryReport(page, options) {
     .getByRole("heading", { name: /Symptom Check History/i })
     .waitFor({ timeout: options.timeoutMs });
 
+  const historyOutcome = await waitForHistoryScanTarget(page, options.timeoutMs);
   const viewFullReport = page.getByRole("button", { name: /View Full Report/i });
-  if (!(await viewFullReport.first().isVisible().catch(() => false))) {
+  if (
+    historyOutcome !== "report" ||
+    !(await viewFullReport.first().isVisible().catch(() => false))
+  ) {
     return {
       scanned: false,
       findings: [],
-      note: "History page loaded, but no visible saved report row was available to expand.",
+      note:
+        historyOutcome === "timeout"
+          ? "History page did not finish loading a saved report row or terminal empty/error state before timeout."
+          : "History page loaded, but no visible saved report row was available to expand.",
     };
   }
 
