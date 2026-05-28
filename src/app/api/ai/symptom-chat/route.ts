@@ -128,6 +128,7 @@ import { decideRepeatLoopGuard } from "@/lib/symptom-chat/repeat-loop-guard";
 import {
   buildSecondOpinionEligibilityTrace,
   extractSecondOpinionPendingAnswer,
+  getPrimarySuccessShadowSamplingAttemptCount as resolvePrimarySuccessShadowSamplingAttemptCount,
   getSecondOpinionExtractorMode,
   type SecondOpinionExtractorMode,
   type SecondOpinionExtractionResult,
@@ -240,20 +241,13 @@ function getPrimarySuccessShadowSamplingAttemptCount(
   session: TriageSession,
   questionId: string
 ): number {
-  const previousClarificationAttempts = getClarificationAttemptCount(
-    session,
-    questionId
-  );
-  if (previousClarificationAttempts === 0) {
-    return 0;
-  }
-
-  // Production first-answer turns can arrive after the clarification counter has
-  // already been incremented. Use the asked-count as the stable first-answer
-  // signal, and keep later re-asks ineligible.
-  return getQuestionAskedCount(session, questionId) === 1
-    ? 0
-    : previousClarificationAttempts;
+  return resolvePrimarySuccessShadowSamplingAttemptCount({
+    previousClarificationAttempts: getClarificationAttemptCount(
+      session,
+      questionId
+    ),
+    questionAskedCount: getQuestionAskedCount(session, questionId),
+  });
 }
 
 function getSecondOpinionAcceptanceOutcome(

@@ -71,6 +71,7 @@ import {
 } from "./final-safety-verifier";
 import {
   buildSecondOpinionEligibilityTrace,
+  getPrimarySuccessShadowSamplingAttemptCount,
   getSecondOpinionExtractorMode,
 } from "./second-opinion-extractor";
 
@@ -598,6 +599,22 @@ function appendReportSecondOpinionTraceIfMissing({
   const hasRecordedAnswer = questionId
     ? (session.answered_questions ?? []).includes(questionId)
     : false;
+  const previousClarificationAttempts = questionId
+    ? (clarificationAttempts[questionId] ?? 0)
+    : 0;
+  const shadowSamplingClarificationAttempts = questionId
+    ? getPrimarySuccessShadowSamplingAttemptCount({
+        previousClarificationAttempts,
+        questionAskedCount: memory.question_asked_counts?.[questionId],
+      })
+    : 0;
+  const primarySuccessShadowSampling = Boolean(
+    questionId &&
+      mode === "shadow" &&
+      hasExtractedAnswer &&
+      hasRecordedAnswer &&
+      shadowSamplingClarificationAttempts === 0
+  );
 
   const eligibilityTrace = buildSecondOpinionEligibilityTrace({
     mode,
@@ -605,11 +622,12 @@ function appendReportSecondOpinionTraceIfMissing({
     ownerMessage,
     primaryExtractionFailed: !hasExtractedAnswer,
     deterministicResolved: hasRecordedAnswer,
-    clarificationAttempts: questionId
-      ? (clarificationAttempts[questionId] ?? 0)
-      : 0,
+    clarificationAttempts: primarySuccessShadowSampling
+      ? shadowSamplingClarificationAttempts
+      : previousClarificationAttempts,
     repeatGuardAlreadyFired: false,
     budgetState: createModelBudgetState(memory.model_budget_state),
+    isShadowSampling: primarySuccessShadowSampling,
   });
 
   const secondOpinionTrace: SecondOpinionTraceTelemetry = {

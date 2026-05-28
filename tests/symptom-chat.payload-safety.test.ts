@@ -717,6 +717,105 @@ describe("VET-1014 terminal payload safety pack", () => {
     }
   });
 
+  it("reconstructs requested primary-success sampling for counted production reports", async () => {
+    const originalMode = process.env.SECOND_OPINION_EXTRACTOR;
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+    let session = addSymptoms(createSession(), ["coughing"]);
+    session = {
+      ...session,
+      answered_questions: ["cough_type"],
+      extracted_answers: {
+        ...session.extracted_answers,
+        cough_type: "dry_honking",
+      },
+      last_question_asked: "cough_duration",
+      case_memory: {
+        ...session.case_memory!,
+        pending_question_id: "cough_duration",
+        unresolved_question_ids: ["cough_duration"],
+        question_asked_counts: {
+          ...session.case_memory!.question_asked_counts,
+          cough_type: 1,
+          cough_duration: 1,
+        },
+        clarification_attempts: {
+          ...session.case_memory!.clarification_attempts,
+          cough_type: 1,
+        },
+        service_observations: [],
+        shadow_comparisons: [],
+      },
+    };
+
+    mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Cough needs veterinary follow-up",
+        explanation: "A honking cough can need veterinary follow-up.",
+        differential_diagnoses: [],
+        clinical_notes: "Monitor cough character and breathing effort.",
+        recommended_tests: [],
+        home_care: [],
+        actions: ["Call your veterinarian if coughing continues."],
+        warning_signs: ["Breathing trouble"],
+        vet_questions: [],
+        confidence: 0.7,
+      })
+    );
+    mockVerifyWithGLM.mockResolvedValueOnce(
+      JSON.stringify({
+        safe: true,
+        corrections: {},
+        reasoning: "Report is safe.",
+      })
+    );
+
+    try {
+      const { response, payload } = await runReport(session, DOG);
+      const persistedReport = mockSaveSymptomReportToDB.mock.calls[0]?.[2] as
+        | { system_observability?: Record<string, unknown> }
+        | undefined;
+      const ownerTelemetry = payload.report?.system_observability as
+        | Record<string, unknown>
+        | undefined;
+      const readout = persistedReport?.system_observability?.shadowReadout as
+        | Record<string, unknown>
+        | undefined;
+      const secondOpinionTrace = readout?.secondOpinionTrace as
+        | Record<string, unknown>
+        | undefined;
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(ownerTelemetry?.shadowReadout).toBeUndefined();
+      expect(secondOpinionTrace).toEqual(
+        expect.objectContaining({
+          total: 1,
+          eligibilityReasonCounts: { shadow_primary_success_sampling: 1 },
+          requestOutcomeCounts: { requested: 1 },
+          comparisonAppendOutcomeCounts: { not_applicable: 1 },
+          comparisonWriteOutcomeCounts: { not_applicable: 1 },
+          extractorReasonCounts: { shadow_primary_success_sampling: 1 },
+          readoutCountedCount: 0,
+        })
+      );
+
+      const ownerJson = JSON.stringify(payload);
+      expect(ownerJson).not.toContain("shadowReadout");
+      expect(ownerJson).not.toContain("secondOpinionTrace");
+      expect(ownerJson).not.toContain("eligibility_reason=");
+      expect(ownerJson).not.toContain("request_outcome=");
+    } finally {
+      if (originalMode === undefined) {
+        delete process.env.SECOND_OPINION_EXTRACTOR;
+      } else {
+        process.env.SECOND_OPINION_EXTRACTOR = originalMode;
+      }
+    }
+  });
+
   it("reconstructs a sanitized second-opinion report trace after client session sanitization", async () => {
     const originalMode = process.env.SECOND_OPINION_EXTRACTOR;
     process.env.SECOND_OPINION_EXTRACTOR = "shadow";
