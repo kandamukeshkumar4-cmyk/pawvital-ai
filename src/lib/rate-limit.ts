@@ -112,6 +112,23 @@ export const generalApiLimiter = registerFallbackConfig(
   }
 );
 
+/** Azure Translator: 20 requests per minute per user */
+export const translatorApiLimiter = registerFallbackConfig(
+  redis
+    ? new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(20, "1 m"),
+        prefix: "rl:azure-translator",
+        analytics: true,
+      })
+    : null,
+  {
+    limit: 20,
+    scope: "azure-translator",
+    windowMs: DEFAULT_FALLBACK_WINDOW_MS,
+  }
+);
+
 // ── Helper ──────────────────────────────────────────────────────────────────
 
 export type RateLimitResult =

@@ -145,4 +145,88 @@ describe("tester onboarding boundaries on the symptom checker", () => {
       screen.getByRole("button", { name: "Generate Emergency Vet Summary" })
     ).toBeTruthy();
   });
+
+  it("keeps multilingual owner display separate from English clinical API messages", async () => {
+    const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (input === "/api/azure/translator") {
+        const body = JSON.parse(String(init?.body ?? "{}")) as {
+          targetLanguage?: string;
+          texts?: string[];
+        };
+        return {
+          json: async () =>
+            body.targetLanguage === "en"
+              ? {
+                  detectedLanguage: "es",
+                  enabled: true,
+                  sourceLanguage: null,
+                  targetLanguage: "en",
+                  translated: true,
+                  translations: ["Buddy is vomiting"],
+                }
+              : {
+                  detectedLanguage: null,
+                  enabled: true,
+                  sourceLanguage: "en",
+                  targetLanguage: "es",
+                  translated: true,
+                  translations: ["¿Cuántas veces ha vomitado Buddy?"],
+                },
+          ok: true,
+          status: 200,
+        };
+      }
+
+      return {
+        json: async () => ({
+          conversationState: "asking",
+          message: "How many times has Buddy vomited?",
+          session: {
+            answered_questions: {},
+            unresolved_question_ids: ["vomiting_frequency"],
+          },
+          type: "question",
+        }),
+        ok: true,
+        status: 200,
+      };
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    renderSymptomChecker();
+    acknowledgeBoundary();
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "Describe what's going on with Buddy or attach a photo..."
+      ),
+      {
+        target: { value: "Buddy está vomitando" },
+      }
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/ai/symptom-chat",
+        expect.any(Object)
+      );
+    });
+
+    const symptomCall = fetchMock.mock.calls.find(
+      ([input]) => input === "/api/ai/symptom-chat"
+    );
+    const symptomPayload = JSON.parse(
+      String((symptomCall?.[1] as RequestInit | undefined)?.body ?? "{}")
+    ) as { messages: Array<{ content: string; role: string }> };
+
+    expect(symptomPayload.messages.at(-1)).toEqual({
+      content: "Buddy is vomiting",
+      role: "user",
+    });
+    expect(await screen.findByText("Buddy está vomitando")).toBeTruthy();
+    expect(
+      await screen.findByText("¿Cuántas veces ha vomitado Buddy?")
+    ).toBeTruthy();
+  });
 });
