@@ -322,7 +322,7 @@ export default function SymptomCheckerPage() {
   );
 
   useWebPubSubLiveUpdates({
-    enabled: sessionStarted,
+    enabled: Boolean(pet),
     onConnectionState: handleLiveConnectionState,
     onUpdate: handleLiveUpdate,
     sessionId: liveSessionIdRef.current,
