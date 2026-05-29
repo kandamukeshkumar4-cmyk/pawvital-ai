@@ -369,6 +369,26 @@ function mockAcceptedReportSecondOpinionForCoughDuration() {
   );
 }
 
+function mockDelayedAcceptedReportSecondOpinionForCoughDuration(delayMs: number) {
+  mockComplete.mockImplementationOnce(
+    () =>
+      new Promise<string>((resolve) => {
+        setTimeout(() => {
+          resolve(
+            JSON.stringify({
+              answered: true,
+              questionId: "cough_duration",
+              answerValue: "2 days",
+              confidence: 0.91,
+              ownerPhrase: "about two days",
+              needsClarification: false,
+            })
+          );
+        }, delayMs);
+      })
+  );
+}
+
 function mockRejectedReportSecondOpinionForCoughDuration() {
   mockComplete.mockResolvedValueOnce(
     JSON.stringify({
@@ -1421,6 +1441,37 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       // Owner-facing report must not leak the internal trace.
       expect(JSON.stringify(payload.report)).not.toContain("request_outcome=");
       expect(JSON.stringify(payload.report)).not.toContain("eligibility_reason=");
+    });
+
+    it("allows report-time primary-success reconstruction to use the extraction role timeout budget", async () => {
+      jest.useFakeTimers();
+      try {
+        process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+        mockDelayedAcceptedReportSecondOpinionForCoughDuration(30_000);
+
+        const reportPromise = postReport(buildFirstAnswerPrimarySuccessReportSession());
+        await jest.advanceTimersByTimeAsync(30_000);
+        const { response, payload } = await reportPromise;
+        await jest.runOnlyPendingTimersAsync();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("report");
+
+        const traceParts = getLatestSecondOpinionTraceParts();
+        expect(traceParts.eligibility_reason).toBe(
+          "shadow_primary_success_sampling"
+        );
+        expect(traceParts.request_outcome).toBe("requested");
+        expect(traceParts.acceptance_outcome).toBe("accepted");
+        expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+        expect(traceParts.comparison_write_outcome).toBe(
+          "comparison_write_succeeded"
+        );
+        expect(mockComplete).toHaveBeenCalledTimes(1);
+        expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it("keeps requested primary-success reconstruction observable when the report-time extractor rejects the answer", async () => {

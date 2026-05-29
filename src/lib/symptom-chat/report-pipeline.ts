@@ -47,6 +47,7 @@ import {
   type TelemetryGateEvent,
 } from "@/lib/symptom-memory";
 import { createModelBudgetState } from "@/lib/model-budget";
+import { getRoleTimeoutMs } from "@/lib/model-router";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
   describeLiveTrafficDecision,
@@ -98,7 +99,8 @@ const URGENCY_TO_RECOMMENDATION: Record<string, string> = {
   moderate: "vet_48h",
   low: "monitor",
 };
-const REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS = 20_000;
+const REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS =
+  getRoleTimeoutMs("extraction");
 const REPORT_CLAIM_SECTION_PATTERNS = [
   /top differentials:/i,
   /recommended diagnostics:/i,
