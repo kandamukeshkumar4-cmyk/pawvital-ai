@@ -56,6 +56,7 @@ const mockEmit = jest.fn();
 const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockTrackRouteTelemetry = jest.fn();
 const mockTrackException = jest.fn();
+const mockPublishTriageLiveUpdate = jest.fn();
 const mockEventType = {
   REPORT_READY: "REPORT_READY",
   URGENCY_HIGH: "URGENCY_HIGH",
@@ -238,6 +239,25 @@ jest.mock("@/lib/azure/telemetry", () => ({
   trackRouteTelemetry: (...args: unknown[]) => mockTrackRouteTelemetry(...args),
   trackException: (...args: unknown[]) => mockTrackException(...args),
 }));
+
+jest.mock("@/lib/azure/web-pubsub", () => ({
+  normalizeWebPubSubSessionId: (value: unknown) => {
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      trimmed,
+    )
+      ? trimmed.toLowerCase()
+      : null;
+  },
+  publishTriageLiveUpdate: (...args: unknown[]) =>
+    mockPublishTriageLiveUpdate(...args),
+}));
+
+const LIVE_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 
 const PET = {
   name: "Bruno",
@@ -490,6 +510,29 @@ function buildErrorSidecarResult(
   return { ok: false, category, error, latencyMs, service };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => {
+    resolve = resolver;
+  });
+
+  return { promise, resolve };
+}
+
+async function waitForMockCalls(
+  mock: { mock: { calls: unknown[][] } },
+  count: number,
+) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (mock.mock.calls.length >= count) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  throw new Error(`Expected at least ${count} mock calls`);
+}
+
 describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -661,6 +704,10 @@ describe("symptom-chat mixed text + image routing", () => {
     });
     mockEvaluateImageGate.mockResolvedValue(null);
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockPublishTriageLiveUpdate.mockResolvedValue({
+      enabled: true,
+      published: true,
+    });
   });
 
   it("records sanitized route telemetry for rate-limited symptom-chat requests", async () => {
@@ -688,6 +735,185 @@ describe("symptom-chat mixed text + image routing", () => {
       "coughing"
     );
     expect(mockTrackException).not.toHaveBeenCalled();
+  });
+
+  it("publishes metadata-only live update statuses for authenticated sessions", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: LIVE_SESSION_ID,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    await POST(liveRequest);
+
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(1, {
+      action: "chat",
+      sessionId: LIVE_SESSION_ID,
+      status: "processing",
+      userId: "user-1",
+    });
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
+      action: "chat",
+      sessionId: LIVE_SESSION_ID,
+      status: "response_ready",
+      userId: "user-1",
+    });
+    expect(JSON.stringify(mockPublishTriageLiveUpdate.mock.calls)).not.toContain(
+      "limping",
+    );
+  });
+
+  it("does not schedule live updates for unsafe live session IDs", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: "../live session",
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    await POST(liveRequest);
+
+    expect(mockPublishTriageLiveUpdate).not.toHaveBeenCalled();
+  });
+
+  it("awaits the terminal live update before returning", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const terminalPublish = createDeferred<{
+      enabled: true;
+      published: true;
+    }>();
+    mockPublishTriageLiveUpdate
+      .mockResolvedValueOnce({ enabled: true, published: true })
+      .mockReturnValueOnce(terminalPublish.promise);
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: LIVE_SESSION_ID,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const responsePromise = POST(liveRequest);
+    await waitForMockCalls(mockPublishTriageLiveUpdate, 2);
+
+    let settled = false;
+    void responsePromise.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(settled).toBe(false);
+
+    terminalPublish.resolve({ enabled: true, published: true });
+    const response = await responsePromise;
+
+    expect(response.status).toBe(200);
+    expect(settled).toBe(true);
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
+      action: "chat",
+      sessionId: LIVE_SESSION_ID,
+      status: "response_ready",
+      userId: "user-1",
+    });
+  });
+
+  it("preserves live update order when processing publish is slow", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const processingPublish = createDeferred<{
+      enabled: true;
+      published: true;
+    }>();
+    mockPublishTriageLiveUpdate
+      .mockReturnValueOnce(processingPublish.promise)
+      .mockResolvedValueOnce({ enabled: true, published: true });
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: LIVE_SESSION_ID,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const responsePromise = POST(liveRequest);
+    await waitForMockCalls(mockPublishTriageLiveUpdate, 1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockPublishTriageLiveUpdate).toHaveBeenCalledTimes(1);
+
+    let settled = false;
+    void responsePromise.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+
+    processingPublish.resolve({ enabled: true, published: true });
+    const response = await responsePromise;
+
+    expect(response.status).toBe(200);
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(1, {
+      action: "chat",
+      sessionId: LIVE_SESSION_ID,
+      status: "processing",
+      userId: "user-1",
+    });
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
+      action: "chat",
+      sessionId: LIVE_SESSION_ID,
+      status: "response_ready",
+      userId: "user-1",
+    });
   });
 
   it("fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up", async () => {
