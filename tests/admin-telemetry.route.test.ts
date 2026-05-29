@@ -1,5 +1,7 @@
 const mockGetAdminRequestContext = jest.fn();
 const mockLoadAdminTelemetryDashboardData = jest.fn();
+const mockTrackRouteTelemetry = jest.fn();
+const mockTrackException = jest.fn();
 
 jest.mock("@/lib/admin-auth", () => ({
   getAdminRequestContext: (...args: unknown[]) =>
@@ -9,6 +11,11 @@ jest.mock("@/lib/admin-auth", () => ({
 jest.mock("@/lib/admin-telemetry", () => ({
   loadAdminTelemetryDashboardData: (...args: unknown[]) =>
     mockLoadAdminTelemetryDashboardData(...args),
+}));
+
+jest.mock("@/lib/azure/telemetry", () => ({
+  trackRouteTelemetry: (...args: unknown[]) => mockTrackRouteTelemetry(...args),
+  trackException: (...args: unknown[]) => mockTrackException(...args),
 }));
 
 function buildTelemetryPayload() {
@@ -83,6 +90,12 @@ describe("admin telemetry route", () => {
 
     expect(response.status).toBe(401);
     expect(payload.error).toContain("Unauthorized");
+    expect(mockTrackRouteTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routeName: "api.admin.telemetry",
+        statusCode: 401,
+      })
+    );
   });
 
   it("returns the production telemetry contract for admins", async () => {
@@ -104,6 +117,12 @@ describe("admin telemetry route", () => {
     expect(payload.recentServiceCalls).toBeUndefined();
     expect(payload.recentShadowComparisons).toBeUndefined();
     expect(serialized).not.toContain("question_state=");
+    expect(mockTrackRouteTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routeName: "api.admin.telemetry",
+        statusCode: 200,
+      })
+    );
   });
 
   it("returns 500 when telemetry loading throws", async () => {
@@ -120,5 +139,16 @@ describe("admin telemetry route", () => {
 
     expect(response.status).toBe(500);
     expect(payload.error).toContain("Internal Server Error");
+    expect(mockTrackRouteTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routeName: "api.admin.telemetry",
+        statusCode: 500,
+        errorCode: "admin_telemetry_unhandled",
+      })
+    );
+    expect(mockTrackException).toHaveBeenCalledWith(
+      "admin_telemetry_unhandled",
+      { routeName: "api.admin.telemetry" }
+    );
   });
 });

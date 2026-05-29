@@ -161,6 +161,10 @@ import {
   generateReport,
   generateTerminalOutcomeReport,
 } from "@/lib/symptom-chat/report-pipeline";
+import {
+  trackException,
+  trackRouteTelemetry,
+} from "@/lib/azure/telemetry";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -180,6 +184,7 @@ import {
 
 // Detect which engine to use
 const useNvidia = isNvidiaConfigured();
+const ROUTE_NAME = "api.ai.symptom-chat";
 
 interface RequestBody {
   messages: { role: "user" | "assistant"; content: string }[];
@@ -1036,6 +1041,10 @@ function buildDeterministicEmergencyMessage(
 }
 
 export async function POST(request: Request) {
+  const startedAtMs = Date.now();
+  let statusCode = 200;
+  let errorCode: string | undefined;
+
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
     const rlResult = await checkRateLimit(
@@ -1043,6 +1052,7 @@ export async function POST(request: Request) {
       getRateLimitId(request)
     );
     if (!rlResult.success) {
+      statusCode = 429;
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
         {
@@ -1074,6 +1084,7 @@ export async function POST(request: Request) {
       session,
     });
     if (usageLimitResponse) {
+      statusCode = usageLimitResponse.status;
       return usageLimitResponse;
     }
 
@@ -2511,6 +2522,7 @@ export async function POST(request: Request) {
       image,
     });
   } catch (error) {
+    errorCode = "symptom_chat_unhandled";
     console.error("Symptom chat error:", error);
     return NextResponse.json(
       {
@@ -2520,5 +2532,15 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
+  } finally {
+    void trackRouteTelemetry({
+      routeName: ROUTE_NAME,
+      statusCode,
+      startedAtMs,
+      errorCode,
+    });
+    if (errorCode) {
+      void trackException(errorCode, { routeName: ROUTE_NAME });
+    }
   }
 }
