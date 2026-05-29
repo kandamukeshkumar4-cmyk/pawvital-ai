@@ -4,6 +4,7 @@ const mockRequireAuthenticatedApiUser = jest.fn();
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockTranslateTexts = jest.fn();
+const mockTranslatorApiLimiter = { scope: "azure-translator" };
 
 jest.mock("@/lib/api-auth", () => ({
   requireAuthenticatedApiUser: (...args: unknown[]) =>
@@ -11,7 +12,7 @@ jest.mock("@/lib/api-auth", () => ({
 }));
 
 jest.mock("@/lib/rate-limit", () => ({
-  generalApiLimiter: {},
+  translatorApiLimiter: mockTranslatorApiLimiter,
   checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
   getRateLimitId: (...args: unknown[]) => mockGetRateLimitId(...args),
 }));
@@ -92,6 +93,10 @@ describe("POST /api/azure/translator", () => {
 
     expect(response.status).toBe(429);
     expect(payload.error).toContain("Too many requests");
+    expect(mockCheckRateLimit).toHaveBeenCalledWith(
+      mockTranslatorApiLimiter,
+      "user:user-1",
+    );
     expect(mockGetRateLimitId).toHaveBeenCalledWith(expect.any(Request), "user-1");
     expect(mockTranslateTexts).not.toHaveBeenCalled();
   });
