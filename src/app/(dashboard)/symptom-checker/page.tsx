@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useState,
+  useRef,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import {
   Stethoscope,
   AlertTriangle,
@@ -32,6 +38,14 @@ import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 import { SpeechInputButton } from "@/components/symptom-checker/speech-input-button";
 import { VetRecordIntakeButton } from "@/components/symptom-checker/vet-record-intake-button";
+import {
+  useWebPubSubLiveUpdates,
+  type TriageLiveUpdateConnectionState,
+} from "@/components/symptom-checker/use-webpubsub-live-updates";
+import type {
+  TriageLiveUpdate,
+  TriageLiveUpdateStatus,
+} from "@/lib/azure/web-pubsub";
 
 // --- Types ---
 
@@ -95,6 +109,14 @@ const quickSymptoms = [
 
 function subscribeToHydration() {
   return () => {};
+}
+
+function createLiveSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `triage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 // --- Components ---
@@ -248,6 +270,10 @@ export default function SymptomCheckerPage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const liveSessionIdRef = useRef<string>(createLiveSessionId());
+  const [, setLiveUpdateStatus] = useState<TriageLiveUpdateStatus | null>(null);
+  const [, setLiveConnectionState] =
+    useState<TriageLiveUpdateConnectionState>("disabled");
 
   // Hybrid triage session — passed to/from the API each turn
   // Use both state (for re-renders) and ref (to avoid stale closures in async sendMessage)
@@ -283,6 +309,24 @@ export default function SymptomCheckerPage() {
       block: "start",
     });
   }, [report]);
+
+  const handleLiveUpdate = useCallback((update: TriageLiveUpdate) => {
+    setLiveUpdateStatus(update.status);
+  }, []);
+
+  const handleLiveConnectionState = useCallback(
+    (state: TriageLiveUpdateConnectionState) => {
+      setLiveConnectionState(state);
+    },
+    [],
+  );
+
+  useWebPubSubLiveUpdates({
+    enabled: sessionStarted,
+    onConnectionState: handleLiveConnectionState,
+    onUpdate: handleLiveUpdate,
+    sessionId: liveSessionIdRef.current,
+  });
 
   const clearComposerImage = () => {
     setSelectedImage(null);
@@ -505,6 +549,7 @@ export default function SymptomCheckerPage() {
           pet,
           action: "chat",
           session: triageSessionRef.current,
+          liveSessionId: liveSessionIdRef.current,
           image: imageToSend, // Send the base64 image here
           imageMeta: imageMetaToSend,
           gateOverride,
@@ -653,6 +698,7 @@ export default function SymptomCheckerPage() {
           pet,
           action: "generate_report",
           session: overrideSession || triageSessionRef.current,
+          liveSessionId: liveSessionIdRef.current,
         }),
       });
 
@@ -697,6 +743,9 @@ export default function SymptomCheckerPage() {
     setTotalQuestions(0);
     setTriageSession(null);
     triageSessionRef.current = null;
+    liveSessionIdRef.current = createLiveSessionId();
+    setLiveUpdateStatus(null);
+    setLiveConnectionState("disabled");
     setInput("");
     clearComposerImage();
     clearPendingGateImage();

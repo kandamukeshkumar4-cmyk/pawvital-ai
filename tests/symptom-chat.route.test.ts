@@ -56,6 +56,7 @@ const mockEmit = jest.fn();
 const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockTrackRouteTelemetry = jest.fn();
 const mockTrackException = jest.fn();
+const mockPublishTriageLiveUpdate = jest.fn();
 const mockEventType = {
   REPORT_READY: "REPORT_READY",
   URGENCY_HIGH: "URGENCY_HIGH",
@@ -237,6 +238,11 @@ jest.mock("@/lib/events/notification-handler", () => ({}));
 jest.mock("@/lib/azure/telemetry", () => ({
   trackRouteTelemetry: (...args: unknown[]) => mockTrackRouteTelemetry(...args),
   trackException: (...args: unknown[]) => mockTrackException(...args),
+}));
+
+jest.mock("@/lib/azure/web-pubsub", () => ({
+  publishTriageLiveUpdate: (...args: unknown[]) =>
+    mockPublishTriageLiveUpdate(...args),
 }));
 
 const PET = {
@@ -661,6 +667,10 @@ describe("symptom-chat mixed text + image routing", () => {
     });
     mockEvaluateImageGate.mockResolvedValue(null);
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockPublishTriageLiveUpdate.mockResolvedValue({
+      enabled: true,
+      published: true,
+    });
   });
 
   it("records sanitized route telemetry for rate-limited symptom-chat requests", async () => {
@@ -688,6 +698,46 @@ describe("symptom-chat mixed text + image routing", () => {
       "coughing"
     );
     expect(mockTrackException).not.toHaveBeenCalled();
+  });
+
+  it("publishes metadata-only live update statuses for authenticated sessions", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: "live-session-1",
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    await POST(liveRequest);
+
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(1, {
+      action: "chat",
+      sessionId: "live-session-1",
+      status: "processing",
+      userId: "user-1",
+    });
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
+      action: "chat",
+      sessionId: "live-session-1",
+      status: "response_ready",
+      userId: "user-1",
+    });
+    expect(JSON.stringify(mockPublishTriageLiveUpdate.mock.calls)).not.toContain(
+      "limping",
+    );
   });
 
   it("fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up", async () => {

@@ -165,6 +165,10 @@ import {
   trackException,
   trackRouteTelemetry,
 } from "@/lib/azure/telemetry";
+import {
+  publishTriageLiveUpdate,
+  type TriageLiveUpdateStatus,
+} from "@/lib/azure/web-pubsub";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -191,9 +195,32 @@ interface RequestBody {
   pet: PetProfile;
   action: "chat" | "generate_report";
   session?: TriageSession;
+  liveSessionId?: string;
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
+}
+
+type LiveUpdateTarget = {
+  action: "chat" | "generate_report";
+  sessionId: string;
+  userId: string;
+};
+
+function scheduleTriageLiveUpdate(
+  target: LiveUpdateTarget | null,
+  status: TriageLiveUpdateStatus
+) {
+  if (!target) {
+    return;
+  }
+
+  void publishTriageLiveUpdate({
+    action: target.action,
+    sessionId: target.sessionId,
+    status,
+    userId: target.userId,
+  });
 }
 
 async function persistChatShadowTelemetrySnapshot({
@@ -1044,6 +1071,7 @@ export async function POST(request: Request) {
   const startedAtMs = Date.now();
   let statusCode = 200;
   let errorCode: string | undefined;
+  let liveUpdateTarget: LiveUpdateTarget | null = null;
 
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
@@ -1072,6 +1100,7 @@ export async function POST(request: Request) {
       pet,
       action,
       session: clientSession,
+      liveSessionId,
       image,
       imageMeta,
       gateOverride,
@@ -1115,6 +1144,14 @@ export async function POST(request: Request) {
     // can be emitted with a trusted userId. Falls back to null in demo mode or
     // when the session cookie is absent — emissions are skipped in that case.
     const verifiedUserId = await resolveVerifiedUserId();
+    if (verifiedUserId && liveSessionId) {
+      liveUpdateTarget = {
+        action,
+        sessionId: liveSessionId,
+        userId: verifiedUserId,
+      };
+      scheduleTriageLiveUpdate(liveUpdateTarget, "processing");
+    }
 
     if (action === "generate_report") {
       const reportBlockingCriticalInfo = findReportBlockingCriticalInfo(session);
@@ -2542,5 +2579,13 @@ export async function POST(request: Request) {
     if (errorCode) {
       void trackException(errorCode, { routeName: ROUTE_NAME });
     }
+    scheduleTriageLiveUpdate(
+      liveUpdateTarget,
+      errorCode
+        ? "failed"
+        : liveUpdateTarget?.action === "generate_report"
+          ? "report_ready"
+          : "response_ready"
+    );
   }
 }
