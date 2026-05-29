@@ -606,6 +606,47 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
     });
   });
 
+  it("accepts slow extractor responses that finish inside the supplied timeout budget", async () => {
+    const modelCaller = jest.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          setTimeout(() => {
+            resolve(
+              JSON.stringify({
+                answered: true,
+                questionId: "vomit_duration",
+                answerValue: "two days",
+                confidence: 0.9,
+                ownerPhrase: "two days",
+                needsClarification: false,
+              })
+            );
+          }, 10);
+        })
+    );
+
+    await expect(
+      extractSecondOpinionPendingAnswer({
+        mode: "on",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "for two days",
+        primaryExtractionFailed: true,
+        deterministicResolved: false,
+        clarificationAttempts: 1,
+        knownSymptomsBeforeTurn: ["vomiting"],
+        timeoutMs: 50,
+        modelCaller,
+      })
+    ).resolves.toMatchObject({
+      status: "accepted",
+      answer: {
+        questionId: "vomit_duration",
+        answerValue: "two days",
+      },
+    });
+    expect(modelCaller).toHaveBeenCalledTimes(1);
+  });
+
   it("fails closed when the second-opinion session budget is already exhausted", async () => {
     const modelCaller = jest.fn();
 
