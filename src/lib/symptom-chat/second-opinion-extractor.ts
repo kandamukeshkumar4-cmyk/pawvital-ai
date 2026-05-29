@@ -13,6 +13,7 @@ import {
   getSecondOpinionExtractorMode as getRouterSecondOpinionExtractorMode,
   type ModelFallbackReason,
   type ModelFeatureMode,
+  type ModelProvider,
 } from "@/lib/model-router";
 import { complete } from "@/lib/nvidia-models";
 import {
@@ -106,6 +107,10 @@ type ModelCaller = (prompt: string) => Promise<string>;
 
 const CONFIDENCE_THRESHOLD = 0.82;
 const STRING_ANSWER_MAX_LENGTH = 160;
+const SECOND_OPINION_PROVIDER_PRIORITY = [
+  "nvidia",
+  "narrow-pack",
+] as const satisfies readonly ModelProvider[];
 
 const NUMBER_WORDS: Record<string, string> = {
   one: "1",
@@ -310,8 +315,7 @@ export function parseSecondOpinionExtractorResponse(
   const answerValue = normalizeAnswerValue(
     pendingQuestionId,
     question,
-    parsed.answerValue,
-    ownerPhrase
+    parsed.answerValue
   );
   if (answerValue === null) {
     return { status: "rejected", reason: "unsafe_inference" };
@@ -577,8 +581,7 @@ function introducesNewSymptomOutsidePendingAnswer(
 function normalizeAnswerValue(
   questionId: string,
   question: FollowUpQuestion,
-  rawValue: unknown,
-  ownerPhrase: string
+  rawValue: unknown
 ): string | boolean | number | null {
   if (
     typeof rawValue !== "string" &&
@@ -780,6 +783,7 @@ async function callSecondOpinionModel(prompt: string): Promise<string> {
     prompt,
     systemPrompt: "Return strict JSON only. Do not include reasoning.",
     maxTokens: 180,
+    providerPriority: SECOND_OPINION_PROVIDER_PRIORITY,
     temperature: 0,
   });
 }
