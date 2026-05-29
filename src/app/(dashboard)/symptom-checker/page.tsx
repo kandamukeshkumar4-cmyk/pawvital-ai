@@ -31,6 +31,7 @@ import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 import { SpeechInputButton } from "@/components/symptom-checker/speech-input-button";
+import { VetRecordIntakeButton } from "@/components/symptom-checker/vet-record-intake-button";
 
 // --- Types ---
 
@@ -297,6 +298,14 @@ export default function SymptomCheckerPage() {
     setInput((current) => {
       const trimmedCurrent = current.trimEnd();
       return trimmedCurrent ? `${trimmedCurrent} ${transcript}` : transcript;
+    });
+    inputRef.current?.focus();
+  };
+
+  const appendVetRecordContextToInput = (context: string) => {
+    setInput((current) => {
+      const trimmedCurrent = current.trimEnd();
+      return trimmedCurrent ? `${trimmedCurrent}\n\n${context}` : context;
     });
     inputRef.current?.focus();
   };
@@ -990,6 +999,10 @@ export default function SymptomCheckerPage() {
                       disabled={loading}
                       onTranscript={appendTranscriptToInput}
                     />
+                    <VetRecordIntakeButton
+                      disabled={loading}
+                      onContext={appendVetRecordContextToInput}
+                    />
                     <input
                       type="file"
                       accept="image/*"
@@ -1069,6 +1082,10 @@ export default function SymptomCheckerPage() {
                 <SpeechInputButton
                   disabled={loading}
                   onTranscript={appendTranscriptToInput}
+                />
+                <VetRecordIntakeButton
+                  disabled={loading}
+                  onContext={appendVetRecordContextToInput}
                 />
                 <input
                   type="file"
