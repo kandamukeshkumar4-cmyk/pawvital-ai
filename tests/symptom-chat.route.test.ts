@@ -54,6 +54,8 @@ const mockSaveTesterFeedbackCaseLedgerToDB = jest.fn(async () => ({
 }));
 const mockEmit = jest.fn();
 const mockCalibrateDiagnosticConfidence = jest.fn();
+const mockTrackRouteTelemetry = jest.fn();
+const mockTrackException = jest.fn();
 const mockEventType = {
   REPORT_READY: "REPORT_READY",
   URGENCY_HIGH: "URGENCY_HIGH",
@@ -231,6 +233,11 @@ jest.mock("@/lib/events/event-bus", () => ({
 }));
 
 jest.mock("@/lib/events/notification-handler", () => ({}));
+
+jest.mock("@/lib/azure/telemetry", () => ({
+  trackRouteTelemetry: (...args: unknown[]) => mockTrackRouteTelemetry(...args),
+  trackException: (...args: unknown[]) => mockTrackException(...args),
+}));
 
 const PET = {
   name: "Bruno",
@@ -654,6 +661,33 @@ describe("symptom-chat mixed text + image routing", () => {
     });
     mockEvaluateImageGate.mockResolvedValue(null);
     mockShouldAnalyzeWoundImage.mockReturnValue(false);
+  });
+
+  it("records sanitized route telemetry for rate-limited symptom-chat requests", async () => {
+    mockCheckRateLimit.mockResolvedValue({
+      success: false,
+      reset: Date.now() + 60_000,
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My dog is coughing and breathing strangely."
+      )
+    );
+
+    expect(response.status).toBe(429);
+    expect(mockTrackRouteTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        routeName: "api.ai.symptom-chat",
+        statusCode: 429,
+      })
+    );
+    expect(JSON.stringify(mockTrackRouteTelemetry.mock.calls)).not.toContain(
+      "coughing"
+    );
+    expect(mockTrackException).not.toHaveBeenCalled();
   });
 
   it("fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up", async () => {
