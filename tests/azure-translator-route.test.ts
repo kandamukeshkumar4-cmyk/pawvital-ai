@@ -275,6 +275,24 @@ describe("POST /api/azure/translator", () => {
     expect(mockTranslateTexts).not.toHaveBeenCalled();
   });
 
+  it("rejects oversized request bodies before calling Azure", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRequest({
+        targetLanguage: "en",
+        text: "a".repeat(33_000),
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
   it("passes validated text batches into the Translator helper", async () => {
     const { POST } = await import("@/app/api/azure/translator/route");
     const response = await POST(

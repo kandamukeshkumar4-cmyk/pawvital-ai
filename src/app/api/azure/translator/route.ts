@@ -17,7 +17,7 @@ const NO_STORE_HEADERS = {
 const MAX_TRANSLATOR_ITEMS = 25;
 const MAX_TRANSLATOR_TEXT_CHARS = 5_000;
 const MAX_TRANSLATOR_BATCH_CHARS = 25_000;
-const MAX_TRANSLATOR_REQUEST_CHARS = 150_000;
+const MAX_TRANSLATOR_REQUEST_CHARS = 32_000;
 const UNSAFE_TEXT_PATTERN =
   /[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069<>]/;
 const LANGUAGE_TAG_PATTERN = /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/i;
@@ -115,6 +115,7 @@ function sanitizeTranslatorText(value: unknown): string | null {
     return null;
   }
 
+  // Security boundary: only plain owner-visible text reaches Azure Translator.
   const text = value.trim().normalize("NFC");
   if (
     text.length === 0 ||
@@ -177,7 +178,7 @@ export async function POST(request: Request) {
     return auth.response;
   }
 
-  // Charge authenticated callers before parsing payloads or touching Azure.
+  // Dedicated 20/min/user limiter runs before parsing payloads or touching Azure.
   const rateLimitResult = await checkRateLimit(
     translatorApiLimiter,
     getRateLimitId(request, auth.user.id),
