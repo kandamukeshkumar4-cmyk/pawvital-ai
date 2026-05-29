@@ -159,12 +159,68 @@ describe("POST /api/azure/translator", () => {
     expect(mockTranslateTexts).not.toHaveBeenCalled();
   });
 
+  it("rejects invalid source language types before calling Azure", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRequest({
+        sourceLanguage: 123,
+        targetLanguage: "en",
+        text: "Mi perro vomita",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
+  it("rejects unexpected body keys before calling Azure", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRequest({
+        targetLanguage: "en",
+        text: "Mi perro vomita",
+        unsafeHtml: "<script>alert(1)</script>",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
   it("rejects unsafe control characters before calling Azure", async () => {
     const { POST } = await import("@/app/api/azure/translator/route");
     const response = await POST(
       makeRequest({
         targetLanguage: "en",
         text: "Mi perro\u0000vomita",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
+  it("rejects markup delimiters before calling Azure", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRequest({
+        targetLanguage: "en",
+        text: "Mi perro <script>vomita</script>",
       }),
     );
     const payload = await response.json();
@@ -266,6 +322,22 @@ describe("POST /api/azure/translator", () => {
       enabled: false,
       reason: "not_configured",
     });
+
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRequest({ targetLanguage: "en", text: "Mi perro vomita" }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "translator_unavailable",
+    });
+  });
+
+  it("fails closed when the Translator helper throws", async () => {
+    mockTranslateTexts.mockRejectedValueOnce(new Error("upstream failed"));
 
     const { POST } = await import("@/app/api/azure/translator/route");
     const response = await POST(

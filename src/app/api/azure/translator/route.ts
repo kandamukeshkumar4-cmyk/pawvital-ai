@@ -15,8 +15,16 @@ const NO_STORE_HEADERS = {
 
 const MAX_TRANSLATOR_ITEMS = 25;
 const MAX_TRANSLATOR_TEXT_CHARS = 5_000;
+const MAX_TRANSLATOR_BATCH_CHARS = 25_000;
 const MAX_TRANSLATOR_REQUEST_CHARS = 150_000;
-const UNSAFE_CONTROL_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+const ALLOWED_TRANSLATOR_REQUEST_KEYS = new Set([
+  "sourceLanguage",
+  "targetLanguage",
+  "text",
+  "texts",
+]);
+const UNSAFE_TEXT_PATTERN =
+  /[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069<>]/;
 
 type TranslatorRequestBody = {
   sourceLanguage?: unknown;
@@ -48,6 +56,12 @@ function hasJsonContentType(request: Request): boolean {
 
 function isRecord(value: unknown): value is TranslatorRequestBody {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasOnlyAllowedRequestKeys(value: TranslatorRequestBody): boolean {
+  return Object.keys(value).every((key) =>
+    ALLOWED_TRANSLATOR_REQUEST_KEYS.has(key),
+  );
 }
 
 async function readTranslatorRequestBody(
@@ -85,8 +99,14 @@ function sanitizeTranslatorText(value: unknown): string | null {
   if (
     text.length === 0 ||
     text.length > MAX_TRANSLATOR_TEXT_CHARS ||
-    UNSAFE_CONTROL_CHAR_PATTERN.test(text)
+    UNSAFE_TEXT_PATTERN.test(text)
   ) {
+    return null;
+  }
+
+  try {
+    encodeURIComponent(text);
+  } catch {
     return null;
   }
 
@@ -114,7 +134,12 @@ function normalizeTexts(body: TranslatorRequestBody): string[] | null {
   }
 
   const texts = rawTexts.map(sanitizeTranslatorText);
-  return texts.every((text): text is string => text !== null) ? texts : null;
+  if (!texts.every((text): text is string => text !== null)) {
+    return null;
+  }
+
+  const batchChars = texts.reduce((total, text) => total + text.length, 0);
+  return batchChars <= MAX_TRANSLATOR_BATCH_CHARS ? texts : null;
 }
 
 function normalizeLanguage(value: unknown): string | null {
@@ -131,6 +156,14 @@ function hasLanguageValue(value: unknown): boolean {
 function validateTranslatorRequest(
   body: TranslatorRequestBody,
 ): ValidatedTranslatorRequest | null {
+  if (
+    !hasOnlyAllowedRequestKeys(body) ||
+    (typeof body.sourceLanguage !== "undefined" &&
+      !hasLanguageValue(body.sourceLanguage))
+  ) {
+    return null;
+  }
+
   const targetLanguage = normalizeLanguage(body.targetLanguage);
   const sourceLanguage = hasLanguageValue(body.sourceLanguage)
     ? normalizeLanguage(body.sourceLanguage)
@@ -193,11 +226,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await translateTexts({
-    sourceLanguage: validated.sourceLanguage,
-    targetLanguage: validated.targetLanguage,
-    texts: validated.texts,
-  });
+  let result;
+  try {
+    result = await translateTexts({
+      sourceLanguage: validated.sourceLanguage,
+      targetLanguage: validated.targetLanguage,
+      texts: validated.texts,
+    });
+  } catch {
+    return jsonNoStore(
+      { enabled: false, reason: "translator_unavailable" },
+      503,
+    );
+  }
 
   if (!result.enabled && result.reason === "feature_disabled") {
     return jsonNoStore({ enabled: false, reason: "feature_disabled" });
