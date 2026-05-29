@@ -32,6 +32,22 @@ function isSuccessfulResponse(
   );
 }
 
+function failureMessageForResponse(
+  payload: VetRecordIntakeResponse,
+  status: number,
+): string {
+  if (payload.enabled === false) {
+    return "Vet record intake is not enabled yet.";
+  }
+  if ("code" in payload && payload.code === "DOCUMENT_CONTENT_BLOCKED") {
+    return "This vet record could not be imported after the safety screen.";
+  }
+  if (status === 400) {
+    return "Upload a PDF vet record under 10 MB.";
+  }
+  return "Vet record intake is unavailable right now.";
+}
+
 export function VetRecordIntakeButton({
   disabled = false,
   onContext,
@@ -59,7 +75,7 @@ export function VetRecordIntakeButton({
       setIsUnavailable(true);
     }
 
-    throw new Error("DOCUMENT_INTAKE_UNAVAILABLE");
+    throw new Error(failureMessageForResponse(payload, response.status));
   };
 
   return (
@@ -93,8 +109,12 @@ export function VetRecordIntakeButton({
           }
           setIsUploading(true);
           void uploadFile(file)
-            .catch(() => {
-              window.alert("Vet record intake is unavailable right now.");
+            .catch((error: unknown) => {
+              window.alert(
+                error instanceof Error
+                  ? error.message
+                  : "Vet record intake is unavailable right now.",
+              );
             })
             .finally(() => setIsUploading(false));
         }}

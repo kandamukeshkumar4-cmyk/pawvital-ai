@@ -23,10 +23,23 @@ describe("VetRecordIntakeButton", () => {
   function installFetch(response: unknown) {
     const mockFetch = jest.fn(async () => ({
       json: jest.fn(async () => response),
+      status: 200,
     }));
     global.fetch = mockFetch as jest.MockedFunction<typeof fetch>;
     window.fetch = mockFetch as jest.MockedFunction<typeof fetch>;
     return mockFetch;
+  }
+
+  function selectPdf(container: HTMLElement) {
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: {
+        files: [
+          new File([Buffer.from("%PDF-1.7")], "record.pdf", {
+            type: "application/pdf",
+          }),
+        ],
+      },
+    });
   }
 
   it("uploads a selected PDF and appends extracted context", async () => {
@@ -40,15 +53,7 @@ describe("VetRecordIntakeButton", () => {
       React.createElement(VetRecordIntakeButton, { onContext }),
     );
 
-    fireEvent.change(container.querySelector('input[type="file"]')!, {
-      target: {
-        files: [
-          new File([Buffer.from("%PDF-1.7")], "record.pdf", {
-            type: "application/pdf",
-          }),
-        ],
-      },
-    });
+    selectPdf(container);
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
     await waitFor(() =>
@@ -73,15 +78,7 @@ describe("VetRecordIntakeButton", () => {
       React.createElement(VetRecordIntakeButton, { onContext: jest.fn() }),
     );
 
-    fireEvent.change(container.querySelector('input[type="file"]')!, {
-      target: {
-        files: [
-          new File([Buffer.from("%PDF-1.7")], "record.pdf", {
-            type: "application/pdf",
-          }),
-        ],
-      },
-    });
+    selectPdf(container);
 
     await waitFor(() =>
       expect(
@@ -93,7 +90,23 @@ describe("VetRecordIntakeButton", () => {
       ).toBe(true),
     );
     expect(window.alert).toHaveBeenCalledWith(
-      "Vet record intake is unavailable right now.",
+      "Vet record intake is not enabled yet.",
+    );
+  });
+
+  it("shows a sanitized safety-screen message when extracted text is blocked", async () => {
+    installFetch({ code: "DOCUMENT_CONTENT_BLOCKED", enabled: true });
+
+    const { container } = render(
+      React.createElement(VetRecordIntakeButton, { onContext: jest.fn() }),
+    );
+
+    selectPdf(container);
+
+    await waitFor(() =>
+      expect(window.alert).toHaveBeenCalledWith(
+        "This vet record could not be imported after the safety screen.",
+      ),
     );
   });
 });
