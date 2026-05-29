@@ -319,7 +319,8 @@ Pricing references:
 4. AZ-005, AZ-006, AZ-007: Speech, Document Intelligence plus Content Safety,
    and Translator.
 5. AZ-009: Service Bus queue producer and worker consumer. Document intake
-   enqueues metadata-only `document-processing` jobs after successful extraction.
+   enqueues metadata-only `document-processing` jobs after successful extraction,
+   and `/api/azure/service-bus/worker` runs one authenticated worker receive pass.
 6. AZ-010, AZ-011, AZ-012: Maps, Web PubSub, and Static Web App mirror.
 
 Each code ticket needs a unit test with Azure clients mocked and a demo-mode
