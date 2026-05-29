@@ -57,7 +57,7 @@ Policy-allowed regional deployment locations observed on this subscription:
 | `pawvital-speech` | Azure AI Speech | `centralus` | Voice-to-text input support. |
 | `pawvital-translator` | Azure AI Translator | `global` | UI translation support. |
 | `pawvital-sb-nil7y8` | Service Bus namespace | `centralus` | Basic-tier queue for async review/jobs. |
-| `pawvital-webpubsub-nil7y8` | Web PubSub | `centralus` | Future live session updates. |
+| `pawvital-webpubsub-nil7y8` | Web PubSub | `centralus` | Live symptom-session status updates. |
 | `pawvital-nh-ns-nil7y8` | Notification Hubs namespace | `centralus` | Future owner push alerts. |
 | `pawvital-notifications` | Notification Hub | `centralus` | Push hub under notification namespace. |
 | `pawvital-appconfig-nil7y8` | App Configuration | `centralus` | Azure feature flags. |
@@ -318,7 +318,8 @@ Pricing references:
 3. AZ-004 and AZ-008: Blob Storage helpers and App Configuration flags.
 4. AZ-005, AZ-006, AZ-007: Speech, Document Intelligence plus Content Safety,
    and Translator.
-5. AZ-009: Service Bus queue producer and worker scaffold.
+5. AZ-009: Service Bus queue producer and worker consumer. Document intake
+   enqueues metadata-only `document-processing` jobs after successful extraction.
 6. AZ-010, AZ-011, AZ-012: Maps, Web PubSub, and Static Web App mirror.
 
 Each code ticket needs a unit test with Azure clients mocked and a demo-mode

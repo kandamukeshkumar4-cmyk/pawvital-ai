@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   getContentSafetyClient,
   getDocumentIntelligenceClient,
@@ -6,6 +7,7 @@ import {
 } from "@/lib/azure";
 import { getFlag, type AzureFeatureFlagOptions } from "@/lib/azure/app-config";
 import { uploadReport, type UploadAzureBlobOptions } from "@/lib/azure/blob";
+import { enqueueJob } from "@/lib/azure/service-bus";
 import { trackEvent, type TrackOptions } from "@/lib/azure/telemetry";
 
 export const AZURE_DOC_INTEL_FEATURE_FLAG = "azure.docintel.enabled";
@@ -82,6 +84,7 @@ export type VetRecordDocumentIntakeOptions = AzureClientOptions &
   AzureFeatureFlagOptions &
   TrackOptions &
   UploadAzureBlobOptions & {
+    enqueueDocumentProcessingJob?: typeof enqueueJob;
     fetchContentSafety?: AzureServiceFetch;
     fetchDocumentIntelligence?: AzureServiceFetch;
     maxPollAttempts?: number;
@@ -359,6 +362,37 @@ async function trackDocIntelOutcome(
   );
 }
 
+async function enqueueDocumentProcessing(
+  input: {
+    blobName: string;
+    contentLength: number;
+    pageCount: number;
+  },
+  options: VetRecordDocumentIntakeOptions,
+): Promise<void> {
+  const jobId = `document-processing-${randomUUID()}`;
+  const queue = options.enqueueDocumentProcessingJob ?? enqueueJob;
+
+  try {
+    await queue(
+      "document-processing",
+      {
+        blobName: input.blobName,
+        contentLength: input.contentLength,
+        jobId,
+        pageCount: input.pageCount,
+        source: "vet-record-intake",
+      },
+      {
+        ...options,
+        jobId,
+      },
+    );
+  } catch {
+    // Document intake is owner-facing; async queue outages must not block it.
+  }
+}
+
 export async function intakeVetRecordDocument(
   input: VetRecordDocumentIntakeInput,
   options: VetRecordDocumentIntakeOptions = {},
@@ -472,6 +506,15 @@ export async function intakeVetRecordDocument(
       demoMode: Boolean(upload.demo),
       pageCount: analyzed.pageCount,
       statusCode: 200,
+    },
+    options,
+  );
+
+  await enqueueDocumentProcessing(
+    {
+      blobName: upload.blobName,
+      contentLength: analyzed.content.length,
+      pageCount: analyzed.pageCount,
     },
     options,
   );
