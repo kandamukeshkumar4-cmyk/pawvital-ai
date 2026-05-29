@@ -1,5 +1,7 @@
 import { parseTriageLiveUpdate } from "@/components/symptom-checker/use-webpubsub-live-updates";
 
+const LIVE_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
+
 describe("parseTriageLiveUpdate", () => {
   it("accepts metadata-only triage update JSON", () => {
     expect(
@@ -7,7 +9,7 @@ describe("parseTriageLiveUpdate", () => {
         JSON.stringify({
           action: "chat",
           generatedAt: "2026-05-29T18:00:00.000Z",
-          sessionId: "session-1",
+          sessionId: LIVE_SESSION_ID,
           status: "response_ready",
           type: "triage_update",
         }),
@@ -15,7 +17,7 @@ describe("parseTriageLiveUpdate", () => {
     ).toEqual({
       action: "chat",
       generatedAt: "2026-05-29T18:00:00.000Z",
-      sessionId: "session-1",
+      sessionId: LIVE_SESSION_ID,
       status: "response_ready",
       type: "triage_update",
     });
@@ -28,8 +30,17 @@ describe("parseTriageLiveUpdate", () => {
       parseTriageLiveUpdate({
         action: "chat",
         generatedAt: "2026-05-29T18:00:00.000Z",
+        sessionId: "owner-name-or-free-text",
+        status: "response_ready",
+        type: "triage_update",
+      }),
+    ).toBeNull();
+    expect(
+      parseTriageLiveUpdate({
+        action: "chat",
+        generatedAt: "2026-05-29T18:00:00.000Z",
         rawSymptoms: "vomiting blood",
-        sessionId: "session-1",
+        sessionId: LIVE_SESSION_ID,
         status: "response_ready",
         type: "triage_update",
       }),

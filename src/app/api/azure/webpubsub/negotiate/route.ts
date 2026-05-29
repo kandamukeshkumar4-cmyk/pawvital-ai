@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   negotiateTriageLiveUpdates,
-  normalizeWebPubSubSafeId,
+  normalizeWebPubSubSessionId,
 } from "@/lib/azure/web-pubsub";
 import { requireAuthenticatedApiUser } from "@/lib/api-auth";
 import {
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   const unsafeSessionId =
     new URL(request.url).searchParams.get("sessionId") ?? "";
-  const sessionId = normalizeWebPubSubSafeId(unsafeSessionId);
+  const sessionId = normalizeWebPubSubSessionId(unsafeSessionId);
   if (!sessionId) {
     return jsonNoStore({ enabled: false, reason: "invalid_request" }, 400);
   }

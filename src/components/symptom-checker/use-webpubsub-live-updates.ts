@@ -34,6 +34,8 @@ const TRIAGE_LIVE_UPDATE_KEYS = new Set([
   "status",
   "type",
 ]);
+const LIVE_SESSION_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function isTriageLiveUpdate(value: unknown): value is TriageLiveUpdate {
   if (!value || typeof value !== "object") {
@@ -48,6 +50,7 @@ function isTriageLiveUpdate(value: unknown): value is TriageLiveUpdate {
   return (
     update.type === "triage_update" &&
     typeof update.sessionId === "string" &&
+    LIVE_SESSION_ID_PATTERN.test(update.sessionId) &&
     typeof update.generatedAt === "string" &&
     (update.action === "chat" || update.action === "generate_report") &&
     (update.status === "processing" ||

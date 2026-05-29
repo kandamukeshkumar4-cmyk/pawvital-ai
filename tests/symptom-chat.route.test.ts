@@ -241,17 +241,23 @@ jest.mock("@/lib/azure/telemetry", () => ({
 }));
 
 jest.mock("@/lib/azure/web-pubsub", () => ({
-  normalizeWebPubSubSafeId: (value: unknown) => {
+  normalizeWebPubSubSessionId: (value: unknown) => {
     if (typeof value !== "string") {
       return null;
     }
 
     const trimmed = value.trim();
-    return /^[A-Za-z0-9:_@.-]{1,128}$/.test(trimmed) ? trimmed : null;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      trimmed,
+    )
+      ? trimmed.toLowerCase()
+      : null;
   },
   publishTriageLiveUpdate: (...args: unknown[]) =>
     mockPublishTriageLiveUpdate(...args),
 }));
+
+const LIVE_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 
 const PET = {
   name: "Bruno",
@@ -745,7 +751,7 @@ describe("symptom-chat mixed text + image routing", () => {
     const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
       body: JSON.stringify({
         ...body,
-        liveSessionId: "live-session-1",
+        liveSessionId: LIVE_SESSION_ID,
       }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
@@ -756,13 +762,13 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(1, {
       action: "chat",
-      sessionId: "live-session-1",
+      sessionId: LIVE_SESSION_ID,
       status: "processing",
       userId: "user-1",
     });
     expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
       action: "chat",
-      sessionId: "live-session-1",
+      sessionId: LIVE_SESSION_ID,
       status: "response_ready",
       userId: "user-1",
     });
@@ -819,7 +825,7 @@ describe("symptom-chat mixed text + image routing", () => {
     const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
       body: JSON.stringify({
         ...body,
-        liveSessionId: "live-session-1",
+        liveSessionId: LIVE_SESSION_ID,
       }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
@@ -844,7 +850,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(settled).toBe(true);
     expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
       action: "chat",
-      sessionId: "live-session-1",
+      sessionId: LIVE_SESSION_ID,
       status: "response_ready",
       userId: "user-1",
     });

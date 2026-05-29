@@ -23,6 +23,7 @@ const APP_CONFIG_CONNECTION_STRING =
   "Endpoint=https://pawvital-appconfig.azconfig.io;Id=test;Secret=test";
 const WEB_PUBSUB_CONNECTION_STRING =
   "Endpoint=https://pawvital-webpubsub.webpubsub.azure.com;AccessKey=secret;Version=1.0;";
+const LIVE_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 
 function makeSecretClient(secrets: Record<string, string>): SecretClientLike {
   return {
@@ -81,7 +82,7 @@ describe("Azure Web PubSub helper", () => {
 
     await expect(
       negotiateTriageLiveUpdates(
-        { sessionId: "session-1", userId: "user-1" },
+        { sessionId: LIVE_SESSION_ID, userId: "user-1" },
         {
           ...baseOptions(),
           appConfigurationClientFactory: () => disabledFlagClient(),
@@ -97,7 +98,7 @@ describe("Azure Web PubSub helper", () => {
     const client = makeClient();
 
     const result = await negotiateTriageLiveUpdates(
-      { sessionId: "session-1", userId: "user-1" },
+      { sessionId: LIVE_SESSION_ID, userId: "user-1" },
       {
         ...baseOptions(),
         webPubSubClientFactory: jest.fn().mockReturnValue(client),
@@ -106,7 +107,7 @@ describe("Azure Web PubSub helper", () => {
 
     expect(result).toEqual({
       enabled: true,
-      sessionId: "session-1",
+      sessionId: LIVE_SESSION_ID,
       url: expect.stringContaining("wss://"),
     });
     expect(JSON.stringify(result)).not.toContain("AccessKey=secret");
@@ -121,7 +122,7 @@ describe("Azure Web PubSub helper", () => {
 
     await expect(
       negotiateTriageLiveUpdates(
-        { sessionId: "session-1", userId: "user-1" },
+        { sessionId: LIVE_SESSION_ID, userId: "user-1" },
         {
           ...baseOptions({ "webpubsub-connection-string": "" }),
           webPubSubClientFactory,
@@ -140,7 +141,7 @@ describe("Azure Web PubSub helper", () => {
 
     await expect(
       negotiateTriageLiveUpdates(
-        { sessionId: "session-1", userId: "user-1" },
+        { sessionId: LIVE_SESSION_ID, userId: "user-1" },
         {
           ...baseOptions(),
           webPubSubClientFactory: jest.fn().mockReturnValue(client),
@@ -156,7 +157,7 @@ describe("Azure Web PubSub helper", () => {
       publishTriageLiveUpdate(
         {
           action: "chat",
-          sessionId: "session-1",
+          sessionId: LIVE_SESSION_ID,
           status: "response_ready",
           userId: "user-1",
         },
@@ -170,7 +171,7 @@ describe("Azure Web PubSub helper", () => {
     expect(client.sendToUser).toHaveBeenCalledWith("user-1", {
       action: "chat",
       generatedAt: expect.any(String),
-      sessionId: "session-1",
+      sessionId: LIVE_SESSION_ID,
       status: "response_ready",
       type: "triage_update",
     });
@@ -189,7 +190,7 @@ describe("Azure Web PubSub helper", () => {
       publishTriageLiveUpdate(
         {
           action: "chat",
-          sessionId: "session-1",
+          sessionId: LIVE_SESSION_ID,
           status: "failed",
           userId: "user-1",
         },
@@ -219,7 +220,7 @@ describe("Azure Web PubSub helper", () => {
       publishTriageLiveUpdate(
         {
           action: "chat",
-          sessionId: "session-1",
+          sessionId: LIVE_SESSION_ID,
           status: "processing",
           userId: "user 1",
         },
@@ -238,7 +239,7 @@ describe("Azure Web PubSub helper", () => {
     const webPubSubClientFactory = jest.fn().mockReturnValue(client);
 
     await negotiateTriageLiveUpdates(
-      { sessionId: "session-1", userId: "user-1" },
+      { sessionId: LIVE_SESSION_ID, userId: "user-1" },
       {
         ...baseOptions(),
         webPubSubClientFactory,

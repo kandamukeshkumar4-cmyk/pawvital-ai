@@ -4,6 +4,7 @@ const mockRequireAuthenticatedApiUser = jest.fn();
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockNegotiateTriageLiveUpdates = jest.fn();
+const LIVE_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000";
 
 jest.mock("@/lib/api-auth", () => ({
   requireAuthenticatedApiUser: (...args: unknown[]) =>
@@ -19,17 +20,21 @@ jest.mock("@/lib/rate-limit", () => ({
 jest.mock("@/lib/azure/web-pubsub", () => ({
   negotiateTriageLiveUpdates: (...args: unknown[]) =>
     mockNegotiateTriageLiveUpdates(...args),
-  normalizeWebPubSubSafeId: (value: unknown) => {
+  normalizeWebPubSubSessionId: (value: unknown) => {
     if (typeof value !== "string") {
       return null;
     }
 
     const trimmed = value.trim();
-    return /^[A-Za-z0-9:_@.-]{1,128}$/.test(trimmed) ? trimmed : null;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      trimmed,
+    )
+      ? trimmed.toLowerCase()
+      : null;
   },
 }));
 
-function makeRequest(sessionId = "session-1") {
+function makeRequest(sessionId = LIVE_SESSION_ID) {
   return new Request(
     `http://localhost/api/azure/webpubsub/negotiate?sessionId=${encodeURIComponent(
       sessionId,
@@ -52,7 +57,7 @@ describe("azure Web PubSub negotiate route", () => {
     mockGetRateLimitId.mockReturnValue("user:user-1");
     mockNegotiateTriageLiveUpdates.mockResolvedValue({
       enabled: true,
-      sessionId: "session-1",
+      sessionId: LIVE_SESSION_ID,
       url: "wss://pawvital-webpubsub.webpubsub.azure.com/client/hubs/pawvital_triage?access_token=client-token",
     });
   });
@@ -107,12 +112,12 @@ describe("azure Web PubSub negotiate route", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(payload).toEqual({
       enabled: true,
-      sessionId: "session-1",
+      sessionId: LIVE_SESSION_ID,
       url: expect.stringContaining("wss://"),
     });
     expect(JSON.stringify(payload)).not.toContain("AccessKey=");
     expect(mockNegotiateTriageLiveUpdates).toHaveBeenCalledWith({
-      sessionId: "session-1",
+      sessionId: LIVE_SESSION_ID,
       userId: "user-1",
     });
   });

@@ -8,7 +8,9 @@ import { trackEvent, type TrackOptions } from "@/lib/azure/telemetry";
 export const AZURE_WEB_PUBSUB_FEATURE_FLAG = "azure.webpubsub.enabled";
 export const DEFAULT_WEB_PUBSUB_HUB_NAME = "pawvital_triage";
 
-const SAFE_ID_PATTERN = /^[A-Za-z0-9:_@.-]{1,128}$/;
+const SAFE_USER_ID_PATTERN = /^[A-Za-z0-9:_@.-]{1,128}$/;
+const SAFE_SESSION_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type WebPubSubErrorCode =
   | "feature_disabled"
@@ -83,13 +85,22 @@ export type PublishTriageLiveUpdateResult =
         | "publish_failed";
     };
 
-export function normalizeWebPubSubSafeId(value: unknown): string | null {
+export function normalizeWebPubSubUserId(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
   }
 
   const trimmed = value.trim();
-  return SAFE_ID_PATTERN.test(trimmed) ? trimmed : null;
+  return SAFE_USER_ID_PATTERN.test(trimmed) ? trimmed : null;
+}
+
+export function normalizeWebPubSubSessionId(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return SAFE_SESSION_ID_PATTERN.test(trimmed) ? trimmed.toLowerCase() : null;
 }
 
 async function createDefaultWebPubSubClient(
@@ -137,8 +148,8 @@ export async function negotiateTriageLiveUpdates(
   input: { sessionId: string; userId: string },
   options: WebPubSubOptions = {},
 ): Promise<NegotiateTriageLiveUpdatesResult> {
-  const userId = normalizeWebPubSubSafeId(input.userId);
-  const sessionId = normalizeWebPubSubSafeId(input.sessionId);
+  const userId = normalizeWebPubSubUserId(input.userId);
+  const sessionId = normalizeWebPubSubSessionId(input.sessionId);
   if (!userId || !sessionId) {
     await trackWebPubSubEvent(
       { errorCode: "invalid_request", statusCode: 400 },
@@ -203,8 +214,8 @@ export async function publishTriageLiveUpdate(
   },
   options: WebPubSubOptions = {},
 ): Promise<PublishTriageLiveUpdateResult> {
-  const userId = normalizeWebPubSubSafeId(input.userId);
-  const sessionId = normalizeWebPubSubSafeId(input.sessionId);
+  const userId = normalizeWebPubSubUserId(input.userId);
+  const sessionId = normalizeWebPubSubSessionId(input.sessionId);
   if (!userId || !sessionId) {
     await trackWebPubSubEvent(
       { errorCode: "invalid_request", statusCode: 400 },
