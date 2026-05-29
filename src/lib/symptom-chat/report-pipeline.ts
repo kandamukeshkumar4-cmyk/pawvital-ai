@@ -527,7 +527,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
 }`;
 }
 
-function buildClientObservabilitySnapshot(session: TriageSession) {
+function buildObservabilityCounterSnapshot(session: TriageSession) {
   const observabilitySnapshot = buildObservabilitySnapshot(session);
 
   return {
@@ -710,7 +710,7 @@ function buildPersistedReportWithShadowReadout(
   return {
     ...report,
     system_observability: {
-      ...buildClientObservabilitySnapshot(session),
+      ...buildObservabilityCounterSnapshot(session),
       shadowReadout: buildShadowReadoutObservabilitySnapshot(session),
     },
   };
@@ -1270,7 +1270,6 @@ export async function generateReport({
     finalReport.severity = finalSafetyResult.severity;
     finalReport.recommendation = finalSafetyResult.recommendation;
     finalReport.vet_handoff_summary = finalSafetyResult.vetHandoffSummary;
-    finalReport.system_observability = buildClientObservabilitySnapshot(session);
 
     if (
       finalSafetyResult.status !== "skipped" ||

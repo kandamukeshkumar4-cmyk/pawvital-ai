@@ -9370,17 +9370,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         "He keeps scratching around his ears."
       );
       expect(payload.report.recommendation).not.toBe("emergency_vet");
-      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
-        ["fallbackCount", "timeoutCount"]
-      );
-      expect(payload.report.system_observability).toEqual(
-        expect.objectContaining({
-          fallbackCount: expect.any(Number),
-          timeoutCount: expect.any(Number),
-        })
-      );
-      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
-      expect(payload.report.system_observability.contradictionRecords).toBeUndefined();
+      expect(payload.report.system_observability).toBeUndefined();
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
       expect(mockVerifyWithGLM).not.toHaveBeenCalled();
     });
@@ -9407,10 +9397,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.clinical_notes).not.toContain(
         "He vomited blood this morning."
       );
-      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
-        ["fallbackCount", "timeoutCount"]
-      );
-      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(payload.report.system_observability).toBeUndefined();
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
       expect(mockVerifyWithGLM).not.toHaveBeenCalled();
     });
@@ -9457,10 +9444,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.explanation).toContain("life-threatening");
       expect(payload.report.title).not.toContain("Demo");
       expect(payload.report.report_mode).toBeUndefined();
-      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
-        ["fallbackCount", "timeoutCount"]
-      );
-      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(payload.report.system_observability).toBeUndefined();
     });
 
     it("renders real generated non-emergency report content when providers are available", async () => {
@@ -9505,10 +9489,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.explanation).toContain("real gastrointestinal concern");
       expect(payload.report.explanation).not.toContain("Demo mode");
       expect(payload.report.report_mode).toBeUndefined();
-      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
-        ["fallbackCount", "timeoutCount"]
-      );
-      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(payload.report.system_observability).toBeUndefined();
     });
 
     it("runs the final-stage Grok safety verifier behind the flag and keeps the vet handoff deterministic", async () => {
@@ -9603,10 +9584,7 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.report.clinical_notes).not.toContain(
         "He keeps scratching around his ears."
       );
-      expect(Object.keys(payload.report.system_observability ?? {}).sort()).toEqual(
-        ["fallbackCount", "timeoutCount"]
-      );
-      expect(payload.report.system_observability.recentServiceCalls).toBeUndefined();
+      expect(payload.report.system_observability).toBeUndefined();
       expect(mockDiagnoseWithDeepSeek).toHaveBeenCalledTimes(1);
     });
   });
