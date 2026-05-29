@@ -141,6 +141,46 @@
       }
     },
     {
+      "id": "production_primary_success_slash_choice_requested_accepted",
+      "description": "The live cough flow remains accepted when the extractor mirrors the slash punctuation from the pending question label instead of the canonical underscore choice.",
+      "initialSymptoms": ["coughing"],
+      "pendingQuestionId": "cough_type",
+      "askedCount": 1,
+      "clarificationAttempts": 1,
+      "ownerMessage": "It is a dry honking cough.",
+      "qwenExtraction": {
+        "symptoms": ["coughing"],
+        "answers": {
+          "cough_type": "dry_honking"
+        }
+      },
+      "secondOpinionModel": {
+        "response": {
+          "answered": true,
+          "questionId": "cough_type",
+          "answerValue": "Dry/honking",
+          "confidence": 0.9,
+          "ownerPhrase": "dry honking cough",
+          "needsClarification": false
+        }
+      },
+      "expected": {
+        "modelCalls": 1,
+        "shadowComparisons": 1,
+        "trace": {
+          "eligibility_reason": "shadow_primary_success_sampling",
+          "request_outcome": "requested",
+          "acceptance_outcome": "accepted",
+          "comparison_append_outcome": "comparison_appended",
+          "comparison_write_outcome": "comparison_write_succeeded"
+        },
+        "ownerAnswer": {
+          "questionId": "cough_type",
+          "value": "dry_honking"
+        }
+      }
+    },
+    {
       "id": "unresolved_ambiguity_requested_rejected",
       "description": "Unresolved ambiguity on the first clarification turn should request second-opinion, then preserve fail-closed behavior when the model response is too low confidence.",
       "initialSymptoms": ["coughing"],

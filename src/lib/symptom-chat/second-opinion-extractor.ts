@@ -606,18 +606,7 @@ function normalizeAnswerValue(
   }
 
   if (question.data_type === "choice") {
-    const answerFromValue = sanitizeAnswerForQuestion(
-      questionId,
-      String(rawValue)
-    );
-    const normalizedChoices = new Set(
-      (question.choices ?? []).map((choice) => String(choice))
-    );
-
-    return typeof answerFromValue === "string" &&
-      normalizedChoices.has(answerFromValue)
-      ? answerFromValue
-      : null;
+    return normalizeChoiceAnswerValue(questionId, question, rawValue);
   }
 
   const value = String(rawValue).trim().replace(/\s+/g, " ");
@@ -626,6 +615,54 @@ function normalizeAnswerValue(
   }
 
   return value;
+}
+
+function normalizeChoiceAnswerValue(
+  questionId: string,
+  question: FollowUpQuestion,
+  rawValue: unknown
+): string | null {
+  if (!Array.isArray(question.choices)) {
+    return null;
+  }
+
+  const canonicalChoices = new Map(
+    question.choices.map((choice) => [
+      normalizeExtractorChoiceLabel(String(choice)),
+      String(choice),
+    ])
+  );
+  const candidates: string[] = [];
+  const sanitizedValue = sanitizeAnswerForQuestion(
+    questionId,
+    String(rawValue)
+  );
+
+  if (typeof sanitizedValue === "string") {
+    candidates.push(sanitizedValue);
+  }
+  if (
+    typeof rawValue === "string" ||
+    typeof rawValue === "boolean" ||
+    typeof rawValue === "number"
+  ) {
+    candidates.push(String(rawValue));
+  }
+
+  for (const candidate of candidates) {
+    const canonicalChoice = canonicalChoices.get(
+      normalizeExtractorChoiceLabel(candidate)
+    );
+    if (canonicalChoice) {
+      return canonicalChoice;
+    }
+  }
+
+  return null;
+}
+
+function normalizeExtractorChoiceLabel(value: string): string {
+  return normalizeChoiceLabel(value.replace(/[\\/]+/g, " "));
 }
 
 function isAnswerAnchoredToOwnerPhrase(
@@ -766,6 +803,7 @@ Rules:
 - Do not resolve a different question.
 - Do not infer missing facts.
 - Do not mark a critical red-flag question false unless the owner explicitly denies it.
+- For choice questions, answerValue must be exactly one listed choice value.
 - If the reply is unrelated, ambiguous, unsafe, or needs clarification, set answered=false.
 - Include ownerPhrase as the exact source span from the owner reply.
 - Return only strict JSON. No markdown, comments, or reasoning.

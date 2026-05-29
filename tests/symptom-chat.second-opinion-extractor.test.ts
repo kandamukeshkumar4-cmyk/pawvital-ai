@@ -347,6 +347,36 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
     });
   });
 
+  it("accepts cough choice labels when the model mirrors slash punctuation from the question text", () => {
+    const parsed = parseSecondOpinionExtractorResponse(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "Dry/honking",
+        confidence: 0.9,
+        ownerPhrase: "dry honking cough",
+        needsClarification: false,
+      }),
+      {
+        pendingQuestionId: "cough_type",
+        ownerMessage: "It is a dry honking cough.",
+        knownSymptomsBeforeTurn: ["coughing"],
+      }
+    );
+
+    expect(parsed).toEqual({
+      status: "accepted",
+      answer: {
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "dry honking cough",
+        needsClarification: false,
+      },
+    });
+  });
+
   it.each([
     ["```json\n{\"answered\":true}\n```", "malformed_json"],
     [
