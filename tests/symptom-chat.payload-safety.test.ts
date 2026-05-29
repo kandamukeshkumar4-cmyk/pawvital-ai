@@ -580,6 +580,16 @@ describe("VET-1014 terminal payload safety pack", () => {
       "reason=budget_exceeded",
       "owner said honking loudly",
     ];
+    const ownerForbiddenMarkers = [
+      "System Notes",
+      "Recent fallbacks",
+      "Timeouts",
+      "system_observability",
+      "shadowReadout",
+      "secondOpinionTrace",
+      "fallbackCount",
+      "timeoutCount",
+    ];
 
     const session = addSymptoms(createSession(), ["vomiting"]);
     session.case_memory = {
@@ -674,11 +684,7 @@ describe("VET-1014 terminal payload safety pack", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("report");
-    expect(ownerTelemetry).toEqual({
-      timeoutCount: expect.any(Number),
-      fallbackCount: expect.any(Number),
-    });
-    expect(ownerTelemetry?.shadowReadout).toBeUndefined();
+    expect(ownerTelemetry).toBeUndefined();
     expect(readout).toEqual(
       expect.objectContaining({
         reportPresent: true,
@@ -710,7 +716,9 @@ describe("VET-1014 terminal payload safety pack", () => {
 
     const ownerJson = JSON.stringify(payload);
     const persistedJson = JSON.stringify(persistedReport);
-    expect(ownerJson).not.toContain("secondOpinionTrace");
+    for (const marker of ownerForbiddenMarkers) {
+      expect(ownerJson).not.toContain(marker);
+    }
     for (const marker of forbiddenMarkers) {
       expect(ownerJson).not.toContain(marker);
       expect(persistedJson).not.toContain(marker);
@@ -789,7 +797,7 @@ describe("VET-1014 terminal payload safety pack", () => {
 
       expect(response.status).toBe(200);
       expect(payload.type).toBe("report");
-      expect(ownerTelemetry?.shadowReadout).toBeUndefined();
+      expect(ownerTelemetry).toBeUndefined();
       expect(secondOpinionTrace).toEqual(
         expect.objectContaining({
           total: 1,
@@ -803,8 +811,11 @@ describe("VET-1014 terminal payload safety pack", () => {
       );
 
       const ownerJson = JSON.stringify(payload);
+      expect(ownerJson).not.toContain("system_observability");
       expect(ownerJson).not.toContain("shadowReadout");
       expect(ownerJson).not.toContain("secondOpinionTrace");
+      expect(ownerJson).not.toContain("fallbackCount");
+      expect(ownerJson).not.toContain("timeoutCount");
       expect(ownerJson).not.toContain("eligibility_reason=");
       expect(ownerJson).not.toContain("request_outcome=");
     } finally {
@@ -887,11 +898,7 @@ describe("VET-1014 terminal payload safety pack", () => {
 
       expect(response.status).toBe(200);
       expect(payload.type).toBe("report");
-      expect(ownerTelemetry).toEqual({
-        timeoutCount: expect.any(Number),
-        fallbackCount: expect.any(Number),
-      });
-      expect(ownerTelemetry?.shadowReadout).toBeUndefined();
+      expect(ownerTelemetry).toBeUndefined();
       expect(secondOpinionTrace).toEqual(
         expect.objectContaining({
           total: 1,
@@ -906,8 +913,11 @@ describe("VET-1014 terminal payload safety pack", () => {
 
       const ownerJson = JSON.stringify(payload);
       const persistedJson = JSON.stringify(persistedReport);
+      expect(ownerJson).not.toContain("system_observability");
       expect(ownerJson).not.toContain("shadowReadout");
       expect(ownerJson).not.toContain("secondOpinionTrace");
+      expect(ownerJson).not.toContain("fallbackCount");
+      expect(ownerJson).not.toContain("timeoutCount");
       expect(ownerJson).not.toContain("eligibility_reason=");
       expect(ownerJson).not.toContain("request_outcome=");
       expect(persistedJson).not.toContain("Please generate the report.");
