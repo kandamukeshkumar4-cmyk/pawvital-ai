@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { negotiateTriageLiveUpdates } from "@/lib/azure/web-pubsub";
+import {
+  negotiateTriageLiveUpdates,
+  normalizeWebPubSubSafeId,
+} from "@/lib/azure/web-pubsub";
 import { requireAuthenticatedApiUser } from "@/lib/api-auth";
 import {
   checkRateLimit,
@@ -47,7 +50,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const sessionId = new URL(request.url).searchParams.get("sessionId") ?? "";
+  const unsafeSessionId =
+    new URL(request.url).searchParams.get("sessionId") ?? "";
+  const sessionId = normalizeWebPubSubSafeId(unsafeSessionId);
+  if (!sessionId) {
+    return jsonNoStore({ enabled: false, reason: "invalid_request" }, 400);
+  }
+
   const result = await negotiateTriageLiveUpdates({
     sessionId,
     userId: auth.user.id,

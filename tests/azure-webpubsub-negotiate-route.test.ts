@@ -19,6 +19,14 @@ jest.mock("@/lib/rate-limit", () => ({
 jest.mock("@/lib/azure/web-pubsub", () => ({
   negotiateTriageLiveUpdates: (...args: unknown[]) =>
     mockNegotiateTriageLiveUpdates(...args),
+  normalizeWebPubSubSafeId: (value: unknown) => {
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return /^[A-Za-z0-9:_@.-]{1,128}$/.test(trimmed) ? trimmed : null;
+  },
 }));
 
 function makeRequest(sessionId = "session-1") {
@@ -129,11 +137,6 @@ describe("azure Web PubSub negotiate route", () => {
   });
 
   it("fails closed for invalid session IDs", async () => {
-    mockNegotiateTriageLiveUpdates.mockResolvedValueOnce({
-      enabled: false,
-      reason: "invalid_request",
-    });
-
     const { GET } = await import(
       "@/app/api/azure/webpubsub/negotiate/route"
     );
@@ -144,6 +147,7 @@ describe("azure Web PubSub negotiate route", () => {
       reason: "invalid_request",
     });
     expect(response.status).toBe(400);
+    expect(mockNegotiateTriageLiveUpdates).not.toHaveBeenCalled();
   });
 
   it("fails closed when Web PubSub is unavailable", async () => {
