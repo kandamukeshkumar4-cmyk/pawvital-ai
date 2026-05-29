@@ -6,6 +6,8 @@ import {
 } from "@/lib/triage-engine";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
 import { extractTelemetryGateEventsFromObservations } from "@/lib/sidecar-observability";
+import { updateStructuredCaseMemory } from "@/lib/symptom-memory";
+import { sanitizeSessionForClient } from "@/lib/symptom-chat/context-helpers";
 import secondOpinionQualifyingFlowMatrix from "./fixtures/second-opinion-qualifying-flow-matrix.json";
 
 const mockCheckRateLimit = jest.fn();
@@ -1366,20 +1368,37 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
   // as not_requested / budget_exhausted — never requested.
   // ────────────────────────────────────────────────────────────────────────
   describe("VET-1546C-R3 report-time second-opinion reconstruction", () => {
+    const pet = {
+      name: "Milo",
+      species: "dog",
+      breed: "Mixed",
+      age_years: 5,
+      weight: 28,
+    };
+
     function buildFirstAnswerPrimarySuccessReportSession(options?: {
       budgetExhausted?: boolean;
+      latestOwnerTurn?: string;
+      answerSourceMessages?: Record<string, string>;
+      durationAnswer?: string;
     }): TriageSession {
       let session = createSession();
       session = addSymptoms(session, ["coughing"]);
       // Genuine first-answer primary success: asked once, no clarification.
-      session = recordAnswer(session, "cough_duration", "2 days");
+      session = recordAnswer(
+        session,
+        "cough_duration",
+        options?.durationAnswer ?? "2 days"
+      );
       // Later question that required a clarification round (re-asked).
       session = recordAnswer(session, "cough_type", "dry");
 
       const memory = session.case_memory!;
       session.case_memory = {
         ...memory,
-        latest_owner_turn: "It is a dry honking cough for about two days.",
+        latest_owner_turn:
+          options?.latestOwnerTurn ??
+          "It is a dry honking cough for about two days.",
         question_asked_counts: {
           cough_duration: 1,
           cough_type: 2,
@@ -1397,9 +1416,80 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
             }
           : {}),
       };
+      if (options?.answerSourceMessages) {
+        (
+          session.case_memory as typeof session.case_memory & {
+            answer_source_messages?: Record<string, string>;
+          }
+        ).answer_source_messages = options.answerSourceMessages;
+      }
 
       return session;
     }
+
+    it("records the first owner source turn for each newly extracted answer", () => {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_duration", "2 days");
+      session = updateStructuredCaseMemory(session, pet, {
+        latestUserMessage: "It started about two days ago.",
+        imageAnalyzed: false,
+        answeredQuestionSourceIds: ["cough_duration"],
+      });
+
+      session = recordAnswer(session, "cough_timing", "after excitement");
+      session = updateStructuredCaseMemory(session, pet, {
+        latestUserMessage: "Mostly after excitement and sometimes at night.",
+        imageAnalyzed: false,
+        answeredQuestionSourceIds: ["cough_timing"],
+      });
+
+      expect(session.case_memory?.answer_source_messages).toEqual(
+        expect.objectContaining({
+          cough_duration: "It started about two days ago.",
+          cough_timing: "Mostly after excitement and sometimes at night.",
+        })
+      );
+    });
+
+    it("keeps answer source messages in sanitized client session while stripping internal telemetry", () => {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_duration", "2 days");
+      session = updateStructuredCaseMemory(session, pet, {
+        latestUserMessage: "It started about two days ago.",
+        imageAnalyzed: false,
+        answeredQuestionSourceIds: ["cough_duration"],
+      });
+      session.case_memory!.service_observations = [
+        {
+          service: "async-review-service",
+          stage: "second_opinion",
+          outcome: "success",
+          latencyMs: 12,
+          fallbackUsed: false,
+          note: "request_outcome=requested",
+        },
+      ];
+      session.case_memory!.shadow_comparisons = [
+        {
+          service: "async-review-service",
+          usedStrategy: "primary",
+          shadowStrategy: "second_opinion_extractor",
+          summary: "internal comparison",
+          disagreementCount: 0,
+          recordedAt: "2026-05-29T18:00:00.000Z",
+        },
+      ];
+
+      const sanitized = sanitizeSessionForClient(session);
+
+      expect(sanitized.case_memory?.answer_source_messages).toEqual({
+        cough_duration: "It started about two days ago.",
+      });
+      expect(sanitized.case_memory?.service_observations).toEqual([]);
+      expect(sanitized.case_memory?.shadow_comparisons).toEqual([]);
+    });
 
     it("reconstructs requested for a fresh first-answer primary-success session even when the most-recent answer was clarified", async () => {
       process.env.SECOND_OPINION_EXTRACTOR = "shadow";
@@ -1441,6 +1531,124 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       // Owner-facing report must not leak the internal trace.
       expect(JSON.stringify(payload.report)).not.toContain("request_outcome=");
       expect(JSON.stringify(payload.report)).not.toContain("eligibility_reason=");
+    });
+
+    it("anchors report-time primary-success reconstruction to the selected answer source turn", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockAcceptedReportSecondOpinionForCoughDuration();
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({
+          latestOwnerTurn: "Mostly after excitement and sometimes at night.",
+          answerSourceMessages: {
+            cough_duration: "It started about two days ago.",
+            cough_type: "It is a dry honking cough.",
+          },
+        })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const prompt = (mockComplete.mock.calls[0]?.[0] as { prompt?: string })
+        ?.prompt;
+      expect(prompt).toContain(JSON.stringify("It started about two days ago."));
+      expect(prompt).not.toContain("Mostly after excitement");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("accepted");
+      expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+      expect(traceParts.comparison_write_outcome).toBe(
+        "comparison_write_succeeded"
+      );
+      expect(traceParts.extractor_reason).toBeUndefined();
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+    });
+
+    it("rejects legacy reconstruction with a concrete source-context reason when no selected source turn is available", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({
+          latestOwnerTurn: "Mostly after excitement and sometimes at night.",
+        })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.extractor_reason).toBe("source_context_unavailable");
+      expect(traceParts.comparison_append_outcome).toBe("not_applicable");
+      expect(traceParts.comparison_write_outcome).toBe("not_applicable");
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+    });
+
+    it("fails closed for legacy boolean answers without a selected source turn", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      let session = createSession();
+      session = addSymptoms(session, ["regurgitation"]);
+      session = recordAnswer(session, "coughing_present", true);
+      const memory = session.case_memory!;
+      session.case_memory = {
+        ...memory,
+        latest_owner_turn: "Mostly after excitement and sometimes at night.",
+        question_asked_counts: { coughing_present: 1 },
+        clarification_attempts: { coughing_present: 0 },
+      };
+
+      const { response, payload } = await postReport(session);
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.extractor_reason).toBe("source_context_unavailable");
+      expect(mockComplete).not.toHaveBeenCalled();
+    });
+
+    it("fails closed for legacy short-answer anchors without a selected source turn", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({
+          durationAnswer: "2",
+          latestOwnerTurn:
+            "Mostly after excitement, and he had 2 quick coughing fits.",
+        })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.extractor_reason).toBe("source_context_unavailable");
+      expect(mockComplete).not.toHaveBeenCalled();
     });
 
     it("allows report-time primary-success reconstruction to use the extraction role timeout budget", async () => {

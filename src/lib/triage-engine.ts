@@ -80,6 +80,7 @@ export interface StructuredCaseMemory {
   pending_question_id?: string;
   question_asked_counts?: Record<string, number>;
   clarification_attempts?: Record<string, number>;
+  answer_source_messages?: Record<string, string>;
   timeline_notes: string[];
   visual_evidence: VisionClinicalEvidence[];
   retrieval_evidence: Array<RetrievalTextEvidence | RetrievalImageEvidence>;
@@ -142,6 +143,7 @@ export function createSession(): TriageSession {
       pending_question_id: undefined,
       question_asked_counts: {},
       clarification_attempts: {},
+      answer_source_messages: {},
       timeline_notes: [],
       visual_evidence: [],
       retrieval_evidence: [],

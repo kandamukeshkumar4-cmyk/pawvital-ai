@@ -2376,6 +2376,7 @@ export async function POST(request: Request) {
         consultOpinion,
       }),
       missingQuestionIds: getMissingQuestions(session),
+      answeredQuestionSourceIds: changedAnswerKeys,
     });
     const diagnosisContext = buildDiagnosisContext(session, effectivePet);
 

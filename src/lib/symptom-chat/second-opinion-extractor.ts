@@ -34,6 +34,7 @@ export type SecondOpinionReason =
   | "malformed_json"
   | "low_confidence"
   | "unsafe_inference"
+  | "source_context_unavailable"
   | "timeout"
   | "provider_error"
   | Extract<
