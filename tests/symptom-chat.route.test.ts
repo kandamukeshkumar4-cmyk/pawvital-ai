@@ -856,6 +856,66 @@ describe("symptom-chat mixed text + image routing", () => {
     });
   });
 
+  it("preserves live update order when processing publish is slow", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const processingPublish = createDeferred<{
+      enabled: true;
+      published: true;
+    }>();
+    mockPublishTriageLiveUpdate
+      .mockReturnValueOnce(processingPublish.promise)
+      .mockResolvedValueOnce({ enabled: true, published: true });
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: LIVE_SESSION_ID,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const responsePromise = POST(liveRequest);
+    await waitForMockCalls(mockPublishTriageLiveUpdate, 1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockPublishTriageLiveUpdate).toHaveBeenCalledTimes(1);
+
+    let settled = false;
+    void responsePromise.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(settled).toBe(false);
+
+    processingPublish.resolve({ enabled: true, published: true });
+    const response = await responsePromise;
+
+    expect(response.status).toBe(200);
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(1, {
+      action: "chat",
+      sessionId: LIVE_SESSION_ID,
+      status: "processing",
+      userId: "user-1",
+    });
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
+      action: "chat",
+      sessionId: LIVE_SESSION_ID,
+      status: "response_ready",
+      userId: "user-1",
+    });
+  });
+
   it("fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up", async () => {
     let session = createSession();
     session = addSymptoms(session, ["limping"]);

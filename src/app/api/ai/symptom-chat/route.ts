@@ -1077,6 +1077,16 @@ export async function POST(request: Request) {
   let statusCode = 200;
   let errorCode: string | undefined;
   let liveUpdateTarget: LiveUpdateTarget | null = null;
+  let liveUpdateChain: Promise<void> = Promise.resolve();
+  const queueTriageLiveUpdate = (
+    target: LiveUpdateTarget | null,
+    status: TriageLiveUpdateStatus
+  ): Promise<void> => {
+    liveUpdateChain = liveUpdateChain.then(() =>
+      scheduleTriageLiveUpdate(target, status)
+    );
+    return liveUpdateChain;
+  };
 
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
@@ -1156,7 +1166,7 @@ export async function POST(request: Request) {
         sessionId: safeLiveSessionId,
         userId: verifiedUserId,
       };
-      void scheduleTriageLiveUpdate(liveUpdateTarget, "processing");
+      void queueTriageLiveUpdate(liveUpdateTarget, "processing");
     }
 
     if (action === "generate_report") {
@@ -2585,7 +2595,7 @@ export async function POST(request: Request) {
     if (errorCode) {
       void trackException(errorCode, { routeName: ROUTE_NAME });
     }
-    await scheduleTriageLiveUpdate(
+    await queueTriageLiveUpdate(
       liveUpdateTarget,
       errorCode
         ? "failed"
