@@ -1,5 +1,6 @@
 import {
   AZURE_TRANSLATOR_FEATURE_FLAG,
+  normalizeTranslatorPlainText,
   translateTexts,
   type AzureTranslatorFetch,
 } from "@/lib/azure/translator";
@@ -41,6 +42,17 @@ function disabledFlagClient() {
 }
 
 describe("azure translator helper", () => {
+  it("normalizes only plain Translator text at the shared boundary", () => {
+    expect(normalizeTranslatorPlainText("  Mi perro vomita  ")).toBe(
+      "Mi perro vomita",
+    );
+    expect(
+      normalizeTranslatorPlainText("Mi perro <script>vomita</script>"),
+    ).toBeNull();
+    expect(normalizeTranslatorPlainText("Mi perro\u0000vomita")).toBeNull();
+    expect(normalizeTranslatorPlainText("a".repeat(5_001))).toBeNull();
+  });
+
   it("defaults off when the App Config translator flag is disabled", async () => {
     const fetchTranslator = jest.fn();
 
@@ -115,6 +127,59 @@ describe("azure translator helper", () => {
     });
     expect(init.headers).not.toHaveProperty("Ocp-Apim-Subscription-Region");
     expect(JSON.stringify(result)).not.toContain("translator-secret");
+  });
+
+  it("rejects unsafe direct caller text before fetching Translator", async () => {
+    const fetchTranslator = jest.fn();
+
+    await expect(
+      translateTexts(
+        { targetLanguage: "en", texts: ["Mi perro <script>vomita</script>"] },
+        { fetchTranslator },
+      ),
+    ).resolves.toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+
+    expect(fetchTranslator).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsafe Translator responses before returning owner-visible text", async () => {
+    const fetchTranslator: jest.MockedFunction<AzureTranslatorFetch> = jest.fn(
+      async () => ({
+        json: async () => [
+          {
+            detectedLanguage: { language: "es", score: 1 },
+            translations: [{ text: "<script>alert(1)</script>", to: "en" }],
+          },
+        ],
+        ok: true,
+        status: 200,
+      }),
+    );
+
+    const result = await translateTexts(
+      { targetLanguage: "en", texts: ["Mi perro vomita"] },
+      {
+        appConfigurationClientFactory: () => enabledFlagClient(),
+        env: CONFIGURED_ENV,
+        fetchTranslator,
+        secretClientFactory: () =>
+          makeSecretClient({
+            "appconfig-connection-string": APP_CONFIG_CONNECTION_STRING,
+            "translator-endpoint": "https://api.cognitive.microsofttranslator.com/",
+            "translator-key": "translator-secret",
+            "translator-region": "global",
+          }),
+      },
+    );
+
+    expect(result).toEqual({
+      enabled: false,
+      reason: "translator_unavailable",
+    });
+    expect(JSON.stringify(result)).not.toContain("<script>");
   });
 
   it("uses the custom cognitive-services Translator path and regional header when configured", async () => {

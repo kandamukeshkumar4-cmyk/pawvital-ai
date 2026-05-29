@@ -12,6 +12,8 @@ export const AZURE_TRANSLATOR_FEATURE_FLAG = "azure.translator.enabled";
 const TRANSLATOR_API_VERSION = "3.0";
 const MAX_TRANSLATOR_ITEMS = 25;
 const MAX_TRANSLATOR_TEXT_CHARS = 5_000;
+const UNSAFE_TRANSLATOR_TEXT_PATTERN =
+  /[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069<>]/;
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -66,6 +68,8 @@ type TranslatorResponsePayload = Array<{
   }>;
 }>;
 
+type TranslatorErrorCode = "not_configured" | "translator_unavailable";
+
 function defaultFetchTranslator(
   input: string | URL,
   init: RequestInit,
@@ -84,19 +88,39 @@ function normalizeLanguage(value: string | null | undefined): string | null {
     : null;
 }
 
+export function normalizeTranslatorPlainText(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const text = value.trim().normalize("NFC");
+  if (
+    text.length === 0 ||
+    text.length > MAX_TRANSLATOR_TEXT_CHARS ||
+    UNSAFE_TRANSLATOR_TEXT_PATTERN.test(text)
+  ) {
+    return null;
+  }
+
+  try {
+    encodeURIComponent(text);
+  } catch {
+    return null;
+  }
+
+  return text;
+}
+
 function normalizeTexts(texts: string[]): string[] | null {
   if (!Array.isArray(texts) || texts.length === 0) {
     return null;
   }
 
-  const normalized = texts
-    .map((text) => (typeof text === "string" ? text.trim() : ""))
-    .filter(Boolean);
-
+  const normalized = texts.map(normalizeTranslatorPlainText);
   if (
     normalized.length === 0 ||
     normalized.length > MAX_TRANSLATOR_ITEMS ||
-    normalized.some((text) => text.length > MAX_TRANSLATOR_TEXT_CHARS)
+    !normalized.every((text): text is string => text !== null)
   ) {
     return null;
   }
@@ -170,9 +194,9 @@ function parseTranslations(
 
   const translations = payload.map((entry) => {
     const text = entry.translations?.[0]?.text;
-    return typeof text === "string" ? text.trim() : "";
+    return normalizeTranslatorPlainText(text);
   });
-  if (translations.some((text) => !text)) {
+  if (!translations.every((text): text is string => text !== null)) {
     return null;
   }
 
@@ -189,7 +213,7 @@ function parseTranslations(
 async function trackTranslatorOutcome(
   input: {
     characterCount?: number;
-    errorCode?: string;
+    errorCode?: TranslatorErrorCode;
     statusCode: number;
   },
   options: TranslateTextOptions,

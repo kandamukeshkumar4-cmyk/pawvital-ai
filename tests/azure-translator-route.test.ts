@@ -17,9 +17,13 @@ jest.mock("@/lib/rate-limit", () => ({
   getRateLimitId: (...args: unknown[]) => mockGetRateLimitId(...args),
 }));
 
-jest.mock("@/lib/azure/translator", () => ({
-  translateTexts: (...args: unknown[]) => mockTranslateTexts(...args),
-}));
+jest.mock("@/lib/azure/translator", () => {
+  const actual = jest.requireActual("@/lib/azure/translator");
+  return {
+    ...actual,
+    translateTexts: (...args: unknown[]) => mockTranslateTexts(...args),
+  };
+});
 
 function makeRequest(body: unknown = {}) {
   return new Request("http://localhost/api/azure/translator", {

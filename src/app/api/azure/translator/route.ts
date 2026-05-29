@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { translateTexts } from "@/lib/azure/translator";
+import {
+  normalizeTranslatorPlainText,
+  translateTexts,
+} from "@/lib/azure/translator";
 import { requireAuthenticatedApiUser } from "@/lib/api-auth";
 import {
   checkRateLimit,
@@ -15,11 +18,8 @@ const NO_STORE_HEADERS = {
 };
 
 const MAX_TRANSLATOR_ITEMS = 25;
-const MAX_TRANSLATOR_TEXT_CHARS = 5_000;
 const MAX_TRANSLATOR_BATCH_CHARS = 25_000;
 const MAX_TRANSLATOR_REQUEST_CHARS = 32_000;
-const UNSAFE_TEXT_PATTERN =
-  /[\u0000-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069<>]/;
 const LANGUAGE_TAG_PATTERN = /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/i;
 
 type TranslatorRequestBody = {
@@ -111,27 +111,8 @@ async function readTranslatorRequestBody(
 }
 
 function sanitizeTranslatorText(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
   // Security boundary: only plain owner-visible text reaches Azure Translator.
-  const text = value.trim().normalize("NFC");
-  if (
-    text.length === 0 ||
-    text.length > MAX_TRANSLATOR_TEXT_CHARS ||
-    UNSAFE_TEXT_PATTERN.test(text)
-  ) {
-    return null;
-  }
-
-  try {
-    encodeURIComponent(text);
-  } catch {
-    return null;
-  }
-
-  return text;
+  return normalizeTranslatorPlainText(value);
 }
 
 function normalizeTexts(body: ParsedTranslatorRequestBody): string[] | null {
