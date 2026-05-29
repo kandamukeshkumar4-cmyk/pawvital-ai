@@ -47,7 +47,7 @@ Policy-allowed regional deployment locations observed on this subscription:
 | `pawvital-appinsights` | Application Insights | `centralus` | Privacy-safe telemetry target. |
 | `workspace-pawvitalrgVG49` | Log Analytics workspace | `centralus` | Container Apps generated workspace. |
 | `pawvital-aca-env` | Container Apps environment | `centralus` | Future sidecar/container environment. |
-| `pawvitalstnil7y8` | Storage account | `centralus` | Binary backing store for media, reports, audio. |
+| `pawvitalstnil7y8` | Storage account | `centralus` | Binary backing store; containers: `pet-media`, `reports`, `audio-corpus`. |
 | `pawvital-func-nil7y8` | Function App | `centralus` | Future background jobs. |
 | `CentralUSPlan` | App Service plan | `centralus` | Function App plan artifact. |
 | `pawvital-swa` | Static Web App | `centralus` | Staging mirror only; Vercel remains production. |

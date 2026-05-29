@@ -209,4 +209,31 @@ describe("uploadAzureBlob", () => {
     expect(getContainerClient).toHaveBeenCalledWith("pet-media");
     expect(getBlockBlobClient).toHaveBeenCalledWith("pets/pet-1/image.png");
   });
+
+  it("uses the provisioned audio-corpus container for audio uploads", async () => {
+    const uploadData = jest.fn().mockResolvedValue({});
+    const getBlockBlobClient = jest.fn().mockReturnValue({ uploadData });
+    const getContainerClient = jest.fn().mockReturnValue({ getBlockBlobClient });
+
+    await uploadAudio(
+      {
+        blobName: "sessions/session-1/input.wav",
+        body: Buffer.from("wav"),
+        contentType: "audio/wav",
+      },
+      {
+        env: CONFIGURED_ENV,
+        secretClientFactory: () =>
+          makeSecretClient({
+            "azure-storage-connection-string": "UseDevelopmentStorage=true",
+          }),
+        blobServiceClientFactory: () => ({ getContainerClient }),
+      }
+    );
+
+    expect(getContainerClient).toHaveBeenCalledWith("audio-corpus");
+    expect(getBlockBlobClient).toHaveBeenCalledWith(
+      "sessions/session-1/input.wav"
+    );
+  });
 });

@@ -1,7 +1,7 @@
 import { getBlobClient, type AzureClientOptions } from "./index";
 
 export const AZURE_BLOB_CONTAINERS = {
-  audio: "audio",
+  audio: "audio-corpus",
   petMedia: "pet-media",
   reports: "reports",
 } as const;
