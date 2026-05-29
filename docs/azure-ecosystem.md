@@ -325,3 +325,26 @@ Pricing references:
 
 Each code ticket needs a unit test with Azure clients mocked and a demo-mode
 test proving absent env or absent secret disables the feature cleanly.
+
+## Live Smoke Scenario
+
+Run the live Azure service-response check from an authenticated Azure CLI
+session:
+
+```bash
+npm run smoke:azure
+```
+
+The smoke script reads secrets from Key Vault but never prints secret values. It
+uses low-risk non-PII probes for Azure account/resource inventory, Key Vault,
+Application Insights, App Configuration flags, Static Web Apps, Blob Storage,
+Translator, Speech token issuance, Document Intelligence model listing, Content
+Safety text analysis, Azure Maps address search, Web PubSub token issuance, and
+Service Bus send/receive/complete.
+
+Expected current caveats:
+
+- App Configuration feature flags may intentionally report `off` until the
+  latest production deploy is ready.
+- Static Web Apps may report the Azure resource as ready while GitHub repo
+  linking is still manual/admin work.
