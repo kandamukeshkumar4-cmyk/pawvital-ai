@@ -46,6 +46,7 @@ import type {
   TriageLiveUpdate,
   TriageLiveUpdateStatus,
 } from "@/lib/azure/web-pubsub";
+import { useSymptomTranslator } from "@/hooks/useSymptomTranslator";
 
 // --- Types ---
 
@@ -65,6 +66,8 @@ interface ImageGateWarning {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  apiContent?: string;
+  ownerLanguage?: string | null;
   type?:
     | "question"
     | "emergency"
@@ -274,6 +277,12 @@ export default function SymptomCheckerPage() {
   const [, setLiveUpdateStatus] = useState<TriageLiveUpdateStatus | null>(null);
   const [, setLiveConnectionState] =
     useState<TriageLiveUpdateConnectionState>("disabled");
+  const {
+    localizeAssistantText,
+    localizeReport,
+    normalizeOwnerMessage,
+    resetOwnerLanguage,
+  } = useSymptomTranslator();
 
   // Hybrid triage session — passed to/from the API each turn
   // Use both state (for re-renders) and ref (to avoid stale closures in async sendMessage)
@@ -464,7 +473,7 @@ export default function SymptomCheckerPage() {
       .filter((m) => m.type !== "image_gate")
       .map((m) => ({
         role: m.role as "user" | "assistant",
-        content: m.content,
+        content: m.apiContent ?? m.content,
       }));
     return extraMessages ? [...base, ...extraMessages] : base;
   };
@@ -509,11 +518,20 @@ export default function SymptomCheckerPage() {
     const imageMetaToSend = imageMetaOverride ?? selectedImageMeta;
     if ((!messageText && !imageToSend) || loading) return;
 
+    const normalizedUserText =
+      appendUserMessage && messageText
+        ? await normalizeOwnerMessage(messageText)
+        : null;
+
     let userMessage: ChatMessage | null = null;
     if (appendUserMessage) {
       const nextUserMessage: ChatMessage = {
         role: "user",
         content: messageText || "Uploaded an image for analysis.",
+        apiContent: normalizedUserText?.translated
+          ? normalizedUserText.apiText
+          : undefined,
+        ownerLanguage: normalizedUserText?.ownerLanguage,
         image: imageToSend || undefined,
         timestamp: new Date(),
       };
@@ -537,7 +555,10 @@ export default function SymptomCheckerPage() {
         appendUserMessage && userMessage
           ? [
               ...baseMessages,
-              { role: "user" as const, content: userMessage.content },
+              {
+                role: "user" as const,
+                content: userMessage.apiContent ?? userMessage.content,
+              },
             ]
           : baseMessages;
 
@@ -587,12 +608,26 @@ export default function SymptomCheckerPage() {
         setConversationState(inferred);
       }
 
+      const assistantText =
+        typeof data.message === "string"
+          ? await localizeAssistantText(data.message)
+          : null;
+      const terminalOwnerText =
+        typeof data.owner_message === "string"
+          ? await localizeAssistantText(data.owner_message)
+          : null;
+      const terminalNextStepText =
+        typeof data.recommended_next_step === "string"
+          ? await localizeAssistantText(data.recommended_next_step)
+          : null;
+
       if (data.type === "emergency") {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: data.message,
+            content: assistantText?.content ?? data.message,
+            apiContent: assistantText?.apiContent,
             type: "emergency",
             timestamp: new Date(),
           },
@@ -604,7 +639,8 @@ export default function SymptomCheckerPage() {
           ...prev,
           {
             role: "assistant",
-            content: data.message,
+            content: assistantText?.content ?? data.message,
+            apiContent: assistantText?.apiContent,
             type: "image_gate",
             gate: data.gate,
             timestamp: new Date(),
@@ -615,7 +651,8 @@ export default function SymptomCheckerPage() {
           ...prev,
           {
             role: "assistant",
-            content: data.message,
+            content: assistantText?.content ?? data.message,
+            apiContent: assistantText?.apiContent,
             type: "ready",
             timestamp: new Date(),
           },
@@ -634,9 +671,13 @@ export default function SymptomCheckerPage() {
           {
             role: "assistant",
             content:
-              isTerminalOutcome && typeof data.owner_message === "string"
-                ? data.owner_message
-                : data.message,
+              isTerminalOutcome && terminalOwnerText
+                ? terminalOwnerText.content
+                : assistantText?.content ?? data.message,
+            apiContent:
+              isTerminalOutcome && terminalOwnerText
+                ? terminalOwnerText.apiContent
+                : assistantText?.apiContent,
             type: data.type,
             terminalState:
               isTerminalOutcome && typeof data.terminal_state === "string"
@@ -648,12 +689,12 @@ export default function SymptomCheckerPage() {
                 : null,
             ownerMessage:
               isTerminalOutcome && typeof data.owner_message === "string"
-                ? data.owner_message
+                ? terminalOwnerText?.content ?? data.owner_message
                 : null,
             recommendedNextStep:
               isTerminalOutcome &&
               typeof data.recommended_next_step === "string"
-                ? data.recommended_next_step
+                ? terminalNextStepText?.content ?? data.recommended_next_step
                 : null,
             timestamp: new Date(),
           },
@@ -708,7 +749,7 @@ export default function SymptomCheckerPage() {
         (data.type === "cannot_assess" &&
           data.report?.report_mode === "terminal_cannot_assess");
       if (shouldRenderReport && data.report) {
-        setReport(data.report);
+        setReport(await localizeReport(data.report));
         setReportPersistenceMessage(
           typeof data.persistence?.message === "string"
             ? data.persistence.message
@@ -741,6 +782,7 @@ export default function SymptomCheckerPage() {
     setConversationState("idle");
     setAnsweredCount(0);
     setTotalQuestions(0);
+    resetOwnerLanguage();
     setTriageSession(null);
     triageSessionRef.current = null;
     liveSessionIdRef.current = createLiveSessionId();
