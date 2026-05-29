@@ -208,20 +208,24 @@ type LiveUpdateTarget = {
   userId: string;
 };
 
-function scheduleTriageLiveUpdate(
+async function scheduleTriageLiveUpdate(
   target: LiveUpdateTarget | null,
   status: TriageLiveUpdateStatus
-) {
+): Promise<void> {
   if (!target) {
     return;
   }
 
-  void publishTriageLiveUpdate({
-    action: target.action,
-    sessionId: target.sessionId,
-    status,
-    userId: target.userId,
-  });
+  try {
+    await publishTriageLiveUpdate({
+      action: target.action,
+      sessionId: target.sessionId,
+      status,
+      userId: target.userId,
+    });
+  } catch {
+    // Live status is an enhancement; never let Web PubSub affect triage output.
+  }
 }
 
 async function persistChatShadowTelemetrySnapshot({
@@ -1152,7 +1156,7 @@ export async function POST(request: Request) {
         sessionId: safeLiveSessionId,
         userId: verifiedUserId,
       };
-      scheduleTriageLiveUpdate(liveUpdateTarget, "processing");
+      void scheduleTriageLiveUpdate(liveUpdateTarget, "processing");
     }
 
     if (action === "generate_report") {
@@ -2581,7 +2585,7 @@ export async function POST(request: Request) {
     if (errorCode) {
       void trackException(errorCode, { routeName: ROUTE_NAME });
     }
-    scheduleTriageLiveUpdate(
+    await scheduleTriageLiveUpdate(
       liveUpdateTarget,
       errorCode
         ? "failed"

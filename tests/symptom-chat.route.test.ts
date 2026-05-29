@@ -504,6 +504,29 @@ function buildErrorSidecarResult(
   return { ok: false, category, error, latencyMs, service };
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolver) => {
+    resolve = resolver;
+  });
+
+  return { promise, resolve };
+}
+
+async function waitForMockCalls(
+  mock: { mock: { calls: unknown[][] } },
+  count: number,
+) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    if (mock.mock.calls.length >= count) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  throw new Error(`Expected at least ${count} mock calls`);
+}
+
 describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -772,6 +795,59 @@ describe("symptom-chat mixed text + image routing", () => {
     await POST(liveRequest);
 
     expect(mockPublishTriageLiveUpdate).not.toHaveBeenCalled();
+  });
+
+  it("awaits the terminal live update before returning", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const terminalPublish = createDeferred<{
+      enabled: true;
+      published: true;
+    }>();
+    mockPublishTriageLiveUpdate
+      .mockResolvedValueOnce({ enabled: true, published: true })
+      .mockReturnValueOnce(terminalPublish.promise);
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: "live-session-1",
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const responsePromise = POST(liveRequest);
+    await waitForMockCalls(mockPublishTriageLiveUpdate, 2);
+
+    let settled = false;
+    void responsePromise.then(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(settled).toBe(false);
+
+    terminalPublish.resolve({ enabled: true, published: true });
+    const response = await responsePromise;
+
+    expect(response.status).toBe(200);
+    expect(settled).toBe(true);
+    expect(mockPublishTriageLiveUpdate).toHaveBeenNthCalledWith(2, {
+      action: "chat",
+      sessionId: "live-session-1",
+      status: "response_ready",
+      userId: "user-1",
+    });
   });
 
   it("fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up", async () => {
