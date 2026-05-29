@@ -95,7 +95,9 @@ function isUnsafeString(value: string): boolean {
   return value.length > 4096 || /^data:/i.test(value);
 }
 
-function hasUnsafePayload(value: ServiceBusSafeJsonValue): boolean {
+export function hasUnsafeServiceBusPayload(
+  value: ServiceBusSafeJsonValue
+): boolean {
   if (typeof value === "string") {
     return isUnsafeString(value);
   }
@@ -105,13 +107,14 @@ function hasUnsafePayload(value: ServiceBusSafeJsonValue): boolean {
   }
 
   if (Array.isArray(value)) {
-    return value.some((item) => hasUnsafePayload(item));
+    return value.some((item) => hasUnsafeServiceBusPayload(item));
   }
 
   return Object.entries(value).some(([key, nestedValue]) => {
     const normalizedKey = key.replace(/[_-]/g, "").toLowerCase();
     return (
-      UNSAFE_PAYLOAD_KEYS.has(normalizedKey) || hasUnsafePayload(nestedValue)
+      UNSAFE_PAYLOAD_KEYS.has(normalizedKey) ||
+      hasUnsafeServiceBusPayload(nestedValue)
     );
   });
 }
@@ -130,7 +133,7 @@ export async function enqueueJob(
     return { ok: false, reason: "feature_disabled" };
   }
 
-  if (hasUnsafePayload(payload)) {
+  if (hasUnsafeServiceBusPayload(payload)) {
     return { ok: false, reason: "unsafe_payload" };
   }
 
