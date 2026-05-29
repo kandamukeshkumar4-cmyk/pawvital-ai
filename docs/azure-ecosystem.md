@@ -238,6 +238,7 @@ Initial flag keys:
 | `azure.translator.enabled` | off | Owner language translation. |
 | `azure.telemetry.sampling` | off or minimal | App Insights sampling control. |
 | `azure.async-review.enabled` | off | Service Bus async jobs. |
+| `azure.maps.enabled` | off | Consent-gated nearest emergency vet lookup. |
 
 ## Data Boundary
 

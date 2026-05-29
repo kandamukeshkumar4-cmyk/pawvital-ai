@@ -19,6 +19,7 @@ import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
 import { BayesianDifferentials } from "./bayesian-differentials";
 import { OwnerSummarySection } from "./owner-summary";
+import { NearestVetFinder } from "./nearest-vet-finder";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
@@ -236,6 +237,10 @@ export function FullReport({
         warningSigns={report.warning_signs}
         warningTitle={presentation.warningTitle}
       />
+
+      {!readOnlyShared &&
+        (report.recommendation === "emergency_vet" ||
+          report.severity === "emergency") && <NearestVetFinder />}
 
       <OwnerSummarySection
         canExport={canExport}
