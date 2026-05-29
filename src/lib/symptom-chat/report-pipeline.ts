@@ -98,6 +98,7 @@ const URGENCY_TO_RECOMMENDATION: Record<string, string> = {
   moderate: "vet_48h",
   low: "monitor",
 };
+const REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS = 20_000;
 const REPORT_CLAIM_SECTION_PATTERNS = [
   /top differentials:/i,
   /recommended diagnostics:/i,
@@ -715,6 +716,7 @@ async function appendReportSecondOpinionTraceIfMissing({
       deterministicResolved: hasRecordedAnswer,
       clarificationAttempts: shadowSamplingClarificationAttempts,
       knownSymptomsBeforeTurn: session.known_symptoms,
+      timeoutMs: REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS,
       budgetState: reconstructionBudgetState,
       isShadowSampling: true,
     });
