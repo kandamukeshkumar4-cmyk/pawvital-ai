@@ -1,6 +1,7 @@
 # PawVital Azure Ecosystem
 
-Status: AZ-001 inventory baseline for the existing Azure resources.
+Status: AZ-001 inventory baseline for the existing Azure resources. AZ-012
+adds the Static Web App staging mirror admin handoff.
 
 Do not rerun `G:\MY Website\azure-free-setup.ps1` for normal app wiring. The
 resources below already exist. Rerunning the setup script can create duplicate
@@ -62,6 +63,128 @@ Policy-allowed regional deployment locations observed on this subscription:
 | `pawvital-appconfig-nil7y8` | App Configuration | `centralus` | Azure feature flags. |
 | `pawvitalacrnil7y8` | Container Registry | `centralus` | Sidecar/container images. |
 | `pawvital-maps` | Azure Maps | `global` | Nearest emergency vet lookup. |
+
+## AZ-012 Static Web App Staging Mirror Handoff
+
+Goal: link the existing `pawvital-swa` Static Web App to GitHub as a staging
+mirror only. Vercel remains the owner-facing production host for
+`pawvital-ai.vercel.app`; `pawvital-swa` must not receive production DNS, Vercel
+environment variables, or live traffic routing.
+
+### Boundary
+
+| Item | Required value |
+| --- | --- |
+| Azure resource | Existing `pawvital-swa` in `pawvital-rg`; do not create a duplicate Static Web App. |
+| GitHub repository | `kandamukeshkumar4-cmyk/pawvital-ai`. |
+| Branch | `swa-test` only. Do not select `master` or any agent feature branch. |
+| Azure purpose | Staging mirror and Azure hosting compatibility check. |
+| Production host | Vercel remains production. Do not change Vercel project settings, domains, env vars, or deploy hooks for AZ-012. |
+| Secret rule | Do not paste deployment tokens, GitHub tokens, Supabase secrets, Vercel env values, or Key Vault values into docs, chat, commits, screenshots, or PR text. |
+
+### Preflight
+
+1. In GitHub, create or refresh `swa-test` from the current green `master`
+   commit after the latest production gates are passing.
+2. Confirm `swa-test` can accept the Azure-generated workflow commit. If branch
+   protection blocks Azure from committing `.github/workflows/azure-static-web-apps-*.yml`,
+   temporarily allow the admin to commit to `swa-test`; do not switch the Azure
+   setup to `master`.
+3. Confirm no PawVital production domain is assigned to `pawvital-swa`. Leave the
+   default `*.azurestaticapps.net` host as the staging URL unless a separate
+   DNS ticket authorizes a staging subdomain.
+
+### Azure Portal Steps
+
+1. Open https://portal.azure.com.
+2. Search for `Static Web Apps`, then open `pawvital-swa`.
+3. Confirm the resource is under subscription `Azure for Students`, resource
+   group `pawvital-rg`, and region `centralus`.
+4. If the Portal exposes deployment-token or deployment-authorization settings,
+   keep the workflow on the Azure-generated Static Web Apps deployment token.
+   Azure stores this in GitHub as a repository secret named like
+   `AZURE_STATIC_WEB_APPS_API_TOKEN...`.
+5. Return to **Overview**. If the resource offers a GitHub/source-control setup
+   action, choose **GitHub** as the source and sign in when prompted.
+6. Authorize **Azure Static Web Apps** for the GitHub account only if the
+   repository list is missing. In GitHub this is under **Settings -> Applications
+   -> Authorized OAuth Apps -> Azure Static Web Apps -> Grant**.
+7. Set repository details exactly:
+
+   | Portal field | Value |
+   | --- | --- |
+   | Organization | `kandamukeshkumar4-cmyk` |
+   | Repository | `pawvital-ai` |
+   | Branch | `swa-test` |
+
+8. In **Build Details**, choose the **Next.js** preset:
+
+   | Portal field | Value |
+   | --- | --- |
+   | App location | `/` |
+   | API location | empty |
+   | Output location | empty |
+
+   PawVital is a hybrid Next.js app with App Router route handlers. Do not use
+   static export settings for AZ-012 unless a later ticket changes
+   `next.config.ts` to `output: "export"`.
+9. Select **Review + create** or the equivalent final setup action. Azure should
+   create a GitHub Actions workflow on `swa-test` and create a GitHub repository
+   Actions secret named like `AZURE_STATIC_WEB_APPS_API_TOKEN...`.
+10. After the workflow appears in GitHub, inspect the file on `swa-test` before
+    any branch promotion:
+
+    ```yaml
+    on:
+      push:
+        branches:
+          - swa-test
+      pull_request:
+        branches:
+          - swa-test
+    ```
+
+    The deploy step should keep `app_location: "/"`, `api_location: ""`,
+    `output_location: ""`, and `production_branch: "swa-test"` if Azure includes
+    that field. If the generated workflow targets `master`, stop and correct the
+    setup on `swa-test`; do not merge it.
+11. If the build needs environment variables, add only staging/demo-safe values
+    or dedicated GitHub Actions staging secrets. Do not copy Vercel Production
+    secrets or Supabase service-role credentials into the SWA workflow.
+12. When the GitHub Actions run succeeds, open the Azure-generated default host
+    from `pawvital-swa` and mark it as a staging mirror URL. Do not add a custom
+    domain or production alias in AZ-012.
+
+### Ongoing Refresh
+
+Refresh the mirror by fast-forwarding `swa-test` from a known-good `master`
+after production gates are already green:
+
+```powershell
+git fetch origin
+git switch swa-test
+git merge --ff-only origin/master
+git push origin swa-test
+```
+
+This push should trigger only the Azure Static Web Apps workflow for `swa-test`.
+Vercel production continues to deploy from `master` through the existing Vercel
+integration.
+
+### References
+
+- Azure Static Web Apps portal setup:
+  https://learn.microsoft.com/en-us/azure/static-web-apps/get-started-portal
+- Azure Static Web Apps build configuration:
+  https://learn.microsoft.com/en-in/azure/static-web-apps/build-configuration
+- Azure Static Web Apps branch environments:
+  https://learn.microsoft.com/en-us/azure/static-web-apps/branch-environments
+- Azure Static Web Apps deployment token management:
+  https://learn.microsoft.com/en-us/azure/static-web-apps/deployment-token-management
+- Azure Static Web Apps Next.js support:
+  https://learn.microsoft.com/en-us/azure/static-web-apps/nextjs
+- Azure Static Web Apps hybrid Next.js deployment:
+  https://learn.microsoft.com/en-us/azure/static-web-apps/deploy-nextjs-hybrid
 
 ## Key Vault Contract
 
