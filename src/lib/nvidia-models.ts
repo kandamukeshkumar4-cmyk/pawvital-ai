@@ -147,6 +147,7 @@ interface CompletionOptions {
   prompt: string;
   systemPrompt?: string;
   maxTokens?: number;
+  providerPriority?: readonly ModelProvider[];
   temperature?: number;
 }
 
@@ -155,9 +156,15 @@ export async function complete({
   prompt,
   systemPrompt,
   maxTokens = 1024,
+  providerPriority,
   temperature = 0.6,
 }: CompletionOptions): Promise<string> {
-  const providers = getModelProviderChain(role);
+  const configuredProviders = getModelProviderChain(role);
+  const providers = providerPriority
+    ? providerPriority.filter((provider) =>
+        configuredProviders.includes(provider)
+      )
+    : configuredProviders;
   if (providers.length === 0) {
     throw new Error(`${MODELS[role].role} model not configured`);
   }

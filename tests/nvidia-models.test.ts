@@ -148,4 +148,36 @@ describe("nvidia-models configuration", () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it("honors a call-scoped provider priority for latency-sensitive extractors", async () => {
+    process.env.HF_NARROW_MODEL_PACK_URL = "https://narrow-pack.example/v1";
+    process.env.HF_SIDECAR_API_KEY = "sidecar-secret";
+    process.env.NARROW_PACK_ENABLED = "true";
+    process.env.NVIDIA_API_KEY = "nvapi-shared";
+
+    mockCreate.mockResolvedValueOnce({
+      choices: [{ message: { content: "nvidia response" } }],
+    });
+
+    const models = await import("@/lib/nvidia-models");
+    const response = await models.complete({
+      role: "extraction",
+      prompt: "extract this",
+      providerPriority: ["nvidia", "narrow-pack"],
+      temperature: 0,
+    });
+
+    expect(response).toBe("nvidia response");
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        baseURL: "https://integrate.api.nvidia.com/v1",
+        apiKey: "nvapi-shared",
+        request: expect.objectContaining({
+          model: "qwen/qwen3.5-122b-a10b",
+        }),
+      })
+    );
+  });
 });
