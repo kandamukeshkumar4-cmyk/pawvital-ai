@@ -83,6 +83,11 @@ describe("Azure Document Intelligence vet record intake", () => {
   });
 
   it("extracts context, screens it, and records page-count telemetry without raw text", async () => {
+    const enqueueDocumentProcessingJob = jest.fn().mockResolvedValue({
+      messageId: "document-processing-job",
+      ok: true,
+      queueName: "async-review",
+    });
     const fetchDocument = jest
       .fn<ReturnType<AzureServiceFetch>, Parameters<AzureServiceFetch>>()
       .mockResolvedValueOnce(
@@ -131,6 +136,7 @@ describe("Azure Document Intelligence vet record intake", () => {
     const result = await intakeVetRecordDocument(BASE_INPUT, {
       appConfigurationClientFactory: appConfigurationClientFactory(true),
       env: CONFIGURED_ENV,
+      enqueueDocumentProcessingJob,
       fetchContentSafety,
       fetchDocumentIntelligence: fetchDocument,
       pollIntervalMs: 0,
@@ -172,6 +178,22 @@ describe("Azure Document Intelligence vet record intake", () => {
 
     expect(JSON.stringify(result)).not.toContain("doc-secret");
     expect(JSON.stringify(result)).not.toContain("content-secret");
+    expect(enqueueDocumentProcessingJob).toHaveBeenCalledWith(
+      "document-processing",
+      expect.objectContaining({
+        blobName: BASE_INPUT.blobName,
+        contentLength: expect.any(Number),
+        jobId: expect.stringMatching(/^document-processing-/),
+        pageCount: 2,
+        source: "vet-record-intake",
+      }),
+      expect.objectContaining({
+        jobId: expect.stringMatching(/^document-processing-/),
+      }),
+    );
+    expect(JSON.stringify(enqueueDocumentProcessingJob.mock.calls)).not.toContain(
+      "Buddy had vomiting",
+    );
     expect(transport).toHaveBeenCalledTimes(1);
     expect(
       JSON.stringify(
@@ -181,6 +203,60 @@ describe("Azure Document Intelligence vet record intake", () => {
     expect(JSON.stringify(transport.mock.calls[0][0])).not.toContain(
       "Buddy had vomiting",
     );
+  });
+
+  it("keeps successful document intake available when async queueing fails", async () => {
+    const fetchDocument = jest
+      .fn<ReturnType<AzureServiceFetch>, Parameters<AzureServiceFetch>>()
+      .mockResolvedValueOnce(
+        response({
+          headers: { "operation-location": "https://poll.example/doc-1" },
+          status: 202,
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          json: {
+            analyzeResult: {
+              content: "Normal lab result note.",
+              pages: [{ pageNumber: 1 }],
+            },
+            status: "succeeded",
+          },
+        }),
+      );
+    const fetchContentSafety = jest
+      .fn<ReturnType<AzureServiceFetch>, Parameters<AzureServiceFetch>>()
+      .mockResolvedValue(
+        response({
+          json: {
+            categoriesAnalysis: [
+              { category: "Hate", severity: 0 },
+              { category: "SelfHarm", severity: 0 },
+              { category: "Sexual", severity: 0 },
+              { category: "Violence", severity: 0 },
+            ],
+          },
+        }),
+      );
+
+    const result = await intakeVetRecordDocument(BASE_INPUT, {
+      appConfigurationClientFactory: appConfigurationClientFactory(true),
+      enqueueDocumentProcessingJob: jest
+        .fn()
+        .mockRejectedValue(new Error("queue unavailable")),
+      env: CONFIGURED_ENV,
+      fetchContentSafety,
+      fetchDocumentIntelligence: fetchDocument,
+      pollIntervalMs: 0,
+      secretClientFactory: secretClientFactory(BASE_SECRETS),
+    });
+
+    expect(result).toMatchObject({
+      enabled: true,
+      ok: true,
+      pageCount: 1,
+    });
   });
 
   it("blocks unsafe extracted text without returning the extracted context", async () => {
