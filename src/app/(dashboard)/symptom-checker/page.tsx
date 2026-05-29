@@ -30,6 +30,7 @@ import type { ConversationState } from "@/lib/conversation-state/types";
 import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
+import { SpeechInputButton } from "@/components/symptom-checker/speech-input-button";
 
 // --- Types ---
 
@@ -290,6 +291,14 @@ export default function SymptomCheckerPage() {
   const clearPendingGateImage = () => {
     setPendingGateImage(null);
     setPendingGateImageMeta(null);
+  };
+
+  const appendTranscriptToInput = (transcript: string) => {
+    setInput((current) => {
+      const trimmedCurrent = current.trimEnd();
+      return trimmedCurrent ? `${trimmedCurrent} ${transcript}` : transcript;
+    });
+    inputRef.current?.focus();
   };
 
   // ── Stage 1: Image Preprocessing ──
@@ -977,6 +986,10 @@ export default function SymptomCheckerPage() {
                     >
                       <ImagePlus className="w-5 h-5 text-gray-500" />
                     </Button>
+                    <SpeechInputButton
+                      disabled={loading}
+                      onTranscript={appendTranscriptToInput}
+                    />
                     <input
                       type="file"
                       accept="image/*"
@@ -1053,6 +1066,10 @@ export default function SymptomCheckerPage() {
                 >
                   <ImagePlus className="w-5 h-5 text-gray-500" />
                 </Button>
+                <SpeechInputButton
+                  disabled={loading}
+                  onTranscript={appendTranscriptToInput}
+                />
                 <input
                   type="file"
                   accept="image/*"
