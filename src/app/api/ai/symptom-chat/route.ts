@@ -166,6 +166,7 @@ import {
   trackRouteTelemetry,
 } from "@/lib/azure/telemetry";
 import {
+  normalizeWebPubSubSafeId,
   publishTriageLiveUpdate,
   type TriageLiveUpdateStatus,
 } from "@/lib/azure/web-pubsub";
@@ -1144,10 +1145,11 @@ export async function POST(request: Request) {
     // can be emitted with a trusted userId. Falls back to null in demo mode or
     // when the session cookie is absent — emissions are skipped in that case.
     const verifiedUserId = await resolveVerifiedUserId();
-    if (verifiedUserId && liveSessionId) {
+    const safeLiveSessionId = normalizeWebPubSubSafeId(liveSessionId);
+    if (verifiedUserId && safeLiveSessionId) {
       liveUpdateTarget = {
         action,
-        sessionId: liveSessionId,
+        sessionId: safeLiveSessionId,
         userId: verifiedUserId,
       };
       scheduleTriageLiveUpdate(liveUpdateTarget, "processing");

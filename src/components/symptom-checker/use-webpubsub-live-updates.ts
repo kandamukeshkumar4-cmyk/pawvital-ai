@@ -57,6 +57,18 @@ function isTriageLiveUpdate(value: unknown): value is TriageLiveUpdate {
   );
 }
 
+function isSuccessfulNegotiation(
+  value: NegotiationResponse,
+  sessionId: string,
+): value is Extract<NegotiationResponse, { enabled: true }> {
+  return (
+    value.enabled === true &&
+    value.sessionId === sessionId &&
+    typeof value.url === "string" &&
+    value.url.startsWith("wss://")
+  );
+}
+
 export function parseTriageLiveUpdate(data: unknown): TriageLiveUpdate | null {
   const parsed =
     typeof data === "string"
@@ -110,6 +122,11 @@ export function useWebPubSubLiveUpdates({
         const body = (await response.json()) as NegotiationResponse;
         if (!body.enabled) {
           onConnectionState?.("disabled");
+          return;
+        }
+
+        if (!isSuccessfulNegotiation(body, sessionId)) {
+          onConnectionState?.("fallback");
           return;
         }
 

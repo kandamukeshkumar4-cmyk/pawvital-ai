@@ -83,7 +83,7 @@ export type PublishTriageLiveUpdateResult =
         | "publish_failed";
     };
 
-function normalizeSafeId(value: unknown): string | null {
+export function normalizeWebPubSubSafeId(value: unknown): string | null {
   if (typeof value !== "string") {
     return null;
   }
@@ -137,8 +137,8 @@ export async function negotiateTriageLiveUpdates(
   input: { sessionId: string; userId: string },
   options: WebPubSubOptions = {},
 ): Promise<NegotiateTriageLiveUpdatesResult> {
-  const userId = normalizeSafeId(input.userId);
-  const sessionId = normalizeSafeId(input.sessionId);
+  const userId = normalizeWebPubSubSafeId(input.userId);
+  const sessionId = normalizeWebPubSubSafeId(input.sessionId);
   if (!userId || !sessionId) {
     await trackWebPubSubEvent(
       { errorCode: "invalid_request", statusCode: 400 },
@@ -203,8 +203,8 @@ export async function publishTriageLiveUpdate(
   },
   options: WebPubSubOptions = {},
 ): Promise<PublishTriageLiveUpdateResult> {
-  const userId = normalizeSafeId(input.userId);
-  const sessionId = normalizeSafeId(input.sessionId);
+  const userId = normalizeWebPubSubSafeId(input.userId);
+  const sessionId = normalizeWebPubSubSafeId(input.sessionId);
   if (!userId || !sessionId) {
     await trackWebPubSubEvent(
       { errorCode: "invalid_request", statusCode: 400 },

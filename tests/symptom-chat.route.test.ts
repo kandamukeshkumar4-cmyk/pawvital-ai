@@ -241,6 +241,14 @@ jest.mock("@/lib/azure/telemetry", () => ({
 }));
 
 jest.mock("@/lib/azure/web-pubsub", () => ({
+  normalizeWebPubSubSafeId: (value: unknown) => {
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const trimmed = value.trim();
+    return /^[A-Za-z0-9:_@.-]{1,128}$/.test(trimmed) ? trimmed : null;
+  },
   publishTriageLiveUpdate: (...args: unknown[]) =>
     mockPublishTriageLiveUpdate(...args),
 }));
@@ -738,6 +746,32 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(JSON.stringify(mockPublishTriageLiveUpdate.mock.calls)).not.toContain(
       "limping",
     );
+  });
+
+  it("does not schedule live updates for unsafe live session IDs", async () => {
+    mockCreateServerSupabaseClient.mockResolvedValue(
+      buildBillingSupabase({ userId: "user-1" }),
+    );
+
+    const session = createSession();
+    const request = makeTextOnlyRequest(
+      session,
+      "My dog is limping on the back leg.",
+    );
+    const body = await request.json();
+    const liveRequest = new Request("http://localhost/api/ai/symptom-chat", {
+      body: JSON.stringify({
+        ...body,
+        liveSessionId: "../live session",
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    await POST(liveRequest);
+
+    expect(mockPublishTriageLiveUpdate).not.toHaveBeenCalled();
   });
 
   it("fuses a direct leg answer with wound-photo evidence and pivots to wound follow-up", async () => {
