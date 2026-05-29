@@ -43,6 +43,7 @@ export const PROTECTED_CONTROL_STATE_KEYS = [
   "pending_question_id",
   "question_asked_counts",
   "clarification_attempts",
+  "answer_source_messages",
   "last_question_asked",
 ] as const;
 
@@ -61,6 +62,7 @@ export interface ProtectedConversationState {
   pending_question_id?: string;
   question_asked_counts: Record<string, number>;
   clarification_attempts: Record<string, number>;
+  answer_source_messages: Record<string, string>;
   last_question_asked?: string;
 }
 
@@ -83,6 +85,8 @@ export function getProtectedConversationState(
       session.case_memory?.question_asked_counts ?? {},
     clarification_attempts:
       session.case_memory?.clarification_attempts ?? {},
+    answer_source_messages:
+      session.case_memory?.answer_source_messages ?? {},
     last_question_asked: session.last_question_asked,
   };
 }
@@ -238,6 +242,12 @@ export function hasControlStateChanged(
     return true;
   }
 
+  if (
+    !sameReasonMap(before.answer_source_messages, after.answer_source_messages)
+  ) {
+    return true;
+  }
+
   // last_question_asked
   if (before.last_question_asked !== after.last_question_asked) {
     return true;
@@ -306,6 +316,7 @@ export function mergeCompressionResult(
       pending_question_id: protectedState.pending_question_id,
       question_asked_counts: protectedState.question_asked_counts,
       clarification_attempts: protectedState.clarification_attempts,
+      answer_source_messages: protectedState.answer_source_messages,
       // Only these fields come from compression
       compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
       compression_model: compressed.model,
@@ -456,6 +467,7 @@ interface TurnMemoryUpdate {
   ambiguityFlags?: string[];
   evidenceNotes?: string[];
   imageInfluencedQuestionSelection?: boolean;
+  answeredQuestionSourceIds?: string[];
 }
 
 function trimLines(lines: string[], limit: number): string[] {
@@ -474,6 +486,33 @@ function dedupeStrings(values: string[], limit = 12): string[] {
     deduped.push(normalized);
   }
   return deduped.slice(0, limit);
+}
+
+function buildAnswerSourceMessages(
+  existing: StructuredCaseMemory,
+  update: TurnMemoryUpdate
+): Record<string, string> {
+  const answerSourceMessages = {
+    ...(existing.answer_source_messages || {}),
+  };
+  const sourceMessage = update.latestUserMessage
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 400);
+
+  if (!sourceMessage) {
+    return answerSourceMessages;
+  }
+
+  for (const questionId of update.answeredQuestionSourceIds || []) {
+    const normalizedQuestionId = questionId.trim();
+    if (!normalizedQuestionId || answerSourceMessages[normalizedQuestionId]) {
+      continue;
+    }
+    answerSourceMessages[normalizedQuestionId] = sourceMessage;
+  }
+
+  return answerSourceMessages;
 }
 
 function summarizeFacts(
@@ -550,6 +589,7 @@ export function ensureStructuredCaseMemory(
     pending_question_id: existing?.pending_question_id,
     question_asked_counts: existing?.question_asked_counts || {},
     clarification_attempts: existing?.clarification_attempts || {},
+    answer_source_messages: existing?.answer_source_messages || {},
     timeline_notes: existing?.timeline_notes || [],
     visual_evidence: existing?.visual_evidence || [],
     retrieval_evidence: existing?.retrieval_evidence || [],
@@ -691,6 +731,7 @@ export function updateStructuredCaseMemory(
         ],
         12
       ),
+      answer_source_messages: buildAnswerSourceMessages(existing, update),
       timeline_notes: timelineNotes,
       visual_evidence: visualEvidence,
       retrieval_evidence: retrievalEvidence,

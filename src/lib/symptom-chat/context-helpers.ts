@@ -745,6 +745,9 @@ export function sanitizeSessionForClient(
   if (!hasNonEmptyModelBudgetState(safeMemory.model_budget_state)) {
     delete safeMemory.model_budget_state;
   }
+  // The browser currently round-trips session state. Keep
+  // answer_source_messages so report-time reconstruction can anchor the selected
+  // answer to the owner's own source turn; this is not internal telemetry.
   const sanitizedMemory = {
     ...safeMemory,
     service_observations: sanitizeServiceObservationsForClient(

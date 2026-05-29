@@ -7,6 +7,7 @@ import type { RetrievalBundle } from "@/lib/clinical-evidence";
 import {
   buildDiagnosisContext,
   type PetProfile,
+  type StructuredCaseMemory,
   type TriageSession,
 } from "@/lib/triage-engine";
 import type { UncertaintyTerminalOutcome } from "@/lib/clinical/uncertainty-routing";
@@ -101,6 +102,22 @@ const URGENCY_TO_RECOMMENDATION: Record<string, string> = {
 };
 const REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS =
   getRoleTimeoutMs("extraction");
+const REPORT_SECOND_OPINION_SOURCE_UNAVAILABLE_REASON =
+  "source_context_unavailable";
+const NUMBER_WORD_ANSWERS: Record<string, string> = {
+  "1": "one",
+  "2": "two",
+  "3": "three",
+  "4": "four",
+  "5": "five",
+  "6": "six",
+  "7": "seven",
+  "8": "eight",
+  "9": "nine",
+  "10": "ten",
+  "11": "eleven",
+  "12": "twelve",
+};
 const REPORT_CLAIM_SECTION_PATTERNS = [
   /top differentials:/i,
   /recommended diagnostics:/i,
@@ -574,6 +591,92 @@ function getSecondOpinionAcceptanceOutcome(
   return undefined;
 }
 
+function getReportSecondOpinionOwnerMessage({
+  memory,
+  ownerMessage,
+  questionId,
+}: {
+  memory: StructuredCaseMemory;
+  ownerMessage: string;
+  questionId?: string;
+}): { hasQuestionSourceMessage: boolean; ownerMessage: string } {
+  const questionSourceMessage = questionId
+    ? memory.answer_source_messages?.[questionId]?.trim()
+    : undefined;
+
+  return {
+    hasQuestionSourceMessage: Boolean(questionSourceMessage),
+    ownerMessage:
+      questionSourceMessage || memory.latest_owner_turn?.trim() || ownerMessage,
+  };
+}
+
+function normalizeAnswerAnchorText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function buildAnswerAnchorCandidates(
+  answerValue: string | number
+): string[] {
+  const normalizedValue = normalizeAnswerAnchorText(String(answerValue));
+  if (!normalizedValue) {
+    return [];
+  }
+
+  const wordToNumber = Object.fromEntries(
+    Object.entries(NUMBER_WORD_ANSWERS).map(([number, word]) => [word, number])
+  );
+  const candidates = new Set<string>([normalizedValue]);
+  candidates.add(
+    normalizedValue.replace(/\b\d+\b/g, (value) => {
+      return NUMBER_WORD_ANSWERS[value] || value;
+    })
+  );
+  candidates.add(
+    normalizedValue.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g, (value) => {
+      return wordToNumber[value] || value;
+    })
+  );
+
+  return Array.from(candidates).filter((candidate) => candidate.length > 0);
+}
+
+function ownerMessageAnchorsAnswerValue(
+  ownerMessage: string,
+  answerValue: string | boolean | number
+): boolean {
+  if (typeof answerValue === "boolean") {
+    return false;
+  }
+
+  const normalizedOwnerMessage = normalizeAnswerAnchorText(ownerMessage);
+  const paddedOwnerMessage = ` ${normalizedOwnerMessage} `;
+  return buildAnswerAnchorCandidates(answerValue).some((candidate) =>
+    candidate.length >= 4 && paddedOwnerMessage.includes(` ${candidate} `)
+  );
+}
+
+function shouldRejectReportTraceForMissingSource({
+  primarySuccessShadowSampling,
+  hasQuestionSourceMessage,
+  primaryAnswerValue,
+  traceOwnerMessage,
+}: {
+  primarySuccessShadowSampling: boolean;
+  hasQuestionSourceMessage: boolean;
+  primaryAnswerValue: string | boolean | number;
+  traceOwnerMessage: string;
+}): boolean {
+  if (!primarySuccessShadowSampling || hasQuestionSourceMessage) {
+    return false;
+  }
+
+  return !ownerMessageAnchorsAnswerValue(traceOwnerMessage, primaryAnswerValue);
+}
+
 function isReportPrimarySuccessShadowSample(
   session: TriageSession,
   questionId: string
@@ -651,10 +754,17 @@ async function appendReportSecondOpinionTraceIfMissing({
   }
 
   const memory = ensureStructuredCaseMemory(session);
-  const traceOwnerMessage = memory.latest_owner_turn?.trim() || ownerMessage;
   const clarificationAttempts = memory.clarification_attempts ?? {};
   const unresolvedQuestionIds = memory.unresolved_question_ids ?? [];
   const questionId = findSecondOpinionReportTraceQuestionId(session);
+  const {
+    hasQuestionSourceMessage,
+    ownerMessage: traceOwnerMessage,
+  } = getReportSecondOpinionOwnerMessage({
+    memory,
+    ownerMessage,
+    questionId,
+  });
   const hasExtractedAnswer = questionId
     ? Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)
     : false;
@@ -710,6 +820,35 @@ async function appendReportSecondOpinionTraceIfMissing({
     questionId
   ) {
     const primaryAnswerValue = session.extracted_answers[questionId];
+    if (
+      shouldRejectReportTraceForMissingSource({
+        primarySuccessShadowSampling,
+        hasQuestionSourceMessage,
+        primaryAnswerValue,
+        traceOwnerMessage,
+      })
+    ) {
+      const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+        ...eligibilityTrace,
+        acceptance_outcome: "rejected",
+        comparison_append_outcome: "not_applicable",
+        comparison_write_outcome: "not_applicable",
+        extractor_reason: REPORT_SECOND_OPINION_SOURCE_UNAVAILABLE_REASON,
+      };
+
+      return recordConversationTelemetry(session, {
+        event: "second_opinion",
+        turn_count: memory.turn_count ?? 0,
+        question_id: questionId,
+        outcome: "second_opinion_rejected",
+        source: "second_opinion",
+        reason: REPORT_SECOND_OPINION_SOURCE_UNAVAILABLE_REASON,
+        pending_before: true,
+        pending_after: unresolvedQuestionIds.includes(questionId),
+        second_opinion_trace: secondOpinionTrace,
+        gate_events: ["second_opinion_rejected"],
+      });
+    }
     const shadowResult = await extractSecondOpinionPendingAnswer({
       mode,
       pendingQuestionId: questionId,
