@@ -28,6 +28,14 @@ function makeRequest(body: unknown = {}) {
   });
 }
 
+function makeRawRequest(body: string, headers: HeadersInit = {}) {
+  return new Request("http://localhost/api/azure/translator", {
+    body,
+    headers,
+    method: "POST",
+  });
+}
+
 describe("POST /api/azure/translator", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -102,6 +110,36 @@ describe("POST /api/azure/translator", () => {
     expect(mockTranslateTexts).not.toHaveBeenCalled();
   });
 
+  it("rejects non-json requests before calling Azure", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRawRequest("targetLanguage=en&text=hola", {
+        "Content-Type": "application/x-www-form-urlencoded",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-object json payloads before calling Azure", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(makeRequest(["Mi perro vomita"]));
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
   it("rejects invalid language tags before calling Azure", async () => {
     const { POST } = await import("@/app/api/azure/translator/route");
     const response = await POST(
@@ -127,6 +165,43 @@ describe("POST /api/azure/translator", () => {
       makeRequest({
         targetLanguage: "en",
         text: "Mi perro\u0000vomita",
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
+  it("rejects ambiguous single and batch text payloads", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRequest({
+        targetLanguage: "en",
+        text: "Mi perro vomita",
+        texts: ["No come"],
+      }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(payload).toEqual({
+      enabled: false,
+      reason: "invalid_request",
+    });
+    expect(mockTranslateTexts).not.toHaveBeenCalled();
+  });
+
+  it("rejects mixed invalid text batches before calling Azure", async () => {
+    const { POST } = await import("@/app/api/azure/translator/route");
+    const response = await POST(
+      makeRequest({
+        targetLanguage: "en",
+        texts: ["Mi perro vomita", 42],
       }),
     );
     const payload = await response.json();

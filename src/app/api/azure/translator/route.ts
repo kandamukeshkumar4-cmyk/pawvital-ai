@@ -15,6 +15,7 @@ const NO_STORE_HEADERS = {
 
 const MAX_TRANSLATOR_ITEMS = 25;
 const MAX_TRANSLATOR_TEXT_CHARS = 5_000;
+const MAX_TRANSLATOR_REQUEST_CHARS = 150_000;
 const UNSAFE_CONTROL_CHAR_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
 
 type TranslatorRequestBody = {
@@ -22,6 +23,12 @@ type TranslatorRequestBody = {
   targetLanguage?: unknown;
   text?: unknown;
   texts?: unknown;
+};
+
+type ValidatedTranslatorRequest = {
+  sourceLanguage: string | null;
+  targetLanguage: string;
+  texts: string[];
 };
 
 function jsonNoStore(body: unknown, status = 200, headers = {}) {
@@ -34,43 +41,115 @@ function jsonNoStore(body: unknown, status = 200, headers = {}) {
   });
 }
 
-function normalizeTexts(body: TranslatorRequestBody): string[] | null {
-  const rawTexts = Array.isArray(body.texts)
-    ? body.texts
-    : typeof body.text === "string"
-      ? [body.text]
-      : null;
-  if (!rawTexts) {
+function hasJsonContentType(request: Request): boolean {
+  const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
+  return contentType.includes("application/json");
+}
+
+function isRecord(value: unknown): value is TranslatorRequestBody {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function readTranslatorRequestBody(
+  request: Request,
+): Promise<TranslatorRequestBody | null> {
+  if (!hasJsonContentType(request)) {
     return null;
   }
 
-  const texts = rawTexts
-    .map((text) => (typeof text === "string" ? text.trim() : ""))
-    .filter(Boolean);
+  let rawBody: string;
+  try {
+    rawBody = await request.text();
+  } catch {
+    return null;
+  }
+
+  if (!rawBody || rawBody.length > MAX_TRANSLATOR_REQUEST_CHARS) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawBody) as unknown;
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeTranslatorText(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const text = value.trim().normalize("NFC");
   if (
-    texts.length === 0 ||
-    texts.length > MAX_TRANSLATOR_ITEMS ||
-    texts.some(
-      (text) =>
-        text.length > MAX_TRANSLATOR_TEXT_CHARS ||
-        UNSAFE_CONTROL_CHAR_PATTERN.test(text),
-    )
+    text.length === 0 ||
+    text.length > MAX_TRANSLATOR_TEXT_CHARS ||
+    UNSAFE_CONTROL_CHAR_PATTERN.test(text)
   ) {
     return null;
   }
 
-  return texts;
+  return text;
+}
+
+function normalizeTexts(body: TranslatorRequestBody): string[] | null {
+  const hasText = typeof body.text !== "undefined";
+  const hasTexts = typeof body.texts !== "undefined";
+  if (hasText === hasTexts) {
+    return null;
+  }
+
+  const rawTexts = Array.isArray(body.texts)
+    ? body.texts
+    : hasText
+      ? [body.text]
+      : null;
+  if (
+    !rawTexts ||
+    rawTexts.length === 0 ||
+    rawTexts.length > MAX_TRANSLATOR_ITEMS
+  ) {
+    return null;
+  }
+
+  const texts = rawTexts.map(sanitizeTranslatorText);
+  return texts.every((text): text is string => text !== null) ? texts : null;
 }
 
 function normalizeLanguage(value: unknown): string | null {
   const language = typeof value === "string" ? value.trim() : "";
   return /^[a-z]{2,3}(?:-[a-z0-9]{2,8}){0,2}$/i.test(language)
-    ? language
+    ? language.toLowerCase()
     : null;
 }
 
 function hasLanguageValue(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function validateTranslatorRequest(
+  body: TranslatorRequestBody,
+): ValidatedTranslatorRequest | null {
+  const targetLanguage = normalizeLanguage(body.targetLanguage);
+  const sourceLanguage = hasLanguageValue(body.sourceLanguage)
+    ? normalizeLanguage(body.sourceLanguage)
+    : null;
+  const texts = normalizeTexts(body);
+
+  if (
+    !targetLanguage ||
+    (hasLanguageValue(body.sourceLanguage) && !sourceLanguage) ||
+    !texts
+  ) {
+    return null;
+  }
+
+  return {
+    sourceLanguage,
+    targetLanguage,
+    texts,
+  };
 }
 
 export async function POST(request: Request) {
@@ -81,6 +160,7 @@ export async function POST(request: Request) {
     return auth.response;
   }
 
+  // Charge authenticated callers before parsing payloads or touching Azure.
   const rateLimitResult = await checkRateLimit(
     generalApiLimiter,
     getRateLimitId(request, auth.user.id),
@@ -97,26 +177,16 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: TranslatorRequestBody;
-  try {
-    body = (await request.json()) as TranslatorRequestBody;
-  } catch {
+  const body = await readTranslatorRequestBody(request);
+  if (!body) {
     return jsonNoStore(
       { enabled: false, reason: "invalid_request" },
       400,
     );
   }
 
-  const targetLanguage = normalizeLanguage(body.targetLanguage);
-  const sourceLanguage = hasLanguageValue(body.sourceLanguage)
-    ? normalizeLanguage(body.sourceLanguage)
-    : null;
-  const texts = normalizeTexts(body);
-  if (
-    !targetLanguage ||
-    (hasLanguageValue(body.sourceLanguage) && !sourceLanguage) ||
-    !texts
-  ) {
+  const validated = validateTranslatorRequest(body);
+  if (!validated) {
     return jsonNoStore(
       { enabled: false, reason: "invalid_request" },
       400,
@@ -124,9 +194,9 @@ export async function POST(request: Request) {
   }
 
   const result = await translateTexts({
-    sourceLanguage,
-    targetLanguage,
-    texts,
+    sourceLanguage: validated.sourceLanguage,
+    targetLanguage: validated.targetLanguage,
+    texts: validated.texts,
   });
 
   if (!result.enabled && result.reason === "feature_disabled") {
