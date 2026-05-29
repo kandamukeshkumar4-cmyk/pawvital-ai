@@ -85,6 +85,14 @@ export type RunServiceBusWorkerOnceResult =
         | "receive_failed";
     };
 
+type ServiceBusWorkerErrorCode =
+  | "feature_disabled"
+  | "handler_failed"
+  | "invalid_message"
+  | "no_messages"
+  | "not_configured"
+  | "receive_failed";
+
 const SUPPORTED_JOB_TYPES = new Set<ServiceBusJobType>([
   "async-review",
   "document-processing",
@@ -170,7 +178,7 @@ async function defaultJobHandler(): Promise<void> {
 }
 
 async function trackWorkerEvent(input: {
-  errorCode?: string;
+  errorCode?: ServiceBusWorkerErrorCode;
   statusCode: number;
   trackOptions: TrackOptions;
 }): Promise<void> {
@@ -192,11 +200,21 @@ export async function runServiceBusWorkerOnce(
 ): Promise<RunServiceBusWorkerOnceResult> {
   const enabled = await getFlag(AZURE_ASYNC_REVIEW_FEATURE_FLAG, options);
   if (!enabled) {
+    await trackWorkerEvent({
+      errorCode: "feature_disabled",
+      statusCode: 204,
+      trackOptions: options,
+    });
     return { ok: false, reason: "feature_disabled" };
   }
 
   const connectionString = await getServiceBusConnectionString(options);
   if (!connectionString) {
+    await trackWorkerEvent({
+      errorCode: "not_configured",
+      statusCode: 503,
+      trackOptions: options,
+    });
     return { ok: false, reason: "not_configured" };
   }
 
@@ -214,6 +232,11 @@ export async function runServiceBusWorkerOnce(
     });
 
     if (!message) {
+      await trackWorkerEvent({
+        errorCode: "no_messages",
+        statusCode: 204,
+        trackOptions: options,
+      });
       return { ok: true, processed: false, reason: "no_messages" };
     }
 

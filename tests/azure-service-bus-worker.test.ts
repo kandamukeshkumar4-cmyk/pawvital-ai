@@ -84,6 +84,23 @@ function makeClient(receiver: ServiceBusReceiverLike) {
   } satisfies ServiceBusWorkerClientLike;
 }
 
+function expectServiceBusTelemetry(
+  statusCode: number,
+  errorCode?: string,
+): void {
+  expect(trackEvent).toHaveBeenCalledWith(
+    {
+      name: "azure.service.called",
+      properties: {
+        azureService: "servicebus",
+        errorCode,
+        statusCode,
+      },
+    },
+    expect.any(Object),
+  );
+}
+
 describe("Azure Service Bus worker consumer", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -101,6 +118,7 @@ describe("Azure Service Bus worker consumer", () => {
     ).resolves.toEqual({ ok: false, reason: "feature_disabled" });
 
     expect(serviceBusClientFactory).not.toHaveBeenCalled();
+    expectServiceBusTelemetry(204, "feature_disabled");
   });
 
   it("does not connect when the Service Bus connection string is missing", async () => {
@@ -118,6 +136,7 @@ describe("Azure Service Bus worker consumer", () => {
     ).resolves.toEqual({ ok: false, reason: "not_configured" });
 
     expect(serviceBusClientFactory).not.toHaveBeenCalled();
+    expectServiceBusTelemetry(503, "not_configured");
   });
 
   it("receives, dispatches, completes, and tracks one valid queue message", async () => {
@@ -158,17 +177,7 @@ describe("Azure Service Bus worker consumer", () => {
     });
     expect(receiver.completeMessage).toHaveBeenCalledTimes(1);
     expect(receiver.deadLetterMessage).not.toHaveBeenCalled();
-    expect(trackEvent).toHaveBeenCalledWith(
-      {
-        name: "azure.service.called",
-        properties: {
-          azureService: "servicebus",
-          errorCode: undefined,
-          statusCode: 200,
-        },
-      },
-      expect.any(Object),
-    );
+    expectServiceBusTelemetry(200);
   });
 
   it("dead-letters unsupported or unsafe job envelopes", async () => {
@@ -196,6 +205,7 @@ describe("Azure Service Bus worker consumer", () => {
       },
     );
     expect(receiver.completeMessage).not.toHaveBeenCalled();
+    expectServiceBusTelemetry(400, "invalid_message");
   });
 
   it("abandons the message when the handler fails", async () => {
@@ -221,6 +231,7 @@ describe("Azure Service Bus worker consumer", () => {
       expect.objectContaining({ messageId: "msg-handler" }),
     );
     expect(receiver.completeMessage).not.toHaveBeenCalled();
+    expectServiceBusTelemetry(500, "handler_failed");
   });
 
   it("returns no_messages without completing anything when the queue is empty", async () => {
@@ -240,5 +251,31 @@ describe("Azure Service Bus worker consumer", () => {
 
     expect(receiver.completeMessage).not.toHaveBeenCalled();
     expect(receiver.deadLetterMessage).not.toHaveBeenCalled();
+    expectServiceBusTelemetry(204, "no_messages");
+  });
+
+  it("returns receive_failed and tracks a sanitized error code when receive fails", async () => {
+    const receiver = {
+      abandonMessage: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined),
+      completeMessage: jest.fn().mockResolvedValue(undefined),
+      deadLetterMessage: jest.fn().mockResolvedValue(undefined),
+      receiveMessages: jest.fn().mockRejectedValue(new Error("raw broker error")),
+    } satisfies ServiceBusReceiverLike;
+    const client = makeClient(receiver);
+
+    await expect(
+      runServiceBusWorkerOnce({
+        ...baseOptions(),
+        serviceBusClientFactory: jest.fn().mockReturnValue(client),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "receive_failed" });
+
+    expect(receiver.completeMessage).not.toHaveBeenCalled();
+    expect(receiver.deadLetterMessage).not.toHaveBeenCalled();
+    expect(receiver.abandonMessage).not.toHaveBeenCalled();
+    expect(receiver.close).toHaveBeenCalledTimes(1);
+    expect(client.close).toHaveBeenCalledTimes(1);
+    expectServiceBusTelemetry(503, "receive_failed");
   });
 });
