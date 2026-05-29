@@ -15,6 +15,10 @@ jest.mock("@/components/symptom-report", () => ({
   FullReport: () => null,
 }));
 
+jest.mock("@/components/symptom-checker/use-webpubsub-live-updates", () => ({
+  useWebPubSubLiveUpdates: jest.fn(),
+}));
+
 const TEST_PET = {
   id: "pet-1",
   user_id: "user-1",
