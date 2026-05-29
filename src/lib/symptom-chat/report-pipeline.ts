@@ -30,10 +30,12 @@ import {
 import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
 import { saveTesterFeedbackCaseLedgerToDB } from "@/lib/tester-feedback-storage";
 import {
+  appendShadowComparison,
   appendSidecarObservation,
   buildInternalShadowTelemetrySnapshot,
   buildObservabilitySnapshot,
   buildShadowReadoutObservabilitySnapshot,
+  describeShadowComparison,
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
@@ -71,8 +73,10 @@ import {
 } from "./final-safety-verifier";
 import {
   buildSecondOpinionEligibilityTrace,
+  extractSecondOpinionPendingAnswer,
   getPrimarySuccessShadowSamplingAttemptCount,
   getSecondOpinionExtractorMode,
+  type SecondOpinionExtractionResult,
 } from "./second-opinion-extractor";
 
 const useNvidia = isNvidiaConfigured();
@@ -552,6 +556,21 @@ function hasSecondOpinionTrace(session: TriageSession): boolean {
   );
 }
 
+function getSecondOpinionAcceptanceOutcome(
+  result: SecondOpinionExtractionResult
+): SecondOpinionTraceTelemetry["acceptance_outcome"] {
+  if (result.status === "accepted") {
+    return "accepted";
+  }
+  if (result.status === "rejected") {
+    return "rejected";
+  }
+  if (result.status === "failed") {
+    return "failed";
+  }
+  return undefined;
+}
+
 function isReportPrimarySuccessShadowSample(
   session: TriageSession,
   questionId: string
@@ -616,19 +635,20 @@ function findSecondOpinionReportTraceQuestionId(
   );
 }
 
-function appendReportSecondOpinionTraceIfMissing({
+async function appendReportSecondOpinionTraceIfMissing({
   session,
   ownerMessage,
 }: {
   session: TriageSession;
   ownerMessage: string;
-}): TriageSession {
+}): Promise<TriageSession> {
   const mode = getSecondOpinionExtractorMode();
   if (mode === "off" || hasSecondOpinionTrace(session)) {
     return session;
   }
 
   const memory = ensureStructuredCaseMemory(session);
+  const traceOwnerMessage = memory.latest_owner_turn?.trim() || ownerMessage;
   const clarificationAttempts = memory.clarification_attempts ?? {};
   const unresolvedQuestionIds = memory.unresolved_question_ids ?? [];
   const questionId = findSecondOpinionReportTraceQuestionId(session);
@@ -670,7 +690,7 @@ function appendReportSecondOpinionTraceIfMissing({
   const eligibilityTrace = buildSecondOpinionEligibilityTrace({
     mode,
     pendingQuestionId: questionId,
-    ownerMessage,
+    ownerMessage: traceOwnerMessage,
     primaryExtractionFailed: !hasExtractedAnswer,
     deterministicResolved: hasRecordedAnswer,
     clarificationAttempts: primarySuccessShadowSampling
@@ -680,6 +700,99 @@ function appendReportSecondOpinionTraceIfMissing({
     budgetState: reconstructionBudgetState,
     isShadowSampling: primarySuccessShadowSampling,
   });
+
+  if (
+    primarySuccessShadowSampling &&
+    eligibilityTrace.request_outcome === "requested" &&
+    questionId
+  ) {
+    const primaryAnswerValue = session.extracted_answers[questionId];
+    const shadowResult = await extractSecondOpinionPendingAnswer({
+      mode,
+      pendingQuestionId: questionId,
+      ownerMessage: traceOwnerMessage,
+      primaryExtractionFailed: !hasExtractedAnswer,
+      deterministicResolved: hasRecordedAnswer,
+      clarificationAttempts: shadowSamplingClarificationAttempts,
+      knownSymptomsBeforeTurn: session.known_symptoms,
+      budgetState: reconstructionBudgetState,
+      isShadowSampling: true,
+    });
+
+    let comparisonAppendOutcome: SecondOpinionTraceTelemetry["comparison_append_outcome"] =
+      "not_applicable";
+    let comparisonWriteOutcome: SecondOpinionTraceTelemetry["comparison_write_outcome"] =
+      "not_applicable";
+
+    if (shadowResult.status === "accepted") {
+      const previousShadowComparisonCount =
+        session.case_memory?.shadow_comparisons?.length ?? 0;
+      const disagreed =
+        String(primaryAnswerValue) === String(shadowResult.answer.answerValue)
+          ? 0
+          : 1;
+      session = appendShadowComparison(
+        session,
+        describeShadowComparison(
+          "async-review-service",
+          "primary_extraction_succeeded",
+          "second_opinion_extractor",
+          `q=${questionId}; shadow_answer_recorded=true; conf=${shadowResult.answer.confidence.toFixed(2)}; agreed=${disagreed === 0}`,
+          disagreed
+        )
+      );
+      const recordedShadowComparisons =
+        session.case_memory?.shadow_comparisons ?? [];
+      if (recordedShadowComparisons.length > previousShadowComparisonCount) {
+        comparisonAppendOutcome = "comparison_appended";
+        comparisonWriteOutcome = "comparison_write_succeeded";
+      } else {
+        comparisonAppendOutcome = "comparison_append_failed";
+        comparisonWriteOutcome = "comparison_write_failed";
+      }
+    }
+
+    const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+      ...eligibilityTrace,
+      acceptance_outcome: getSecondOpinionAcceptanceOutcome(shadowResult),
+      comparison_append_outcome: comparisonAppendOutcome,
+      comparison_write_outcome: comparisonWriteOutcome,
+      extractor_reason:
+        shadowResult.status === "accepted"
+          ? undefined
+          : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+    };
+
+    return recordConversationTelemetry(session, {
+      event: "second_opinion",
+      turn_count: memory.turn_count ?? 0,
+      question_id: questionId,
+      outcome:
+        shadowResult.status === "accepted"
+          ? "second_opinion_used"
+          : shadowResult.status === "failed"
+            ? "second_opinion_failed"
+            : shadowResult.status === "rejected"
+              ? "second_opinion_rejected"
+              : "second_opinion_skipped",
+      source: "second_opinion",
+      reason:
+        shadowResult.status === "accepted"
+          ? undefined
+          : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+      pending_before: true,
+      pending_after: unresolvedQuestionIds.includes(questionId),
+      second_opinion_trace: secondOpinionTrace,
+      gate_events:
+        shadowResult.status === "accepted"
+          ? ["second_opinion_used"]
+          : shadowResult.status === "failed"
+            ? ["second_opinion_failed"]
+            : shadowResult.status === "rejected"
+              ? ["second_opinion_rejected"]
+              : [],
+    });
+  }
 
   const secondOpinionTrace: SecondOpinionTraceTelemetry = {
     ...eligibilityTrace,
@@ -1316,7 +1429,7 @@ export async function generateReport({
       });
     }
 
-    const reportPersistenceSession = appendReportSecondOpinionTraceIfMissing({
+    const reportPersistenceSession = await appendReportSecondOpinionTraceIfMissing({
       session,
       ownerMessage: getLastOwnerMessageContent(messages),
     });

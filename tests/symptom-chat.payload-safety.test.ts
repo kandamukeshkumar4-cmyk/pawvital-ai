@@ -18,6 +18,7 @@ const mockParseVisionForMatrix = jest.fn();
 const mockImageGuardrail = jest.fn();
 const mockDiagnoseWithDeepSeek = jest.fn();
 const mockVerifyWithGLM = jest.fn();
+const mockComplete = jest.fn();
 const mockDetectBreedWithNyckel = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
 const mockEvaluateImageGate = jest.fn();
@@ -61,6 +62,7 @@ jest.mock("@/lib/nvidia-models", () => ({
     mockVerifyQuestionWithNemotron(...args),
   diagnoseWithDeepSeek: (...args: unknown[]) => mockDiagnoseWithDeepSeek(...args),
   verifyWithGLM: (...args: unknown[]) => mockVerifyWithGLM(...args),
+  complete: (...args: unknown[]) => mockComplete(...args),
   runVisionPipeline: (...args: unknown[]) => mockRunVisionPipeline(...args),
   parseVisionForMatrix: (...args: unknown[]) => mockParseVisionForMatrix(...args),
   imageGuardrail: (...args: unknown[]) => mockImageGuardrail(...args),
@@ -425,6 +427,16 @@ describe("VET-1014 terminal payload safety pack", () => {
     });
     mockDiagnoseWithDeepSeek.mockResolvedValue("{}");
     mockVerifyWithGLM.mockResolvedValue({});
+    mockComplete.mockResolvedValue(
+      JSON.stringify({
+        answered: false,
+        questionId: "payload_safety_default",
+        answerValue: null,
+        confidence: 0,
+        ownerPhrase: "",
+        needsClarification: true,
+      })
+    );
     mockDetectBreedWithNyckel.mockResolvedValue(null);
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -659,6 +671,16 @@ describe("VET-1014 terminal payload safety pack", () => {
         reasoning: "Report is safe.",
       })
     );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.92,
+        ownerPhrase: "dry honking",
+        needsClarification: false,
+      })
+    );
 
     const { response, payload } = await runReport(session, DOG);
     const persistedReport = mockSaveSymptomReportToDB.mock.calls[0]?.[2] as
@@ -732,6 +754,7 @@ describe("VET-1014 terminal payload safety pack", () => {
       last_question_asked: "cough_duration",
       case_memory: {
         ...session.case_memory!,
+        latest_owner_turn: "It is a dry honking cough.",
         pending_question_id: "cough_duration",
         unresolved_question_ids: ["cough_duration"],
         question_asked_counts: {
@@ -795,12 +818,15 @@ describe("VET-1014 terminal payload safety pack", () => {
           total: 1,
           eligibilityReasonCounts: { shadow_primary_success_sampling: 1 },
           requestOutcomeCounts: { requested: 1 },
-          comparisonAppendOutcomeCounts: { not_applicable: 1 },
-          comparisonWriteOutcomeCounts: { not_applicable: 1 },
-          extractorReasonCounts: { shadow_primary_success_sampling: 1 },
-          readoutCountedCount: 0,
+          acceptanceOutcomeCounts: { accepted: 1 },
+          comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+          comparisonWriteOutcomeCounts: { comparison_write_succeeded: 1 },
+          extractorReasonCounts: {},
+          readoutCountedCount: 1,
         })
       );
+      expect(readout?.shadowComparisonCount).toBe(1);
+      expect(mockComplete).toHaveBeenCalledTimes(1);
 
       const ownerJson = JSON.stringify(payload);
       expect(ownerJson).not.toContain("shadowReadout");

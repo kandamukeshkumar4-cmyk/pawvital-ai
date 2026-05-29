@@ -356,6 +356,32 @@ function getSecondOpinionShadowComparisonCalls() {
     );
 }
 
+function mockAcceptedReportSecondOpinionForCoughDuration() {
+  mockComplete.mockResolvedValueOnce(
+    JSON.stringify({
+      answered: true,
+      questionId: "cough_duration",
+      answerValue: "2 days",
+      confidence: 0.91,
+      ownerPhrase: "about two days",
+      needsClarification: false,
+    })
+  );
+}
+
+function mockRejectedReportSecondOpinionForCoughDuration() {
+  mockComplete.mockResolvedValueOnce(
+    JSON.stringify({
+      answered: true,
+      questionId: "cough_duration",
+      answerValue: "2 days",
+      confidence: 0.5,
+      ownerPhrase: "about two days",
+      needsClarification: false,
+    })
+  );
+}
+
 type SecondOpinionMatrixTraceExpectation = {
   eligibility_reason: string;
   request_outcome: string;
@@ -1357,6 +1383,7 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
 
     it("reconstructs requested for a fresh first-answer primary-success session even when the most-recent answer was clarified", async () => {
       process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockAcceptedReportSecondOpinionForCoughDuration();
 
       const { response, payload } = await postReport(
         buildFirstAnswerPrimarySuccessReportSession()
@@ -1371,14 +1398,67 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
         "shadow_primary_success_sampling"
       );
       expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("accepted");
+      expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+      expect(traceParts.comparison_write_outcome).toBe(
+        "comparison_write_succeeded"
+      );
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+      expect(getLatestShadowTelemetrySnapshot()).toEqual(
+        expect.objectContaining({
+          source: "report",
+          recentShadowComparisons: [
+            expect.objectContaining({
+              shadowStrategy: "second_opinion_extractor",
+              summary:
+                "q=cough_duration; shadow_answer_recorded=true; conf=0.91; agreed=true",
+            }),
+          ],
+        })
+      );
 
       // Owner-facing report must not leak the internal trace.
       expect(JSON.stringify(payload.report)).not.toContain("request_outcome=");
       expect(JSON.stringify(payload.report)).not.toContain("eligibility_reason=");
     });
 
+    it("keeps requested primary-success reconstruction observable when the report-time extractor rejects the answer", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockRejectedReportSecondOpinionForCoughDuration();
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession()
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.comparison_append_outcome).toBe("not_applicable");
+      expect(traceParts.comparison_write_outcome).toBe("not_applicable");
+      expect(traceParts.extractor_reason).toBe("low_confidence");
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+      expect(getLatestShadowTelemetrySnapshot()).toEqual(
+        expect.objectContaining({
+          source: "report",
+          recentShadowComparisons: [],
+        })
+      );
+      expect(JSON.stringify(payload.report)).not.toContain("request_outcome=");
+      expect(JSON.stringify(payload.report)).not.toContain("acceptance_outcome=");
+    });
+
     it("does not let an exhausted end-of-session budget mask the first eligible primary-success sample", async () => {
       process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockAcceptedReportSecondOpinionForCoughDuration();
 
       const { response, payload } = await postReport(
         buildFirstAnswerPrimarySuccessReportSession({ budgetExhausted: true })
@@ -1391,6 +1471,9 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       const traceParts = getLatestSecondOpinionTraceParts();
       expect(traceParts.request_outcome).not.toBe("budget_exhausted");
       expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("accepted");
+      expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+      expect(mockComplete).toHaveBeenCalledTimes(1);
     });
 
     it("does not over-broaden: a clarified-only session still reconstructs as not_requested", async () => {
@@ -1420,6 +1503,7 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(traceParts.eligibility_reason).not.toBe(
         "shadow_primary_success_sampling"
       );
+      expect(mockComplete).not.toHaveBeenCalled();
     });
 
     it("never bypasses an open second-opinion circuit when reconstructing a primary-success sample", async () => {
@@ -1451,6 +1535,7 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       const traceParts = getLatestSecondOpinionTraceParts();
       expect(traceParts.eligibility_reason).toBe("circuit_open");
       expect(traceParts.request_outcome).toBe("not_requested");
+      expect(mockComplete).not.toHaveBeenCalled();
     });
   });
 });
