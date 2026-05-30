@@ -319,8 +319,32 @@ Pricing references:
 4. AZ-005, AZ-006, AZ-007: Speech, Document Intelligence plus Content Safety,
    and Translator.
 5. AZ-009: Service Bus queue producer and worker consumer. Document intake
-   enqueues metadata-only `document-processing` jobs after successful extraction.
+   enqueues metadata-only `document-processing` jobs after successful extraction,
+   and `/api/azure/service-bus/worker` runs one authenticated worker receive pass.
 6. AZ-010, AZ-011, AZ-012: Maps, Web PubSub, and Static Web App mirror.
 
 Each code ticket needs a unit test with Azure clients mocked and a demo-mode
 test proving absent env or absent secret disables the feature cleanly.
+
+## Live Smoke Scenario
+
+Run the live Azure service-response check from an authenticated Azure CLI
+session:
+
+```bash
+npm run smoke:azure
+```
+
+The smoke script reads secrets from Key Vault but never prints secret values. It
+uses low-risk non-PII probes for Azure account/resource inventory, Key Vault,
+Application Insights, App Configuration flags, Static Web Apps, Blob Storage,
+Translator, Speech token issuance, Document Intelligence model listing, Content
+Safety text analysis, Azure Maps address search, Web PubSub token issuance, and
+Service Bus send/receive/complete.
+
+Expected current caveats:
+
+- App Configuration feature flags may intentionally report `off` until the
+  latest production deploy is ready.
+- Static Web Apps may report the Azure resource as ready while GitHub repo
+  linking is still manual/admin work.

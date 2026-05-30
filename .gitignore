@@ -77,6 +77,7 @@ next-env.d.ts
 !/scripts/validate-benchmark.ts
 !/scripts/silent-trial.ts
 !/scripts/pipeline-smoke-test.mjs
+!/scripts/azure-ecosystem-smoke.mjs
 !/scripts/enrich-benchmark-cases.mjs
 !/scripts/stamp-gold-benchmark.mjs
 !/scripts/benchmark-quota-tracker.mjs
