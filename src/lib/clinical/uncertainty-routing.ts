@@ -93,6 +93,7 @@ const REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS = [
   "breathing_onset",
   "consciousness_level",
   "gum_color",
+  "breathing_status",
 ] as const;
 
 type ReportBlockingCriticalInfoQuestionId =
