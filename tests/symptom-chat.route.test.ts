@@ -1828,6 +1828,161 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
   });
 
+  it("VET-1554C-R2: first-turn pet-prefixed Vomiting chip text uses the deterministic quick-start path", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockRejectedValue(new Error("provider timeout"));
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(createSession(), "Milo has been vomiting")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.message).toContain("How long has the vomiting been going on?");
+    expect(payload.session.known_symptoms).toContain("vomiting");
+    expect(payload.session.last_question_asked).toBe("vomit_duration");
+    expect(mockExtractWithQwen).not.toHaveBeenCalled();
+    expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+    expect(mockPhraseWithLlama).not.toHaveBeenCalled();
+    expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      "Milo has been drinking more water than usual",
+      "drinking_more",
+      "water_amount_change",
+    ],
+    ["Milo has been trembling/shaking", "trembling", "trembling_duration"],
+  ])(
+    "VET-1554C-R2: pet-prefixed quick-start chip label uses the deterministic path: %s",
+    async (ownerMessage, expectedSymptom, expectedQuestion) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockRejectedValue(new Error("provider timeout"));
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(createSession(), ownerMessage));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(payload.session.known_symptoms).toContain(expectedSymptom);
+      expect(payload.session.last_question_asked).toBe(expectedQuestion);
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
+      expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+      expect(mockPhraseWithLlama).not.toHaveBeenCalled();
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    }
+  );
+
+  it("VET-1554C-R2: does not fast-path negated owner text that ends with quick-start wording", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({
+        symptoms: [],
+        answers: {},
+      })
+    );
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(createSession(), "I don't think Milo has been vomiting")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockExtractWithQwen).toHaveBeenCalled();
+    expect(payload.session.known_symptoms).not.toContain("vomiting");
+    expect(payload.session.last_question_asked).not.toBe("vomit_duration");
+  });
+
+  it("VET-1554C-R2: keeps negated quick-start suffix suppressed when extraction falls back", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockRejectedValue(new Error("provider timeout"));
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(createSession(), "I don't think Milo has been vomiting")
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockExtractWithQwen).toHaveBeenCalled();
+    expect(payload.session.known_symptoms).not.toContain("vomiting");
+    expect(payload.session.last_question_asked).not.toBe("vomit_duration");
+  });
+
+  it("VET-1554C-R2: preserves keyword fallback for longer non-negated symptom descriptions", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockRejectedValue(new Error("provider timeout"));
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(
+      makeTextOnlyRequest(
+        createSession(),
+        "My older golden retriever Milo has been vomiting"
+      )
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockExtractWithQwen).toHaveBeenCalled();
+    expect(payload.session.known_symptoms).toContain("vomiting");
+    expect(payload.session.last_question_asked).toBe("vomit_duration");
+  });
+
+  it.each([
+    "No, Milo has been vomiting",
+    "It's not his appetite; Milo has been vomiting",
+  ])(
+    "VET-1554C-R2: preserves keyword fallback for affirmed symptom text after discourse negation: %s",
+    async (ownerMessage) => {
+      mockRunRoboflowSkinWorkflow.mockResolvedValue({
+        positive: false,
+        summary: "",
+        labels: [],
+      });
+      mockShouldAnalyzeWoundImage.mockReturnValue(false);
+      mockExtractWithQwen.mockRejectedValue(new Error("provider timeout"));
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(createSession(), ownerMessage));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(mockExtractWithQwen).toHaveBeenCalled();
+      expect(payload.session.known_symptoms).toContain("vomiting");
+      expect(payload.session.last_question_asked).toBe("vomit_duration");
+    }
+  );
+
   it("prefers direct owner text over conflicting model extraction for critical first-turn facts", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,

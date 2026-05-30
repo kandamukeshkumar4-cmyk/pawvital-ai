@@ -18,7 +18,8 @@ export async function extractDataFromMessage(
   session: TriageSession,
   pet: PetProfile,
   schema: ReturnType<typeof getExtractionSchema>,
-  compactImageSignals?: string
+  compactImageSignals?: string,
+  fallbackSymptoms?: string[]
 ): Promise<{
   symptoms: string[];
   answers: Record<string, string | boolean | number>;
@@ -84,7 +85,10 @@ ${CLINICAL_ARCHITECTURE_FOOTER}`;
   } catch (error) {
     console.error("Primary extraction failed:", error);
     console.log("[Engine] Extraction fallback: keyword-only recovery");
-    return { symptoms: extractSymptomsFromKeywords(message), answers: {} };
+    return {
+      symptoms: fallbackSymptoms ?? extractSymptomsFromKeywords(message),
+      answers: {},
+    };
   }
 }
 
