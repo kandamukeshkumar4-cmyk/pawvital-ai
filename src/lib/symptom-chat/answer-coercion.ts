@@ -185,6 +185,7 @@ export function normalizeIntentText(rawMessage: string): string {
 
 const UNSAFE_EMERGENCY_QUESTIONS = new Set([
   "breathing_onset",
+  "breathing_status",
   "gum_color",
   "consciousness_level",
   "seizure_duration",
