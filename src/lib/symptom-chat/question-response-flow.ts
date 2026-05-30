@@ -35,6 +35,7 @@ interface BuildQuestionResponseFlowInput {
   visionAnalysis: string | null;
   visionSeverity?: "normal" | "needs_review" | "urgent";
   image?: string;
+  forceDeterministicQuestionFallback?: boolean;
 }
 
 export async function buildQuestionResponseFlow(
@@ -140,6 +141,21 @@ async function phraseNextQuestion(
     )
       ? buildQuestionPhrasingContext(input.session, input.visionSeverity)
       : null;
+  if (input.forceDeterministicQuestionFallback) {
+    return phraseQuestion(
+      questionText,
+      input.nextQuestionId,
+      input.session,
+      input.effectivePet,
+      input.messages,
+      input.lastUserMessage,
+      basePhrasingContext,
+      hasLiveVisionThisTurn,
+      false,
+      true
+    );
+  }
+
   const questionGate = await gateQuestionBeforePhrasing(
     input.nextQuestionId,
     questionText,

@@ -1,8 +1,10 @@
 /** @jest-environment jsdom */
 
 import * as React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import SymptomCheckerPage from "@/app/(dashboard)/symptom-checker/page";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import SymptomCheckerPage, {
+  SYMPTOM_CHAT_REQUEST_TIMEOUT_MS,
+} from "@/app/(dashboard)/symptom-checker/page";
 import { useAppStore } from "@/store/app-store";
 import {
   TESTER_ACKNOWLEDGEMENT_STORAGE_KEY,
@@ -228,5 +230,63 @@ describe("tester onboarding boundaries on the symptom checker", () => {
     expect(
       await screen.findByText("¿Cuántas veces ha vomitado Buddy?")
     ).toBeTruthy();
+  });
+
+  it("unblocks the composer and shows a safe error when symptom chat times out", async () => {
+    jest.useFakeTimers();
+
+    const fetchMock = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (input !== "/api/ai/symptom-chat") {
+        return Promise.resolve({
+          json: async () => ({
+            translated: false,
+            translations: [],
+          }),
+          ok: true,
+          status: 200,
+        });
+      }
+
+      const signal = init?.signal;
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener("abort", () => {
+          reject(new DOMException("Request timed out", "AbortError"));
+        });
+      });
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      renderSymptomChecker();
+      acknowledgeBoundary();
+
+      fireEvent.change(
+        screen.getByPlaceholderText(
+          "Describe what's going on with Buddy or attach a photo..."
+        ),
+        {
+          target: { value: "Buddy is vomiting." },
+        }
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+      expect(await screen.findByText("Thinking...")).toBeTruthy();
+
+      await act(async () => {
+        jest.advanceTimersByTime(SYMPTOM_CHAT_REQUEST_TIMEOUT_MS + 1);
+      });
+
+      expect(
+        await screen.findByText(
+          "The symptom checker took too long to respond. Please try again."
+        )
+      ).toBeTruthy();
+      expect(screen.queryByText("Thinking...")).toBeNull();
+      expect(
+        (screen.getByRole("textbox") as HTMLTextAreaElement).disabled
+      ).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

@@ -572,6 +572,57 @@ function humanizeEmergencySignal(signal: string): string {
   return signal.replace(/_/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function normalizeQuickStartText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isExactTextOnlyQuickStartMessage(
+  rawMessage: string,
+  keywordSymptoms: string[]
+): boolean {
+  if (keywordSymptoms.length !== 1) {
+    return false;
+  }
+
+  return (
+    normalizeQuickStartText(rawMessage) ===
+    normalizeQuickStartText(keywordSymptoms[0].replace(/_/g, " "))
+  );
+}
+
+function buildTextOnlyQuickStartExtraction(
+  session: TriageSession,
+  rawMessage: string,
+  keywordSymptoms: string[],
+  hasImage: boolean
+): {
+  symptoms: string[];
+  answers: Record<string, string | boolean | number>;
+} | null {
+  const hasPendingQuestion =
+    Boolean(session.last_question_asked) || Boolean(getPendingQuestionId(session));
+  if (
+    hasImage ||
+    hasPendingQuestion ||
+    session.known_symptoms.length > 0 ||
+    session.answered_questions.length > 0 ||
+    Object.keys(session.extracted_answers).length > 0 ||
+    session.red_flags_triggered.length > 0 ||
+    !isExactTextOnlyQuickStartMessage(rawMessage, keywordSymptoms)
+  ) {
+    return null;
+  }
+
+  return {
+    symptoms: keywordSymptoms,
+    answers: {},
+  };
+}
+
 function collectDeterministicEmergencySignals(
   session: TriageSession,
   diagnosisContext: ReturnType<typeof buildDiagnosisContext>
@@ -1570,10 +1621,11 @@ export async function POST(request: Request) {
     // ═══════════════════════════════════════════════════════════════════
     // STEP 1: EXTRACT structured data — Qwen 3.5 122B
     // ═══════════════════════════════════════════════════════════════════
+    const keywordSymptoms = extractSymptomsFromKeywords(lastUserMessage.content);
     const seededExtractionSymptoms = Array.from(
       new Set([
         ...session.known_symptoms,
-        ...extractSymptomsFromKeywords(lastUserMessage.content),
+        ...keywordSymptoms,
         ...visionSymptoms,
       ])
     );
@@ -1587,8 +1639,15 @@ export async function POST(request: Request) {
       visionRedFlags,
       visionSeverity
     );
+    const textOnlyQuickStartExtraction = buildTextOnlyQuickStartExtraction(
+      session,
+      lastUserMessage.content,
+      keywordSymptoms,
+      Boolean(image)
+    );
     const extracted =
       fastPathExtraction ||
+      textOnlyQuickStartExtraction ||
       (await extractDataFromMessage(
         lastUserMessage.content,
         session,
@@ -1601,7 +1660,7 @@ export async function POST(request: Request) {
       typeof extracted === "object" &&
       extracted !== null &&
       !Array.isArray(extracted);
-    const usedFastPath = Boolean(fastPathExtraction);
+    const usedFastPath = Boolean(fastPathExtraction || textOnlyQuickStartExtraction);
     session = recordConversationTelemetry(session, {
       event: "extraction",
       turn_count: session.case_memory?.turn_count ?? 0,
@@ -1643,7 +1702,7 @@ export async function POST(request: Request) {
     const turnTextSymptoms = Array.from(
       new Set([
         ...(extracted.symptoms || []),
-        ...extractSymptomsFromKeywords(lastUserMessage.content),
+        ...keywordSymptoms,
       ])
     );
 
@@ -2574,6 +2633,7 @@ export async function POST(request: Request) {
       visionAnalysis,
       visionSeverity,
       image,
+      forceDeterministicQuestionFallback: Boolean(textOnlyQuickStartExtraction),
     });
   } catch (error) {
     errorCode = "symptom_chat_unhandled";
