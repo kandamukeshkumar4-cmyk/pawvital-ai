@@ -95,6 +95,8 @@ interface SendMessageOptions {
 
 // --- Config ---
 
+export const SYMPTOM_CHAT_REQUEST_TIMEOUT_MS = 30000;
+
 const quickSymptoms = [
   "Not eating",
   "Limping",
@@ -120,6 +122,15 @@ function createLiveSessionId(): string {
   }
 
   return `triage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof Error && error.name === "AbortError") ||
+    (typeof DOMException !== "undefined" &&
+      error instanceof DOMException &&
+      error.name === "AbortError")
+  );
 }
 
 // --- Components ---
@@ -548,6 +559,11 @@ export default function SymptomCheckerPage() {
 
     setSessionStarted(true);
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      SYMPTOM_CHAT_REQUEST_TIMEOUT_MS,
+    );
 
     try {
       const baseMessages = getApiMessages();
@@ -575,6 +591,7 @@ export default function SymptomCheckerPage() {
           imageMeta: imageMetaToSend,
           gateOverride,
         }),
+        signal: controller.signal,
       });
 
       const data = await res.json();
@@ -709,20 +726,23 @@ export default function SymptomCheckerPage() {
           setReadyForReport(false);
         }
       }
-    } catch {
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "I had trouble connecting. Please try again.",
+          content: isAbortError(error)
+            ? "The symptom checker took too long to respond. Please try again."
+            : "I had trouble connecting. Please try again.",
           type: "error",
           timestamp: new Date(),
         },
       ]);
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      inputRef.current?.focus();
     }
-
-    setLoading(false);
-    inputRef.current?.focus();
   };
 
   const generateReport = async (

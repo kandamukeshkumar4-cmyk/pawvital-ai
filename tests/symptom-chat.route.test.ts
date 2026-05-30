@@ -1804,6 +1804,30 @@ describe("symptom-chat mixed text + image routing", () => {
     );
   });
 
+  it("VET-1554C: first-turn Vomiting quick start returns a follow-up without provider extraction or phrasing", async () => {
+    mockRunRoboflowSkinWorkflow.mockResolvedValue({
+      positive: false,
+      summary: "",
+      labels: [],
+    });
+    mockShouldAnalyzeWoundImage.mockReturnValue(false);
+    mockExtractWithQwen.mockRejectedValue(new Error("provider timeout"));
+
+    const { POST } = await import("@/app/api/ai/symptom-chat/route");
+    const response = await POST(makeTextOnlyRequest(createSession(), "Vomiting"));
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.type).toBe("question");
+    expect(payload.message).toContain("How long has the vomiting been going on?");
+    expect(payload.session.known_symptoms).toContain("vomiting");
+    expect(payload.session.last_question_asked).toBe("vomit_duration");
+    expect(mockExtractWithQwen).not.toHaveBeenCalled();
+    expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+    expect(mockPhraseWithLlama).not.toHaveBeenCalled();
+    expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+  });
+
   it("prefers direct owner text over conflicting model extraction for critical first-turn facts", async () => {
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
