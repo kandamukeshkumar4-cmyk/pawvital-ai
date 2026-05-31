@@ -49,6 +49,9 @@ export function buildSecurityHeaders(
 }
 
 const nextConfig: NextConfig = {
+  ...(process.env.AZURE_STATIC_WEB_APPS === "1"
+    ? { output: "standalone" as const }
+    : {}),
   // Exclude Node.js-only packages from bundling
   serverExternalPackages: ["pg", "pg-native", "pg-pool", "pg-protocol"],
   // Skip type-checking during build — handled separately by CI `tsc --noEmit`.
