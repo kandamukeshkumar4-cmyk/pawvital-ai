@@ -111,6 +111,14 @@ describe("VET-1215 proxy auth guard", () => {
     expect(mockCreateServerClient).not.toHaveBeenCalled();
   });
 
+  it("excludes Azure Static Web Apps health probes from the proxy matcher", async () => {
+    const { config } = await loadProxyModule();
+    const matcher = config.matcher[0];
+
+    expect(new RegExp(`^${matcher}$`).test("/.swa/health.html")).toBe(false);
+    expect(new RegExp(`^${matcher}$`).test("/dashboard")).toBe(true);
+  });
+
   it("VET-1352 tester access smoke: sends non-invited authenticated users to login so they can switch accounts", async () => {
     process.env = {
       ...originalEnv,
