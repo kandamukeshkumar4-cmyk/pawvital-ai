@@ -13,6 +13,10 @@ const REQUIRED_ENV = [
   "AZURE_CLIENT_SECRET",
   "AZURE_KEY_VAULT_NAME",
 ];
+const DIRECT_SECRET_ENV = {
+  appConfigConnectionString: "AZURE_SECRET_APPCONFIG_CONNECTION_STRING",
+  mapsKey: "AZURE_SECRET_MAPS_KEY",
+};
 
 function parseEnvFile(path) {
   const values = new Map();
@@ -58,36 +62,46 @@ async function main() {
   console.log("Secret values are not printed.\n");
 
   const env = parseEnvFile(ENV_FILE);
-  const missing = REQUIRED_ENV.filter((name) => !env.get(name));
-  if (missing.length > 0) {
-    throw new Error(`missing required env vars: ${missing.join(", ")}`);
-  }
 
-  const keyVaultName = normalizeVaultName(env.get("AZURE_KEY_VAULT_NAME"));
-  const credential = new ClientSecretCredential(
-    env.get("AZURE_TENANT_ID"),
-    env.get("AZURE_CLIENT_ID"),
-    env.get("AZURE_CLIENT_SECRET"),
+  let appConfigConnectionString = env.get(
+    DIRECT_SECRET_ENV.appConfigConnectionString,
   );
-  const secretClient = new SecretClient(
-    `https://${keyVaultName}.vault.azure.net`,
-    credential,
-  );
+  const directMapsKey = env.get(DIRECT_SECRET_ENV.mapsKey);
+  if (appConfigConnectionString?.trim() && directMapsKey?.trim()) {
+    console.log("[PASS] Direct AZURE_SECRET_* fallback values present");
+  } else {
+    const missing = REQUIRED_ENV.filter((name) => !env.get(name));
+    if (missing.length > 0) {
+      throw new Error(`missing required env vars: ${missing.join(", ")}`);
+    }
 
-  const [appConfigSecret, mapsKeySecret] = await Promise.all([
-    secretClient.getSecret("appconfig-connection-string"),
-    secretClient.getSecret("maps-key"),
-  ]);
+    const keyVaultName = normalizeVaultName(env.get("AZURE_KEY_VAULT_NAME"));
+    const credential = new ClientSecretCredential(
+      env.get("AZURE_TENANT_ID"),
+      env.get("AZURE_CLIENT_ID"),
+      env.get("AZURE_CLIENT_SECRET"),
+    );
+    const secretClient = new SecretClient(
+      `https://${keyVaultName}.vault.azure.net`,
+      credential,
+    );
 
-  if (!appConfigSecret.value?.trim()) {
-    throw new Error("appconfig-connection-string secret is empty or unreadable");
+    const [appConfigSecret, mapsKeySecret] = await Promise.all([
+      secretClient.getSecret("appconfig-connection-string"),
+      secretClient.getSecret("maps-key"),
+    ]);
+
+    if (!appConfigSecret.value?.trim()) {
+      throw new Error("appconfig-connection-string secret is empty or unreadable");
+    }
+    if (!mapsKeySecret.value?.trim()) {
+      throw new Error("maps-key secret is empty or unreadable");
+    }
+    appConfigConnectionString = appConfigSecret.value;
+    console.log("[PASS] Key Vault secrets readable");
   }
-  if (!mapsKeySecret.value?.trim()) {
-    throw new Error("maps-key secret is empty or unreadable");
-  }
-  console.log("[PASS] Key Vault secrets readable");
 
-  const appConfig = new AppConfigurationClient(appConfigSecret.value);
+  const appConfig = new AppConfigurationClient(appConfigConnectionString);
   const mapsFlag = await appConfig.getConfigurationSetting({
     key: ".appconfig.featureflag/azure.maps.enabled",
   });

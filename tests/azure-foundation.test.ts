@@ -18,6 +18,49 @@ describe("azure foundation", () => {
     expect(factory).not.toHaveBeenCalled();
   });
 
+  it("supports direct server env secrets as a break-glass fallback", async () => {
+    const azure = await import("@/lib/azure");
+    const factory = jest.fn();
+
+    await expect(
+      azure.getSecret("maps-key", {
+        env: {
+          AZURE_SECRET_MAPS_KEY: " direct-maps-key ",
+        },
+        secretClientFactory: factory,
+      })
+    ).resolves.toBe("direct-maps-key");
+
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  it("does not read direct env fallbacks for arbitrary secret names", async () => {
+    const azure = await import("@/lib/azure");
+
+    await expect(
+      azure.getSecret("not-a-known-secret", {
+        env: {
+          AZURE_SECRET_NOT_A_KNOWN_SECRET: "should-not-load",
+        },
+      })
+    ).resolves.toBeNull();
+  });
+
+  it("prefers Key Vault over direct env fallback when both are available", async () => {
+    const azure = await import("@/lib/azure");
+    const getSecret = jest.fn().mockResolvedValue({ value: "vault-value" });
+
+    await expect(
+      azure.getSecret("maps-key", {
+        env: {
+          ...configuredEnv,
+          AZURE_SECRET_MAPS_KEY: "direct-value",
+        },
+        secretClientFactory: () => ({ getSecret }),
+      })
+    ).resolves.toBe("vault-value");
+  });
+
   it("uses the Key Vault name to build a secret client when configured", async () => {
     const azure = await import("@/lib/azure");
     const getSecret = jest.fn().mockResolvedValue({ value: " secret-value " });
