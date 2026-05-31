@@ -68,6 +68,13 @@ export interface RouteTelemetryInput {
   routeName: string;
   statusCode: number;
   startedAtMs: number;
+  /**
+   * Optional response-time timestamp (ms). When the call is deferred past the
+   * response (e.g. via `after()`), pass the time the response was produced so
+   * `durationMs` reflects the real turn latency and is not inflated by
+   * post-response scheduling delay. Defaults to `Date.now()`.
+   */
+  endedAtMs?: number;
   errorCode?: string;
   /**
    * Optional per-stage latencies (ms) for the route, e.g. { extractionMs,
@@ -251,7 +258,13 @@ export function trackRouteTelemetry(
   input: RouteTelemetryInput,
   options: TrackOptions = {}
 ): Promise<void> {
-  const durationMs = Math.max(0, Date.now() - input.startedAtMs);
+  // Use the caller-supplied response time only when it is a finite number;
+  // otherwise fall back to now. Math.max guards against a clock skew / too-early
+  // value producing a negative duration.
+  const endedAtMs = Number.isFinite(input.endedAtMs)
+    ? (input.endedAtMs as number)
+    : Date.now();
+  const durationMs = Math.max(0, endedAtMs - input.startedAtMs);
   const properties: SafeProperties = {
     routeName: input.routeName,
     statusCode: input.statusCode,
