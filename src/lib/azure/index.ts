@@ -70,9 +70,33 @@ export const AZURE_SECRET_NAMES = {
   webPubSubConnectionString: "webpubsub-connection-string",
 } as const;
 
+const DIRECT_ENV_SECRET_PREFIX = "AZURE_SECRET_";
+const ALLOWED_DIRECT_ENV_SECRETS = new Set<string>(
+  Object.values(AZURE_SECRET_NAMES)
+);
+
 function readEnv(env: AzureEnv, name: string): string | null {
   const value = env[name]?.trim();
   return value ? value : null;
+}
+
+export function getDirectSecretEnvName(name: string): string | null {
+  if (!ALLOWED_DIRECT_ENV_SECRETS.has(name)) {
+    return null;
+  }
+
+  return `${DIRECT_ENV_SECRET_PREFIX}${name
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")}`;
+}
+
+function getDirectEnvSecret(
+  name: string,
+  env: AzureEnv = process.env
+): string | null {
+  const envName = getDirectSecretEnvName(name);
+  return envName ? readEnv(env, envName) : null;
 }
 
 function normalizeVaultName(rawValue: string): string {
@@ -154,17 +178,18 @@ export async function getSecret(
   name: string,
   options: AzureClientOptions = {}
 ): Promise<string | null> {
+  const directEnvSecret = getDirectEnvSecret(name, options.env);
   const config = getAzureRuntimeConfig(options.env);
   if (!config) {
-    return null;
+    return directEnvSecret;
   }
 
   try {
     const client = await getSecretClient(config, options.secretClientFactory);
     const secret = await client.getSecret(name);
-    return normalizeSecretValue(secret.value);
+    return normalizeSecretValue(secret.value) ?? directEnvSecret;
   } catch {
-    return null;
+    return directEnvSecret;
   }
 }
 
