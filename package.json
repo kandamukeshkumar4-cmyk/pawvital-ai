@@ -16,6 +16,7 @@
     "smoke:private-tester:access": "node scripts/private-tester-smoke.mjs tester-access",
     "smoke:private-tester:emergency-bypass": "node scripts/private-tester-smoke.mjs emergency-bypass",
     "smoke:azure": "node scripts/azure-ecosystem-smoke.mjs",
+    "check:azure:vercel-env": "node scripts/check-vercel-azure-runtime-env.mjs",
     "smoke:browser-mobile": "node smoke/browser-mobile/run.mjs",
     "smoke:browser-mobile:install": "node smoke/browser-mobile/run.mjs --install-only",
     "shadow:readout-gate": "node scripts/shadow-readout-gate-runner.mjs",

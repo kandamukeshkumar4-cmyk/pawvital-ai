@@ -17,6 +17,12 @@ const STATIC_WEB_APP = process.env.AZURE_STATIC_WEB_APP || "pawvital-swa";
 const SERVICE_BUS_QUEUE = process.env.AZURE_SERVICE_BUS_QUEUE || "async-review";
 const WEB_PUBSUB_HUB =
   process.env.AZURE_WEBPUBSUB_HUB || "pawvital_triage";
+const PRODUCTION_APP_URL =
+  process.env.PAWVITAL_PRODUCTION_URL || "https://pawvital-ai.vercel.app";
+const CHECK_TIMEOUT_MS = Number.parseInt(
+  process.env.AZURE_SMOKE_CHECK_TIMEOUT_MS || "60000",
+  10,
+);
 
 const REQUIRED_SECRETS = [
   "appconfig-connection-string",
@@ -150,6 +156,28 @@ async function fetchJson(url, init = {}, timeoutMs = 20_000) {
   }
 }
 
+async function checkClockSkew() {
+  const response = await fetch("https://www.microsoft.com", {
+    cache: "no-store",
+    method: "HEAD",
+  });
+  const serverDateHeader = response.headers.get("date");
+  const serverDate = serverDateHeader ? new Date(serverDateHeader) : null;
+  if (!serverDate || Number.isNaN(serverDate.getTime())) {
+    throw new Error("could not read server Date header");
+  }
+
+  const skewMs = Math.abs(Date.now() - serverDate.getTime());
+  const skewMinutes = Math.round(skewMs / 60_000);
+  if (skewMs > 10 * 60_000) {
+    throw new Error(
+      `local clock differs from Microsoft server time by about ${skewMinutes} minutes; sync Windows time before running Azure shared-key checks`,
+    );
+  }
+
+  return `clock skew about ${skewMinutes} minute(s)`;
+}
+
 async function getSecret(name) {
   if (secretCache.has(name)) {
     return secretCache.get(name);
@@ -179,6 +207,29 @@ async function getSecret(name) {
 
 function buildUrl(endpoint, path) {
   return `${endpoint.replace(/\/+$/, "")}${path}`;
+}
+
+function timeoutError(label) {
+  const error = new Error(
+    `${label} did not finish within ${CHECK_TIMEOUT_MS}ms`,
+  );
+  error.name = "TimeoutError";
+  return error;
+}
+
+async function withTimeout(label, promise) {
+  let timeoutId;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(timeoutError(label)), CHECK_TIMEOUT_MS);
+        timeoutId.unref?.();
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function checkAzureAccount() {
@@ -408,6 +459,35 @@ async function checkMaps() {
   return `${payload.results.length} search result(s)`;
 }
 
+async function checkProductionAppRuntime() {
+  const payload = await fetchJson(
+    buildUrl(PRODUCTION_APP_URL, "/api/azure/maps/nearest-vets"),
+    {
+      body: JSON.stringify({
+        latitude: 41.1537,
+        longitude: -81.3579,
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    },
+    30_000,
+  );
+
+  if (payload?.enabled !== true) {
+    throw new Error(
+      `production app returned enabled=${String(payload?.enabled)} reason=${
+        payload?.reason ?? "unknown"
+      }`,
+    );
+  }
+
+  if (!Array.isArray(payload.clinics)) {
+    throw new Error("production app did not return a clinics array");
+  }
+
+  return `${payload.clinics.length} clinic(s) through ${PRODUCTION_APP_URL}`;
+}
+
 async function checkWebPubSub() {
   const connectionString = await getSecret("webpubsub-connection-string");
   const client = new WebPubSubServiceClient(connectionString, WEB_PUBSUB_HUB);
@@ -461,8 +541,9 @@ async function checkServiceBus() {
 }
 
 async function runCheck(label, fn) {
+  console.log(`[RUN]  ${label}`);
   try {
-    const details = await fn();
+    const details = await withTimeout(label, fn());
     console.log(`[PASS] ${label}${details ? ` - ${details}` : ""}`);
     return true;
   } catch (error) {
@@ -481,6 +562,7 @@ async function main() {
 
   const checks = [
     ["Azure account", checkAzureAccount],
+    ["Local clock skew", checkClockSkew],
     ["Resource inventory", checkResourceInventory],
     ["Key Vault secrets", checkKeyVaultSecrets],
     ["Application Insights", checkAppInsights],
@@ -492,6 +574,7 @@ async function main() {
     ["Document Intelligence", checkDocumentIntelligence],
     ["Content Safety", checkContentSafety],
     ["Azure Maps", checkMaps],
+    ["Production app Azure runtime", checkProductionAppRuntime],
     ["Web PubSub", checkWebPubSub],
     ["Service Bus", checkServiceBus],
   ];
