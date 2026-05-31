@@ -69,6 +69,13 @@ export interface RouteTelemetryInput {
   statusCode: number;
   startedAtMs: number;
   errorCode?: string;
+  /**
+   * Optional per-stage latencies (ms) for the route, e.g. { extractionMs,
+   * secondOpinionMs }. Emitted as App Insights measurements alongside the
+   * authoritative total `durationMs`. Internal-only: measurements never enter
+   * the route response payload.
+   */
+  stageDurationsMs?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -255,11 +262,21 @@ export function trackRouteTelemetry(
     properties.errorCode = input.errorCode;
   }
 
+  // Merge per-stage latencies, then set the total last so a stage key can never
+  // overwrite the authoritative `durationMs`.
+  const measurements: Record<string, number> = {};
+  for (const [stage, ms] of Object.entries(input.stageDurationsMs ?? {})) {
+    if (Number.isFinite(ms)) {
+      measurements[stage] = Math.max(0, ms);
+    }
+  }
+  measurements.durationMs = durationMs;
+
   return trackEvent(
     {
       name: input.errorCode ? "route.error" : "route.request",
       properties,
-      measurements: { durationMs },
+      measurements,
     },
     options
   );

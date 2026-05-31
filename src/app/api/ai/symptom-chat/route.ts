@@ -1212,6 +1212,13 @@ function buildDeterministicEmergencyMessage(
 
 export async function POST(request: Request) {
   const startedAtMs = Date.now();
+  const stageDurationsMs: Record<string, number> = {};
+  // Internal-only per-stage latency accumulator. Surfaced to App Insights via
+  // trackRouteTelemetry measurements; never enters the route response payload.
+  const recordStageMs = (stage: string, startedAt: number): void => {
+    stageDurationsMs[stage] =
+      (stageDurationsMs[stage] ?? 0) + Math.max(0, Date.now() - startedAt);
+  };
   let statusCode = 200;
   let errorCode: string | undefined;
   let liveUpdateTarget: LiveUpdateTarget | null = null;
@@ -1740,6 +1747,7 @@ export async function POST(request: Request) {
       keywordSymptoms,
       Boolean(image)
     );
+    const extractionStartedAt = Date.now();
     const extracted =
       fastPathExtraction ||
       textOnlyQuickStartExtraction ||
@@ -1751,6 +1759,7 @@ export async function POST(request: Request) {
         compactImageSignals,
         keywordSymptoms
       ));
+    recordStageMs("extractionMs", extractionStartedAt);
 
     const isExtractionValidJson =
       typeof extracted === "object" &&
@@ -1924,6 +1933,7 @@ export async function POST(request: Request) {
           typeof recoveredPendingAnswerValue === "boolean" ||
           typeof recoveredPendingAnswerValue === "number")
       ) {
+        const secondOpinionStartedAt = Date.now();
         session = await recordSecondOpinionShadowSample({
           session,
           pendingQuestionId: pendingTelemetryQuestionId,
@@ -1937,6 +1947,7 @@ export async function POST(request: Request) {
           primaryAnswerValue: recoveredPendingAnswerValue,
           hadUnresolved: pendingWasUnresolved,
         });
+        recordStageMs("secondOpinionMs", secondOpinionStartedAt);
       } else {
         session = await recordSecondOpinionNotRequestedTrace({
           session,
@@ -2098,6 +2109,7 @@ export async function POST(request: Request) {
           shadowSamplingMode === "shadow" &&
           shadowSamplingClarificationAttempts === 0
         ) {
+          const secondOpinionStartedAt = Date.now();
           session = await recordSecondOpinionShadowSample({
             session,
             pendingQuestionId: pendingQ,
@@ -2111,6 +2123,7 @@ export async function POST(request: Request) {
             primaryAnswerValue: pendingAnswer.value,
             hadUnresolved,
           });
+          recordStageMs("secondOpinionMs", secondOpinionStartedAt);
         } else {
           session = await recordSecondOpinionNotRequestedTrace({
             session,
@@ -2748,6 +2761,7 @@ export async function POST(request: Request) {
       statusCode,
       startedAtMs,
       errorCode,
+      stageDurationsMs,
     });
     if (errorCode) {
       void trackException(errorCode, { routeName: ROUTE_NAME });

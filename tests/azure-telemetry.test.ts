@@ -223,6 +223,55 @@ describe("trackRouteTelemetry", () => {
     });
   });
 
+  it("merges per-stage durations into measurements alongside total durationMs", async () => {
+    const transport = makeMockTransport();
+    jest.spyOn(Date, "now").mockReturnValue(1_250);
+
+    await trackRouteTelemetry(
+      {
+        routeName: "api.ai.symptom-chat",
+        statusCode: 200,
+        startedAtMs: 1_000,
+        stageDurationsMs: { extractionMs: 40, secondOpinionMs: 120 },
+      },
+      {
+        env: CONFIGURED_ENV,
+        secretClientFactory: () => makeConnectedSecretClient(),
+        transport,
+      }
+    );
+
+    expect(getEventEnvelope(transport).data.baseData.measurements).toEqual({
+      durationMs: 250,
+      extractionMs: 40,
+      secondOpinionMs: 120,
+    });
+  });
+
+  it("keeps the total durationMs authoritative even if a stage key collides", async () => {
+    const transport = makeMockTransport();
+    jest.spyOn(Date, "now").mockReturnValue(1_250);
+
+    await trackRouteTelemetry(
+      {
+        routeName: "api.ai.symptom-chat",
+        statusCode: 200,
+        startedAtMs: 1_000,
+        // A stage must never be able to overwrite the authoritative total.
+        stageDurationsMs: { durationMs: 9_999, extractionMs: 40 },
+      },
+      {
+        env: CONFIGURED_ENV,
+        secretClientFactory: () => makeConnectedSecretClient(),
+        transport,
+      }
+    );
+
+    const measurements = getEventEnvelope(transport).data.baseData.measurements;
+    expect(measurements?.durationMs).toBe(250);
+    expect(measurements?.extractionMs).toBe(40);
+  });
+
   it("tracks route errors with fixed error codes only", async () => {
     const transport = makeMockTransport();
     jest.spyOn(Date, "now").mockReturnValue(2_010);
