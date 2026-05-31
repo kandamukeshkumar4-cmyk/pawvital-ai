@@ -132,6 +132,24 @@ function buildAnalyzeUrl(endpoint: string): URL {
   return url;
 }
 
+async function deleteAnalyzeResult(
+  operationLocation: string,
+  client: AzureKeyEndpointClient,
+  fetchDocument: AzureServiceFetch,
+): Promise<void> {
+  try {
+    await fetchDocument(operationLocation, {
+      headers: {
+        "Ocp-Apim-Subscription-Key": client.key,
+      },
+      method: "DELETE",
+    });
+  } catch {
+    // The owner-facing intake already has the result it needs. Treat cleanup as
+    // best-effort so a transient Azure deletion error does not break intake.
+  }
+}
+
 function buildContentSafetyUrl(endpoint: string): URL {
   const url = new URL(joinAzurePath(endpoint, "/contentsafety/text:analyze"));
   url.searchParams.set("api-version", CONTENT_SAFETY_API_VERSION);
@@ -258,42 +276,46 @@ async function analyzeDocument(
   );
   const wait = options.sleep ?? sleep;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    if (attempt > 0 && pollIntervalMs > 0) {
-      await wait(pollIntervalMs);
+  try {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (attempt > 0 && pollIntervalMs > 0) {
+        await wait(pollIntervalMs);
+      }
+
+      const pollResponse = await fetchDocument(operationLocation, {
+        headers: {
+          "Ocp-Apim-Subscription-Key": client.key,
+        },
+        method: "GET",
+      });
+      if (!pollResponse.ok) {
+        return null;
+      }
+
+      const payload = (await pollResponse.json()) as AnalyzeDocumentPayload;
+      if (payload.status === "failed") {
+        return null;
+      }
+      if (payload.status !== "succeeded") {
+        continue;
+      }
+
+      const result = payload.analyzeResult;
+      if (!result) {
+        return null;
+      }
+
+      return {
+        content: normalizeText(result.content),
+        fields: extractFields(result.keyValuePairs),
+        pageCount: extractPageCount(result.pages),
+      };
     }
 
-    const pollResponse = await fetchDocument(operationLocation, {
-      headers: {
-        "Ocp-Apim-Subscription-Key": client.key,
-      },
-      method: "GET",
-    });
-    if (!pollResponse.ok) {
-      return null;
-    }
-
-    const payload = (await pollResponse.json()) as AnalyzeDocumentPayload;
-    if (payload.status === "failed") {
-      return null;
-    }
-    if (payload.status !== "succeeded") {
-      continue;
-    }
-
-    const result = payload.analyzeResult;
-    if (!result) {
-      return null;
-    }
-
-    return {
-      content: normalizeText(result.content),
-      fields: extractFields(result.keyValuePairs),
-      pageCount: extractPageCount(result.pages),
-    };
+    return null;
+  } finally {
+    await deleteAnalyzeResult(operationLocation, client, fetchDocument);
   }
-
-  return null;
 }
 
 async function screenExtractedText(

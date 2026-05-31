@@ -47,6 +47,21 @@ function response(input: {
   };
 }
 
+function expectAnalyzeResultDeleted(
+  fetchDocument: jest.Mock<
+    ReturnType<AzureServiceFetch>,
+    Parameters<AzureServiceFetch>
+  >,
+  callIndex = 2,
+) {
+  const [cleanupUrl, cleanupInit] = fetchDocument.mock.calls[callIndex];
+  expect(cleanupUrl).toBe("https://poll.example/doc-1");
+  expect(cleanupInit.headers).toMatchObject({
+    "Ocp-Apim-Subscription-Key": "doc-secret",
+  });
+  expect(cleanupInit.method).toBe("DELETE");
+}
+
 const BASE_INPUT = {
   blobName: "vet-record-intake/user-1/record.pdf",
   body: Buffer.from("%PDF-1.7 test"),
@@ -169,6 +184,7 @@ describe("Azure Document Intelligence vet record intake", () => {
       "Content-Type": "application/pdf",
       "Ocp-Apim-Subscription-Key": "doc-secret",
     });
+    expectAnalyzeResultDeleted(fetchDocument);
 
     const [, safetyInit] = fetchContentSafety.mock.calls[0];
     expect(JSON.parse(String(safetyInit.body))).toMatchObject({
@@ -257,6 +273,60 @@ describe("Azure Document Intelligence vet record intake", () => {
       ok: true,
       pageCount: 1,
     });
+    expectAnalyzeResultDeleted(fetchDocument);
+  });
+
+  it("keeps successful document intake available when analyze-result cleanup fails", async () => {
+    const fetchDocument = jest
+      .fn<ReturnType<AzureServiceFetch>, Parameters<AzureServiceFetch>>()
+      .mockResolvedValueOnce(
+        response({
+          headers: { "operation-location": "https://poll.example/doc-1" },
+          status: 202,
+        }),
+      )
+      .mockResolvedValueOnce(
+        response({
+          json: {
+            analyzeResult: {
+              content: "Normal lab result note.",
+              pages: [{ pageNumber: 1 }],
+            },
+            status: "succeeded",
+          },
+        }),
+      )
+      .mockRejectedValueOnce(new Error("delete unavailable"));
+    const fetchContentSafety = jest
+      .fn<ReturnType<AzureServiceFetch>, Parameters<AzureServiceFetch>>()
+      .mockResolvedValue(
+        response({
+          json: {
+            categoriesAnalysis: [
+              { category: "Hate", severity: 0 },
+              { category: "SelfHarm", severity: 0 },
+              { category: "Sexual", severity: 0 },
+              { category: "Violence", severity: 0 },
+            ],
+          },
+        }),
+      );
+
+    const result = await intakeVetRecordDocument(BASE_INPUT, {
+      appConfigurationClientFactory: appConfigurationClientFactory(true),
+      env: CONFIGURED_ENV,
+      fetchContentSafety,
+      fetchDocumentIntelligence: fetchDocument,
+      pollIntervalMs: 0,
+      secretClientFactory: secretClientFactory(BASE_SECRETS),
+    });
+
+    expect(result).toMatchObject({
+      enabled: true,
+      ok: true,
+      pageCount: 1,
+    });
+    expectAnalyzeResultDeleted(fetchDocument);
   });
 
   it("blocks unsafe extracted text without returning the extracted context", async () => {
@@ -306,6 +376,7 @@ describe("Azure Document Intelligence vet record intake", () => {
       reason: "content_safety_blocked",
     });
     expect(JSON.stringify(result)).not.toContain("unsafe extracted text");
+    expectAnalyzeResultDeleted(fetchDocument);
   });
 
   it("fails closed when Content Safety is unavailable", async () => {
