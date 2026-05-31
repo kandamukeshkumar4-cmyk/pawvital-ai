@@ -258,7 +258,13 @@ export function trackRouteTelemetry(
   input: RouteTelemetryInput,
   options: TrackOptions = {}
 ): Promise<void> {
-  const durationMs = Math.max(0, (input.endedAtMs ?? Date.now()) - input.startedAtMs);
+  // Use the caller-supplied response time only when it is a finite number;
+  // otherwise fall back to now. Math.max guards against a clock skew / too-early
+  // value producing a negative duration.
+  const endedAtMs = Number.isFinite(input.endedAtMs)
+    ? (input.endedAtMs as number)
+    : Date.now();
+  const durationMs = Math.max(0, endedAtMs - input.startedAtMs);
   const properties: SafeProperties = {
     routeName: input.routeName,
     statusCode: input.statusCode,

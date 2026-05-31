@@ -303,6 +303,52 @@ describe("trackRouteTelemetry", () => {
     });
   });
 
+  it("clamps durationMs to 0 when endedAtMs is earlier than startedAtMs", async () => {
+    const transport = makeMockTransport();
+    jest.spyOn(Date, "now").mockReturnValue(5_000);
+
+    await trackRouteTelemetry(
+      {
+        routeName: "api.ai.symptom-chat",
+        statusCode: 200,
+        startedAtMs: 1_000,
+        endedAtMs: 800, // clock skew: response time before start
+      },
+      {
+        env: CONFIGURED_ENV,
+        secretClientFactory: () => makeConnectedSecretClient(),
+        transport,
+      }
+    );
+
+    expect(getEventEnvelope(transport).data.baseData.measurements).toEqual({
+      durationMs: 0,
+    });
+  });
+
+  it("falls back to Date.now() when endedAtMs is not a finite number", async () => {
+    const transport = makeMockTransport();
+    jest.spyOn(Date, "now").mockReturnValue(1_250);
+
+    await trackRouteTelemetry(
+      {
+        routeName: "api.ai.symptom-chat",
+        statusCode: 200,
+        startedAtMs: 1_000,
+        endedAtMs: Number.NaN, // malformed value must not poison durationMs
+      },
+      {
+        env: CONFIGURED_ENV,
+        secretClientFactory: () => makeConnectedSecretClient(),
+        transport,
+      }
+    );
+
+    expect(getEventEnvelope(transport).data.baseData.measurements).toEqual({
+      durationMs: 250,
+    });
+  });
+
   it("tracks route errors with fixed error codes only", async () => {
     const transport = makeMockTransport();
     jest.spyOn(Date, "now").mockReturnValue(2_010);
