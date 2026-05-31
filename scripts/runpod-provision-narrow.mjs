@@ -68,6 +68,18 @@ const pods = JSON.parse(fs.readFileSync(podsPath, "utf8"));
 const NARROW_PACK_ROLE = "narrow_model_pack";
 const NARROW_PACK_NAME = "pawvital-narrow-model-pack-v1";
 const NARROW_PACK_PORT = "8085";
+const NARROW_PACK_GPU_COUNT = 2;
+const NARROW_PACK_GPU_LABEL = "2x NVIDIA A100 80GB/H100/H200 or RTX 6000 Ada";
+const NARROW_PACK_GPU_TYPE_IDS = [
+  "NVIDIA A100 80GB PCIe",
+  "NVIDIA A100-SXM4-80GB",
+  "NVIDIA H100 80GB HBM3",
+  "NVIDIA H100 PCIe",
+  "NVIDIA H100 NVL",
+  "NVIDIA H200",
+  "NVIDIA H200 NVL",
+  "NVIDIA RTX 6000 Ada Generation",
+];
 
 // Models included in the narrow pack
 const NARROW_PACK_MODELS = {
@@ -507,8 +519,8 @@ async function provisionNarrowPackPod() {
   // Show provisioning plan
   console.log("\n=== Narrow Model Pack Provisioning Plan ===\n");
   console.log(`Pod name:     ${NARROW_PACK_NAME}`);
-  console.log(`GPU type:     NVIDIA A100 40GB (or equivalent)`);
-  console.log(`GPU count:    1`);
+  console.log(`GPU type:     ${NARROW_PACK_GPU_LABEL}`);
+  console.log(`GPU count:    ${NARROW_PACK_GPU_COUNT}`);
   console.log(`Port:         ${NARROW_PACK_PORT}`);
   console.log(`Models:`);
   for (const [role, model] of Object.entries(NARROW_PACK_MODELS)) {
@@ -534,15 +546,10 @@ async function provisionNarrowPackPod() {
     name: NARROW_PACK_NAME,
     cloudType: "COMMUNITY",
     computeType: "GPU",
-    gpuCount: 1,
-    gpuTypeIds: [
-      "NVIDIA A100 40GB PCIe",
-      "NVIDIA A100-SXM4-40GB",
-      "NVIDIA A100 80GB PCIe",
-      "NVIDIA A100-SXM4-80GB",
-      "NVIDIA RTX 6000 Ada Generation",
-    ],
+    gpuCount: NARROW_PACK_GPU_COUNT,
+    gpuTypeIds: NARROW_PACK_GPU_TYPE_IDS,
     gpuTypePriority: "custom",
+    supportPublicIp: true,
     allowedCudaVersions: ["12.8", "12.6", "12.5", "12.4"],
     imageName: "runpod/pytorch:2.8.0-py3.11-cuda12.8.1-cudnn-devel-ubuntu22.04",
     ports: [`${NARROW_PACK_PORT}/http`, "22/tcp"],
@@ -564,7 +571,7 @@ async function provisionNarrowPackPod() {
     pods[NARROW_PACK_ROLE] = {
       pod_id: pod.id,
       name: pod.name,
-      gpu: "NVIDIA A100 40GB or equivalent",
+      gpu: NARROW_PACK_GPU_LABEL,
       services: [`narrow-model-pack-service:${NARROW_PACK_PORT}`],
       proxy_base: `https://${pod.id}-${NARROW_PACK_PORT}.proxy.runpod.net`,
       status: "booting",
