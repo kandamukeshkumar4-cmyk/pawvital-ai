@@ -124,6 +124,7 @@ import {
   shouldTriggerSyncConsult,
   buildEvidenceChainNotes,
   deriveSymptomsFromImageEvidence,
+  runAfterSafely,
 } from "@/lib/symptom-chat/report-helpers";
 import { decideRepeatLoopGuard } from "@/lib/symptom-chat/repeat-loop-guard";
 import {
@@ -2756,16 +2757,25 @@ export async function POST(request: Request) {
       { status: 200 }
     );
   } finally {
-    void trackRouteTelemetry({
-      routeName: ROUTE_NAME,
-      statusCode,
-      startedAtMs,
-      errorCode,
-      stageDurationsMs,
+    // Defer telemetry to after the response flushes. On serverless the function
+    // can freeze/terminate once the response is sent (or the client aborts),
+    // dropping any un-awaited fetch; `after()` keeps the runtime alive until the
+    // POST settles. Capture the response time now so a deferred `durationMs`
+    // still reflects real turn latency, not post-response scheduling delay.
+    const endedAtMs = Date.now();
+    runAfterSafely(async () => {
+      await trackRouteTelemetry({
+        routeName: ROUTE_NAME,
+        statusCode,
+        startedAtMs,
+        endedAtMs,
+        errorCode,
+        stageDurationsMs,
+      });
+      if (errorCode) {
+        await trackException(errorCode, { routeName: ROUTE_NAME });
+      }
     });
-    if (errorCode) {
-      void trackException(errorCode, { routeName: ROUTE_NAME });
-    }
     await queueTriageLiveUpdate(
       liveUpdateTarget,
       errorCode

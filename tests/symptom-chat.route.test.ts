@@ -240,6 +240,21 @@ jest.mock("@/lib/azure/telemetry", () => ({
   trackException: (...args: unknown[]) => mockTrackException(...args),
 }));
 
+// The route defers post-response side effects (telemetry) via runAfterSafely,
+// which calls Next's after() and is a no-op outside a request scope. In tests
+// there is no request scope, so run the deferred task inline to keep the
+// "telemetry is recorded" behavioral assertions meaningful.
+jest.mock("@/lib/symptom-chat/report-helpers", () => {
+  const actual = jest.requireActual("@/lib/symptom-chat/report-helpers");
+  return {
+    ...actual,
+    runAfterSafely: (task: () => Promise<void>) => {
+      void task();
+      return true;
+    },
+  };
+});
+
 jest.mock("@/lib/azure/web-pubsub", () => ({
   normalizeWebPubSubSessionId: (value: unknown) => {
     if (typeof value !== "string") {

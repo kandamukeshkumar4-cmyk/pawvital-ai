@@ -272,6 +272,37 @@ describe("trackRouteTelemetry", () => {
     expect(measurements?.extractionMs).toBe(40);
   });
 
+  it("uses endedAtMs for durationMs so a deferred (after-response) call is not inflated", async () => {
+    const transport = makeMockTransport();
+    // Simulate the call running well after the response was produced: the
+    // response ended at 1_250 but `after()` runs the track at 9_999.
+    jest.spyOn(Date, "now").mockReturnValue(9_999);
+
+    await trackRouteTelemetry(
+      {
+        routeName: "api.ai.symptom-chat",
+        statusCode: 200,
+        startedAtMs: 1_000,
+        endedAtMs: 1_250,
+        stageDurationsMs: { extractionMs: 40, secondOpinionMs: 120 },
+      },
+      {
+        env: CONFIGURED_ENV,
+        secretClientFactory: () => makeConnectedSecretClient(),
+        transport,
+      }
+    );
+
+    const baseData = getEventEnvelope(transport).data.baseData;
+    // durationMs reflects real turn latency (250), not the scheduling delay.
+    expect(baseData.properties?.durationMs).toBe("250");
+    expect(baseData.measurements).toEqual({
+      durationMs: 250,
+      extractionMs: 40,
+      secondOpinionMs: 120,
+    });
+  });
+
   it("tracks route errors with fixed error codes only", async () => {
     const transport = makeMockTransport();
     jest.spyOn(Date, "now").mockReturnValue(2_010);
