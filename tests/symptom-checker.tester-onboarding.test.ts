@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import SymptomCheckerPage, {
-  SYMPTOM_CHAT_REQUEST_TIMEOUT_MS,
-} from "@/app/(dashboard)/symptom-checker/page";
+import SymptomCheckerPage from "@/app/(dashboard)/symptom-checker/page";
+import { SYMPTOM_CHAT_REQUEST_TIMEOUT_MS } from "@/lib/symptom-chat/request-timeout";
 import { useAppStore } from "@/store/app-store";
 import {
   TESTER_ACKNOWLEDGEMENT_STORAGE_KEY,

@@ -38,6 +38,7 @@ import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 import { SpeechInputButton } from "@/components/symptom-checker/speech-input-button";
 import { VetRecordIntakeButton } from "@/components/symptom-checker/vet-record-intake-button";
+import { QUICK_START_SYMPTOMS } from "@/lib/symptom-chat/quick-start-symptoms";
 import {
   useWebPubSubLiveUpdates,
   type TriageLiveUpdateConnectionState,
@@ -46,6 +47,7 @@ import type {
   TriageLiveUpdate,
   TriageLiveUpdateStatus,
 } from "@/lib/azure/web-pubsub";
+import { SYMPTOM_CHAT_REQUEST_TIMEOUT_MS } from "@/lib/symptom-chat/request-timeout";
 import { useSymptomTranslator } from "@/hooks/useSymptomTranslator";
 
 // --- Types ---
@@ -95,22 +97,7 @@ interface SendMessageOptions {
 
 // --- Config ---
 
-export const SYMPTOM_CHAT_REQUEST_TIMEOUT_MS = 30000;
-
-const quickSymptoms = [
-  "Not eating",
-  "Limping",
-  "Vomiting",
-  "Diarrhea",
-  "Lethargy",
-  "Excessive scratching",
-  "Coughing",
-  "Difficulty breathing",
-  "Trembling/shaking",
-  "Drinking more water than usual",
-  "Blood in stool",
-  "Swollen abdomen",
-];
+const quickSymptoms = QUICK_START_SYMPTOMS;
 
 function subscribeToHydration() {
   return () => {};
