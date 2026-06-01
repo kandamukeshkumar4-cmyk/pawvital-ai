@@ -139,6 +139,20 @@ describe("Azure Service Bus worker consumer", () => {
     expectServiceBusTelemetry(503, "not_configured");
   });
 
+  it("does not receive or complete messages without an explicit handler", async () => {
+    const serviceBusClientFactory = jest.fn();
+
+    await expect(
+      runServiceBusWorkerOnce({
+        ...baseOptions(),
+        serviceBusClientFactory,
+      }),
+    ).resolves.toEqual({ ok: false, reason: "handler_unconfigured" });
+
+    expect(serviceBusClientFactory).not.toHaveBeenCalled();
+    expectServiceBusTelemetry(503, "handler_unconfigured");
+  });
+
   it("receives, dispatches, completes, and tracks one valid queue message", async () => {
     const receiver = makeReceiver([
       {
@@ -193,6 +207,7 @@ describe("Azure Service Bus worker consumer", () => {
     await expect(
       runServiceBusWorkerOnce({
         ...baseOptions(),
+        handler: jest.fn(),
         serviceBusClientFactory: jest.fn().mockReturnValue(client),
       }),
     ).resolves.toEqual({ ok: false, reason: "invalid_message" });
@@ -241,6 +256,7 @@ describe("Azure Service Bus worker consumer", () => {
     await expect(
       runServiceBusWorkerOnce({
         ...baseOptions(),
+        handler: jest.fn(),
         serviceBusClientFactory: jest.fn().mockReturnValue(client),
       }),
     ).resolves.toEqual({
@@ -267,6 +283,7 @@ describe("Azure Service Bus worker consumer", () => {
     await expect(
       runServiceBusWorkerOnce({
         ...baseOptions(),
+        handler: jest.fn(),
         serviceBusClientFactory: jest.fn().mockReturnValue(client),
       }),
     ).resolves.toEqual({ ok: false, reason: "receive_failed" });
