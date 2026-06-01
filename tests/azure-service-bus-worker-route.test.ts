@@ -105,7 +105,26 @@ describe("POST /api/azure/service-bus/worker", () => {
     expect(payload).toEqual({ ok: false, reason: "invalid_message" });
   });
 
-  it("allows local/demo runs when no worker secret is configured", async () => {
+  it("maps an unconfigured worker handler to a safe 503", async () => {
+    process.env.ASYNC_REVIEW_WEBHOOK_SECRET = "worker-secret";
+    mockRunServiceBusWorkerOnce.mockResolvedValueOnce({
+      ok: false,
+      reason: "handler_unconfigured",
+    });
+    const { POST } = await import(
+      "@/app/api/azure/service-bus/worker/route"
+    );
+
+    const response = await POST(
+      request({ "x-service-bus-worker-secret": "worker-secret" }),
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(payload).toEqual({ ok: false, reason: "handler_unconfigured" });
+  });
+
+  it("does not run the worker on GET", async () => {
     const { GET } = await import("@/app/api/azure/service-bus/worker/route");
 
     const response = await GET(
@@ -113,11 +132,10 @@ describe("POST /api/azure/service-bus/worker", () => {
     );
     const payload = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(payload).toEqual({
-      ok: true,
-      processed: false,
-      reason: "no_messages",
-    });
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("POST");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(payload).toEqual({ error: "Method Not Allowed" });
+    expect(mockRunServiceBusWorkerOnce).not.toHaveBeenCalled();
   });
 });

@@ -79,6 +79,7 @@ export type RunServiceBusWorkerOnceResult =
       ok: false;
       reason:
         | "feature_disabled"
+        | "handler_unconfigured"
         | "handler_failed"
         | "invalid_message"
         | "not_configured"
@@ -87,6 +88,7 @@ export type RunServiceBusWorkerOnceResult =
 
 type ServiceBusWorkerErrorCode =
   | "feature_disabled"
+  | "handler_unconfigured"
   | "handler_failed"
   | "invalid_message"
   | "no_messages"
@@ -173,10 +175,6 @@ function parseWorkerJob(
   };
 }
 
-async function defaultJobHandler(): Promise<void> {
-  return undefined;
-}
-
 async function trackWorkerEvent(input: {
   errorCode?: ServiceBusWorkerErrorCode;
   statusCode: number;
@@ -218,6 +216,15 @@ export async function runServiceBusWorkerOnce(
     return { ok: false, reason: "not_configured" };
   }
 
+  if (!options.handler) {
+    await trackWorkerEvent({
+      errorCode: "handler_unconfigured",
+      statusCode: 503,
+      trackOptions: options,
+    });
+    return { ok: false, reason: "handler_unconfigured" };
+  }
+
   const queueName = options.queueName ?? DEFAULT_SERVICE_BUS_QUEUE_NAME;
   let client: ServiceBusWorkerClientLike | null = null;
   let receiver: ServiceBusReceiverLike | null = null;
@@ -255,7 +262,7 @@ export async function runServiceBusWorkerOnce(
     }
 
     try {
-      await (options.handler ?? defaultJobHandler)(job);
+      await options.handler(job);
       await receiver.completeMessage(message);
       await trackWorkerEvent({
         statusCode: 200,

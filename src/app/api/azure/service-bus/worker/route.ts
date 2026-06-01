@@ -15,6 +15,19 @@ function jsonNoStore(body: unknown, status = 200) {
   });
 }
 
+function methodNotAllowed() {
+  return NextResponse.json(
+    { error: "Method Not Allowed" },
+    {
+      headers: {
+        ...NO_STORE_HEADERS,
+        Allow: "POST",
+      },
+      status: 405,
+    },
+  );
+}
+
 function normalizeConfiguredSecret(value: string): string {
   return value.replace(/(?:\\r\\n|\\n|\\r)+$/g, "").trim();
 }
@@ -59,6 +72,9 @@ function statusForWorkerResult(
   if (result.reason === "invalid_message") {
     return 400;
   }
+  if (result.reason === "handler_unconfigured") {
+    return 503;
+  }
   if (result.reason === "handler_failed") {
     return 500;
   }
@@ -74,8 +90,8 @@ async function runWorker(request: Request) {
   return jsonNoStore(result, statusForWorkerResult(result));
 }
 
-export async function GET(request: Request) {
-  return runWorker(request);
+export async function GET() {
+  return methodNotAllowed();
 }
 
 export async function POST(request: Request) {
