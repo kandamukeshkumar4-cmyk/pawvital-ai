@@ -12,8 +12,8 @@ Overall status: BLOCKED
 |---|---|---|---|
 | Project-manager sync | READY | 5 tickets queued in the local project-manager fallback; Azure live sync remains blocked by: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PAT. | Use plans/VET-1560-project-manager-local-sync.json as the current execution queue; add Azure credentials only in a separate live-sync pass. |
 | Model/NIM promotion | BLOCKED | 5 blocked evidence categories; candidate selection resolved=false; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 3 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6. | validation=0, holdout=0, threshold=4.2 |
-| Claim-language review | READY | 308 strings reviewed with no blocked findings. | Rerun npm run product:claim-language-review after any owner-visible copy change. |
-| Whoop-style product contract | READY | 3 implementation tickets defined; production smoke ready=true, live migration applied=false; smoke runbook has 5 evidence steps. | Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json. |
+| Claim-language review | READY | 397 strings reviewed with no blocked findings. | Rerun npm run product:claim-language-review after any owner-visible copy change. |
+| Whoop-style product contract | READY | 4 implementation tickets defined; production smoke ready=true, live migration applied=false; smoke runbook has 5 evidence steps. | Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json. |
 | Instruction governance | READY | VET-1565 defines a proposal-only Tugboat adoption plan with 4 phases and 6 PawVital boundaries. | Use VET-1565 for any Tugboat-style instruction observability work; do not install, run llmff, or apply instruction patches without a separate approved trace bundle and reviewer decision. |
 
 ## Blockers
@@ -49,9 +49,9 @@ Overall status: BLOCKED
 - `plans/VET-1563-protected-clinical-diff-proof.json` (fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8)
 - `plans/VET-1563-extraction-runtime-promotion-ticket.json` (76e39951537d0c2ac6a1cc06fd2450de8ddeb1c863c4836b3a2fa5aafb647f0e)
 - `plans/VET-1563-extraction-owner-approval-request.json` (eb0e39b1144d9e589b6978938703303899d20e7f9371f5ff749d308ad827327b)
-- `plans/VET-1564C-claim-language-review.json` (0205609882c4635f2bd13a5d3d500d72e36bcf993093065df9ec98d19b73064a)
-- `plans/VET-1564-longitudinal-readiness-contract.json` (87ae4f942739a41a547b1c205569e4d64c5d6a3a00989e963921a2c1f7e7ce62)
-- `plans/VET-1564-production-readiness.json` (951b2281dae608cb7e250101e7e2f6d0aaa3fec3249ae309d2a3dc6b10ce455c)
-- `plans/VET-1564-production-smoke-runbook.json` (e2a515ca034c5f63893376f42d2fa33c567cd68b0c200a4f5985046a3b1f1fd2)
+- `plans/VET-1564C-claim-language-review.json` (543f4e0341c0e8e70656d8c172d5b7602515606a7281c24303b0c29ee95ef06d)
+- `plans/VET-1564-longitudinal-readiness-contract.json` (c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96)
+- `plans/VET-1564-production-readiness.json` (b4aec836949a75079d75efe7cfcc6bc8fcfdac88663ce37f0a5cb613886c009c)
+- `plans/VET-1564-production-smoke-runbook.json` (1643880a8d48c9ef1c68b95d744da274a8b0b2c65b06d88470b6da667e2d56d7)
 - `plans/VET-1565-tugboat-governance-plan.json` (5df3fd43414c3b2da9e8ba51304aa44edb86f51ab00826d12a26a940c058f151)
 - `plans/VET-1560-regeneration-summary.json` (395f3fc61b3489c54e218ade5a5eca44c7a6890f3d5a73e5d8e4447d2c89143d)

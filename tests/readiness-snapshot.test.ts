@@ -1,6 +1,13 @@
 import { buildDailyReadinessSnapshot } from "@/lib/readiness-snapshot";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
 
+interface BaselineShiftForTest {
+  direction: string;
+  latestScore: number | null;
+  baselineScore: number | null;
+  delta: number | null;
+}
+
 function entry(overrides: Partial<SymptomCheckEntry> = {}): SymptomCheckEntry {
   return {
     id: "check-1",
@@ -36,6 +43,48 @@ describe("daily readiness snapshots", () => {
     expect(snapshot.sourceCheckIds).toEqual(["check-2", "check-1"]);
     expect(snapshot.claimGuard).toContain("not a diagnosis");
     expect(snapshot.ownerSummary).not.toMatch(/cleared|diagnosed|treatment/i);
+    expect(
+      (snapshot.product as typeof snapshot.product & { baselineShift?: BaselineShiftForTest })
+        .baselineShift
+    ).toEqual(
+      expect.objectContaining({
+        direction: "steady",
+        delta: 0,
+      })
+    );
+  });
+
+  it("persists below-baseline shifts in the daily readiness payload", () => {
+    const snapshot = buildDailyReadinessSnapshot({
+      petId: "pet-1",
+      generatedAt: "2026-06-02T15:00:00.000Z",
+      healthScore: 91,
+      entries: [
+        entry({ id: "check-baseline-1", created_at: "2026-05-31T14:00:00.000Z" }),
+        entry({ id: "check-baseline-2", created_at: "2026-06-01T14:00:00.000Z" }),
+        entry({
+          id: "check-latest",
+          created_at: "2026-06-02T14:00:00.000Z",
+          severity: "moderate",
+          urgency: "schedule",
+          primary_symptom: "lower appetite",
+        }),
+      ],
+    });
+
+    expect(snapshot.product.state).toBe("watch");
+    expect(
+      (snapshot.product as typeof snapshot.product & { baselineShift?: BaselineShiftForTest })
+        .baselineShift
+    ).toEqual(
+      expect.objectContaining({
+        direction: "declining",
+        latestScore: 78,
+        baselineScore: 92,
+        delta: -14,
+      })
+    );
+    expect(snapshot.ownerSummary).toContain("below recent baseline");
   });
 
   it("keeps missing evidence explicit and blocks persistence", () => {

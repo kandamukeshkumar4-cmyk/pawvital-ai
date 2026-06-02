@@ -33,6 +33,19 @@
       ],
       "missingState": "unknown trend until there are at least two comparable observations."
     },
+    "baselineShift": {
+      "lookbackDays": 7,
+      "requiredSignals": [
+        "latest symptom check",
+        "at least one comparable prior symptom check"
+      ],
+      "optionalSignals": [
+        "health score",
+        "follow-up answer",
+        "report disposition"
+      ],
+      "missingState": "unknown baseline shift until a latest check and comparable prior check exist; never coerce missing baseline evidence to a negative shift."
+    },
     "recovery": {
       "lookbackDays": 14,
       "requiredSignals": [
@@ -61,6 +74,7 @@
         "low",
         "insufficient"
       ],
+      "baselineShift": "typed direction, latest score, baseline score, delta, evidence chips, missing evidence chips, owner summary, and deterministic override",
       "evidenceCoverage": "available evidence fields divided by available plus missing fields",
       "nextEvidencePrompt": "single most useful missing evidence field unless urgent override exists"
     },
@@ -113,8 +127,9 @@
   "acceptanceGates": [
     "readiness snapshot tests cover persistable, insufficient-evidence, and urgent override states",
     "recovery checkpoint tests cover report-linked, insufficient-evidence, and urgent override states",
-    "product-intelligence unit tests cover stable, urgent, and missing-data states",
-    "analytics panel test covers Evidence ring, coverage text, missing-data state, and claim guard",
+    "product-intelligence unit tests cover stable, urgent, missing-data, below-baseline, unknown baseline, and baseline urgent-override states",
+    "daily readiness snapshot tests prove baseline-shift durability in the product payload",
+    "analytics panel test covers Evidence ring, coverage text, missing-data state, baseline-shift row, and claim guard",
     "analytics owner workflow can save persistable readiness/recovery records and read back history through authenticated routes",
     "build passes",
     "no protected clinical file diff unless separately authorized",
@@ -206,18 +221,34 @@
       "id": "VET-1564C",
       "title": "Run owner-facing claim-language clinical review",
       "scope": "Review readiness, trend, recovery, and evidence-coach copy for unsupported diagnosis, prognosis, treatment, or emergency-clearance claims."
+    },
+    {
+      "id": "VET-1564D",
+      "title": "Add deterministic baseline-shift product intelligence",
+      "scope": "Compare the latest symptom-check evidence against the recent comparable baseline, preserve the signal in readiness snapshots, and surface it without diagnosis, prognosis, treatment, disease-progression, or emergency-clearance claims.",
+      "implementedFoundation": {
+        "module": "src/lib/product-intelligence.ts",
+        "snapshotPayload": "src/lib/readiness-snapshot.ts",
+        "ownerSurface": "src/components/analytics/product-intelligence-panel.tsx",
+        "tests": [
+          "tests/product-intelligence.test.ts",
+          "tests/readiness-snapshot.test.ts",
+          "tests/product-intelligence-panel.test.tsx"
+        ],
+        "persistenceStatus": "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied"
+      }
     }
   ],
   "dependencyArtifacts": [
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "77fd4b6a53ae913c8010ace272591c6a938c0b59ff4416068a15ea660b24351e"
+      "sha256": "9ed312c0405b355b0884c20a64255d49531d56e419b1adb8f89d25411e5e9a7d"
     },
     {
       "path": "src/lib/product-intelligence.ts",
       "exists": true,
-      "sha256": "f104dfb5ad8b70c4bb286c0172f4730b567e4bd8727e354ac2eb458d0b5135bc"
+      "sha256": "96b6cb4b2d58ff878d91e47e96840b7e8589353248d54673405bdc56c65cd113"
     },
     {
       "path": "src/lib/readiness-snapshot.ts",
@@ -257,17 +288,17 @@
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
       "exists": true,
-      "sha256": "45c14206b8dc5c2391d7b69225dffe53903d27b3f86223e9e6dc012f50c749ac"
+      "sha256": "5fed902f94e495571cb9089e96b7c0f0f94f8fde4c1b9e6b0228c8ec5e2bcf73"
     },
     {
       "path": "tests/product-intelligence.test.ts",
       "exists": true,
-      "sha256": "aaa2f922723eb9a79d6729ba4ec9921a74a64d7e3681a3a5e289350f60ceb740"
+      "sha256": "a00f8ea1a838e6206593c96495f25a4f1d5d589eb29df0f36badcf6e2bac60bd"
     },
     {
       "path": "tests/readiness-snapshot.test.ts",
       "exists": true,
-      "sha256": "60c9de979d168e9b518a8eb064155646c915ebd4f951b3d0529c6b8ee53aa9cb"
+      "sha256": "b747db0bd38dfee4c91c996f7cd72eec40d77bc485883818146b2622e4073990"
     },
     {
       "path": "tests/recovery-checkpoint.test.ts",
@@ -292,7 +323,7 @@
     {
       "path": "tests/product-intelligence-panel.test.tsx",
       "exists": true,
-      "sha256": "c4d830fbdf1d616326a732dc16bc4c21c92ffb986566209af6fc75aabc8bac5a"
+      "sha256": "01a32de77a012b2bacc0e241ee796cab43f4a4db90c5475bc376f7ecf4dc0137"
     },
     {
       "path": "tests/analytics-product-owner-workflow.test.ts",

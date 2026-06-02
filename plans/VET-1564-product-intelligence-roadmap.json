@@ -2,9 +2,9 @@
   "ticket": "VET-1564",
   "mode": "review-only-product-intelligence-roadmap",
   "generatedAt": "2026-05-31T00:00:00.000Z",
-  "productLane": "Whoop-style daily readiness and recovery intelligence for dogs",
+  "productLane": "Whoop-style daily readiness, recovery, and baseline-shift intelligence for dogs",
   "note": "Roadmap only. It does not apply Supabase migrations, write production data, call providers, mutate clinical logic, or promote runtime model routes.",
-  "ownerPromise": "Explain readiness, trend, recovery, and missing evidence using existing evidence while avoiding diagnosis, prognosis, treatment, or emergency-clearance claims.",
+  "ownerPromise": "Explain readiness, baseline shift, trend, recovery, and missing evidence using existing evidence while avoiding diagnosis, prognosis, treatment, or emergency-clearance claims.",
   "phases": [
     {
       "id": "VET-1564A",
@@ -29,6 +29,15 @@
       "title": "Run owner-facing claim-language clinical review",
       "status": "ready-for-local-review",
       "blockers": []
+    },
+    {
+      "id": "VET-1564D",
+      "title": "Add deterministic baseline-shift product intelligence",
+      "status": "review-only-foundation",
+      "blockers": [
+        "live Supabase migration is not applied",
+        "authenticated production smoke is not complete"
+      ]
     }
   ],
   "claimGuards": [
@@ -56,7 +65,7 @@
     {
       "path": "src/lib/product-intelligence.ts",
       "exists": true,
-      "sha256": "f104dfb5ad8b70c4bb286c0172f4730b567e4bd8727e354ac2eb458d0b5135bc"
+      "sha256": "96b6cb4b2d58ff878d91e47e96840b7e8589353248d54673405bdc56c65cd113"
     },
     {
       "path": "src/lib/readiness-snapshot.ts",
@@ -71,7 +80,7 @@
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
       "exists": true,
-      "sha256": "45c14206b8dc5c2391d7b69225dffe53903d27b3f86223e9e6dc012f50c749ac"
+      "sha256": "5fed902f94e495571cb9089e96b7c0f0f94f8fde4c1b9e6b0228c8ec5e2bcf73"
     },
     {
       "path": "src/app/(dashboard)/analytics/page.tsx",
@@ -86,6 +95,7 @@
   ],
   "acceptanceGates": [
     "schema readiness packet passes local review",
+    "baseline-shift tests cover below-baseline, unknown, urgent override, and panel rendering states",
     "claim-language review passes",
     "authenticated route tests cover owner-scoped save/history",
     "production smoke runbook is executed only after approved migration"

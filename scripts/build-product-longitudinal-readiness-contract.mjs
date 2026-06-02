@@ -100,6 +100,13 @@ const contract = {
       missingState:
         "unknown trend until there are at least two comparable observations.",
     },
+    baselineShift: {
+      lookbackDays: 7,
+      requiredSignals: ["latest symptom check", "at least one comparable prior symptom check"],
+      optionalSignals: ["health score", "follow-up answer", "report disposition"],
+      missingState:
+        "unknown baseline shift until a latest check and comparable prior check exist; never coerce missing baseline evidence to a negative shift.",
+    },
     recovery: {
       lookbackDays: 14,
       requiredSignals: ["post-event journal entries or report-linked follow-up"],
@@ -112,6 +119,8 @@ const contract = {
     outputShape: {
       state: ["stable", "watch", "urgent", "unknown"],
       confidence: ["high", "medium", "low", "insufficient"],
+      baselineShift:
+        "typed direction, latest score, baseline score, delta, evidence chips, missing evidence chips, owner summary, and deterministic override",
       evidenceCoverage: "available evidence fields divided by available plus missing fields",
       nextEvidencePrompt: "single most useful missing evidence field unless urgent override exists",
     },
@@ -164,8 +173,9 @@ const contract = {
   acceptanceGates: [
     "readiness snapshot tests cover persistable, insufficient-evidence, and urgent override states",
     "recovery checkpoint tests cover report-linked, insufficient-evidence, and urgent override states",
-    "product-intelligence unit tests cover stable, urgent, and missing-data states",
-    "analytics panel test covers Evidence ring, coverage text, missing-data state, and claim guard",
+    "product-intelligence unit tests cover stable, urgent, missing-data, below-baseline, unknown baseline, and baseline urgent-override states",
+    "daily readiness snapshot tests prove baseline-shift durability in the product payload",
+    "analytics panel test covers Evidence ring, coverage text, missing-data state, baseline-shift row, and claim guard",
     "analytics owner workflow can save persistable readiness/recovery records and read back history through authenticated routes",
     "build passes",
     "no protected clinical file diff unless separately authorized",
@@ -206,6 +216,24 @@ const contract = {
       title: "Run owner-facing claim-language clinical review",
       scope:
         "Review readiness, trend, recovery, and evidence-coach copy for unsupported diagnosis, prognosis, treatment, or emergency-clearance claims.",
+    },
+    {
+      id: "VET-1564D",
+      title: "Add deterministic baseline-shift product intelligence",
+      scope:
+        "Compare the latest symptom-check evidence against the recent comparable baseline, preserve the signal in readiness snapshots, and surface it without diagnosis, prognosis, treatment, disease-progression, or emergency-clearance claims.",
+      implementedFoundation: {
+        module: "src/lib/product-intelligence.ts",
+        snapshotPayload: "src/lib/readiness-snapshot.ts",
+        ownerSurface: "src/components/analytics/product-intelligence-panel.tsx",
+        tests: [
+          "tests/product-intelligence.test.ts",
+          "tests/readiness-snapshot.test.ts",
+          "tests/product-intelligence-panel.test.tsx",
+        ],
+        persistenceStatus:
+          "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied",
+      },
     },
   ],
   dependencyArtifacts: dependencies.map(dependencyArtifact),
