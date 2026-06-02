@@ -9,7 +9,7 @@
     {
       "path": "plans/VET-1560-readiness-dashboard.json",
       "exists": true,
-      "sha256": "3448ec4c58b00d250aaa7ccc6fd673ec35b6e605fb5f27ce2548453e77e092b2"
+      "sha256": "95c742daf34ffb64fd620dce10bcb70b9725740c4e0145d5d83665c45851c2a6"
     },
     {
       "path": "plans/VET-1560-project-manager-tickets.json",
@@ -34,12 +34,12 @@
     {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
       "exists": true,
-      "sha256": "b02a4a2a7d913307317da49c717a1d0d3a88b409cfe73bf1975256844399f17f"
+      "sha256": "764bd42a3c60fbed457ec48ca3b583464cfd142df30f4f001c9b6be5dd11f1c4"
     },
     {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
       "exists": true,
-      "sha256": "b7551eaf04974a4235988e6b0300e3f66c2f9e7ac87f4e55b7966fc00a6f1497"
+      "sha256": "f153876e6c40dc903d332466462c8fab09e675561979458754bc87728ff4305f"
     },
     {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
@@ -64,7 +64,7 @@
     {
       "path": "plans/VET-1563-extraction-output-capture-authorization.json",
       "exists": true,
-      "sha256": "a2ed39d42d982401087d506b18fd277b9e6e71d4bff468f398fdb3f713891c9b"
+      "sha256": "f75fa3b960c3dec818dde1c90d6bcfeb6a0fbf7b0470a47f2afabbc0e87edbc4"
     },
     {
       "path": "plans/VET-1563-extraction-scorecard-review-packet.json",
@@ -94,7 +94,7 @@
     {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
       "exists": true,
-      "sha256": "23698c963e7012ceba85b96940649d6f498d72a1a92343ef44a0024505713199"
+      "sha256": "82b2669803ab2676855552cc28ea864086b3da32a226be034913ffdac375e2b5"
     },
     {
       "path": "plans/VET-1564C-claim-language-review.json",
@@ -149,7 +149,7 @@
     {
       "path": "plans/VET-1560-regeneration-summary.json",
       "exists": true,
-      "sha256": "4ebc9b3be95283bd2e3b12a3ce44d6c82ff525143d6f1a4422074f68465ff72a"
+      "sha256": "dfb098003932811b7dc5790c568a83babad38387dc8b11a4e699a6f926e3ee27"
     }
   ],
   "requirements": [

@@ -42,6 +42,7 @@
   ],
   "evidenceRequiredBeforeApproval": [
     "Promotion preflight reports readyForPromotionTicket=true.",
+    "Promotion preflight reports candidateGateBlockedCount=0 and no diagnostic candidate content hashes without evidence hashes.",
     "Frozen output status reports every validation and holdout case ready for human review.",
     "Evidence packet has populated scorecard, output hashes, reviewer, rollback, and protected clinical proof.",
     "Promotion ticket draft reports readyToOpenPromotionPr=true.",
@@ -76,6 +77,72 @@
       "output-capture: 3 baseline output hash(es) missing",
       "output-capture: 3 candidate output hash(es) missing"
     ],
+    "preflightOutputGateStatus": {
+      "candidateGateBlockedCount": 3,
+      "candidateContentHashWithoutEvidenceHashCount": 0,
+      "candidateGates": [
+        {
+          "caseSourceId": "dog-triage-gold-v1-validation",
+          "split": "validation",
+          "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+          "candidateOutputSha256": null,
+          "candidateOutputContentSha256": null,
+          "candidateSchemaValid": false,
+          "candidateBlocker": "output file missing",
+          "captureGate": {
+            "status": "blocked",
+            "requiredApprovalScope": "validation-output-capture-only",
+            "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+            "candidateIdentityResolved": false,
+            "captureApprovalComplete": false,
+            "blockers": [
+              "candidate identity is not resolved",
+              "scoped validation-output-capture approval is not complete"
+            ]
+          }
+        },
+        {
+          "caseSourceId": "dog-triage-sample-cases-validation",
+          "split": "validation",
+          "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+          "candidateOutputSha256": null,
+          "candidateOutputContentSha256": null,
+          "candidateSchemaValid": false,
+          "candidateBlocker": "output file missing",
+          "captureGate": {
+            "status": "blocked",
+            "requiredApprovalScope": "validation-output-capture-only",
+            "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+            "candidateIdentityResolved": false,
+            "captureApprovalComplete": false,
+            "blockers": [
+              "candidate identity is not resolved",
+              "scoped validation-output-capture approval is not complete"
+            ]
+          }
+        },
+        {
+          "caseSourceId": "dog-triage-wave3-freeze-holdout",
+          "split": "holdout",
+          "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+          "candidateOutputSha256": null,
+          "candidateOutputContentSha256": null,
+          "candidateSchemaValid": false,
+          "candidateBlocker": "output file missing",
+          "captureGate": {
+            "status": "blocked",
+            "requiredApprovalScope": "validation-output-capture-only",
+            "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+            "candidateIdentityResolved": false,
+            "captureApprovalComplete": false,
+            "blockers": [
+              "candidate identity is not resolved",
+              "scoped validation-output-capture approval is not complete"
+            ]
+          }
+        }
+      ]
+    },
     "frozenOutputStatus": {
       "readyForHumanReview": false,
       "readyCaseCount": 0,
@@ -115,11 +182,11 @@
     },
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "b7551eaf04974a4235988e6b0300e3f66c2f9e7ac87f4e55b7966fc00a6f1497"
+      "sha256": "f153876e6c40dc903d332466462c8fab09e675561979458754bc87728ff4305f"
     },
     "promotionEvidencePacket": {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
-      "sha256": "4f2ec1884adfa9fc2e2151feac8c14796a37afe7f3188be4228af0e00c09431c"
+      "sha256": "a0d1b1b3fe1a4f99674391b6a082970911b09664908dbadcb9e4bba751092ee6"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",

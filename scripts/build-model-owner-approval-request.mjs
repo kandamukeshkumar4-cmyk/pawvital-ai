@@ -88,6 +88,7 @@ function buildApprovalRequest() {
     approvalBlockers,
     evidenceRequiredBeforeApproval: [
       "Promotion preflight reports readyForPromotionTicket=true.",
+      "Promotion preflight reports candidateGateBlockedCount=0 and no diagnostic candidate content hashes without evidence hashes.",
       "Frozen output status reports every validation and holdout case ready for human review.",
       "Evidence packet has populated scorecard, output hashes, reviewer, rollback, and protected clinical proof.",
       "Promotion ticket draft reports readyToOpenPromotionPr=true.",
@@ -98,6 +99,13 @@ function buildApprovalRequest() {
       promotionTicketBlockers: promotionTicket.readiness.blockers,
       preflightReady: preflight.summary.readyForPromotionTicket,
       preflightBlockers: preflight.blockers,
+      preflightOutputGateStatus: {
+        candidateGateBlockedCount:
+          preflight.summary?.candidateGateBlockedCount ?? null,
+        candidateContentHashWithoutEvidenceHashCount:
+          preflight.summary?.candidateContentHashWithoutEvidenceHashCount ?? null,
+        candidateGates: preflight.outputGateStatus?.candidateGates ?? [],
+      },
       frozenOutputStatus: promotionEvidencePacket.frozenOutputStatus,
       promotionSmokeRunbook: {
         readyForSmoke: promotionSmokeRunbook.currentStatus.readyForSmoke,

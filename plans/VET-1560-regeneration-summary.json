@@ -437,7 +437,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
           "exists": true,
-          "sha256": "b7551eaf04974a4235988e6b0300e3f66c2f9e7ac87f4e55b7966fc00a6f1497"
+          "sha256": "f153876e6c40dc903d332466462c8fab09e675561979458754bc87728ff4305f"
         }
       ]
     },
@@ -461,7 +461,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
           "exists": true,
-          "sha256": "4f2ec1884adfa9fc2e2151feac8c14796a37afe7f3188be4228af0e00c09431c"
+          "sha256": "a0d1b1b3fe1a4f99674391b6a082970911b09664908dbadcb9e4bba751092ee6"
         }
       ]
     },
@@ -485,7 +485,7 @@
         {
           "path": "plans/VET-1563-extraction-owner-approval-request.json",
           "exists": true,
-          "sha256": "23698c963e7012ceba85b96940649d6f498d72a1a92343ef44a0024505713199"
+          "sha256": "82b2669803ab2676855552cc28ea864086b3da32a226be034913ffdac375e2b5"
         }
       ]
     },
@@ -509,7 +509,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
           "exists": true,
-          "sha256": "b02a4a2a7d913307317da49c717a1d0d3a88b409cfe73bf1975256844399f17f"
+          "sha256": "764bd42a3c60fbed457ec48ca3b583464cfd142df30f4f001c9b6be5dd11f1c4"
         }
       ]
     },
@@ -533,7 +533,7 @@
         {
           "path": "plans/VET-1563-extraction-output-capture-authorization.json",
           "exists": true,
-          "sha256": "a2ed39d42d982401087d506b18fd277b9e6e71d4bff468f398fdb3f713891c9b"
+          "sha256": "f75fa3b960c3dec818dde1c90d6bcfeb6a0fbf7b0470a47f2afabbc0e87edbc4"
         }
       ]
     },
@@ -849,12 +849,12 @@
         {
           "path": "plans/VET-1560-readiness-dashboard.json",
           "exists": true,
-          "sha256": "3448ec4c58b00d250aaa7ccc6fd673ec35b6e605fb5f27ce2548453e77e092b2"
+          "sha256": "95c742daf34ffb64fd620dce10bcb70b9725740c4e0145d5d83665c45851c2a6"
         },
         {
           "path": "plans/VET-1560-readiness-dashboard.md",
           "exists": true,
-          "sha256": "4a032ed06cf01c29eddf3fb524b8236007e2d6f5154e01b282cd896c7bc1e982"
+          "sha256": "f5d31f63c749aeff1ab3122873afa1a24405354df1b6f47fd311e66bb6dfb305"
         }
       ]
     },
@@ -878,7 +878,7 @@
         {
           "path": "plans/VET-1560-completion-audit.json",
           "exists": true,
-          "sha256": "c27c7585896911976e7172baeb3a972ea281ee4b5e8b4593900513013525e895"
+          "sha256": "1c0d8e6d6ae5ce250fa022bbfbca1a2a36ddf573b02676a2b441661cf3a57139"
         },
         {
           "path": "plans/VET-1560-completion-audit.md",
