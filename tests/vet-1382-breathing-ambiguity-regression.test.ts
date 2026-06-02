@@ -12,6 +12,7 @@ import {
 } from "@/lib/triage-engine";
 import { shouldEscalateForUnknown } from "@/lib/symptom-chat/answer-coercion";
 import { findReportBlockingCriticalInfo } from "@/lib/clinical/uncertainty-routing";
+import { EMERGENCY_GRADE_CRITICAL_QUESTIONS } from "@/lib/clinical/emergency-grade-critical-questions";
 
 /**
  * VET-1382 / #341 — Unknown-Concern Breathing Ambiguity Regression Pass.
@@ -81,13 +82,31 @@ describe("VET-1382 breathing ambiguity invariants", () => {
 });
 
 describe("VET-1382 breathing_status is an escalation-grade critical sign", () => {
+  it("keeps the emergency-grade critical question source explicit", () => {
+    expect(EMERGENCY_GRADE_CRITICAL_QUESTIONS).toEqual([
+      "breathing_onset",
+      "consciousness_level",
+      "gum_color",
+      "breathing_status",
+      "seizure_duration",
+    ]);
+  });
+
+  it("keeps every emergency-grade critical question backed by a critical follow-up schema", () => {
+    for (const questionId of EMERGENCY_GRADE_CRITICAL_QUESTIONS) {
+      expect(FOLLOW_UP_QUESTIONS[questionId]).toBeDefined();
+      expect(FOLLOW_UP_QUESTIONS[questionId]?.critical).toBe(true);
+    }
+  });
+
   // Invariant 1 (gap-closer): can't-assess breathing routes to escalation,
   // consistent with the other critical breathing/gum signals.
   it("treats breathing_status as unsafe-to-mark-unknown (escalation-grade)", () => {
-    expect(shouldEscalateForUnknown("breathing_status")).toBe(true);
-    // Parity with the existing critical breathing/gum signals.
-    expect(shouldEscalateForUnknown("breathing_onset")).toBe(true);
-    expect(shouldEscalateForUnknown("gum_color")).toBe(true);
+    for (const questionId of EMERGENCY_GRADE_CRITICAL_QUESTIONS) {
+      expect(shouldEscalateForUnknown(questionId)).toBe(true);
+    }
+
+    expect(shouldEscalateForUnknown("prior_seizures")).toBe(false);
   });
 
   it("keeps breathing_status defined as a critical follow-up question", () => {
@@ -118,6 +137,35 @@ describe("VET-1382 breathing_status is an escalation-grade critical sign", () =>
 
     expect(finding).not.toBeNull();
     expect(finding?.questionId).toBe("breathing_status");
+    expect(finding?.reason).toBe("unknown");
+  });
+
+  it("blocks the report when seizure_duration is missing on a seizure/collapse case", () => {
+    const session = buildSyntheticSession(["seizure_collapse"], {
+      consciousness_level: "alert",
+      gum_color: "pink_normal",
+      breathing_status: "normal",
+    });
+
+    const finding = findReportBlockingCriticalInfo(session);
+
+    expect(finding).not.toBeNull();
+    expect(finding?.questionId).toBe("seizure_duration");
+    expect(finding?.reason).toBe("missing");
+  });
+
+  it("blocks the report when seizure_duration is recorded as unknown", () => {
+    const session = buildSyntheticSession(["seizure_collapse"], {
+      seizure_duration: "unknown",
+      consciousness_level: "alert",
+      gum_color: "pink_normal",
+      breathing_status: "normal",
+    });
+
+    const finding = findReportBlockingCriticalInfo(session);
+
+    expect(finding).not.toBeNull();
+    expect(finding?.questionId).toBe("seizure_duration");
     expect(finding?.reason).toBe("unknown");
   });
 });
