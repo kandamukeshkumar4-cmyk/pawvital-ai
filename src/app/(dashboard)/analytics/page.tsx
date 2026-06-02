@@ -8,6 +8,7 @@ import Card from "@/components/ui/card";
 import Select from "@/components/ui/select";
 import {
   HealthScoreCard,
+  ProductIntelligencePanel,
   SeverityTrendChart,
   SymptomFrequencyChart,
   UrgencyDistribution,
@@ -15,6 +16,7 @@ import {
 import type { SymptomCheckEntry } from "@/components/timeline/types";
 import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-check-entry-map";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
+import { buildProductIntelligenceSnapshot } from "@/lib/product-intelligence";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { DEMO_ANALYTICS_SYMPTOM_ENTRIES } from "@/lib/demo-health-data";
 import { useAppStore } from "@/store/app-store";
@@ -110,6 +112,11 @@ function AnalyticsPageContent() {
     return list;
   }, [rawEntries, range, petId, now]);
 
+  const productSnapshot = useMemo(
+    () => buildProductIntelligenceSnapshot({ entries: filtered }),
+    [filtered]
+  );
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -154,6 +161,9 @@ function AnalyticsPageContent() {
         </Card>
       ) : (
         <>
+          <Card className="p-6">
+            <ProductIntelligencePanel snapshot={productSnapshot} />
+          </Card>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6">
               <HealthScoreCard entries={filtered} />

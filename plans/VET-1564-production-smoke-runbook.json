@@ -7,7 +7,7 @@
     "productionReadiness": {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "f151580f6611020087e3e1d45fc76f04af7ae2bdc9a4b38bf314cb950fe6e766"
+      "sha256": "ac3fda2def1ba90608baadc4f09c5fdc31369d37d40dfe6927f78c87e695c952"
     },
     "schema": {
       "path": "supabase-product-intelligence-schema.sql",

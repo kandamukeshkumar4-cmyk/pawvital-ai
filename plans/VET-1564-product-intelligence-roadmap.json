@@ -9,7 +9,7 @@
     {
       "id": "VET-1564A",
       "title": "Persist daily readiness snapshots from existing evidence",
-      "status": "review-only-foundation",
+      "status": "planned-blocked",
       "blockers": [
         "live Supabase migration is not applied",
         "authenticated production smoke is not complete"
@@ -18,7 +18,7 @@
     {
       "id": "VET-1564B",
       "title": "Add report-linked recovery checkpoints",
-      "status": "review-only-foundation",
+      "status": "planned-blocked",
       "blockers": [
         "live Supabase migration is not applied",
         "authenticated production smoke is not complete"
@@ -55,8 +55,8 @@
   "referencedArtifacts": [
     {
       "path": "src/lib/product-intelligence.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "f104dfb5ad8b70c4bb286c0172f4730b567e4bd8727e354ac2eb458d0b5135bc"
     },
     {
       "path": "src/lib/readiness-snapshot.ts",
@@ -70,13 +70,13 @@
     },
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "bc6a3cc0ca043475ccbf89a87184537989b73f462f15eb16170120de1eb249d9"
     },
     {
       "path": "src/app/(dashboard)/analytics/page.tsx",
       "exists": true,
-      "sha256": "983cdba61a5184520a7d2cab3c5afa07439f29d31c75a81140e663e1d3db3623"
+      "sha256": "73b14bb5c04a7528fbe8d97e615d1af7b8699659903c9fa470dbed43a4271fa4"
     },
     {
       "path": "supabase-product-intelligence-schema.sql",

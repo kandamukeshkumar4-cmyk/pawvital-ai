@@ -14,12 +14,12 @@
     "claimReview": {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "f658182b3c14797a333901b84a20b1697d9b8b6641f44534edbc5aa88e441bde"
+      "sha256": "73a925158d16b640e77d769822756279a0698390d3d26bb0f566ecd6cf17c5af"
     },
     "readinessContract": {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "21ff009788c937303f812e0f7cf972f6767fb15d030810a3635f1fb3e108aeda"
+      "sha256": "d9a64e2ae3bb1b1ae91658a7c4f41a6658327b5a0c7782b0a33c49b9c262eaf5"
     },
     "route": {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -97,7 +97,33 @@
         "schema": "supabase-product-intelligence-schema.sql",
         "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
         "test": "tests/readiness-snapshot.test.ts",
-        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+        "artifactStatus": {
+          "module": {
+            "path": "src/lib/readiness-snapshot.ts",
+            "exists": false
+          },
+          "persistenceMapper": {
+            "path": "src/lib/product-intelligence-persistence.ts",
+            "exists": false
+          },
+          "readWriteRoute": {
+            "path": "src/app/api/product-intelligence/snapshots/route.ts",
+            "exists": false
+          },
+          "schema": {
+            "path": "supabase-product-intelligence-schema.sql",
+            "exists": false
+          },
+          "ownerWorkflow": {
+            "path": "src/app/(dashboard)/analytics/page.tsx",
+            "exists": true
+          },
+          "test": {
+            "path": "tests/readiness-snapshot.test.ts",
+            "exists": false
+          }
+        },
+        "persistenceStatus": "surface-only: missing src/lib/readiness-snapshot.ts, src/lib/product-intelligence-persistence.ts, src/app/api/product-intelligence/snapshots/route.ts, supabase-product-intelligence-schema.sql, tests/readiness-snapshot.test.ts; persistence/schema/route/live smoke remain future blockers"
       }
     },
     {
@@ -111,7 +137,33 @@
         "schema": "supabase-product-intelligence-schema.sql",
         "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
         "test": "tests/recovery-checkpoint.test.ts",
-        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+        "artifactStatus": {
+          "module": {
+            "path": "src/lib/recovery-checkpoint.ts",
+            "exists": false
+          },
+          "persistenceMapper": {
+            "path": "src/lib/product-intelligence-persistence.ts",
+            "exists": false
+          },
+          "readWriteRoute": {
+            "path": "src/app/api/product-intelligence/snapshots/route.ts",
+            "exists": false
+          },
+          "schema": {
+            "path": "supabase-product-intelligence-schema.sql",
+            "exists": false
+          },
+          "ownerWorkflow": {
+            "path": "src/app/(dashboard)/analytics/page.tsx",
+            "exists": true
+          },
+          "test": {
+            "path": "tests/recovery-checkpoint.test.ts",
+            "exists": false
+          }
+        },
+        "persistenceStatus": "surface-only: missing src/lib/recovery-checkpoint.ts, src/lib/product-intelligence-persistence.ts, src/app/api/product-intelligence/snapshots/route.ts, supabase-product-intelligence-schema.sql, tests/recovery-checkpoint.test.ts; persistence/schema/route/live smoke remain future blockers"
       }
     },
     {

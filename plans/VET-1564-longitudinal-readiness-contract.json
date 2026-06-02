@@ -133,7 +133,33 @@
         "schema": "supabase-product-intelligence-schema.sql",
         "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
         "test": "tests/readiness-snapshot.test.ts",
-        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+        "artifactStatus": {
+          "module": {
+            "path": "src/lib/readiness-snapshot.ts",
+            "exists": false
+          },
+          "persistenceMapper": {
+            "path": "src/lib/product-intelligence-persistence.ts",
+            "exists": false
+          },
+          "readWriteRoute": {
+            "path": "src/app/api/product-intelligence/snapshots/route.ts",
+            "exists": false
+          },
+          "schema": {
+            "path": "supabase-product-intelligence-schema.sql",
+            "exists": false
+          },
+          "ownerWorkflow": {
+            "path": "src/app/(dashboard)/analytics/page.tsx",
+            "exists": true
+          },
+          "test": {
+            "path": "tests/readiness-snapshot.test.ts",
+            "exists": false
+          }
+        },
+        "persistenceStatus": "surface-only: missing src/lib/readiness-snapshot.ts, src/lib/product-intelligence-persistence.ts, src/app/api/product-intelligence/snapshots/route.ts, supabase-product-intelligence-schema.sql, tests/readiness-snapshot.test.ts; persistence/schema/route/live smoke remain future blockers"
       }
     },
     {
@@ -147,7 +173,33 @@
         "schema": "supabase-product-intelligence-schema.sql",
         "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
         "test": "tests/recovery-checkpoint.test.ts",
-        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+        "artifactStatus": {
+          "module": {
+            "path": "src/lib/recovery-checkpoint.ts",
+            "exists": false
+          },
+          "persistenceMapper": {
+            "path": "src/lib/product-intelligence-persistence.ts",
+            "exists": false
+          },
+          "readWriteRoute": {
+            "path": "src/app/api/product-intelligence/snapshots/route.ts",
+            "exists": false
+          },
+          "schema": {
+            "path": "supabase-product-intelligence-schema.sql",
+            "exists": false
+          },
+          "ownerWorkflow": {
+            "path": "src/app/(dashboard)/analytics/page.tsx",
+            "exists": true
+          },
+          "test": {
+            "path": "tests/recovery-checkpoint.test.ts",
+            "exists": false
+          }
+        },
+        "persistenceStatus": "surface-only: missing src/lib/recovery-checkpoint.ts, src/lib/product-intelligence-persistence.ts, src/app/api/product-intelligence/snapshots/route.ts, supabase-product-intelligence-schema.sql, tests/recovery-checkpoint.test.ts; persistence/schema/route/live smoke remain future blockers"
       }
     },
     {
@@ -160,12 +212,12 @@
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "ae8a852aa4ee63b8125e7e8f2aac3086b89002fc04ac5e4524513d213aaa626c"
+      "sha256": "d07c9e3cfd317972001b2e82d45b78b120bbd1e84cba3ca3507574888a515230"
     },
     {
       "path": "src/lib/product-intelligence.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "f104dfb5ad8b70c4bb286c0172f4730b567e4bd8727e354ac2eb458d0b5135bc"
     },
     {
       "path": "src/lib/readiness-snapshot.ts",
@@ -200,17 +252,17 @@
     {
       "path": "src/app/(dashboard)/analytics/page.tsx",
       "exists": true,
-      "sha256": "983cdba61a5184520a7d2cab3c5afa07439f29d31c75a81140e663e1d3db3623"
+      "sha256": "73b14bb5c04a7528fbe8d97e615d1af7b8699659903c9fa470dbed43a4271fa4"
     },
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "bc6a3cc0ca043475ccbf89a87184537989b73f462f15eb16170120de1eb249d9"
     },
     {
       "path": "tests/product-intelligence.test.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "aaa2f922723eb9a79d6729ba4ec9921a74a64d7e3681a3a5e289350f60ceb740"
     },
     {
       "path": "tests/readiness-snapshot.test.ts",
@@ -239,8 +291,8 @@
     },
     {
       "path": "tests/product-intelligence-panel.test.tsx",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "d4f3405abe0b88cf39fc28b7d40b70db1764324549db50e64bdc269aa20b4874"
     },
     {
       "path": "tests/analytics-product-owner-workflow.test.ts",
@@ -249,38 +301,30 @@
     }
   ],
   "missingDependencyArtifacts": [
-    "src/lib/product-intelligence.ts",
     "src/lib/readiness-snapshot.ts",
     "src/lib/recovery-checkpoint.ts",
     "src/lib/product-intelligence-persistence.ts",
     "supabase-product-intelligence-schema.sql",
     "src/app/api/product-intelligence/snapshots/route.ts",
-    "src/components/analytics/product-intelligence-panel.tsx",
-    "tests/product-intelligence.test.ts",
     "tests/readiness-snapshot.test.ts",
     "tests/recovery-checkpoint.test.ts",
     "tests/product-intelligence-persistence.test.ts",
     "tests/product-intelligence-schema.test.ts",
     "tests/product-intelligence-snapshots.route.test.ts",
-    "tests/product-intelligence-panel.test.tsx",
     "tests/analytics-product-owner-workflow.test.ts"
   ],
   "status": "blocked",
   "blockers": [
-    "missing readiness contract dependency: src/lib/product-intelligence.ts",
     "missing readiness contract dependency: src/lib/readiness-snapshot.ts",
     "missing readiness contract dependency: src/lib/recovery-checkpoint.ts",
     "missing readiness contract dependency: src/lib/product-intelligence-persistence.ts",
     "missing readiness contract dependency: supabase-product-intelligence-schema.sql",
     "missing readiness contract dependency: src/app/api/product-intelligence/snapshots/route.ts",
-    "missing readiness contract dependency: src/components/analytics/product-intelligence-panel.tsx",
-    "missing readiness contract dependency: tests/product-intelligence.test.ts",
     "missing readiness contract dependency: tests/readiness-snapshot.test.ts",
     "missing readiness contract dependency: tests/recovery-checkpoint.test.ts",
     "missing readiness contract dependency: tests/product-intelligence-persistence.test.ts",
     "missing readiness contract dependency: tests/product-intelligence-schema.test.ts",
     "missing readiness contract dependency: tests/product-intelligence-snapshots.route.test.ts",
-    "missing readiness contract dependency: tests/product-intelligence-panel.test.tsx",
     "missing readiness contract dependency: tests/analytics-product-owner-workflow.test.ts"
   ]
 }
