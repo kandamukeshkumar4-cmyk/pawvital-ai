@@ -7,7 +7,7 @@
   "inputArtifacts": {
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "f153876e6c40dc903d332466462c8fab09e675561979458754bc87728ff4305f"
+      "sha256": "b9388b874b4aff88e45192ce7c45a3d38bf139ebcf2c6cbd6339d397ff244261"
     },
     "checklist": {
       "path": "plans/VET-1563-extraction-promotion-checklist.json",
@@ -39,7 +39,7 @@
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
-      "sha256": "82b2669803ab2676855552cc28ea864086b3da32a226be034913ffdac375e2b5"
+      "sha256": "eb0e39b1144d9e589b6978938703303899d20e7f9371f5ff749d308ad827327b"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",

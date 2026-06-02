@@ -9,6 +9,10 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  loadModelTechniqueIntake,
+  requireModelTechniqueSource,
+} from "./vet1560-model-technique-intake.mjs";
 
 const outPath = resolve(process.cwd(), "plans/VET-1565-tugboat-governance-plan.json");
 
@@ -16,23 +20,16 @@ function sha256(text) {
   return createHash("sha256").update(text).digest("hex");
 }
 
-function readJson(relativePath) {
-  return JSON.parse(readFileSync(resolve(process.cwd(), relativePath), "utf8"));
-}
-
 function buildPlan() {
   const ticketsPath = resolve(process.cwd(), "plans/VET-1560-project-manager-tickets.json");
   const ticketsText = existsSync(ticketsPath) ? readFileSync(ticketsPath, "utf8") : null;
   const tickets = ticketsText ? JSON.parse(ticketsText) : { tickets: [] };
   const tugboatTicket = tickets.tickets.find((ticket) => ticket.id === "VET-1565") ?? null;
-  const localConfig = readJson("../.agents/autoscientists/local.config.json");
-  const source = localConfig.modelTechniqueIntake.sources.find(
-    (item) => item.id === "syndicalt-tugboat"
+  const modelTechniqueIntake = loadModelTechniqueIntake();
+  const source = requireModelTechniqueSource(
+    modelTechniqueIntake.intake,
+    "syndicalt-tugboat"
   );
-
-  if (!source) {
-    throw new Error("syndicalt-tugboat source is missing from local.config.json");
-  }
 
   return {
     ticket: "VET-1565",
@@ -100,8 +97,12 @@ function buildPlan() {
         sha256: ticketsText ? sha256(ticketsText) : null,
       },
       localConfig: {
-        path: "../.agents/autoscientists/local.config.json",
+        path: modelTechniqueIntake.source.path,
+        type: modelTechniqueIntake.source.type,
         sourceRegistered: true,
+        fallbackPath: modelTechniqueIntake.source.fallbackPath ?? null,
+        liveConfigPath: modelTechniqueIntake.source.liveConfigPath ?? null,
+        liveConfigExists: modelTechniqueIntake.source.liveConfigExists ?? true,
       },
     },
     readiness: {

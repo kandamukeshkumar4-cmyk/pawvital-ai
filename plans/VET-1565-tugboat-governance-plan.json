@@ -70,7 +70,11 @@
     },
     "localConfig": {
       "path": "../.agents/autoscientists/local.config.json",
-      "sourceRegistered": true
+      "type": "live-local-config",
+      "sourceRegistered": true,
+      "fallbackPath": "plans/VET-1560-model-technique-intake-snapshot.json",
+      "liveConfigPath": null,
+      "liveConfigExists": true
     }
   },
   "readiness": {

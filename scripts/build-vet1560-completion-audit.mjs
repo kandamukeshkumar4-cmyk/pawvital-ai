@@ -10,13 +10,14 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { loadModelTechniqueIntake } from "./vet1560-model-technique-intake.mjs";
 
 const artifactPaths = {
   dashboard: "plans/VET-1560-readiness-dashboard.json",
   tickets: "plans/VET-1560-project-manager-tickets.json",
   localProjectManagerSync: "plans/VET-1560-project-manager-local-sync.json",
   azureLiveSyncRunbook: "plans/VET-1560-azure-live-sync-runbook.json",
-  localConfig: "../.agents/autoscientists/local.config.json",
+  modelTechniqueIntakeSnapshot: "plans/VET-1560-model-technique-intake-snapshot.json",
   modelEvidencePacket: "plans/VET-1563-extraction-promotion-evidence-packet.json",
   modelPromotionPreflight:
     "plans/VET-1563-extraction-promotion-readiness-preflight.json",
@@ -79,7 +80,7 @@ function buildAudit() {
     ? readJson(artifactPaths.localProjectManagerSync)
     : null;
   const azureLiveSyncRunbook = readJson(artifactPaths.azureLiveSyncRunbook);
-  const localConfig = readJson(artifactPaths.localConfig);
+  const modelTechniqueIntake = loadModelTechniqueIntake();
   const modelEvidencePacket = readJson(artifactPaths.modelEvidencePacket);
   const modelPreflight = readJson(artifactPaths.modelPromotionPreflight);
   const modelCandidateSelectionPacket = readJson(
@@ -109,7 +110,7 @@ function buildAudit() {
   const productLane = dashboard.lanes.find((lane) => lane.id === "whoop-product-contract");
   const claimLane = dashboard.lanes.find((lane) => lane.id === "claim-language");
   const instructionLane = dashboard.lanes.find((lane) => lane.id === "instruction-governance");
-  const sourceIds = localConfig.modelTechniqueIntake?.sources?.map((source) => source.id) ?? [];
+  const sourceIds = modelTechniqueIntake.intake.sources?.map((source) => source.id) ?? [];
   const requiredSources = ["fareedkhan-train-llm-from-scratch", "syndicalt-tugboat"];
   const hasRequiredSources = requiredSources.every((sourceId) => sourceIds.includes(sourceId));
   const modelBlockers = [
@@ -134,7 +135,7 @@ function buildAudit() {
       requirement: "Go through FareedKhan-dev/train-llm-from-scratch and syndicalt/tugboat and identify transferable techniques.",
       status: hasRequiredSources ? "proved" : "missing",
       evidence: [
-        `local.config.json modelTechniqueIntake includes source ids: ${sourceIds.join(", ")}.`,
+        `${modelTechniqueIntake.source.path} modelTechniqueIntake includes source ids: ${sourceIds.join(", ")}.`,
         "Both sources include observed implementation details, transferable techniques, and non-transferable claims.",
         tickets.source.verdict,
       ],
@@ -158,10 +159,10 @@ function buildAudit() {
     {
       id: "local-config-updated",
       requirement: "Update local.config so next agents can use learned techniques.",
-      status: localConfig.modelTechniqueIntake?.nextAgentInstruction ? "proved" : "missing",
+      status: modelTechniqueIntake.intake.nextAgentInstruction ? "proved" : "missing",
       evidence: [
-        "local.config.json has modelTechniqueIntake.nextAgentInstruction.",
-        `${localConfig.modelTechniqueIntake?.projectManagerArtifacts?.length ?? 0} model/product/project-manager artifacts registered.`,
+        `${modelTechniqueIntake.source.path} has modelTechniqueIntake.nextAgentInstruction.`,
+        `${modelTechniqueIntake.intake.projectManagerArtifacts?.length ?? 0} model/product/project-manager artifacts registered.`,
         `Regeneration command status: ${regenerationSummary.overallStatus}.`,
       ],
       blockers: [],

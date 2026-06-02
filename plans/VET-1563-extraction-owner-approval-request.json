@@ -182,11 +182,11 @@
     },
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "f153876e6c40dc903d332466462c8fab09e675561979458754bc87728ff4305f"
+      "sha256": "b9388b874b4aff88e45192ce7c45a3d38bf139ebcf2c6cbd6339d397ff244261"
     },
     "promotionEvidencePacket": {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
-      "sha256": "a0d1b1b3fe1a4f99674391b6a082970911b09664908dbadcb9e4bba751092ee6"
+      "sha256": "5bb38350b23179b7d38be08470b89d7f77255062d60f336a878af42b011ff94f"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
