@@ -1,0 +1,75 @@
+{
+  "ticket": "VET-1564C",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "mode": "review-only",
+  "note": "Deterministic claim-language review only. It does not call providers, generate model copy, or mutate clinical logic.",
+  "reviewedArtifacts": [
+    {
+      "path": "src/lib/product-intelligence.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/components/analytics/product-intelligence-panel.tsx",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "plans/VET-1564-longitudinal-readiness-contract.json",
+      "exists": true,
+      "sha256": "21ff009788c937303f812e0f7cf972f6767fb15d030810a3635f1fb3e108aeda"
+    },
+    {
+      "path": "plans/VET-1564-product-intelligence-roadmap.json",
+      "exists": true,
+      "sha256": "ae8a852aa4ee63b8125e7e8f2aac3086b89002fc04ac5e4524513d213aaa626c"
+    }
+  ],
+  "missingArtifacts": [
+    "src/lib/product-intelligence.ts",
+    "src/components/analytics/product-intelligence-panel.tsx"
+  ],
+  "reviewedStringCount": 227,
+  "blockedClaimPolicy": [
+    "diagnosis-certainty",
+    "treatment-recommendation",
+    "prognosis-promise",
+    "emergency-clearance",
+    "clinical-clearance"
+  ],
+  "guardCoverage": [
+    {
+      "phrase": "not a diagnosis",
+      "present": true
+    },
+    {
+      "phrase": "not a diagnosis, prognosis, treatment plan, or emergency clearance",
+      "present": true
+    },
+    {
+      "phrase": "not a diagnosis or clearance",
+      "present": true
+    },
+    {
+      "phrase": "not disease progression certainty",
+      "present": true
+    },
+    {
+      "phrase": "not a vet discharge decision",
+      "present": true
+    },
+    {
+      "phrase": "do not delay urgent care",
+      "present": true
+    }
+  ],
+  "findings": [],
+  "verdict": "blocked",
+  "blockedReason": "missing review inputs: src/lib/product-intelligence.ts, src/components/analytics/product-intelligence-panel.tsx",
+  "reopenConditions": [
+    "Any new owner-visible readiness, trend, recovery, evidence-coach, or model-summary copy is added.",
+    "Any model-generated copy is promoted to an owner-visible surface.",
+    "Any clinical deterministic escalation copy changes.",
+    "Any runtime NIM or adapter route starts influencing readiness copy."
+  ]
+}

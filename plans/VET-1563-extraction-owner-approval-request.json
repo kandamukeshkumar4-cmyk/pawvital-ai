@@ -1,0 +1,135 @@
+{
+  "ticket": "VET-1563",
+  "promotionTicket": "VET-1563P",
+  "role": "extraction",
+  "mode": "review-only-owner-approval-request",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "status": "blocked-before-owner-approval",
+  "approvalRequestReady": false,
+  "approvalGranted": false,
+  "decision": {
+    "approver": null,
+    "approvedAt": null,
+    "approvalRecord": null,
+    "decisionNotes": null
+  },
+  "requestedDecision": "Approve or reject a future extraction model runtime promotion only after all attached evidence is populated and reviewed.",
+  "approvalBlockers": [
+    "validation score below 4.2",
+    "holdout score below 4.2",
+    "scorecard contains unresolved issues",
+    "frozen baseline/candidate outputs and hashes are incomplete",
+    "candidate model or adapter identity is not approved",
+    "explicit owner approval artifact is missing",
+    "scorecard-populated: validation average 0 below threshold 4.2",
+    "scorecard-populated: holdout average 0 below threshold 4.2",
+    "scorecard-populated: scorecard still contains unresolved issues",
+    "frozen-observed-outputs: 3 case(s) not ready for human review",
+    "frozen-observed-outputs: 3 baseline output file(s) missing",
+    "frozen-observed-outputs: 3 candidate output file(s) missing",
+    "owner-approval: explicit owner approval missing",
+    "promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.",
+    "separate-promotion-ticket: validation score below 4.2",
+    "separate-promotion-ticket: holdout score below 4.2",
+    "separate-promotion-ticket: scorecard contains unresolved issues",
+    "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+    "separate-promotion-ticket: candidate model or adapter identity is not approved",
+    "separate-promotion-ticket: explicit owner approval artifact is missing",
+    "output-capture: 3 baseline output hash(es) missing",
+    "output-capture: 3 candidate output hash(es) missing",
+    "frozen output status is not ready for human review",
+    "promotion smoke runbook is not ready for execution"
+  ],
+  "evidenceRequiredBeforeApproval": [
+    "Promotion preflight reports readyForPromotionTicket=true.",
+    "Frozen output status reports every validation and holdout case ready for human review.",
+    "Evidence packet has populated scorecard, output hashes, reviewer, rollback, and protected clinical proof.",
+    "Promotion ticket draft reports readyToOpenPromotionPr=true.",
+    "Production-like smoke plan is attached for the proposed route change."
+  ],
+  "currentBlockingSummary": {
+    "promotionTicketReady": false,
+    "promotionTicketBlockers": [
+      "validation score below 4.2",
+      "holdout score below 4.2",
+      "scorecard contains unresolved issues",
+      "frozen baseline/candidate outputs and hashes are incomplete",
+      "candidate model or adapter identity is not approved",
+      "explicit owner approval artifact is missing"
+    ],
+    "preflightReady": false,
+    "preflightBlockers": [
+      "scorecard-populated: validation average 0 below threshold 4.2",
+      "scorecard-populated: holdout average 0 below threshold 4.2",
+      "scorecard-populated: scorecard still contains unresolved issues",
+      "frozen-observed-outputs: 3 case(s) not ready for human review",
+      "frozen-observed-outputs: 3 baseline output file(s) missing",
+      "frozen-observed-outputs: 3 candidate output file(s) missing",
+      "owner-approval: explicit owner approval missing",
+      "promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.",
+      "separate-promotion-ticket: validation score below 4.2",
+      "separate-promotion-ticket: holdout score below 4.2",
+      "separate-promotion-ticket: scorecard contains unresolved issues",
+      "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: candidate model or adapter identity is not approved",
+      "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "output-capture: 3 baseline output hash(es) missing",
+      "output-capture: 3 candidate output hash(es) missing"
+    ],
+    "frozenOutputStatus": {
+      "readyForHumanReview": false,
+      "readyCaseCount": 0,
+      "missingBaselineOutputCount": 3,
+      "missingCandidateOutputCount": 3,
+      "invalidJsonOutputCount": 0,
+      "invalidSchemaOutputCount": 0
+    },
+    "promotionSmokeRunbook": {
+      "readyForSmoke": false,
+      "evidenceStepCount": 5,
+      "requiredAttachmentCount": 5
+    },
+    "evidencePacketBlockers": [
+      "scorecard-populated: validation average 0 below threshold 4.2",
+      "scorecard-populated: holdout average 0 below threshold 4.2",
+      "scorecard-populated: scorecard still contains unresolved issues",
+      "frozen-observed-outputs: 3 case(s) not ready for human review",
+      "frozen-observed-outputs: 3 baseline output file(s) missing",
+      "frozen-observed-outputs: 3 candidate output file(s) missing",
+      "owner-approval: explicit owner approval missing",
+      "promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.",
+      "separate-promotion-ticket: validation score below 4.2",
+      "separate-promotion-ticket: holdout score below 4.2",
+      "separate-promotion-ticket: scorecard contains unresolved issues",
+      "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: candidate model or adapter identity is not approved",
+      "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "output-capture: 3 baseline output hash(es) missing",
+      "output-capture: 3 candidate output hash(es) missing"
+    ]
+  },
+  "inputArtifacts": {
+    "promotionTicket": {
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+      "sha256": "76e39951537d0c2ac6a1cc06fd2450de8ddeb1c863c4836b3a2fa5aafb647f0e"
+    },
+    "preflight": {
+      "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
+      "sha256": "b7551eaf04974a4235988e6b0300e3f66c2f9e7ac87f4e55b7966fc00a6f1497"
+    },
+    "promotionEvidencePacket": {
+      "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
+      "sha256": "4f2ec1884adfa9fc2e2151feac8c14796a37afe7f3188be4228af0e00c09431c"
+    },
+    "promotionSmokeRunbook": {
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+      "sha256": "0b823268c555cafd9f8eb598ebd34dd6124308d797188dc12f0ae0c8118606b9"
+    }
+  },
+  "guardrails": [
+    "This packet does not grant approval.",
+    "Owner approval must be an explicit human decision artifact.",
+    "Approval cannot override failing holdout, missing frozen outputs, missing rollback, or protected clinical drift.",
+    "Approval cannot authorize changes outside the separate promotion ticket."
+  ]
+}

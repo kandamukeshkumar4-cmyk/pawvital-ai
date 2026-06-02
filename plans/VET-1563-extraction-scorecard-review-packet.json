@@ -1,0 +1,278 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "review-only-scorecard-review-packet",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Reviewer packet only. It prepares scoring instructions after frozen outputs exist; it does not score or authorize promotion.",
+  "inputArtifacts": {
+    "scaffold": {
+      "path": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+      "sha256": "34358b67dc516469cad47ee4e68b808995663a1ccad11fe3ca77b64317372120"
+    },
+    "outputCapturePlan": {
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+      "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+    },
+    "outputStatus": {
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
+      "sha256": "c787bce0e2074f27f6717befebb3f6b36264bffae43e97e0b135a4f914fbd92b"
+    },
+    "candidateSelection": {
+      "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
+      "sha256": "a4bc894840e56b8bbe65fdbf2100284de5863d643ad428c609a8a75822427b6d"
+    }
+  },
+  "readiness": {
+    "validationCasesReadyToReview": 0,
+    "validationCaseCount": 2,
+    "holdoutCasesReadyToReview": 0,
+    "holdoutCaseCount": 1,
+    "reviewerRequired": true,
+    "candidateIdentityResolved": false,
+    "readyForScoring": false,
+    "blockers": [
+      "candidate identity is not resolved or approved",
+      "dog-triage-gold-v1-validation: baseline/candidate frozen outputs are not ready for validation review or candidate identity is unresolved",
+      "dog-triage-sample-cases-validation: baseline/candidate frozen outputs are not ready for validation review or candidate identity is unresolved"
+    ]
+  },
+  "scoringPolicy": {
+    "weightedScoreMinimum": 4.2,
+    "ownerApprovalRequired": true,
+    "runtimeChangeAllowedHere": false,
+    "dimensionScoreRange": "0..5",
+    "requiredDimensionEvidence": true,
+    "noBlockingFindings": true,
+    "holdoutFindingsMayNotFeedIteration": true
+  },
+  "validationReviews": [
+    {
+      "caseSourceId": "dog-triage-gold-v1-validation",
+      "split": "validation",
+      "sourcePath": "data/benchmarks/dog-triage/gold-v1-enriched.jsonl",
+      "sourceSha256": "208510654ae6988e592c12da071fc00f9fa48565d6fe02b54d86219667c37e43",
+      "recordCount": 226,
+      "baselineOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/baseline.json",
+      "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+      "baselineOutputReady": false,
+      "candidateOutputReady": false,
+      "baselineOutputBlocker": "output file missing",
+      "candidateOutputBlocker": "output file missing",
+      "candidateIdentityResolved": false,
+      "mayReviewNow": false,
+      "holdoutReleaseCondition": null,
+      "scoringDimensions": [
+        {
+          "dimension": "structuredOutputValidity",
+          "weight": 0.3,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "ownerLanguageRecall",
+          "weight": 0.25,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "clinicalSlotIntegrity",
+          "weight": 0.25,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "latency",
+          "weight": 0.1,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "cost",
+          "weight": 0.1,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        }
+      ],
+      "blockingFindings": [
+        {
+          "blocker": "invalid JSON or schema drift",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        },
+        {
+          "blocker": "corrupts answered_questions, extracted_answers, or unresolved_question_ids",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        },
+        {
+          "blocker": "uses holdout cases for prompt, adapter, or training iteration",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        }
+      ],
+      "patchTarget": {
+        "scaffoldPath": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+        "expectedEvidencePath": "validationCases[caseSourceId=dog-triage-gold-v1-validation].expectedEvidence",
+        "scoresPath": "validationCases[caseSourceId=dog-triage-gold-v1-validation].scores",
+        "blockersPath": "validationCases[caseSourceId=dog-triage-gold-v1-validation].blockers"
+      }
+    },
+    {
+      "caseSourceId": "dog-triage-sample-cases-validation",
+      "split": "validation",
+      "sourcePath": "data/benchmarks/dog-triage/sample-cases.json",
+      "sourceSha256": "5fa19dcf8d213aec926b4b9ca0d2359a26709f327a1066dac055e51f54ea4700",
+      "recordCount": 3,
+      "baselineOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/baseline.json",
+      "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+      "baselineOutputReady": false,
+      "candidateOutputReady": false,
+      "baselineOutputBlocker": "output file missing",
+      "candidateOutputBlocker": "output file missing",
+      "candidateIdentityResolved": false,
+      "mayReviewNow": false,
+      "holdoutReleaseCondition": null,
+      "scoringDimensions": [
+        {
+          "dimension": "structuredOutputValidity",
+          "weight": 0.3,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "ownerLanguageRecall",
+          "weight": 0.25,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "clinicalSlotIntegrity",
+          "weight": 0.25,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "latency",
+          "weight": 0.1,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "cost",
+          "weight": 0.1,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        }
+      ],
+      "blockingFindings": [
+        {
+          "blocker": "invalid JSON or schema drift",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        },
+        {
+          "blocker": "corrupts answered_questions, extracted_answers, or unresolved_question_ids",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        },
+        {
+          "blocker": "uses holdout cases for prompt, adapter, or training iteration",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        }
+      ],
+      "patchTarget": {
+        "scaffoldPath": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+        "expectedEvidencePath": "validationCases[caseSourceId=dog-triage-sample-cases-validation].expectedEvidence",
+        "scoresPath": "validationCases[caseSourceId=dog-triage-sample-cases-validation].scores",
+        "blockersPath": "validationCases[caseSourceId=dog-triage-sample-cases-validation].blockers"
+      }
+    }
+  ],
+  "holdoutReviews": [
+    {
+      "caseSourceId": "dog-triage-wave3-freeze-holdout",
+      "split": "holdout",
+      "sourcePath": "data/benchmarks/dog-triage/wave3-freeze-manifest.json",
+      "sourceSha256": "f35c71aeffe92c9a9983feeaea6c643f6b054556dad8578f732b975c8ad353b9",
+      "recordCount": 226,
+      "baselineOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/baseline.json",
+      "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+      "baselineOutputReady": false,
+      "candidateOutputReady": false,
+      "baselineOutputBlocker": "output file missing",
+      "candidateOutputBlocker": "output file missing",
+      "candidateIdentityResolved": false,
+      "mayReviewNow": false,
+      "holdoutReleaseCondition": "Holdout may be reviewed only after validation candidate outputs are frozen, scored, and no further prompt/adapter/training iteration will use holdout findings.",
+      "scoringDimensions": [
+        {
+          "dimension": "structuredOutputValidity",
+          "weight": 0.3,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "ownerLanguageRecall",
+          "weight": 0.25,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "clinicalSlotIntegrity",
+          "weight": 0.25,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "latency",
+          "weight": 0.1,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        },
+        {
+          "dimension": "cost",
+          "weight": 0.1,
+          "scoreRange": "0..5",
+          "requiredEvidence": "Cite concrete baseline vs candidate behavior, record ids or examples, and why the score is not inflated by output shape alone."
+        }
+      ],
+      "blockingFindings": [
+        {
+          "blocker": "invalid JSON or schema drift",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        },
+        {
+          "blocker": "corrupts answered_questions, extracted_answers, or unresolved_question_ids",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        },
+        {
+          "blocker": "uses holdout cases for prompt, adapter, or training iteration",
+          "requiredValue": false,
+          "evidenceRequired": "Set observed=true only with specific record/output evidence. Any observed blocker prevents promotion regardless of weighted score."
+        }
+      ],
+      "patchTarget": {
+        "scaffoldPath": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+        "expectedEvidencePath": "holdoutCases[caseSourceId=dog-triage-wave3-freeze-holdout].expectedEvidence",
+        "scoresPath": "holdoutCases[caseSourceId=dog-triage-wave3-freeze-holdout].scores",
+        "blockersPath": "holdoutCases[caseSourceId=dog-triage-wave3-freeze-holdout].blockers"
+      }
+    }
+  ],
+  "nextCommandsAfterReview": [
+    "Patch the scaffold scores, evidence, expectedEvidence.observedOutputPath, and expectedEvidence.reviewer only after frozen outputs exist.",
+    "Confirm the candidate-selection packet is resolved before scoring candidate outputs.",
+    "npm run models:shadow-eval-score",
+    "npm run models:promotion-preflight",
+    "npm run models:promotion-evidence-packet"
+  ],
+  "guardrails": [
+    "Do not review holdout until validation candidate outputs are frozen and no further iteration will use holdout findings.",
+    "Do not score from model self-report or training loss.",
+    "Do not let JSON-shape validity compensate for clinical slot corruption.",
+    "Do not mutate runtime routing or provider env while filling this packet."
+  ]
+}

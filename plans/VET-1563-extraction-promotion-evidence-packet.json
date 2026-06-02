@@ -1,0 +1,327 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "review-only-evidence-packet-template",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Fillable packet for a future separate promotion ticket. It does not authorize runtime model routing changes.",
+  "inputArtifacts": {
+    "preflight": {
+      "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
+      "sha256": "b7551eaf04974a4235988e6b0300e3f66c2f9e7ac87f4e55b7966fc00a6f1497"
+    },
+    "checklist": {
+      "path": "plans/VET-1563-extraction-promotion-checklist.json",
+      "sha256": "981368103151454bb73e3e411cf115dc1b48d50c31492b0a6a9eab7aac0475e0"
+    },
+    "outputCapturePlan": {
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+      "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+    },
+    "outputTemplates": {
+      "path": "plans/VET-1563-extraction-frozen-output-templates.json",
+      "sha256": "8e64adcdb2a561e865531245b8b627cf995e42a48f58a42713e09fdff141aff9"
+    },
+    "outputStatus": {
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
+      "sha256": "c787bce0e2074f27f6717befebb3f6b36264bffae43e97e0b135a4f914fbd92b"
+    },
+    "rollbackPlan": {
+      "path": "plans/VET-1563-extraction-model-rollback-plan.json",
+      "sha256": "2f75f73b1a3e3ca6ed57f16318f7c89f100ab06912c50c40e29bf79a8b9dd326"
+    },
+    "protectedClinicalDiffProof": {
+      "path": "plans/VET-1563-protected-clinical-diff-proof.json",
+      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+    },
+    "promotionTicket": {
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+      "sha256": "76e39951537d0c2ac6a1cc06fd2450de8ddeb1c863c4836b3a2fa5aafb647f0e"
+    },
+    "ownerApprovalRequest": {
+      "path": "plans/VET-1563-extraction-owner-approval-request.json",
+      "sha256": "23698c963e7012ceba85b96940649d6f498d72a1a92343ef44a0024505713199"
+    },
+    "promotionSmokeRunbook": {
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+      "sha256": "0b823268c555cafd9f8eb598ebd34dd6124308d797188dc12f0ae0c8118606b9"
+    }
+  },
+  "readiness": {
+    "readyForPromotionTicket": false,
+    "blockedEvidenceCount": 5,
+    "blockers": [
+      "scorecard-populated: validation average 0 below threshold 4.2",
+      "scorecard-populated: holdout average 0 below threshold 4.2",
+      "scorecard-populated: scorecard still contains unresolved issues",
+      "frozen-observed-outputs: 3 case(s) not ready for human review",
+      "frozen-observed-outputs: 3 baseline output file(s) missing",
+      "frozen-observed-outputs: 3 candidate output file(s) missing",
+      "owner-approval: explicit owner approval missing",
+      "promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.",
+      "separate-promotion-ticket: validation score below 4.2",
+      "separate-promotion-ticket: holdout score below 4.2",
+      "separate-promotion-ticket: scorecard contains unresolved issues",
+      "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: candidate model or adapter identity is not approved",
+      "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "output-capture: 3 baseline output hash(es) missing",
+      "output-capture: 3 candidate output hash(es) missing"
+    ]
+  },
+  "evidenceToAttach": [
+    {
+      "id": "scorecard-populated",
+      "currentStatus": "blocked",
+      "requiredProof": "validation=0, holdout=0, threshold=4.2",
+      "blockers": [
+        "validation average 0 below threshold 4.2",
+        "holdout average 0 below threshold 4.2",
+        "scorecard still contains unresolved issues"
+      ],
+      "attachmentSlot": null,
+      "reviewer": null,
+      "completedAt": null
+    },
+    {
+      "id": "frozen-observed-outputs",
+      "currentStatus": "blocked",
+      "requiredProof": "status ready=0/3, missing baseline=3, missing candidate=3, invalid JSON=0, invalid schema=0",
+      "blockers": [
+        "3 case(s) not ready for human review",
+        "3 baseline output file(s) missing",
+        "3 candidate output file(s) missing"
+      ],
+      "attachmentSlot": null,
+      "reviewer": null,
+      "completedAt": null
+    },
+    {
+      "id": "owner-approval",
+      "currentStatus": "blocked",
+      "requiredProof": "Owner approval must be recorded outside the generated artifact.",
+      "blockers": [
+        "explicit owner approval missing"
+      ],
+      "attachmentSlot": null,
+      "reviewer": null,
+      "completedAt": null
+    },
+    {
+      "id": "promotion-smoke-runbook",
+      "currentStatus": "blocked",
+      "requiredProof": "Promotion smoke runbook defines 5 evidence steps and 5 required attachments; readyForSmoke=false.",
+      "blockers": [
+        "Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready."
+      ],
+      "attachmentSlot": null,
+      "reviewer": null,
+      "completedAt": null
+    },
+    {
+      "id": "separate-promotion-ticket",
+      "currentStatus": "blocked",
+      "requiredProof": "Separate promotion ticket draft VET-1563P exists; readyToOpenPromotionPr=false.",
+      "blockers": [
+        "validation score below 4.2",
+        "holdout score below 4.2",
+        "scorecard contains unresolved issues",
+        "frozen baseline/candidate outputs and hashes are incomplete",
+        "candidate model or adapter identity is not approved",
+        "explicit owner approval artifact is missing"
+      ],
+      "attachmentSlot": null,
+      "reviewer": null,
+      "completedAt": null
+    }
+  ],
+  "frozenOutputSlots": [
+    {
+      "caseSourceId": "dog-triage-gold-v1-validation",
+      "split": "validation",
+      "baselineOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/baseline.json",
+      "baselineOutputSha256": null,
+      "baselineSchemaValid": false,
+      "baselineBlocker": "output file missing",
+      "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+      "candidateOutputSha256": null,
+      "candidateOutputContentSha256": null,
+      "candidateSchemaValid": false,
+      "candidateBlocker": "output file missing",
+      "candidateCaptureGate": {
+        "status": "blocked",
+        "requiredApprovalScope": "validation-output-capture-only",
+        "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+        "candidateIdentityResolved": false,
+        "captureApprovalComplete": false,
+        "blockers": [
+          "candidate identity is not resolved",
+          "scoped validation-output-capture approval is not complete"
+        ]
+      },
+      "reviewer": null,
+      "populated": false
+    },
+    {
+      "caseSourceId": "dog-triage-sample-cases-validation",
+      "split": "validation",
+      "baselineOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/baseline.json",
+      "baselineOutputSha256": null,
+      "baselineSchemaValid": false,
+      "baselineBlocker": "output file missing",
+      "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+      "candidateOutputSha256": null,
+      "candidateOutputContentSha256": null,
+      "candidateSchemaValid": false,
+      "candidateBlocker": "output file missing",
+      "candidateCaptureGate": {
+        "status": "blocked",
+        "requiredApprovalScope": "validation-output-capture-only",
+        "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+        "candidateIdentityResolved": false,
+        "captureApprovalComplete": false,
+        "blockers": [
+          "candidate identity is not resolved",
+          "scoped validation-output-capture approval is not complete"
+        ]
+      },
+      "reviewer": null,
+      "populated": false
+    },
+    {
+      "caseSourceId": "dog-triage-wave3-freeze-holdout",
+      "split": "holdout",
+      "baselineOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/baseline.json",
+      "baselineOutputSha256": null,
+      "baselineSchemaValid": false,
+      "baselineBlocker": "output file missing",
+      "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+      "candidateOutputSha256": null,
+      "candidateOutputContentSha256": null,
+      "candidateSchemaValid": false,
+      "candidateBlocker": "output file missing",
+      "candidateCaptureGate": {
+        "status": "blocked",
+        "requiredApprovalScope": "validation-output-capture-only",
+        "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+        "candidateIdentityResolved": false,
+        "captureApprovalComplete": false,
+        "blockers": [
+          "candidate identity is not resolved",
+          "scoped validation-output-capture approval is not complete"
+        ]
+      },
+      "reviewer": null,
+      "populated": false
+    }
+  ],
+  "frozenOutputTemplateStatus": {
+    "available": true,
+    "templateCount": 6,
+    "schema": {
+      "requiredFields": [
+        "role",
+        "caseSourceId",
+        "split",
+        "model",
+        "capturedAt",
+        "outputs"
+      ],
+      "outputItemRequiredFields": [
+        "inputId",
+        "rawOutput"
+      ],
+      "recordCountRule": "outputs length must exactly match the inputSource.recordCount for the case."
+    }
+  },
+  "frozenOutputStatus": {
+    "readyForHumanReview": false,
+    "readyCaseCount": 0,
+    "missingBaselineOutputCount": 3,
+    "missingCandidateOutputCount": 3,
+    "invalidJsonOutputCount": 0,
+    "invalidSchemaOutputCount": 0
+  },
+  "ownerApproval": {
+    "required": true,
+    "approver": null,
+    "approvedAt": null,
+    "approvalArtifact": "plans/VET-1563-extraction-owner-approval-request.json",
+    "notes": null
+  },
+  "separatePromotionTicket": {
+    "required": true,
+    "draftArtifact": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+    "draftTicket": "VET-1563P",
+    "runtimeChangeAllowedByDraft": false,
+    "readyToOpenPromotionPr": false,
+    "blockers": [
+      "validation score below 4.2",
+      "holdout score below 4.2",
+      "scorecard contains unresolved issues",
+      "frozen baseline/candidate outputs and hashes are incomplete",
+      "candidate model or adapter identity is not approved",
+      "explicit owner approval artifact is missing"
+    ]
+  },
+  "promotionSmokeRunbook": {
+    "required": true,
+    "artifact": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+    "readyForSmoke": false,
+    "evidenceStepCount": 5,
+    "requiredAttachments": [
+      "frozen output status artifact after pre-smoke freeze check",
+      "approved promotion branch route diff",
+      "protected clinical no-diff proof",
+      "validation route smoke transcript with case ids",
+      "rollback rehearsal transcript or reviewer-signed dry-run proof"
+    ]
+  },
+  "rollbackPlan": {
+    "required": true,
+    "status": "ready",
+    "currentRuntimeSurface": "src/lib/symptom-chat/answer-extraction.ts",
+    "currentPrimaryModel": "current-runtime-extraction-route",
+    "currentFallbackModel": "deterministic extraction fallback",
+    "previousRouteOrConfigValue": {
+      "role": "extraction",
+      "primaryModel": "current-runtime-extraction-route",
+      "fallbackModel": "deterministic extraction fallback",
+      "runtimeSurface": "src/lib/symptom-chat/answer-extraction.ts"
+    },
+    "rollbackCommand": "git revert <promotion-commit> && npm run models:promotion-preflight && npm test -- --runTestsByPath tests/model-promotion-readiness-preflight.test.ts",
+    "productionSmokePlan": [
+      "Run the separate promotion ticket's model route smoke against validation cases.",
+      "Confirm deterministic emergency and clinical state fields still come from protected clinical logic.",
+      "Regenerate VET-1563 promotion preflight and verify the route is back on the previous primary/fallback values."
+    ],
+    "proofArtifact": "plans/VET-1563-extraction-model-rollback-plan.json"
+  },
+  "protectedClinicalProof": {
+    "required": true,
+    "files": [
+      "src/lib/triage-engine.ts",
+      "src/lib/clinical-matrix.ts",
+      "src/app/api/ai/symptom-chat/route.ts",
+      "src/lib/symptom-memory.ts"
+    ],
+    "diffProofCommand": "git diff -- src/lib/triage-engine.ts src/lib/clinical-matrix.ts src/app/api/ai/symptom-chat/route.ts src/lib/symptom-memory.ts",
+    "status": "ready",
+    "attachedDiffProof": {
+      "path": "plans/VET-1563-protected-clinical-diff-proof.json",
+      "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "diffLineCount": 0,
+      "proof": "No local diff in protected deterministic clinical files."
+    }
+  },
+  "promotionDecision": {
+    "allowedByThisPacket": false,
+    "reason": "This packet is only a fillable evidence template. Runtime promotion remains blocked until every slot is completed, reviewed, and linked from a separate authorized promotion ticket."
+  },
+  "guardrails": [
+    "Do not promote from training loss alone.",
+    "Do not promote from validation-only score.",
+    "Do not train on or tune against holdout cases.",
+    "Do not improve JSON validity while weakening emergency escalation or clinical correctness.",
+    "Do not let model output override deterministic clinical state fields."
+  ]
+}

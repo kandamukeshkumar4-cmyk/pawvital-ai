@@ -1,0 +1,898 @@
+{
+  "ticket": "VET-1560",
+  "mode": "review-only-regeneration",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "reviewOnly": true,
+  "overallStatus": "success",
+  "commandCount": 36,
+  "executedCommandCount": 36,
+  "failedCommandIds": [],
+  "commands": [
+    {
+      "id": "dataset-manifest",
+      "command": [
+        "node",
+        "scripts/build-model-dataset-manifest.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1561-model-dataset-manifest.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1561-model-dataset-manifest.json",
+          "exists": true,
+          "sha256": "858abe8cbb3cdf3b8f9ddcaac2c2710c64287fc556c4735fc97d3c964b3fcd80"
+        }
+      ]
+    },
+    {
+      "id": "model-routing-readout",
+      "command": [
+        "node",
+        "scripts/model-routing-readout.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-model-routing-matrix.json",
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-model-routing-evaluation-matrix.md"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-model-routing-matrix.json",
+          "exists": true,
+          "sha256": "ec2df3a37f90d69e9cefd2c76d960421806916d2852125076087c1fae1f2d4ff"
+        },
+        {
+          "path": "plans/VET-1563-model-routing-evaluation-matrix.md",
+          "exists": true,
+          "sha256": "a8c946a5e8e0a326ef00ab882ec3a4a8a974ad71c525e9f5e75fb46ec7b2df61"
+        }
+      ]
+    },
+    {
+      "id": "model-routing-eval-plan",
+      "command": [
+        "node",
+        "scripts/build-model-routing-evaluation-plan.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-model-routing-evaluation-plan.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-model-routing-evaluation-plan.json",
+          "exists": true,
+          "sha256": "a0d4baa4a357f7a59fc033dd418f1c3bf5d4cb12cdccc48b8b36a95cef403b84"
+        }
+      ]
+    },
+    {
+      "id": "shadow-eval-scaffold",
+      "command": [
+        "node",
+        "scripts/build-model-shadow-eval-scaffold.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-shadow-eval-scaffold.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+          "exists": true,
+          "sha256": "34358b67dc516469cad47ee4e68b808995663a1ccad11fe3ca77b64317372120"
+        }
+      ]
+    },
+    {
+      "id": "offline-experiment-package",
+      "command": [
+        "node",
+        "scripts/build-model-experiment-package.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1562-offline-experiment-package.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1562-offline-experiment-package.json",
+          "exists": true,
+          "sha256": "10af867958543bd8a90a6835803a659fa06df74219bdc5f568dda11e62c61d3f"
+        }
+      ]
+    },
+    {
+      "id": "candidate-selection-packet",
+      "command": [
+        "node",
+        "scripts/build-model-candidate-selection-packet.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-candidate-selection-packet.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
+          "exists": true,
+          "sha256": "a4bc894840e56b8bbe65fdbf2100284de5863d643ad428c609a8a75822427b6d"
+        }
+      ]
+    },
+    {
+      "id": "output-capture-plan",
+      "command": [
+        "node",
+        "scripts/build-model-output-capture-plan.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-capture-plan.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+          "exists": true,
+          "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+        }
+      ]
+    },
+    {
+      "id": "frozen-output-templates",
+      "command": [
+        "node",
+        "scripts/build-model-frozen-output-templates.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-templates.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-frozen-output-templates.json",
+          "exists": true,
+          "sha256": "8e64adcdb2a561e865531245b8b627cf995e42a48f58a42713e09fdff141aff9"
+        }
+      ]
+    },
+    {
+      "id": "frozen-output-status",
+      "command": [
+        "node",
+        "scripts/build-model-frozen-output-status.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-status.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-frozen-output-status.json",
+          "exists": true,
+          "sha256": "c787bce0e2074f27f6717befebb3f6b36264bffae43e97e0b135a4f914fbd92b"
+        }
+      ]
+    },
+    {
+      "id": "shadow-eval-score",
+      "command": [
+        "node",
+        "scripts/score-model-shadow-eval.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-shadow-eval-scorecard.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
+          "exists": true,
+          "sha256": "89752e472d1788a72966fd3b5175c9b608e2a6df8f379f8829bc5982c530b09c"
+        }
+      ]
+    },
+    {
+      "id": "output-capture-runbook",
+      "command": [
+        "node",
+        "scripts/build-model-output-capture-runbook.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-output-capture-runbook.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-output-capture-runbook.json",
+          "exists": true,
+          "sha256": "23b365c7f311ff925fd9c482b326c959010f6e832b3c3d8d1dfb240bcc1513fb"
+        }
+      ]
+    },
+    {
+      "id": "scorecard-review-packet",
+      "command": [
+        "node",
+        "scripts/build-model-scorecard-review-packet.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-scorecard-review-packet.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-scorecard-review-packet.json",
+          "exists": true,
+          "sha256": "bab1402bb28bf875177ee74f38f986e74af7bbf5750a8616fb22b616226dbc88"
+        }
+      ]
+    },
+    {
+      "id": "rollback-plan",
+      "command": [
+        "node",
+        "scripts/build-model-rollback-plan.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-model-rollback-plan.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-model-rollback-plan.json",
+          "exists": true,
+          "sha256": "2f75f73b1a3e3ca6ed57f16318f7c89f100ab06912c50c40e29bf79a8b9dd326"
+        }
+      ]
+    },
+    {
+      "id": "protected-clinical-diff-proof",
+      "command": [
+        "node",
+        "scripts/build-protected-clinical-diff-proof.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-protected-clinical-diff-proof.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-protected-clinical-diff-proof.json",
+          "exists": true,
+          "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+        }
+      ]
+    },
+    {
+      "id": "model-promotion-smoke-runbook",
+      "command": [
+        "node",
+        "scripts/build-model-promotion-smoke-runbook.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-smoke-runbook.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+          "exists": true,
+          "sha256": "0b823268c555cafd9f8eb598ebd34dd6124308d797188dc12f0ae0c8118606b9"
+        }
+      ]
+    },
+    {
+      "id": "promotion-ticket",
+      "command": [
+        "node",
+        "scripts/build-model-promotion-ticket.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-runtime-promotion-ticket.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+          "exists": true,
+          "sha256": "76e39951537d0c2ac6a1cc06fd2450de8ddeb1c863c4836b3a2fa5aafb647f0e"
+        }
+      ]
+    },
+    {
+      "id": "promotion-checklist",
+      "command": [
+        "node",
+        "scripts/build-model-promotion-checklist.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-checklist.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-promotion-checklist.json",
+          "exists": true,
+          "sha256": "981368103151454bb73e3e411cf115dc1b48d50c31492b0a6a9eab7aac0475e0"
+        }
+      ]
+    },
+    {
+      "id": "promotion-preflight",
+      "command": [
+        "node",
+        "scripts/model-promotion-readiness-preflight.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-readiness-preflight.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
+          "exists": true,
+          "sha256": "b7551eaf04974a4235988e6b0300e3f66c2f9e7ac87f4e55b7966fc00a6f1497"
+        }
+      ]
+    },
+    {
+      "id": "promotion-evidence-packet",
+      "command": [
+        "node",
+        "scripts/build-model-promotion-evidence-packet.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-evidence-packet.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
+          "exists": true,
+          "sha256": "4f2ec1884adfa9fc2e2151feac8c14796a37afe7f3188be4228af0e00c09431c"
+        }
+      ]
+    },
+    {
+      "id": "owner-approval-request",
+      "command": [
+        "node",
+        "scripts/build-model-owner-approval-request.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-owner-approval-request.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-owner-approval-request.json",
+          "exists": true,
+          "sha256": "23698c963e7012ceba85b96940649d6f498d72a1a92343ef44a0024505713199"
+        }
+      ]
+    },
+    {
+      "id": "promotion-evidence-packet-with-owner-request",
+      "command": [
+        "node",
+        "scripts/build-model-promotion-evidence-packet.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-evidence-packet.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
+          "exists": true,
+          "sha256": "b02a4a2a7d913307317da49c717a1d0d3a88b409cfe73bf1975256844399f17f"
+        }
+      ]
+    },
+    {
+      "id": "output-capture-authorization",
+      "command": [
+        "node",
+        "scripts/build-model-output-capture-authorization.mjs",
+        "--role=extraction",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-output-capture-authorization.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1563-extraction-output-capture-authorization.json",
+          "exists": true,
+          "sha256": "a2ed39d42d982401087d506b18fd277b9e6e71d4bff468f398fdb3f713891c9b"
+        }
+      ]
+    },
+    {
+      "id": "product-roadmap",
+      "command": [
+        "node",
+        "scripts/build-product-intelligence-roadmap.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1564-product-intelligence-roadmap.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1564-product-intelligence-roadmap.json",
+          "exists": true,
+          "sha256": "ae8a852aa4ee63b8125e7e8f2aac3086b89002fc04ac5e4524513d213aaa626c"
+        }
+      ]
+    },
+    {
+      "id": "product-persistence-schema",
+      "command": [
+        "node",
+        "scripts/verify-product-intelligence-schema.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1564-product-persistence-schema-readiness.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1564-product-persistence-schema-readiness.json",
+          "exists": true,
+          "sha256": "321a8c25199d092f2efc3b986e545a0b58f00ff1f4c054c8e63707cd36b7077d"
+        }
+      ]
+    },
+    {
+      "id": "product-readiness-contract",
+      "command": [
+        "node",
+        "scripts/build-product-longitudinal-readiness-contract.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1564-longitudinal-readiness-contract.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1564-longitudinal-readiness-contract.json",
+          "exists": true,
+          "sha256": "21ff009788c937303f812e0f7cf972f6767fb15d030810a3635f1fb3e108aeda"
+        }
+      ]
+    },
+    {
+      "id": "claim-language-review",
+      "command": [
+        "node",
+        "scripts/build-product-claim-language-review.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1564C-claim-language-review.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1564C-claim-language-review.json",
+          "exists": true,
+          "sha256": "f658182b3c14797a333901b84a20b1697d9b8b6641f44534edbc5aa88e441bde"
+        }
+      ]
+    },
+    {
+      "id": "product-production-readiness",
+      "command": [
+        "node",
+        "scripts/build-product-production-readiness.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1564-production-readiness.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1564-production-readiness.json",
+          "exists": true,
+          "sha256": "f151580f6611020087e3e1d45fc76f04af7ae2bdc9a4b38bf314cb950fe6e766"
+        }
+      ]
+    },
+    {
+      "id": "product-production-smoke-runbook",
+      "command": [
+        "node",
+        "scripts/build-product-production-smoke-runbook.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1564-production-smoke-runbook.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1564-production-smoke-runbook.json",
+          "exists": true,
+          "sha256": "5045cf8a82183dbabde6b662926844e00542fcdd9cf7be52a0d6472dfdd913c4"
+        }
+      ]
+    },
+    {
+      "id": "tugboat-governance-plan",
+      "command": [
+        "node",
+        "scripts/build-tugboat-governance-plan.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1565-tugboat-governance-plan.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1565-tugboat-governance-plan.json",
+          "exists": true,
+          "sha256": "e170f2f7a1d90bc3195a88141900be716e121cc55857c0eaddadcd1e378feb42"
+        }
+      ]
+    },
+    {
+      "id": "azure-sync-preflight",
+      "command": [
+        "node",
+        "scripts/devops/vet1560-azure-sync-preflight.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-azure-sync-preflight.json",
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-azure-sync-preflight.md"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-azure-sync-preflight.json",
+          "exists": true,
+          "sha256": "05f01309f6df160cc6a96d229903d590a9378c855181e49c900c4ad225a1861f"
+        },
+        {
+          "path": "plans/VET-1560-azure-sync-preflight.md",
+          "exists": true,
+          "sha256": "12a3e0566367c10ffe504d0f8d07d8ee86786c22b605cc890d55ae39fc1e17a4"
+        }
+      ]
+    },
+    {
+      "id": "azure-live-sync-runbook",
+      "command": [
+        "node",
+        "scripts/devops/vet1560-azure-live-sync-runbook.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-azure-live-sync-runbook.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-azure-live-sync-runbook.json",
+          "exists": true,
+          "sha256": "ecc5c7131a83ba9f4d5a07b5ed1fd57e3e356f51d6edb4d482f1c06af37bdf35"
+        }
+      ]
+    },
+    {
+      "id": "project-manager-sync-readiness",
+      "command": [
+        "node",
+        "scripts/devops/vet1560-sync-readiness.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-project-manager-tickets.json",
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-project-manager-sync-readiness.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-project-manager-sync-readiness.json",
+          "exists": true,
+          "sha256": "a729f82e726d028dbb2ddc1ac2c6c9f9c1aba3da1028e3c6146f3ff59d93ca1a"
+        }
+      ]
+    },
+    {
+      "id": "project-manager-local-sync",
+      "command": [
+        "node",
+        "scripts/devops/create-vet1560-work-items.mjs",
+        "--from",
+        "plans/VET-1560-project-manager-tickets.json",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-project-manager-local-sync.json",
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-project-manager-local-sync.md"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-project-manager-local-sync.json",
+          "exists": true,
+          "sha256": "5febb8eda6290d19b99bb1d77e2d20873cb5023bd01227b4608c77cb85425c8d"
+        },
+        {
+          "path": "plans/VET-1560-project-manager-local-sync.md",
+          "exists": true,
+          "sha256": "e11a9bba0caca41cc4838186a7b9daf7d56449671de77f5f3f1cbd37f9857f7f"
+        }
+      ]
+    },
+    {
+      "id": "project-manager-sync-readiness-final",
+      "command": [
+        "node",
+        "scripts/devops/vet1560-sync-readiness.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-project-manager-tickets.json",
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-project-manager-sync-readiness.json"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-project-manager-sync-readiness.json",
+          "exists": true,
+          "sha256": "a729f82e726d028dbb2ddc1ac2c6c9f9c1aba3da1028e3c6146f3ff59d93ca1a"
+        }
+      ]
+    },
+    {
+      "id": "readiness-dashboard",
+      "command": [
+        "node",
+        "scripts/build-vet1560-readiness-dashboard.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-readiness-dashboard.json",
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-readiness-dashboard.md"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-readiness-dashboard.json",
+          "exists": true,
+          "sha256": "3448ec4c58b00d250aaa7ccc6fd673ec35b6e605fb5f27ce2548453e77e092b2"
+        },
+        {
+          "path": "plans/VET-1560-readiness-dashboard.md",
+          "exists": true,
+          "sha256": "4a032ed06cf01c29eddf3fb524b8236007e2d6f5154e01b282cd896c7bc1e982"
+        }
+      ]
+    },
+    {
+      "id": "completion-audit",
+      "command": [
+        "node",
+        "scripts/build-vet1560-completion-audit.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-completion-audit.json",
+        "Wrote G:\\MY Website\\pawvital-ai\\plans\\VET-1560-completion-audit.md"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-completion-audit.json",
+          "exists": true,
+          "sha256": "c27c7585896911976e7172baeb3a972ea281ee4b5e8b4593900513013525e895"
+        },
+        {
+          "path": "plans/VET-1560-completion-audit.md",
+          "exists": true,
+          "sha256": "d1814d33c2dc21b22c5a528cca4e94b860d7dce72e74bd43422ef227d68c5944"
+        }
+      ]
+    }
+  ],
+  "guardrails": [
+    "Does not run live Azure Boards creation.",
+    "Does not call provider, NIM, RunPod, embedding, or training endpoints.",
+    "Does not install Tugboat, run llmff, or auto-apply instruction patches.",
+    "Does not mutate runtime model routing, provider env, or protected clinical files.",
+    "Leaves project-manager live sync blocked until Azure env vars are explicitly provided."
+  ]
+}

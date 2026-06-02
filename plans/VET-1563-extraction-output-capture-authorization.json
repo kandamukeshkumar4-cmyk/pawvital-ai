@@ -1,0 +1,118 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "review-only-output-capture-authorization",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Authorization preflight only. It does not read secret values, call providers, write output envelopes, or mutate runtime routing.",
+  "readyForProviderCapture": false,
+  "blockers": [
+    "candidate capture approval is not complete",
+    "baseline provider credential group is not present in the current process environment",
+    "candidate provider credential group is not present in the current process environment",
+    "candidate model or adapter identity has not been approved"
+  ],
+  "inputArtifacts": {
+    "outputCaptureRunbook": {
+      "path": "plans/VET-1563-extraction-output-capture-runbook.json",
+      "sha256": "23b365c7f311ff925fd9c482b326c959010f6e832b3c3d8d1dfb240bcc1513fb"
+    },
+    "ownerApprovalRequest": {
+      "path": "plans/VET-1563-extraction-owner-approval-request.json",
+      "sha256": "23698c963e7012ceba85b96940649d6f498d72a1a92343ef44a0024505713199"
+    },
+    "routingMatrix": {
+      "path": "plans/VET-1563-model-routing-matrix.json",
+      "sha256": "ec2df3a37f90d69e9cefd2c76d960421806916d2852125076087c1fae1f2d4ff"
+    },
+    "candidateSelectionPacket": {
+      "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
+      "sha256": "a4bc894840e56b8bbe65fdbf2100284de5863d643ad428c609a8a75822427b6d"
+    }
+  },
+  "approvalGate": {
+    "requiredForProviderCapture": false,
+    "requestReady": false,
+    "approvalGranted": false,
+    "decisionComplete": false,
+    "approver": null,
+    "approvedAt": null,
+    "approvalRecord": null,
+    "sourceArtifact": "plans/VET-1563-extraction-owner-approval-request.json",
+    "note": "Runtime promotion approval is intentionally downstream of frozen output capture and review; it does not authorize provider capture."
+  },
+  "captureApprovalGate": {
+    "required": true,
+    "scope": "validation-output-capture-only",
+    "promotionApproval": false,
+    "decisionComplete": false,
+    "approver": null,
+    "approvedAt": null,
+    "approvalRecord": null,
+    "sourceArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json"
+  },
+  "credentialGate": {
+    "providerCredentialsRequired": true,
+    "reportsPresenceOnly": true,
+    "baselineCredentialPresent": false,
+    "candidateCredentialPresent": false,
+    "groups": [
+      {
+        "id": "baseline-nvidia-extraction",
+        "purpose": "Capture current baseline extraction outputs through the existing NVIDIA/Qwen route.",
+        "acceptedEnvNames": [
+          "NVIDIA_QWEN_API_KEY",
+          "NVIDIA_API_KEY"
+        ],
+        "present": false
+      },
+      {
+        "id": "narrow-pack-sidecar",
+        "purpose": "Capture or compare narrow-pack extraction behavior when the authorized candidate uses sidecar routing.",
+        "acceptedEnvNames": [
+          "HF_SIDECAR_API_KEY"
+        ],
+        "present": false
+      },
+      {
+        "id": "candidate-provider",
+        "purpose": "Capture candidate model or adapter outputs after the approved candidate identity is known.",
+        "acceptedEnvNames": [
+          "NVIDIA_QWEN_API_KEY",
+          "NVIDIA_API_KEY",
+          "HF_SIDECAR_API_KEY",
+          "RUNPOD_API_KEY"
+        ],
+        "present": false
+      }
+    ]
+  },
+  "routeContext": {
+    "currentRuntimeSurface": "src/lib/symptom-chat/answer-extraction.ts",
+    "providers": [
+      "current PawVital runtime provider chain"
+    ],
+    "baselineModels": [
+      "current-runtime-extraction-route"
+    ],
+    "candidateModels": [
+      "<candidate-model-or-adapter>"
+    ],
+    "candidateIdentityResolved": false,
+    "candidateSelectionStatus": "blocked",
+    "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+    "runtimeRoutingChangeAllowed": false
+  },
+  "allowedNextActions": [
+    "Record explicit candidate capture approval before provider capture.",
+    "Provide provider credentials through the authorized environment without writing secret values to artifacts.",
+    "Replace the candidate model placeholder with the approved candidate model or adapter identity.",
+    "Rerun npm run models:output-capture-authorization before any provider call."
+  ],
+  "guardrails": [
+    "Do not print secret values; this artifact records presence booleans only.",
+    "Do not call providers or write frozen output files from this preflight.",
+    "Do not mutate runtime model routing during capture authorization.",
+    "Do not use holdout cases for prompt, adapter, or training iteration.",
+    "Do not treat provider credentials as owner approval."
+  ]
+}

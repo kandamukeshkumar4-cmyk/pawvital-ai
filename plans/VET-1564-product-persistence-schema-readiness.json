@@ -1,0 +1,37 @@
+{
+  "ticket": "VET-1564A/B",
+  "mode": "review-only-schema-readiness",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "readyForMigrationReview": false,
+  "schema": {
+    "path": "supabase-product-intelligence-schema.sql",
+    "exists": false,
+    "sha256": null
+  },
+  "tables": [
+    "daily_readiness_snapshots",
+    "recovery_checkpoints"
+  ],
+  "requiredFragmentsPresent": false,
+  "missingRequired": [
+    "CREATE TABLE IF NOT EXISTS public.daily_readiness_snapshots",
+    "CREATE TABLE IF NOT EXISTS public.recovery_checkpoints",
+    "ALTER TABLE public.daily_readiness_snapshots ENABLE ROW LEVEL SECURITY",
+    "ALTER TABLE public.recovery_checkpoints ENABLE ROW LEVEL SECURITY",
+    "auth.uid() = user_id",
+    "UNIQUE (user_id, pet_id, snapshot_date, generated_by)",
+    "UNIQUE (user_id, pet_id, report_source_id, checkpoint_date, generated_by)"
+  ],
+  "forbiddenClaimFragmentsPresent": [],
+  "liveMigrationApplied": false,
+  "nextActions": [
+    "Review SQL in Supabase SQL Editor or migration workflow.",
+    "Apply only after product owner approves persistence semantics.",
+    "Verify the authenticated write route against the migrated tables before enabling owner workflow automation."
+  ],
+  "guardrails": [
+    "This verifier does not apply schema changes.",
+    "Do not store diagnosis, treatment, prognosis, or emergency-clearance claims.",
+    "Rows must remain user-owned through RLS policies."
+  ]
+}

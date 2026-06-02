@@ -1,0 +1,286 @@
+{
+  "ticket": "VET-1564",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "mode": "review-only",
+  "productName": "PawVital Longitudinal Readiness Contract",
+  "intent": "Define the evidence contract for a Whoop-for-dogs style daily readiness and recovery layer without creating unsupported diagnosis, prognosis, treatment, or emergency-clearance claims.",
+  "ownerVisiblePromise": "Show whether available evidence looks baseline, watchful, urgent, or unknown, and explain exactly which evidence created that state.",
+  "evidenceWindows": {
+    "dailyReadiness": {
+      "lookbackDays": 1,
+      "requiredSignals": [
+        "health score or derived wellness index",
+        "latest symptom check"
+      ],
+      "optionalSignals": [
+        "journal energy",
+        "journal mood",
+        "appetite",
+        "hydration",
+        "rest"
+      ],
+      "missingState": "unknown readiness or watch state with explicit next evidence prompt; never coerce missing evidence to zero."
+    },
+    "trend": {
+      "lookbackDays": 7,
+      "requiredSignals": [
+        "at least two symptom checks or journal entries"
+      ],
+      "optionalSignals": [
+        "outcome feedback",
+        "follow-up answers",
+        "report disposition"
+      ],
+      "missingState": "unknown trend until there are at least two comparable observations."
+    },
+    "recovery": {
+      "lookbackDays": 14,
+      "requiredSignals": [
+        "post-event journal entries or report-linked follow-up"
+      ],
+      "optionalSignals": [
+        "energy trend",
+        "mood trend",
+        "appetite trend",
+        "hydration trend"
+      ],
+      "missingState": "unknown recovery until a baseline and at least one follow-up checkpoint exist."
+    }
+  },
+  "scoringContract": {
+    "outputShape": {
+      "state": [
+        "stable",
+        "watch",
+        "urgent",
+        "unknown"
+      ],
+      "confidence": [
+        "high",
+        "medium",
+        "low",
+        "insufficient"
+      ],
+      "evidenceCoverage": "available evidence fields divided by available plus missing fields",
+      "nextEvidencePrompt": "single most useful missing evidence field unless urgent override exists"
+    },
+    "forbiddenOutputs": [
+      "single magic health score without source evidence",
+      "diagnosis certainty",
+      "treatment recommendation",
+      "prognosis promise",
+      "emergency clearance",
+      "model confidence displayed as medical certainty"
+    ],
+    "deterministicOverrides": [
+      "emergency symptom check forces urgent state",
+      "same-day clinical red flag forces urgent or watch state according to deterministic clinical rules",
+      "urgent override suppresses coaching prompts that could delay care"
+    ]
+  },
+  "modelUsageBoundaries": {
+    "allowed": [
+      "normalize owner-language evidence after extraction scorecard gates pass",
+      "summarize already-determined deterministic state in owner-friendly wording",
+      "detect unsafe reassurance in generated copy through safety verifier"
+    ],
+    "blockedUntilSeparateTicket": [
+      "runtime NIM or narrow-pack route promotion",
+      "adapter or checkpoint promotion",
+      "model-owned clinical state",
+      "vision-only readiness state"
+    ]
+  },
+  "uiContract": {
+    "surface": "analytics Evidence ring",
+    "mustShow": [
+      "module state",
+      "evidence chips",
+      "missing evidence chips",
+      "deterministic override when present",
+      "claim guard",
+      "review-only or evidence-quality status while gates are not complete",
+      "save controls only when selected-dog evidence is persistable",
+      "saved snapshot history count when authenticated database reads are available"
+    ],
+    "mustNotShow": [
+      "marketing hero as primary experience",
+      "pet wellness score without evidence source",
+      "hidden missing-data penalty",
+      "clinical clearance language"
+    ]
+  },
+  "acceptanceGates": [
+    "readiness snapshot tests cover persistable, insufficient-evidence, and urgent override states",
+    "recovery checkpoint tests cover report-linked, insufficient-evidence, and urgent override states",
+    "product-intelligence unit tests cover stable, urgent, and missing-data states",
+    "analytics panel test covers Evidence ring, coverage text, missing-data state, and claim guard",
+    "analytics owner workflow can save persistable readiness/recovery records and read back history through authenticated routes",
+    "build passes",
+    "no protected clinical file diff unless separately authorized",
+    "no runtime model routing or provider env diff",
+    "claim-language clinical review before expanding owner-visible copy"
+  ],
+  "nextImplementationTickets": [
+    {
+      "id": "VET-1564A",
+      "title": "Persist daily readiness snapshots from existing evidence",
+      "scope": "Add read-only snapshot generation from existing journal, symptom, and health-score evidence; no diagnosis claims and no model routing changes.",
+      "implementedFoundation": {
+        "module": "src/lib/readiness-snapshot.ts",
+        "persistenceMapper": "src/lib/product-intelligence-persistence.ts",
+        "readWriteRoute": "src/app/api/product-intelligence/snapshots/route.ts",
+        "schema": "supabase-product-intelligence-schema.sql",
+        "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
+        "test": "tests/readiness-snapshot.test.ts",
+        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+      }
+    },
+    {
+      "id": "VET-1564B",
+      "title": "Add report-linked recovery checkpoints",
+      "scope": "Create follow-up checkpoints tied to report disposition and journal evidence, with urgent override and missing-data states.",
+      "implementedFoundation": {
+        "module": "src/lib/recovery-checkpoint.ts",
+        "persistenceMapper": "src/lib/product-intelligence-persistence.ts",
+        "readWriteRoute": "src/app/api/product-intelligence/snapshots/route.ts",
+        "schema": "supabase-product-intelligence-schema.sql",
+        "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
+        "test": "tests/recovery-checkpoint.test.ts",
+        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+      }
+    },
+    {
+      "id": "VET-1564C",
+      "title": "Run owner-facing claim-language clinical review",
+      "scope": "Review readiness, trend, recovery, and evidence-coach copy for unsupported diagnosis, prognosis, treatment, or emergency-clearance claims."
+    }
+  ],
+  "dependencyArtifacts": [
+    {
+      "path": "plans/VET-1564-product-intelligence-roadmap.json",
+      "exists": true,
+      "sha256": "ae8a852aa4ee63b8125e7e8f2aac3086b89002fc04ac5e4524513d213aaa626c"
+    },
+    {
+      "path": "src/lib/product-intelligence.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/lib/readiness-snapshot.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/lib/recovery-checkpoint.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/lib/product-intelligence-persistence.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "supabase-product-intelligence-schema.sql",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "plans/VET-1564-product-persistence-schema-readiness.json",
+      "exists": true,
+      "sha256": "321a8c25199d092f2efc3b986e545a0b58f00ff1f4c054c8e63707cd36b7077d"
+    },
+    {
+      "path": "src/app/api/product-intelligence/snapshots/route.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "src/app/(dashboard)/analytics/page.tsx",
+      "exists": true,
+      "sha256": "983cdba61a5184520a7d2cab3c5afa07439f29d31c75a81140e663e1d3db3623"
+    },
+    {
+      "path": "src/components/analytics/product-intelligence-panel.tsx",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/product-intelligence.test.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/readiness-snapshot.test.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/recovery-checkpoint.test.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/product-intelligence-persistence.test.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/product-intelligence-schema.test.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/product-intelligence-snapshots.route.test.ts",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/product-intelligence-panel.test.tsx",
+      "exists": false,
+      "sha256": null
+    },
+    {
+      "path": "tests/analytics-product-owner-workflow.test.ts",
+      "exists": false,
+      "sha256": null
+    }
+  ],
+  "missingDependencyArtifacts": [
+    "src/lib/product-intelligence.ts",
+    "src/lib/readiness-snapshot.ts",
+    "src/lib/recovery-checkpoint.ts",
+    "src/lib/product-intelligence-persistence.ts",
+    "supabase-product-intelligence-schema.sql",
+    "src/app/api/product-intelligence/snapshots/route.ts",
+    "src/components/analytics/product-intelligence-panel.tsx",
+    "tests/product-intelligence.test.ts",
+    "tests/readiness-snapshot.test.ts",
+    "tests/recovery-checkpoint.test.ts",
+    "tests/product-intelligence-persistence.test.ts",
+    "tests/product-intelligence-schema.test.ts",
+    "tests/product-intelligence-snapshots.route.test.ts",
+    "tests/product-intelligence-panel.test.tsx",
+    "tests/analytics-product-owner-workflow.test.ts"
+  ],
+  "status": "blocked",
+  "blockers": [
+    "missing readiness contract dependency: src/lib/product-intelligence.ts",
+    "missing readiness contract dependency: src/lib/readiness-snapshot.ts",
+    "missing readiness contract dependency: src/lib/recovery-checkpoint.ts",
+    "missing readiness contract dependency: src/lib/product-intelligence-persistence.ts",
+    "missing readiness contract dependency: supabase-product-intelligence-schema.sql",
+    "missing readiness contract dependency: src/app/api/product-intelligence/snapshots/route.ts",
+    "missing readiness contract dependency: src/components/analytics/product-intelligence-panel.tsx",
+    "missing readiness contract dependency: tests/product-intelligence.test.ts",
+    "missing readiness contract dependency: tests/readiness-snapshot.test.ts",
+    "missing readiness contract dependency: tests/recovery-checkpoint.test.ts",
+    "missing readiness contract dependency: tests/product-intelligence-persistence.test.ts",
+    "missing readiness contract dependency: tests/product-intelligence-schema.test.ts",
+    "missing readiness contract dependency: tests/product-intelligence-snapshots.route.test.ts",
+    "missing readiness contract dependency: tests/product-intelligence-panel.test.tsx",
+    "missing readiness contract dependency: tests/analytics-product-owner-workflow.test.ts"
+  ]
+}

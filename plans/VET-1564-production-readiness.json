@@ -1,0 +1,123 @@
+{
+  "ticket": "VET-1564A/B",
+  "mode": "review-only-production-readiness",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "readyForProductionSmoke": false,
+  "liveMigrationApplied": false,
+  "authenticatedProductionSmokeComplete": false,
+  "inputArtifacts": {
+    "schemaReadiness": {
+      "path": "plans/VET-1564-product-persistence-schema-readiness.json",
+      "exists": true,
+      "sha256": "321a8c25199d092f2efc3b986e545a0b58f00ff1f4c054c8e63707cd36b7077d"
+    },
+    "claimReview": {
+      "path": "plans/VET-1564C-claim-language-review.json",
+      "exists": true,
+      "sha256": "f658182b3c14797a333901b84a20b1697d9b8b6641f44534edbc5aa88e441bde"
+    },
+    "readinessContract": {
+      "path": "plans/VET-1564-longitudinal-readiness-contract.json",
+      "exists": true,
+      "sha256": "21ff009788c937303f812e0f7cf972f6767fb15d030810a3635f1fb3e108aeda"
+    },
+    "route": {
+      "path": "src/app/api/product-intelligence/snapshots/route.ts",
+      "exists": false,
+      "sha256": null
+    },
+    "ownerWorkflowTest": {
+      "path": "tests/analytics-product-owner-workflow.test.ts",
+      "exists": false,
+      "sha256": null
+    }
+  },
+  "routeGuards": {
+    "routeExists": false,
+    "authenticatedUserRequired": false,
+    "petOwnershipCheck": false,
+    "demoModeBlocked": false,
+    "persistenceAllowedEnforced": false,
+    "rateLimitEnforced": false,
+    "ownerScopedHistoryRead": false
+  },
+  "workflowSmoke": {
+    "ownerWorkflowTestExists": false,
+    "selectedDogHistoryRead": false,
+    "readinessSavePost": false,
+    "credentialedRequest": false
+  },
+  "missingRouteGuards": [
+    "routeExists",
+    "authenticatedUserRequired",
+    "petOwnershipCheck",
+    "demoModeBlocked",
+    "persistenceAllowedEnforced",
+    "rateLimitEnforced",
+    "ownerScopedHistoryRead"
+  ],
+  "missingWorkflowEvidence": [
+    "ownerWorkflowTestExists",
+    "selectedDogHistoryRead",
+    "readinessSavePost",
+    "credentialedRequest"
+  ],
+  "productionSmokePlan": [
+    "Apply supabase-product-intelligence-schema.sql through the approved Supabase migration path.",
+    "Run authenticated owner workflow on production with a real test pet owned by the signed-in user.",
+    "Save one persistable daily readiness snapshot and verify it appears in saved history.",
+    "Save or withhold recovery checkpoint according to persistenceAllowed and verify blocked reasons are preserved.",
+    "Confirm RLS denies reads/writes for a pet owned by another user.",
+    "Rerun claim-language review after any owner-visible copy changes."
+  ],
+  "rollbackPlan": [
+    "Disable the analytics save controls if production write/read fails.",
+    "Revert the route/UI changes through the owning promotion PR if persistence corrupts owner data.",
+    "Drop only the two product-intelligence tables through an approved database rollback if the migration itself must be reverted."
+  ],
+  "blockers": [
+    "live Supabase migration is not applied",
+    "authenticated production owner workflow smoke is not complete"
+  ],
+  "guardrails": [
+    "This packet does not apply the migration.",
+    "Do not use service-role credentials in owner workflow smoke.",
+    "Do not store diagnosis, prognosis, treatment, or emergency-clearance claims.",
+    "Do not bypass pet ownership or RLS checks to make the smoke pass."
+  ],
+  "contractTickets": [
+    {
+      "id": "VET-1564A",
+      "title": "Persist daily readiness snapshots from existing evidence",
+      "scope": "Add read-only snapshot generation from existing journal, symptom, and health-score evidence; no diagnosis claims and no model routing changes.",
+      "implementedFoundation": {
+        "module": "src/lib/readiness-snapshot.ts",
+        "persistenceMapper": "src/lib/product-intelligence-persistence.ts",
+        "readWriteRoute": "src/app/api/product-intelligence/snapshots/route.ts",
+        "schema": "supabase-product-intelligence-schema.sql",
+        "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
+        "test": "tests/readiness-snapshot.test.ts",
+        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+      }
+    },
+    {
+      "id": "VET-1564B",
+      "title": "Add report-linked recovery checkpoints",
+      "scope": "Create follow-up checkpoints tied to report disposition and journal evidence, with urgent override and missing-data states.",
+      "implementedFoundation": {
+        "module": "src/lib/recovery-checkpoint.ts",
+        "persistenceMapper": "src/lib/product-intelligence-persistence.ts",
+        "readWriteRoute": "src/app/api/product-intelligence/snapshots/route.ts",
+        "schema": "supabase-product-intelligence-schema.sql",
+        "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
+        "test": "tests/recovery-checkpoint.test.ts",
+        "persistenceStatus": "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied"
+      }
+    },
+    {
+      "id": "VET-1564C",
+      "title": "Run owner-facing claim-language clinical review",
+      "scope": "Review readiness, trend, recovery, and evidence-coach copy for unsupported diagnosis, prognosis, treatment, or emergency-clearance claims."
+    }
+  ]
+}

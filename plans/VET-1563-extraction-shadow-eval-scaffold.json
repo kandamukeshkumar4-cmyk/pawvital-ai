@@ -1,0 +1,237 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "review-only",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Shadow-eval scaffold only. It has no observed model outputs, does not call providers, does not train, and does not mutate runtime routing.",
+  "inputs": {
+    "datasetManifest": {
+      "path": "plans/VET-1561-model-dataset-manifest.json",
+      "sha256": "858abe8cbb3cdf3b8f9ddcaac2c2710c64287fc556c4735fc97d3c964b3fcd80"
+    },
+    "routingEvaluationPlan": {
+      "path": "plans/VET-1563-model-routing-evaluation-plan.json",
+      "sha256": "a0d4baa4a357f7a59fc033dd418f1c3bf5d4cb12cdccc48b8b36a95cef403b84"
+    }
+  },
+  "baseline": {
+    "primaryModel": "current-runtime-extraction-route",
+    "fallbackModel": "deterministic extraction fallback",
+    "providers": [
+      "current PawVital runtime provider chain"
+    ],
+    "timeoutMs": 8000,
+    "concurrencyLimit": 4
+  },
+  "thresholds": {
+    "weightedScoreMinimum": 4.2,
+    "noBlockingFindings": true,
+    "latencyMustNotRegressByMoreThanPct": 20,
+    "costMustBeDocumented": true,
+    "ownerApprovalRequired": true,
+    "runtimeChangeAllowedHere": false
+  },
+  "requiredCases": {
+    "minimumHoldoutCases": 40,
+    "mustIncludeEmergencyCases": false,
+    "mustIncludeOwnerLanguageVariants": true,
+    "mustIncludePoorEvidenceCases": false
+  },
+  "validationCases": [
+    {
+      "caseSourceId": "dog-triage-gold-v1-validation",
+      "split": "validation",
+      "sourcePath": "data/benchmarks/dog-triage/gold-v1-enriched.jsonl",
+      "sourceSha256": "208510654ae6988e592c12da071fc00f9fa48565d6fe02b54d86219667c37e43",
+      "recordCount": 226,
+      "containsOwnerLanguage": true,
+      "containsClinicalLabels": true,
+      "expectedEvidence": {
+        "inputSource": "dog-triage-gold-v1-validation",
+        "baselineModel": "current-runtime-extraction-route",
+        "candidateModelOrAdapter": null,
+        "observedOutputPath": null,
+        "reviewer": null
+      },
+      "scores": {
+        "structuredOutputValidity": {
+          "score": null,
+          "weight": 0.3,
+          "evidence": null
+        },
+        "ownerLanguageRecall": {
+          "score": null,
+          "weight": 0.25,
+          "evidence": null
+        },
+        "clinicalSlotIntegrity": {
+          "score": null,
+          "weight": 0.25,
+          "evidence": null
+        },
+        "latency": {
+          "score": null,
+          "weight": 0.1,
+          "evidence": null
+        },
+        "cost": {
+          "score": null,
+          "weight": 0.1,
+          "evidence": null
+        }
+      },
+      "blockers": [
+        {
+          "blocker": "invalid JSON or schema drift",
+          "observed": null,
+          "evidence": null
+        },
+        {
+          "blocker": "corrupts answered_questions, extracted_answers, or unresolved_question_ids",
+          "observed": null,
+          "evidence": null
+        },
+        {
+          "blocker": "uses holdout cases for prompt, adapter, or training iteration",
+          "observed": null,
+          "evidence": null
+        }
+      ],
+      "verdict": "not_run"
+    },
+    {
+      "caseSourceId": "dog-triage-sample-cases-validation",
+      "split": "validation",
+      "sourcePath": "data/benchmarks/dog-triage/sample-cases.json",
+      "sourceSha256": "5fa19dcf8d213aec926b4b9ca0d2359a26709f327a1066dac055e51f54ea4700",
+      "recordCount": 3,
+      "containsOwnerLanguage": true,
+      "containsClinicalLabels": true,
+      "expectedEvidence": {
+        "inputSource": "dog-triage-sample-cases-validation",
+        "baselineModel": "current-runtime-extraction-route",
+        "candidateModelOrAdapter": null,
+        "observedOutputPath": null,
+        "reviewer": null
+      },
+      "scores": {
+        "structuredOutputValidity": {
+          "score": null,
+          "weight": 0.3,
+          "evidence": null
+        },
+        "ownerLanguageRecall": {
+          "score": null,
+          "weight": 0.25,
+          "evidence": null
+        },
+        "clinicalSlotIntegrity": {
+          "score": null,
+          "weight": 0.25,
+          "evidence": null
+        },
+        "latency": {
+          "score": null,
+          "weight": 0.1,
+          "evidence": null
+        },
+        "cost": {
+          "score": null,
+          "weight": 0.1,
+          "evidence": null
+        }
+      },
+      "blockers": [
+        {
+          "blocker": "invalid JSON or schema drift",
+          "observed": null,
+          "evidence": null
+        },
+        {
+          "blocker": "corrupts answered_questions, extracted_answers, or unresolved_question_ids",
+          "observed": null,
+          "evidence": null
+        },
+        {
+          "blocker": "uses holdout cases for prompt, adapter, or training iteration",
+          "observed": null,
+          "evidence": null
+        }
+      ],
+      "verdict": "not_run"
+    }
+  ],
+  "holdoutCases": [
+    {
+      "caseSourceId": "dog-triage-wave3-freeze-holdout",
+      "split": "holdout",
+      "sourcePath": "data/benchmarks/dog-triage/wave3-freeze-manifest.json",
+      "sourceSha256": "f35c71aeffe92c9a9983feeaea6c643f6b054556dad8578f732b975c8ad353b9",
+      "recordCount": 226,
+      "containsOwnerLanguage": true,
+      "containsClinicalLabels": true,
+      "expectedEvidence": {
+        "inputSource": "dog-triage-wave3-freeze-holdout",
+        "baselineModel": "current-runtime-extraction-route",
+        "candidateModelOrAdapter": null,
+        "observedOutputPath": null,
+        "reviewer": null
+      },
+      "scores": {
+        "structuredOutputValidity": {
+          "score": null,
+          "weight": 0.3,
+          "evidence": null
+        },
+        "ownerLanguageRecall": {
+          "score": null,
+          "weight": 0.25,
+          "evidence": null
+        },
+        "clinicalSlotIntegrity": {
+          "score": null,
+          "weight": 0.25,
+          "evidence": null
+        },
+        "latency": {
+          "score": null,
+          "weight": 0.1,
+          "evidence": null
+        },
+        "cost": {
+          "score": null,
+          "weight": 0.1,
+          "evidence": null
+        }
+      },
+      "blockers": [
+        {
+          "blocker": "invalid JSON or schema drift",
+          "observed": null,
+          "evidence": null
+        },
+        {
+          "blocker": "corrupts answered_questions, extracted_answers, or unresolved_question_ids",
+          "observed": null,
+          "evidence": null
+        },
+        {
+          "blocker": "uses holdout cases for prompt, adapter, or training iteration",
+          "observed": null,
+          "evidence": null
+        }
+      ],
+      "verdict": "not_run"
+    }
+  ],
+  "promotionStatus": {
+    "allowed": false,
+    "reason": "No observed baseline/candidate outputs, no human scoring, no holdout verdict, and no owner approval are present."
+  },
+  "goodhartGuards": [
+    "do not score holdout until candidate is frozen",
+    "do not reuse holdout findings for prompt, adapter, or training iteration",
+    "do not promote from weighted score if any blocker is observed",
+    "do not optimize JSON shape while reducing clinical slot integrity"
+  ]
+}

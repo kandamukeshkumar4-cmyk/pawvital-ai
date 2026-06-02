@@ -1,0 +1,174 @@
+{
+  "ticket": "VET-1560",
+  "mode": "review-only-dashboard",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "overallStatus": "blocked",
+  "summary": "2 lane(s) blocked before the full objective is complete.",
+  "artifacts": [
+    {
+      "path": "plans/VET-1560-azure-sync-preflight.json",
+      "exists": true,
+      "sha256": "05f01309f6df160cc6a96d229903d590a9378c855181e49c900c4ad225a1861f"
+    },
+    {
+      "path": "plans/VET-1560-azure-live-sync-runbook.json",
+      "exists": true,
+      "sha256": "ecc5c7131a83ba9f4d5a07b5ed1fd57e3e356f51d6edb4d482f1c06af37bdf35"
+    },
+    {
+      "path": "plans/VET-1560-project-manager-sync-readiness.json",
+      "exists": true,
+      "sha256": "a729f82e726d028dbb2ddc1ac2c6c9f9c1aba3da1028e3c6146f3ff59d93ca1a"
+    },
+    {
+      "path": "plans/VET-1560-project-manager-local-sync.json",
+      "exists": true,
+      "sha256": "5febb8eda6290d19b99bb1d77e2d20873cb5023bd01227b4608c77cb85425c8d"
+    },
+    {
+      "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
+      "exists": true,
+      "sha256": "b7551eaf04974a4235988e6b0300e3f66c2f9e7ac87f4e55b7966fc00a6f1497"
+    },
+    {
+      "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
+      "exists": true,
+      "sha256": "b02a4a2a7d913307317da49c717a1d0d3a88b409cfe73bf1975256844399f17f"
+    },
+    {
+      "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
+      "exists": true,
+      "sha256": "a4bc894840e56b8bbe65fdbf2100284de5863d643ad428c609a8a75822427b6d"
+    },
+    {
+      "path": "plans/VET-1563-extraction-frozen-output-templates.json",
+      "exists": true,
+      "sha256": "8e64adcdb2a561e865531245b8b627cf995e42a48f58a42713e09fdff141aff9"
+    },
+    {
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
+      "exists": true,
+      "sha256": "c787bce0e2074f27f6717befebb3f6b36264bffae43e97e0b135a4f914fbd92b"
+    },
+    {
+      "path": "plans/VET-1563-extraction-output-capture-runbook.json",
+      "exists": true,
+      "sha256": "23b365c7f311ff925fd9c482b326c959010f6e832b3c3d8d1dfb240bcc1513fb"
+    },
+    {
+      "path": "plans/VET-1563-extraction-output-capture-authorization.json",
+      "exists": true,
+      "sha256": "a2ed39d42d982401087d506b18fd277b9e6e71d4bff468f398fdb3f713891c9b"
+    },
+    {
+      "path": "plans/VET-1563-extraction-scorecard-review-packet.json",
+      "exists": true,
+      "sha256": "bab1402bb28bf875177ee74f38f986e74af7bbf5750a8616fb22b616226dbc88"
+    },
+    {
+      "path": "plans/VET-1563-extraction-model-rollback-plan.json",
+      "exists": true,
+      "sha256": "2f75f73b1a3e3ca6ed57f16318f7c89f100ab06912c50c40e29bf79a8b9dd326"
+    },
+    {
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+      "exists": true,
+      "sha256": "0b823268c555cafd9f8eb598ebd34dd6124308d797188dc12f0ae0c8118606b9"
+    },
+    {
+      "path": "plans/VET-1563-protected-clinical-diff-proof.json",
+      "exists": true,
+      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+    },
+    {
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+      "exists": true,
+      "sha256": "76e39951537d0c2ac6a1cc06fd2450de8ddeb1c863c4836b3a2fa5aafb647f0e"
+    },
+    {
+      "path": "plans/VET-1563-extraction-owner-approval-request.json",
+      "exists": true,
+      "sha256": "23698c963e7012ceba85b96940649d6f498d72a1a92343ef44a0024505713199"
+    },
+    {
+      "path": "plans/VET-1564C-claim-language-review.json",
+      "exists": true,
+      "sha256": "f658182b3c14797a333901b84a20b1697d9b8b6641f44534edbc5aa88e441bde"
+    },
+    {
+      "path": "plans/VET-1564-longitudinal-readiness-contract.json",
+      "exists": true,
+      "sha256": "21ff009788c937303f812e0f7cf972f6767fb15d030810a3635f1fb3e108aeda"
+    },
+    {
+      "path": "plans/VET-1564-production-readiness.json",
+      "exists": true,
+      "sha256": "f151580f6611020087e3e1d45fc76f04af7ae2bdc9a4b38bf314cb950fe6e766"
+    },
+    {
+      "path": "plans/VET-1564-production-smoke-runbook.json",
+      "exists": true,
+      "sha256": "5045cf8a82183dbabde6b662926844e00542fcdd9cf7be52a0d6472dfdd913c4"
+    },
+    {
+      "path": "plans/VET-1565-tugboat-governance-plan.json",
+      "exists": true,
+      "sha256": "e170f2f7a1d90bc3195a88141900be716e121cc55857c0eaddadcd1e378feb42"
+    },
+    {
+      "path": "plans/VET-1560-regeneration-summary.json",
+      "exists": true,
+      "sha256": "17e1630c85024355b1fab9db3d0b666c3fccf78974be1a9c84254c2b3fffb968"
+    }
+  ],
+  "lanes": [
+    {
+      "id": "project-manager",
+      "label": "Project-manager sync",
+      "status": "ready",
+      "summary": "5 tickets queued in the local project-manager fallback; Azure live sync remains blocked by: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PAT.",
+      "nextAction": "Use plans/VET-1560-project-manager-local-sync.json as the current execution queue; add Azure credentials only in a separate live-sync pass."
+    },
+    {
+      "id": "model-nim-promotion",
+      "label": "Model/NIM promotion",
+      "status": "blocked",
+      "summary": "5 blocked evidence categories; candidate selection resolved=false; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 3 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6.",
+      "nextAction": "validation=0, holdout=0, threshold=4.2"
+    },
+    {
+      "id": "claim-language",
+      "label": "Claim-language review",
+      "status": "blocked",
+      "summary": "missing review inputs: src/lib/product-intelligence.ts, src/components/analytics/product-intelligence-panel.tsx",
+      "nextAction": "Resolve blocked claim-language findings before expanding product copy."
+    },
+    {
+      "id": "whoop-product-contract",
+      "label": "Whoop-style product contract",
+      "status": "ready",
+      "summary": "3 implementation tickets defined; production smoke ready=false, live migration applied=false; smoke runbook has 5 evidence steps.",
+      "nextAction": "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json."
+    },
+    {
+      "id": "instruction-governance",
+      "label": "Instruction governance",
+      "status": "ready",
+      "summary": "VET-1565 defines a proposal-only Tugboat adoption plan with 4 phases and 6 PawVital boundaries.",
+      "nextAction": "Use VET-1565 for any Tugboat-style instruction observability work; do not install, run llmff, or apply instruction patches without a separate approved trace bundle and reviewer decision."
+    }
+  ],
+  "blockers": [
+    "Model/NIM promotion: 5 blocked evidence categories; candidate selection resolved=false; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 3 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6.",
+    "Claim-language review: missing review inputs: src/lib/product-intelligence.ts, src/components/analytics/product-intelligence-panel.tsx"
+  ],
+  "guardrails": [
+    "Do not treat local project-manager fallback evidence as Azure Boards live-sync evidence.",
+    "Do not mutate runtime NIM, narrow-pack, provider env, or model routing from this dashboard.",
+    "Do not promote a model from validation-only or unpopulated scorecard evidence.",
+    "Do not weaken protected deterministic clinical files while improving product intelligence.",
+    "Keep owner-visible readiness copy tied to evidence coverage and claim-language review.",
+    "Keep Tugboat-style instruction optimization proposal-only until a reviewer approves a trace bundle, policy file, eval suite, and rollback plan.",
+    "Use npm run vet1560:regenerate-all to refresh this evidence chain before handoff."
+  ]
+}

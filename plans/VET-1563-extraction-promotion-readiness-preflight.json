@@ -1,0 +1,262 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "read-only-preflight",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "summary": {
+    "readyForPromotionTicket": false,
+    "readyEvidenceCount": 3,
+    "blockedEvidenceCount": 5,
+    "weightedScoreMinimum": 4.2,
+    "validationAverage": 0,
+    "holdoutAverage": 0,
+    "outputCases": 3,
+    "outputReadyCases": 0,
+    "baselineOutputHashes": 0,
+    "candidateOutputHashes": 0,
+    "invalidJsonOutputs": 0,
+    "invalidSchemaOutputs": 0,
+    "candidateGateBlockedCount": 3,
+    "candidateContentHashWithoutEvidenceHashCount": 0
+  },
+  "inputArtifacts": {
+    "checklist": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-checklist.json",
+      "exists": true,
+      "sha256": "981368103151454bb73e3e411cf115dc1b48d50c31492b0a6a9eab7aac0475e0"
+    },
+    "scorecard": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-shadow-eval-scorecard.json",
+      "exists": true,
+      "sha256": "89752e472d1788a72966fd3b5175c9b608e2a6df8f379f8829bc5982c530b09c"
+    },
+    "outputCapturePlan": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-capture-plan.json",
+      "exists": true,
+      "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+    },
+    "outputTemplates": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-templates.json",
+      "exists": true,
+      "sha256": "8e64adcdb2a561e865531245b8b627cf995e42a48f58a42713e09fdff141aff9"
+    },
+    "outputStatus": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-status.json",
+      "exists": true,
+      "sha256": "c787bce0e2074f27f6717befebb3f6b36264bffae43e97e0b135a4f914fbd92b"
+    },
+    "promotionTicket": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-runtime-promotion-ticket.json",
+      "exists": true,
+      "sha256": "76e39951537d0c2ac6a1cc06fd2450de8ddeb1c863c4836b3a2fa5aafb647f0e"
+    },
+    "ownerApprovalRequest": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-owner-approval-request.json",
+      "exists": true,
+      "sha256": "76a88bbde66c0d65958c1339579af76aecdddcec1017173ec816a2eae0658160"
+    },
+    "promotionSmokeRunbook": {
+      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-smoke-runbook.json",
+      "exists": true,
+      "sha256": "0b823268c555cafd9f8eb598ebd34dd6124308d797188dc12f0ae0c8118606b9"
+    }
+  },
+  "requiredEvidence": [
+    {
+      "id": "scorecard-populated",
+      "status": "blocked",
+      "blockers": [
+        "validation average 0 below threshold 4.2",
+        "holdout average 0 below threshold 4.2",
+        "scorecard still contains unresolved issues"
+      ]
+    },
+    {
+      "id": "frozen-observed-outputs",
+      "status": "blocked",
+      "blockers": [
+        "3 case(s) not ready for human review",
+        "3 baseline output file(s) missing",
+        "3 candidate output file(s) missing"
+      ]
+    },
+    {
+      "id": "owner-approval",
+      "status": "blocked",
+      "blockers": [
+        "explicit owner approval missing"
+      ]
+    },
+    {
+      "id": "rollback-plan",
+      "status": "ready",
+      "blockers": []
+    },
+    {
+      "id": "promotion-smoke-runbook",
+      "status": "blocked",
+      "blockers": [
+        "Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready."
+      ]
+    },
+    {
+      "id": "separate-promotion-ticket",
+      "status": "blocked",
+      "blockers": [
+        "validation score below 4.2",
+        "holdout score below 4.2",
+        "scorecard contains unresolved issues",
+        "frozen baseline/candidate outputs and hashes are incomplete",
+        "candidate model or adapter identity is not approved",
+        "explicit owner approval artifact is missing"
+      ]
+    },
+    {
+      "id": "protected-clinical-no-diff",
+      "status": "ready",
+      "blockers": []
+    },
+    {
+      "id": "runtime-routing-no-diff-here",
+      "status": "ready",
+      "blockers": []
+    }
+  ],
+  "outputGateStatus": {
+    "candidateGateBlockedCount": 3,
+    "candidateContentHashWithoutEvidenceHashCount": 0,
+    "candidateGates": [
+      {
+        "caseSourceId": "dog-triage-gold-v1-validation",
+        "split": "validation",
+        "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+        "candidateOutputSha256": null,
+        "candidateOutputContentSha256": null,
+        "candidateSchemaValid": false,
+        "candidateBlocker": "output file missing",
+        "captureGate": {
+          "status": "blocked",
+          "requiredApprovalScope": "validation-output-capture-only",
+          "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+          "candidateIdentityResolved": false,
+          "captureApprovalComplete": false,
+          "blockers": [
+            "candidate identity is not resolved",
+            "scoped validation-output-capture approval is not complete"
+          ]
+        }
+      },
+      {
+        "caseSourceId": "dog-triage-sample-cases-validation",
+        "split": "validation",
+        "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+        "candidateOutputSha256": null,
+        "candidateOutputContentSha256": null,
+        "candidateSchemaValid": false,
+        "candidateBlocker": "output file missing",
+        "captureGate": {
+          "status": "blocked",
+          "requiredApprovalScope": "validation-output-capture-only",
+          "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+          "candidateIdentityResolved": false,
+          "captureApprovalComplete": false,
+          "blockers": [
+            "candidate identity is not resolved",
+            "scoped validation-output-capture approval is not complete"
+          ]
+        }
+      },
+      {
+        "caseSourceId": "dog-triage-wave3-freeze-holdout",
+        "split": "holdout",
+        "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+        "candidateOutputSha256": null,
+        "candidateOutputContentSha256": null,
+        "candidateSchemaValid": false,
+        "candidateBlocker": "output file missing",
+        "captureGate": {
+          "status": "blocked",
+          "requiredApprovalScope": "validation-output-capture-only",
+          "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+          "candidateIdentityResolved": false,
+          "captureApprovalComplete": false,
+          "blockers": [
+            "candidate identity is not resolved",
+            "scoped validation-output-capture approval is not complete"
+          ]
+        }
+      }
+    ]
+  },
+  "blockers": [
+    "scorecard-populated: validation average 0 below threshold 4.2",
+    "scorecard-populated: holdout average 0 below threshold 4.2",
+    "scorecard-populated: scorecard still contains unresolved issues",
+    "frozen-observed-outputs: 3 case(s) not ready for human review",
+    "frozen-observed-outputs: 3 baseline output file(s) missing",
+    "frozen-observed-outputs: 3 candidate output file(s) missing",
+    "owner-approval: explicit owner approval missing",
+    "promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.",
+    "separate-promotion-ticket: validation score below 4.2",
+    "separate-promotion-ticket: holdout score below 4.2",
+    "separate-promotion-ticket: scorecard contains unresolved issues",
+    "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+    "separate-promotion-ticket: candidate model or adapter identity is not approved",
+    "separate-promotion-ticket: explicit owner approval artifact is missing",
+    "output-capture: 3 baseline output hash(es) missing",
+    "output-capture: 3 candidate output hash(es) missing"
+  ],
+  "nextActions": [
+    {
+      "evidenceId": "scorecard-populated",
+      "action": "validation=0, holdout=0, threshold=4.2",
+      "blockers": [
+        "validation average 0 below threshold 4.2",
+        "holdout average 0 below threshold 4.2",
+        "scorecard still contains unresolved issues"
+      ]
+    },
+    {
+      "evidenceId": "frozen-observed-outputs",
+      "action": "status ready=0/3, missing baseline=3, missing candidate=3, invalid JSON=0, invalid schema=0",
+      "blockers": [
+        "3 case(s) not ready for human review",
+        "3 baseline output file(s) missing",
+        "3 candidate output file(s) missing"
+      ]
+    },
+    {
+      "evidenceId": "owner-approval",
+      "action": "Owner approval must be recorded outside the generated artifact.",
+      "blockers": [
+        "explicit owner approval missing"
+      ]
+    },
+    {
+      "evidenceId": "promotion-smoke-runbook",
+      "action": "Promotion smoke runbook defines 5 evidence steps and 5 required attachments; readyForSmoke=false.",
+      "blockers": [
+        "Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready."
+      ]
+    },
+    {
+      "evidenceId": "separate-promotion-ticket",
+      "action": "Separate promotion ticket draft VET-1563P exists; readyToOpenPromotionPr=false.",
+      "blockers": [
+        "validation score below 4.2",
+        "holdout score below 4.2",
+        "scorecard contains unresolved issues",
+        "frozen baseline/candidate outputs and hashes are incomplete",
+        "candidate model or adapter identity is not approved",
+        "explicit owner approval artifact is missing"
+      ]
+    }
+  ],
+  "guardrails": [
+    "Do not mutate runtime model routing from this preflight.",
+    "Do not open a promotion PR until readyForPromotionTicket is true.",
+    "Do not treat validation-only score as promotion evidence.",
+    "Do not train on or tune against holdout cases.",
+    "Keep protected clinical files authoritative unless a separate clinical ticket authorizes changes."
+  ]
+}
