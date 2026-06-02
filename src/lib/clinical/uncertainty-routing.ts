@@ -5,6 +5,11 @@ import {
   type PetProfile,
   type TriageSession,
 } from "@/lib/triage-engine";
+import {
+  EMERGENCY_GRADE_CRITICAL_QUESTIONS,
+  isEmergencyGradeCriticalQuestionId,
+  type EmergencyGradeCriticalQuestionId,
+} from "@/lib/clinical/emergency-grade-critical-questions";
 import { resolveUncertainty } from "./uncertainty-contract";
 
 export type UncertaintyTerminalState = "cannot_assess" | "out_of_scope";
@@ -89,20 +94,10 @@ const ALTERNATE_OBSERVABLE_PATTERNS: AlternateObservablePattern[] = [
   },
 ];
 
-const REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS = [
-  "breathing_onset",
-  "consciousness_level",
-  "gum_color",
-  "breathing_status",
-] as const;
-
-type ReportBlockingCriticalInfoQuestionId =
-  (typeof REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS)[number];
-
 type ReportBlockingCriticalInfoReason = "missing" | "unknown";
 
 export interface ReportBlockingCriticalInfoFinding {
-  questionId: ReportBlockingCriticalInfoQuestionId;
+  questionId: EmergencyGradeCriticalQuestionId;
   questionText: string | null;
   reason: ReportBlockingCriticalInfoReason;
 }
@@ -154,15 +149,13 @@ function getAlternateObservablePattern(
 
 function isReportBlockingCriticalInfoQuestionId(
   questionId: string
-): questionId is ReportBlockingCriticalInfoQuestionId {
-  return REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS.includes(
-    questionId as ReportBlockingCriticalInfoQuestionId
-  );
+): questionId is EmergencyGradeCriticalQuestionId {
+  return isEmergencyGradeCriticalQuestionId(questionId);
 }
 
 function isQuestionRelevantToCurrentSession(
   session: TriageSession,
-  questionId: ReportBlockingCriticalInfoQuestionId
+  questionId: EmergencyGradeCriticalQuestionId
 ): boolean {
   if (
     session.answered_questions.includes(questionId) ||
@@ -181,7 +174,7 @@ function isUnknownCriticalInfoValue(value: unknown): boolean {
 export function findReportBlockingCriticalInfo(
   session: TriageSession
 ): ReportBlockingCriticalInfoFinding | null {
-  for (const questionId of REPORT_BLOCKING_CRITICAL_INFO_QUESTION_IDS) {
+  for (const questionId of EMERGENCY_GRADE_CRITICAL_QUESTIONS) {
     if (!isQuestionRelevantToCurrentSession(session, questionId)) {
       continue;
     }

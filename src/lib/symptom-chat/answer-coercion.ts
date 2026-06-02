@@ -6,6 +6,7 @@ import {
 } from "@/lib/triage-engine";
 import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 import { coerceAmbiguousReplyToUnknown } from "@/lib/ambiguous-reply";
+import { isEmergencyGradeCriticalQuestionId } from "@/lib/clinical/emergency-grade-critical-questions";
 
 export function getNextQuestionAvoidingRepeat(
   session: TriageSession,
@@ -183,16 +184,8 @@ export function normalizeIntentText(rawMessage: string): string {
     .replace(/\s+/g, " ");
 }
 
-const UNSAFE_EMERGENCY_QUESTIONS = new Set([
-  "breathing_onset",
-  "breathing_status",
-  "gum_color",
-  "consciousness_level",
-  "seizure_duration",
-]);
-
 export function shouldEscalateForUnknown(questionId: string): boolean {
-  return UNSAFE_EMERGENCY_QUESTIONS.has(questionId);
+  return isEmergencyGradeCriticalQuestionId(questionId);
 }
 
 export function questionAllowsCanonicalUnknown(question: {

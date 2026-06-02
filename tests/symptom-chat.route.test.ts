@@ -8258,6 +8258,32 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.owner_message).toContain("What color are your dog's gums?");
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
     });
+
+    it("VET-1382: generate_report blocks when seizure duration is still unanswered", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["seizure_collapse"]);
+      session = recordAnswer(session, "consciousness_level", "alert");
+      session = recordAnswer(session, "gum_color", "pink_normal");
+      session = recordAnswer(session, "breathing_status", "normal");
+      session.case_memory = {
+        ...session.case_memory!,
+        latest_owner_turn:
+          "He collapsed, but he is alert now, breathing normally, and his gums are pink.",
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_seizure_duration");
+      expect(payload.ready_for_report).toBe(false);
+      expect(payload.owner_message).toContain(
+        "How long did the seizure or collapse episode last?"
+      );
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
   });
 
   describe("VET-1029 critical info and alternate observable regression matrix", () => {
