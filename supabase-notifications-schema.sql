@@ -40,6 +40,24 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 ALTER TABLE notifications         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
+-- Data API grants are explicit so this stays safe across Supabase projects that
+-- no longer expose new public tables automatically. RLS below still owns row
+-- access.
+GRANT SELECT, UPDATE, DELETE ON TABLE public.notifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.notifications TO service_role;
+GRANT SELECT, INSERT, UPDATE ON TABLE public.notification_preferences TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.notification_preferences TO service_role;
+
+-- Keep reruns idempotent when a previous recovery created the tables/policies
+-- but did not finish the full schema.
+DROP POLICY IF EXISTS "Users read own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users delete own notifications" ON notifications;
+DROP POLICY IF EXISTS "Users update own notifications" ON notifications;
+DROP POLICY IF EXISTS "System inserts notifications" ON notifications;
+DROP POLICY IF EXISTS "Users read own preferences" ON notification_preferences;
+DROP POLICY IF EXISTS "Users upsert own preferences" ON notification_preferences;
+DROP POLICY IF EXISTS "Users update own preferences" ON notification_preferences;
+
 -- Users can read and delete their own notifications
 CREATE POLICY "Users read own notifications"
   ON notifications FOR SELECT

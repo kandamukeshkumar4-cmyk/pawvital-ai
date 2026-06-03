@@ -5,6 +5,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { isMissingNotificationsTableError } from "@/lib/notifications/table-errors";
 
 export async function POST(request: Request) {
   const rateLimitResult = await checkRateLimit(
@@ -61,6 +62,19 @@ export async function POST(request: Request) {
     .eq("read", false);
 
   if (unreadError) {
+    if (isMissingNotificationsTableError(unreadError)) {
+      console.warn(
+        "[Notifications] Notifications schema unavailable; treating mark-all-read as a no-op."
+      );
+      return NextResponse.json({
+        success: true,
+        updatedCount: 0,
+        alreadyRead: true,
+        unavailable: true,
+        code: "NOTIFICATIONS_SCHEMA_UNAVAILABLE",
+      });
+    }
+
     console.error(
       "[Notifications] Failed to load unread notifications before mark-all-read:",
       unreadError
@@ -87,6 +101,19 @@ export async function POST(request: Request) {
     .eq("read", false);
 
   if (error) {
+    if (isMissingNotificationsTableError(error)) {
+      console.warn(
+        "[Notifications] Notifications schema unavailable during mark-all-read update."
+      );
+      return NextResponse.json({
+        success: true,
+        updatedCount: 0,
+        alreadyRead: true,
+        unavailable: true,
+        code: "NOTIFICATIONS_SCHEMA_UNAVAILABLE",
+      });
+    }
+
     console.error("[Notifications] Failed to mark all as read:", error);
     return NextResponse.json(
       { error: "Unable to mark notifications as read" },

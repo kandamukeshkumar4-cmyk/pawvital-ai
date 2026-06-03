@@ -5,6 +5,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { isMissingNotificationsTableError } from "@/lib/notifications/table-errors";
 
 export async function PATCH(
   request: NextRequest,
@@ -92,6 +93,19 @@ export async function PATCH(
     .maybeSingle();
 
   if (error) {
+    if (isMissingNotificationsTableError(error)) {
+      console.warn(
+        "[Notifications] Notifications schema unavailable; notification cannot be updated."
+      );
+      return NextResponse.json(
+        {
+          error: "Notification not found",
+          code: "NOTIFICATIONS_SCHEMA_UNAVAILABLE",
+        },
+        { status: 404 }
+      );
+    }
+
     console.error("[Notifications] Failed to update notification:", error);
     return NextResponse.json(
       { error: "Unable to update notification" },

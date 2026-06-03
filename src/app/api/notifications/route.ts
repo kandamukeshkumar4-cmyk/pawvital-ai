@@ -5,6 +5,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { isMissingNotificationsTableError } from "@/lib/notifications/table-errors";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -80,6 +81,17 @@ export async function GET(request: Request) {
   const { data, error } = await query;
 
   if (error) {
+    if (isMissingNotificationsTableError(error)) {
+      console.warn(
+        "[Notifications] Notifications schema unavailable; returning empty list."
+      );
+      return NextResponse.json({
+        data: [],
+        unavailable: true,
+        code: "NOTIFICATIONS_SCHEMA_UNAVAILABLE",
+      });
+    }
+
     console.error("[Notifications] Failed to fetch notifications:", error);
     return NextResponse.json(
       { error: "Unable to fetch notifications" },
