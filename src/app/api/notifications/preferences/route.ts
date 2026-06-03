@@ -6,6 +6,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { isMissingNotificationsTableError } from "@/lib/notifications/table-errors";
 
 const PreferencesUpdateSchema = z.object({
   email_digest: z.boolean().optional(),
@@ -14,6 +15,14 @@ const PreferencesUpdateSchema = z.object({
   outcome_reminders: z.boolean().optional(),
   digest_frequency: z.enum(["daily", "weekly", "never"]).optional(),
 });
+
+const DEFAULT_PREFERENCES = {
+  email_digest: true,
+  push_enabled: false,
+  urgency_alerts: true,
+  outcome_reminders: true,
+  digest_frequency: "daily" as const,
+};
 
 async function getClient(request: Request) {
   const rateLimitResult = await checkRateLimit(
@@ -86,6 +95,17 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (error) {
+    if (isMissingNotificationsTableError(error)) {
+      console.warn(
+        "[NotificationPreferences] Notifications schema unavailable; returning defaults."
+      );
+      return NextResponse.json({
+        data: DEFAULT_PREFERENCES,
+        unavailable: true,
+        code: "NOTIFICATIONS_SCHEMA_UNAVAILABLE",
+      });
+    }
+
     console.error(
       "[NotificationPreferences] Failed to fetch preferences:",
       error
@@ -97,15 +117,7 @@ export async function GET(request: Request) {
   }
 
   // Return defaults when the row doesn't exist yet
-  const defaults = {
-    email_digest: true,
-    push_enabled: false,
-    urgency_alerts: true,
-    outcome_reminders: true,
-    digest_frequency: "daily" as const,
-  };
-
-  return NextResponse.json({ data: data ?? defaults });
+  return NextResponse.json({ data: data ?? DEFAULT_PREFERENCES });
 }
 
 export async function PUT(request: Request) {
@@ -158,6 +170,19 @@ export async function PUT(request: Request) {
     .maybeSingle();
 
   if (error) {
+    if (isMissingNotificationsTableError(error)) {
+      console.warn(
+        "[NotificationPreferences] Notifications schema unavailable; preferences were not persisted."
+      );
+      return NextResponse.json(
+        {
+          error: "Notification preferences are temporarily unavailable",
+          code: "NOTIFICATIONS_SCHEMA_UNAVAILABLE",
+        },
+        { status: 503 }
+      );
+    }
+
     console.error(
       "[NotificationPreferences] Failed to update preferences:",
       error
