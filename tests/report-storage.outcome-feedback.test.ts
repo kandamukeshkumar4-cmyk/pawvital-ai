@@ -101,11 +101,13 @@ function createSupabaseMock(configByTable: Record<string, TableConfig>) {
 
 describe("saveOutcomeFeedbackToDB ownership guards", () => {
   const SUPABASE_URL = "https://paw-vital.supabase.co";
+  const SERVER_SUPABASE_URL = "https://service.paw-vital.supabase.co";
   const SERVICE_ROLE_KEY = "service-role-key";
 
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env.SUPABASE_URL = SERVER_SUPABASE_URL;
     process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
     process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_KEY;
     mockBuildThresholdProposalDraft.mockReturnValue({
@@ -292,5 +294,45 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
       warnings: ["Invalid symptom check identifier"],
     });
     expect(mockCreateClient).not.toHaveBeenCalled();
+  });
+
+  it("uses SUPABASE_URL before NEXT_PUBLIC_SUPABASE_URL for trusted outcome feedback writes", async () => {
+    process.env.SUPABASE_URL = SERVER_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://stale-public.supabase.co\n";
+
+    const { supabase } = createSupabaseMock({
+      pets: {
+        selectResult: {
+          data: { user_id: "33333333-3333-3333-3333-333333333333" },
+          error: null,
+        },
+      },
+      symptom_checks: {
+        selectResult: {
+          data: {
+            id: "11111111-1111-1111-1111-111111111111",
+            pet_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            symptoms: "vomiting",
+            severity: "high",
+            recommendation: "vet_24h",
+            ai_response: JSON.stringify({ title: "GI upset report" }),
+          },
+          error: null,
+        },
+      },
+    });
+    mockCreateClient.mockReturnValue(supabase);
+
+    const { saveOutcomeFeedbackToDB } = await import("@/lib/report-storage");
+    await saveOutcomeFeedbackToDB({
+      symptomCheckId: "11111111-1111-1111-1111-111111111111",
+      matchedExpectation: "yes",
+      requestingUserId: "33333333-3333-3333-3333-333333333333",
+    });
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      SERVER_SUPABASE_URL,
+      SERVICE_ROLE_KEY
+    );
   });
 });

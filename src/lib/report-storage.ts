@@ -6,6 +6,7 @@ import {
   extractSafeSupabaseErrorDetails,
   type SafeSupabaseErrorDetails,
 } from "./supabase-error";
+import { getServiceSupabaseUrl } from "./supabase-admin";
 
 export interface OutcomeFeedbackInput {
   symptomCheckId: string;
@@ -44,8 +45,8 @@ export interface SaveSymptomReportOptions {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getServerSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getServiceSupabaseUrl();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
   if (!url || !serviceKey || url.includes("your_supabase")) {
     return null;
   }

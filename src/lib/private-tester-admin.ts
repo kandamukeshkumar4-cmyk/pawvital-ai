@@ -6,6 +6,7 @@ import {
   getPrivateTesterBlockedEmails,
   normalizePrivateTesterEmail,
 } from "./private-tester-access";
+import { getServiceSupabaseUrl } from "./supabase-admin";
 
 interface ServiceProfileRow {
   email: string | null;
@@ -358,8 +359,8 @@ export function buildPrivateTesterDashboardFallback(
 }
 
 function getServiceSupabase(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getServiceSupabaseUrl();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
 
   if (!url || !serviceKey || url.includes("your_supabase")) {
     throw new Error("SUPABASE_SERVICE_ROLE_REQUIRED");

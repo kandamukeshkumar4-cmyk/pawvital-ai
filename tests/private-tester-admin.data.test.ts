@@ -100,6 +100,7 @@ function buildMockSupabase(input?: {
 
 describe("private tester admin data helpers", () => {
   const envSnapshot = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     PRIVATE_TESTER_ALLOWED_EMAILS: process.env.PRIVATE_TESTER_ALLOWED_EMAILS,
     PRIVATE_TESTER_MODE: process.env.PRIVATE_TESTER_MODE,
@@ -109,6 +110,7 @@ describe("private tester admin data helpers", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env.SUPABASE_URL = "https://service.example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.PRIVATE_TESTER_ALLOWED_EMAILS = "tester@example.com";
     process.env.PRIVATE_TESTER_MODE = "1";
@@ -117,6 +119,12 @@ describe("private tester admin data helpers", () => {
   });
 
   afterAll(() => {
+    if (envSnapshot.SUPABASE_URL === undefined) {
+      delete process.env.SUPABASE_URL;
+    } else {
+      process.env.SUPABASE_URL = envSnapshot.SUPABASE_URL;
+    }
+
     if (envSnapshot.NEXT_PUBLIC_SUPABASE_URL === undefined) {
       delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     } else {
@@ -249,5 +257,27 @@ describe("private tester admin data helpers", () => {
     expect(disabled.counts.journalEntries).toBe(0);
     expect(restored.adminState.accessDisabled).toBe(false);
     expect(restored.counts.journalEntries).toBe(0);
+  });
+
+  it("prefers SUPABASE_URL for service-role admin access when the public URL is stale", async () => {
+    process.env.SUPABASE_URL = "https://service.example.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://stale.example.supabase.co\n";
+
+    const { listPrivateTesterSummaries } = await import(
+      "@/lib/private-tester-admin"
+    );
+
+    await listPrivateTesterSummaries();
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      "https://service.example.supabase.co",
+      "service-role-key",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
   });
 });
