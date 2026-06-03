@@ -249,6 +249,7 @@ describe("private tester cohort command center helpers", () => {
       emergencyResults: 1,
       feedbackSubmitted: 3,
       negativeFeedback: 2,
+      questionFlowIssueFlags: 1,
       repeatedQuestionFlags: 1,
       reportFailures: 1,
       reportsOpened: 3,
@@ -265,6 +266,12 @@ describe("private tester cohort command center helpers", () => {
       }),
     ]);
     expect(dashboard.highRiskSessions).toHaveLength(2);
+    expect(dashboard.filters.questionFlowIssueSessions).toHaveLength(1);
+    expect(dashboard.triage.P1[0]).toMatchObject({
+      category: "Question flow issue",
+      rationale:
+        "The stored case ledger flagged an incomplete, confusing, or loop-prone question flow.",
+    });
     expect(dashboard.triage.P0).toHaveLength(1);
     expect(dashboard.triage.P1).toHaveLength(1);
     expect(dashboard.triage.P3).toHaveLength(1);

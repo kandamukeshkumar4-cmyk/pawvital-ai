@@ -33,6 +33,8 @@ export interface PrivateTesterCohortCommandCenter {
     latestSessions: TesterFeedbackCaseSummary[];
     negativeFeedbackSessions: TesterFeedbackCaseSummary[];
     noFeedbackSessions: TesterFeedbackCaseSummary[];
+    questionFlowIssueSessions: TesterFeedbackCaseSummary[];
+    /** @deprecated Use questionFlowIssueSessions. */
     repeatedQuestionSessions: TesterFeedbackCaseSummary[];
   };
   highRiskSessions: TesterFeedbackCaseSummary[];
@@ -43,6 +45,8 @@ export interface PrivateTesterCohortCommandCenter {
     emergencyResults: number;
     feedbackSubmitted: number;
     negativeFeedback: number;
+    questionFlowIssueFlags: number;
+    /** @deprecated Use questionFlowIssueFlags. */
     repeatedQuestionFlags: number;
     reportFailures: number;
     reportsOpened: number;
@@ -99,9 +103,9 @@ function classifyCase(entry: TesterFeedbackCaseSummary): PrivateTesterTriageCase
   if (hasQuestionFlowIssue(entry)) {
     return {
       caseSummary: entry,
-      category: "Repeated question / flow loop",
+      category: "Question flow issue",
       rationale:
-        "The stored case ledger flagged a repeated-question or clarification-loop issue.",
+        "The stored case ledger flagged an incomplete, confusing, or loop-prone question flow.",
       severity: "P1",
     };
   }
@@ -206,7 +210,7 @@ export function buildPrivateTesterCohortCommandCenter(input: {
     input.feedbackDashboard.reportFailureCases,
   ]);
 
-  const repeatedQuestionSessions = allCases.filter(hasQuestionFlowIssue);
+  const questionFlowIssueSessions = allCases.filter(hasQuestionFlowIssue);
   const highRiskSessions = allCases.filter(
     (entry) =>
       entry.emergencyCase ||
@@ -225,7 +229,8 @@ export function buildPrivateTesterCohortCommandCenter(input: {
       latestSessions: input.feedbackDashboard.latestCases,
       negativeFeedbackSessions: input.feedbackDashboard.negativeFeedbackCases,
       noFeedbackSessions: input.feedbackDashboard.noFeedbackCases,
-      repeatedQuestionSessions,
+      questionFlowIssueSessions,
+      repeatedQuestionSessions: questionFlowIssueSessions,
     },
     highRiskSessions,
     notes: buildNotes(input.privateTesterDashboard, accessIssues),
@@ -238,7 +243,8 @@ export function buildPrivateTesterCohortCommandCenter(input: {
       emergencyResults: input.feedbackDashboard.summary.emergencyCases,
       feedbackSubmitted: input.feedbackDashboard.summary.feedbackSubmittedCases,
       negativeFeedback: input.feedbackDashboard.summary.negativeFeedbackCases,
-      repeatedQuestionFlags: repeatedQuestionSessions.length,
+      questionFlowIssueFlags: questionFlowIssueSessions.length,
+      repeatedQuestionFlags: questionFlowIssueSessions.length,
       reportFailures: input.feedbackDashboard.summary.reportFailureCases,
       reportsOpened: allCases.filter((entry) => Boolean(entry.reportId)).length,
       signInFailures: 0,
