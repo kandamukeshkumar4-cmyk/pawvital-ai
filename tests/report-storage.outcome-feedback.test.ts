@@ -1,5 +1,7 @@
 const mockCreateClient = jest.fn();
 const mockBuildThresholdProposalDraft = jest.fn();
+const SERVICE_ROLE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UifQ.signature";
 
 jest.mock("@supabase/supabase-js", () => ({
   createClient: (...args: unknown[]) => mockCreateClient(...args),
@@ -102,7 +104,7 @@ function createSupabaseMock(configByTable: Record<string, TableConfig>) {
 describe("saveOutcomeFeedbackToDB ownership guards", () => {
   const SUPABASE_URL = "https://paw-vital.supabase.co";
   const SERVER_SUPABASE_URL = "https://service.paw-vital.supabase.co";
-  const SERVICE_ROLE_KEY = "service-role-key";
+  const SERVICE_ROLE_KEY = SERVICE_ROLE_JWT;
 
   beforeEach(() => {
     jest.resetModules();
@@ -292,6 +294,26 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
       proposalCreated: false,
       structuredStored: false,
       warnings: ["Invalid symptom check identifier"],
+    });
+    expect(mockCreateClient).not.toHaveBeenCalled();
+  });
+
+  it("fails closed for malformed service-role keys without creating a client", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+
+    const { saveOutcomeFeedbackToDB } = await import("@/lib/report-storage");
+    const result = await saveOutcomeFeedbackToDB({
+      symptomCheckId: "11111111-1111-1111-1111-111111111111",
+      matchedExpectation: "yes",
+      requestingUserId: "33333333-3333-3333-3333-333333333333",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      legacyUpdated: false,
+      proposalCreated: false,
+      structuredStored: false,
+      warnings: ["Supabase is not configured"],
     });
     expect(mockCreateClient).not.toHaveBeenCalled();
   });

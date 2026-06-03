@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildPrivateTesterConfigSummary,
   evaluatePrivateTesterAccess,
@@ -6,7 +6,7 @@ import {
   getPrivateTesterBlockedEmails,
   normalizePrivateTesterEmail,
 } from "./private-tester-access";
-import { getServiceSupabaseUrl } from "./supabase-admin";
+import { getServiceSupabase as getConfiguredServiceSupabase } from "./supabase-admin";
 
 interface ServiceProfileRow {
   email: string | null;
@@ -359,19 +359,18 @@ export function buildPrivateTesterDashboardFallback(
 }
 
 function getServiceSupabase(): SupabaseClient {
-  const url = getServiceSupabaseUrl();
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
-
-  if (!url || !serviceKey || url.includes("your_supabase")) {
-    throw new Error("SUPABASE_SERVICE_ROLE_REQUIRED");
-  }
-
-  return createClient(url, serviceKey, {
+  const supabase = getConfiguredServiceSupabase({
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+
+  if (!supabase) {
+    throw new Error("SUPABASE_SERVICE_ROLE_REQUIRED");
+  }
+
+  return supabase;
 }
 
 async function resolveProfileByIdentity(
