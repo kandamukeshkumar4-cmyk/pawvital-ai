@@ -249,6 +249,7 @@ describe("private tester cohort command center helpers", () => {
       emergencyResults: 1,
       feedbackSubmitted: 3,
       negativeFeedback: 2,
+      questionFlowIssueFlags: 1,
       repeatedQuestionFlags: 1,
       reportFailures: 1,
       reportsOpened: 3,
@@ -265,8 +266,44 @@ describe("private tester cohort command center helpers", () => {
       }),
     ]);
     expect(dashboard.highRiskSessions).toHaveLength(2);
+    expect(dashboard.filters.questionFlowIssueSessions).toHaveLength(1);
+    expect(dashboard.filters.repeatedQuestionSessions).toBe(
+      dashboard.filters.questionFlowIssueSessions
+    );
+    expect(dashboard.summary.repeatedQuestionFlags).toBe(
+      dashboard.summary.questionFlowIssueFlags
+    );
+    expect(dashboard.triage.P1[0]).toMatchObject({
+      category: "Question flow issue",
+      rationale:
+        "The stored case ledger flagged an incomplete, confusing, or loop-prone question flow.",
+    });
     expect(dashboard.triage.P0).toHaveLength(1);
     expect(dashboard.triage.P1).toHaveLength(1);
     expect(dashboard.triage.P3).toHaveLength(1);
+  });
+
+  it("does not propagate unexpected telemetry or secret fields from feedback cases", () => {
+    const feedbackDashboard = buildFeedbackDashboard();
+    feedbackDashboard.latestCases[1] = {
+      ...feedbackDashboard.latestCases[1],
+      rawTelemetry: "repeat_suppression:service-role-secret",
+      secretServiceRole: "service-role-secret",
+    } as typeof feedbackDashboard.latestCases[number];
+    feedbackDashboard.negativeFeedbackCases[1] = feedbackDashboard.latestCases[1];
+
+    const dashboard = buildPrivateTesterCohortCommandCenter({
+      feedbackDashboard,
+      privateTesterDashboard: buildPrivateTesterDashboard(),
+    });
+
+    const serialized = JSON.stringify(dashboard);
+    expect(serialized).not.toContain("service-role-secret");
+    expect(serialized).not.toContain("rawTelemetry");
+    expect(serialized).not.toContain("secretServiceRole");
+    expect(dashboard.filters.questionFlowIssueSessions[0]).toMatchObject({
+      flagReasons: ["question_flow_issue", "confusing_questions"],
+      symptomCheckId: "case-2",
+    });
   });
 });

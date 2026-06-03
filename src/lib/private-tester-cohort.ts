@@ -33,6 +33,8 @@ export interface PrivateTesterCohortCommandCenter {
     latestSessions: TesterFeedbackCaseSummary[];
     negativeFeedbackSessions: TesterFeedbackCaseSummary[];
     noFeedbackSessions: TesterFeedbackCaseSummary[];
+    questionFlowIssueSessions: TesterFeedbackCaseSummary[];
+    /** @deprecated Use questionFlowIssueSessions. */
     repeatedQuestionSessions: TesterFeedbackCaseSummary[];
   };
   highRiskSessions: TesterFeedbackCaseSummary[];
@@ -43,6 +45,8 @@ export interface PrivateTesterCohortCommandCenter {
     emergencyResults: number;
     feedbackSubmitted: number;
     negativeFeedback: number;
+    questionFlowIssueFlags: number;
+    /** @deprecated Use questionFlowIssueFlags. */
     repeatedQuestionFlags: number;
     reportFailures: number;
     reportsOpened: number;
@@ -61,7 +65,7 @@ function dedupeCases(
 
   for (const group of groups) {
     for (const entry of group) {
-      casesById.set(entry.symptomCheckId, entry);
+      casesById.set(entry.symptomCheckId, sanitizeCaseSummary(entry));
     }
   }
 
@@ -69,6 +73,40 @@ function dedupeCases(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
   );
+}
+
+function sanitizeCaseSummary(
+  entry: TesterFeedbackCaseSummary
+): TesterFeedbackCaseSummary {
+  return {
+    answerCount: entry.answerCount,
+    answersGiven: { ...entry.answersGiven },
+    confusingAreas: [...entry.confusingAreas],
+    createdAt: entry.createdAt,
+    emergencyCase: entry.emergencyCase,
+    feedbackStatus: entry.feedbackStatus,
+    flagged: entry.flagged,
+    flagReasons: [...entry.flagReasons],
+    helpfulness: entry.helpfulness,
+    knownSymptoms: [...entry.knownSymptoms],
+    negativeFeedbackFlag: entry.negativeFeedbackFlag,
+    notes: entry.notes,
+    petId: entry.petId,
+    questionCount: entry.questionCount,
+    questionsAsked: entry.questionsAsked.map((question) => ({
+      id: question.id,
+      prompt: question.prompt,
+    })),
+    reportFailed: entry.reportFailed,
+    reportId: entry.reportId,
+    reportTitle: entry.reportTitle,
+    submittedAt: entry.submittedAt,
+    symptomCheckId: entry.symptomCheckId,
+    symptomInput: entry.symptomInput,
+    testerUserId: entry.testerUserId,
+    trustLevel: entry.trustLevel,
+    urgencyResult: entry.urgencyResult,
+  };
 }
 
 function hasQuestionFlowIssue(entry: TesterFeedbackCaseSummary) {
@@ -99,9 +137,9 @@ function classifyCase(entry: TesterFeedbackCaseSummary): PrivateTesterTriageCase
   if (hasQuestionFlowIssue(entry)) {
     return {
       caseSummary: entry,
-      category: "Repeated question / flow loop",
+      category: "Question flow issue",
       rationale:
-        "The stored case ledger flagged a repeated-question or clarification-loop issue.",
+        "The stored case ledger flagged an incomplete, confusing, or loop-prone question flow.",
       severity: "P1",
     };
   }
@@ -198,15 +236,29 @@ export function buildPrivateTesterCohortCommandCenter(input: {
   feedbackDashboard: AdminFeedbackLedgerDashboardData;
   privateTesterDashboard: PrivateTesterDashboardData;
 }): PrivateTesterCohortCommandCenter {
+  const emergencySessions = input.feedbackDashboard.emergencyCases.map(
+    sanitizeCaseSummary
+  );
+  const failedReportSessions = input.feedbackDashboard.reportFailureCases.map(
+    sanitizeCaseSummary
+  );
+  const latestSessions = input.feedbackDashboard.latestCases.map(
+    sanitizeCaseSummary
+  );
+  const negativeFeedbackSessions =
+    input.feedbackDashboard.negativeFeedbackCases.map(sanitizeCaseSummary);
+  const noFeedbackSessions = input.feedbackDashboard.noFeedbackCases.map(
+    sanitizeCaseSummary
+  );
   const allCases = dedupeCases([
-    input.feedbackDashboard.latestCases,
-    input.feedbackDashboard.emergencyCases,
-    input.feedbackDashboard.negativeFeedbackCases,
-    input.feedbackDashboard.noFeedbackCases,
-    input.feedbackDashboard.reportFailureCases,
+    latestSessions,
+    emergencySessions,
+    negativeFeedbackSessions,
+    noFeedbackSessions,
+    failedReportSessions,
   ]);
 
-  const repeatedQuestionSessions = allCases.filter(hasQuestionFlowIssue);
+  const questionFlowIssueSessions = allCases.filter(hasQuestionFlowIssue);
   const highRiskSessions = allCases.filter(
     (entry) =>
       entry.emergencyCase ||
@@ -219,13 +271,14 @@ export function buildPrivateTesterCohortCommandCenter(input: {
 
   return {
     filters: {
-      emergencySessions: input.feedbackDashboard.emergencyCases,
-      failedReportSessions: input.feedbackDashboard.reportFailureCases,
+      emergencySessions,
+      failedReportSessions,
       failedSignInOrAccessSessions: accessIssues,
-      latestSessions: input.feedbackDashboard.latestCases,
-      negativeFeedbackSessions: input.feedbackDashboard.negativeFeedbackCases,
-      noFeedbackSessions: input.feedbackDashboard.noFeedbackCases,
-      repeatedQuestionSessions,
+      latestSessions,
+      negativeFeedbackSessions,
+      noFeedbackSessions,
+      questionFlowIssueSessions,
+      repeatedQuestionSessions: questionFlowIssueSessions,
     },
     highRiskSessions,
     notes: buildNotes(input.privateTesterDashboard, accessIssues),
@@ -238,7 +291,8 @@ export function buildPrivateTesterCohortCommandCenter(input: {
       emergencyResults: input.feedbackDashboard.summary.emergencyCases,
       feedbackSubmitted: input.feedbackDashboard.summary.feedbackSubmittedCases,
       negativeFeedback: input.feedbackDashboard.summary.negativeFeedbackCases,
-      repeatedQuestionFlags: repeatedQuestionSessions.length,
+      questionFlowIssueFlags: questionFlowIssueSessions.length,
+      repeatedQuestionFlags: questionFlowIssueSessions.length,
       reportFailures: input.feedbackDashboard.summary.reportFailureCases,
       reportsOpened: allCases.filter((entry) => Boolean(entry.reportId)).length,
       signInFailures: 0,

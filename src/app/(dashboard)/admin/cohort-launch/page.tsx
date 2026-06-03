@@ -91,7 +91,7 @@ export default async function AdminCohortLaunchPage() {
     ["Feedback submitted", commandCenter.summary.feedbackSubmitted],
     ["Negative feedback", commandCenter.summary.negativeFeedback],
     ["Emergency results", commandCenter.summary.emergencyResults],
-    ["Repeated-question flags", commandCenter.summary.repeatedQuestionFlags],
+    ["Question-flow flags", commandCenter.summary.questionFlowIssueFlags],
     ["Report failures", commandCenter.summary.reportFailures],
     ["Sign-in failures", commandCenter.summary.signInFailures],
     ["Tester access disabled", commandCenter.summary.testerAccessDisabled],
@@ -193,7 +193,7 @@ export default async function AdminCohortLaunchPage() {
                     ) : null}
                     {entry.flagReasons.includes("question_flow_issue") ? (
                       <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                        repeated_question
+                        question_flow_issue
                       </span>
                     ) : null}
                     {entry.trustLevel ? (
