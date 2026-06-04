@@ -18,6 +18,7 @@ import {
 } from "@/lib/symptom-chat/extraction-helpers";
 
 const useNvidia = isNvidiaConfigured();
+export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 10_000;
 
 export interface SymptomChatTurnMessage {
   role: "user" | "assistant";
@@ -28,6 +29,15 @@ export interface QuestionGateDecision {
   includeImageContext: boolean;
   useDeterministicFallback: boolean;
   reason: string;
+}
+
+function getTextTurnOwnerVisibleDeadline(
+  hasPhoto: boolean,
+  ownerVisibleDeadlineMs?: number | null
+): number | null {
+  return hasPhoto
+    ? null
+    : ownerVisibleDeadlineMs ?? Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
 }
 
 export function sanitizeQuestionDraft(
@@ -68,7 +78,8 @@ export async function gateQuestionBeforePhrasing(
   messages: SymptomChatTurnMessage[],
   latestUserMessage: string,
   phrasingContext?: string | null,
-  photoAnalyzedThisTurn?: boolean
+  photoAnalyzedThisTurn?: boolean,
+  ownerVisibleDeadlineMs?: number | null
 ): Promise<QuestionGateDecision> {
   const defaultDecision: QuestionGateDecision = {
     includeImageContext: Boolean(photoAnalyzedThisTurn && phrasingContext),
@@ -106,7 +117,34 @@ RULES:
 - Be precise, not overly cautious.`;
 
   try {
-    const rawDecision = await reviewQuestionPlanWithNemotron(prompt);
+    const budgetDeadline = getTextTurnOwnerVisibleDeadline(
+      Boolean(photoAnalyzedThisTurn),
+      ownerVisibleDeadlineMs
+    );
+    const budgetMs = budgetDeadline !== null ? budgetDeadline - Date.now() : null;
+    if (budgetMs !== null && budgetMs <= 0) {
+      console.warn(
+        "Question preflight gate exceeded text-turn owner-visible budget; using default gate decision."
+      );
+      return { ...defaultDecision, reason: "text-turn-budget-timeout" };
+    }
+
+    const decisionResult =
+      budgetMs !== null
+        ? await withTimeout(reviewQuestionPlanWithNemotron(prompt), budgetMs)
+        : {
+            timedOut: false as const,
+            value: await reviewQuestionPlanWithNemotron(prompt),
+          };
+
+    if (decisionResult.timedOut) {
+      console.warn(
+        "Question preflight gate exceeded text-turn owner-visible budget; using default gate decision."
+      );
+      return { ...defaultDecision, reason: "text-turn-budget-timeout" };
+    }
+
+    const rawDecision = decisionResult.value;
     const parsed = parseLooseJsonRecord(rawDecision);
     const includeImageContext =
       Boolean(parsed.include_image_context) &&
@@ -253,6 +291,29 @@ async function verifyQuestionDraft(
   }
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number
+): Promise<{ timedOut: false; value: T } | { timedOut: true }> {
+  if (timeoutMs <= 0) {
+    return { timedOut: true };
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.then((value) => ({ timedOut: false as const, value })),
+      new Promise<{ timedOut: true }>((resolve) => {
+        timeoutId = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function phraseQuestionV2(
   questionText: string,
   questionId: string,
@@ -263,7 +324,8 @@ async function phraseQuestionV2(
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
-  forceDeterministicFallback = false
+  forceDeterministicFallback = false,
+  ownerVisibleDeadlineMs?: number | null
 ): Promise<string> {
   const answerType = FOLLOW_UP_QUESTIONS[questionId]?.data_type || "string";
   const hasPhoto = Boolean(photoAnalyzedThisTurn);
@@ -296,8 +358,33 @@ async function phraseQuestionV2(
     answerType
   );
 
+  const budgetDeadline = getTextTurnOwnerVisibleDeadline(
+    hasPhoto,
+    ownerVisibleDeadlineMs
+  );
+
   try {
-    const draft = await phraseWithLlama(prompt);
+    const draftBudgetMs = budgetDeadline !== null ? budgetDeadline - Date.now() : null;
+    if (draftBudgetMs !== null && draftBudgetMs <= 0) {
+      console.warn(
+        "Question phrasing exceeded text-turn owner-visible budget; using deterministic fallback."
+      );
+      return fallbackMessage;
+    }
+
+    const draftResult =
+      draftBudgetMs !== null
+        ? await withTimeout(phraseWithLlama(prompt), draftBudgetMs)
+        : { timedOut: false as const, value: await phraseWithLlama(prompt) };
+
+    if (draftResult.timedOut) {
+      console.warn(
+        "Question phrasing exceeded text-turn owner-visible budget; using deterministic fallback."
+      );
+      return fallbackMessage;
+    }
+
+    const draft = draftResult.value;
     console.log("[Engine] Phrasing primary: Llama 3.3 70B Instruct");
 
     const sanitizedDraft = sanitizeQuestionDraft(
@@ -305,6 +392,36 @@ async function phraseQuestionV2(
       fallbackMessage,
       allowPhotoMentionInWording
     );
+
+    if (budgetDeadline) {
+      const verificationBudget = budgetDeadline - Date.now();
+      if (verificationBudget <= 0) {
+        return sanitizedDraft;
+      }
+
+      const verifiedResult = await withTimeout(
+        verifyQuestionDraft(
+          questionText,
+          questionId,
+          memorySnapshot,
+          phrasingContext,
+          hasPhoto,
+          allowPhotoMentionInWording,
+          sanitizedDraft,
+          fallbackMessage
+        ),
+        verificationBudget
+      );
+
+      if (verifiedResult.timedOut) {
+        console.warn(
+          "Question verification exceeded text-turn owner-visible budget; using sanitized draft."
+        );
+        return sanitizedDraft;
+      }
+
+      return verifiedResult.value;
+    }
 
     return verifyQuestionDraft(
       questionText,
@@ -332,7 +449,8 @@ export async function phraseQuestion(
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
-  forceDeterministicFallback = false
+  forceDeterministicFallback = false,
+  ownerVisibleDeadlineMs?: number | null
 ): Promise<string> {
   return phraseQuestionV2(
     questionText,
@@ -344,6 +462,7 @@ export async function phraseQuestion(
     phrasingContext,
     photoAnalyzedThisTurn,
     allowPhotoMentionInWording,
-    forceDeterministicFallback
+    forceDeterministicFallback,
+    ownerVisibleDeadlineMs
   );
 }

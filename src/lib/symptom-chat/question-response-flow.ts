@@ -18,6 +18,7 @@ import {
   shouldIncludeImageContextInQuestion,
 } from "@/lib/symptom-chat/context-helpers";
 import {
+  TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS,
   gateQuestionBeforePhrasing,
   phraseQuestion,
   type SymptomChatTurnMessage,
@@ -141,6 +142,9 @@ async function phraseNextQuestion(
     )
       ? buildQuestionPhrasingContext(input.session, input.visionSeverity)
       : null;
+  const textTurnPhrasingDeadlineMs = hasLiveVisionThisTurn
+    ? null
+    : Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
   if (input.forceDeterministicQuestionFallback) {
     return phraseQuestion(
       questionText,
@@ -152,7 +156,8 @@ async function phraseNextQuestion(
       basePhrasingContext,
       hasLiveVisionThisTurn,
       false,
-      true
+      true,
+      textTurnPhrasingDeadlineMs
     );
   }
 
@@ -164,7 +169,8 @@ async function phraseNextQuestion(
     input.messages,
     input.lastUserMessage,
     basePhrasingContext,
-    hasLiveVisionThisTurn
+    hasLiveVisionThisTurn,
+    textTurnPhrasingDeadlineMs
   );
 
   return phraseQuestion(
@@ -177,6 +183,7 @@ async function phraseNextQuestion(
     basePhrasingContext,
     hasLiveVisionThisTurn,
     hasLiveVisionThisTurn && questionGate.includeImageContext,
-    questionGate.useDeterministicFallback
+    questionGate.useDeterministicFallback,
+    textTurnPhrasingDeadlineMs
   );
 }
