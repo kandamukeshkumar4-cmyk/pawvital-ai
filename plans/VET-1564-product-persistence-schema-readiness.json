@@ -2,26 +2,18 @@
   "ticket": "VET-1564A/B",
   "mode": "review-only-schema-readiness",
   "generatedAt": "2026-05-31T00:00:00.000Z",
-  "readyForMigrationReview": false,
+  "readyForMigrationReview": true,
   "schema": {
     "path": "supabase-product-intelligence-schema.sql",
-    "exists": false,
-    "sha256": null
+    "exists": true,
+    "sha256": "f6c0b944d2ad5daea36f0421226335eb0e604dec28037a92344c1b49dfc00bb0"
   },
   "tables": [
     "daily_readiness_snapshots",
     "recovery_checkpoints"
   ],
-  "requiredFragmentsPresent": false,
-  "missingRequired": [
-    "CREATE TABLE IF NOT EXISTS public.daily_readiness_snapshots",
-    "CREATE TABLE IF NOT EXISTS public.recovery_checkpoints",
-    "ALTER TABLE public.daily_readiness_snapshots ENABLE ROW LEVEL SECURITY",
-    "ALTER TABLE public.recovery_checkpoints ENABLE ROW LEVEL SECURITY",
-    "auth.uid() = user_id",
-    "UNIQUE (user_id, pet_id, snapshot_date, generated_by)",
-    "UNIQUE (user_id, pet_id, report_source_id, checkpoint_date, generated_by)"
-  ],
+  "requiredFragmentsPresent": true,
+  "missingRequired": [],
   "forbiddenClaimFragmentsPresent": [],
   "liveMigrationApplied": false,
   "nextActions": [

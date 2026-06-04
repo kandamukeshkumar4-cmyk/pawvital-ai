@@ -7,20 +7,20 @@
     "productionReadiness": {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "ac3fda2def1ba90608baadc4f09c5fdc31369d37d40dfe6927f78c87e695c952"
+      "sha256": "951b2281dae608cb7e250101e7e2f6d0aaa3fec3249ae309d2a3dc6b10ce455c"
     },
     "schema": {
       "path": "supabase-product-intelligence-schema.sql",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "f6c0b944d2ad5daea36f0421226335eb0e604dec28037a92344c1b49dfc00bb0"
     }
   },
   "preconditions": {
-    "readyForProductionSmoke": false,
+    "readyForProductionSmoke": true,
     "liveMigrationApplied": false,
     "authenticatedProductionSmokeComplete": false,
-    "rlsPoliciesPresentInSql": false,
-    "rollbackTargetsPresentInSql": false
+    "rlsPoliciesPresentInSql": true,
+    "rollbackTargetsPresentInSql": true
   },
   "actorRequirements": [
     "Use a normal authenticated owner account, not a service-role key.",
