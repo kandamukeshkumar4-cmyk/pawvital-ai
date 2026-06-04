@@ -24,15 +24,15 @@
   "inputArtifacts": {
     "outputCaptureRunbook": {
       "path": "plans/VET-1563-extraction-output-capture-runbook.json",
-      "sha256": "bf14e26a278aacbe02b7ff0fdd5ccdec9d77e72e64e35d7643b06cbbe602e720"
+      "sha256": "65fc509e6ea50732fdd73fdfdfb4f77a61fe3fd1347f400077b6d9ff7464bf3a"
     },
     "outputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
-      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
     },
     "rollbackPlan": {
       "path": "plans/VET-1563-extraction-model-rollback-plan.json",
-      "sha256": "370507e4d1ce6aade8051e66d9367433baa5d04cd434b4bf1b51291c76ef639e"
+      "sha256": "d71f0f5475f0fa87ac2bef0ac466a6950276b670ec4f4008375edfa37986ccc8"
     },
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",

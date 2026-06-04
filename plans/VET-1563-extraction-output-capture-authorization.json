@@ -14,11 +14,11 @@
   "inputArtifacts": {
     "outputCaptureRunbook": {
       "path": "plans/VET-1563-extraction-output-capture-runbook.json",
-      "sha256": "bf14e26a278aacbe02b7ff0fdd5ccdec9d77e72e64e35d7643b06cbbe602e720"
+      "sha256": "65fc509e6ea50732fdd73fdfdfb4f77a61fe3fd1347f400077b6d9ff7464bf3a"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
-      "sha256": "8ccc2134cd84cbaab10dee0bca55cca0f13cf89f47f74af4d9e5301f9878e7be"
+      "sha256": "63f90667f723b3176bde51f9ebaf569b76d1395a542385351f7875a30a5dbfc8"
     },
     "routingMatrix": {
       "path": "plans/VET-1563-model-routing-matrix.json",
@@ -26,7 +26,7 @@
     },
     "candidateSelectionPacket": {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
-      "sha256": "595ce8c183d44a427bfd6c03cf536e3fe6afc4fe31c1b4c5920c4b025976ebdb"
+      "sha256": "a8783640cbcb626d130217b0d42d60be8b7a6c901862598a29bb5628f6818e54"
     }
   },
   "approvalGate": {

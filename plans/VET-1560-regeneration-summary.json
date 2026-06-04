@@ -20,7 +20,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1561-model-dataset-manifest.json"
+        "Wrote plans/VET-1561-model-dataset-manifest.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -43,8 +43,8 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-model-routing-matrix.json",
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-model-routing-evaluation-matrix.md"
+        "Wrote plans/VET-1563-model-routing-matrix.json",
+        "Wrote plans/VET-1563-model-routing-evaluation-matrix.md"
       ],
       "stderr": [],
       "artifacts": [
@@ -72,14 +72,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-model-routing-evaluation-plan.json"
+        "Wrote plans/VET-1563-model-routing-evaluation-plan.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-model-routing-evaluation-plan.json",
           "exists": true,
-          "sha256": "bd2b241d78ec104320684a1bf9e357ffb077196272c7981c4612b0aa538d5c3d"
+          "sha256": "c599193839310717a8e44ea680aebb2ac8a6e095df45e22c09842d1e404df767"
         }
       ]
     },
@@ -96,14 +96,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-shadow-eval-scaffold.json"
+        "Wrote plans/VET-1563-extraction-shadow-eval-scaffold.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
           "exists": true,
-          "sha256": "083674e052c7e8b93cbc2f84da579c5f3c3e6f59b7379c3eee752a6e682cb7c9"
+          "sha256": "9ca017ffd2741bd27673390e455c1e94b38968e06d2cf7e9bd4e60f169f3c8de"
         }
       ]
     },
@@ -119,14 +119,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1562-offline-experiment-package.json"
+        "Wrote plans/VET-1562-offline-experiment-package.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1562-offline-experiment-package.json",
           "exists": true,
-          "sha256": "108e0569f55ad53f261deb7b4612776f2feadafd6e59e0af8d27050889ac5936"
+          "sha256": "f78b76c9efa7b988e8596e37e6efbf1cdaffba94d29d08ca00ad0a7308737953"
         }
       ]
     },
@@ -143,14 +143,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-candidate-selection-packet.json"
+        "Wrote plans/VET-1563-extraction-candidate-selection-packet.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
           "exists": true,
-          "sha256": "595ce8c183d44a427bfd6c03cf536e3fe6afc4fe31c1b4c5920c4b025976ebdb"
+          "sha256": "a8783640cbcb626d130217b0d42d60be8b7a6c901862598a29bb5628f6818e54"
         }
       ]
     },
@@ -167,14 +167,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-capture-plan.json"
+        "Wrote plans/VET-1563-extraction-frozen-output-capture-plan.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
           "exists": true,
-          "sha256": "61bf8283b3d8f6bc096351c677d77bce2fdbc4b24e190bc7411d1ec82bacac16"
+          "sha256": "b55873cc0a61580f73239360a462d31f2a650a0acaed7aa00b902f9e26e3aeda"
         }
       ]
     },
@@ -191,14 +191,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-templates.json"
+        "Wrote plans/VET-1563-extraction-frozen-output-templates.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-frozen-output-templates.json",
           "exists": true,
-          "sha256": "3ef7680dff1e1f533c0715cb04f5a3018d3855150f2c24f842ff83041138245e"
+          "sha256": "6fe951b6f375c471700f29c4f15b021a507fb0cafdae84d7d1f2cac46c614c80"
         }
       ]
     },
@@ -215,14 +215,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-status.json"
+        "Wrote plans/VET-1563-extraction-frozen-output-status.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-frozen-output-status.json",
           "exists": true,
-          "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+          "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
         }
       ]
     },
@@ -239,14 +239,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-shadow-eval-scorecard.json"
+        "Wrote plans/VET-1563-extraction-shadow-eval-scorecard.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
           "exists": true,
-          "sha256": "32746cd08bc2fc8215ecbdc934c223f10bfc3a0b30cdbce3270a16ef24768f08"
+          "sha256": "f14574f1b1e0362da6f459dbd714acce3975da2196695db3d0423e0950d16b6c"
         }
       ]
     },
@@ -263,14 +263,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-output-capture-runbook.json"
+        "Wrote plans/VET-1563-extraction-output-capture-runbook.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-output-capture-runbook.json",
           "exists": true,
-          "sha256": "bf14e26a278aacbe02b7ff0fdd5ccdec9d77e72e64e35d7643b06cbbe602e720"
+          "sha256": "65fc509e6ea50732fdd73fdfdfb4f77a61fe3fd1347f400077b6d9ff7464bf3a"
         }
       ]
     },
@@ -287,14 +287,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-scorecard-review-packet.json"
+        "Wrote plans/VET-1563-extraction-scorecard-review-packet.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-scorecard-review-packet.json",
           "exists": true,
-          "sha256": "086505008ea2f35564742159102b38bd7869399566ba20b9f42254eee5f05d7d"
+          "sha256": "de41111a0244edf9b9f72f10ce08a57ffcc65eded41af041820973d8632c1a3d"
         }
       ]
     },
@@ -311,14 +311,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-model-rollback-plan.json"
+        "Wrote plans/VET-1563-extraction-model-rollback-plan.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-model-rollback-plan.json",
           "exists": true,
-          "sha256": "370507e4d1ce6aade8051e66d9367433baa5d04cd434b4bf1b51291c76ef639e"
+          "sha256": "d71f0f5475f0fa87ac2bef0ac466a6950276b670ec4f4008375edfa37986ccc8"
         }
       ]
     },
@@ -334,7 +334,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-protected-clinical-diff-proof.json"
+        "Wrote plans/VET-1563-protected-clinical-diff-proof.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -358,14 +358,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-smoke-runbook.json"
+        "Wrote plans/VET-1563-extraction-promotion-smoke-runbook.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
           "exists": true,
-          "sha256": "2bb486dd98f5cfc950eaabd094cbd18eba533931ad048cfdc56bc515acf94d38"
+          "sha256": "5204ad6455377442f21eb066e65f38e6ac44ab95a7e4c0f0d272f3e0162f4c33"
         }
       ]
     },
@@ -382,14 +382,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-runtime-promotion-ticket.json"
+        "Wrote plans/VET-1563-extraction-runtime-promotion-ticket.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
           "exists": true,
-          "sha256": "82e8384c49bcd045c25205376d7b96083970ac5e9d0277322acc99bad2000ec0"
+          "sha256": "f0695218de335b09dcf0e25899ffd79e90266415f27b7d1a581a529b067c0e76"
         }
       ]
     },
@@ -406,14 +406,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-checklist.json"
+        "Wrote plans/VET-1563-extraction-promotion-checklist.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-promotion-checklist.json",
           "exists": true,
-          "sha256": "28cfb0398cc8fb3fa457414b26cf6d59160fd82d0cd5c78ba6bb170627184a28"
+          "sha256": "206229f14f87bc2a137358482d7371127eaf593beeef372fa25c1a8e24442523"
         }
       ]
     },
@@ -430,14 +430,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-readiness-preflight.json"
+        "Wrote plans/VET-1563-extraction-promotion-readiness-preflight.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
           "exists": true,
-          "sha256": "9915b5034062197e9c7fc044f0e3781637681b9eca5a6022ba87b7bab2add6e0"
+          "sha256": "e09fbd1e6c844f3232c69977dee286237c660dbc9fda4f443727f7101d943bf5"
         }
       ]
     },
@@ -454,14 +454,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-evidence-packet.json"
+        "Wrote plans/VET-1563-extraction-promotion-evidence-packet.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
           "exists": true,
-          "sha256": "0f223772ab5480e6c133d7a24a5ebb1b24b700268a779fc48c3729ed46a5c7ee"
+          "sha256": "3f564395c1998a62711b32344310da99baaee6264903d6c31590093995173b94"
         }
       ]
     },
@@ -478,14 +478,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-owner-approval-request.json"
+        "Wrote plans/VET-1563-extraction-owner-approval-request.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-owner-approval-request.json",
           "exists": true,
-          "sha256": "8ccc2134cd84cbaab10dee0bca55cca0f13cf89f47f74af4d9e5301f9878e7be"
+          "sha256": "63f90667f723b3176bde51f9ebaf569b76d1395a542385351f7875a30a5dbfc8"
         }
       ]
     },
@@ -502,14 +502,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-evidence-packet.json"
+        "Wrote plans/VET-1563-extraction-promotion-evidence-packet.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
           "exists": true,
-          "sha256": "0f223772ab5480e6c133d7a24a5ebb1b24b700268a779fc48c3729ed46a5c7ee"
+          "sha256": "3f564395c1998a62711b32344310da99baaee6264903d6c31590093995173b94"
         }
       ]
     },
@@ -526,14 +526,14 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-output-capture-authorization.json"
+        "Wrote plans/VET-1563-extraction-output-capture-authorization.json"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1563-extraction-output-capture-authorization.json",
           "exists": true,
-          "sha256": "ef28ca464bc154831b5af5bd25619851bb20a206d6c4ac71b51cdfddfd8098ba"
+          "sha256": "9503aa9384605c460a712f66d4943b066de3d335bc34e2813477de914abe5d5f"
         }
       ]
     },
@@ -549,7 +549,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1564-product-intelligence-roadmap.json"
+        "Wrote plans/VET-1564-product-intelligence-roadmap.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -572,7 +572,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1564-product-persistence-schema-readiness.json"
+        "Wrote plans/VET-1564-product-persistence-schema-readiness.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -595,7 +595,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1564-longitudinal-readiness-contract.json"
+        "Wrote plans/VET-1564-longitudinal-readiness-contract.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -618,7 +618,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1564C-claim-language-review.json"
+        "Wrote plans/VET-1564C-claim-language-review.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -641,7 +641,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1564-production-readiness.json"
+        "Wrote plans/VET-1564-production-readiness.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -664,7 +664,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1564-production-smoke-runbook.json"
+        "Wrote plans/VET-1564-production-smoke-runbook.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -687,7 +687,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1565-tugboat-governance-plan.json"
+        "Wrote plans/VET-1565-tugboat-governance-plan.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -710,8 +710,8 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-azure-sync-preflight.json",
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-azure-sync-preflight.md"
+        "Wrote plans/VET-1560-azure-sync-preflight.json",
+        "Wrote plans/VET-1560-azure-sync-preflight.md"
       ],
       "stderr": [],
       "artifacts": [
@@ -739,7 +739,7 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-azure-live-sync-runbook.json"
+        "Wrote plans/VET-1560-azure-live-sync-runbook.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -762,8 +762,8 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-project-manager-tickets.json",
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-project-manager-sync-readiness.json"
+        "Wrote plans/VET-1560-project-manager-tickets.json",
+        "Wrote plans/VET-1560-project-manager-sync-readiness.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -788,8 +788,8 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-project-manager-local-sync.json",
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-project-manager-local-sync.md"
+        "Wrote plans/VET-1560-project-manager-local-sync.json",
+        "Wrote plans/VET-1560-project-manager-local-sync.md"
       ],
       "stderr": [],
       "artifacts": [
@@ -817,8 +817,8 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-project-manager-tickets.json",
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-project-manager-sync-readiness.json"
+        "Wrote plans/VET-1560-project-manager-tickets.json",
+        "Wrote plans/VET-1560-project-manager-sync-readiness.json"
       ],
       "stderr": [],
       "artifacts": [
@@ -841,20 +841,20 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-readiness-dashboard.json",
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-readiness-dashboard.md"
+        "Wrote plans/VET-1560-readiness-dashboard.json",
+        "Wrote plans/VET-1560-readiness-dashboard.md"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1560-readiness-dashboard.json",
           "exists": true,
-          "sha256": "6368de6dc8d303ade343bfd617582f5f5e6bb8f227916cec25f0eacec44dc672"
+          "sha256": "9c6683943185235746cb6d51c84da7943230a931e702e2ba5ba97eb6e2b34806"
         },
         {
           "path": "plans/VET-1560-readiness-dashboard.md",
           "exists": true,
-          "sha256": "ba53802a909ddfc0677834597af3c4fd7dea631122ce7787c20f1d33807862b2"
+          "sha256": "4730d9ab4ad82f27d832c0cdb2c04b45d26356af078a61de856466b44e7a185e"
         }
       ]
     },
@@ -870,15 +870,15 @@
       "startedAt": "2026-05-31T00:00:00.000Z",
       "finishedAt": "2026-05-31T00:00:00.000Z",
       "stdout": [
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-completion-audit.json",
-        "Wrote G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1560-completion-audit.md"
+        "Wrote plans/VET-1560-completion-audit.json",
+        "Wrote plans/VET-1560-completion-audit.md"
       ],
       "stderr": [],
       "artifacts": [
         {
           "path": "plans/VET-1560-completion-audit.json",
           "exists": true,
-          "sha256": "0a69244904a893d10ea7c6fd7258a7243ee88de8f67e37a0cc8dae76f3ed92d7"
+          "sha256": "002387b954e08423778a7faba9e874bf18e3580eb4c9bdb192ca140603b79d8a"
         },
         {
           "path": "plans/VET-1560-completion-audit.md",

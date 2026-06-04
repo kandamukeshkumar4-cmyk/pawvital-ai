@@ -9,6 +9,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { repoRelativePath } from "./lib/artifact-paths.mjs";
 
 const matrixPath = resolve(process.cwd(), "plans/VET-1563-model-routing-matrix.json");
 const outPath = resolve(
@@ -182,7 +183,7 @@ function buildPlan() {
     ticket: "VET-1563",
     mode: "review-only",
     generatedAt: "2026-05-31T00:00:00.000Z",
-    inputRoutingMatrix: matrixPath,
+    inputRoutingMatrix: repoRelativePath(matrixPath),
     note:
       "Evaluation plan only. It does not call providers, train models, or mutate runtime model routing.",
     globalGuards: [
