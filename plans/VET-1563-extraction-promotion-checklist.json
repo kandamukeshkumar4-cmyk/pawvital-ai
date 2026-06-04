@@ -6,49 +6,49 @@
   "note": "Promotion checklist only. It does not call providers, train models, or mutate runtime routing.",
   "inputArtifacts": {
     "scorecard": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-shadow-eval-scorecard.json",
+      "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
       "exists": true,
-      "sha256": "32746cd08bc2fc8215ecbdc934c223f10bfc3a0b30cdbce3270a16ef24768f08"
+      "sha256": "f14574f1b1e0362da6f459dbd714acce3975da2196695db3d0423e0950d16b6c"
     },
     "experimentPackage": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1562-offline-experiment-package.json",
+      "path": "plans/VET-1562-offline-experiment-package.json",
       "exists": true,
-      "sha256": "108e0569f55ad53f261deb7b4612776f2feadafd6e59e0af8d27050889ac5936"
+      "sha256": "f78b76c9efa7b988e8596e37e6efbf1cdaffba94d29d08ca00ad0a7308737953"
     },
     "evaluationPlan": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-model-routing-evaluation-plan.json",
+      "path": "plans/VET-1563-model-routing-evaluation-plan.json",
       "exists": true,
-      "sha256": "bd2b241d78ec104320684a1bf9e357ffb077196272c7981c4612b0aa538d5c3d"
+      "sha256": "c599193839310717a8e44ea680aebb2ac8a6e095df45e22c09842d1e404df767"
     },
     "outputCapturePlan": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-capture-plan.json",
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
       "exists": true,
-      "sha256": "61bf8283b3d8f6bc096351c677d77bce2fdbc4b24e190bc7411d1ec82bacac16"
+      "sha256": "b55873cc0a61580f73239360a462d31f2a650a0acaed7aa00b902f9e26e3aeda"
     },
     "outputStatus": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-status.json",
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
       "exists": true,
-      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
     },
     "rollbackPlan": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-model-rollback-plan.json",
+      "path": "plans/VET-1563-extraction-model-rollback-plan.json",
       "exists": true,
-      "sha256": "370507e4d1ce6aade8051e66d9367433baa5d04cd434b4bf1b51291c76ef639e"
+      "sha256": "d71f0f5475f0fa87ac2bef0ac466a6950276b670ec4f4008375edfa37986ccc8"
     },
     "protectedClinicalDiffProof": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-protected-clinical-diff-proof.json",
+      "path": "plans/VET-1563-protected-clinical-diff-proof.json",
       "exists": true,
       "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
     },
     "promotionSmokeRunbook": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-smoke-runbook.json",
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "2bb486dd98f5cfc950eaabd094cbd18eba533931ad048cfdc56bc515acf94d38"
+      "sha256": "5204ad6455377442f21eb066e65f38e6ac44ab95a7e4c0f0d272f3e0162f4c33"
     },
     "promotionTicket": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-runtime-promotion-ticket.json",
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "82e8384c49bcd045c25205376d7b96083970ac5e9d0277322acc99bad2000ec0"
+      "sha256": "f0695218de335b09dcf0e25899ffd79e90266415f27b7d1a581a529b067c0e76"
     }
   },
   "baselineRoute": {

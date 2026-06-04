@@ -28,52 +28,52 @@
     {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
       "exists": true,
-      "sha256": "9915b5034062197e9c7fc044f0e3781637681b9eca5a6022ba87b7bab2add6e0"
+      "sha256": "e09fbd1e6c844f3232c69977dee286237c660dbc9fda4f443727f7101d943bf5"
     },
     {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
       "exists": true,
-      "sha256": "0f223772ab5480e6c133d7a24a5ebb1b24b700268a779fc48c3729ed46a5c7ee"
+      "sha256": "3f564395c1998a62711b32344310da99baaee6264903d6c31590093995173b94"
     },
     {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
       "exists": true,
-      "sha256": "595ce8c183d44a427bfd6c03cf536e3fe6afc4fe31c1b4c5920c4b025976ebdb"
+      "sha256": "a8783640cbcb626d130217b0d42d60be8b7a6c901862598a29bb5628f6818e54"
     },
     {
       "path": "plans/VET-1563-extraction-frozen-output-templates.json",
       "exists": true,
-      "sha256": "3ef7680dff1e1f533c0715cb04f5a3018d3855150f2c24f842ff83041138245e"
+      "sha256": "6fe951b6f375c471700f29c4f15b021a507fb0cafdae84d7d1f2cac46c614c80"
     },
     {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
       "exists": true,
-      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
     },
     {
       "path": "plans/VET-1563-extraction-output-capture-runbook.json",
       "exists": true,
-      "sha256": "bf14e26a278aacbe02b7ff0fdd5ccdec9d77e72e64e35d7643b06cbbe602e720"
+      "sha256": "65fc509e6ea50732fdd73fdfdfb4f77a61fe3fd1347f400077b6d9ff7464bf3a"
     },
     {
       "path": "plans/VET-1563-extraction-output-capture-authorization.json",
       "exists": true,
-      "sha256": "ef28ca464bc154831b5af5bd25619851bb20a206d6c4ac71b51cdfddfd8098ba"
+      "sha256": "9503aa9384605c460a712f66d4943b066de3d335bc34e2813477de914abe5d5f"
     },
     {
       "path": "plans/VET-1563-extraction-scorecard-review-packet.json",
       "exists": true,
-      "sha256": "086505008ea2f35564742159102b38bd7869399566ba20b9f42254eee5f05d7d"
+      "sha256": "de41111a0244edf9b9f72f10ce08a57ffcc65eded41af041820973d8632c1a3d"
     },
     {
       "path": "plans/VET-1563-extraction-model-rollback-plan.json",
       "exists": true,
-      "sha256": "370507e4d1ce6aade8051e66d9367433baa5d04cd434b4bf1b51291c76ef639e"
+      "sha256": "d71f0f5475f0fa87ac2bef0ac466a6950276b670ec4f4008375edfa37986ccc8"
     },
     {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "2bb486dd98f5cfc950eaabd094cbd18eba533931ad048cfdc56bc515acf94d38"
+      "sha256": "5204ad6455377442f21eb066e65f38e6ac44ab95a7e4c0f0d272f3e0162f4c33"
     },
     {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
@@ -83,12 +83,12 @@
     {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "82e8384c49bcd045c25205376d7b96083970ac5e9d0277322acc99bad2000ec0"
+      "sha256": "f0695218de335b09dcf0e25899ffd79e90266415f27b7d1a581a529b067c0e76"
     },
     {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
       "exists": true,
-      "sha256": "8ccc2134cd84cbaab10dee0bca55cca0f13cf89f47f74af4d9e5301f9878e7be"
+      "sha256": "63f90667f723b3176bde51f9ebaf569b76d1395a542385351f7875a30a5dbfc8"
     },
     {
       "path": "plans/VET-1564C-claim-language-review.json",

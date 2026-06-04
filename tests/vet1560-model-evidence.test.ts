@@ -26,6 +26,12 @@ type CandidateEnvelope = Record<string, unknown> & {
   outputs: TemplateOutput[];
 };
 
+type ArtifactRef = {
+  path: string;
+  exists?: boolean;
+  sha256?: string | null;
+};
+
 type FrozenOutputTemplate = {
   variant: string;
   outputPath: string;
@@ -47,9 +53,7 @@ type FrozenOutputTemplates = {
 
 type FrozenOutputStatus = {
   inputArtifacts: {
-    outputTemplates: {
-      path: string;
-    };
+    outputTemplates: ArtifactRef;
   };
   cases: Array<{
     caseSourceId: string;
@@ -84,6 +88,14 @@ type PromotionEvidencePacket = {
   };
 };
 
+type ShadowEvalScorecard = {
+  input: string;
+  inputArtifacts: {
+    scaffold: ArtifactRef;
+    frozenOutputStatus: ArtifactRef;
+  };
+};
+
 type PromotionReadinessPreflight = {
   summary: {
     readyForPromotionTicket: boolean;
@@ -91,11 +103,7 @@ type PromotionReadinessPreflight = {
     candidateGateBlockedCount: number;
     candidateContentHashWithoutEvidenceHashCount: number;
   };
-  inputArtifacts: {
-    outputTemplates: {
-      exists: boolean;
-    };
-  };
+  inputArtifacts: Record<string, ArtifactRef>;
   outputGateStatus: {
     candidateGates: Array<{
       caseSourceId: string;
@@ -109,6 +117,14 @@ type PromotionReadinessPreflight = {
       };
     }>;
   };
+};
+
+type ArtifactInputs = {
+  inputArtifacts: Record<string, ArtifactRef>;
+};
+
+type RoutingEvaluationPlan = {
+  inputRoutingMatrix: string;
 };
 
 type ReadinessDashboard = {
@@ -295,6 +311,18 @@ function cleanupCandidateOutput(outputPath: string) {
   const absolutePath = path.join(repoRoot, outputPath);
   if (existsSync(absolutePath)) {
     unlinkSync(absolutePath);
+  }
+}
+
+function expectRepoRelativePath(artifactPath: string) {
+  expect(path.isAbsolute(artifactPath)).toBe(false);
+  expect(artifactPath).not.toContain(repoRoot);
+  expect(artifactPath).not.toContain("\\");
+}
+
+function expectRepoRelativeArtifacts(artifacts: Record<string, ArtifactRef>) {
+  for (const artifact of Object.values(artifacts)) {
+    expectRepoRelativePath(artifact.path);
   }
 }
 
@@ -754,6 +782,70 @@ describe("VET-1560 model evidence readouts", () => {
       expect(packet.promotionDecision.allowedByThisPacket).toBe(false);
     } finally {
       cleanupCandidateOutput(candidate.outputPath);
+    }
+  });
+
+  it("keeps generated model evidence artifact paths repo-relative", () => {
+    const evaluationPlan = runJson<RoutingEvaluationPlan>([
+      "scripts/build-model-routing-evaluation-plan.mjs",
+    ]);
+    const scorecard = runJson<ShadowEvalScorecard>([
+      "scripts/score-model-shadow-eval.mjs",
+      "--role=extraction",
+    ]);
+    const rollbackPlan = runJson<ArtifactInputs>([
+      "scripts/build-model-rollback-plan.mjs",
+      "--role=extraction",
+    ]);
+    const promotionTicket = runJson<ArtifactInputs>([
+      "scripts/build-model-promotion-ticket.mjs",
+      "--role=extraction",
+    ]);
+    const promotionChecklist = runJson<ArtifactInputs>([
+      "scripts/build-model-promotion-checklist.mjs",
+      "--role=extraction",
+    ]);
+    const preflight = runJson<PromotionReadinessPreflight>([
+      "scripts/model-promotion-readiness-preflight.mjs",
+      "--role=extraction",
+    ]);
+
+    expect(evaluationPlan.inputRoutingMatrix).toBe(
+      "plans/VET-1563-model-routing-matrix.json",
+    );
+    expect(scorecard.input).toBe(
+      "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+    );
+    expect(scorecard.inputArtifacts.scaffold.path).toBe(
+      "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+    );
+    expect(scorecard.inputArtifacts.frozenOutputStatus.path).toBe(
+      "plans/VET-1563-extraction-frozen-output-status.json",
+    );
+
+    const artifactPaths = Object.values(preflight.inputArtifacts).map(
+      (artifact) => artifact.path,
+    );
+    expect(artifactPaths).toEqual(
+      expect.arrayContaining([
+        "plans/VET-1563-extraction-promotion-checklist.json",
+        "plans/VET-1563-extraction-shadow-eval-scorecard.json",
+        "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+        "plans/VET-1563-extraction-frozen-output-templates.json",
+        "plans/VET-1563-extraction-frozen-output-status.json",
+        "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+        "plans/VET-1563-extraction-owner-approval-request.json",
+        "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+      ]),
+    );
+    expectRepoRelativeArtifacts(rollbackPlan.inputArtifacts);
+    expectRepoRelativeArtifacts(promotionTicket.inputArtifacts);
+    expectRepoRelativeArtifacts(promotionChecklist.inputArtifacts);
+
+    expectRepoRelativePath(evaluationPlan.inputRoutingMatrix);
+    expectRepoRelativePath(scorecard.input);
+    for (const artifactPath of artifactPaths) {
+      expectRepoRelativePath(artifactPath);
     }
   });
 });

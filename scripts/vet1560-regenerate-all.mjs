@@ -253,6 +253,25 @@ function artifact(relativePath) {
   };
 }
 
+function sanitizeCapturedLine(line) {
+  const root = process.cwd();
+  const forwardRoot = root.replaceAll("\\", "/");
+  return line
+    .replaceAll(`${root}\\`, "")
+    .replaceAll(`${root}/`, "")
+    .replaceAll(`${forwardRoot}/`, "")
+    .replaceAll("\\", "/");
+}
+
+function capturedLines(output) {
+  return output
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map(sanitizeCapturedLine)
+    .slice(-8);
+}
+
 function verifyReviewOnlyPlan() {
   const violations = commands.filter((command) =>
     forbiddenLiveCommands.some((forbidden) => {
@@ -300,8 +319,8 @@ function runCommand(command) {
     exitCode: result.status,
     startedAt,
     finishedAt: timestamp(),
-    stdout: result.stdout.trim().split(/\r?\n/).filter(Boolean).slice(-8),
-    stderr: result.stderr.trim().split(/\r?\n/).filter(Boolean).slice(-8),
+    stdout: capturedLines(result.stdout),
+    stderr: capturedLines(result.stderr),
     artifacts: command.artifacts.map(artifact),
   };
 }

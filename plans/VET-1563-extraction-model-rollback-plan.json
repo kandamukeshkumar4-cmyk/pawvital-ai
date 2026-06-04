@@ -6,12 +6,12 @@
   "status": "ready",
   "inputArtifacts": {
     "experimentPackage": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1562-offline-experiment-package.json",
+      "path": "plans/VET-1562-offline-experiment-package.json",
       "exists": true,
-      "sha256": "108e0569f55ad53f261deb7b4612776f2feadafd6e59e0af8d27050889ac5936"
+      "sha256": "f78b76c9efa7b988e8596e37e6efbf1cdaffba94d29d08ca00ad0a7308737953"
     },
     "routingMatrix": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-model-routing-matrix.json",
+      "path": "plans/VET-1563-model-routing-matrix.json",
       "exists": true,
       "sha256": "ec2df3a37f90d69e9cefd2c76d960421806916d2852125076087c1fae1f2d4ff"
     }

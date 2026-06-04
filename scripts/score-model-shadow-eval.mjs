@@ -10,6 +10,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { repoRelativePath } from "./lib/artifact-paths.mjs";
 
 const role = process.argv
   .find((arg) => arg.startsWith("--role="))
@@ -163,10 +164,10 @@ function buildScorecard(scaffold, outputStatus) {
     generatedAt: "2026-05-31T00:00:00.000Z",
     note:
       "Offline scorecard only. It does not call providers, train models, or mutate runtime routing.",
-    input: inputPath,
+    input: repoRelativePath(inputPath),
     inputArtifacts: {
       scaffold: {
-        path: inputPath,
+        path: repoRelativePath(inputPath),
         sha256: sha256(inputPath),
       },
       frozenOutputStatus: {

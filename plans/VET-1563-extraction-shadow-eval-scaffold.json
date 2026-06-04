@@ -11,7 +11,7 @@
     },
     "routingEvaluationPlan": {
       "path": "plans/VET-1563-model-routing-evaluation-plan.json",
-      "sha256": "bd2b241d78ec104320684a1bf9e357ffb077196272c7981c4612b0aa538d5c3d"
+      "sha256": "c599193839310717a8e44ea680aebb2ac8a6e095df45e22c09842d1e404df767"
     }
   },
   "baseline": {

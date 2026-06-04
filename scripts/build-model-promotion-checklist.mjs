@@ -10,6 +10,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { repoRelativePath } from "./lib/artifact-paths.mjs";
 
 const role = process.argv
   .find((arg) => arg.startsWith("--role="))
@@ -66,7 +67,7 @@ function sha256(path) {
 
 function artifact(path) {
   return {
-    path,
+    path: repoRelativePath(path),
     exists: existsSync(path),
     sha256: existsSync(path) ? sha256(path) : null,
   };

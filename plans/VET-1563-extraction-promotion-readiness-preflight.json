@@ -21,45 +21,45 @@
   },
   "inputArtifacts": {
     "checklist": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-checklist.json",
+      "path": "plans/VET-1563-extraction-promotion-checklist.json",
       "exists": true,
-      "sha256": "28cfb0398cc8fb3fa457414b26cf6d59160fd82d0cd5c78ba6bb170627184a28"
+      "sha256": "206229f14f87bc2a137358482d7371127eaf593beeef372fa25c1a8e24442523"
     },
     "scorecard": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-shadow-eval-scorecard.json",
+      "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
       "exists": true,
-      "sha256": "32746cd08bc2fc8215ecbdc934c223f10bfc3a0b30cdbce3270a16ef24768f08"
+      "sha256": "f14574f1b1e0362da6f459dbd714acce3975da2196695db3d0423e0950d16b6c"
     },
     "outputCapturePlan": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-capture-plan.json",
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
       "exists": true,
-      "sha256": "61bf8283b3d8f6bc096351c677d77bce2fdbc4b24e190bc7411d1ec82bacac16"
+      "sha256": "b55873cc0a61580f73239360a462d31f2a650a0acaed7aa00b902f9e26e3aeda"
     },
     "outputTemplates": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-templates.json",
+      "path": "plans/VET-1563-extraction-frozen-output-templates.json",
       "exists": true,
-      "sha256": "3ef7680dff1e1f533c0715cb04f5a3018d3855150f2c24f842ff83041138245e"
+      "sha256": "6fe951b6f375c471700f29c4f15b021a507fb0cafdae84d7d1f2cac46c614c80"
     },
     "outputStatus": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-status.json",
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
       "exists": true,
-      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
     },
     "promotionTicket": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-runtime-promotion-ticket.json",
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "82e8384c49bcd045c25205376d7b96083970ac5e9d0277322acc99bad2000ec0"
+      "sha256": "f0695218de335b09dcf0e25899ffd79e90266415f27b7d1a581a529b067c0e76"
     },
     "ownerApprovalRequest": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-owner-approval-request.json",
+      "path": "plans/VET-1563-extraction-owner-approval-request.json",
       "exists": true,
       "sha256": null,
       "sha256OmittedReason": "downstream artifact is generated from this preflight; hashing it here would make regeneration non-idempotent"
     },
     "promotionSmokeRunbook": {
-      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-smoke-runbook.json",
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "2bb486dd98f5cfc950eaabd094cbd18eba533931ad048cfdc56bc515acf94d38"
+      "sha256": "5204ad6455377442f21eb066e65f38e6ac44ab95a7e4c0f0d272f3e0162f4c33"
     }
   },
   "requiredEvidence": [

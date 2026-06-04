@@ -14,11 +14,11 @@
   "inputArtifacts": {
     "templates": {
       "path": "plans/VET-1563-extraction-frozen-output-templates.json",
-      "sha256": "3ef7680dff1e1f533c0715cb04f5a3018d3855150f2c24f842ff83041138245e"
+      "sha256": "6fe951b6f375c471700f29c4f15b021a507fb0cafdae84d7d1f2cac46c614c80"
     },
     "status": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
-      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
     }
   },
   "currentStatus": {

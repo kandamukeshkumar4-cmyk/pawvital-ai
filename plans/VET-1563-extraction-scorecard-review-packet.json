@@ -7,19 +7,19 @@
   "inputArtifacts": {
     "scaffold": {
       "path": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
-      "sha256": "083674e052c7e8b93cbc2f84da579c5f3c3e6f59b7379c3eee752a6e682cb7c9"
+      "sha256": "9ca017ffd2741bd27673390e455c1e94b38968e06d2cf7e9bd4e60f169f3c8de"
     },
     "outputCapturePlan": {
       "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
-      "sha256": "61bf8283b3d8f6bc096351c677d77bce2fdbc4b24e190bc7411d1ec82bacac16"
+      "sha256": "b55873cc0a61580f73239360a462d31f2a650a0acaed7aa00b902f9e26e3aeda"
     },
     "outputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
-      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
     },
     "candidateSelection": {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
-      "sha256": "595ce8c183d44a427bfd6c03cf536e3fe6afc4fe31c1b4c5920c4b025976ebdb"
+      "sha256": "a8783640cbcb626d130217b0d42d60be8b7a6c901862598a29bb5628f6818e54"
     }
   },
   "readiness": {

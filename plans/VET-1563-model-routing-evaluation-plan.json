@@ -2,7 +2,7 @@
   "ticket": "VET-1563",
   "mode": "review-only",
   "generatedAt": "2026-05-31T00:00:00.000Z",
-  "inputRoutingMatrix": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-model-routing-matrix.json",
+  "inputRoutingMatrix": "plans/VET-1563-model-routing-matrix.json",
   "note": "Evaluation plan only. It does not call providers, train models, or mutate runtime model routing.",
   "globalGuards": [
     "deterministic clinical logic remains authoritative",

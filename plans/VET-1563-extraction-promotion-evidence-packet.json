@@ -7,27 +7,27 @@
   "inputArtifacts": {
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "9915b5034062197e9c7fc044f0e3781637681b9eca5a6022ba87b7bab2add6e0"
+      "sha256": "e09fbd1e6c844f3232c69977dee286237c660dbc9fda4f443727f7101d943bf5"
     },
     "checklist": {
       "path": "plans/VET-1563-extraction-promotion-checklist.json",
-      "sha256": "28cfb0398cc8fb3fa457414b26cf6d59160fd82d0cd5c78ba6bb170627184a28"
+      "sha256": "206229f14f87bc2a137358482d7371127eaf593beeef372fa25c1a8e24442523"
     },
     "outputCapturePlan": {
       "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
-      "sha256": "61bf8283b3d8f6bc096351c677d77bce2fdbc4b24e190bc7411d1ec82bacac16"
+      "sha256": "b55873cc0a61580f73239360a462d31f2a650a0acaed7aa00b902f9e26e3aeda"
     },
     "outputTemplates": {
       "path": "plans/VET-1563-extraction-frozen-output-templates.json",
-      "sha256": "3ef7680dff1e1f533c0715cb04f5a3018d3855150f2c24f842ff83041138245e"
+      "sha256": "6fe951b6f375c471700f29c4f15b021a507fb0cafdae84d7d1f2cac46c614c80"
     },
     "outputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
-      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
+      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
     },
     "rollbackPlan": {
       "path": "plans/VET-1563-extraction-model-rollback-plan.json",
-      "sha256": "370507e4d1ce6aade8051e66d9367433baa5d04cd434b4bf1b51291c76ef639e"
+      "sha256": "d71f0f5475f0fa87ac2bef0ac466a6950276b670ec4f4008375edfa37986ccc8"
     },
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
@@ -35,15 +35,15 @@
     },
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
-      "sha256": "82e8384c49bcd045c25205376d7b96083970ac5e9d0277322acc99bad2000ec0"
+      "sha256": "f0695218de335b09dcf0e25899ffd79e90266415f27b7d1a581a529b067c0e76"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
-      "sha256": "8ccc2134cd84cbaab10dee0bca55cca0f13cf89f47f74af4d9e5301f9878e7be"
+      "sha256": "63f90667f723b3176bde51f9ebaf569b76d1395a542385351f7875a30a5dbfc8"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
-      "sha256": "2bb486dd98f5cfc950eaabd094cbd18eba533931ad048cfdc56bc515acf94d38"
+      "sha256": "5204ad6455377442f21eb066e65f38e6ac44ab95a7e4c0f0d272f3e0162f4c33"
     }
   },
   "readiness": {

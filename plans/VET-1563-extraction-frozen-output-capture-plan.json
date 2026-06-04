@@ -7,11 +7,11 @@
   "inputArtifacts": {
     "shadowEvalScaffold": {
       "path": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
-      "sha256": "083674e052c7e8b93cbc2f84da579c5f3c3e6f59b7379c3eee752a6e682cb7c9"
+      "sha256": "9ca017ffd2741bd27673390e455c1e94b38968e06d2cf7e9bd4e60f169f3c8de"
     },
     "experimentPackage": {
       "path": "plans/VET-1562-offline-experiment-package.json",
-      "sha256": "108e0569f55ad53f261deb7b4612776f2feadafd6e59e0af8d27050889ac5936"
+      "sha256": "f78b76c9efa7b988e8596e37e6efbf1cdaffba94d29d08ca00ad0a7308737953"
     }
   },
   "baselineRoute": {
