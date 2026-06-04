@@ -1,0 +1,41 @@
+{
+  "ticket": "VET-1560",
+  "mode": "local-project-manager-sync-readiness",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "ticketCount": 5,
+  "readyForLiveSync": false,
+  "readyForExecutionSync": true,
+  "executionMode": "local-project-manager-fallback",
+  "blockedReason": null,
+  "liveRunCommand": "Azure live creation remains disabled until a separate approved live-sync ticket implements duplicate checks, owner approval capture, and created work item evidence.",
+  "localFallbackCommand": "npm run devops:vet1560-local-sync",
+  "inputArtifacts": {
+    "preflight": {
+      "path": "plans/VET-1560-azure-sync-preflight.json",
+      "exists": true,
+      "sha256": "05f01309f6df160cc6a96d229903d590a9378c855181e49c900c4ad225a1861f"
+    },
+    "runbook": {
+      "path": "plans/VET-1560-azure-live-sync-runbook.json",
+      "exists": true,
+      "sha256": "ecc5c7131a83ba9f4d5a07b5ed1fd57e3e356f51d6edb4d482f1c06af37bdf35"
+    },
+    "tickets": {
+      "path": "plans/VET-1560-project-manager-tickets.json",
+      "exists": true,
+      "sha256": "a8cd5b2e84838dbec328e450ae5061d591678a8e22f7801bb395d4234601efab"
+    },
+    "localSync": {
+      "path": "plans/VET-1560-project-manager-local-sync.json",
+      "exists": true,
+      "sha256": "5febb8eda6290d19b99bb1d77e2d20873cb5023bd01227b4608c77cb85425c8d"
+    }
+  },
+  "runbookStepCount": 5,
+  "blockers": [],
+  "guardrails": [
+    "This readiness builder does not create Azure work items.",
+    "A local fallback queue is execution-sync evidence, not Azure Boards live-sync evidence.",
+    "Do not mark live sync complete without created work item ids and URLs."
+  ]
+}

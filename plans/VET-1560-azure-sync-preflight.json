@@ -1,0 +1,32 @@
+{
+  "ticket": "VET-1560",
+  "mode": "local-only-azure-sync-preflight",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "readyForLiveSync": false,
+  "missing": [
+    "AZURE_DEVOPS_ORG",
+    "AZURE_DEVOPS_PROJECT",
+    "AZURE_DEVOPS_PAT"
+  ],
+  "checkedEnvVars": [
+    {
+      "name": "AZURE_DEVOPS_ORG",
+      "present": false
+    },
+    {
+      "name": "AZURE_DEVOPS_PROJECT",
+      "present": false
+    },
+    {
+      "name": "AZURE_DEVOPS_PAT",
+      "present": false
+    }
+  ],
+  "liveCallMade": false,
+  "blockedReason": "Azure DevOps env vars missing: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PAT",
+  "guardrails": [
+    "This preflight does not call Azure DevOps.",
+    "Do not print or persist AZURE_DEVOPS_PAT.",
+    "Do not create live work items until all required env vars are present and owner approval exists."
+  ]
+}

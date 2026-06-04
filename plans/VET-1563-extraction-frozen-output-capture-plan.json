@@ -1,0 +1,158 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "review-only",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Frozen output capture plan only. It does not call providers, train models, score outputs, or mutate runtime routing.",
+  "inputArtifacts": {
+    "shadowEvalScaffold": {
+      "path": "plans/VET-1563-extraction-shadow-eval-scaffold.json",
+      "sha256": "34358b67dc516469cad47ee4e68b808995663a1ccad11fe3ca77b64317372120"
+    },
+    "experimentPackage": {
+      "path": "plans/VET-1562-offline-experiment-package.json",
+      "sha256": "10af867958543bd8a90a6835803a659fa06df74219bdc5f568dda11e62c61d3f"
+    }
+  },
+  "baselineRoute": {
+    "role": "extraction",
+    "primaryModel": "current-runtime-extraction-route",
+    "fallbackModel": "deterministic extraction fallback",
+    "providers": [
+      "current PawVital runtime provider chain"
+    ],
+    "currentRuntimeSurface": "src/lib/symptom-chat/answer-extraction.ts"
+  },
+  "capturePolicy": {
+    "validationBeforeHoldout": true,
+    "holdoutMayRunOnlyAfterCandidateFrozen": true,
+    "runtimeChangeAllowedHere": false,
+    "providerCallsAllowedByThisArtifact": false,
+    "outputHashRequired": true,
+    "reviewerRequiredBeforeScoring": true
+  },
+  "validationCases": [
+    {
+      "caseSourceId": "dog-triage-gold-v1-validation",
+      "split": "validation",
+      "phase": "validation-first",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/gold-v1-enriched.jsonl",
+        "sha256": "208510654ae6988e592c12da071fc00f9fa48565d6fe02b54d86219667c37e43",
+        "recordCount": 226
+      },
+      "baseline": {
+        "model": "current-runtime-extraction-route",
+        "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/baseline.json",
+        "outputSha256": null
+      },
+      "candidate": {
+        "modelOrAdapter": null,
+        "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+        "outputSha256": null
+      },
+      "scorecardPatch": {
+        "expectedEvidence": {
+          "observedOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+          "reviewer": null
+        },
+        "reviewerInstruction": "After outputs are frozen and hashed, score every dimension with evidence and mark each blocker observed=true/false."
+      },
+      "blockersUntilPopulated": [
+        "baseline output hash missing",
+        "candidate output hash missing",
+        "reviewer missing",
+        "dimension scores missing",
+        "blocker observations missing"
+      ]
+    },
+    {
+      "caseSourceId": "dog-triage-sample-cases-validation",
+      "split": "validation",
+      "phase": "validation-first",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/sample-cases.json",
+        "sha256": "5fa19dcf8d213aec926b4b9ca0d2359a26709f327a1066dac055e51f54ea4700",
+        "recordCount": 3
+      },
+      "baseline": {
+        "model": "current-runtime-extraction-route",
+        "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/baseline.json",
+        "outputSha256": null
+      },
+      "candidate": {
+        "modelOrAdapter": null,
+        "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+        "outputSha256": null
+      },
+      "scorecardPatch": {
+        "expectedEvidence": {
+          "observedOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+          "reviewer": null
+        },
+        "reviewerInstruction": "After outputs are frozen and hashed, score every dimension with evidence and mark each blocker observed=true/false."
+      },
+      "blockersUntilPopulated": [
+        "baseline output hash missing",
+        "candidate output hash missing",
+        "reviewer missing",
+        "dimension scores missing",
+        "blocker observations missing"
+      ]
+    }
+  ],
+  "holdoutCases": [
+    {
+      "caseSourceId": "dog-triage-wave3-freeze-holdout",
+      "split": "holdout",
+      "phase": "holdout-after-candidate-freeze",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/wave3-freeze-manifest.json",
+        "sha256": "f35c71aeffe92c9a9983feeaea6c643f6b054556dad8578f732b975c8ad353b9",
+        "recordCount": 226
+      },
+      "baseline": {
+        "model": "current-runtime-extraction-route",
+        "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/baseline.json",
+        "outputSha256": null
+      },
+      "candidate": {
+        "modelOrAdapter": null,
+        "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+        "outputSha256": null
+      },
+      "scorecardPatch": {
+        "expectedEvidence": {
+          "observedOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+          "reviewer": null
+        },
+        "reviewerInstruction": "After outputs are frozen and hashed, score every dimension with evidence and mark each blocker observed=true/false."
+      },
+      "blockersUntilPopulated": [
+        "baseline output hash missing",
+        "candidate output hash missing",
+        "reviewer missing",
+        "dimension scores missing",
+        "blocker observations missing"
+      ]
+    }
+  ],
+  "promotionDecision": {
+    "allowed": false,
+    "reason": "This plan only defines output capture paths. Promotion remains blocked until outputs are populated, hashes are recorded, human review is complete, scorecard thresholds pass, owner approval exists, and a separate promotion ticket authorizes runtime changes."
+  },
+  "nextCommands": [
+    "npm run models:shadow-eval-scaffold",
+    "npm run models:output-capture-plan",
+    "populate artifacts/model-shadow-eval/<role>/<caseSourceId>/baseline.json and candidate.json in a separate review-only run",
+    "record sha256 hashes in the populated scorecard",
+    "npm run models:shadow-eval-score",
+    "npm run models:promotion-checklist"
+  ],
+  "goodhartGuard": [
+    "Do not score holdout before candidate output is frozen.",
+    "Do not overwrite frozen outputs after reviewing scores.",
+    "Do not use holdout findings for prompt, adapter, or training iteration.",
+    "Do not promote output-shape improvements that weaken clinical slot integrity."
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "read-only-frozen-output-status",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Read-only frozen output status. It checks expected output files and hashes only; it does not call providers, train models, score outputs, or mutate runtime routing.",
+  "inputArtifacts": {
+    "outputCapturePlan": {
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+      "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+    },
+    "outputTemplates": {
+      "path": "plans/VET-1563-extraction-frozen-output-templates.json",
+      "sha256": "8e64adcdb2a561e865531245b8b627cf995e42a48f58a42713e09fdff141aff9"
+    }
+  },
+  "summary": {
+    "readyForHumanReview": false,
+    "caseCount": 3,
+    "readyCaseCount": 0,
+    "missingBaselineOutputCount": 3,
+    "missingCandidateOutputCount": 3,
+    "invalidJsonOutputCount": 0,
+    "invalidSchemaOutputCount": 0
+  },
+  "cases": [
+    {
+      "caseSourceId": "dog-triage-gold-v1-validation",
+      "split": "validation",
+      "phase": "validation-first",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/gold-v1-enriched.jsonl",
+        "sha256": "208510654ae6988e592c12da071fc00f9fa48565d6fe02b54d86219667c37e43",
+        "recordCount": 226
+      },
+      "baseline": {
+        "path": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/baseline.json",
+        "exists": false,
+        "sha256": null,
+        "parseableJson": false,
+        "schemaValid": false,
+        "schemaErrors": [],
+        "recordCount": null,
+        "blocker": "output file missing"
+      },
+      "candidate": {
+        "path": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+        "exists": false,
+        "sha256": null,
+        "parseableJson": false,
+        "schemaValid": false,
+        "schemaErrors": [],
+        "recordCount": null,
+        "blocker": "output file missing"
+      },
+      "readyForReview": false,
+      "blockers": [
+        "baseline output file missing",
+        "candidate output file missing"
+      ]
+    },
+    {
+      "caseSourceId": "dog-triage-sample-cases-validation",
+      "split": "validation",
+      "phase": "validation-first",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/sample-cases.json",
+        "sha256": "5fa19dcf8d213aec926b4b9ca0d2359a26709f327a1066dac055e51f54ea4700",
+        "recordCount": 3
+      },
+      "baseline": {
+        "path": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/baseline.json",
+        "exists": false,
+        "sha256": null,
+        "parseableJson": false,
+        "schemaValid": false,
+        "schemaErrors": [],
+        "recordCount": null,
+        "blocker": "output file missing"
+      },
+      "candidate": {
+        "path": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+        "exists": false,
+        "sha256": null,
+        "parseableJson": false,
+        "schemaValid": false,
+        "schemaErrors": [],
+        "recordCount": null,
+        "blocker": "output file missing"
+      },
+      "readyForReview": false,
+      "blockers": [
+        "baseline output file missing",
+        "candidate output file missing"
+      ]
+    },
+    {
+      "caseSourceId": "dog-triage-wave3-freeze-holdout",
+      "split": "holdout",
+      "phase": "holdout-after-candidate-freeze",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/wave3-freeze-manifest.json",
+        "sha256": "f35c71aeffe92c9a9983feeaea6c643f6b054556dad8578f732b975c8ad353b9",
+        "recordCount": 226
+      },
+      "baseline": {
+        "path": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/baseline.json",
+        "exists": false,
+        "sha256": null,
+        "parseableJson": false,
+        "schemaValid": false,
+        "schemaErrors": [],
+        "recordCount": null,
+        "blocker": "output file missing"
+      },
+      "candidate": {
+        "path": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+        "exists": false,
+        "sha256": null,
+        "parseableJson": false,
+        "schemaValid": false,
+        "schemaErrors": [],
+        "recordCount": null,
+        "blocker": "output file missing"
+      },
+      "readyForReview": false,
+      "blockers": [
+        "baseline output file missing",
+        "candidate output file missing"
+      ]
+    }
+  ],
+  "blockers": [
+    "dog-triage-gold-v1-validation: baseline output file missing",
+    "dog-triage-gold-v1-validation: candidate output file missing",
+    "dog-triage-sample-cases-validation: baseline output file missing",
+    "dog-triage-sample-cases-validation: candidate output file missing",
+    "dog-triage-wave3-freeze-holdout: baseline output file missing",
+    "dog-triage-wave3-freeze-holdout: candidate output file missing"
+  ],
+  "nextActions": [
+    "Populate each missing baseline.json and candidate.json from a separate authorized review-only capture run.",
+    "Resolve candidate template capture gates before candidate output hashes can count.",
+    "Do not run holdout capture until validation candidate outputs are frozen.",
+    "Rerun npm run models:frozen-output-status after output files are written.",
+    "Use the recorded sha256 values to update the scorecard evidence before human scoring."
+  ],
+  "guardrails": [
+    "Do not generate model outputs from this status command.",
+    "Do not count candidate output hashes while candidate identity or scoped validation-output-capture approval is unresolved.",
+    "Do not overwrite frozen outputs after review begins.",
+    "Do not use holdout results for prompt, adapter, or training iteration.",
+    "Do not mutate runtime NIM, provider env, or model routing from this artifact."
+  ]
+}

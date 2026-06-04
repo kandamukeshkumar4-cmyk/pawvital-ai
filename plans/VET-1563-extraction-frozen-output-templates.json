@@ -1,0 +1,3856 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "read-only-frozen-output-templates",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Template artifact only. Copy an envelope into the matching output path during a separate authorized capture run; this artifact does not populate frozen outputs.",
+  "inputArtifacts": {
+    "outputCapturePlan": {
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+      "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+    },
+    "candidateSelectionPacket": {
+      "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
+      "sha256": "a4bc894840e56b8bbe65fdbf2100284de5863d643ad428c609a8a75822427b6d"
+    }
+  },
+  "capturePrerequisites": {
+    "candidateCaptureApprovalScope": "validation-output-capture-only",
+    "candidateIdentityResolved": false,
+    "candidateCaptureApprovalComplete": false,
+    "candidateTemplateStatus": "candidate templates remain placeholders until candidate-selection approval is complete"
+  },
+  "envelopeSchema": {
+    "requiredFields": [
+      "role",
+      "caseSourceId",
+      "split",
+      "model",
+      "capturedAt",
+      "outputs"
+    ],
+    "outputItemRequiredFields": [
+      "inputId",
+      "rawOutput"
+    ],
+    "recordCountRule": "outputs length must exactly match the inputSource.recordCount for the case."
+  },
+  "cases": [
+    {
+      "caseSourceId": "dog-triage-gold-v1-validation",
+      "split": "validation",
+      "phase": "validation-first",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/gold-v1-enriched.jsonl",
+        "sha256": "208510654ae6988e592c12da071fc00f9fa48565d6fe02b54d86219667c37e43",
+        "recordCount": 226
+      },
+      "templates": [
+        {
+          "variant": "baseline",
+          "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/baseline.json",
+          "captureGate": {
+            "status": "ready-for-authorized-baseline-capture",
+            "requiredApprovalScope": null,
+            "blockers": []
+          },
+          "envelope": {
+            "role": "extraction",
+            "caseSourceId": "dog-triage-gold-v1-validation",
+            "split": "validation",
+            "model": "current-runtime-extraction-route",
+            "capturedAt": "<ISO-8601 timestamp from capture run>",
+            "outputs": [
+              {
+                "inputId": "emergency-blue-gums-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-gdv-retching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-cluster-seizures",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-deep-bleeding-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-heatstroke",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-toxin-xylitol",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dystocia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-eclampsia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pale-gums-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-anaphylaxis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomit-blood-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-parvo-style-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-open-fracture",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-resting-open-mouth-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pyometra-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-oral-bleeding-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-rat-poison-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-unresponsive-after-tremors",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-limping-sudden",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-excessive-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drinking-more",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trembling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-gradual-belly-enlargement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-small-blood-in-stool",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-eye-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-ear-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-weight-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-wound-skin-issue",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urination-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-behavior-change",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-swelling-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-dental-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-hair-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-regurgitation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-constipation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-generalized-stiffness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nasal-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting-diarrhea-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing-breathing-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-postoperative-concern",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-decline",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-progression-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trauma-history-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-onset-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-water-intake-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-gum-color-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-consciousness-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-type-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-blood-amount-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-appetite-change-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-stool-consistency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seasonal-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trembling-timing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-weight-bearing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-swelling-present-no",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-acute-paralysis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hypoglycemia-toy-breed",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-repeated-nonproductive-heaving",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-pseudopregnancy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-prolonged-heat",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-mastitis-postpartum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-scrotal-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-vaginal-discharge-bright",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-heavy-postpartum-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-retained-puppy-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-foul-discharge-fever",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-male-paraphimosis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-chocolate-small-amount",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-marijuana-drowsy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-garlic-onion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-ibuprofen-maybe",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-antifreeze",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-sago-palm",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-grapes-weakness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-lily-chew",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-tremorgenic-mycotoxin",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-cough-night",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-exercise-intolerance",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-belly-fluid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-faint-then-recovers",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-collapse-blue-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-resting-breathing-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-collapse-after-excitement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-rapid-breathing-pale",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-new-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-weight-loss-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-oral-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-bone-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-lymph-node-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-bleeding-splenic-rupture-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-mouth-tumor-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-obstructive-neck-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-nosebleed-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car-pale-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-gasdilation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-post-vaccine-face-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dog-bite-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-diabetic-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-prolonged-seizure",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-choking-foreign-body",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-glaucoma-eye",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-imma-mediated-thrombocytopenia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-burn-chemical",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-allergic-reaction-hives",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-female-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-electrical-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-protozoal-acute-babesia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-snake-bite",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-addisonian-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hemorrhagic-diarrhea-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-difficulty-breathing-kennel",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-after-meal",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-seizure-first-time",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-breathing-labored",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomiting-green",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-limping-cry-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-wound-deep-avulsion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-trembling-cold-weak",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seizure-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postictal-no-recovery",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-heavy-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hard-labor-no-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-ear-infection",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vomiting-multiple-times",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-limping-non-weight-bearing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-urinary-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-hot-spot-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-coughing-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-diarrhea-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-eye-squinting-red",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-trembling-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-swollen-abdomen-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-itching-intense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-weight-loss-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-dental-bleeding-gum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-hair-loss-spreading",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vaginal-discharge-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drinking-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-behavior-hiding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-regurgitation-frequent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-abdominal-pain-tense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-face-swelling-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-scooting-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-infection-spread",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drooling-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-senior-not-eating-days",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-chronic-limp-sudden-worse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trauma-fall-yard",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-separation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-thunder",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-bad-breath-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-flea-infestation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tick-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-obesity-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-paw-licking-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting-foul-odor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-pustules",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-snoring-loud",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vaccine-reaction-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urine-marking-indoor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-cold-sensitivity",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nail-overgrowth",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drooling-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-growth-wart",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-abdominal-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-reverse-sneezing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tail-chasing-compulsive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-face-swelling-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-weight-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-sick-dog",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-throwing-up-bricks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-energy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-cough-vomit-itch",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-big",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-not-eating",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-runs",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-limping",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-lethargy-vomit-drink",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-eye-bad",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-lump-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-his-stomach-upset",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-skin-ear-lick",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-drinking-peeing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-leg-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-coughing-sometimes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-weight-hair-tired",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-shakes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-onset-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-which-leg-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-itch-location-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-urine-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-lump-size-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-discharge-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-energy-level-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-wound-depth-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-temperature-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-cognitive-dysfunction",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-arthritis-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-ear-infections",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-skin-allergies",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-vision-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-hearing-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-intermittent-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-incontinence",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-chronic-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-chronic-cough",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-senior-decline-combo",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-dental-decay",
+                "rawOutput": "<verbatim model output JSON/text>"
+              }
+            ]
+          }
+        },
+        {
+          "variant": "candidate",
+          "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+          "captureGate": {
+            "status": "blocked",
+            "requiredApprovalScope": "validation-output-capture-only",
+            "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+            "candidateIdentityResolved": false,
+            "captureApprovalComplete": false,
+            "blockers": [
+              "candidate identity is not resolved",
+              "scoped validation-output-capture approval is not complete"
+            ]
+          },
+          "envelope": {
+            "role": "extraction",
+            "caseSourceId": "dog-triage-gold-v1-validation",
+            "split": "validation",
+            "model": "<candidate-model-or-adapter>",
+            "capturedAt": "<ISO-8601 timestamp from capture run>",
+            "outputs": [
+              {
+                "inputId": "emergency-blue-gums-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-gdv-retching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-cluster-seizures",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-deep-bleeding-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-heatstroke",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-toxin-xylitol",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dystocia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-eclampsia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pale-gums-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-anaphylaxis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomit-blood-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-parvo-style-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-open-fracture",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-resting-open-mouth-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pyometra-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-oral-bleeding-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-rat-poison-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-unresponsive-after-tremors",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-limping-sudden",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-excessive-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drinking-more",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trembling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-gradual-belly-enlargement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-small-blood-in-stool",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-eye-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-ear-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-weight-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-wound-skin-issue",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urination-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-behavior-change",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-swelling-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-dental-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-hair-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-regurgitation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-constipation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-generalized-stiffness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nasal-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting-diarrhea-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing-breathing-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-postoperative-concern",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-decline",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-progression-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trauma-history-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-onset-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-water-intake-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-gum-color-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-consciousness-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-type-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-blood-amount-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-appetite-change-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-stool-consistency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seasonal-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trembling-timing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-weight-bearing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-swelling-present-no",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-acute-paralysis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hypoglycemia-toy-breed",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-repeated-nonproductive-heaving",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-pseudopregnancy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-prolonged-heat",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-mastitis-postpartum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-scrotal-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-vaginal-discharge-bright",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-heavy-postpartum-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-retained-puppy-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-foul-discharge-fever",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-male-paraphimosis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-chocolate-small-amount",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-marijuana-drowsy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-garlic-onion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-ibuprofen-maybe",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-antifreeze",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-sago-palm",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-grapes-weakness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-lily-chew",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-tremorgenic-mycotoxin",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-cough-night",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-exercise-intolerance",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-belly-fluid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-faint-then-recovers",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-collapse-blue-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-resting-breathing-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-collapse-after-excitement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-rapid-breathing-pale",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-new-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-weight-loss-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-oral-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-bone-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-lymph-node-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-bleeding-splenic-rupture-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-mouth-tumor-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-obstructive-neck-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-nosebleed-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car-pale-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-gasdilation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-post-vaccine-face-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dog-bite-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-diabetic-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-prolonged-seizure",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-choking-foreign-body",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-glaucoma-eye",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-imma-mediated-thrombocytopenia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-burn-chemical",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-allergic-reaction-hives",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-female-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-electrical-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-protozoal-acute-babesia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-snake-bite",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-addisonian-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hemorrhagic-diarrhea-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-difficulty-breathing-kennel",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-after-meal",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-seizure-first-time",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-breathing-labored",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomiting-green",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-limping-cry-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-wound-deep-avulsion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-trembling-cold-weak",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seizure-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postictal-no-recovery",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-heavy-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hard-labor-no-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-ear-infection",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vomiting-multiple-times",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-limping-non-weight-bearing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-urinary-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-hot-spot-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-coughing-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-diarrhea-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-eye-squinting-red",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-trembling-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-swollen-abdomen-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-itching-intense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-weight-loss-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-dental-bleeding-gum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-hair-loss-spreading",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vaginal-discharge-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drinking-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-behavior-hiding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-regurgitation-frequent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-abdominal-pain-tense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-face-swelling-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-scooting-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-infection-spread",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drooling-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-senior-not-eating-days",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-chronic-limp-sudden-worse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trauma-fall-yard",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-separation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-thunder",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-bad-breath-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-flea-infestation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tick-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-obesity-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-paw-licking-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting-foul-odor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-pustules",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-snoring-loud",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vaccine-reaction-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urine-marking-indoor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-cold-sensitivity",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nail-overgrowth",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drooling-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-growth-wart",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-abdominal-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-reverse-sneezing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tail-chasing-compulsive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-face-swelling-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-weight-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-sick-dog",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-throwing-up-bricks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-energy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-cough-vomit-itch",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-big",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-not-eating",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-runs",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-limping",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-lethargy-vomit-drink",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-eye-bad",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-lump-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-his-stomach-upset",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-skin-ear-lick",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-drinking-peeing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-leg-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-coughing-sometimes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-weight-hair-tired",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-shakes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-onset-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-which-leg-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-itch-location-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-urine-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-lump-size-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-discharge-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-energy-level-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-wound-depth-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-temperature-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-cognitive-dysfunction",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-arthritis-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-ear-infections",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-skin-allergies",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-vision-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-hearing-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-intermittent-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-incontinence",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-chronic-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-chronic-cough",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-senior-decline-combo",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-dental-decay",
+                "rawOutput": "<verbatim model output JSON/text>"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "caseSourceId": "dog-triage-sample-cases-validation",
+      "split": "validation",
+      "phase": "validation-first",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/sample-cases.json",
+        "sha256": "5fa19dcf8d213aec926b4b9ca0d2359a26709f327a1066dac055e51f54ea4700",
+        "recordCount": 3
+      },
+      "templates": [
+        {
+          "variant": "baseline",
+          "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/baseline.json",
+          "captureGate": {
+            "status": "ready-for-authorized-baseline-capture",
+            "requiredApprovalScope": null,
+            "blockers": []
+          },
+          "envelope": {
+            "role": "extraction",
+            "caseSourceId": "dog-triage-sample-cases-validation",
+            "split": "validation",
+            "model": "current-runtime-extraction-route",
+            "capturedAt": "<ISO-8601 timestamp from capture run>",
+            "outputs": [
+              {
+                "inputId": "emergency-breathing-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "limping-follow-up",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "swollen-abdomen-retching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              }
+            ]
+          }
+        },
+        {
+          "variant": "candidate",
+          "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+          "captureGate": {
+            "status": "blocked",
+            "requiredApprovalScope": "validation-output-capture-only",
+            "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+            "candidateIdentityResolved": false,
+            "captureApprovalComplete": false,
+            "blockers": [
+              "candidate identity is not resolved",
+              "scoped validation-output-capture approval is not complete"
+            ]
+          },
+          "envelope": {
+            "role": "extraction",
+            "caseSourceId": "dog-triage-sample-cases-validation",
+            "split": "validation",
+            "model": "<candidate-model-or-adapter>",
+            "capturedAt": "<ISO-8601 timestamp from capture run>",
+            "outputs": [
+              {
+                "inputId": "emergency-breathing-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "limping-follow-up",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "swollen-abdomen-retching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "caseSourceId": "dog-triage-wave3-freeze-holdout",
+      "split": "holdout",
+      "phase": "holdout-after-candidate-freeze",
+      "inputSource": {
+        "path": "data/benchmarks/dog-triage/wave3-freeze-manifest.json",
+        "sha256": "f35c71aeffe92c9a9983feeaea6c643f6b054556dad8578f732b975c8ad353b9",
+        "recordCount": 226
+      },
+      "templates": [
+        {
+          "variant": "baseline",
+          "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/baseline.json",
+          "captureGate": {
+            "status": "ready-for-authorized-baseline-capture",
+            "requiredApprovalScope": null,
+            "blockers": []
+          },
+          "envelope": {
+            "role": "extraction",
+            "caseSourceId": "dog-triage-wave3-freeze-holdout",
+            "split": "holdout",
+            "model": "current-runtime-extraction-route",
+            "capturedAt": "<ISO-8601 timestamp from capture run>",
+            "outputs": [
+              {
+                "inputId": "cardiac-emergency-collapse-after-excitement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-collapse-blue-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-rapid-breathing-pale",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-resting-breathing-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-belly-fluid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-cough-night",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-exercise-intolerance",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-faint-then-recovers",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-acute-paralysis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-addisonian-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-allergic-reaction-hives",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-anaphylaxis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-after-meal",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-gasdilation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-blue-gums-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-breathing-labored",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-burn-chemical",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-choking-foreign-body",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-cluster-seizures",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-deep-bleeding-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-diabetic-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-difficulty-breathing-kennel",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dog-bite-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dystocia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-electrical-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-gdv-retching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-glaucoma-eye",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hard-labor-no-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-heatstroke",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hemorrhagic-diarrhea-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car-pale-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hypoglycemia-toy-breed",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-imma-mediated-thrombocytopenia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-limping-cry-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-open-fracture",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-oral-bleeding-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pale-gums-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-parvo-style-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-post-vaccine-face-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postictal-no-recovery",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-eclampsia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-heavy-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-prolonged-seizure",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-protozoal-acute-babesia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pyometra-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-rat-poison-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-repeated-nonproductive-heaving",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-resting-open-mouth-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-seizure-first-time",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-snake-bite",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-toxin-xylitol",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-trembling-cold-weak",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-unresponsive-after-tremors",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-female-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomit-blood-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomiting-green",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-wound-deep-avulsion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-appetite-change-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-blood-amount-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-onset-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-consciousness-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-type-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-onset-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-discharge-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-energy-level-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-gum-color-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-itch-location-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-progression-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-which-leg-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-lump-size-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seasonal-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seizure-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-stool-consistency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-swelling-present-no",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-temperature-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trauma-history-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trembling-timing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-urine-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-water-intake-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-weight-bearing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-wound-depth-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-bleeding-splenic-rupture-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-mouth-tumor-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-nosebleed-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-obstructive-neck-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-bone-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-lymph-node-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-new-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-oral-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-weight-loss-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-abdominal-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-separation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-thunder",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-bad-breath-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-behavior-change",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-chronic-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-ear-infections",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-intermittent-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-skin-allergies",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-weight-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-cold-sensitivity",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-constipation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-drinking-peeing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-energy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-limping",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing-breathing-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-dental-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drinking-more",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drooling-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-ear-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-excessive-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-eye-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-face-swelling-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-flea-infestation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-generalized-stiffness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-gradual-belly-enlargement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-hair-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-limping-sudden",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-big",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-eye-bad",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-leg-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-cough-vomit-itch",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-lethargy-vomit-drink",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-senior-decline-combo",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-skin-ear-lick",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-weight-hair-tired",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nail-overgrowth",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nasal-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-obesity-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-paw-licking-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-postoperative-concern",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-regurgitation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-reverse-sneezing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting-foul-odor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-arthritis-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-chronic-cough",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-cognitive-dysfunction",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-decline",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-dental-decay",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-hearing-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-incontinence",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-vision-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-growth-wart",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-pustules",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-his-stomach-upset",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-runs",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-shakes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-throwing-up-bricks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-small-blood-in-stool",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-snoring-loud",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-swelling-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tail-chasing-compulsive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tick-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trauma-fall-yard",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trembling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urination-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urine-marking-indoor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vaccine-reaction-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-coughing-sometimes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-lump-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-not-eating",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-sick-dog",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting-diarrhea-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-weight-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-wound-skin-issue",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-foul-discharge-fever",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-heavy-postpartum-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-male-paraphimosis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-retained-puppy-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-mastitis-postpartum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-prolonged-heat",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-pseudopregnancy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-scrotal-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-vaginal-discharge-bright",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-abdominal-pain-tense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-behavior-hiding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-chronic-limp-sudden-worse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-coughing-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-dental-bleeding-gum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-diarrhea-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drinking-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drooling-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-ear-infection",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-eye-squinting-red",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-face-swelling-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-hair-loss-spreading",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-itching-intense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-limping-non-weight-bearing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-regurgitation-frequent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-scooting-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-senior-not-eating-days",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-hot-spot-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-infection-spread",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-swollen-abdomen-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-trembling-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-urinary-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vaginal-discharge-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vomiting-multiple-times",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-weight-loss-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-antifreeze",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-grapes-weakness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-lily-chew",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-sago-palm",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-tremorgenic-mycotoxin",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-chocolate-small-amount",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-garlic-onion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-ibuprofen-maybe",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-marijuana-drowsy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              }
+            ]
+          }
+        },
+        {
+          "variant": "candidate",
+          "outputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+          "captureGate": {
+            "status": "blocked",
+            "requiredApprovalScope": "validation-output-capture-only",
+            "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+            "candidateIdentityResolved": false,
+            "captureApprovalComplete": false,
+            "blockers": [
+              "candidate identity is not resolved",
+              "scoped validation-output-capture approval is not complete"
+            ]
+          },
+          "envelope": {
+            "role": "extraction",
+            "caseSourceId": "dog-triage-wave3-freeze-holdout",
+            "split": "holdout",
+            "model": "<candidate-model-or-adapter>",
+            "capturedAt": "<ISO-8601 timestamp from capture run>",
+            "outputs": [
+              {
+                "inputId": "cardiac-emergency-collapse-after-excitement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-collapse-blue-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-rapid-breathing-pale",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-emergency-resting-breathing-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-belly-fluid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-cough-night",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-exercise-intolerance",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "cardiac-question-faint-then-recovers",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-acute-paralysis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-addisonian-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-allergic-reaction-hives",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-anaphylaxis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-after-meal",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-bloat-gasdilation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-blue-gums-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-breathing-labored",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-burn-chemical",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-choking-foreign-body",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-cluster-seizures",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-deep-bleeding-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-diabetic-crisis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-difficulty-breathing-kennel",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dog-bite-wound",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-dystocia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-electrical-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-gdv-retching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-glaucoma-eye",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hard-labor-no-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-heatstroke",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hemorrhagic-diarrhea-shock",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hit-by-car-pale-gums",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-hypoglycemia-toy-breed",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-imma-mediated-thrombocytopenia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-limping-cry-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-open-fracture",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-oral-bleeding-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pale-gums-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-parvo-style-puppy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-post-vaccine-face-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postictal-no-recovery",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-eclampsia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-postpartum-heavy-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-prolonged-seizure",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-protozoal-acute-babesia",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-pyometra-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-rat-poison-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-repeated-nonproductive-heaving",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-resting-open-mouth-breathing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-seizure-first-time",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-snake-bite",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-toxin-xylitol",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-trembling-cold-weak",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-unresponsive-after-tremors",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-blockage-distress",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-urinary-female-blockage",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomit-blood-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-vomiting-green",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "emergency-wound-deep-avulsion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-appetite-change-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-blood-amount-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-onset-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-breathing-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-consciousness-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-cough-type-unknown-reasks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-diarrhea-onset-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-discharge-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-energy-level-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-gum-color-unknown-escalates",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-itch-location-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-progression-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-limping-which-leg-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-lump-size-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seasonal-pattern-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-seizure-duration-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-stool-consistency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-swelling-present-no",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-temperature-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trauma-history-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-trembling-timing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-urine-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-color-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-duration-raw-text",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-vomit-frequency-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-water-intake-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-weight-bearing-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "followup-wound-depth-unknown",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-bleeding-splenic-rupture-style",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-mouth-tumor-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-nosebleed-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-emergency-obstructive-neck-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-bone-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-lymph-node-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-new-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-oral-mass",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "oncology-question-weight-loss-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-abdominal-pain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-separation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-anxiety-thunder",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-bad-breath-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-behavior-change",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-chronic-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-ear-infections",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-intermittent-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-skin-allergies",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-chronic-weight-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-cold-sensitivity",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-constipation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-drinking-peeing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-energy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-limping",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-contradictory-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-coughing-breathing-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-dental-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-diarrhea",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drinking-more",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-drooling-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-ear-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-excessive-scratching",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-eye-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-face-swelling-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-flea-infestation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-generalized-stiffness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-gradual-belly-enlargement",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-hair-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-limping-sudden",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-big",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-belly-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-eye-bad",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-low-literacy-leg-hurt",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-cough-vomit-itch",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-lethargy-vomit-drink",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-senior-decline-combo",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-skin-ear-lick",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-multi-weight-hair-tired",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nail-overgrowth",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-nasal-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-obesity-gain",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-paw-licking-chronic",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-postoperative-concern",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-regurgitation",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-reverse-sneezing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-scooting-foul-odor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-arthritis-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-chronic-cough",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-cognitive-dysfunction",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-decline",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-dental-decay",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-hearing-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-incontinence",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-senior-vision-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-growth-wart",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-skin-pustules",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-his-stomach-upset",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-runs",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-the-shakes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-slang-throwing-up-bricks",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-small-blood-in-stool",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-snoring-loud",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-swelling-lump",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tail-chasing-compulsive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-tick-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trauma-fall-yard",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-trembling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urination-problem",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-urine-marking-indoor",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vaccine-reaction-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-coughing-sometimes",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-lump-found",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-not-eating",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vague-sick-dog",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-vomiting-diarrhea-combined",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-weight-loss",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "question-wound-skin-issue",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-foul-discharge-fever",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-heavy-postpartum-bleeding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-labor-green-discharge",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-male-paraphimosis",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-emergency-retained-puppy-collapse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-mastitis-postpartum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-prolonged-heat",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-pseudopregnancy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-scrotal-swelling",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "repro-question-vaginal-discharge-bright",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-abdominal-pain-tense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-behavior-hiding",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-chronic-limp-sudden-worse",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-coughing-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-dental-bleeding-gum",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-diarrhea-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drinking-excessive",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-drooling-cant-swallow",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-ear-infection",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-eye-squinting-red",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-face-swelling-worsening",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-hair-loss-spreading",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-itching-intense",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-limping-non-weight-bearing",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-regurgitation-frequent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-scooting-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-senior-not-eating-days",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-hot-spot-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-skin-infection-spread",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-swollen-abdomen-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-trembling-persistent",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-urinary-blood",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vaginal-discharge-mild",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-vomiting-multiple-times",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "sameday-weight-loss-rapid",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-antifreeze",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-grapes-weakness",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-lily-chew",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-sago-palm",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-emergency-tremorgenic-mycotoxin",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-chocolate-small-amount",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-garlic-onion",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-ibuprofen-maybe",
+                "rawOutput": "<verbatim model output JSON/text>"
+              },
+              {
+                "inputId": "toxin-question-marijuana-drowsy",
+                "rawOutput": "<verbatim model output JSON/text>"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "nextCommands": [
+    "Run an authorized review-only capture outside this template builder.",
+    "Complete candidate-selection scoped validation-output-capture approval before filling candidate envelopes.",
+    "Write each populated envelope to its baseline.json or candidate.json outputPath.",
+    "Run npm run models:frozen-output-status to validate schema and hashes.",
+    "Only after validation outputs are frozen may holdout capture run."
+  ],
+  "guardrails": [
+    "Do not write actual frozen outputs from this template command.",
+    "Do not fill candidate templates while candidate identity or scoped validation-output-capture approval is unresolved.",
+    "Do not use holdout templates until validation candidate outputs are frozen.",
+    "Do not tune prompts, adapters, or training from holdout outputs.",
+    "Do not mutate runtime model routing from this artifact."
+  ]
+}

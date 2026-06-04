@@ -1,0 +1,85 @@
+# VET-1560 Completion Audit
+
+Generated: 2026-05-31T00:00:00.000Z
+Mode: review-only-completion-audit
+Overall status: INCOMPLETE
+
+57 blocker(s) remain before the full objective can be marked complete.
+
+## Requirements
+
+| Requirement | Status | Objective Item | Evidence |
+|---|---|---|---|
+| source-reviewed | PROVED | Go through FareedKhan-dev/train-llm-from-scratch and syndicalt/tugboat and identify transferable techniques. | ../.agents/autoscientists/local.config.json modelTechniqueIntake includes source ids: fareedkhan-train-llm-from-scratch, syndicalt-tugboat. Both sources include observed implementation details, transferable techniques, and non-transferable claims. FareedKhan scratch-training and syndicalt Tugboat techniques are translated into review-only PawVital tickets and local evidence artifacts. |
+| project-manager-tickets | PROVED | Create tickets in the PawVital project manager. | 5 local ticket payload entries exist. 5 tickets are queued in the local project-manager fallback. Azure live-sync runbook: 5 execution steps and 5 required evidence attachments defined. 5 tickets queued in the local project-manager fallback; Azure live sync remains blocked by: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PAT. |
+| local-config-updated | PROVED | Update local.config so next agents can use learned techniques. | ../.agents/autoscientists/local.config.json has modelTechniqueIntake.nextAgentInstruction. 128 model/product/project-manager artifacts registered. Regeneration command status: success. |
+| nim-and-ai-model-improvement | BLOCKED | Make the NIM models and AI models better for PawVital. | 5 blocked evidence categories; candidate selection resolved=false; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 3 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6. 5 promotion evidence slots defined. Candidate selection packet: resolved=false, blockers=5. Frozen output templates: 3 cases and 6 baseline/candidate envelopes defined. Frozen output status: 0/3 cases ready for human review. Promotion preflight gate summary: candidateGateBlockedCount=3, candidateContentHashWithoutEvidenceHashCount=0. Output capture runbook: 3 gated capture steps with holdout gated until validation freeze. Output capture authorization: readyForProviderCapture=false, blockers=4. Scorecard review packet: 2 validation and 1 holdout review forms defined. Rollback plan status: ready. Promotion smoke runbook: 5 evidence steps and 5 required attachments defined. Protected clinical diff proof status: ready. Promotion ticket draft: VET-1563P (review-only-promotion-ticket-draft), ready=false, candidateResolved=false. Owner approval request status: blocked-before-owner-approval, ready=false. Runtime routing was intentionally not changed by this review-only work. |
+| whoop-for-dogs-app | BLOCKED | Move the app toward a best-in-world Whoop-for-Dogs style experience. | 3 implementation tickets defined; production smoke ready=false, live migration applied=false; smoke runbook has 5 evidence steps. missing review inputs: src/lib/product-intelligence.ts, src/components/analytics/product-intelligence-panel.tsx 3 implementation tickets defined. Production readiness packet: readyForProductionSmoke=false, liveMigrationApplied=false, authenticatedProductionSmokeComplete=false. Production smoke runbook: 3 migration steps and 5 smoke evidence steps defined. Readiness/recovery persistence schema, pure row mappers, authenticated read/write route, and analytics save/history controls exist. |
+| claim-safety | BLOCKED | Keep owner-facing model/product intelligence clinically safe. | Claim-language verdict: blocked. 227 strings reviewed. |
+| instruction-governance | PROVED | Use Tugboat techniques to improve future agent instruction governance without unsafe auto-apply. | VET-1565 defines a proposal-only Tugboat adoption plan with 4 phases and 6 PawVital boundaries. 4 proposal-only adoption phases defined. 6 PawVital boundaries defined. Live Tugboat install, llmff runs, and instruction patch application remain intentionally unclaimed. |
+
+## Blockers
+
+- nim-and-ai-model-improvement: scorecard-populated: validation average 0 below threshold 4.2
+- nim-and-ai-model-improvement: scorecard-populated: holdout average 0 below threshold 4.2
+- nim-and-ai-model-improvement: scorecard-populated: scorecard still contains unresolved issues
+- nim-and-ai-model-improvement: frozen-observed-outputs: 3 case(s) not ready for human review
+- nim-and-ai-model-improvement: frozen-observed-outputs: 3 baseline output file(s) missing
+- nim-and-ai-model-improvement: frozen-observed-outputs: 3 candidate output file(s) missing
+- nim-and-ai-model-improvement: owner-approval: explicit owner approval missing
+- nim-and-ai-model-improvement: promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.
+- nim-and-ai-model-improvement: separate-promotion-ticket: validation score below 4.2
+- nim-and-ai-model-improvement: separate-promotion-ticket: holdout score below 4.2
+- nim-and-ai-model-improvement: separate-promotion-ticket: scorecard contains unresolved issues
+- nim-and-ai-model-improvement: separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete
+- nim-and-ai-model-improvement: separate-promotion-ticket: candidate model or adapter identity is not approved
+- nim-and-ai-model-improvement: separate-promotion-ticket: explicit owner approval artifact is missing
+- nim-and-ai-model-improvement: output-capture: 3 baseline output hash(es) missing
+- nim-and-ai-model-improvement: output-capture: 3 candidate output hash(es) missing
+- nim-and-ai-model-improvement: candidate-selection: candidate model or adapter id missing
+- nim-and-ai-model-improvement: candidate-selection: candidate provider missing
+- nim-and-ai-model-improvement: candidate-selection: candidate artifact hash missing
+- nim-and-ai-model-improvement: candidate-selection: candidate validation-output-capture approval record missing
+- nim-and-ai-model-improvement: candidate-selection: offline training/eval artifact is not populated
+- nim-and-ai-model-improvement: promotion-ticket: validation score below 4.2
+- nim-and-ai-model-improvement: promotion-ticket: holdout score below 4.2
+- nim-and-ai-model-improvement: promotion-ticket: scorecard contains unresolved issues
+- nim-and-ai-model-improvement: promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete
+- nim-and-ai-model-improvement: promotion-ticket: candidate model or adapter identity is not approved
+- nim-and-ai-model-improvement: promotion-ticket: explicit owner approval artifact is missing
+- nim-and-ai-model-improvement: owner-approval-request: validation score below 4.2
+- nim-and-ai-model-improvement: owner-approval-request: holdout score below 4.2
+- nim-and-ai-model-improvement: owner-approval-request: scorecard contains unresolved issues
+- nim-and-ai-model-improvement: owner-approval-request: frozen baseline/candidate outputs and hashes are incomplete
+- nim-and-ai-model-improvement: owner-approval-request: candidate model or adapter identity is not approved
+- nim-and-ai-model-improvement: owner-approval-request: explicit owner approval artifact is missing
+- nim-and-ai-model-improvement: owner-approval-request: scorecard-populated: validation average 0 below threshold 4.2
+- nim-and-ai-model-improvement: owner-approval-request: scorecard-populated: holdout average 0 below threshold 4.2
+- nim-and-ai-model-improvement: owner-approval-request: scorecard-populated: scorecard still contains unresolved issues
+- nim-and-ai-model-improvement: owner-approval-request: frozen-observed-outputs: 3 case(s) not ready for human review
+- nim-and-ai-model-improvement: owner-approval-request: frozen-observed-outputs: 3 baseline output file(s) missing
+- nim-and-ai-model-improvement: owner-approval-request: frozen-observed-outputs: 3 candidate output file(s) missing
+- nim-and-ai-model-improvement: owner-approval-request: owner-approval: explicit owner approval missing
+- nim-and-ai-model-improvement: owner-approval-request: promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.
+- nim-and-ai-model-improvement: owner-approval-request: separate-promotion-ticket: validation score below 4.2
+- nim-and-ai-model-improvement: owner-approval-request: separate-promotion-ticket: holdout score below 4.2
+- nim-and-ai-model-improvement: owner-approval-request: separate-promotion-ticket: scorecard contains unresolved issues
+- nim-and-ai-model-improvement: owner-approval-request: separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete
+- nim-and-ai-model-improvement: owner-approval-request: separate-promotion-ticket: candidate model or adapter identity is not approved
+- nim-and-ai-model-improvement: owner-approval-request: separate-promotion-ticket: explicit owner approval artifact is missing
+- nim-and-ai-model-improvement: owner-approval-request: output-capture: 3 baseline output hash(es) missing
+- nim-and-ai-model-improvement: owner-approval-request: output-capture: 3 candidate output hash(es) missing
+- nim-and-ai-model-improvement: owner-approval-request: frozen output status is not ready for human review
+- nim-and-ai-model-improvement: owner-approval-request: promotion smoke runbook is not ready for execution
+- nim-and-ai-model-improvement: output-capture-authorization: candidate capture approval is not complete
+- nim-and-ai-model-improvement: output-capture-authorization: baseline provider credential group is not present in the current process environment
+- nim-and-ai-model-improvement: output-capture-authorization: candidate provider credential group is not present in the current process environment
+- nim-and-ai-model-improvement: output-capture-authorization: candidate model or adapter identity has not been approved
+- whoop-for-dogs-app: Daily readiness and recovery live migration is not applied; authenticated production owner workflow smoke is not complete.
+- claim-safety: missing review inputs: src/lib/product-intelligence.ts, src/components/analytics/product-intelligence-panel.tsx
+
+## Completion Decision
+
+Can mark goal complete: false
+
+The full objective still requires live project-manager sync and model/NIM promotion evidence; product work is partial.

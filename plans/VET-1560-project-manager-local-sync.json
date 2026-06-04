@@ -1,0 +1,117 @@
+{
+  "ticket": "VET-1560",
+  "mode": "local-project-manager-fallback-sync",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "source": {
+    "path": "plans/VET-1560-project-manager-tickets.json",
+    "sha256": "a8cd5b2e84838dbec328e450ae5061d591678a8e22f7801bb395d4234601efab",
+    "ticketCount": 5
+  },
+  "azure": {
+    "liveCallMade": false,
+    "readyForLiveSync": false,
+    "missingEnvVars": [
+      "AZURE_DEVOPS_ORG",
+      "AZURE_DEVOPS_PROJECT",
+      "AZURE_DEVOPS_PAT"
+    ],
+    "checkedEnvVars": [
+      {
+        "name": "AZURE_DEVOPS_ORG",
+        "present": false
+      },
+      {
+        "name": "AZURE_DEVOPS_PROJECT",
+        "present": false
+      },
+      {
+        "name": "AZURE_DEVOPS_PAT",
+        "present": false
+      }
+    ]
+  },
+  "localFallback": {
+    "ready": true,
+    "itemCount": 5,
+    "items": [
+      {
+        "localId": "local-VET-1561",
+        "sequence": 1,
+        "ticketId": "VET-1561",
+        "title": "Build model dataset manifest and holdout policy",
+        "dependencies": [],
+        "acceptanceCriteria": [
+          "dataset manifest exists",
+          "holdout policy is explicit"
+        ],
+        "verifier": "plans/VET-1561-model-dataset-manifest.json",
+        "status": "queued-local-project-manager",
+        "localUrl": "local://pawvital/project-manager/VET-1561"
+      },
+      {
+        "localId": "local-VET-1562",
+        "sequence": 2,
+        "ticketId": "VET-1562",
+        "title": "Package offline narrow-model experiment evidence",
+        "dependencies": [
+          "VET-1561"
+        ],
+        "acceptanceCriteria": [
+          "offline package exists",
+          "runtime changes are blocked"
+        ],
+        "verifier": "plans/VET-1562-offline-experiment-package.json",
+        "status": "queued-local-project-manager",
+        "localUrl": "local://pawvital/project-manager/VET-1562"
+      },
+      {
+        "localId": "local-VET-1563",
+        "sequence": 3,
+        "ticketId": "VET-1563",
+        "title": "Prepare model promotion evidence without changing runtime routes",
+        "dependencies": [
+          "VET-1561",
+          "VET-1562"
+        ],
+        "acceptanceCriteria": [
+          "scorecard, rollback, owner approval, and smoke evidence blockers are explicit"
+        ],
+        "verifier": "plans/VET-1563-extraction-promotion-evidence-packet.json",
+        "status": "queued-local-project-manager",
+        "localUrl": "local://pawvital/project-manager/VET-1563"
+      },
+      {
+        "localId": "local-VET-1564",
+        "sequence": 4,
+        "ticketId": "VET-1564",
+        "title": "Prepare Whoop-style product intelligence evidence contract",
+        "dependencies": [],
+        "acceptanceCriteria": [
+          "claim guard and persistence schema readiness are explicit"
+        ],
+        "verifier": "plans/VET-1564-longitudinal-readiness-contract.json",
+        "status": "queued-local-project-manager",
+        "localUrl": "local://pawvital/project-manager/VET-1564"
+      },
+      {
+        "localId": "local-VET-1565",
+        "sequence": 5,
+        "ticketId": "VET-1565",
+        "title": "Proposal-only Tugboat governance adoption",
+        "dependencies": [],
+        "acceptanceCriteria": [
+          "proposal-only phases and no-auto-apply boundaries exist"
+        ],
+        "verifier": "plans/VET-1565-tugboat-governance-plan.json",
+        "status": "queued-local-project-manager",
+        "localUrl": "local://pawvital/project-manager/VET-1565"
+      }
+    ]
+  },
+  "guardrails": [
+    "This artifact is local project-manager fallback evidence, not Azure Boards live-sync proof.",
+    "Do not mark Azure live sync complete without created Azure work item ids and URLs.",
+    "Do not print or persist AZURE_DEVOPS_PAT.",
+    "Do not mutate runtime routes, model flags, provider env, or clinical logic from this sync command."
+  ]
+}

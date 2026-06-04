@@ -1,0 +1,84 @@
+{
+  "ticket": "VET-1560",
+  "mode": "model-technique-intake-snapshot",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "source": {
+    "path": "../.agents/autoscientists/local.config.json",
+    "field": "modelTechniqueIntake",
+    "purpose": "Committed snapshot for CI and repo-local VET-1560 artifact generation when the workspace-local AutoScientists config is unavailable."
+  },
+  "modelTechniqueIntake": {
+    "sources": [
+      {
+        "id": "fareedkhan-train-llm-from-scratch",
+        "url": "https://github.com/FareedKhan-dev/train-llm-from-scratch",
+        "type": "educational repository",
+        "paperBasis": "Attention Is All You Need",
+        "validatedAsOf": "2026-05-31",
+        "summary": "Reference implementation for a decoder-only Transformer training pipeline: dataset download, preprocessing, tokenization, configurable architecture, training loop, checkpoint save, and generation script.",
+        "observedImplementationDetails": [
+          "config.py centralizes vocabulary size, context length, embedding size, head count, block count, batch size, training steps, eval cadence, learning-rate schedule, output path, and device",
+          "data_loader.py reads tokenized HDF5 data, builds contiguous next-token prediction windows, shuffles examples, and yields input/target batches",
+          "train_transformer.py builds the model from config, trains with AdamW, evaluates train/dev loss on a cadence, decays learning rate once, and saves model state plus optimizer/loss metadata",
+          "transformer.py combines token embeddings, positional embeddings, stacked Transformer blocks, final layer norm, language-model head, cross-entropy loss, and multinomial token generation"
+        ],
+        "transferableTechniques": [
+          "keep dataset download, preprocessing, training, evaluation, checkpoint, and generation as separate reviewable stages",
+          "start with small model or adapter experiments before any billion-parameter or production NIM change",
+          "pin tokenizer, context length, embedding size, head count, block count, batch size, data manifest, and checkpoint identity in config",
+          "validate on held-out clinical and owner-language tasks before considering runtime promotion",
+          "treat all model-learning work as weight-update candidates until artifacts, eval manifests, rollback, and explicit approval exist"
+        ],
+        "nonTransferableClaims": [
+          "does not prove a PawVital model is clinically safe",
+          "does not directly improve deployed NVIDIA NIM models",
+          "does not replace deterministic clinical logic, route tests, owner approval, or production-like verification"
+        ],
+        "pawvitalUse": "Use as a training-harness pattern for PawVital offline model experiments, dataset-factory improvements, and NIM routing evaluation tickets. Do not mutate runtime model flags from this source alone."
+      },
+      {
+        "id": "syndicalt-tugboat",
+        "url": "https://github.com/syndicalt/tugboat",
+        "type": "instruction governance repository",
+        "paperBasis": "SkillOpt-inspired governed instruction optimization",
+        "validatedAsOf": "2026-06-01",
+        "summary": "Local-first sidecar pattern for observing agent instruction behavior, generating evidence-backed proposal artifacts, and governing any instruction patch through deterministic policy, evals, reviewer approval, rollback, and audit records.",
+        "observedImplementationDetails": [
+          "README describes Tugboat as a local-first sidecar for agent instruction observability and governed optimization over CODEX.md, AGENTS.md, SKILL.md, runbooks, eval definitions, and local policy files",
+          "SPEC separates the main coding agent from the sidecar supervisor and keeps llmff bounded to typed pipeline execution, traces, events, checkpoints, and output handling",
+          "SPEC requires proposal-only default posture, evidence-backed patches, deterministic policy gates, held-out evals, VCS-backed application, rollback, and append-only audit records",
+          "quickstart initializes local proposal-only policy, indexes the instruction corpus, runs optimize/audit/propose/eval/report over trace bundles, and keeps provider-backed smoke checks opt-in"
+        ],
+        "transferableTechniques": [
+          "treat AGENTS.md, RULES.md, AutoScientists runbooks, skills, eval definitions, and local.config.json as production instruction artifacts with owners, hashes, precedence, and protected sections",
+          "convert repeated PawVital ticket failures or user corrections into redacted trace bundles before proposing instruction changes",
+          "use a proposal-only audit/propose/eval loop for instruction drift, stale commands, missing handoff gates, and conflicting rules",
+          "require deterministic policy gates, held-out regression cases, reviewer approval, rollback notes, and audit-ledger entries before applying instruction patches",
+          "keep auto-apply disabled for protected headings, model/provider routing, deployment, secrets, approval policy, clinical logic, and sidecar authority"
+        ],
+        "nonTransferableClaims": [
+          "does not improve PawVital NIM or AI model weights",
+          "does not authorize automatic edits to AGENTS.md, RULES.md, skills, or local.config.json",
+          "does not replace AutoScientists, SIA, thermo-review, clinical review, project-manager gates, or production verification",
+          "does not justify provider-backed llmff runs, live network access, or auto-apply without explicit owner approval"
+        ],
+        "pawvitalUse": "Use as a governance pattern for future PawVital instruction observability and proposal-only instruction patch workflows. Keep it separate from model/NIM promotion and product intelligence runtime work."
+      }
+    ],
+    "nextAgentInstruction": "Before changing NIM, narrow-pack, AI model routing, dataset preprocessing, training, adapters, owner-visible model intelligence, or PawVital instruction governance, read modelTechniqueIntake, choose the matching VET-1561..VET-1565 ticket path, define the holdout or governance verifier, and keep the work review-only until the weight-update, proposal-only governance, and owner-approval gates pass.",
+    "projectManagerArtifacts": [
+      "plans/VET-1560-project-manager-tickets.json",
+      "plans/VET-1560-azure-sync-preflight.json",
+      "plans/VET-1560-azure-live-sync-runbook.json",
+      "plans/VET-1560-project-manager-sync-readiness.json",
+      "plans/VET-1560-project-manager-local-sync.json",
+      "plans/VET-1560-readiness-dashboard.json",
+      "plans/VET-1560-completion-audit.json",
+      "plans/VET-1560-regeneration-summary.json",
+      "plans/VET-1565-tugboat-governance-plan.json",
+      "scripts/vet1560-regenerate-all.mjs",
+      "scripts/build-tugboat-governance-plan.mjs",
+      "scripts/build-vet1560-completion-audit.mjs"
+    ]
+  }
+}
