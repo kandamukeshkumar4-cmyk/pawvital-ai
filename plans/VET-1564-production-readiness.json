@@ -14,12 +14,12 @@
     "claimReview": {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "0205609882c4635f2bd13a5d3d500d72e36bcf993093065df9ec98d19b73064a"
+      "sha256": "543f4e0341c0e8e70656d8c172d5b7602515606a7281c24303b0c29ee95ef06d"
     },
     "readinessContract": {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "87ae4f942739a41a547b1c205569e4d64c5d6a3a00989e963921a2c1f7e7ce62"
+      "sha256": "c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96"
     },
     "route": {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -162,6 +162,22 @@
       "id": "VET-1564C",
       "title": "Run owner-facing claim-language clinical review",
       "scope": "Review readiness, trend, recovery, and evidence-coach copy for unsupported diagnosis, prognosis, treatment, or emergency-clearance claims."
+    },
+    {
+      "id": "VET-1564D",
+      "title": "Add deterministic baseline-shift product intelligence",
+      "scope": "Compare the latest symptom-check evidence against the recent comparable baseline, preserve the signal in readiness snapshots, and surface it without diagnosis, prognosis, treatment, disease-progression, or emergency-clearance claims.",
+      "implementedFoundation": {
+        "module": "src/lib/product-intelligence.ts",
+        "snapshotPayload": "src/lib/readiness-snapshot.ts",
+        "ownerSurface": "src/components/analytics/product-intelligence-panel.tsx",
+        "tests": [
+          "tests/product-intelligence.test.ts",
+          "tests/readiness-snapshot.test.ts",
+          "tests/product-intelligence-panel.test.tsx"
+        ],
+        "persistenceStatus": "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied"
+      }
     }
   ]
 }

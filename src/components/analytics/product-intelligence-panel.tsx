@@ -5,10 +5,14 @@ import {
   AlertTriangle,
   CheckCircle2,
   CircleHelp,
+  Minus,
   Save,
   ShieldCheck,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import type {
+  ProductBaselineShiftDirection,
   ProductIntelligenceSnapshot,
   ProductIntelligenceState,
 } from "@/lib/product-intelligence";
@@ -39,6 +43,25 @@ const STATE_STYLES: Record<
   unknown: { accent: "#6b7280", bg: "bg-gray-100 text-gray-700", icon: CircleHelp },
 };
 
+const BASELINE_SHIFT_LABEL: Record<ProductBaselineShiftDirection, string> = {
+  improving: "Above baseline",
+  declining: "Below baseline",
+  steady: "Near baseline",
+  unknown: "Baseline pending",
+  urgent_override: "Urgent override",
+};
+
+const BASELINE_SHIFT_STYLES: Record<
+  ProductBaselineShiftDirection,
+  { bg: string; icon: typeof TrendingDown }
+> = {
+  improving: { bg: "bg-emerald-50 text-emerald-700", icon: TrendingUp },
+  declining: { bg: "bg-amber-50 text-amber-700", icon: TrendingDown },
+  steady: { bg: "bg-blue-50 text-blue-700", icon: Minus },
+  unknown: { bg: "bg-gray-100 text-gray-700", icon: CircleHelp },
+  urgent_override: { bg: "bg-red-50 text-red-700", icon: AlertTriangle },
+};
+
 function Chip({ children, tone = "default" }: { children: string; tone?: "default" | "missing" }) {
   return (
     <span
@@ -51,6 +74,21 @@ function Chip({ children, tone = "default" }: { children: string; tone?: "defaul
       {children}
     </span>
   );
+}
+
+function formatDelta(delta: number | null): string {
+  if (delta === null) return "n/a";
+  return delta > 0 ? `+${delta}` : `${delta}`;
+}
+
+function formatBaselineScores(
+  latestScore: number | null,
+  baselineScore: number | null
+): string {
+  if (latestScore === null || baselineScore === null) {
+    return "Need comparable baseline";
+  }
+  return `Latest ${latestScore} / baseline ${baselineScore}`;
 }
 
 export default function ProductIntelligencePanel({
@@ -70,6 +108,8 @@ export default function ProductIntelligencePanel({
       : null;
   const canRenderSave = Boolean(onSaveSnapshot) && snapshot.persistenceAllowed;
   const saveDisabled = saveSnapshotDisabled || saveSnapshotInProgress;
+  const baselineStyle = BASELINE_SHIFT_STYLES[snapshot.baselineShift.direction];
+  const BaselineIcon = baselineStyle.icon;
 
   return (
     <section className="space-y-5" aria-label="Product intelligence">
@@ -124,6 +164,30 @@ export default function ProductIntelligencePanel({
               </div>
             </div>
           ) : null}
+        </div>
+      </div>
+
+      <div className="grid gap-3 border-t border-gray-100 pt-4 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <BaselineIcon className="h-4 w-4 text-gray-500" aria-hidden />
+            <p className="font-semibold text-gray-900">Baseline shift</p>
+          </div>
+          <p className="mt-1 text-gray-600">{snapshot.baselineShift.ownerSummary}</p>
+          <p className="mt-1 text-xs font-medium text-gray-500">
+            {formatBaselineScores(
+              snapshot.baselineShift.latestScore,
+              snapshot.baselineShift.baselineScore
+            )}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${baselineStyle.bg}`}>
+            {BASELINE_SHIFT_LABEL[snapshot.baselineShift.direction]}
+          </span>
+          <span className="inline-flex min-w-12 justify-center rounded-md border border-gray-200 bg-white px-2.5 py-1 text-sm font-semibold tabular-nums text-gray-900">
+            {formatDelta(snapshot.baselineShift.delta)}
+          </span>
         </div>
       </div>
 

@@ -5,13 +5,40 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import ProductIntelligencePanel from "@/components/analytics/product-intelligence-panel";
 import type { ProductIntelligenceSnapshot } from "@/lib/product-intelligence";
 
+interface BaselineShiftForTest {
+  direction: string;
+  confidence: string;
+  latestScore: number | null;
+  baselineScore: number | null;
+  delta: number | null;
+  evidenceChips: string[];
+  missingEvidenceChips: string[];
+  ownerSummary: string;
+  deterministicOverride: string | null;
+}
+
+type ProductIntelligenceSnapshotForTest = ProductIntelligenceSnapshot & {
+  baselineShift: BaselineShiftForTest;
+};
+
 function buildSnapshot(
-  overrides: Partial<ProductIntelligenceSnapshot> = {}
-): ProductIntelligenceSnapshot {
+  overrides: Partial<ProductIntelligenceSnapshotForTest> = {}
+): ProductIntelligenceSnapshotForTest {
   return {
     state: "unknown",
     confidence: "insufficient",
     displayScore: null,
+    baselineShift: {
+      direction: "unknown",
+      confidence: "insufficient",
+      latestScore: null,
+      baselineScore: null,
+      delta: null,
+      evidenceChips: [],
+      missingEvidenceChips: ["comparable baseline"],
+      ownerSummary: "Not enough comparable baseline evidence yet.",
+      deterministicOverride: null,
+    },
     evidenceCoverage: 0.25,
     evidenceChips: ["latest symptom check"],
     missingEvidenceChips: ["wellness index", "7-day trend"],
@@ -96,5 +123,41 @@ describe("ProductIntelligencePanel", () => {
 
     expect(onSaveSnapshot).toHaveBeenCalledTimes(1);
     expect(screen.getByText("2 saved snapshots")).toBeTruthy();
+  });
+
+  it("renders the baseline-shift comparison without medical claim language", () => {
+    render(
+      React.createElement(ProductIntelligencePanel, {
+        snapshot: buildSnapshot({
+          state: "watch",
+          confidence: "high",
+          displayScore: 91,
+          evidenceCoverage: 1,
+          evidenceChips: ["wellness index", "latest symptom check", "7-day trend"],
+          missingEvidenceChips: [],
+          nextEvidencePrompt: null,
+          ownerSummary: "Latest check is below recent baseline. Keep collecting comparable evidence.",
+          persistenceAllowed: true,
+          persistenceBlockedReasons: [],
+          baselineShift: {
+            direction: "declining",
+            confidence: "high",
+            latestScore: 78,
+            baselineScore: 92,
+            delta: -14,
+            evidenceChips: ["latest symptom check", "comparable baseline"],
+            missingEvidenceChips: [],
+            ownerSummary: "Latest check is below recent baseline. Keep collecting comparable evidence.",
+            deterministicOverride: null,
+          },
+        }),
+      })
+    );
+
+    expect(screen.getByText("Baseline shift")).toBeTruthy();
+    expect(screen.getByText("Below baseline")).toBeTruthy();
+    expect(screen.getByText("-14")).toBeTruthy();
+    expect(screen.getByText("Latest 78 / baseline 92")).toBeTruthy();
+    expect(screen.queryByText(/disease progression|diagnosed|treat with|safe to wait/i)).toBeNull();
   });
 });

@@ -7,26 +7,26 @@
     {
       "path": "src/lib/product-intelligence.ts",
       "exists": true,
-      "sha256": "f104dfb5ad8b70c4bb286c0172f4730b567e4bd8727e354ac2eb458d0b5135bc"
+      "sha256": "96b6cb4b2d58ff878d91e47e96840b7e8589353248d54673405bdc56c65cd113"
     },
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
       "exists": true,
-      "sha256": "45c14206b8dc5c2391d7b69225dffe53903d27b3f86223e9e6dc012f50c749ac"
+      "sha256": "5fed902f94e495571cb9089e96b7c0f0f94f8fde4c1b9e6b0228c8ec5e2bcf73"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "87ae4f942739a41a547b1c205569e4d64c5d6a3a00989e963921a2c1f7e7ce62"
+      "sha256": "c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96"
     },
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "77fd4b6a53ae913c8010ace272591c6a938c0b59ff4416068a15ea660b24351e"
+      "sha256": "9ed312c0405b355b0884c20a64255d49531d56e419b1adb8f89d25411e5e9a7d"
     }
   ],
   "missingArtifacts": [],
-  "reviewedStringCount": 308,
+  "reviewedStringCount": 397,
   "blockedClaimPolicy": [
     "diagnosis-certainty",
     "treatment-recommendation",

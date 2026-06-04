@@ -43,11 +43,11 @@ const roadmap = {
   generatedAt:
     process.env.PRODUCT_INTELLIGENCE_ROADMAP_GENERATED_AT ??
     "2026-05-31T00:00:00.000Z",
-  productLane: "Whoop-style daily readiness and recovery intelligence for dogs",
+  productLane: "Whoop-style daily readiness, recovery, and baseline-shift intelligence for dogs",
   note:
     "Roadmap only. It does not apply Supabase migrations, write production data, call providers, mutate clinical logic, or promote runtime model routes.",
   ownerPromise:
-    "Explain readiness, trend, recovery, and missing evidence using existing evidence while avoiding diagnosis, prognosis, treatment, or emergency-clearance claims.",
+    "Explain readiness, baseline shift, trend, recovery, and missing evidence using existing evidence while avoiding diagnosis, prognosis, treatment, or emergency-clearance claims.",
   phases: [
     {
       id: "VET-1564A",
@@ -66,6 +66,12 @@ const roadmap = {
       title: "Run owner-facing claim-language clinical review",
       status: "ready-for-local-review",
       blockers: [],
+    },
+    {
+      id: "VET-1564D",
+      title: "Add deterministic baseline-shift product intelligence",
+      status: "review-only-foundation",
+      blockers: ["live Supabase migration is not applied", "authenticated production smoke is not complete"],
     },
   ],
   claimGuards: [
@@ -92,6 +98,7 @@ const roadmap = {
   referencedArtifacts: referencedFiles.map(artifact),
   acceptanceGates: [
     "schema readiness packet passes local review",
+    "baseline-shift tests cover below-baseline, unknown, urgent override, and panel rendering states",
     "claim-language review passes",
     "authenticated route tests cover owner-scoped save/history",
     "production smoke runbook is executed only after approved migration",
