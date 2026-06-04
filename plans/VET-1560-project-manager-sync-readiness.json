@@ -9,6 +9,15 @@
   "blockedReason": null,
   "liveRunCommand": "Azure live creation remains disabled until a separate approved live-sync ticket implements duplicate checks, owner approval capture, and created work item evidence.",
   "localFallbackCommand": "npm run devops:vet1560-local-sync",
+  "localFallbackValidation": {
+    "status": "passed",
+    "blockers": [],
+    "uniqueTicketCount": 5,
+    "ticketCount": 5,
+    "dependencyEdgeCount": 3,
+    "orderedDependencyEdgeCount": 3,
+    "verifierArtifactCount": 5
+  },
   "inputArtifacts": {
     "preflight": {
       "path": "plans/VET-1560-azure-sync-preflight.json",
@@ -28,7 +37,7 @@
     "localSync": {
       "path": "plans/VET-1560-project-manager-local-sync.json",
       "exists": true,
-      "sha256": "5febb8eda6290d19b99bb1d77e2d20873cb5023bd01227b4608c77cb85425c8d"
+      "sha256": "3dcaf9b97e308e3f963f771c1d0769e57cb7f06e866d7491eccd7bcc03803850"
     }
   },
   "runbookStepCount": 5,

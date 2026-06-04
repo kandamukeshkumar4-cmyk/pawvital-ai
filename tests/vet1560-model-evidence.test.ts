@@ -125,6 +125,7 @@ type CompletionAudit = {
     status: string;
     evidence: string[];
   }>;
+  blockers: string[];
   artifacts: Array<{
     path: string;
     exists: boolean;
@@ -153,6 +154,78 @@ type OwnerApprovalRequest = {
       }>;
     };
   };
+};
+
+type CandidateSelectionPacket = {
+  candidateIdentityResolved: boolean;
+  candidateEvidenceSearch: {
+    resolved: boolean;
+    conclusion: string;
+    sourcesInspected: Array<{
+      id: string;
+      status: string;
+      artifact: {
+        path: string;
+        exists?: boolean;
+        sha256: string | null;
+      };
+      observedFields: Record<string, unknown> | null;
+      finding: string;
+    }>;
+    nextRequiredEvidence: string[];
+  };
+  guardrails: string[];
+};
+
+type OutputCaptureRunbook = {
+  authorizationPreflightCommand: string;
+  captureSequence: Array<{
+    id: string;
+    variant?: string;
+    allowedNow: boolean;
+    authorizationCheckRequired?: boolean;
+    localOnly?: boolean;
+    reason: string;
+  }>;
+};
+
+type OutputCaptureAuthorization = {
+  readyForProviderCapture: boolean;
+  blockers: string[];
+  captureReadiness: {
+    baselineValidation: {
+      ready: boolean;
+      variant: string;
+      requiredApprovalScope: string | null;
+      blockers: string[];
+      runbookSequenceId: string;
+    };
+    candidateValidation: {
+      ready: boolean;
+      variant: string;
+      requiredApprovalScope: string;
+      blockers: string[];
+      runbookSequenceId: string;
+    };
+    holdout: {
+      ready: boolean;
+      variants: string[];
+      blockers: string[];
+      runbookSequenceIds: string[];
+    };
+  };
+  allowedNextActions: string[];
+};
+
+type PromotionSmokeRunbook = {
+  smokeRunbook: Array<{
+    step: string;
+    requiredInputIds?: string[];
+  }>;
+};
+
+type PackageJson = {
+  scripts: Record<string, string>;
 };
 
 function runNode(args: string[]) {
@@ -250,6 +323,49 @@ afterEach(regenerateArtifacts);
 afterAll(regenerateArtifacts);
 
 describe("VET-1560 model evidence readouts", () => {
+  it("records candidate evidence provenance without resolving candidate identity", () => {
+    const packet = runJson<CandidateSelectionPacket>([
+      "scripts/build-model-candidate-selection-packet.mjs",
+      "--role=extraction",
+    ]);
+
+    expect(packet.candidateIdentityResolved).toBe(false);
+    expect(packet.candidateEvidenceSearch.resolved).toBe(false);
+    expect(packet.candidateEvidenceSearch.conclusion).toContain(
+      "No approved candidate model or adapter identity",
+    );
+    expect(packet.candidateEvidenceSearch.sourcesInspected).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "vet-1562-offline-experiment-package",
+          status: "unresolved-candidate-identity",
+          observedFields: expect.objectContaining({
+            baseModel: "unresolved-review-only-candidate",
+            adapterOrCheckpointId: null,
+            trainingArtifactPath: null,
+            trainingArtifactSha256: null,
+          }),
+        }),
+        expect.objectContaining({
+          id: "runpod-narrow-model-pack-manifest",
+          status: "experiment-manifest-only",
+          observedFields: expect.objectContaining({
+            experimentPackId: "vet-915-narrow-model-pack",
+          }),
+        }),
+      ]),
+    );
+    expect(packet.candidateEvidenceSearch.nextRequiredEvidence).toEqual(
+      expect.arrayContaining([
+        "approved candidate model or adapter id",
+        "scoped validation-output-capture approval record",
+      ]),
+    );
+    expect(packet.guardrails).toContain(
+      "Do not infer candidate identity from an experiment manifest without an approved model or adapter artifact.",
+    );
+  });
+
   it("surfaces candidate capture-gate blockers in dashboard and completion audit", () => {
     const dashboard = runJson<ReadinessDashboard>([
       "scripts/build-vet1560-readiness-dashboard.mjs",
@@ -263,6 +379,12 @@ describe("VET-1560 model evidence readouts", () => {
     expect(modelLane.summary).toContain(
       "diagnostic candidate content hashes without evidence hash=0",
     );
+    expect(modelLane.summary).toContain(
+      "candidate evidence provenance resolved=false",
+    );
+    expect(modelLane.summary).toContain(
+      "runpod-narrow-model-pack-manifest=experiment-manifest-only",
+    );
 
     const audit = runJson<CompletionAudit>([
       "scripts/build-vet1560-completion-audit.mjs",
@@ -275,6 +397,16 @@ describe("VET-1560 model evidence readouts", () => {
     expect(modelRequirement.evidence).toEqual(
       expect.arrayContaining([
         "Promotion preflight gate summary: candidateGateBlockedCount=3, candidateContentHashWithoutEvidenceHashCount=0.",
+        expect.stringContaining(
+          "Candidate evidence provenance: resolved=false",
+        ),
+      ]),
+    );
+    expect(audit.blockers).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          "candidate-selection: No approved candidate model or adapter identity",
+        ),
       ]),
     );
     expect(audit.artifacts).toEqual(
@@ -317,6 +449,143 @@ describe("VET-1560 model evidence readouts", () => {
         "scoped validation-output-capture approval is not complete",
       ]),
     );
+  });
+
+  it("keeps provider capture gated by explicit authorization readiness", () => {
+    const runbook = runJson<OutputCaptureRunbook>([
+      "scripts/build-model-output-capture-runbook.mjs",
+      "--role=extraction",
+    ]);
+    const authorization = runJson<OutputCaptureAuthorization>([
+      "scripts/build-model-output-capture-authorization.mjs",
+      "--role=extraction",
+    ]);
+    const baselineSequence = requireDefined(
+      runbook.captureSequence.find((item) => item.id === "validation-baseline"),
+      "validation baseline capture sequence",
+    );
+    const candidateSequence = requireDefined(
+      runbook.captureSequence.find((item) => item.id === "validation-candidate"),
+      "validation candidate capture sequence",
+    );
+    const freezeSequence = requireDefined(
+      runbook.captureSequence.find((item) => item.id === "freeze-validation"),
+      "freeze validation sequence",
+    );
+
+    expect(runbook.authorizationPreflightCommand).toBe(
+      "npm run models:output-capture-authorization",
+    );
+    expect(baselineSequence.allowedNow).toBe(false);
+    expect(baselineSequence.authorizationCheckRequired).toBe(true);
+    expect(baselineSequence.reason).toContain(
+      "captureReadiness.baselineValidation.ready=true",
+    );
+    expect(candidateSequence.allowedNow).toBe(false);
+    expect(candidateSequence.authorizationCheckRequired).toBe(true);
+    expect(candidateSequence.reason).toContain(
+      "captureReadiness.candidateValidation.ready=true",
+    );
+    expect(freezeSequence.allowedNow).toBe(true);
+    expect(freezeSequence.localOnly).toBe(true);
+
+    expect(authorization.readyForProviderCapture).toBe(false);
+    expect(authorization.captureReadiness.baselineValidation).toEqual(
+      expect.objectContaining({
+        ready: false,
+        variant: "baseline",
+        requiredApprovalScope: null,
+        runbookSequenceId: "validation-baseline",
+      }),
+    );
+    expect(
+      authorization.captureReadiness.baselineValidation.blockers,
+    ).toContain(
+      "baseline provider credential group is not present in the current process environment",
+    );
+    expect(authorization.captureReadiness.candidateValidation).toEqual(
+      expect.objectContaining({
+        ready: false,
+        variant: "candidate",
+        requiredApprovalScope: "validation-output-capture-only",
+        runbookSequenceId: "validation-candidate",
+      }),
+    );
+    expect(
+      authorization.captureReadiness.candidateValidation.blockers,
+    ).toEqual(
+      expect.arrayContaining([
+        "candidate capture approval is not complete",
+        "candidate provider credential group is not present in the current process environment",
+        "candidate model or adapter identity has not been approved",
+      ]),
+    );
+    expect(authorization.captureReadiness.holdout.ready).toBe(false);
+    expect(authorization.captureReadiness.holdout.runbookSequenceIds).toEqual([
+      "holdout-baseline",
+      "holdout-candidate",
+    ]);
+    expect(authorization.captureReadiness.holdout.blockers).toContain(
+      "validation baseline and candidate outputs are not frozen and reviewed",
+    );
+    expect(authorization.allowedNextActions).toEqual(
+      expect.arrayContaining([
+        "Provide baseline provider credentials through the authorized environment without writing secret values to artifacts.",
+        "Rerun npm run models:output-capture-authorization before any provider call.",
+      ]),
+    );
+  });
+
+  it("exposes the model evidence npm scripts referenced by VET-1563 artifacts", () => {
+    const { scripts } = readJson<PackageJson>("package.json");
+    const requiredScripts = [
+      "models:shadow-eval-scaffold",
+      "models:output-capture-plan",
+      "models:frozen-output-templates",
+      "models:frozen-output-status",
+      "models:shadow-eval-score",
+      "models:output-capture-runbook",
+      "models:scorecard-review-packet",
+      "models:rollback-plan",
+      "models:protected-clinical-diff-proof",
+      "models:promotion-smoke-runbook",
+      "models:promotion-ticket",
+      "models:promotion-checklist",
+      "models:promotion-preflight",
+      "models:promotion-evidence-packet",
+      "models:owner-approval-request",
+      "models:output-capture-authorization",
+    ];
+
+    for (const scriptName of requiredScripts) {
+      expect(scripts[scriptName]).toEqual(expect.stringContaining("--write"));
+    }
+    expect(scripts["models:output-capture-authorization"]).toContain(
+      "scripts/build-model-output-capture-authorization.mjs",
+    );
+  });
+
+  it("derives validation smoke ids from split capture sequences without duplicates", () => {
+    const smokeRunbook = runJson<PromotionSmokeRunbook>([
+      "scripts/build-model-promotion-smoke-runbook.mjs",
+      "--role=extraction",
+    ]);
+    const validationSmoke = requireDefined(
+      smokeRunbook.smokeRunbook.find(
+        (item) => item.step === "validation-route-smoke",
+      ),
+      "validation route smoke step",
+    );
+    const requiredInputIds = validationSmoke.requiredInputIds ?? [];
+
+    expect(requiredInputIds).toEqual(
+      expect.arrayContaining([
+        "emergency-blue-gums-breathing",
+        "emergency-breathing-collapse",
+        "limping-follow-up",
+      ]),
+    );
+    expect(new Set(requiredInputIds).size).toBe(requiredInputIds.length);
   });
 
   it("rejects arbitrary candidate JSON before hashes can count", () => {

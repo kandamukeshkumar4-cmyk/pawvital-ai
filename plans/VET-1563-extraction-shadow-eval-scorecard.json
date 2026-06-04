@@ -4,15 +4,15 @@
   "mode": "review-only",
   "generatedAt": "2026-05-31T00:00:00.000Z",
   "note": "Offline scorecard only. It does not call providers, train models, or mutate runtime routing.",
-  "input": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-shadow-eval-scaffold.json",
+  "input": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-shadow-eval-scaffold.json",
   "inputArtifacts": {
     "scaffold": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-shadow-eval-scaffold.json",
-      "sha256": "34358b67dc516469cad47ee4e68b808995663a1ccad11fe3ca77b64317372120"
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-shadow-eval-scaffold.json",
+      "sha256": "083674e052c7e8b93cbc2f84da579c5f3c3e6f59b7379c3eee752a6e682cb7c9"
     },
     "frozenOutputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
-      "sha256": "c787bce0e2074f27f6717befebb3f6b36264bffae43e97e0b135a4f914fbd92b",
+      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8",
       "readyForHumanReview": false,
       "readyCaseCount": 0
     }

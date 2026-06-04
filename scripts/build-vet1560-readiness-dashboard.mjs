@@ -66,6 +66,16 @@ function sha256(relativePath) {
 }
 
 function artifact(relativePath) {
+  if (relativePath === artifactPaths.regenerationSummary) {
+    return {
+      path: relativePath,
+      exists: existsSync(resolve(process.cwd(), relativePath)),
+      sha256: null,
+      sha256OmittedReason:
+        "regeneration summary is finalized after the dashboard; hashing it here would make regeneration non-idempotent",
+    };
+  }
+
   return {
     path: relativePath,
     exists: existsSync(resolve(process.cwd(), relativePath)),
@@ -77,6 +87,19 @@ function artifact(relativePath) {
 
 function status(value) {
   return value ? "ready" : "blocked";
+}
+
+function candidateEvidenceSummary(candidateSelectionPacket) {
+  const search = candidateSelectionPacket.candidateEvidenceSearch;
+  if (!search) {
+    return "candidate evidence provenance unavailable";
+  }
+
+  const sourceSummary = (search.sourcesInspected ?? [])
+    .map((source) => `${source.id}=${source.status}`)
+    .join(", ");
+
+  return `candidate evidence provenance resolved=${search.resolved}; ${search.conclusion} Sources inspected: ${sourceSummary}`;
 }
 
 function buildDashboard() {
@@ -105,6 +128,13 @@ function buildDashboard() {
   const productProductionReadiness = readJson(artifactPaths.productProductionReadiness);
   const productProductionSmokeRunbook = readJson(artifactPaths.productProductionSmokeRunbook);
   const tugboatGovernancePlan = readJson(artifactPaths.tugboatGovernancePlan);
+  const candidateProvenanceSummary = candidateEvidenceSummary(
+    modelCandidateSelectionPacket
+  );
+  const localQueueValidation = projectManager.localFallbackValidation;
+  const localQueueValidationSummary = localQueueValidation
+    ? `queue validation=${localQueueValidation.status}; ${localQueueValidation.verifierArtifactCount}/${localQueueValidation.ticketCount} verifier artifacts present; ${localQueueValidation.orderedDependencyEdgeCount}/${localQueueValidation.dependencyEdgeCount} dependency edges ordered`
+    : "queue validation unavailable";
 
   const lanes = [
     {
@@ -114,7 +144,7 @@ function buildDashboard() {
       summary: projectManager.readyForLiveSync
         ? `${projectManager.ticketCount} tickets ready for live Azure Boards sync.`
         : projectManagerLocalSync?.localFallback?.ready
-          ? `${projectManagerLocalSync.localFallback.itemCount} tickets queued in the local project-manager fallback; Azure live sync remains blocked by: ${azurePreflight.missing.join(", ") || "none"}.`
+          ? `${projectManagerLocalSync.localFallback.itemCount} tickets queued in the local project-manager fallback; ${localQueueValidationSummary}; Azure live sync remains blocked by: ${azurePreflight.missing.join(", ") || "none"}.`
           : `${projectManager.blockedReason}; Azure preflight missing: ${azurePreflight.missing.join(", ") || "none"}; live-sync runbook has ${azureLiveSyncRunbook.runSequence?.length ?? 0} steps.`,
       nextAction: projectManager.readyForLiveSync
         ? projectManager.liveRunCommand
@@ -128,7 +158,7 @@ function buildDashboard() {
       status: status(modelPreflight.summary?.readyForPromotionTicket),
       summary: modelPreflight.summary?.readyForPromotionTicket
         ? "Extraction route has enough evidence to open a separate promotion ticket."
-        : `${modelPreflight.summary?.blockedEvidenceCount ?? 0} blocked evidence categories; candidate selection resolved=${modelCandidateSelectionPacket.candidateIdentityResolved}; promotion ticket candidate resolved=${modelPromotionTicket.routeContext?.candidateIdentityResolved}; owner approval request ready=${modelOwnerApprovalRequest.approvalRequestReady}; ${modelPreflight.summary?.candidateOutputHashes ?? 0}/${modelPreflight.summary?.outputCases ?? 0} candidate output hashes populated; candidate capture gates blocked=${modelPreflight.summary?.candidateGateBlockedCount ?? 0}; diagnostic candidate content hashes without evidence hash=${modelPreflight.summary?.candidateContentHashWithoutEvidenceHashCount ?? 0}; evidence packet has ${modelEvidencePacket.evidenceToAttach?.length ?? 0} attachment slots; capture runbook has ${modelOutputCaptureRunbook.captureSequence?.length ?? 0} gated steps; capture authorization ready=${modelOutputCaptureAuthorization.readyForProviderCapture}; promotion smoke runbook has ${modelPromotionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps; promotion ticket blockers=${modelPromotionTicket.readiness?.blockers?.length ?? 0}.`,
+        : `${modelPreflight.summary?.blockedEvidenceCount ?? 0} blocked evidence categories; candidate selection resolved=${modelCandidateSelectionPacket.candidateIdentityResolved}; ${candidateProvenanceSummary}; promotion ticket candidate resolved=${modelPromotionTicket.routeContext?.candidateIdentityResolved}; owner approval request ready=${modelOwnerApprovalRequest.approvalRequestReady}; ${modelPreflight.summary?.candidateOutputHashes ?? 0}/${modelPreflight.summary?.outputCases ?? 0} candidate output hashes populated; candidate capture gates blocked=${modelPreflight.summary?.candidateGateBlockedCount ?? 0}; diagnostic candidate content hashes without evidence hash=${modelPreflight.summary?.candidateContentHashWithoutEvidenceHashCount ?? 0}; evidence packet has ${modelEvidencePacket.evidenceToAttach?.length ?? 0} attachment slots; capture runbook has ${modelOutputCaptureRunbook.captureSequence?.length ?? 0} gated steps; capture authorization ready=${modelOutputCaptureAuthorization.readyForProviderCapture}; promotion smoke runbook has ${modelPromotionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps; promotion ticket blockers=${modelPromotionTicket.readiness?.blockers?.length ?? 0}.`,
       nextAction: modelPreflight.summary?.readyForPromotionTicket
         ? "Open a separate runtime promotion ticket with owner approval and rollback."
         : modelPreflight.nextActions?.[0]?.action ?? "Populate model promotion evidence.",
@@ -210,7 +240,13 @@ function renderMarkdown(dashboard) {
     .map((guardrail) => `- ${guardrail}`)
     .join("\n");
   const artifacts = dashboard.artifacts
-    .map((artifact) => `- \`${artifact.path}\` (${artifact.sha256})`)
+    .map((artifact) => {
+      const digest =
+        artifact.sha256 ??
+        artifact.sha256OmittedReason ??
+        "missing";
+      return `- \`${artifact.path}\` (${digest})`;
+    })
     .join("\n");
 
   return `# VET-1560 Readiness Dashboard

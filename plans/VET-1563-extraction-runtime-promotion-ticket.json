@@ -49,39 +49,39 @@
   ],
   "inputArtifacts": {
     "scorecard": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-shadow-eval-scorecard.json",
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-shadow-eval-scorecard.json",
       "exists": true,
-      "sha256": "89752e472d1788a72966fd3b5175c9b608e2a6df8f379f8829bc5982c530b09c"
+      "sha256": "32746cd08bc2fc8215ecbdc934c223f10bfc3a0b30cdbce3270a16ef24768f08"
     },
     "outputCapturePlan": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-capture-plan.json",
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-capture-plan.json",
       "exists": true,
-      "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+      "sha256": "61bf8283b3d8f6bc096351c677d77bce2fdbc4b24e190bc7411d1ec82bacac16"
     },
     "outputStatus": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-frozen-output-status.json",
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-frozen-output-status.json",
       "exists": true,
-      "sha256": "c787bce0e2074f27f6717befebb3f6b36264bffae43e97e0b135a4f914fbd92b"
+      "sha256": "9af4494ed969d7e3d33da74f7d6b583555a19d75e9bfee070416763cba70c4c8"
     },
     "rollbackPlan": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-model-rollback-plan.json",
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-model-rollback-plan.json",
       "exists": true,
-      "sha256": "2f75f73b1a3e3ca6ed57f16318f7c89f100ab06912c50c40e29bf79a8b9dd326"
+      "sha256": "370507e4d1ce6aade8051e66d9367433baa5d04cd434b4bf1b51291c76ef639e"
     },
     "protectedClinicalDiffProof": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-protected-clinical-diff-proof.json",
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-protected-clinical-diff-proof.json",
       "exists": true,
       "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
     },
     "promotionSmokeRunbook": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-promotion-smoke-runbook.json",
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "0b823268c555cafd9f8eb598ebd34dd6124308d797188dc12f0ae0c8118606b9"
+      "sha256": "2bb486dd98f5cfc950eaabd094cbd18eba533931ad048cfdc56bc515acf94d38"
     },
     "candidateSelectionPacket": {
-      "path": "G:\\MY Website\\pawvital-ai\\plans\\VET-1563-extraction-candidate-selection-packet.json",
+      "path": "G:\\MY Website\\pawvital-ai-vet1563-scope\\plans\\VET-1563-extraction-candidate-selection-packet.json",
       "exists": true,
-      "sha256": "a4bc894840e56b8bbe65fdbf2100284de5863d643ad428c609a8a75822427b6d"
+      "sha256": "595ce8c183d44a427bfd6c03cf536e3fe6afc4fe31c1b4c5920c4b025976ebdb"
     }
   },
   "routeContext": {

@@ -64,10 +64,42 @@ function sha256(relativePath) {
 }
 
 function artifact(relativePath) {
+  if (relativePath === artifactPaths.regenerationSummary) {
+    return {
+      path: relativePath,
+      exists: existsSync(absolute(relativePath)),
+      sha256: null,
+      sha256OmittedReason:
+        "regeneration summary is finalized after the completion audit; hashing it here would make regeneration non-idempotent",
+    };
+  }
+
   return {
     path: relativePath,
     exists: existsSync(absolute(relativePath)),
     sha256: existsSync(absolute(relativePath)) ? sha256(relativePath) : null,
+  };
+}
+
+function candidateEvidenceSummary(candidateSelectionPacket) {
+  const search = candidateSelectionPacket.candidateEvidenceSearch;
+  if (!search) {
+    return {
+      evidence: "Candidate evidence provenance unavailable.",
+      blocker: "candidate-selection: candidate evidence provenance unavailable",
+    };
+  }
+
+  const sourceSummary = (search.sourcesInspected ?? [])
+    .map((source) => `${source.id}=${source.status}`)
+    .join(", ");
+
+  return {
+    evidence: `Candidate evidence provenance: resolved=${search.resolved}; ${search.conclusion} Sources inspected: ${sourceSummary}`,
+    blocker:
+      search.resolved === true
+        ? null
+        : `candidate-selection: ${search.conclusion}`,
   };
 }
 
@@ -98,6 +130,9 @@ function buildAudit() {
   const protectedClinicalDiffProof = readJson(artifactPaths.protectedClinicalDiffProof);
   const modelPromotionTicket = readJson(artifactPaths.modelPromotionTicket);
   const modelOwnerApprovalRequest = readJson(artifactPaths.modelOwnerApprovalRequest);
+  const modelCandidateEvidence = candidateEvidenceSummary(
+    modelCandidateSelectionPacket
+  );
   const claimReview = readJson(artifactPaths.claimReview);
   const readinessContract = readJson(artifactPaths.readinessContract);
   const productProductionReadiness = readJson(artifactPaths.productProductionReadiness);
@@ -110,6 +145,10 @@ function buildAudit() {
   const productLane = dashboard.lanes.find((lane) => lane.id === "whoop-product-contract");
   const claimLane = dashboard.lanes.find((lane) => lane.id === "claim-language");
   const instructionLane = dashboard.lanes.find((lane) => lane.id === "instruction-governance");
+  const localQueueValidation =
+    projectManagerLane && localProjectManagerSync?.localFallback?.validation
+      ? localProjectManagerSync.localFallback.validation
+      : null;
   const sourceIds = modelTechniqueIntake.intake.sources?.map((source) => source.id) ?? [];
   const requiredSources = ["fareedkhan-train-llm-from-scratch", "syndicalt-tugboat"];
   const hasRequiredSources = requiredSources.every((sourceId) => sourceIds.includes(sourceId));
@@ -118,6 +157,7 @@ function buildAudit() {
     ...(modelCandidateSelectionPacket.blockers ?? []).map(
       (blocker) => `candidate-selection: ${blocker}`
     ),
+    ...(modelCandidateEvidence.blocker ? [modelCandidateEvidence.blocker] : []),
     ...(modelPromotionTicket.readiness?.blockers ?? []).map(
       (blocker) => `promotion-ticket: ${blocker}`
     ),
@@ -150,6 +190,9 @@ function buildAudit() {
         localProjectManagerSync?.localFallback?.ready
           ? `${localProjectManagerSync.localFallback.itemCount} tickets are queued in the local project-manager fallback.`
           : "Local project-manager fallback artifact is missing.",
+        localQueueValidation
+          ? `Local queue validation: ${localQueueValidation.status}; ${localQueueValidation.verifierArtifactCount}/${localQueueValidation.ticketCount} verifier artifacts present; ${localQueueValidation.orderedDependencyEdgeCount}/${localQueueValidation.dependencyEdgeCount} dependency edges ordered.`
+          : "Local queue validation is unavailable.",
         `Azure live-sync runbook: ${azureLiveSyncRunbook.runSequence?.length ?? 0} execution steps and ${azureLiveSyncRunbook.evidencePacketTemplate?.requiredAttachments?.length ?? 0} required evidence attachments defined.`,
         projectManagerLane?.summary ?? "project-manager lane missing",
       ],
@@ -175,6 +218,7 @@ function buildAudit() {
         modelLane?.summary ?? "model lane missing",
         `${modelEvidencePacket.evidenceToAttach?.length ?? 0} promotion evidence slots defined.`,
         `Candidate selection packet: resolved=${modelCandidateSelectionPacket.candidateIdentityResolved}, blockers=${modelCandidateSelectionPacket.blockers?.length ?? 0}.`,
+        modelCandidateEvidence.evidence,
         `Frozen output templates: ${modelFrozenOutputTemplates.cases?.length ?? 0} cases and ${modelEvidencePacket.frozenOutputTemplateStatus?.templateCount ?? 0} baseline/candidate envelopes defined.`,
         `Frozen output status: ${modelFrozenOutputStatus.summary?.readyCaseCount ?? 0}/${modelFrozenOutputStatus.summary?.caseCount ?? 0} cases ready for human review.`,
         `Promotion preflight gate summary: candidateGateBlockedCount=${modelPreflight.summary?.candidateGateBlockedCount ?? 0}, candidateContentHashWithoutEvidenceHashCount=${modelPreflight.summary?.candidateContentHashWithoutEvidenceHashCount ?? 0}.`,

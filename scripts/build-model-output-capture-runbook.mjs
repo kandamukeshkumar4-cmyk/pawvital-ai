@@ -62,6 +62,14 @@ function outputStep(evalCase, template) {
   };
 }
 
+function stepsForVariant(cases, variant) {
+  return cases.flatMap((item) =>
+    item.templates
+      .filter((template) => template.variant === variant)
+      .map((template) => outputStep(item, template))
+  );
+}
+
 function buildRunbook() {
   const templates = readJson(templatesPath);
   const status = readJson(statusPath);
@@ -75,12 +83,10 @@ function buildRunbook() {
 
   const validationCases = templates.cases.filter((item) => item.split === "validation");
   const holdoutCases = templates.cases.filter((item) => item.split === "holdout");
-  const validationSteps = validationCases.flatMap((item) =>
-    item.templates.map((template) => outputStep(item, template))
-  );
-  const holdoutSteps = holdoutCases.flatMap((item) =>
-    item.templates.map((template) => outputStep(item, template))
-  );
+  const validationBaselineSteps = stepsForVariant(validationCases, "baseline");
+  const validationCandidateSteps = stepsForVariant(validationCases, "candidate");
+  const holdoutBaselineSteps = stepsForVariant(holdoutCases, "baseline");
+  const holdoutCandidateSteps = stepsForVariant(holdoutCases, "candidate");
 
   return {
     ticket: "VET-1563",
@@ -111,17 +117,30 @@ function buildRunbook() {
       },
     },
     currentStatus: status.summary,
+    authorizationPreflightCommand: "npm run models:output-capture-authorization",
     captureSequence: [
       {
-        id: "validation-baseline-and-candidate",
-        allowedNow: true,
+        id: "validation-baseline",
+        variant: "baseline",
+        allowedNow: false,
+        authorizationCheckRequired: true,
         reason:
-          "Validation capture may run first after scoped validation-output-capture approval, approved candidate identity, and provider credentials.",
-        steps: validationSteps,
+          "Run only after output-capture authorization reports captureReadiness.baselineValidation.ready=true.",
+        steps: validationBaselineSteps,
+      },
+      {
+        id: "validation-candidate",
+        variant: "candidate",
+        allowedNow: false,
+        authorizationCheckRequired: true,
+        reason:
+          "Run only after output-capture authorization reports captureReadiness.candidateValidation.ready=true.",
+        steps: validationCandidateSteps,
       },
       {
         id: "freeze-validation",
-        allowedNow: validationSteps.length > 0,
+        allowedNow: true,
+        localOnly: true,
         reason:
           "After validation outputs are written, run npm run models:frozen-output-status and do not overwrite valid hashes.",
         steps: [
@@ -133,11 +152,22 @@ function buildRunbook() {
         ],
       },
       {
-        id: "holdout-baseline-and-candidate",
-        allowedNow: status.summary?.readyCaseCount >= validationCases.length,
+        id: "holdout-baseline",
+        variant: "baseline",
+        allowedNow: false,
+        authorizationCheckRequired: true,
         reason:
-          "Holdout capture stays gated until validation outputs are schema-valid and frozen.",
-        steps: holdoutSteps,
+          "Holdout capture stays gated until validation baseline and candidate outputs are schema-valid, frozen, and no longer being used for iteration.",
+        steps: holdoutBaselineSteps,
+      },
+      {
+        id: "holdout-candidate",
+        variant: "candidate",
+        allowedNow: false,
+        authorizationCheckRequired: true,
+        reason:
+          "Holdout candidate capture stays gated until validation outputs are frozen and the candidate remains unchanged.",
+        steps: holdoutCandidateSteps,
       },
     ],
     nextCommandsAfterCapture: [

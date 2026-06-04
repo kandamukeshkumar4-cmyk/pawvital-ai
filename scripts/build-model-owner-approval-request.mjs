@@ -43,6 +43,15 @@ function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function cyclicArtifactReference(path) {
+  return {
+    path,
+    sha256: null,
+    sha256OmittedReason:
+      "promotion evidence packet reads this owner approval request; hashing it here would make regeneration non-idempotent",
+  };
+}
+
 function buildApprovalRequest() {
   const promotionTicket = readJson(promotionTicketPath);
   const preflight = readJson(evidencePacketPath);
@@ -124,10 +133,9 @@ function buildApprovalRequest() {
         path: `plans/VET-1563-${role}-promotion-readiness-preflight.json`,
         sha256: sha256(evidencePacketPath),
       },
-      promotionEvidencePacket: {
-        path: `plans/VET-1563-${role}-promotion-evidence-packet.json`,
-        sha256: sha256(promotionEvidencePacketPath),
-      },
+      promotionEvidencePacket: cyclicArtifactReference(
+        `plans/VET-1563-${role}-promotion-evidence-packet.json`
+      ),
       promotionSmokeRunbook: {
         path: `plans/VET-1563-${role}-promotion-smoke-runbook.json`,
         sha256: sha256(promotionSmokeRunbookPath),

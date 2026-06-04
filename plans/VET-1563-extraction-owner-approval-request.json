@@ -178,19 +178,20 @@
   "inputArtifacts": {
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
-      "sha256": "76e39951537d0c2ac6a1cc06fd2450de8ddeb1c863c4836b3a2fa5aafb647f0e"
+      "sha256": "82e8384c49bcd045c25205376d7b96083970ac5e9d0277322acc99bad2000ec0"
     },
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "b9388b874b4aff88e45192ce7c45a3d38bf139ebcf2c6cbd6339d397ff244261"
+      "sha256": "9915b5034062197e9c7fc044f0e3781637681b9eca5a6022ba87b7bab2add6e0"
     },
     "promotionEvidencePacket": {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
-      "sha256": "5bb38350b23179b7d38be08470b89d7f77255062d60f336a878af42b011ff94f"
+      "sha256": null,
+      "sha256OmittedReason": "promotion evidence packet reads this owner approval request; hashing it here would make regeneration non-idempotent"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
-      "sha256": "0b823268c555cafd9f8eb598ebd34dd6124308d797188dc12f0ae0c8118606b9"
+      "sha256": "2bb486dd98f5cfc950eaabd094cbd18eba533931ad048cfdc56bc515acf94d38"
     }
   },
   "guardrails": [

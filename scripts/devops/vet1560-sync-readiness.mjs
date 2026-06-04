@@ -89,7 +89,10 @@ writeFileSync(ticketsPath, `${JSON.stringify(tickets, null, 2)}\n`);
 const preflight = readJson(preflightPath);
 const runbook = readJson(runbookPath);
 const localSync = existsSync(localSyncPath) ? readJson(localSyncPath) : null;
-const localFallbackReady = localSync?.localFallback?.ready === true;
+const localFallbackValidation = localSync?.localFallback?.validation ?? null;
+const localFallbackReady =
+  localSync?.localFallback?.ready === true &&
+  localFallbackValidation?.status === "passed";
 const readiness = {
   ticket: "VET-1560",
   mode: "local-project-manager-sync-readiness",
@@ -111,6 +114,7 @@ const readiness = {
   liveRunCommand:
     "Azure live creation remains disabled until a separate approved live-sync ticket implements duplicate checks, owner approval capture, and created work item evidence.",
   localFallbackCommand: "npm run devops:vet1560-local-sync",
+  localFallbackValidation,
   inputArtifacts: {
     preflight: artifact(preflightPath, "plans/VET-1560-azure-sync-preflight.json"),
     runbook: artifact(runbookPath, "plans/VET-1560-azure-live-sync-runbook.json"),
@@ -126,7 +130,9 @@ const readiness = {
       ? []
       : [
           ...preflight.missing.map((name) => `${name} missing`),
-          "local fallback artifact missing",
+          ...(localSync
+            ? (localFallbackValidation?.blockers ?? ["local fallback validation missing"])
+            : ["local fallback artifact missing"]),
         ],
   guardrails: [
     "This readiness builder does not create Azure work items.",
