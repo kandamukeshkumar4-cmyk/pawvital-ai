@@ -58,6 +58,72 @@ function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function verifierExists(ticket) {
+  return typeof ticket.verifier === "string" && existsSync(resolve(process.cwd(), ticket.verifier));
+}
+
+function validateLocalQueue(tickets, localItems) {
+  const blockers = [];
+  const seen = new Set();
+  const indexByTicketId = new Map();
+  let dependencyEdgeCount = 0;
+  let orderedDependencyEdgeCount = 0;
+  let verifierArtifactCount = 0;
+
+  tickets.forEach((ticket, index) => {
+    if (!ticket.id) {
+      blockers.push(`ticket at sequence ${index + 1} is missing an id`);
+      return;
+    }
+    if (seen.has(ticket.id)) {
+      blockers.push(`duplicate ticket id: ${ticket.id}`);
+      return;
+    }
+    seen.add(ticket.id);
+    indexByTicketId.set(ticket.id, index);
+  });
+
+  tickets.forEach((ticket, index) => {
+    const dependencies = Array.isArray(ticket.dependencies)
+      ? ticket.dependencies
+      : [];
+
+    for (const dependency of dependencies) {
+      dependencyEdgeCount += 1;
+      const dependencyIndex = indexByTicketId.get(dependency);
+      if (dependencyIndex === undefined) {
+        blockers.push(`${ticket.id ?? `sequence ${index + 1}`} depends on missing ticket ${dependency}`);
+        continue;
+      }
+      if (dependencyIndex >= index) {
+        blockers.push(`${ticket.id} depends on ${dependency}, but ${dependency} is not queued earlier`);
+        continue;
+      }
+      orderedDependencyEdgeCount += 1;
+    }
+
+    if (!verifierExists(ticket)) {
+      blockers.push(`${ticket.id ?? `sequence ${index + 1}`} verifier artifact missing: ${ticket.verifier ?? "none"}`);
+    } else {
+      verifierArtifactCount += 1;
+    }
+  });
+
+  if (tickets.length !== localItems.length) {
+    blockers.push(`local item count ${localItems.length} does not match ticket count ${tickets.length}`);
+  }
+
+  return {
+    status: blockers.length === 0 ? "passed" : "blocked",
+    blockers,
+    uniqueTicketCount: seen.size,
+    ticketCount: tickets.length,
+    dependencyEdgeCount,
+    orderedDependencyEdgeCount,
+    verifierArtifactCount,
+  };
+}
+
 if (!existsSync(sourcePath)) {
   throw new Error(`Ticket payload not found: ${fromPath}`);
 }
@@ -74,9 +140,11 @@ const localItems = tickets.map((ticket, index) => ({
   dependencies: ticket.dependencies ?? [],
   acceptanceCriteria: ticket.acceptanceCriteria ?? [],
   verifier: ticket.verifier ?? null,
+  verifierArtifactExists: verifierExists(ticket),
   status: "queued-local-project-manager",
   localUrl: `local://pawvital/project-manager/${ticket.id}`,
 }));
+const localQueueValidation = validateLocalQueue(tickets, localItems);
 
 const localSync = {
   ticket: "VET-1560",
@@ -99,8 +167,9 @@ const localSync = {
     })),
   },
   localFallback: {
-    ready: tickets.length > 0,
+    ready: tickets.length > 0 && localQueueValidation.status === "passed",
     itemCount: localItems.length,
+    validation: localQueueValidation,
     items: localItems,
   },
   guardrails: [
@@ -115,7 +184,7 @@ function renderMarkdown() {
   const rows = localItems
     .map(
       (item) =>
-        `| ${item.ticketId} | ${item.title} | ${item.dependencies.join(", ") || "none"} | ${item.verifier ?? "none"} | ${item.status} |`
+        `| ${item.ticketId} | ${item.title} | ${item.dependencies.join(", ") || "none"} | ${item.verifier ?? "none"} | ${item.verifierArtifactExists} | ${item.status} |`
     )
     .join("\n");
   const blockers = missingAzureEnv.length
@@ -128,12 +197,19 @@ Generated: ${localSync.generatedAt}
 Mode: ${localSync.mode}
 Local fallback ready: ${localSync.localFallback.ready}
 Azure live call made: false
+Queue validation: ${localSync.localFallback.validation.status}
 
 ## Local Queue
 
-| Ticket | Title | Dependencies | Verifier | Status |
-|---|---|---|---|---|
+| Ticket | Title | Dependencies | Verifier | Verifier exists | Status |
+|---|---|---|---|---|---|
 ${rows}
+
+## Queue Validation
+
+${localSync.localFallback.validation.blockers.length
+    ? localSync.localFallback.validation.blockers.map((blocker) => `- ${blocker}`).join("\n")
+    : "- All queued dependencies are ordered, ticket ids are unique, and verifier artifacts exist."}
 
 ## Azure Live-Sync Blockers
 

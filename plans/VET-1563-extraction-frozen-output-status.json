@@ -7,11 +7,11 @@
   "inputArtifacts": {
     "outputCapturePlan": {
       "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
-      "sha256": "4e3a0bdb954e45799e965e492ad23ba2b935152837c7637ea3e7c63a24ccd899"
+      "sha256": "61bf8283b3d8f6bc096351c677d77bce2fdbc4b24e190bc7411d1ec82bacac16"
     },
     "outputTemplates": {
       "path": "plans/VET-1563-extraction-frozen-output-templates.json",
-      "sha256": "8e64adcdb2a561e865531245b8b627cf995e42a48f58a42713e09fdff141aff9"
+      "sha256": "3ef7680dff1e1f533c0715cb04f5a3018d3855150f2c24f842ff83041138245e"
     }
   },
   "summary": {

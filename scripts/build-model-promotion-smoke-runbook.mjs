@@ -44,6 +44,19 @@ function sha256(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
+function unique(values) {
+  return [...new Set(values)];
+}
+
+function validationInputIds(captureRunbook) {
+  return unique(
+    (captureRunbook.captureSequence ?? [])
+      .filter((sequence) => sequence.id?.startsWith("validation-"))
+      .flatMap((sequence) => sequence.steps ?? [])
+      .flatMap((step) => step.requiredOutputIds ?? [])
+  );
+}
+
 function buildRunbook() {
   const captureRunbook = readJson(outputCaptureRunbookPath);
   const outputStatus = readJson(outputStatusPath);
@@ -126,10 +139,7 @@ function buildRunbook() {
           "Run the promoted extraction route against validation cases from the frozen output capture runbook and compare structured extraction fields to the frozen candidate outputs.",
         requiredEvidence:
           "Validation route smoke matches the approved candidate behavior and preserves deterministic emergency state.",
-        requiredInputIds:
-          captureRunbook.captureSequence?.[0]?.steps?.flatMap(
-            (step) => step.requiredOutputIds ?? []
-          ) ?? [],
+        requiredInputIds: validationInputIds(captureRunbook),
         mustNotDo: [
           "Do not use holdout cases to tune prompts or routing.",
           "Do not accept a smoke pass from raw text resemblance alone.",

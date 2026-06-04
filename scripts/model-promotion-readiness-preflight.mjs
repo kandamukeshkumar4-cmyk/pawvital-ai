@@ -67,6 +67,16 @@ function artifact(path) {
   };
 }
 
+function downstreamArtifact(path) {
+  return {
+    path,
+    exists: existsSync(path),
+    sha256: null,
+    sha256OmittedReason:
+      "downstream artifact is generated from this preflight; hashing it here would make regeneration non-idempotent",
+  };
+}
+
 function collectOutputHashStatus(capturePlan, outputStatus) {
   if (!capturePlan) {
     return {
@@ -228,7 +238,7 @@ function buildPreflight() {
       outputTemplates: artifact(outputTemplatesPath),
       outputStatus: artifact(outputStatusPath),
       promotionTicket: artifact(promotionTicketPath),
-      ownerApprovalRequest: artifact(ownerApprovalRequestPath),
+      ownerApprovalRequest: downstreamArtifact(ownerApprovalRequestPath),
       promotionSmokeRunbook: artifact(promotionSmokeRunbookPath),
     },
     requiredEvidence: requiredEvidence.map((item) => ({

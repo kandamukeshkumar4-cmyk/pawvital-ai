@@ -130,28 +130,45 @@ function buildAuthorization() {
     candidateIdentityResolved &&
     credentialGroups.find((group) => group.id === "candidate-provider")?.present ===
       true;
-  const blockers = [
+  const providerCredentialsRequired =
+    runbook.authorizationRequired?.providerCredentialsRequired === true;
+  const runtimeRoutingBlockers =
+    runbook.authorizationRequired?.runtimeRoutingChangeAllowed === false
+      ? []
+      : ["capture runbook unexpectedly allows runtime routing changes"];
+  const baselineValidationBlockers = [
+    ...(providerCredentialsRequired && !baselineCredentialPresent
+      ? ["baseline provider credential group is not present in the current process environment"]
+      : []),
+    ...runtimeRoutingBlockers,
+  ];
+  const candidateValidationBlockers = [
     ...(candidateApprovalComplete
       ? []
       : ["candidate capture approval is not complete"]),
-    ...(ownerApproval.approvalRequestReady === false
-      ? []
-      : ["promotion owner approval request should remain blocked until frozen outputs are captured and reviewed"]),
-    ...(runbook.authorizationRequired?.providerCredentialsRequired === true &&
-    !baselineCredentialPresent
-      ? ["baseline provider credential group is not present in the current process environment"]
-      : []),
-    ...(runbook.authorizationRequired?.providerCredentialsRequired === true &&
-    !candidateCredentialPresent
+    ...(providerCredentialsRequired && !candidateCredentialPresent
       ? ["candidate provider credential group is not present in the current process environment"]
       : []),
     ...(!candidateIdentityResolved
       ? ["candidate model or adapter identity has not been approved"]
       : []),
-    ...(runbook.authorizationRequired?.runtimeRoutingChangeAllowed === false
-      ? []
-      : ["capture runbook unexpectedly allows runtime routing changes"]),
+    ...runtimeRoutingBlockers,
   ];
+  const holdoutBlockers = unique([
+    "validation baseline and candidate outputs are not frozen and reviewed",
+    "candidate must remain unchanged after validation freeze",
+    ...baselineValidationBlockers,
+    ...candidateValidationBlockers,
+  ]);
+  const blockers = unique([
+    ...(ownerApproval.approvalRequestReady === false
+      ? []
+      : ["promotion owner approval request should remain blocked until frozen outputs are captured and reviewed"]),
+    ...baselineValidationBlockers,
+    ...candidateValidationBlockers,
+  ]);
+  const baselineValidationReady = baselineValidationBlockers.length === 0;
+  const candidateValidationReady = candidateValidationBlockers.length === 0;
 
   return {
     ticket: "VET-1563",
@@ -162,7 +179,7 @@ function buildAuthorization() {
       "2026-05-31T00:00:00.000Z",
     note:
       "Authorization preflight only. It does not read secret values, call providers, write output envelopes, or mutate runtime routing.",
-    readyForProviderCapture: blockers.length === 0,
+    readyForProviderCapture: baselineValidationReady && candidateValidationReady,
     blockers,
     inputArtifacts: {
       outputCaptureRunbook: {
@@ -205,12 +222,41 @@ function buildAuthorization() {
       sourceArtifact: `plans/VET-1563-${role}-candidate-selection-packet.json`,
     },
     credentialGate: {
-      providerCredentialsRequired:
-        runbook.authorizationRequired?.providerCredentialsRequired === true,
+      providerCredentialsRequired,
       reportsPresenceOnly: true,
       baselineCredentialPresent,
       candidateCredentialPresent,
       groups: credentialGroups,
+    },
+    captureReadiness: {
+      baselineValidation: {
+        ready: baselineValidationReady,
+        variant: "baseline",
+        requiredApprovalScope: null,
+        blockers: baselineValidationBlockers,
+        runbookSequenceId: "validation-baseline",
+        nextAction: baselineValidationReady
+          ? "Run only the validation baseline capture sequence, then rerun npm run models:frozen-output-status."
+          : "Provide baseline provider credentials through the authorized environment, then rerun npm run models:output-capture-authorization.",
+      },
+      candidateValidation: {
+        ready: candidateValidationReady,
+        variant: "candidate",
+        requiredApprovalScope: captureApproval.scope ?? "validation-output-capture-only",
+        blockers: candidateValidationBlockers,
+        runbookSequenceId: "validation-candidate",
+        nextAction: candidateValidationReady
+          ? "Run the validation candidate capture sequence after baseline capture remains frozen."
+          : "Resolve candidate identity, scoped validation-output-capture approval, and candidate provider credentials before candidate capture.",
+      },
+      holdout: {
+        ready: false,
+        variants: ["baseline", "candidate"],
+        blockers: holdoutBlockers,
+        runbookSequenceIds: ["holdout-baseline", "holdout-candidate"],
+        nextAction:
+          "Do not run holdout capture until validation baseline and candidate outputs are schema-valid, frozen, reviewed, and no longer used for iteration.",
+      },
     },
     routeContext: {
       currentRuntimeSurface: roleRoute?.currentRuntimeSurface ?? null,
@@ -223,18 +269,27 @@ function buildAuthorization() {
       runtimeRoutingChangeAllowed:
         runbook.authorizationRequired?.runtimeRoutingChangeAllowed === true,
     },
-    allowedNextActions: blockers.length === 0
-      ? [
-          "Run the validation baseline/candidate capture sequence from the output-capture runbook.",
-          "Regenerate npm run models:frozen-output-status immediately after capture.",
-          "Do not release holdout capture until validation outputs are frozen and reviewer iteration has stopped.",
-        ]
-      : [
-          "Record explicit candidate capture approval before provider capture.",
-          "Provide provider credentials through the authorized environment without writing secret values to artifacts.",
-          "Replace the candidate model placeholder with the approved candidate model or adapter identity.",
-          "Rerun npm run models:output-capture-authorization before any provider call.",
-        ],
+    allowedNextActions:
+      baselineValidationReady && candidateValidationReady
+        ? [
+            "Run the validation baseline capture sequence from the output-capture runbook.",
+            "Run the validation candidate capture sequence from the output-capture runbook.",
+            "Regenerate npm run models:frozen-output-status immediately after capture.",
+            "Do not release holdout capture until validation outputs are frozen and reviewer iteration has stopped.",
+          ]
+        : [
+            ...(baselineValidationReady
+              ? ["Validation baseline capture may run before candidate capture, then npm run models:frozen-output-status must be rerun."]
+              : ["Provide baseline provider credentials through the authorized environment without writing secret values to artifacts."]),
+            ...(candidateValidationReady
+              ? ["Validation candidate capture may run after baseline capture remains frozen."]
+              : [
+                  "Record explicit candidate capture approval before candidate provider capture.",
+                  "Replace the candidate model placeholder with the approved candidate model or adapter identity.",
+                  "Provide candidate provider credentials through the authorized environment without writing secret values to artifacts.",
+                ]),
+            "Rerun npm run models:output-capture-authorization before any provider call.",
+          ],
     guardrails: [
       "Do not print secret values; this artifact records presence booleans only.",
       "Do not call providers or write frozen output files from this preflight.",

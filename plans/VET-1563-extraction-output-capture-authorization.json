@@ -6,19 +6,19 @@
   "note": "Authorization preflight only. It does not read secret values, call providers, write output envelopes, or mutate runtime routing.",
   "readyForProviderCapture": false,
   "blockers": [
-    "candidate capture approval is not complete",
     "baseline provider credential group is not present in the current process environment",
+    "candidate capture approval is not complete",
     "candidate provider credential group is not present in the current process environment",
     "candidate model or adapter identity has not been approved"
   ],
   "inputArtifacts": {
     "outputCaptureRunbook": {
       "path": "plans/VET-1563-extraction-output-capture-runbook.json",
-      "sha256": "23b365c7f311ff925fd9c482b326c959010f6e832b3c3d8d1dfb240bcc1513fb"
+      "sha256": "bf14e26a278aacbe02b7ff0fdd5ccdec9d77e72e64e35d7643b06cbbe602e720"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
-      "sha256": "eb0e39b1144d9e589b6978938703303899d20e7f9371f5ff749d308ad827327b"
+      "sha256": "8ccc2134cd84cbaab10dee0bca55cca0f13cf89f47f74af4d9e5301f9878e7be"
     },
     "routingMatrix": {
       "path": "plans/VET-1563-model-routing-matrix.json",
@@ -26,7 +26,7 @@
     },
     "candidateSelectionPacket": {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
-      "sha256": "a4bc894840e56b8bbe65fdbf2100284de5863d643ad428c609a8a75822427b6d"
+      "sha256": "595ce8c183d44a427bfd6c03cf536e3fe6afc4fe31c1b4c5920c4b025976ebdb"
     }
   },
   "approvalGate": {
@@ -86,6 +86,50 @@
       }
     ]
   },
+  "captureReadiness": {
+    "baselineValidation": {
+      "ready": false,
+      "variant": "baseline",
+      "requiredApprovalScope": null,
+      "blockers": [
+        "baseline provider credential group is not present in the current process environment"
+      ],
+      "runbookSequenceId": "validation-baseline",
+      "nextAction": "Provide baseline provider credentials through the authorized environment, then rerun npm run models:output-capture-authorization."
+    },
+    "candidateValidation": {
+      "ready": false,
+      "variant": "candidate",
+      "requiredApprovalScope": "validation-output-capture-only",
+      "blockers": [
+        "candidate capture approval is not complete",
+        "candidate provider credential group is not present in the current process environment",
+        "candidate model or adapter identity has not been approved"
+      ],
+      "runbookSequenceId": "validation-candidate",
+      "nextAction": "Resolve candidate identity, scoped validation-output-capture approval, and candidate provider credentials before candidate capture."
+    },
+    "holdout": {
+      "ready": false,
+      "variants": [
+        "baseline",
+        "candidate"
+      ],
+      "blockers": [
+        "validation baseline and candidate outputs are not frozen and reviewed",
+        "candidate must remain unchanged after validation freeze",
+        "baseline provider credential group is not present in the current process environment",
+        "candidate capture approval is not complete",
+        "candidate provider credential group is not present in the current process environment",
+        "candidate model or adapter identity has not been approved"
+      ],
+      "runbookSequenceIds": [
+        "holdout-baseline",
+        "holdout-candidate"
+      ],
+      "nextAction": "Do not run holdout capture until validation baseline and candidate outputs are schema-valid, frozen, reviewed, and no longer used for iteration."
+    }
+  },
   "routeContext": {
     "currentRuntimeSurface": "src/lib/symptom-chat/answer-extraction.ts",
     "providers": [
@@ -103,9 +147,10 @@
     "runtimeRoutingChangeAllowed": false
   },
   "allowedNextActions": [
-    "Record explicit candidate capture approval before provider capture.",
-    "Provide provider credentials through the authorized environment without writing secret values to artifacts.",
+    "Provide baseline provider credentials through the authorized environment without writing secret values to artifacts.",
+    "Record explicit candidate capture approval before candidate provider capture.",
     "Replace the candidate model placeholder with the approved candidate model or adapter identity.",
+    "Provide candidate provider credentials through the authorized environment without writing secret values to artifacts.",
     "Rerun npm run models:output-capture-authorization before any provider call."
   ],
   "guardrails": [
