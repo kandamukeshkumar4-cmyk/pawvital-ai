@@ -95,6 +95,10 @@ describe("buildQuestionResponseFlow", () => {
     expect(payload.conversationState).toBe("asking");
     expect(mockGateQuestionBeforePhrasing).toHaveBeenCalledTimes(1);
     expect(mockPhraseQuestion).toHaveBeenCalledTimes(1);
+    const gateDeadline = mockGateQuestionBeforePhrasing.mock.calls[0][8];
+    const phraseDeadline = mockPhraseQuestion.mock.calls[0][10];
+    expect(typeof gateDeadline).toBe("number");
+    expect(phraseDeadline).toBe(gateDeadline);
   });
 
   it("keeps the needs_clarification conversation state on clarification re-asks", async () => {
