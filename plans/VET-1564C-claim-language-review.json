@@ -12,21 +12,21 @@
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
       "exists": true,
-      "sha256": "bc6a3cc0ca043475ccbf89a87184537989b73f462f15eb16170120de1eb249d9"
+      "sha256": "45c14206b8dc5c2391d7b69225dffe53903d27b3f86223e9e6dc012f50c749ac"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "d9a64e2ae3bb1b1ae91658a7c4f41a6658327b5a0c7782b0a33c49b9c262eaf5"
+      "sha256": "87ae4f942739a41a547b1c205569e4d64c5d6a3a00989e963921a2c1f7e7ce62"
     },
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "d07c9e3cfd317972001b2e82d45b78b120bbd1e84cba3ca3507574888a515230"
+      "sha256": "77fd4b6a53ae913c8010ace272591c6a938c0b59ff4416068a15ea660b24351e"
     }
   ],
   "missingArtifacts": [],
-  "reviewedStringCount": 311,
+  "reviewedStringCount": 308,
   "blockedClaimPolicy": [
     "diagnosis-certainty",
     "treatment-recommendation",

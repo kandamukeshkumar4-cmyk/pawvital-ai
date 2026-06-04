@@ -2,66 +2,58 @@
   "ticket": "VET-1564A/B",
   "mode": "review-only-production-readiness",
   "generatedAt": "2026-05-31T00:00:00.000Z",
-  "readyForProductionSmoke": false,
+  "readyForProductionSmoke": true,
   "liveMigrationApplied": false,
   "authenticatedProductionSmokeComplete": false,
   "inputArtifacts": {
     "schemaReadiness": {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "321a8c25199d092f2efc3b986e545a0b58f00ff1f4c054c8e63707cd36b7077d"
+      "sha256": "8ecaacb7b0c45bbc04fc8e1b1950af4033f3f3284ab0c82e162d222972b1fb69"
     },
     "claimReview": {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "73a925158d16b640e77d769822756279a0698390d3d26bb0f566ecd6cf17c5af"
+      "sha256": "0205609882c4635f2bd13a5d3d500d72e36bcf993093065df9ec98d19b73064a"
     },
     "readinessContract": {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "d9a64e2ae3bb1b1ae91658a7c4f41a6658327b5a0c7782b0a33c49b9c262eaf5"
+      "sha256": "87ae4f942739a41a547b1c205569e4d64c5d6a3a00989e963921a2c1f7e7ce62"
     },
     "route": {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "c7a59d643303756843e61f21518feb35b7a80d207cc770ca576bc4143780344b"
+    },
+    "persistenceMapper": {
+      "path": "src/lib/product-intelligence-persistence.ts",
+      "exists": true,
+      "sha256": "5e677c985eeccb23a1ca1f6ceeead3cb966fa0bced6113964ddba6a31fb74a0f"
     },
     "ownerWorkflowTest": {
       "path": "tests/analytics-product-owner-workflow.test.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "4637ed8567e057b970d8527ca5220df4250f69e419aa224e02599ed72a5d7f09"
     }
   },
   "routeGuards": {
-    "routeExists": false,
-    "authenticatedUserRequired": false,
-    "petOwnershipCheck": false,
-    "demoModeBlocked": false,
-    "persistenceAllowedEnforced": false,
-    "rateLimitEnforced": false,
-    "ownerScopedHistoryRead": false
+    "routeExists": true,
+    "authenticatedUserRequired": true,
+    "petOwnershipCheck": true,
+    "demoModeBlocked": true,
+    "persistenceAllowedEnforced": true,
+    "rateLimitEnforced": true,
+    "ownerScopedHistoryRead": true
   },
   "workflowSmoke": {
-    "ownerWorkflowTestExists": false,
-    "selectedDogHistoryRead": false,
-    "readinessSavePost": false,
-    "credentialedRequest": false
+    "ownerWorkflowTestExists": true,
+    "selectedDogHistoryRead": true,
+    "readinessSavePost": true,
+    "credentialedRequest": true
   },
-  "missingRouteGuards": [
-    "routeExists",
-    "authenticatedUserRequired",
-    "petOwnershipCheck",
-    "demoModeBlocked",
-    "persistenceAllowedEnforced",
-    "rateLimitEnforced",
-    "ownerScopedHistoryRead"
-  ],
-  "missingWorkflowEvidence": [
-    "ownerWorkflowTestExists",
-    "selectedDogHistoryRead",
-    "readinessSavePost",
-    "credentialedRequest"
-  ],
+  "missingRouteGuards": [],
+  "missingWorkflowEvidence": [],
   "productionSmokePlan": [
     "Apply supabase-product-intelligence-schema.sql through the approved Supabase migration path.",
     "Run authenticated owner workflow on production with a real test pet owned by the signed-in user.",
@@ -100,19 +92,19 @@
         "artifactStatus": {
           "module": {
             "path": "src/lib/readiness-snapshot.ts",
-            "exists": false
+            "exists": true
           },
           "persistenceMapper": {
             "path": "src/lib/product-intelligence-persistence.ts",
-            "exists": false
+            "exists": true
           },
           "readWriteRoute": {
             "path": "src/app/api/product-intelligence/snapshots/route.ts",
-            "exists": false
+            "exists": true
           },
           "schema": {
             "path": "supabase-product-intelligence-schema.sql",
-            "exists": false
+            "exists": true
           },
           "ownerWorkflow": {
             "path": "src/app/(dashboard)/analytics/page.tsx",
@@ -120,10 +112,10 @@
           },
           "test": {
             "path": "tests/readiness-snapshot.test.ts",
-            "exists": false
+            "exists": true
           }
         },
-        "persistenceStatus": "surface-only: missing src/lib/readiness-snapshot.ts, src/lib/product-intelligence-persistence.ts, src/app/api/product-intelligence/snapshots/route.ts, supabase-product-intelligence-schema.sql, tests/readiness-snapshot.test.ts; persistence/schema/route/live smoke remain future blockers"
+        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
       }
     },
     {
@@ -140,19 +132,19 @@
         "artifactStatus": {
           "module": {
             "path": "src/lib/recovery-checkpoint.ts",
-            "exists": false
+            "exists": true
           },
           "persistenceMapper": {
             "path": "src/lib/product-intelligence-persistence.ts",
-            "exists": false
+            "exists": true
           },
           "readWriteRoute": {
             "path": "src/app/api/product-intelligence/snapshots/route.ts",
-            "exists": false
+            "exists": true
           },
           "schema": {
             "path": "supabase-product-intelligence-schema.sql",
-            "exists": false
+            "exists": true
           },
           "ownerWorkflow": {
             "path": "src/app/(dashboard)/analytics/page.tsx",
@@ -160,10 +152,10 @@
           },
           "test": {
             "path": "tests/recovery-checkpoint.test.ts",
-            "exists": false
+            "exists": true
           }
         },
-        "persistenceStatus": "surface-only: missing src/lib/recovery-checkpoint.ts, src/lib/product-intelligence-persistence.ts, src/app/api/product-intelligence/snapshots/route.ts, supabase-product-intelligence-schema.sql, tests/recovery-checkpoint.test.ts; persistence/schema/route/live smoke remain future blockers"
+        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
       }
     },
     {

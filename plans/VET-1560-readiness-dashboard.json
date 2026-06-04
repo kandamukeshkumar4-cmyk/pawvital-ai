@@ -93,22 +93,22 @@
     {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "e15ba6e2f098e6acfb0150bc3ec553ebe160f454b5664aa9748c44d76df888ab"
+      "sha256": "0205609882c4635f2bd13a5d3d500d72e36bcf993093065df9ec98d19b73064a"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "d9a64e2ae3bb1b1ae91658a7c4f41a6658327b5a0c7782b0a33c49b9c262eaf5"
+      "sha256": "87ae4f942739a41a547b1c205569e4d64c5d6a3a00989e963921a2c1f7e7ce62"
     },
     {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "17e9064efe9b31e145b90454d664fe78d98bb592f2fcef508a2aa4f856c7e707"
+      "sha256": "951b2281dae608cb7e250101e7e2f6d0aaa3fec3249ae309d2a3dc6b10ce455c"
     },
     {
       "path": "plans/VET-1564-production-smoke-runbook.json",
       "exists": true,
-      "sha256": "86b03b4734cecf5102f7a538792b301ee5a5ca4235746a996861320e07dcfa29"
+      "sha256": "e2a515ca034c5f63893376f42d2fa33c567cd68b0c200a4f5985046a3b1f1fd2"
     },
     {
       "path": "plans/VET-1565-tugboat-governance-plan.json",
@@ -140,14 +140,14 @@
       "id": "claim-language",
       "label": "Claim-language review",
       "status": "ready",
-      "summary": "311 strings reviewed with no blocked findings.",
+      "summary": "308 strings reviewed with no blocked findings.",
       "nextAction": "Rerun npm run product:claim-language-review after any owner-visible copy change."
     },
     {
       "id": "whoop-product-contract",
       "label": "Whoop-style product contract",
       "status": "ready",
-      "summary": "3 implementation tickets defined; production smoke ready=false, live migration applied=false; smoke runbook has 5 evidence steps.",
+      "summary": "3 implementation tickets defined; production smoke ready=true, live migration applied=false; smoke runbook has 5 evidence steps.",
       "nextAction": "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json."
     },
     {

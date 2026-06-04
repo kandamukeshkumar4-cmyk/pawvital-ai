@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import ProductIntelligencePanel from "@/components/analytics/product-intelligence-panel";
 import type { ProductIntelligenceSnapshot } from "@/lib/product-intelligence";
 
@@ -68,5 +68,33 @@ describe("ProductIntelligencePanel", () => {
     expect(screen.getByText("Emergency symptom check forces urgent state.")).toBeTruthy();
     expect(screen.queryByText(/ready to save/i)).toBeNull();
     expect(screen.getByText("urgent override active")).toBeTruthy();
+  });
+
+  it("runs the selected-dog save command for persistable snapshots", () => {
+    const onSaveSnapshot = jest.fn();
+
+    render(
+      React.createElement(ProductIntelligencePanel, {
+        snapshot: buildSnapshot({
+          state: "stable",
+          confidence: "high",
+          displayScore: 91,
+          evidenceCoverage: 1,
+          evidenceChips: ["wellness index", "latest symptom check", "7-day trend"],
+          missingEvidenceChips: [],
+          nextEvidencePrompt: null,
+          ownerSummary: "Available evidence looks close to baseline.",
+          persistenceAllowed: true,
+          persistenceBlockedReasons: [],
+        }),
+        historyCount: 2,
+        onSaveSnapshot,
+      })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save snapshot" }));
+
+    expect(onSaveSnapshot).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("2 saved snapshots")).toBeTruthy();
   });
 });

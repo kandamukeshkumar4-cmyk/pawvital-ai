@@ -60,28 +60,28 @@
     },
     {
       "path": "src/lib/readiness-snapshot.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "8a81a53fa45d4fb17eb9b6e8346932cddc8be1c3ebd2fff3ece091ee9025c5bb"
     },
     {
       "path": "src/lib/recovery-checkpoint.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "0293555a8de7f6920d0c1c84921162c81952cd14c4a4ef8b634cc79560e64eb0"
     },
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
       "exists": true,
-      "sha256": "bc6a3cc0ca043475ccbf89a87184537989b73f462f15eb16170120de1eb249d9"
+      "sha256": "45c14206b8dc5c2391d7b69225dffe53903d27b3f86223e9e6dc012f50c749ac"
     },
     {
       "path": "src/app/(dashboard)/analytics/page.tsx",
       "exists": true,
-      "sha256": "73b14bb5c04a7528fbe8d97e615d1af7b8699659903c9fa470dbed43a4271fa4"
+      "sha256": "a81c7fad6dc4afe3d99a2cbfa0c35d281ce147360d6c9c42c5faf7721947d5d4"
     },
     {
       "path": "supabase-product-intelligence-schema.sql",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "f6c0b944d2ad5daea36f0421226335eb0e604dec28037a92344c1b49dfc00bb0"
     }
   ],
   "acceptanceGates": [

@@ -9,7 +9,7 @@
     {
       "path": "plans/VET-1560-readiness-dashboard.json",
       "exists": true,
-      "sha256": "4547c7e436735011c80c38bc1093760caec04250f927e57d7fb4f077f974b8c9"
+      "sha256": "12ba7e6647c2662813b92e94fbe0a7986d6cfcab1a8378284b1b6e434b0566af"
     },
     {
       "path": "plans/VET-1560-project-manager-tickets.json",
@@ -99,47 +99,47 @@
     {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "e15ba6e2f098e6acfb0150bc3ec553ebe160f454b5664aa9748c44d76df888ab"
+      "sha256": "0205609882c4635f2bd13a5d3d500d72e36bcf993093065df9ec98d19b73064a"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "d9a64e2ae3bb1b1ae91658a7c4f41a6658327b5a0c7782b0a33c49b9c262eaf5"
+      "sha256": "87ae4f942739a41a547b1c205569e4d64c5d6a3a00989e963921a2c1f7e7ce62"
     },
     {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "17e9064efe9b31e145b90454d664fe78d98bb592f2fcef508a2aa4f856c7e707"
+      "sha256": "951b2281dae608cb7e250101e7e2f6d0aaa3fec3249ae309d2a3dc6b10ce455c"
     },
     {
       "path": "plans/VET-1564-production-smoke-runbook.json",
       "exists": true,
-      "sha256": "86b03b4734cecf5102f7a538792b301ee5a5ca4235746a996861320e07dcfa29"
+      "sha256": "e2a515ca034c5f63893376f42d2fa33c567cd68b0c200a4f5985046a3b1f1fd2"
     },
     {
       "path": "src/lib/product-intelligence-persistence.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "5e677c985eeccb23a1ca1f6ceeead3cb966fa0bced6113964ddba6a31fb74a0f"
     },
     {
       "path": "supabase-product-intelligence-schema.sql",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "f6c0b944d2ad5daea36f0421226335eb0e604dec28037a92344c1b49dfc00bb0"
     },
     {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "321a8c25199d092f2efc3b986e545a0b58f00ff1f4c054c8e63707cd36b7077d"
+      "sha256": "8ecaacb7b0c45bbc04fc8e1b1950af4033f3f3284ab0c82e162d222972b1fb69"
     },
     {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "c7a59d643303756843e61f21518feb35b7a80d207cc770ca576bc4143780344b"
     },
     {
       "path": "src/app/(dashboard)/analytics/page.tsx",
       "exists": true,
-      "sha256": "73b14bb5c04a7528fbe8d97e615d1af7b8699659903c9fa470dbed43a4271fa4"
+      "sha256": "a81c7fad6dc4afe3d99a2cbfa0c35d281ce147360d6c9c42c5faf7721947d5d4"
     },
     {
       "path": "plans/VET-1565-tugboat-governance-plan.json",
@@ -271,10 +271,10 @@
       "requirement": "Move the app toward a best-in-world Whoop-for-Dogs style experience.",
       "status": "partial",
       "evidence": [
-        "3 implementation tickets defined; production smoke ready=false, live migration applied=false; smoke runbook has 5 evidence steps.",
-        "311 strings reviewed with no blocked findings.",
+        "3 implementation tickets defined; production smoke ready=true, live migration applied=false; smoke runbook has 5 evidence steps.",
+        "308 strings reviewed with no blocked findings.",
         "3 implementation tickets defined.",
-        "Production readiness packet: readyForProductionSmoke=false, liveMigrationApplied=false, authenticatedProductionSmokeComplete=false.",
+        "Production readiness packet: readyForProductionSmoke=true, liveMigrationApplied=false, authenticatedProductionSmokeComplete=false.",
         "Production smoke runbook: 3 migration steps and 5 smoke evidence steps defined.",
         "Readiness/recovery persistence schema, pure row mappers, authenticated read/write route, and analytics save/history controls exist."
       ],
@@ -288,7 +288,7 @@
       "status": "proved",
       "evidence": [
         "Claim-language verdict: pass.",
-        "311 strings reviewed."
+        "308 strings reviewed."
       ],
       "blockers": []
     },

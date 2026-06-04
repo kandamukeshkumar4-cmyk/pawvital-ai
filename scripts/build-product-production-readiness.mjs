@@ -26,6 +26,10 @@ const routePath = resolve(
   process.cwd(),
   "src/app/api/product-intelligence/snapshots/route.ts"
 );
+const persistenceMapperPath = resolve(
+  process.cwd(),
+  "src/lib/product-intelligence-persistence.ts"
+);
 const ownerWorkflowTestPath = resolve(
   process.cwd(),
   "tests/analytics-product-owner-workflow.test.ts"
@@ -63,13 +67,20 @@ function buildReadiness() {
   const routeExists = existsSync(routePath);
   const ownerWorkflowTestExists = existsSync(ownerWorkflowTestPath);
   const routeText = readText(routePath);
+  const persistenceMapperText = readText(persistenceMapperPath);
   const ownerWorkflowTest = readText(ownerWorkflowTestPath);
   const routeGuards = {
     routeExists,
     authenticatedUserRequired: routeText.includes("supabase.auth.getUser()"),
     petOwnershipCheck: routeText.includes("verifyPetOwnership"),
     demoModeBlocked: routeText.includes("DEMO_MODE"),
-    persistenceAllowedEnforced: routeText.includes("persistenceAllowed"),
+    persistenceAllowedEnforced:
+      routeText.includes("buildDailyReadinessSnapshot") &&
+      routeText.includes("buildRecoveryCheckpoint") &&
+      routeText.includes("mapReadinessSnapshotToRow") &&
+      routeText.includes("mapRecoveryCheckpointToRow") &&
+      persistenceMapperText.includes("!snapshot.persistenceAllowed") &&
+      persistenceMapperText.includes("!checkpoint.persistenceAllowed"),
     rateLimitEnforced: routeText.includes("checkRateLimit"),
     ownerScopedHistoryRead: routeText.includes("daily_readiness_snapshots") &&
       routeText.includes("recovery_checkpoints") &&
@@ -115,6 +126,10 @@ function buildReadiness() {
       route: artifact(
         routePath,
         "src/app/api/product-intelligence/snapshots/route.ts"
+      ),
+      persistenceMapper: artifact(
+        persistenceMapperPath,
+        "src/lib/product-intelligence-persistence.ts"
       ),
       ownerWorkflowTest: artifact(
         ownerWorkflowTestPath,

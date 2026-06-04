@@ -1,6 +1,13 @@
 "use client";
 
-import { Activity, AlertTriangle, CheckCircle2, CircleHelp, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  CircleHelp,
+  Save,
+  ShieldCheck,
+} from "lucide-react";
 import type {
   ProductIntelligenceSnapshot,
   ProductIntelligenceState,
@@ -9,6 +16,10 @@ import type {
 interface ProductIntelligencePanelProps {
   snapshot: ProductIntelligenceSnapshot;
   historyCount?: number;
+  onSaveSnapshot?: () => void;
+  saveSnapshotDisabled?: boolean;
+  saveSnapshotInProgress?: boolean;
+  saveSnapshotStatus?: string | null;
 }
 
 const STATE_LABEL: Record<ProductIntelligenceState, string> = {
@@ -45,6 +56,10 @@ function Chip({ children, tone = "default" }: { children: string; tone?: "defaul
 export default function ProductIntelligencePanel({
   snapshot,
   historyCount,
+  onSaveSnapshot,
+  saveSnapshotDisabled = false,
+  saveSnapshotInProgress = false,
+  saveSnapshotStatus,
 }: ProductIntelligencePanelProps) {
   const percent = Math.round(snapshot.evidenceCoverage * 100);
   const stateStyle = STATE_STYLES[snapshot.state];
@@ -53,6 +68,8 @@ export default function ProductIntelligencePanel({
     typeof historyCount === "number"
       ? `${historyCount} saved snapshot${historyCount === 1 ? "" : "s"}`
       : null;
+  const canRenderSave = Boolean(onSaveSnapshot) && snapshot.persistenceAllowed;
+  const saveDisabled = saveSnapshotDisabled || saveSnapshotInProgress;
 
   return (
     <section className="space-y-5" aria-label="Product intelligence">
@@ -123,7 +140,23 @@ export default function ProductIntelligencePanel({
         <div className="space-y-2 md:text-right">
           {savedText ? <p className="font-medium text-gray-700">{savedText}</p> : null}
           {snapshot.persistenceAllowed ? (
-            <p className="font-medium text-emerald-700">Evidence complete for this snapshot</p>
+            <div className="flex flex-col gap-2 md:items-end">
+              <p className="font-medium text-emerald-700">Evidence complete for this snapshot</p>
+              {canRenderSave ? (
+                <button
+                  type="button"
+                  onClick={onSaveSnapshot}
+                  disabled={saveDisabled}
+                  className="inline-flex h-9 w-fit items-center gap-2 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                >
+                  <Save className="h-4 w-4" aria-hidden />
+                  {saveSnapshotInProgress ? "Saving" : "Save snapshot"}
+                </button>
+              ) : null}
+              {saveSnapshotStatus ? (
+                <p className="text-xs font-medium text-gray-600">{saveSnapshotStatus}</p>
+              ) : null}
+            </div>
           ) : (
             <div className="flex flex-wrap gap-2 md:justify-end">
               {snapshot.persistenceBlockedReasons.map((reason) => (
