@@ -51,6 +51,29 @@ function dependencyArtifact(relativePath) {
   };
 }
 
+function implementationFoundation(paths) {
+  const artifactStatus = Object.fromEntries(
+    Object.entries(paths).map(([key, path]) => {
+      const exists = existsSync(resolve(process.cwd(), path));
+      return [key, { path, exists }];
+    })
+  );
+  const missing = Object.values(artifactStatus)
+    .filter((artifact) => !artifact.exists)
+    .map((artifact) => artifact.path);
+
+  return {
+    ...paths,
+    artifactStatus,
+    persistenceStatus:
+      missing.length === 0
+        ? "foundation files exist locally; live migration and authenticated production smoke still required"
+        : `surface-only: missing ${missing.join(
+            ", "
+          )}; persistence/schema/route/live smoke remain future blockers`,
+  };
+}
+
 const contract = {
   ticket: "VET-1564",
   generatedAt:
@@ -155,32 +178,28 @@ const contract = {
       title: "Persist daily readiness snapshots from existing evidence",
       scope:
         "Add read-only snapshot generation from existing journal, symptom, and health-score evidence; no diagnosis claims and no model routing changes.",
-      implementedFoundation: {
+      implementedFoundation: implementationFoundation({
         module: "src/lib/readiness-snapshot.ts",
         persistenceMapper: "src/lib/product-intelligence-persistence.ts",
         readWriteRoute: "src/app/api/product-intelligence/snapshots/route.ts",
         schema: "supabase-product-intelligence-schema.sql",
         ownerWorkflow: "src/app/(dashboard)/analytics/page.tsx",
         test: "tests/readiness-snapshot.test.ts",
-        persistenceStatus:
-          "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied",
-      },
+      }),
     },
     {
       id: "VET-1564B",
       title: "Add report-linked recovery checkpoints",
       scope:
         "Create follow-up checkpoints tied to report disposition and journal evidence, with urgent override and missing-data states.",
-      implementedFoundation: {
+      implementedFoundation: implementationFoundation({
         module: "src/lib/recovery-checkpoint.ts",
         persistenceMapper: "src/lib/product-intelligence-persistence.ts",
         readWriteRoute: "src/app/api/product-intelligence/snapshots/route.ts",
         schema: "supabase-product-intelligence-schema.sql",
         ownerWorkflow: "src/app/(dashboard)/analytics/page.tsx",
         test: "tests/recovery-checkpoint.test.ts",
-        persistenceStatus:
-          "schema, pure row mapper, authenticated read/write route, and analytics save/history controls exist; live migration not applied",
-      },
+      }),
     },
     {
       id: "VET-1564C",

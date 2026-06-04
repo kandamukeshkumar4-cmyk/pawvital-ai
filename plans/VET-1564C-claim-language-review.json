@@ -6,30 +6,27 @@
   "reviewedArtifacts": [
     {
       "path": "src/lib/product-intelligence.ts",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "f104dfb5ad8b70c4bb286c0172f4730b567e4bd8727e354ac2eb458d0b5135bc"
     },
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
-      "exists": false,
-      "sha256": null
+      "exists": true,
+      "sha256": "bc6a3cc0ca043475ccbf89a87184537989b73f462f15eb16170120de1eb249d9"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "21ff009788c937303f812e0f7cf972f6767fb15d030810a3635f1fb3e108aeda"
+      "sha256": "d9a64e2ae3bb1b1ae91658a7c4f41a6658327b5a0c7782b0a33c49b9c262eaf5"
     },
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "ae8a852aa4ee63b8125e7e8f2aac3086b89002fc04ac5e4524513d213aaa626c"
+      "sha256": "d07c9e3cfd317972001b2e82d45b78b120bbd1e84cba3ca3507574888a515230"
     }
   ],
-  "missingArtifacts": [
-    "src/lib/product-intelligence.ts",
-    "src/components/analytics/product-intelligence-panel.tsx"
-  ],
-  "reviewedStringCount": 227,
+  "missingArtifacts": [],
+  "reviewedStringCount": 311,
   "blockedClaimPolicy": [
     "diagnosis-certainty",
     "treatment-recommendation",
@@ -64,8 +61,8 @@
     }
   ],
   "findings": [],
-  "verdict": "blocked",
-  "blockedReason": "missing review inputs: src/lib/product-intelligence.ts, src/components/analytics/product-intelligence-panel.tsx",
+  "verdict": "pass",
+  "blockedReason": null,
   "reopenConditions": [
     "Any new owner-visible readiness, trend, recovery, evidence-coach, or model-summary copy is added.",
     "Any model-generated copy is promoted to an owner-visible surface.",

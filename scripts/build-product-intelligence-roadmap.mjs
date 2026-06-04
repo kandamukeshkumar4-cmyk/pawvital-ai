@@ -52,13 +52,13 @@ const roadmap = {
     {
       id: "VET-1564A",
       title: "Persist daily readiness snapshots from existing evidence",
-      status: "review-only-foundation",
+      status: "planned-blocked",
       blockers: ["live Supabase migration is not applied", "authenticated production smoke is not complete"],
     },
     {
       id: "VET-1564B",
       title: "Add report-linked recovery checkpoints",
-      status: "review-only-foundation",
+      status: "planned-blocked",
       blockers: ["live Supabase migration is not applied", "authenticated production smoke is not complete"],
     },
     {
