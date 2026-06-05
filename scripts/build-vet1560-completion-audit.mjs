@@ -26,6 +26,8 @@ const artifactPaths = {
   modelFrozenOutputStatus: "plans/VET-1563-extraction-frozen-output-status.json",
   modelOutputCaptureRunbook: "plans/VET-1563-extraction-output-capture-runbook.json",
   modelOutputCaptureAuthorization: "plans/VET-1563-extraction-output-capture-authorization.json",
+  modelCandidateApprovalIntake:
+    "plans/VET-1563-extraction-candidate-approval-intake.json",
   modelScorecardReviewPacket: "plans/VET-1563-extraction-scorecard-review-packet.json",
   modelRollbackPlan: "plans/VET-1563-extraction-model-rollback-plan.json",
   modelPromotionSmokeRunbook: "plans/VET-1563-extraction-promotion-smoke-runbook.json",
@@ -123,6 +125,9 @@ function buildAudit() {
   const modelOutputCaptureRunbook = readJson(artifactPaths.modelOutputCaptureRunbook);
   const modelOutputCaptureAuthorization = readJson(
     artifactPaths.modelOutputCaptureAuthorization
+  );
+  const modelCandidateApprovalIntake = readJson(
+    artifactPaths.modelCandidateApprovalIntake
   );
   const modelScorecardReviewPacket = readJson(artifactPaths.modelScorecardReviewPacket);
   const modelRollbackPlan = readJson(artifactPaths.modelRollbackPlan);
@@ -224,6 +229,7 @@ function buildAudit() {
         `Promotion preflight gate summary: candidateGateBlockedCount=${modelPreflight.summary?.candidateGateBlockedCount ?? 0}, candidateContentHashWithoutEvidenceHashCount=${modelPreflight.summary?.candidateContentHashWithoutEvidenceHashCount ?? 0}.`,
         `Output capture runbook: ${modelOutputCaptureRunbook.captureSequence?.length ?? 0} gated capture steps with holdout gated until validation freeze.`,
         `Output capture authorization: readyForProviderCapture=${modelOutputCaptureAuthorization.readyForProviderCapture}, blockers=${modelOutputCaptureAuthorization.blockers?.length ?? 0}.`,
+        `Candidate approval intake: status=${modelCandidateApprovalIntake.status}, missingFields=${modelCandidateApprovalIntake.missingFields?.length ?? 0}, approvalRecordTarget=${modelCandidateApprovalIntake.approvalRecordTarget}.`,
         `Scorecard review packet: ${modelScorecardReviewPacket.validationReviews?.length ?? 0} validation and ${modelScorecardReviewPacket.holdoutReviews?.length ?? 0} holdout review forms defined.`,
         `Rollback plan status: ${modelRollbackPlan.status}.`,
         `Promotion smoke runbook: ${modelPromotionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps and ${modelPromotionSmokeRunbook.evidencePacketTemplate?.requiredAttachments?.length ?? 0} required attachments defined.`,

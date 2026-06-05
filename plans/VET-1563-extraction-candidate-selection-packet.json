@@ -11,6 +11,7 @@
     "provider": null,
     "artifactType": null,
     "artifactSha256": null,
+    "offlineTrainingEvalManifest": null,
     "baseModel": "unresolved-review-only-candidate",
     "tokenizer": null,
     "contextLength": null,
@@ -74,6 +75,7 @@
     ]
   },
   "blockers": [
+    "candidate approval record missing",
     "candidate model or adapter id missing",
     "candidate provider missing",
     "candidate artifact hash missing",
@@ -92,6 +94,11 @@
     "routingMatrix": {
       "path": "plans/VET-1563-model-routing-matrix.json",
       "sha256": "ec2df3a37f90d69e9cefd2c76d960421806916d2852125076087c1fae1f2d4ff"
+    },
+    "candidateApprovalRecord": {
+      "path": "plans/VET-1563-extraction-candidate-approval-record.json",
+      "exists": false,
+      "sha256": null
     }
   },
   "baselineRoute": {

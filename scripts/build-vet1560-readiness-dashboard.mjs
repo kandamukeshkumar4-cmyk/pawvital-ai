@@ -30,6 +30,8 @@ const artifactPaths = {
     "plans/VET-1563-extraction-output-capture-runbook.json",
   modelOutputCaptureAuthorization:
     "plans/VET-1563-extraction-output-capture-authorization.json",
+  modelCandidateApprovalIntake:
+    "plans/VET-1563-extraction-candidate-approval-intake.json",
   modelScorecardReviewPacket:
     "plans/VET-1563-extraction-scorecard-review-packet.json",
   modelRollbackPlan: "plans/VET-1563-extraction-model-rollback-plan.json",
@@ -120,6 +122,9 @@ function buildDashboard() {
   const modelOutputCaptureAuthorization = readJson(
     artifactPaths.modelOutputCaptureAuthorization
   );
+  const modelCandidateApprovalIntake = readJson(
+    artifactPaths.modelCandidateApprovalIntake
+  );
   const modelPromotionSmokeRunbook = readJson(artifactPaths.modelPromotionSmokeRunbook);
   const modelPromotionTicket = readJson(artifactPaths.modelPromotionTicket);
   const modelOwnerApprovalRequest = readJson(artifactPaths.modelOwnerApprovalRequest);
@@ -158,7 +163,7 @@ function buildDashboard() {
       status: status(modelPreflight.summary?.readyForPromotionTicket),
       summary: modelPreflight.summary?.readyForPromotionTicket
         ? "Extraction route has enough evidence to open a separate promotion ticket."
-        : `${modelPreflight.summary?.blockedEvidenceCount ?? 0} blocked evidence categories; candidate selection resolved=${modelCandidateSelectionPacket.candidateIdentityResolved}; ${candidateProvenanceSummary}; promotion ticket candidate resolved=${modelPromotionTicket.routeContext?.candidateIdentityResolved}; owner approval request ready=${modelOwnerApprovalRequest.approvalRequestReady}; ${modelPreflight.summary?.candidateOutputHashes ?? 0}/${modelPreflight.summary?.outputCases ?? 0} candidate output hashes populated; candidate capture gates blocked=${modelPreflight.summary?.candidateGateBlockedCount ?? 0}; diagnostic candidate content hashes without evidence hash=${modelPreflight.summary?.candidateContentHashWithoutEvidenceHashCount ?? 0}; evidence packet has ${modelEvidencePacket.evidenceToAttach?.length ?? 0} attachment slots; capture runbook has ${modelOutputCaptureRunbook.captureSequence?.length ?? 0} gated steps; capture authorization ready=${modelOutputCaptureAuthorization.readyForProviderCapture}; promotion smoke runbook has ${modelPromotionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps; promotion ticket blockers=${modelPromotionTicket.readiness?.blockers?.length ?? 0}.`,
+        : `${modelPreflight.summary?.blockedEvidenceCount ?? 0} blocked evidence categories; candidate selection resolved=${modelCandidateSelectionPacket.candidateIdentityResolved}; ${candidateProvenanceSummary}; candidate approval intake status=${modelCandidateApprovalIntake.status}, missing fields=${modelCandidateApprovalIntake.missingFields?.length ?? 0}; promotion ticket candidate resolved=${modelPromotionTicket.routeContext?.candidateIdentityResolved}; owner approval request ready=${modelOwnerApprovalRequest.approvalRequestReady}; ${modelPreflight.summary?.candidateOutputHashes ?? 0}/${modelPreflight.summary?.outputCases ?? 0} candidate output hashes populated; candidate capture gates blocked=${modelPreflight.summary?.candidateGateBlockedCount ?? 0}; diagnostic candidate content hashes without evidence hash=${modelPreflight.summary?.candidateContentHashWithoutEvidenceHashCount ?? 0}; evidence packet has ${modelEvidencePacket.evidenceToAttach?.length ?? 0} attachment slots; capture runbook has ${modelOutputCaptureRunbook.captureSequence?.length ?? 0} gated steps; capture authorization ready=${modelOutputCaptureAuthorization.readyForProviderCapture}; promotion smoke runbook has ${modelPromotionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps; promotion ticket blockers=${modelPromotionTicket.readiness?.blockers?.length ?? 0}.`,
       nextAction: modelPreflight.summary?.readyForPromotionTicket
         ? "Open a separate runtime promotion ticket with owner approval and rollback."
         : modelPreflight.nextActions?.[0]?.action ?? "Populate model promotion evidence.",

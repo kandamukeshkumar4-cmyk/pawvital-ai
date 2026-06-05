@@ -23,12 +23,12 @@
     "checklist": {
       "path": "plans/VET-1563-extraction-promotion-checklist.json",
       "exists": true,
-      "sha256": "206229f14f87bc2a137358482d7371127eaf593beeef372fa25c1a8e24442523"
+      "sha256": "dc65a53e6fed8e09d214fd1c8e876cc840efb91ce4f02f0d766a50a471f9254d"
     },
     "scorecard": {
       "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
       "exists": true,
-      "sha256": "f14574f1b1e0362da6f459dbd714acce3975da2196695db3d0423e0950d16b6c"
+      "sha256": "c16f1506941921f733a42f5f187c7c3819b489f06c59170c62a87a37ab8811de"
     },
     "outputCapturePlan": {
       "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
@@ -38,17 +38,17 @@
     "outputTemplates": {
       "path": "plans/VET-1563-extraction-frozen-output-templates.json",
       "exists": true,
-      "sha256": "6fe951b6f375c471700f29c4f15b021a507fb0cafdae84d7d1f2cac46c614c80"
+      "sha256": "f5576de6c0f2e30c994068c18ac9e4aa7c5b12ed9188b0375045b13464dbff83"
     },
     "outputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
       "exists": true,
-      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
+      "sha256": "714b0e63be9f2d47dd5ac4a76e4b1441718266bfadf01dc9e7bf1f9425db092c"
     },
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "f0695218de335b09dcf0e25899ffd79e90266415f27b7d1a581a529b067c0e76"
+      "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
@@ -59,7 +59,7 @@
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "5204ad6455377442f21eb066e65f38e6ac44ab95a7e4c0f0d272f3e0162f4c33"
+      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
     }
   },
   "requiredEvidence": [

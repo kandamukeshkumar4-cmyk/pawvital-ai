@@ -15,11 +15,11 @@
     },
     "outputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
-      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
+      "sha256": "714b0e63be9f2d47dd5ac4a76e4b1441718266bfadf01dc9e7bf1f9425db092c"
     },
     "candidateSelection": {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
-      "sha256": "a8783640cbcb626d130217b0d42d60be8b7a6c901862598a29bb5628f6818e54"
+      "sha256": "3a522d4010138144e30be00d7e83b1650452beadbfad013040813788b7f1cf22"
     }
   },
   "readiness": {

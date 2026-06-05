@@ -32,6 +32,7 @@ Review-only: true
 | owner-approval-request | SUCCESS | node scripts/build-model-owner-approval-request.mjs --role=extraction --write | plans/VET-1563-extraction-owner-approval-request.json |
 | promotion-evidence-packet-with-owner-request | SUCCESS | node scripts/build-model-promotion-evidence-packet.mjs --role=extraction --write | plans/VET-1563-extraction-promotion-evidence-packet.json |
 | output-capture-authorization | SUCCESS | node scripts/build-model-output-capture-authorization.mjs --role=extraction --write | plans/VET-1563-extraction-output-capture-authorization.json |
+| candidate-approval-intake | SUCCESS | node scripts/build-model-candidate-approval-intake.mjs --role=extraction --write | plans/VET-1563-extraction-candidate-approval-intake.json |
 | product-roadmap | SUCCESS | node scripts/build-product-intelligence-roadmap.mjs --write | plans/VET-1564-product-intelligence-roadmap.json |
 | product-persistence-schema | SUCCESS | node scripts/verify-product-intelligence-schema.mjs --write | plans/VET-1564-product-persistence-schema-readiness.json |
 | product-readiness-contract | SUCCESS | node scripts/build-product-longitudinal-readiness-contract.mjs --write | plans/VET-1564-longitudinal-readiness-contract.json |

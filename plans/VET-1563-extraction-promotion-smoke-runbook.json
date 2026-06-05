@@ -24,11 +24,11 @@
   "inputArtifacts": {
     "outputCaptureRunbook": {
       "path": "plans/VET-1563-extraction-output-capture-runbook.json",
-      "sha256": "65fc509e6ea50732fdd73fdfdfb4f77a61fe3fd1347f400077b6d9ff7464bf3a"
+      "sha256": "5d116ed224f288a66aacca4605346ffce5b60dcc2ddece54c3eb93ea54900425"
     },
     "outputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
-      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
+      "sha256": "714b0e63be9f2d47dd5ac4a76e4b1441718266bfadf01dc9e7bf1f9425db092c"
     },
     "rollbackPlan": {
       "path": "plans/VET-1563-extraction-model-rollback-plan.json",
