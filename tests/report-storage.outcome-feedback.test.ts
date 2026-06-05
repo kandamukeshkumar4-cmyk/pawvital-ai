@@ -111,10 +111,7 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
     SUPABASE_URL: process.env.SUPABASE_URL,
   };
 
-  function restoreEnv(
-    name: keyof typeof envSnapshot,
-    value: string | undefined
-  ) {
+  function setEnv(name: keyof typeof envSnapshot, value: string | undefined) {
     if (value === undefined) {
       delete process.env[name];
       return;
@@ -125,9 +122,9 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
-    process.env.SUPABASE_URL = SERVER_SUPABASE_URL;
-    process.env.NEXT_PUBLIC_SUPABASE_URL = SUPABASE_URL;
-    process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_KEY;
+    setEnv("SUPABASE_URL", SERVER_SUPABASE_URL);
+    setEnv("NEXT_PUBLIC_SUPABASE_URL", SUPABASE_URL);
+    setEnv("SUPABASE_SERVICE_ROLE_KEY", SERVICE_ROLE_KEY);
     mockBuildThresholdProposalDraft.mockReturnValue({
       payload: { change: "threshold" },
       proposalType: "threshold_review",
@@ -137,9 +134,9 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
   });
 
   afterAll(() => {
-    restoreEnv("NEXT_PUBLIC_SUPABASE_URL", envSnapshot.NEXT_PUBLIC_SUPABASE_URL);
-    restoreEnv("SUPABASE_SERVICE_ROLE_KEY", envSnapshot.SUPABASE_SERVICE_ROLE_KEY);
-    restoreEnv("SUPABASE_URL", envSnapshot.SUPABASE_URL);
+    setEnv("NEXT_PUBLIC_SUPABASE_URL", envSnapshot.NEXT_PUBLIC_SUPABASE_URL);
+    setEnv("SUPABASE_SERVICE_ROLE_KEY", envSnapshot.SUPABASE_SERVICE_ROLE_KEY);
+    setEnv("SUPABASE_URL", envSnapshot.SUPABASE_URL);
   });
 
   it("blocks non-owner writes before any service-role update or insert happens", async () => {
@@ -321,7 +318,7 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
   });
 
   it("fails closed for malformed service-role keys without creating a client", async () => {
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    setEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-key");
 
     const { saveOutcomeFeedbackToDB } = await import("@/lib/report-storage");
     const result = await saveOutcomeFeedbackToDB({
@@ -341,8 +338,8 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
   });
 
   it("uses SUPABASE_URL before NEXT_PUBLIC_SUPABASE_URL for trusted outcome feedback writes", async () => {
-    process.env.SUPABASE_URL = SERVER_SUPABASE_URL;
-    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://stale-public.supabase.co\n";
+    setEnv("SUPABASE_URL", SERVER_SUPABASE_URL);
+    setEnv("NEXT_PUBLIC_SUPABASE_URL", "https://stale-public.supabase.co\n");
 
     const { supabase } = createSupabaseMock({
       pets: {
