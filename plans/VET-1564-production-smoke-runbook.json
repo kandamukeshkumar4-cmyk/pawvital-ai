@@ -2,12 +2,12 @@
   "ticket": "VET-1564A/B",
   "mode": "review-only-production-smoke-runbook",
   "generatedAt": "2026-05-31T00:00:00.000Z",
-  "note": "Runbook only. It defines the live migration and authenticated production owner smoke evidence to collect; this command does not call production or apply migrations.",
+  "note": "Runbook and evidence checklist. Production migration and owner smoke evidence are attached by reference; this command does not call production or apply migrations.",
   "inputArtifacts": {
     "productionReadiness": {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "b4aec836949a75079d75efe7cfcc6bc8fcfdac88663ce37f0a5cb613886c009c"
+      "sha256": "701d6114e84a820422b9463c550e22a25e2a335ea46b08fcf53cd26f1ca620f2"
     },
     "schema": {
       "path": "supabase-product-intelligence-schema.sql",
@@ -17,8 +17,8 @@
   },
   "preconditions": {
     "readyForProductionSmoke": true,
-    "liveMigrationApplied": false,
-    "authenticatedProductionSmokeComplete": false,
+    "liveMigrationApplied": true,
+    "authenticatedProductionSmokeComplete": true,
     "rlsPoliciesPresentInSql": true,
     "rollbackTargetsPresentInSql": true
   },
@@ -73,8 +73,37 @@
     }
   ],
   "evidencePacketTemplate": {
-    "migrationApplied": false,
-    "authenticatedProductionSmokeComplete": false,
+    "migrationApplied": true,
+    "authenticatedProductionSmokeComplete": true,
+    "productionEvidence": {
+      "issue": 587,
+      "decision": {
+        "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
+        "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+        "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
+        "publicBeta": "HOLD"
+      },
+      "deploymentId": "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
+      "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
+      "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0",
+      "readinessRowId": "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
+      "ownerSmokeCompletedAt": "2026-06-04T22:24:18.992Z",
+      "rlsProofCompletedAt": "2026-06-05T01:29:22.130Z",
+      "postSmoke500JsonRecordCount": 0,
+      "sourceEvidence": {
+        "issueComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
+        "parentTrackerComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
+        "autoScientistsRun": "G:/MY Website/.agents/autoscientists/runs/vet-1571c-product-intelligence-production-schema-recovery",
+        "artifacts": [
+          "product-intelligence-schema-apply-gswj-2026-06-04.json",
+          "product-intelligence-owner-smoke-dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL-2026-06-04T22-24-03-078Z.json",
+          "product-intelligence-rls-proof-gswj-2026-06-04.json",
+          "product-intelligence-post-smoke-500-log-query-dpl_Bo7RYGj-2026-06-04.json",
+          "product-intelligence-claim-language-review-2026-06-04.json"
+        ]
+      }
+    },
+    "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
     "requiredAttachments": [
       "migration id or SQL run id",
       "schema verification output",
@@ -89,10 +118,7 @@
     "Revert the route/UI changes through the owning PR if owner data is corrupted.",
     "Drop only daily_readiness_snapshots and recovery_checkpoints through approved database rollback if the migration itself must be reverted."
   ],
-  "blockers": [
-    "live Supabase migration is not applied",
-    "authenticated production owner workflow smoke is not complete"
-  ],
+  "blockers": [],
   "guardrails": [
     "Do not use service-role credentials for owner smoke.",
     "Do not bypass pet ownership or RLS checks to make the smoke pass.",

@@ -15,11 +15,27 @@
   "requiredFragmentsPresent": true,
   "missingRequired": [],
   "forbiddenClaimFragmentsPresent": [],
-  "liveMigrationApplied": false,
+  "liveMigrationApplied": true,
+  "productionEvidence": {
+    "path": "plans/VET-1564-production-evidence.json",
+    "decision": {
+      "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
+      "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+      "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
+      "publicBeta": "HOLD"
+    },
+    "deploymentId": "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
+    "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
+    "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0",
+    "liveMigrationApplied": true,
+    "authenticatedProductionSmokeComplete": true,
+    "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
+    "blockers": []
+  },
   "nextActions": [
-    "Review SQL in Supabase SQL Editor or migration workflow.",
-    "Apply only after product owner approves persistence semantics.",
-    "Verify the authenticated write route against the migrated tables before enabling owner workflow automation."
+    "Keep the reviewed schema evidence attached to VET-1564 production readiness.",
+    "Rerun the authenticated owner workflow smoke after any schema, route, RLS, or owner-visible copy change.",
+    "Capture a recovery-checkpoint production write or deterministic blocked-reason smoke before claiming recovery write coverage."
   ],
   "guardrails": [
     "This verifier does not apply schema changes.",

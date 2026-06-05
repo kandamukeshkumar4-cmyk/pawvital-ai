@@ -140,6 +140,16 @@ function buildDashboard() {
   const localQueueValidationSummary = localQueueValidation
     ? `queue validation=${localQueueValidation.status}; ${localQueueValidation.verifierArtifactCount}/${localQueueValidation.ticketCount} verifier artifacts present; ${localQueueValidation.orderedDependencyEdgeCount}/${localQueueValidation.dependencyEdgeCount} dependency edges ordered`
     : "queue validation unavailable";
+  const productNextAction =
+    productProductionReadiness.authenticatedProductionSmokeComplete === true
+      ? productProductionReadiness.recoveryCheckpointProductionWriteExercised
+        ? "Keep monitoring product-intelligence persistence and rerun smoke after schema, route, RLS, or copy changes."
+        : "Daily readiness persistence is GO on current production; capture recovery-checkpoint production write or blocked-reason smoke before claiming recovery write coverage."
+      : "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json.";
+  const productSummary =
+    productProductionReadiness.authenticatedProductionSmokeComplete === true
+      ? `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; product-intelligence persistence=${productProductionReadiness.productionPersistenceStatus}; deployment=${productProductionReadiness.productionEvidence?.deploymentId}; readiness row=${productProductionReadiness.productionEvidence?.readinessRowId}; recovery checkpoint status=${productProductionReadiness.recoveryCheckpointStatus}.`
+      : `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; production smoke ready=${productProductionReadiness.readyForProductionSmoke}, live migration applied=${productProductionReadiness.liveMigrationApplied}; smoke runbook has ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps.`;
 
   const lanes = [
     {
@@ -185,9 +195,8 @@ function buildDashboard() {
       id: "whoop-product-contract",
       label: "Whoop-style product contract",
       status: "ready",
-      summary: `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; production smoke ready=${productProductionReadiness.readyForProductionSmoke}, live migration applied=${productProductionReadiness.liveMigrationApplied}; smoke runbook has ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps.`,
-      nextAction:
-        "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json.",
+      summary: productSummary,
+      nextAction: productNextAction,
     },
     {
       id: "instruction-governance",

@@ -155,6 +155,13 @@ function buildAudit() {
       ? localProjectManagerSync.localFallback.validation
       : null;
   const sourceIds = modelTechniqueIntake.intake.sources?.map((source) => source.id) ?? [];
+  const productBlockers = productProductionReadiness.blockers?.length
+    ? productProductionReadiness.blockers
+    : productProductionReadiness.authenticatedProductionSmokeComplete === true
+      ? []
+      : [
+          "Daily readiness and recovery live migration is not applied; authenticated production owner workflow smoke is not complete.",
+        ];
   const requiredSources = ["fareedkhan-train-llm-from-scratch", "syndicalt-tugboat"];
   const hasRequiredSources = requiredSources.every((sourceId) => sourceIds.includes(sourceId));
   const modelBlockers = [
@@ -249,12 +256,14 @@ function buildAudit() {
         claimLane?.summary ?? "claim lane missing",
         `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined.`,
         `Production readiness packet: readyForProductionSmoke=${productProductionReadiness.readyForProductionSmoke}, liveMigrationApplied=${productProductionReadiness.liveMigrationApplied}, authenticatedProductionSmokeComplete=${productProductionReadiness.authenticatedProductionSmokeComplete}.`,
+        productProductionReadiness.productionEvidence
+          ? `Production evidence: deployment=${productProductionReadiness.productionEvidence.deploymentId}, readinessRowId=${productProductionReadiness.productionEvidence.readinessRowId}, postSmoke500JsonRecordCount=${productProductionReadiness.productionEvidence.postSmoke500JsonRecordCount}.`
+          : "Production evidence artifact is not attached.",
+        `Recovery checkpoint status: ${productProductionReadiness.recoveryCheckpointStatus ?? "unknown"}.`,
         `Production smoke runbook: ${productProductionSmokeRunbook.migrationRunbook?.length ?? 0} migration steps and ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} smoke evidence steps defined.`,
         "Readiness/recovery persistence schema, pure row mappers, authenticated read/write route, and analytics save/history controls exist.",
       ],
-      blockers: [
-        "Daily readiness and recovery live migration is not applied; authenticated production owner workflow smoke is not complete.",
-      ],
+      blockers: productBlockers,
     },
     {
       id: "claim-safety",

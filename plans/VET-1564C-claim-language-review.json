@@ -17,16 +17,16 @@
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96"
+      "sha256": "7150fb520fa1d71c8142edab0c0e54832bd67d7bfda445330a655246194222a4"
     },
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "9ed312c0405b355b0884c20a64255d49531d56e419b1adb8f89d25411e5e9a7d"
+      "sha256": "511af8c2745bab23b6d168ea314659fb4e71787ab9e99eafec5ac06f7fcd8eaa"
     }
   ],
   "missingArtifacts": [],
-  "reviewedStringCount": 397,
+  "reviewedStringCount": 408,
   "blockedClaimPolicy": [
     "diagnosis-certainty",
     "treatment-recommendation",

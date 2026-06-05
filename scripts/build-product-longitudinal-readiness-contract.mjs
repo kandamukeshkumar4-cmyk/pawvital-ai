@@ -11,6 +11,11 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  loadProductProductionEvidence,
+  productProductionEvidencePath,
+  summarizeProductProductionEvidence,
+} from "./product-production-evidence.mjs";
 
 const outPath = resolve(
   process.cwd(),
@@ -36,6 +41,7 @@ const dependencies = [
   "tests/product-intelligence-snapshots.route.test.ts",
   "tests/product-intelligence-panel.test.tsx",
   "tests/analytics-product-owner-workflow.test.ts",
+  productProductionEvidencePath,
 ];
 
 function sha256(path) {
@@ -73,6 +79,13 @@ function implementationFoundation(paths) {
           )}; persistence/schema/route/live smoke remain future blockers`,
   };
 }
+
+const productionEvidenceSummary = summarizeProductProductionEvidence(
+  loadProductProductionEvidence()
+);
+const basePersistenceStatus = productionEvidenceSummary.authenticatedProductionSmokeComplete
+  ? `current production daily-readiness persistence passed; recovery checkpoint status=${productionEvidenceSummary.recoveryCheckpointStatus}`
+  : "foundation files exist locally; live migration and authenticated production smoke still required";
 
 const contract = {
   ticket: "VET-1564",
@@ -232,12 +245,28 @@ const contract = {
           "tests/product-intelligence-panel.test.tsx",
         ],
         persistenceStatus:
-          "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied",
+          productionEvidenceSummary.authenticatedProductionSmokeComplete
+            ? "baseline-shift signal is stored inside the existing readiness JSON payload and was persisted in the VET-1571C daily-readiness production smoke"
+            : "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied",
       },
     },
   ],
+  productionEvidenceStatus: {
+    liveMigrationApplied: productionEvidenceSummary.liveMigrationApplied,
+    authenticatedProductionSmokeComplete:
+      productionEvidenceSummary.authenticatedProductionSmokeComplete,
+    recoveryCheckpointStatus:
+      productionEvidenceSummary.recoveryCheckpointStatus,
+    blockers: productionEvidenceSummary.blockers,
+  },
   dependencyArtifacts: dependencies.map(dependencyArtifact),
 };
+
+for (const ticket of contract.nextImplementationTickets) {
+  if (ticket.implementedFoundation?.persistenceStatus?.includes("foundation files exist locally")) {
+    ticket.implementedFoundation.persistenceStatus = basePersistenceStatus;
+  }
+}
 
 contract.missingDependencyArtifacts = contract.dependencyArtifacts
   .filter((artifact) => !artifact.exists)

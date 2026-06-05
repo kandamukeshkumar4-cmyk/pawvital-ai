@@ -9,6 +9,11 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  loadProductProductionEvidence,
+  productProductionEvidencePath,
+  summarizeProductProductionEvidence,
+} from "./product-production-evidence.mjs";
 
 const schemaReadinessPath = resolve(
   process.cwd(),
@@ -33,6 +38,10 @@ const persistenceMapperPath = resolve(
 const ownerWorkflowTestPath = resolve(
   process.cwd(),
   "tests/analytics-product-owner-workflow.test.ts"
+);
+const productionEvidencePath = resolve(
+  process.cwd(),
+  productProductionEvidencePath
 );
 const outPath = resolve(
   process.cwd(),
@@ -64,6 +73,9 @@ function buildReadiness() {
   const schemaReadiness = readJson(schemaReadinessPath);
   const claimReview = readJson(claimReviewPath);
   const readinessContract = readJson(readinessContractPath);
+  const productionEvidence = loadProductProductionEvidence();
+  const productionEvidenceSummary =
+    summarizeProductProductionEvidence(productionEvidence);
   const routeExists = existsSync(routePath);
   const ownerWorkflowTestExists = existsSync(ownerWorkflowTestPath);
   const routeText = readText(routePath);
@@ -111,8 +123,16 @@ function buildReadiness() {
       claimReview.verdict === "pass" &&
       missingRouteGuards.length === 0 &&
       missingWorkflowEvidence.length === 0,
-    liveMigrationApplied: false,
-    authenticatedProductionSmokeComplete: false,
+    liveMigrationApplied: productionEvidenceSummary.liveMigrationApplied,
+    authenticatedProductionSmokeComplete:
+      productionEvidenceSummary.authenticatedProductionSmokeComplete,
+    productionPersistenceStatus:
+      productionEvidenceSummary.authenticatedProductionSmokeComplete
+        ? "go-current-production"
+        : "hold",
+    recoveryCheckpointProductionWriteExercised:
+      productionEvidenceSummary.recoveryCheckpointProductionWriteExercised,
+    recoveryCheckpointStatus: productionEvidenceSummary.recoveryCheckpointStatus,
     inputArtifacts: {
       schemaReadiness: artifact(
         schemaReadinessPath,
@@ -135,7 +155,27 @@ function buildReadiness() {
         ownerWorkflowTestPath,
         "tests/analytics-product-owner-workflow.test.ts"
       ),
+      productionEvidence: artifact(
+        productionEvidencePath,
+        productProductionEvidencePath
+      ),
     },
+    productionEvidence: productionEvidence
+      ? {
+          issue: productionEvidence.issue,
+          decision: productionEvidence.decision,
+          deploymentId: productionEvidence.production?.deploymentId,
+          targetDatabaseHost: productionEvidence.production?.targetDatabaseHost,
+          schemaSha256: productionEvidence.production?.schemaSha256,
+          readinessRowId:
+            productionEvidence.ownerSmoke?.dailyReadinessSave?.rowId,
+          ownerSmokeCompletedAt: productionEvidence.ownerSmoke?.completedAt,
+          rlsProofCompletedAt: productionEvidence.rlsProof?.completedAt,
+          postSmoke500JsonRecordCount:
+            productionEvidence.postSmokeErrorLogQuery?.jsonRecordCount,
+          sourceEvidence: productionEvidence.sourceEvidence,
+        }
+      : null,
     routeGuards,
     workflowSmoke,
     missingRouteGuards,
@@ -153,10 +193,7 @@ function buildReadiness() {
       "Revert the route/UI changes through the owning promotion PR if persistence corrupts owner data.",
       "Drop only the two product-intelligence tables through an approved database rollback if the migration itself must be reverted.",
     ],
-    blockers: [
-      "live Supabase migration is not applied",
-      "authenticated production owner workflow smoke is not complete",
-    ],
+    blockers: productionEvidenceSummary.blockers,
     guardrails: [
       "This packet does not apply the migration.",
       "Do not use service-role credentials in owner workflow smoke.",

@@ -9,6 +9,10 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  loadProductProductionEvidence,
+  summarizeProductProductionEvidence,
+} from "./product-production-evidence.mjs";
 
 const outPath = resolve(
   process.cwd(),
@@ -22,6 +26,7 @@ const referencedFiles = [
   "src/components/analytics/product-intelligence-panel.tsx",
   "src/app/(dashboard)/analytics/page.tsx",
   "supabase-product-intelligence-schema.sql",
+  "plans/VET-1564-production-evidence.json",
 ];
 
 function sha256(path) {
@@ -36,6 +41,11 @@ function artifact(relativePath) {
     sha256: existsSync(absolutePath) ? sha256(absolutePath) : null,
   };
 }
+
+const productionEvidenceSummary = summarizeProductProductionEvidence(
+  loadProductProductionEvidence()
+);
+const productionBlockers = productionEvidenceSummary.blockers;
 
 const roadmap = {
   ticket: "VET-1564",
@@ -52,14 +62,24 @@ const roadmap = {
     {
       id: "VET-1564A",
       title: "Persist daily readiness snapshots from existing evidence",
-      status: "planned-blocked",
-      blockers: ["live Supabase migration is not applied", "authenticated production smoke is not complete"],
+      status: productionEvidenceSummary.authenticatedProductionSmokeComplete
+        ? "go-current-production"
+        : "planned-blocked",
+      blockers: productionEvidenceSummary.authenticatedProductionSmokeComplete
+        ? []
+        : productionBlockers,
     },
     {
       id: "VET-1564B",
       title: "Add report-linked recovery checkpoints",
-      status: "planned-blocked",
-      blockers: ["live Supabase migration is not applied", "authenticated production smoke is not complete"],
+      status: productionEvidenceSummary.authenticatedProductionSmokeComplete
+        ? "schema-and-route-ready-production-write-not-exercised"
+        : "planned-blocked",
+      blockers: productionEvidenceSummary.authenticatedProductionSmokeComplete
+        ? [
+            "recovery checkpoint production write was not exercised by the VET-1571C owner smoke",
+          ]
+        : productionBlockers,
     },
     {
       id: "VET-1564C",
@@ -70,8 +90,12 @@ const roadmap = {
     {
       id: "VET-1564D",
       title: "Add deterministic baseline-shift product intelligence",
-      status: "review-only-foundation",
-      blockers: ["live Supabase migration is not applied", "authenticated production smoke is not complete"],
+      status: productionEvidenceSummary.authenticatedProductionSmokeComplete
+        ? "go-current-production-daily-readiness"
+        : "review-only-foundation",
+      blockers: productionEvidenceSummary.authenticatedProductionSmokeComplete
+        ? []
+        : productionBlockers,
     },
   ],
   claimGuards: [
@@ -96,6 +120,14 @@ const roadmap = {
     ],
   },
   referencedArtifacts: referencedFiles.map(artifact),
+  productionEvidenceStatus: {
+    liveMigrationApplied: productionEvidenceSummary.liveMigrationApplied,
+    authenticatedProductionSmokeComplete:
+      productionEvidenceSummary.authenticatedProductionSmokeComplete,
+    recoveryCheckpointStatus:
+      productionEvidenceSummary.recoveryCheckpointStatus,
+    blockers: productionBlockers,
+  },
   acceptanceGates: [
     "schema readiness packet passes local review",
     "baseline-shift tests cover below-baseline, unknown, urgent override, and panel rendering states",
