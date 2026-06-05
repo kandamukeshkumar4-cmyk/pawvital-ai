@@ -1,6 +1,6 @@
 # VET-1575C - VET-1563 Model Evidence Blocker Readout
 
-Generated: 2026-06-05T00:00:00.000Z
+Generated: 2026-06-05T19:28:38.000Z
 
 ## Decision
 
@@ -11,6 +11,18 @@ Generated: 2026-06-05T00:00:00.000Z
 | Model/NIM promotion | HOLD | Candidate identity, frozen outputs, scorecard, owner approval, and smoke proof are blocked. |
 | Runtime promotion PR | HOLD | Promotion ticket draft reports `readyToOpenPromotionPr=false`. |
 | Public beta model lane | HOLD | The model lane cannot be called production-ready without promotion evidence and owner approval. |
+
+## Current Launch Stack Context
+
+Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`.
+
+The newer launch/readout/product PRs do not change this model evidence decision:
+
+- PR #591 (`be30714b129e05dfaaa68d6707e0fb32d83ec481`) refreshes the public-beta packet and still keeps public beta HOLD.
+- PR #592 (`b76e247edac9a3916349cfa653aa65b6b73d0a0b`) refreshes the Cohort 1 readout and still keeps the readout PARTIAL.
+- PR #594 (`9357e02ee5a3caabc5a38e96ca0c43249f632ab7`) records current-deployment daily-readiness/product-intelligence persistence proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
+
+All three PRs are open/blocked, not merged to `master`.
 
 ## Source Artifacts
 

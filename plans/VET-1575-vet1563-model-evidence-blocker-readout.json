@@ -3,11 +3,32 @@
   "parentTicket": "VET-1563",
   "relatedIssue": 588,
   "mode": "review-only-model-evidence-blocker-readout",
-  "generatedAt": "2026-06-05T00:00:00.000Z",
+  "generatedAt": "2026-06-05T19:28:38.000Z",
   "sourceBranchBase": {
     "branch": "codex/vet-1575c-model-evidence-blocker-readout",
     "baseCommit": "81cae52d0f1b97920a3392493327625ce701ca87",
     "baseCommitNote": "PR #590 candidate approval intake harness is already merged to master."
+  },
+  "currentLaunchStackContext": {
+    "currentProductionDeploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "publicBetaPacketPr": {
+      "pr": 591,
+      "head": "be30714b129e05dfaaa68d6707e0fb32d83ec481",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; public beta remains HOLD and model lane remains HOLD"
+    },
+    "cohortReadoutPr": {
+      "pr": 592,
+      "head": "b76e247edac9a3916349cfa653aa65b6b73d0a0b",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; Cohort 1 readout remains PARTIAL"
+    },
+    "productIntelligencePr": {
+      "pr": 594,
+      "head": "9357e02ee5a3caabc5a38e96ca0c43249f632ab7",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; daily-readiness/product-intelligence persistence proof does not provide candidate identity, frozen outputs, hashes, scorecards, owner approval, or promotion smoke evidence"
+    }
   },
   "scopeGuardrails": {
     "runtimeRoutingChanged": false,
@@ -24,7 +45,7 @@
     "modelNimPromotion": "HOLD",
     "promotionPr": "HOLD",
     "publicBetaModelLane": "HOLD",
-    "reason": "The review-only intake harness exists, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked."
+    "reason": "The review-only intake harness exists, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594 public-beta, cohort-readout, and product-intelligence evidence does not satisfy any model-promotion gate."
   },
   "sourceArtifacts": {
     "candidateApprovalIntake": {
@@ -71,6 +92,7 @@
   "evidenceSummary": {
     "candidateApprovalRecordTarget": "plans/VET-1563-extraction-candidate-approval-record.json",
     "candidateApprovalRecordExists": false,
+    "candidateApprovalRecordCheckedAt": "2026-06-05T19:28:38.000Z",
     "candidateApprovalIntakeStatus": "blocked",
     "candidateApprovalMissingFieldCount": 11,
     "candidateIdentityResolved": false,
@@ -185,6 +207,7 @@
     "modelPromotion": "HOLD",
     "providerCapture": "HOLD",
     "weightUpdate": "HOLD",
-    "runtimeChange": "HOLD"
+    "runtimeChange": "HOLD",
+    "publicBetaModelLane": "HOLD"
   }
 }
