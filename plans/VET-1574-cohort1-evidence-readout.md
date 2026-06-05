@@ -4,7 +4,7 @@ Readout status: PARTIAL.
 
 Public beta decision: HOLD.
 
-Evidence cutoff: 2026-06-05T14:03:15Z.
+Evidence cutoff: 2026-06-05T19:14:11Z.
 
 This is a point-in-time readout from current issue evidence, existing repo templates, and read-only production probes. It is not a completed 48-hour Cohort 1 report because the repo does not contain a completed tester registry, invite-send proof, full cohort counts, or an urgency distribution.
 
@@ -16,7 +16,7 @@ Read-only probe:
 - `/admin/cohort-launch`: HTTP 307 to `/login?redirect=%2Fadmin%2Fcohort-launch&reason=session_expired`
 - `/api/admin/private-tester`: HTTP 403 unauthenticated
 
-This proves the public home is reachable and unauthenticated admin denial still holds. It does not prove current positive-admin access.
+Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`. This proves the public home is reachable and unauthenticated admin denial still holds. It does not prove current positive-admin access.
 
 ## Core Metrics
 
@@ -26,7 +26,7 @@ This proves the public home is reachable and unauthenticated admin denial still 
 | Completed symptom checks | Partial, known proof count 1 | VET-1570C saved-tester replay reached symptom-check completion. |
 | Final reports | Partial, known proof count 1 | VET-1570C saved-tester replay reached final report and History. |
 | Feedback submissions | Partial, known proof count 1 | History feedback submission for symptom check `5aeff251-4b54-4e45-99b6-e99aa1550ce4` returned HTTP 200 with `ok: true`. |
-| Failed/stalled flows | Partial | #585 timeout fixed/verified; #587 product-intelligence history fixed/verified; #582 operational debt open; #588 model evidence open. |
+| Failed/stalled flows | Partial | #585 timeout fixed/verified; #587 product-intelligence history fixed/verified; PR #594 adds current-deployment daily-readiness write proof but is open/blocked; #582 operational debt open; #588 model evidence open. |
 | Urgency distribution | Unknown | No full Cohort 1 result dataset is present. |
 | Owner-visible leakage scan | Partial pass | VET-1570C saved-tester replay was leakage-clean. No full-cohort leakage scan exists. |
 | App Insights latency | Partial | `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, p95 secondOpinionMs=8075. |
@@ -57,17 +57,19 @@ Partial backend proof exists:
 - VET-1570C sampled Vercel logs showed no HTTP 500 rows; symptom-chat and feedback rows returned HTTP 200.
 - VET-1570C App Insights recorded `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, p95 secondOpinionMs=8075.
 - VET-1571C product-intelligence persistence recovery passed owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and post-smoke 500 log query.
+- VET-1576C / PR #594 adds current-deployment daily-readiness/product-intelligence proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.
 
 Backend proof limits:
 
 - Scheduler/shadow readout is still empty where recorded.
 - No full Cohort 1 telemetry window exists in repo evidence.
 - Backend telemetry does not replace owner-visible UX proof.
+- PR #594 is open/blocked, so this is evidence-in-PR, not landed master truth.
 
 ## Product-Quality Triage From Real Evidence
 
 - #585 / VET-1570C: symptom-check stall, closed and production-verified.
-- #587 / VET-1571C: product-intelligence history persistence failure, closed and production-verified.
+- #587 / VET-1571C: product-intelligence history persistence failure, closed and production-verified; PR #594 refreshed current-deployment daily-readiness write proof.
 - #582 / VET-1569C: REST/Auth versus `DATABASE_URL` project split, open operational debt.
 - #588 / VET-1572C: model-promotion evidence chain, open release blocker; do not promote model flags.
 
@@ -88,4 +90,5 @@ Backend proof limits:
 - Cohort 1 launch execution: UNPROVEN_FULL_COHORT
 - Owner-visible UX proof: PARTIAL_PASS
 - Backend readout proof: PARTIAL
+- Product-intelligence backend proof: GO current-production daily-readiness only, in open PR #594
 - Public beta: HOLD

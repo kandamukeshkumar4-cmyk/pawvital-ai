@@ -1,8 +1,8 @@
 {
   "ticket": "VET-1574C",
   "mode": "cohort1-evidence-readout",
-  "generatedAt": "2026-06-05T14:10:00.000Z",
-  "evidenceCutoff": "2026-06-05T14:03:15.000Z",
+  "generatedAt": "2026-06-05T19:14:11.000Z",
+  "evidenceCutoff": "2026-06-05T19:14:11.000Z",
   "readoutStatus": "PARTIAL",
   "publicBetaDecision": "HOLD",
   "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, but it does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, and VET-1563 model evidence keep public beta on HOLD.",
@@ -24,7 +24,9 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-05T14:10:00.000Z",
+    "performedAt": "2026-06-05T19:14:11.000Z",
+    "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
     "results": [
       {
@@ -102,7 +104,7 @@
           "ticket": "VET-1571C / issue #587",
           "status": "closed",
           "severity": "P1",
-          "summary": "Product-intelligence history GET failed with missing daily_readiness_snapshots table; production persistence/RLS smoke passed after recovery."
+          "summary": "Product-intelligence history GET failed with missing daily_readiness_snapshots table; production persistence/RLS smoke passed after recovery, and PR #594 later added current-deployment daily-readiness write proof."
         },
         {
           "ticket": "VET-1569C / issue #582",
@@ -180,12 +182,14 @@
     "passedEvidence": [
       "VET-1570C sampled Vercel logs showed no HTTP 500 rows and symptom-chat/feedback rows returned HTTP 200.",
       "App Insights VET-1570C saved-tester window recorded events=5, errors=0, p95DurationMs=41604, p95ExtractionMs=0, p95SecondOpinionMs=8075.",
-      "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed."
+      "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed.",
+      "VET-1576C PR #594 records current-deployment daily-readiness/product-intelligence write proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb: row 61c44ae9-5b30-482d-8207-efbaf6598140, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records."
     ],
     "limitations": [
       "Scheduler/shadow readout remains empty.",
       "No full Cohort 1 telemetry window or admin API error summary exists in repo evidence.",
-      "Backend telemetry proof is not owner-visible UX proof."
+      "Backend telemetry proof is not owner-visible UX proof.",
+      "PR #594 is open and mergeStateStatus=BLOCKED, so current product-intelligence write proof is evidence-in-PR, not landed master truth."
     ]
   },
   "productQualityTriage": {
@@ -201,7 +205,7 @@
         "issue": "#587 / VET-1571C",
         "category": "product-intelligence history persistence",
         "status": "closed_verified",
-        "evidence": "Production saved-tester owner smoke and RLS denial proof passed."
+        "evidence": "Production saved-tester owner smoke and RLS denial proof passed; PR #594 later refreshed current-deployment write proof without changing this Cohort 1 count status."
       },
       {
         "issue": "#582 / VET-1569C",
@@ -229,6 +233,18 @@
       "id": "issue #587",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
       "summary": "VET-1571C product-intelligence production recovery passed schema, owner smoke, RLS, focused tests, claim-language review, and post-smoke log query."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #594",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/594",
+      "summary": "VET-1576C current-production product-intelligence branch records daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb, row 61c44ae9-5b30-482d-8207-efbaf6598140; PR remains open/blocked."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4634671521",
+      "summary": "VET-1573C public-beta HOLD packet was refreshed after PR #594; public beta remains HOLD while product-intelligence daily-readiness persistence is GO only in PR #594 evidence."
     },
     {
       "type": "issue",
@@ -268,6 +284,7 @@
     "cohort1LaunchExecution": "UNPROVEN_FULL_COHORT",
     "ownerVisibleUxProof": "PARTIAL_PASS",
     "backendReadoutProof": "PARTIAL",
+    "productIntelligenceBackendProof": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY_IN_OPEN_PR",
     "publicBeta": "HOLD"
   }
 }
