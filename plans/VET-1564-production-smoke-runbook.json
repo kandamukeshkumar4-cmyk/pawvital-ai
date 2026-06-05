@@ -7,7 +7,7 @@
     "productionReadiness": {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "795178f1606c650dc97fa0512b7022ce1d7983c36a56121e7b5269fa874d74c7"
+      "sha256": "c6117c3e97680f3e89653e207aad072c6b4db5a2e31ec01d90d228f331062404"
     },
     "schema": {
       "path": "supabase-product-intelligence-schema.sql",
@@ -20,8 +20,8 @@
     "liveMigrationApplied": true,
     "authenticatedProductionSmokeComplete": true,
     "currentDeploymentReadOnlySmokePassed": true,
-    "currentDeploymentAuthenticatedWriteSmokeComplete": false,
-    "currentDeploymentSmokeStatus": "current-deployment-read-only-pass-write-not-exercised",
+    "currentDeploymentAuthenticatedWriteSmokeComplete": true,
+    "currentDeploymentSmokeStatus": "current-deployment-write-exercised",
     "rlsPoliciesPresentInSql": true,
     "rollbackTargetsPresentInSql": true
   },
@@ -79,13 +79,13 @@
     "migrationApplied": true,
     "authenticatedProductionSmokeComplete": true,
     "currentDeploymentReadOnlySmokePassed": true,
-    "currentDeploymentAuthenticatedWriteSmokeComplete": false,
+    "currentDeploymentAuthenticatedWriteSmokeComplete": true,
     "productionEvidence": {
       "issue": 587,
       "decision": {
-        "productIntelligencePersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
-        "dailyReadinessPersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
-        "currentDeploymentWriteCoverage": "HOLD_NOT_EXERCISED",
+        "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
+        "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+        "currentDeploymentWriteCoverage": "GO_CURRENT_PRODUCTION_DAILY_READINESS",
         "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
         "publicBeta": "HOLD"
       },
@@ -94,6 +94,7 @@
       "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
       "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0",
       "readinessRowId": "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
+      "currentReadinessRowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
       "ownerSmokeCompletedAt": "2026-06-04T22:24:18.992Z",
       "rlsProofCompletedAt": "2026-06-05T01:29:22.130Z",
       "currentDeploymentReadOnlySmoke": {
@@ -124,8 +125,31 @@
         }
       },
       "currentDeploymentWriteSmoke": {
-        "exercised": false,
-        "reason": "The June 5 alias-drift refresh used read-only owner-history proof on the current deployment. It did not POST a new daily readiness row on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb."
+        "exercised": true,
+        "status": 201,
+        "rowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
+        "snapshotDate": "2026-06-05",
+        "readinessState": "watch",
+        "confidence": "high",
+        "displayScore": 58,
+        "evidenceCoverage": 1,
+        "generatedBy": "vet-1571c-production-smoke",
+        "sourceCheckIds": [
+          "5aeff251-4b54-4e45-99b6-e99aa1550ce4",
+          "566ff227-282c-46a9-b49f-fd67c8b9adc7"
+        ],
+        "startedAt": "2026-06-05T18:23:33.441Z",
+        "completedAt": "2026-06-05T18:23:48.687Z",
+        "historyReadAfter": {
+          "status": 200,
+          "readinessCount": 2,
+          "recoveryCount": 0,
+          "latestReadinessIds": [
+            "61c44ae9-5b30-482d-8207-efbaf6598140",
+            "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+          ]
+        },
+        "artifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
       },
       "postSmoke500JsonRecordCount": 0,
       "sourceEvidence": {
@@ -133,13 +157,15 @@
         "parentTrackerComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
         "autoScientistsRun": "G:/MY Website/.agents/autoscientists/runs/vet-1571c-product-intelligence-production-schema-recovery",
         "currentDeploymentReadOnlyArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+        "currentDeploymentWriteArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
         "artifacts": [
           "product-intelligence-schema-apply-gswj-2026-06-04.json",
           "product-intelligence-owner-smoke-dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL-2026-06-04T22-24-03-078Z.json",
           "product-intelligence-rls-proof-gswj-2026-06-04.json",
           "product-intelligence-post-smoke-500-log-query-dpl_Bo7RYGj-2026-06-04.json",
           "product-intelligence-claim-language-review-2026-06-04.json",
-          "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
+          "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+          "product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
         ]
       }
     },
@@ -160,9 +186,7 @@
     "Revert the route/UI changes through the owning PR if owner data is corrupted.",
     "Drop only daily_readiness_snapshots and recovery_checkpoints through approved database rollback if the migration itself must be reverted."
   ],
-  "blockers": [
-    "current deployment authenticated write smoke was not exercised"
-  ],
+  "blockers": [],
   "guardrails": [
     "Do not use service-role credentials for owner smoke.",
     "Do not bypass pet ownership or RLS checks to make the smoke pass.",

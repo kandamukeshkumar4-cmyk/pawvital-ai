@@ -174,6 +174,8 @@ function buildReadiness() {
           schemaSha256: productionEvidence.production?.schemaSha256,
           readinessRowId:
             productionEvidence.ownerSmoke?.dailyReadinessSave?.rowId,
+          currentReadinessRowId:
+            productionEvidence.currentProduction?.writeSmoke?.rowId,
           ownerSmokeCompletedAt: productionEvidence.ownerSmoke?.completedAt,
           rlsProofCompletedAt: productionEvidence.rlsProof?.completedAt,
           currentDeploymentReadOnlySmoke:

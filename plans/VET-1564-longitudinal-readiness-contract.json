@@ -174,7 +174,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -214,7 +214,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -249,7 +249,7 @@
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "2249943e6164556d4e9240902881262e9a46f4b70a9d33fce841671411b4e59b"
+      "sha256": "027f424ca49c2b389a492e588fc0fc9826613047e47ac1813d7be87ba62d33e0"
     },
     {
       "path": "src/lib/product-intelligence.ts",
@@ -279,7 +279,7 @@
     {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "fb7c41d8d527dcb49f68520e062aca1805492f95ba639288cd871aecb9d63695"
+      "sha256": "ade325c1183b684674d4044f5d2d10dadf669c29ebdf59d0b6d10a59866170f1"
     },
     {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -339,7 +339,7 @@
     {
       "path": "plans/VET-1564-production-evidence.json",
       "exists": true,
-      "sha256": "d47faca0ae06a9f17a5e59e81fd1d94185cb10a5b735fb0840cf60238a0a548f"
+      "sha256": "73856380da716d3f2894fa2b66f8b45cb163a6a4b185099cfb3732c157179dcb"
     }
   ],
   "missingDependencyArtifacts": [],

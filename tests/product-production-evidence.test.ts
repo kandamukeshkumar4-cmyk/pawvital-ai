@@ -71,6 +71,7 @@ describe("VET-1564 production evidence sync", () => {
         deploymentId: string;
         currentDeploymentId: string;
         readinessRowId: string;
+        currentReadinessRowId: string;
         postSmoke500JsonRecordCount: number;
       };
     }>(["scripts/build-product-production-readiness.mjs"]);
@@ -78,31 +79,29 @@ describe("VET-1564 production evidence sync", () => {
     expect(schema.liveMigrationApplied).toBe(true);
     expect(schema.productionEvidence.authenticatedProductionSmokeComplete).toBe(true);
     expect(schema.productionEvidence.productionPersistenceStatus).toBe(
-      "go-current-read-historical-write",
+      "go-current-production",
     );
     expect(schema.productionEvidence.currentDeploymentReadOnlySmokePassed).toBe(true);
     expect(schema.productionEvidence.currentDeploymentAuthenticatedWriteSmokeComplete).toBe(
-      false,
+      true,
     );
     expect(schema.productionEvidence.currentDeploymentSmokeStatus).toBe(
-      "current-deployment-read-only-pass-write-not-exercised",
+      "current-deployment-write-exercised",
     );
     expect(schema.productionEvidence.blockers).toEqual([]);
-    expect(schema.productionEvidence.currentDeploymentGaps).toEqual([
-      "current deployment authenticated write smoke was not exercised",
-    ]);
+    expect(schema.productionEvidence.currentDeploymentGaps).toEqual([]);
     expect(contract.productionEvidenceStatus.authenticatedProductionSmokeComplete).toBe(true);
     expect(roadmap.productionEvidenceStatus.authenticatedProductionSmokeComplete).toBe(true);
     expect(roadmap.phases).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: "VET-1564A",
-          status: "go-current-read-historical-write",
+          status: "go-current-production",
           blockers: [],
         }),
         expect.objectContaining({
           id: "VET-1564D",
-          status: "go-current-read-historical-write",
+          status: "go-current-production",
           blockers: [],
         }),
       ]),
@@ -110,17 +109,13 @@ describe("VET-1564 production evidence sync", () => {
     expect(readiness.liveMigrationApplied).toBe(true);
     expect(readiness.authenticatedProductionSmokeComplete).toBe(true);
     expect(readiness.currentDeploymentReadOnlySmokePassed).toBe(true);
-    expect(readiness.currentDeploymentAuthenticatedWriteSmokeComplete).toBe(false);
+    expect(readiness.currentDeploymentAuthenticatedWriteSmokeComplete).toBe(true);
     expect(readiness.currentDeploymentSmokeStatus).toBe(
-      "current-deployment-read-only-pass-write-not-exercised",
+      "current-deployment-write-exercised",
     );
-    expect(readiness.productionPersistenceStatus).toBe(
-      "go-current-read-historical-write",
-    );
+    expect(readiness.productionPersistenceStatus).toBe("go-current-production");
     expect(readiness.blockers).toEqual([]);
-    expect(readiness.currentDeploymentGaps).toEqual([
-      "current deployment authenticated write smoke was not exercised",
-    ]);
+    expect(readiness.currentDeploymentGaps).toEqual([]);
     expect(readiness.productionEvidence.deploymentId).toBe(
       "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
     );
@@ -129,6 +124,9 @@ describe("VET-1564 production evidence sync", () => {
     );
     expect(readiness.productionEvidence.readinessRowId).toBe(
       "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
+    );
+    expect(readiness.productionEvidence.currentReadinessRowId).toBe(
+      "61c44ae9-5b30-482d-8207-efbaf6598140",
     );
     expect(readiness.productionEvidence.postSmoke500JsonRecordCount).toBe(0);
     expect(readiness.productionEvidence.decision.publicBeta).toBe("HOLD");

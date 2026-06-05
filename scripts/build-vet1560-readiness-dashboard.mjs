@@ -160,7 +160,7 @@ function buildDashboard() {
   }
   const productSummary =
     productHistoricalSmokeComplete
-      ? `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; product-intelligence persistence=${productProductionReadiness.productionPersistenceStatus}; write deployment=${productProductionReadiness.productionEvidence?.deploymentId}; current deployment=${productProductionReadiness.productionEvidence?.currentDeploymentId}; current smoke=${productProductionReadiness.currentDeploymentSmokeStatus}; readiness row=${productProductionReadiness.productionEvidence?.readinessRowId}; recovery checkpoint status=${productProductionReadiness.recoveryCheckpointStatus}.`
+      ? `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; product-intelligence persistence=${productProductionReadiness.productionPersistenceStatus}; write deployment=${productProductionReadiness.productionEvidence?.deploymentId}; current deployment=${productProductionReadiness.productionEvidence?.currentDeploymentId}; current smoke=${productProductionReadiness.currentDeploymentSmokeStatus}; historical readiness row=${productProductionReadiness.productionEvidence?.readinessRowId}; current readiness row=${productProductionReadiness.productionEvidence?.currentReadinessRowId}; recovery checkpoint status=${productProductionReadiness.recoveryCheckpointStatus}.`
       : `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; production smoke ready=${productProductionReadiness.readyForProductionSmoke}, live migration applied=${productProductionReadiness.liveMigrationApplied}; smoke runbook has ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps.`;
 
   const lanes = [

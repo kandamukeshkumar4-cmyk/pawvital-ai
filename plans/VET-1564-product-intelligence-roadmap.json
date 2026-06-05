@@ -9,7 +9,7 @@
     {
       "id": "VET-1564A",
       "title": "Persist daily readiness snapshots from existing evidence",
-      "status": "go-current-read-historical-write",
+      "status": "go-current-production",
       "blockers": []
     },
     {
@@ -29,7 +29,7 @@
     {
       "id": "VET-1564D",
       "title": "Add deterministic baseline-shift product intelligence",
-      "status": "go-current-read-historical-write",
+      "status": "go-current-production",
       "blockers": []
     }
   ],
@@ -88,22 +88,20 @@
     {
       "path": "plans/VET-1564-production-evidence.json",
       "exists": true,
-      "sha256": "d47faca0ae06a9f17a5e59e81fd1d94185cb10a5b735fb0840cf60238a0a548f"
+      "sha256": "73856380da716d3f2894fa2b66f8b45cb163a6a4b185099cfb3732c157179dcb"
     }
   ],
   "productionEvidenceStatus": {
     "liveMigrationApplied": true,
     "authenticatedProductionSmokeComplete": true,
-    "productionPersistenceStatus": "go-current-read-historical-write",
+    "productionPersistenceStatus": "go-current-production",
     "currentDeploymentReadOnlySmokePassed": true,
-    "currentDeploymentAuthenticatedWriteSmokeComplete": false,
-    "currentDeploymentSmokeStatus": "current-deployment-read-only-pass-write-not-exercised",
+    "currentDeploymentAuthenticatedWriteSmokeComplete": true,
+    "currentDeploymentSmokeStatus": "current-deployment-write-exercised",
     "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
     "blockers": [],
     "currentDeploymentBlockers": [],
-    "currentDeploymentGaps": [
-      "current deployment authenticated write smoke was not exercised"
-    ]
+    "currentDeploymentGaps": []
   },
   "acceptanceGates": [
     "schema readiness packet passes local review",

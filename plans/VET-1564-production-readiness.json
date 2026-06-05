@@ -6,26 +6,26 @@
   "liveMigrationApplied": true,
   "authenticatedProductionSmokeComplete": true,
   "currentDeploymentReadOnlySmokePassed": true,
-  "currentDeploymentAuthenticatedWriteSmokeComplete": false,
-  "currentDeploymentSmokeStatus": "current-deployment-read-only-pass-write-not-exercised",
-  "productionPersistenceStatus": "go-current-read-historical-write",
+  "currentDeploymentAuthenticatedWriteSmokeComplete": true,
+  "currentDeploymentSmokeStatus": "current-deployment-write-exercised",
+  "productionPersistenceStatus": "go-current-production",
   "recoveryCheckpointProductionWriteExercised": false,
   "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
   "inputArtifacts": {
     "schemaReadiness": {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "fb7c41d8d527dcb49f68520e062aca1805492f95ba639288cd871aecb9d63695"
+      "sha256": "ade325c1183b684674d4044f5d2d10dadf669c29ebdf59d0b6d10a59866170f1"
     },
     "claimReview": {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "2bb25189729898ea5e2c8cad8dc35947d102fe24bd221f8a69252639e72692a2"
+      "sha256": "a71b4be8964414605869ac85b7db8ca3246c53084bf16452a16bef8e2b27da3a"
     },
     "readinessContract": {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "bb8bb710bf5408a2169300eebfa92748df3b6f22e00e49507c6de946d8d8346f"
+      "sha256": "5ab2a3fdd89f7f834644372e7abc3b30955a4ca9999eadd8a8f4d2bd7c63f707"
     },
     "route": {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -45,15 +45,15 @@
     "productionEvidence": {
       "path": "plans/VET-1564-production-evidence.json",
       "exists": true,
-      "sha256": "d47faca0ae06a9f17a5e59e81fd1d94185cb10a5b735fb0840cf60238a0a548f"
+      "sha256": "73856380da716d3f2894fa2b66f8b45cb163a6a4b185099cfb3732c157179dcb"
     }
   },
   "productionEvidence": {
     "issue": 587,
     "decision": {
-      "productIntelligencePersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
-      "dailyReadinessPersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
-      "currentDeploymentWriteCoverage": "HOLD_NOT_EXERCISED",
+      "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
+      "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+      "currentDeploymentWriteCoverage": "GO_CURRENT_PRODUCTION_DAILY_READINESS",
       "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
       "publicBeta": "HOLD"
     },
@@ -62,6 +62,7 @@
     "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
     "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0",
     "readinessRowId": "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
+    "currentReadinessRowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
     "ownerSmokeCompletedAt": "2026-06-04T22:24:18.992Z",
     "rlsProofCompletedAt": "2026-06-05T01:29:22.130Z",
     "currentDeploymentReadOnlySmoke": {
@@ -92,8 +93,31 @@
       }
     },
     "currentDeploymentWriteSmoke": {
-      "exercised": false,
-      "reason": "The June 5 alias-drift refresh used read-only owner-history proof on the current deployment. It did not POST a new daily readiness row on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb."
+      "exercised": true,
+      "status": 201,
+      "rowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
+      "snapshotDate": "2026-06-05",
+      "readinessState": "watch",
+      "confidence": "high",
+      "displayScore": 58,
+      "evidenceCoverage": 1,
+      "generatedBy": "vet-1571c-production-smoke",
+      "sourceCheckIds": [
+        "5aeff251-4b54-4e45-99b6-e99aa1550ce4",
+        "566ff227-282c-46a9-b49f-fd67c8b9adc7"
+      ],
+      "startedAt": "2026-06-05T18:23:33.441Z",
+      "completedAt": "2026-06-05T18:23:48.687Z",
+      "historyReadAfter": {
+        "status": 200,
+        "readinessCount": 2,
+        "recoveryCount": 0,
+        "latestReadinessIds": [
+          "61c44ae9-5b30-482d-8207-efbaf6598140",
+          "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+        ]
+      },
+      "artifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
     },
     "postSmoke500JsonRecordCount": 0,
     "sourceEvidence": {
@@ -101,13 +125,15 @@
       "parentTrackerComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
       "autoScientistsRun": "G:/MY Website/.agents/autoscientists/runs/vet-1571c-product-intelligence-production-schema-recovery",
       "currentDeploymentReadOnlyArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+      "currentDeploymentWriteArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
       "artifacts": [
         "product-intelligence-schema-apply-gswj-2026-06-04.json",
         "product-intelligence-owner-smoke-dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL-2026-06-04T22-24-03-078Z.json",
         "product-intelligence-rls-proof-gswj-2026-06-04.json",
         "product-intelligence-post-smoke-500-log-query-dpl_Bo7RYGj-2026-06-04.json",
         "product-intelligence-claim-language-review-2026-06-04.json",
-        "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
+        "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+        "product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
       ]
     }
   },
@@ -143,9 +169,7 @@
   ],
   "blockers": [],
   "currentDeploymentBlockers": [],
-  "currentDeploymentGaps": [
-    "current deployment authenticated write smoke was not exercised"
-  ],
+  "currentDeploymentGaps": [],
   "guardrails": [
     "This packet does not apply the migration.",
     "Do not use service-role credentials in owner workflow smoke.",
@@ -191,7 +215,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -231,7 +255,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {

@@ -3,7 +3,7 @@
   "mode": "review-only-dashboard",
   "generatedAt": "2026-05-31T00:00:00.000Z",
   "overallStatus": "blocked",
-  "summary": "2 lane(s) blocked before the full objective is complete.",
+  "summary": "1 lane(s) blocked before the full objective is complete.",
   "artifacts": [
     {
       "path": "plans/VET-1560-azure-sync-preflight.json",
@@ -98,22 +98,22 @@
     {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "2bb25189729898ea5e2c8cad8dc35947d102fe24bd221f8a69252639e72692a2"
+      "sha256": "a71b4be8964414605869ac85b7db8ca3246c53084bf16452a16bef8e2b27da3a"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "bb8bb710bf5408a2169300eebfa92748df3b6f22e00e49507c6de946d8d8346f"
+      "sha256": "5ab2a3fdd89f7f834644372e7abc3b30955a4ca9999eadd8a8f4d2bd7c63f707"
     },
     {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "795178f1606c650dc97fa0512b7022ce1d7983c36a56121e7b5269fa874d74c7"
+      "sha256": "c6117c3e97680f3e89653e207aad072c6b4db5a2e31ec01d90d228f331062404"
     },
     {
       "path": "plans/VET-1564-production-smoke-runbook.json",
       "exists": true,
-      "sha256": "e918df90eb3380ec80d56389083e3679393586bfb7416a3ce4b55321118358e5"
+      "sha256": "08b0f0b1002f542079f504191e3349a8686677c6f70e6da1cb7c8922ce6ee20d"
     },
     {
       "path": "plans/VET-1565-tugboat-governance-plan.json",
@@ -146,15 +146,15 @@
       "id": "claim-language",
       "label": "Claim-language review",
       "status": "ready",
-      "summary": "417 strings reviewed with no blocked findings.",
+      "summary": "416 strings reviewed with no blocked findings.",
       "nextAction": "Rerun npm run product:claim-language-review after any owner-visible copy change."
     },
     {
       "id": "whoop-product-contract",
       "label": "Whoop-style product contract",
-      "status": "partial",
-      "summary": "4 implementation tickets defined; product-intelligence persistence=go-current-read-historical-write; write deployment=dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL; current deployment=dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb; current smoke=current-deployment-read-only-pass-write-not-exercised; readiness row=8815e992-9b9b-4b1d-9fb4-8690578ecc24; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised.",
-      "nextAction": "Current deployment read-only owner-history proof passed; run a controlled current-deployment POST smoke before claiming current write coverage."
+      "status": "ready",
+      "summary": "4 implementation tickets defined; product-intelligence persistence=go-current-production; write deployment=dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL; current deployment=dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb; current smoke=current-deployment-write-exercised; historical readiness row=8815e992-9b9b-4b1d-9fb4-8690578ecc24; current readiness row=61c44ae9-5b30-482d-8207-efbaf6598140; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised.",
+      "nextAction": "Current-deployment daily readiness write proof passed; capture recovery-checkpoint production write or blocked-reason smoke before claiming recovery write coverage."
     },
     {
       "id": "instruction-governance",
@@ -165,8 +165,7 @@
     }
   ],
   "blockers": [
-    "Model/NIM promotion: 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6.",
-    "Whoop-style product contract: 4 implementation tickets defined; product-intelligence persistence=go-current-read-historical-write; write deployment=dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL; current deployment=dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb; current smoke=current-deployment-read-only-pass-write-not-exercised; readiness row=8815e992-9b9b-4b1d-9fb4-8690578ecc24; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised."
+    "Model/NIM promotion: 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6."
   ],
   "guardrails": [
     "Do not treat local project-manager fallback evidence as Azure Boards live-sync evidence.",
