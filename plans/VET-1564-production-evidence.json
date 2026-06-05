@@ -2,19 +2,59 @@
   "ticket": "VET-1571C",
   "parentTicket": "VET-1564",
   "issue": 587,
-  "mode": "reviewed-production-evidence",
-  "generatedAt": "2026-06-05T00:00:00.000Z",
+  "mode": "reviewed-production-evidence-with-current-readonly-refresh",
+  "generatedAt": "2026-06-05T18:10:00.000Z",
   "decision": {
-    "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
-    "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+    "productIntelligencePersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
+    "dailyReadinessPersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
+    "currentDeploymentWriteCoverage": "HOLD_NOT_EXERCISED",
     "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
     "publicBeta": "HOLD"
   },
   "production": {
     "baseUrl": "https://pawvital-ai.vercel.app",
     "deploymentId": "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
+    "deploymentRole": "historical authenticated owner write smoke",
     "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
     "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0"
+  },
+  "currentProduction": {
+    "baseUrl": "https://pawvital-ai.vercel.app",
+    "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
+    "inspectedAt": "2026-06-05T17:59:18.628Z",
+    "readOnlyOwnerSmoke": {
+      "overallStatus": "pass",
+      "profile": "pawvital-vet-1549c-live-tester-profile",
+      "petId": "061df0e7-d835-47b1-9636-a179f208093b",
+      "mutationAttempted": false,
+      "authenticatedPage": {
+        "status": 200,
+        "loadedSymptomChecker": true
+      },
+      "ownerHistoryRead": {
+        "status": 200,
+        "readinessCount": 1,
+        "recoveryCount": 0,
+        "latestReadinessIds": [
+          "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+        ]
+      },
+      "unownedPetRead": {
+        "status": 404,
+        "error": "Pet not found"
+      },
+      "ownerVisibleScan": {
+        "status": 200,
+        "claimLanguageFindings": 0,
+        "leakageFindings": 0
+      }
+    },
+    "writeSmoke": {
+      "exercised": false,
+      "reason": "The June 5 alias-drift refresh used read-only owner-history proof on the current deployment. It did not POST a new daily readiness row on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb."
+    },
+    "artifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
   },
   "schemaApply": {
     "committed": true,
@@ -109,17 +149,20 @@
     "issueComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
     "parentTrackerComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
     "autoScientistsRun": "G:/MY Website/.agents/autoscientists/runs/vet-1571c-product-intelligence-production-schema-recovery",
+    "currentDeploymentReadOnlyArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
     "artifacts": [
       "product-intelligence-schema-apply-gswj-2026-06-04.json",
       "product-intelligence-owner-smoke-dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL-2026-06-04T22-24-03-078Z.json",
       "product-intelligence-rls-proof-gswj-2026-06-04.json",
       "product-intelligence-post-smoke-500-log-query-dpl_Bo7RYGj-2026-06-04.json",
-      "product-intelligence-claim-language-review-2026-06-04.json"
+      "product-intelligence-claim-language-review-2026-06-04.json",
+      "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
     ]
   },
   "guardrails": [
     "This evidence record does not apply schema, call production, or write data.",
     "Do not use this VET-1564 persistence GO as a public-beta GO.",
+    "Do not claim current-deployment write coverage from the June 5 read-only alias-drift smoke.",
     "Do not claim model/NIM promotion readiness from product-intelligence persistence proof.",
     "Do not claim recovery checkpoint production write proof until an eligible recovery checkpoint write or deterministic blocked-reason smoke is captured.",
     "Rerun claim-language review before any owner-visible product-intelligence copy changes."

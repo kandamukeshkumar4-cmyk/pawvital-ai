@@ -19,8 +19,9 @@
   "productionEvidence": {
     "path": "plans/VET-1564-production-evidence.json",
     "decision": {
-      "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
-      "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+      "productIntelligencePersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
+      "dailyReadinessPersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
+      "currentDeploymentWriteCoverage": "HOLD_NOT_EXERCISED",
       "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
       "publicBeta": "HOLD"
     },
@@ -29,8 +30,16 @@
     "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0",
     "liveMigrationApplied": true,
     "authenticatedProductionSmokeComplete": true,
+    "productionPersistenceStatus": "go-current-read-historical-write",
+    "currentDeploymentReadOnlySmokePassed": true,
+    "currentDeploymentAuthenticatedWriteSmokeComplete": false,
+    "currentDeploymentSmokeStatus": "current-deployment-read-only-pass-write-not-exercised",
     "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
-    "blockers": []
+    "blockers": [],
+    "currentDeploymentBlockers": [],
+    "currentDeploymentGaps": [
+      "current deployment authenticated write smoke was not exercised"
+    ]
   },
   "nextActions": [
     "Keep the reviewed schema evidence attached to VET-1564 production readiness.",

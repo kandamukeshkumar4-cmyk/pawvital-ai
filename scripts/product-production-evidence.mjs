@@ -49,17 +49,60 @@ export function summarizeProductProductionEvidence(evidence) {
     focusedTestsPassed;
   const recoveryCheckpointProductionWriteExercised =
     evidence?.ownerSmoke?.recoveryCheckpointWrite?.exercised === true;
+  const currentReadOnlySmoke = evidence?.currentProduction?.readOnlyOwnerSmoke;
+  const currentDeploymentReadOnlySmokePassed =
+    currentReadOnlySmoke?.overallStatus === "pass" &&
+    currentReadOnlySmoke?.mutationAttempted === false &&
+    currentReadOnlySmoke.authenticatedPage?.status === 200 &&
+    currentReadOnlySmoke.authenticatedPage?.loadedSymptomChecker === true &&
+    currentReadOnlySmoke.ownerHistoryRead?.status === 200 &&
+    currentReadOnlySmoke.ownerHistoryRead?.readinessCount >= 1 &&
+    currentReadOnlySmoke.unownedPetRead?.status === 404 &&
+    currentReadOnlySmoke.ownerVisibleScan?.status === 200 &&
+    currentReadOnlySmoke.ownerVisibleScan?.claimLanguageFindings === 0 &&
+    currentReadOnlySmoke.ownerVisibleScan?.leakageFindings === 0;
+  const currentDeploymentAuthenticatedWriteSmokeComplete =
+    evidence?.currentProduction?.writeSmoke?.exercised === true &&
+    evidence.currentProduction.writeSmoke?.status === 201;
+  const productionPersistenceStatus =
+    authenticatedProductionSmokeComplete &&
+    currentDeploymentAuthenticatedWriteSmokeComplete
+      ? "go-current-production"
+      : authenticatedProductionSmokeComplete &&
+          currentDeploymentReadOnlySmokePassed
+        ? "go-current-read-historical-write"
+        : authenticatedProductionSmokeComplete
+          ? "go-historical-write-current-deployment-unproven"
+          : "hold";
+  const currentDeploymentSmokeStatus =
+    currentDeploymentAuthenticatedWriteSmokeComplete
+      ? "current-deployment-write-exercised"
+      : currentDeploymentReadOnlySmokePassed
+        ? "current-deployment-read-only-pass-write-not-exercised"
+        : "current-deployment-smoke-missing";
+  const currentDeploymentBlockers = currentDeploymentReadOnlySmokePassed
+    ? []
+    : ["current deployment read-only owner-history smoke is missing or failing"];
+  const currentDeploymentGaps = currentDeploymentAuthenticatedWriteSmokeComplete
+    ? []
+    : ["current deployment authenticated write smoke was not exercised"];
 
   return {
     exists: Boolean(evidence),
     liveMigrationApplied,
     authenticatedProductionSmokeComplete,
+    productionPersistenceStatus,
     schemaApplied,
     ownerSmokePassed,
     rlsPassed,
     claimReviewPassed,
     postSmokeErrorsClean,
     focusedTestsPassed,
+    currentDeploymentReadOnlySmokePassed,
+    currentDeploymentAuthenticatedWriteSmokeComplete,
+    currentDeploymentSmokeStatus,
+    currentDeploymentBlockers,
+    currentDeploymentGaps,
     recoveryCheckpointProductionWriteExercised,
     recoveryCheckpointStatus: recoveryCheckpointProductionWriteExercised
       ? "production-write-exercised"

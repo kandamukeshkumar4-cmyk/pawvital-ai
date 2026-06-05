@@ -4,7 +4,7 @@ Generated: 2026-05-31T00:00:00.000Z
 Mode: review-only-dashboard
 Overall status: BLOCKED
 
-1 lane(s) blocked before the full objective is complete.
+2 lane(s) blocked before the full objective is complete.
 
 ## Lanes
 
@@ -12,13 +12,14 @@ Overall status: BLOCKED
 |---|---|---|---|
 | Project-manager sync | READY | 5 tickets queued in the local project-manager fallback; queue validation=passed; 5/5 verifier artifacts present; 3/3 dependency edges ordered; Azure live sync remains blocked by: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PAT. | Use plans/VET-1560-project-manager-local-sync.json as the current execution queue; add Azure credentials only in a separate live-sync pass. |
 | Model/NIM promotion | BLOCKED | 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6. | validation=0, holdout=0, threshold=4.2 |
-| Claim-language review | READY | 408 strings reviewed with no blocked findings. | Rerun npm run product:claim-language-review after any owner-visible copy change. |
-| Whoop-style product contract | READY | 4 implementation tickets defined; product-intelligence persistence=go-current-production; deployment=dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL; readiness row=8815e992-9b9b-4b1d-9fb4-8690578ecc24; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised. | Daily readiness persistence is GO on current production; capture recovery-checkpoint production write or blocked-reason smoke before claiming recovery write coverage. |
+| Claim-language review | READY | 417 strings reviewed with no blocked findings. | Rerun npm run product:claim-language-review after any owner-visible copy change. |
+| Whoop-style product contract | PARTIAL | 4 implementation tickets defined; product-intelligence persistence=go-current-read-historical-write; write deployment=dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL; current deployment=dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb; current smoke=current-deployment-read-only-pass-write-not-exercised; readiness row=8815e992-9b9b-4b1d-9fb4-8690578ecc24; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised. | Current deployment read-only owner-history proof passed; run a controlled current-deployment POST smoke before claiming current write coverage. |
 | Instruction governance | READY | VET-1565 defines a proposal-only Tugboat adoption plan with 4 phases and 6 PawVital boundaries. | Use VET-1565 for any Tugboat-style instruction observability work; do not install, run llmff, or apply instruction patches without a separate approved trace bundle and reviewer decision. |
 
 ## Blockers
 
 - Model/NIM promotion: 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6.
+- Whoop-style product contract: 4 implementation tickets defined; product-intelligence persistence=go-current-read-historical-write; write deployment=dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL; current deployment=dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb; current smoke=current-deployment-read-only-pass-write-not-exercised; readiness row=8815e992-9b9b-4b1d-9fb4-8690578ecc24; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised.
 
 ## Guardrails
 
@@ -50,9 +51,9 @@ Overall status: BLOCKED
 - `plans/VET-1563-protected-clinical-diff-proof.json` (fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8)
 - `plans/VET-1563-extraction-runtime-promotion-ticket.json` (1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f)
 - `plans/VET-1563-extraction-owner-approval-request.json` (5af6d83182802c37a365c78de62ce67f99df3d54aa0317a7dd90528efe8b7243)
-- `plans/VET-1564C-claim-language-review.json` (f9fcdb8765736f7f080a762629f4c0a3f760335fcee8d2cbdfcdef95d467f130)
-- `plans/VET-1564-longitudinal-readiness-contract.json` (7150fb520fa1d71c8142edab0c0e54832bd67d7bfda445330a655246194222a4)
-- `plans/VET-1564-production-readiness.json` (701d6114e84a820422b9463c550e22a25e2a335ea46b08fcf53cd26f1ca620f2)
-- `plans/VET-1564-production-smoke-runbook.json` (4acbaa36ef01efd800b406700ea3e0e44ac751afe96c4b24a4b25df185aa0e05)
+- `plans/VET-1564C-claim-language-review.json` (2bb25189729898ea5e2c8cad8dc35947d102fe24bd221f8a69252639e72692a2)
+- `plans/VET-1564-longitudinal-readiness-contract.json` (bb8bb710bf5408a2169300eebfa92748df3b6f22e00e49507c6de946d8d8346f)
+- `plans/VET-1564-production-readiness.json` (795178f1606c650dc97fa0512b7022ce1d7983c36a56121e7b5269fa874d74c7)
+- `plans/VET-1564-production-smoke-runbook.json` (e918df90eb3380ec80d56389083e3679393586bfb7416a3ce4b55321118358e5)
 - `plans/VET-1565-tugboat-governance-plan.json` (5df3fd43414c3b2da9e8ba51304aa44edb86f51ab00826d12a26a940c058f151)
 - `plans/VET-1560-regeneration-summary.json` (regeneration summary is finalized after the dashboard; hashing it here would make regeneration non-idempotent)

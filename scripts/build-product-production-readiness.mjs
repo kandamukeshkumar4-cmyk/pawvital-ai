@@ -126,10 +126,14 @@ function buildReadiness() {
     liveMigrationApplied: productionEvidenceSummary.liveMigrationApplied,
     authenticatedProductionSmokeComplete:
       productionEvidenceSummary.authenticatedProductionSmokeComplete,
+    currentDeploymentReadOnlySmokePassed:
+      productionEvidenceSummary.currentDeploymentReadOnlySmokePassed,
+    currentDeploymentAuthenticatedWriteSmokeComplete:
+      productionEvidenceSummary.currentDeploymentAuthenticatedWriteSmokeComplete,
+    currentDeploymentSmokeStatus:
+      productionEvidenceSummary.currentDeploymentSmokeStatus,
     productionPersistenceStatus:
-      productionEvidenceSummary.authenticatedProductionSmokeComplete
-        ? "go-current-production"
-        : "hold",
+      productionEvidenceSummary.productionPersistenceStatus,
     recoveryCheckpointProductionWriteExercised:
       productionEvidenceSummary.recoveryCheckpointProductionWriteExercised,
     recoveryCheckpointStatus: productionEvidenceSummary.recoveryCheckpointStatus,
@@ -165,12 +169,17 @@ function buildReadiness() {
           issue: productionEvidence.issue,
           decision: productionEvidence.decision,
           deploymentId: productionEvidence.production?.deploymentId,
+          currentDeploymentId: productionEvidence.currentProduction?.deploymentId,
           targetDatabaseHost: productionEvidence.production?.targetDatabaseHost,
           schemaSha256: productionEvidence.production?.schemaSha256,
           readinessRowId:
             productionEvidence.ownerSmoke?.dailyReadinessSave?.rowId,
           ownerSmokeCompletedAt: productionEvidence.ownerSmoke?.completedAt,
           rlsProofCompletedAt: productionEvidence.rlsProof?.completedAt,
+          currentDeploymentReadOnlySmoke:
+            productionEvidence.currentProduction?.readOnlyOwnerSmoke,
+          currentDeploymentWriteSmoke:
+            productionEvidence.currentProduction?.writeSmoke,
           postSmoke500JsonRecordCount:
             productionEvidence.postSmokeErrorLogQuery?.jsonRecordCount,
           sourceEvidence: productionEvidence.sourceEvidence,
@@ -194,9 +203,13 @@ function buildReadiness() {
       "Drop only the two product-intelligence tables through an approved database rollback if the migration itself must be reverted.",
     ],
     blockers: productionEvidenceSummary.blockers,
+    currentDeploymentBlockers:
+      productionEvidenceSummary.currentDeploymentBlockers,
+    currentDeploymentGaps: productionEvidenceSummary.currentDeploymentGaps,
     guardrails: [
       "This packet does not apply the migration.",
       "Do not use service-role credentials in owner workflow smoke.",
+      "Do not claim current-deployment write coverage unless the current deployment POST smoke is exercised.",
       "Do not store diagnosis, prognosis, treatment, or emergency-clearance claims.",
       "Do not bypass pet ownership or RLS checks to make the smoke pass.",
     ],

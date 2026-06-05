@@ -5,24 +5,27 @@
   "readyForProductionSmoke": true,
   "liveMigrationApplied": true,
   "authenticatedProductionSmokeComplete": true,
-  "productionPersistenceStatus": "go-current-production",
+  "currentDeploymentReadOnlySmokePassed": true,
+  "currentDeploymentAuthenticatedWriteSmokeComplete": false,
+  "currentDeploymentSmokeStatus": "current-deployment-read-only-pass-write-not-exercised",
+  "productionPersistenceStatus": "go-current-read-historical-write",
   "recoveryCheckpointProductionWriteExercised": false,
   "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
   "inputArtifacts": {
     "schemaReadiness": {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "5ca3e3bf3bf82b78f40cd684c8827b9148cef692e0654277226ebdb126f3149c"
+      "sha256": "fb7c41d8d527dcb49f68520e062aca1805492f95ba639288cd871aecb9d63695"
     },
     "claimReview": {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "f9fcdb8765736f7f080a762629f4c0a3f760335fcee8d2cbdfcdef95d467f130"
+      "sha256": "2bb25189729898ea5e2c8cad8dc35947d102fe24bd221f8a69252639e72692a2"
     },
     "readinessContract": {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "7150fb520fa1d71c8142edab0c0e54832bd67d7bfda445330a655246194222a4"
+      "sha256": "bb8bb710bf5408a2169300eebfa92748df3b6f22e00e49507c6de946d8d8346f"
     },
     "route": {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -42,34 +45,69 @@
     "productionEvidence": {
       "path": "plans/VET-1564-production-evidence.json",
       "exists": true,
-      "sha256": "3e33b16d0bc7b3fcda86a7823b99e8b3caecdee27f5f5e1ea132570df3ca9cba"
+      "sha256": "d47faca0ae06a9f17a5e59e81fd1d94185cb10a5b735fb0840cf60238a0a548f"
     }
   },
   "productionEvidence": {
     "issue": 587,
     "decision": {
-      "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
-      "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+      "productIntelligencePersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
+      "dailyReadinessPersistence": "GO_CURRENT_READ_HISTORICAL_WRITE",
+      "currentDeploymentWriteCoverage": "HOLD_NOT_EXERCISED",
       "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
       "publicBeta": "HOLD"
     },
     "deploymentId": "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
+    "currentDeploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
     "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0",
     "readinessRowId": "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
     "ownerSmokeCompletedAt": "2026-06-04T22:24:18.992Z",
     "rlsProofCompletedAt": "2026-06-05T01:29:22.130Z",
+    "currentDeploymentReadOnlySmoke": {
+      "overallStatus": "pass",
+      "profile": "pawvital-vet-1549c-live-tester-profile",
+      "petId": "061df0e7-d835-47b1-9636-a179f208093b",
+      "mutationAttempted": false,
+      "authenticatedPage": {
+        "status": 200,
+        "loadedSymptomChecker": true
+      },
+      "ownerHistoryRead": {
+        "status": 200,
+        "readinessCount": 1,
+        "recoveryCount": 0,
+        "latestReadinessIds": [
+          "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+        ]
+      },
+      "unownedPetRead": {
+        "status": 404,
+        "error": "Pet not found"
+      },
+      "ownerVisibleScan": {
+        "status": 200,
+        "claimLanguageFindings": 0,
+        "leakageFindings": 0
+      }
+    },
+    "currentDeploymentWriteSmoke": {
+      "exercised": false,
+      "reason": "The June 5 alias-drift refresh used read-only owner-history proof on the current deployment. It did not POST a new daily readiness row on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb."
+    },
     "postSmoke500JsonRecordCount": 0,
     "sourceEvidence": {
       "issueComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
       "parentTrackerComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
       "autoScientistsRun": "G:/MY Website/.agents/autoscientists/runs/vet-1571c-product-intelligence-production-schema-recovery",
+      "currentDeploymentReadOnlyArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
       "artifacts": [
         "product-intelligence-schema-apply-gswj-2026-06-04.json",
         "product-intelligence-owner-smoke-dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL-2026-06-04T22-24-03-078Z.json",
         "product-intelligence-rls-proof-gswj-2026-06-04.json",
         "product-intelligence-post-smoke-500-log-query-dpl_Bo7RYGj-2026-06-04.json",
-        "product-intelligence-claim-language-review-2026-06-04.json"
+        "product-intelligence-claim-language-review-2026-06-04.json",
+        "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
       ]
     }
   },
@@ -104,9 +142,14 @@
     "Drop only the two product-intelligence tables through an approved database rollback if the migration itself must be reverted."
   ],
   "blockers": [],
+  "currentDeploymentBlockers": [],
+  "currentDeploymentGaps": [
+    "current deployment authenticated write smoke was not exercised"
+  ],
   "guardrails": [
     "This packet does not apply the migration.",
     "Do not use service-role credentials in owner workflow smoke.",
+    "Do not claim current-deployment write coverage unless the current deployment POST smoke is exercised.",
     "Do not store diagnosis, prognosis, treatment, or emergency-clearance claims.",
     "Do not bypass pet ownership or RLS checks to make the smoke pass."
   ],
@@ -148,7 +191,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "current production daily-readiness persistence passed; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -188,7 +231,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "current production daily-readiness persistence passed; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {

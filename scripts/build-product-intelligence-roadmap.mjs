@@ -63,7 +63,7 @@ const roadmap = {
       id: "VET-1564A",
       title: "Persist daily readiness snapshots from existing evidence",
       status: productionEvidenceSummary.authenticatedProductionSmokeComplete
-        ? "go-current-production"
+        ? productionEvidenceSummary.productionPersistenceStatus
         : "planned-blocked",
       blockers: productionEvidenceSummary.authenticatedProductionSmokeComplete
         ? []
@@ -91,7 +91,7 @@ const roadmap = {
       id: "VET-1564D",
       title: "Add deterministic baseline-shift product intelligence",
       status: productionEvidenceSummary.authenticatedProductionSmokeComplete
-        ? "go-current-production-daily-readiness"
+        ? productionEvidenceSummary.productionPersistenceStatus
         : "review-only-foundation",
       blockers: productionEvidenceSummary.authenticatedProductionSmokeComplete
         ? []
@@ -124,9 +124,20 @@ const roadmap = {
     liveMigrationApplied: productionEvidenceSummary.liveMigrationApplied,
     authenticatedProductionSmokeComplete:
       productionEvidenceSummary.authenticatedProductionSmokeComplete,
+    productionPersistenceStatus:
+      productionEvidenceSummary.productionPersistenceStatus,
+    currentDeploymentReadOnlySmokePassed:
+      productionEvidenceSummary.currentDeploymentReadOnlySmokePassed,
+    currentDeploymentAuthenticatedWriteSmokeComplete:
+      productionEvidenceSummary.currentDeploymentAuthenticatedWriteSmokeComplete,
+    currentDeploymentSmokeStatus:
+      productionEvidenceSummary.currentDeploymentSmokeStatus,
     recoveryCheckpointStatus:
       productionEvidenceSummary.recoveryCheckpointStatus,
     blockers: productionBlockers,
+    currentDeploymentBlockers:
+      productionEvidenceSummary.currentDeploymentBlockers,
+    currentDeploymentGaps: productionEvidenceSummary.currentDeploymentGaps,
   },
   acceptanceGates: [
     "schema readiness packet passes local review",

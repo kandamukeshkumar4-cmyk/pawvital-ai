@@ -174,7 +174,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "current production daily-readiness persistence passed; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -214,7 +214,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "current production daily-readiness persistence passed; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
+        "persistenceStatus": "go-current-read-historical-write; current deployment smoke status=current-deployment-read-only-pass-write-not-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -249,7 +249,7 @@
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "511af8c2745bab23b6d168ea314659fb4e71787ab9e99eafec5ac06f7fcd8eaa"
+      "sha256": "2249943e6164556d4e9240902881262e9a46f4b70a9d33fce841671411b4e59b"
     },
     {
       "path": "src/lib/product-intelligence.ts",
@@ -279,7 +279,7 @@
     {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "5ca3e3bf3bf82b78f40cd684c8827b9148cef692e0654277226ebdb126f3149c"
+      "sha256": "fb7c41d8d527dcb49f68520e062aca1805492f95ba639288cd871aecb9d63695"
     },
     {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -339,7 +339,7 @@
     {
       "path": "plans/VET-1564-production-evidence.json",
       "exists": true,
-      "sha256": "3e33b16d0bc7b3fcda86a7823b99e8b3caecdee27f5f5e1ea132570df3ca9cba"
+      "sha256": "d47faca0ae06a9f17a5e59e81fd1d94185cb10a5b735fb0840cf60238a0a548f"
     }
   ],
   "missingDependencyArtifacts": [],

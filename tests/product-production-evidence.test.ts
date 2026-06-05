@@ -32,8 +32,13 @@ describe("VET-1564 production evidence sync", () => {
       liveMigrationApplied: boolean;
       productionEvidence: {
         authenticatedProductionSmokeComplete: boolean;
+        productionPersistenceStatus: string;
+        currentDeploymentReadOnlySmokePassed: boolean;
+        currentDeploymentAuthenticatedWriteSmokeComplete: boolean;
+        currentDeploymentSmokeStatus: string;
         recoveryCheckpointStatus: string;
         blockers: string[];
+        currentDeploymentGaps: string[];
       };
     }>(["scripts/verify-product-intelligence-schema.mjs"]);
     const contract = runJson<{
@@ -51,15 +56,20 @@ describe("VET-1564 production evidence sync", () => {
     const readiness = runJson<{
       liveMigrationApplied: boolean;
       authenticatedProductionSmokeComplete: boolean;
+      currentDeploymentReadOnlySmokePassed: boolean;
+      currentDeploymentAuthenticatedWriteSmokeComplete: boolean;
+      currentDeploymentSmokeStatus: string;
       productionPersistenceStatus: string;
       recoveryCheckpointProductionWriteExercised: boolean;
       recoveryCheckpointStatus: string;
       blockers: string[];
+      currentDeploymentGaps: string[];
       productionEvidence: {
         decision: {
           publicBeta: string;
         };
         deploymentId: string;
+        currentDeploymentId: string;
         readinessRowId: string;
         postSmoke500JsonRecordCount: number;
       };
@@ -67,29 +77,55 @@ describe("VET-1564 production evidence sync", () => {
 
     expect(schema.liveMigrationApplied).toBe(true);
     expect(schema.productionEvidence.authenticatedProductionSmokeComplete).toBe(true);
+    expect(schema.productionEvidence.productionPersistenceStatus).toBe(
+      "go-current-read-historical-write",
+    );
+    expect(schema.productionEvidence.currentDeploymentReadOnlySmokePassed).toBe(true);
+    expect(schema.productionEvidence.currentDeploymentAuthenticatedWriteSmokeComplete).toBe(
+      false,
+    );
+    expect(schema.productionEvidence.currentDeploymentSmokeStatus).toBe(
+      "current-deployment-read-only-pass-write-not-exercised",
+    );
     expect(schema.productionEvidence.blockers).toEqual([]);
+    expect(schema.productionEvidence.currentDeploymentGaps).toEqual([
+      "current deployment authenticated write smoke was not exercised",
+    ]);
     expect(contract.productionEvidenceStatus.authenticatedProductionSmokeComplete).toBe(true);
     expect(roadmap.productionEvidenceStatus.authenticatedProductionSmokeComplete).toBe(true);
     expect(roadmap.phases).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           id: "VET-1564A",
-          status: "go-current-production",
+          status: "go-current-read-historical-write",
           blockers: [],
         }),
         expect.objectContaining({
           id: "VET-1564D",
-          status: "go-current-production-daily-readiness",
+          status: "go-current-read-historical-write",
           blockers: [],
         }),
       ]),
     );
     expect(readiness.liveMigrationApplied).toBe(true);
     expect(readiness.authenticatedProductionSmokeComplete).toBe(true);
-    expect(readiness.productionPersistenceStatus).toBe("go-current-production");
+    expect(readiness.currentDeploymentReadOnlySmokePassed).toBe(true);
+    expect(readiness.currentDeploymentAuthenticatedWriteSmokeComplete).toBe(false);
+    expect(readiness.currentDeploymentSmokeStatus).toBe(
+      "current-deployment-read-only-pass-write-not-exercised",
+    );
+    expect(readiness.productionPersistenceStatus).toBe(
+      "go-current-read-historical-write",
+    );
     expect(readiness.blockers).toEqual([]);
+    expect(readiness.currentDeploymentGaps).toEqual([
+      "current deployment authenticated write smoke was not exercised",
+    ]);
     expect(readiness.productionEvidence.deploymentId).toBe(
       "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
+    );
+    expect(readiness.productionEvidence.currentDeploymentId).toBe(
+      "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     );
     expect(readiness.productionEvidence.readinessRowId).toBe(
       "8815e992-9b9b-4b1d-9fb4-8690578ecc24",

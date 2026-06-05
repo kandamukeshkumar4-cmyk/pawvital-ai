@@ -77,9 +77,21 @@ function buildReadiness() {
             productionEvidenceSummary.liveMigrationApplied,
           authenticatedProductionSmokeComplete:
             productionEvidenceSummary.authenticatedProductionSmokeComplete,
+          productionPersistenceStatus:
+            productionEvidenceSummary.productionPersistenceStatus,
+          currentDeploymentReadOnlySmokePassed:
+            productionEvidenceSummary.currentDeploymentReadOnlySmokePassed,
+          currentDeploymentAuthenticatedWriteSmokeComplete:
+            productionEvidenceSummary.currentDeploymentAuthenticatedWriteSmokeComplete,
+          currentDeploymentSmokeStatus:
+            productionEvidenceSummary.currentDeploymentSmokeStatus,
           recoveryCheckpointStatus:
             productionEvidenceSummary.recoveryCheckpointStatus,
           blockers: productionEvidenceSummary.blockers,
+          currentDeploymentBlockers:
+            productionEvidenceSummary.currentDeploymentBlockers,
+          currentDeploymentGaps:
+            productionEvidenceSummary.currentDeploymentGaps,
         }
       : null,
     nextActions: productionEvidenceSummary.liveMigrationApplied

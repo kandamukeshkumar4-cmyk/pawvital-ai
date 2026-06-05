@@ -74,6 +74,12 @@ function buildRunbook() {
       liveMigrationApplied: readiness.liveMigrationApplied === true,
       authenticatedProductionSmokeComplete:
         readiness.authenticatedProductionSmokeComplete === true,
+      currentDeploymentReadOnlySmokePassed:
+        readiness.currentDeploymentReadOnlySmokePassed === true,
+      currentDeploymentAuthenticatedWriteSmokeComplete:
+        readiness.currentDeploymentAuthenticatedWriteSmokeComplete === true,
+      currentDeploymentSmokeStatus:
+        readiness.currentDeploymentSmokeStatus ?? "unknown",
       rlsPoliciesPresentInSql: hasRlsPolicies,
       rollbackTargetsPresentInSql: hasRollbackSql,
     },
@@ -141,12 +147,18 @@ function buildRunbook() {
       migrationApplied: readiness.liveMigrationApplied === true,
       authenticatedProductionSmokeComplete:
         readiness.authenticatedProductionSmokeComplete === true,
+      currentDeploymentReadOnlySmokePassed:
+        readiness.currentDeploymentReadOnlySmokePassed === true,
+      currentDeploymentAuthenticatedWriteSmokeComplete:
+        readiness.currentDeploymentAuthenticatedWriteSmokeComplete === true,
       productionEvidence: readiness.productionEvidence ?? null,
       recoveryCheckpointStatus: readiness.recoveryCheckpointStatus,
       requiredAttachments: [
         "migration id or SQL run id",
         "schema verification output",
+        "current deployment id and alias inspect output",
         "owner history read response metadata",
+        "current-deployment daily readiness save response metadata before claiming current write coverage",
         "daily readiness save response metadata",
         "RLS denial response metadata",
         "claim-safety spot-check notes",
@@ -157,7 +169,10 @@ function buildRunbook() {
       "Revert the route/UI changes through the owning PR if owner data is corrupted.",
       "Drop only daily_readiness_snapshots and recovery_checkpoints through approved database rollback if the migration itself must be reverted.",
     ],
-    blockers: readiness.blockers ?? [],
+    blockers: [
+      ...(readiness.blockers ?? []),
+      ...(readiness.currentDeploymentGaps ?? []),
+    ],
     guardrails: [
       "Do not use service-role credentials for owner smoke.",
       "Do not bypass pet ownership or RLS checks to make the smoke pass.",

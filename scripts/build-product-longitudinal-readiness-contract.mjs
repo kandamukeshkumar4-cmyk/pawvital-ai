@@ -84,7 +84,7 @@ const productionEvidenceSummary = summarizeProductProductionEvidence(
   loadProductProductionEvidence()
 );
 const basePersistenceStatus = productionEvidenceSummary.authenticatedProductionSmokeComplete
-  ? `current production daily-readiness persistence passed; recovery checkpoint status=${productionEvidenceSummary.recoveryCheckpointStatus}`
+  ? `${productionEvidenceSummary.productionPersistenceStatus}; current deployment smoke status=${productionEvidenceSummary.currentDeploymentSmokeStatus}; recovery checkpoint status=${productionEvidenceSummary.recoveryCheckpointStatus}`
   : "foundation files exist locally; live migration and authenticated production smoke still required";
 
 const contract = {

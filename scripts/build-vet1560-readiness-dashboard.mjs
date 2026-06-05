@@ -140,15 +140,27 @@ function buildDashboard() {
   const localQueueValidationSummary = localQueueValidation
     ? `queue validation=${localQueueValidation.status}; ${localQueueValidation.verifierArtifactCount}/${localQueueValidation.ticketCount} verifier artifacts present; ${localQueueValidation.orderedDependencyEdgeCount}/${localQueueValidation.dependencyEdgeCount} dependency edges ordered`
     : "queue validation unavailable";
-  const productNextAction =
-    productProductionReadiness.authenticatedProductionSmokeComplete === true
-      ? productProductionReadiness.recoveryCheckpointProductionWriteExercised
-        ? "Keep monitoring product-intelligence persistence and rerun smoke after schema, route, RLS, or copy changes."
-        : "Daily readiness persistence is GO on current production; capture recovery-checkpoint production write or blocked-reason smoke before claiming recovery write coverage."
-      : "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json.";
+  const productHistoricalSmokeComplete =
+    productProductionReadiness.authenticatedProductionSmokeComplete === true;
+  const productCurrentWriteComplete =
+    productProductionReadiness.currentDeploymentAuthenticatedWriteSmokeComplete === true;
+  const productRecoveryWriteComplete =
+    productProductionReadiness.recoveryCheckpointProductionWriteExercised === true;
+  let productNextAction =
+    "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json.";
+  if (productHistoricalSmokeComplete && !productCurrentWriteComplete) {
+    productNextAction =
+      "Current deployment read-only owner-history proof passed; run a controlled current-deployment POST smoke before claiming current write coverage.";
+  } else if (productHistoricalSmokeComplete && !productRecoveryWriteComplete) {
+    productNextAction =
+      "Current-deployment daily readiness write proof passed; capture recovery-checkpoint production write or blocked-reason smoke before claiming recovery write coverage.";
+  } else if (productHistoricalSmokeComplete) {
+    productNextAction =
+      "Keep monitoring product-intelligence persistence and rerun smoke after schema, route, RLS, or copy changes.";
+  }
   const productSummary =
-    productProductionReadiness.authenticatedProductionSmokeComplete === true
-      ? `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; product-intelligence persistence=${productProductionReadiness.productionPersistenceStatus}; deployment=${productProductionReadiness.productionEvidence?.deploymentId}; readiness row=${productProductionReadiness.productionEvidence?.readinessRowId}; recovery checkpoint status=${productProductionReadiness.recoveryCheckpointStatus}.`
+    productHistoricalSmokeComplete
+      ? `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; product-intelligence persistence=${productProductionReadiness.productionPersistenceStatus}; write deployment=${productProductionReadiness.productionEvidence?.deploymentId}; current deployment=${productProductionReadiness.productionEvidence?.currentDeploymentId}; current smoke=${productProductionReadiness.currentDeploymentSmokeStatus}; readiness row=${productProductionReadiness.productionEvidence?.readinessRowId}; recovery checkpoint status=${productProductionReadiness.recoveryCheckpointStatus}.`
       : `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; production smoke ready=${productProductionReadiness.readyForProductionSmoke}, live migration applied=${productProductionReadiness.liveMigrationApplied}; smoke runbook has ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps.`;
 
   const lanes = [
@@ -194,7 +206,9 @@ function buildDashboard() {
     {
       id: "whoop-product-contract",
       label: "Whoop-style product contract",
-      status: "ready",
+      status: productHistoricalSmokeComplete && !productCurrentWriteComplete
+        ? "partial"
+        : "ready",
       summary: productSummary,
       nextAction: productNextAction,
     },
