@@ -136,6 +136,11 @@ const commands = [
     artifacts: ["plans/VET-1563-extraction-output-capture-authorization.json"],
   },
   {
+    id: "candidate-approval-intake",
+    args: ["scripts/build-model-candidate-approval-intake.mjs", "--role=extraction", "--write"],
+    artifacts: ["plans/VET-1563-extraction-candidate-approval-intake.json"],
+  },
+  {
     id: "product-roadmap",
     args: ["scripts/build-product-intelligence-roadmap.mjs", "--write"],
     artifacts: ["plans/VET-1564-product-intelligence-roadmap.json"],

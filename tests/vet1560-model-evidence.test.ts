@@ -173,7 +173,27 @@ type OwnerApprovalRequest = {
 };
 
 type CandidateSelectionPacket = {
+  status: string;
   candidateIdentityResolved: boolean;
+  candidate: {
+    modelOrAdapterId: string | null;
+    provider: string | null;
+    artifactType: string | null;
+    artifactSha256: string | null;
+    offlineTrainingEvalManifest: string | null;
+    approvedBy: string | null;
+    approvedAt: string | null;
+    approvalRecord: string | null;
+    captureApproval: {
+      scope: string;
+      approvedBy: string | null;
+      approvedAt: string | null;
+      approvalRecord: string | null;
+      promotionApproval: boolean;
+    };
+  };
+  blockers: string[];
+  inputArtifacts: Record<string, ArtifactRef>;
   candidateEvidenceSearch: {
     resolved: boolean;
     conclusion: string;
@@ -189,6 +209,36 @@ type CandidateSelectionPacket = {
       finding: string;
     }>;
     nextRequiredEvidence: string[];
+  };
+  guardrails: string[];
+};
+
+type CandidateApprovalIntake = {
+  status: string;
+  readyForProviderCapture: boolean;
+  currentCandidateState: {
+    candidateIdentityResolved: boolean;
+    candidateSelectionStatus: string;
+    blockers: string[];
+    outputCaptureAuthorizationReady: boolean;
+  };
+  requiredFields: Array<{
+    id: string;
+    required: boolean;
+    status: string;
+    currentValue: string | null;
+  }>;
+  missingFields: string[];
+  approvalRecordTarget: string;
+  approvalRecordTemplate: {
+    candidate: {
+      modelOrAdapterId: string;
+      artifactSha256: string;
+      captureApproval: {
+        scope: string;
+        promotionApproval: boolean;
+      };
+    };
   };
   guardrails: string[];
 };
@@ -358,6 +408,14 @@ describe("VET-1560 model evidence readouts", () => {
     ]);
 
     expect(packet.candidateIdentityResolved).toBe(false);
+    expect(packet.status).toBe("blocked");
+    expect(packet.inputArtifacts.candidateApprovalRecord).toEqual(
+      expect.objectContaining({
+        path: "plans/VET-1563-extraction-candidate-approval-record.json",
+        exists: false,
+        sha256: null,
+      }),
+    );
     expect(packet.candidateEvidenceSearch.resolved).toBe(false);
     expect(packet.candidateEvidenceSearch.conclusion).toContain(
       "No approved candidate model or adapter identity",
@@ -392,6 +450,188 @@ describe("VET-1560 model evidence readouts", () => {
     expect(packet.guardrails).toContain(
       "Do not infer candidate identity from an experiment manifest without an approved model or adapter artifact.",
     );
+  });
+
+  it("builds a blocked candidate approval intake packet for owner-supplied identity evidence", () => {
+    const intake = runJson<CandidateApprovalIntake>([
+      "scripts/build-model-candidate-approval-intake.mjs",
+      "--role=extraction",
+    ]);
+
+    expect(intake.status).toBe("blocked");
+    expect(intake.readyForProviderCapture).toBe(false);
+    expect(intake.currentCandidateState).toEqual(
+      expect.objectContaining({
+        candidateIdentityResolved: false,
+        candidateSelectionStatus: "blocked",
+        outputCaptureAuthorizationReady: false,
+      }),
+    );
+    expect(intake.missingFields).toEqual(
+      expect.arrayContaining([
+        "candidate.modelOrAdapterId",
+        "candidate.provider",
+        "candidate.artifactSha256",
+        "candidate.captureApproval.approvalRecord",
+      ]),
+    );
+    expect(intake.requiredFields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "candidate.modelOrAdapterId",
+          status: "missing",
+        }),
+        expect.objectContaining({
+          id: "candidate.artifactSha256",
+          status: "missing",
+        }),
+      ]),
+    );
+    expect(intake.approvalRecordTarget).toBe(
+      "plans/VET-1563-extraction-candidate-approval-record.json",
+    );
+    expect(intake.approvalRecordTemplate.candidate.captureApproval).toEqual(
+      expect.objectContaining({
+        scope: "validation-output-capture-only",
+        promotionApproval: false,
+      }),
+    );
+    expect(intake.guardrails).toContain(
+      "Do not mutate runtime model routing or model flags from this intake packet.",
+    );
+  });
+
+  it("keeps candidate selection blocked for an unsupported approval artifact type", () => {
+    const approvalRecordPath = path.join(
+      repoRoot,
+      "plans",
+      "VET-1563-extraction-candidate-approval-record.json",
+    );
+    writeFileSync(
+      approvalRecordPath,
+      `${JSON.stringify(
+        {
+          ticket: "VET-1563",
+          role: "extraction",
+          mode: "candidate-approval-record",
+          candidate: {
+            modelOrAdapterId: "nvidia/example-extraction-candidate",
+            provider: "nvidia-nim",
+            artifactType: "unreviewed-runtime-toggle",
+            artifactSha256:
+              "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            offlineTrainingEvalManifest:
+              "provider-model-id proof: no local weight artifact",
+            approvedBy: "owner@example.com",
+            approvedAt: "2026-06-04T00:00:00.000Z",
+            approvalRecord: "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#candidate-approval",
+            captureApproval: {
+              scope: "validation-output-capture-only",
+              approvedBy: "owner@example.com",
+              approvedAt: "2026-06-04T00:00:00.000Z",
+              approvalRecord:
+                "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#capture-approval",
+              promotionApproval: false,
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    try {
+      const packet = runJson<CandidateSelectionPacket>([
+        "scripts/build-model-candidate-selection-packet.mjs",
+        "--role=extraction",
+      ]);
+
+      expect(packet.status).toBe("blocked");
+      expect(packet.candidateIdentityResolved).toBe(false);
+      expect(packet.blockers).toContain("candidate artifact type unsupported");
+    } finally {
+      if (existsSync(approvalRecordPath)) {
+        unlinkSync(approvalRecordPath);
+      }
+    }
+  });
+
+  it("can consume a future candidate approval record without inferring identity from manifests", () => {
+    const approvalRecordPath = path.join(
+      repoRoot,
+      "plans",
+      "VET-1563-extraction-candidate-approval-record.json",
+    );
+    writeFileSync(
+      approvalRecordPath,
+      `${JSON.stringify(
+        {
+          ticket: "VET-1563",
+          role: "extraction",
+          mode: "candidate-approval-record",
+          candidate: {
+            modelOrAdapterId: "nvidia/example-extraction-candidate",
+            provider: "nvidia-nim",
+            artifactType: "provider-model-id",
+            artifactSha256:
+              "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+            offlineTrainingEvalManifest:
+              "provider-model-id proof: no local weight artifact",
+            baseModel: "unresolved-review-only-candidate",
+            tokenizer: null,
+            contextLength: null,
+            approvedBy: "owner@example.com",
+            approvedAt: "2026-06-04T00:00:00.000Z",
+            approvalRecord: "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#candidate-approval",
+            captureApproval: {
+              scope: "validation-output-capture-only",
+              approvedBy: "owner@example.com",
+              approvedAt: "2026-06-04T00:00:00.000Z",
+              approvalRecord:
+                "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#capture-approval",
+              promotionApproval: false,
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    try {
+      const packet = runJson<CandidateSelectionPacket>([
+        "scripts/build-model-candidate-selection-packet.mjs",
+        "--role=extraction",
+      ]);
+
+      expect(packet.status).toBe("ready-for-output-capture");
+      expect(packet.candidateIdentityResolved).toBe(true);
+      expect(packet.blockers).toEqual([]);
+      expect(packet.candidate).toEqual(
+        expect.objectContaining({
+          modelOrAdapterId: "nvidia/example-extraction-candidate",
+          provider: "nvidia-nim",
+          artifactType: "provider-model-id",
+          artifactSha256:
+            "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          approvalRecord:
+            "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#candidate-approval",
+        }),
+      );
+      expect(packet.candidate.captureApproval).toEqual(
+        expect.objectContaining({
+          scope: "validation-output-capture-only",
+          promotionApproval: false,
+          approvalRecord:
+            "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#capture-approval",
+        }),
+      );
+      expect(packet.candidateEvidenceSearch.resolved).toBe(false);
+    } finally {
+      if (existsSync(approvalRecordPath)) {
+        unlinkSync(approvalRecordPath);
+      }
+    }
   });
 
   it("surfaces candidate capture-gate blockers in dashboard and completion audit", () => {
@@ -568,6 +808,7 @@ describe("VET-1560 model evidence readouts", () => {
     const { scripts } = readJson<PackageJson>("package.json");
     const requiredScripts = [
       "models:shadow-eval-scaffold",
+      "models:candidate-selection-packet",
       "models:output-capture-plan",
       "models:frozen-output-templates",
       "models:frozen-output-status",
@@ -583,6 +824,7 @@ describe("VET-1560 model evidence readouts", () => {
       "models:promotion-evidence-packet",
       "models:owner-approval-request",
       "models:output-capture-authorization",
+      "models:candidate-approval-intake",
     ];
 
     for (const scriptName of requiredScripts) {
@@ -590,6 +832,12 @@ describe("VET-1560 model evidence readouts", () => {
     }
     expect(scripts["models:output-capture-authorization"]).toContain(
       "scripts/build-model-output-capture-authorization.mjs",
+    );
+    expect(scripts["models:candidate-selection-packet"]).toContain(
+      "scripts/build-model-candidate-selection-packet.mjs",
+    );
+    expect(scripts["models:candidate-approval-intake"]).toContain(
+      "scripts/build-model-candidate-approval-intake.mjs",
     );
   });
 

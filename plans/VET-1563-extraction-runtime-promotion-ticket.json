@@ -51,7 +51,7 @@
     "scorecard": {
       "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
       "exists": true,
-      "sha256": "f14574f1b1e0362da6f459dbd714acce3975da2196695db3d0423e0950d16b6c"
+      "sha256": "c16f1506941921f733a42f5f187c7c3819b489f06c59170c62a87a37ab8811de"
     },
     "outputCapturePlan": {
       "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
@@ -61,7 +61,7 @@
     "outputStatus": {
       "path": "plans/VET-1563-extraction-frozen-output-status.json",
       "exists": true,
-      "sha256": "e5d6b1e8bef1e76559276ed0bce7773201cb78c70bc3433a19d1fdfa74c2dbbb"
+      "sha256": "714b0e63be9f2d47dd5ac4a76e4b1441718266bfadf01dc9e7bf1f9425db092c"
     },
     "rollbackPlan": {
       "path": "plans/VET-1563-extraction-model-rollback-plan.json",
@@ -76,12 +76,12 @@
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "5204ad6455377442f21eb066e65f38e6ac44ab95a7e4c0f0d272f3e0162f4c33"
+      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
     },
     "candidateSelectionPacket": {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
       "exists": true,
-      "sha256": "a8783640cbcb626d130217b0d42d60be8b7a6c901862598a29bb5628f6818e54"
+      "sha256": "3a522d4010138144e30be00d7e83b1650452beadbfad013040813788b7f1cf22"
     }
   },
   "routeContext": {

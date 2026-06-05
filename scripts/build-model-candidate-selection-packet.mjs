@@ -31,6 +31,10 @@ const outPath = resolve(
   process.cwd(),
   `plans/VET-1563-${role}-candidate-selection-packet.json`
 );
+const candidateApprovalRecordPath = resolve(
+  process.cwd(),
+  `plans/VET-1563-${role}-candidate-approval-record.json`
+);
 const narrowPackManifestPath = resolve(
   process.cwd(),
   "data/runpod-experiments/narrow-model-pack.json"
@@ -50,6 +54,113 @@ function artifact(path, relativePath) {
     path: relativePath,
     exists,
     sha256: exists ? sha256(path) : null,
+  };
+}
+
+function optionalJson(path) {
+  return existsSync(path) ? readJson(path) : null;
+}
+
+function hasText(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+const allowedArtifactTypes = new Set([
+  "provider-model-id",
+  "adapter",
+  "checkpoint",
+  "prompt-policy",
+  "sidecar-build",
+]);
+
+function validArtifactType(value) {
+  return hasText(value) && allowedArtifactTypes.has(value);
+}
+
+function approvedValidationCapture(captureApproval) {
+  return (
+    captureApproval?.scope === "validation-output-capture-only" &&
+    captureApproval?.promotionApproval === false &&
+    hasText(captureApproval?.approvedBy) &&
+    hasText(captureApproval?.approvedAt) &&
+    hasText(captureApproval?.approvalRecord)
+  );
+}
+
+function approvalBlockers(candidateApprovalRecord) {
+  if (!candidateApprovalRecord) {
+    return [
+      "candidate approval record missing",
+      "candidate model or adapter id missing",
+      "candidate provider missing",
+      "candidate artifact hash missing",
+      "candidate validation-output-capture approval record missing",
+      "offline training/eval artifact is not populated",
+    ];
+  }
+
+  const candidate = candidateApprovalRecord.candidate ?? {};
+  const captureApproval = candidate.captureApproval ?? {};
+  return [
+    hasText(candidate.modelOrAdapterId)
+      ? null
+      : "candidate model or adapter id missing",
+    hasText(candidate.provider) ? null : "candidate provider missing",
+    hasText(candidate.artifactType)
+      ? null
+      : "candidate artifact type missing",
+    hasText(candidate.artifactType) && !validArtifactType(candidate.artifactType)
+      ? "candidate artifact type unsupported"
+      : null,
+    hasText(candidate.artifactSha256)
+      ? null
+      : "candidate artifact hash missing",
+    hasText(candidate.approvedBy) ? null : "candidate approval approver missing",
+    hasText(candidate.approvedAt) ? null : "candidate approval timestamp missing",
+    hasText(candidate.approvalRecord)
+      ? null
+      : "candidate approval record reference missing",
+    approvedValidationCapture(captureApproval)
+      ? null
+      : "candidate validation-output-capture approval record missing",
+    hasText(candidate.offlineTrainingEvalManifest)
+      ? null
+      : "offline training/eval artifact is not populated",
+  ].filter(Boolean);
+}
+
+function buildCandidate(candidateApprovalRecord, experiment) {
+  const approvalCandidate = candidateApprovalRecord?.candidate ?? {};
+  const captureApproval = approvalCandidate.captureApproval ?? {};
+  return {
+    modelOrAdapterId: approvalCandidate.modelOrAdapterId ?? null,
+    provider: approvalCandidate.provider ?? null,
+    artifactType: approvalCandidate.artifactType ?? null,
+    artifactSha256: approvalCandidate.artifactSha256 ?? null,
+    offlineTrainingEvalManifest:
+      approvalCandidate.offlineTrainingEvalManifest ?? null,
+    baseModel:
+      approvalCandidate.baseModel ??
+      experiment.proposedExperiment?.baseModel ??
+      null,
+    tokenizer:
+      approvalCandidate.tokenizer ??
+      experiment.proposedExperiment?.tokenizer ??
+      null,
+    contextLength:
+      approvalCandidate.contextLength ??
+      experiment.proposedExperiment?.contextLength ??
+      null,
+    approvedBy: approvalCandidate.approvedBy ?? null,
+    approvedAt: approvalCandidate.approvedAt ?? null,
+    approvalRecord: approvalCandidate.approvalRecord ?? null,
+    captureApproval: {
+      scope: captureApproval.scope ?? "validation-output-capture-only",
+      approvedBy: captureApproval.approvedBy ?? null,
+      approvedAt: captureApproval.approvedAt ?? null,
+      approvalRecord: captureApproval.approvalRecord ?? null,
+      promotionApproval: captureApproval.promotionApproval ?? false,
+    },
   };
 }
 
@@ -118,6 +229,7 @@ function buildPacket() {
   const experiment = readJson(experimentPath);
   const routingPlan = readJson(routingPlanPath);
   const routingMatrix = readJson(routingMatrixPath);
+  const candidateApprovalRecord = optionalJson(candidateApprovalRecordPath);
   const rolePlan = routingPlan.rolePlans.find((item) => item.role === role);
   const roleRoute = routingMatrix.matrix.find((item) => item.role === role);
 
@@ -125,32 +237,9 @@ function buildPacket() {
     throw new Error(`No model routing plan found for role ${role}.`);
   }
 
-  const candidate = {
-    modelOrAdapterId: null,
-    provider: null,
-    artifactType: null,
-    artifactSha256: null,
-    baseModel: experiment.proposedExperiment?.baseModel ?? null,
-    tokenizer: experiment.proposedExperiment?.tokenizer ?? null,
-    contextLength: experiment.proposedExperiment?.contextLength ?? null,
-    approvedBy: null,
-    approvedAt: null,
-    approvalRecord: null,
-    captureApproval: {
-      scope: "validation-output-capture-only",
-      approvedBy: null,
-      approvedAt: null,
-      approvalRecord: null,
-      promotionApproval: false,
-    },
-  };
-  const blockers = [
-    "candidate model or adapter id missing",
-    "candidate provider missing",
-    "candidate artifact hash missing",
-    "candidate validation-output-capture approval record missing",
-    "offline training/eval artifact is not populated",
-  ];
+  const candidate = buildCandidate(candidateApprovalRecord, experiment);
+  const blockers = approvalBlockers(candidateApprovalRecord);
+  const candidateIdentityResolved = blockers.length === 0;
 
   return {
     ticket: "VET-1563",
@@ -161,8 +250,8 @@ function buildPacket() {
       "2026-05-31T00:00:00.000Z",
     note:
       "Candidate selection packet only. It does not train, call providers, write output captures, or mutate runtime routing.",
-    status: "blocked",
-    candidateIdentityResolved: false,
+    status: candidateIdentityResolved ? "ready-for-output-capture" : "blocked",
+    candidateIdentityResolved,
     candidate,
     candidateEvidenceSearch: buildCandidateEvidenceSearch(experiment),
     blockers,
@@ -179,6 +268,10 @@ function buildPacket() {
         path: "plans/VET-1563-model-routing-matrix.json",
         sha256: sha256(routingMatrixPath),
       },
+      candidateApprovalRecord: artifact(
+        candidateApprovalRecordPath,
+        `plans/VET-1563-${role}-candidate-approval-record.json`
+      ),
     },
     baselineRoute: {
       primaryModel: roleRoute.primaryModel,
