@@ -105,6 +105,22 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
   const SUPABASE_URL = "https://paw-vital.supabase.co";
   const SERVER_SUPABASE_URL = "https://service.paw-vital.supabase.co";
   const SERVICE_ROLE_KEY = SERVICE_ROLE_JWT;
+  const envSnapshot = {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+  };
+
+  function restoreEnv(
+    name: keyof typeof envSnapshot,
+    value: string | undefined
+  ) {
+    if (value === undefined) {
+      delete process.env[name];
+      return;
+    }
+    process.env[name] = value;
+  }
 
   beforeEach(() => {
     jest.resetModules();
@@ -118,6 +134,12 @@ describe("saveOutcomeFeedbackToDB ownership guards", () => {
       rationale: "owner feedback materially disagreed with the report",
       summary: "Review this threshold",
     });
+  });
+
+  afterAll(() => {
+    restoreEnv("NEXT_PUBLIC_SUPABASE_URL", envSnapshot.NEXT_PUBLIC_SUPABASE_URL);
+    restoreEnv("SUPABASE_SERVICE_ROLE_KEY", envSnapshot.SUPABASE_SERVICE_ROLE_KEY);
+    restoreEnv("SUPABASE_URL", envSnapshot.SUPABASE_URL);
   });
 
   it("blocks non-owner writes before any service-role update or insert happens", async () => {
