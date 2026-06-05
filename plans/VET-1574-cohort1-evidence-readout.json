@@ -1,0 +1,273 @@
+{
+  "ticket": "VET-1574C",
+  "mode": "cohort1-evidence-readout",
+  "generatedAt": "2026-06-05T14:10:00.000Z",
+  "evidenceCutoff": "2026-06-05T14:03:15.000Z",
+  "readoutStatus": "PARTIAL",
+  "publicBetaDecision": "HOLD",
+  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, but it does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, and VET-1563 model evidence keep public beta on HOLD.",
+  "scope": {
+    "allowed": [
+      "point-in-time Cohort 1 evidence readout",
+      "source-evidence matrix",
+      "known gaps and blocker classification"
+    ],
+    "forbidden": [
+      "invite mutations",
+      "admin writes",
+      "Vercel environment mutation",
+      "Supabase schema mutation",
+      "model flag mutation",
+      "provider calls",
+      "clinical logic changes"
+    ]
+  },
+  "currentProductionProbe": {
+    "alias": "https://pawvital-ai.vercel.app",
+    "performedAt": "2026-06-05T14:10:00.000Z",
+    "readOnly": true,
+    "results": [
+      {
+        "url": "https://pawvital-ai.vercel.app/",
+        "status": 200,
+        "meaning": "public home reachable"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/admin/cohort-launch",
+        "status": 307,
+        "location": "/login?redirect=%2Fadmin%2Fcohort-launch&reason=session_expired",
+        "meaning": "unauthenticated admin page redirects to login; this is not positive-admin proof"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/api/admin/private-tester",
+        "status": 403,
+        "meaning": "unauthenticated admin API denial still holds"
+      }
+    ]
+  },
+  "launchExecution": {
+    "intendedCohortOnly": {
+      "status": "unproven",
+      "note": "No current admin export, invite-send log, or completed cohort registry is present in repo evidence."
+    },
+    "inviteSendProof": {
+      "status": "missing",
+      "note": "The repo contains a private-tester invite document and registry template, but no completed invite-send evidence."
+    },
+    "testerAccess": {
+      "status": "partial",
+      "passedEvidence": [
+        "Historical same-deployment admin-positive, non-admin denial, and feedback persistence passed on deployment dpl_APRuoBLQtj3uYeK4EBQXW2e2iMcA.",
+        "VET-1570C saved-tester replay on dpl_581C9m5utNovKZXFGoEhybXFGqWa confirmed non-admin 403 and admin guard behavior."
+      ],
+      "gap": "Fresh positive-admin command-center/API proof is unavailable from this machine on later deployments."
+    }
+  },
+  "metrics": {
+    "testerCount": {
+      "status": "unknown",
+      "invited": null,
+      "active": null,
+      "source": "No completed cohort registry/admin export found.",
+      "requiredEvidence": "Cohort registry or admin export from /admin/cohort-launch."
+    },
+    "completedSymptomChecks": {
+      "status": "partial",
+      "knownProofCount": 1,
+      "source": "VET-1570C saved-tester replay reached symptom-check completion on dpl_581C9m5utNovKZXFGoEhybXFGqWa.",
+      "requiredEvidence": "Aggregate completed symptom-check count for all invited Cohort 1 testers."
+    },
+    "finalReports": {
+      "status": "partial",
+      "knownProofCount": 1,
+      "source": "VET-1570C saved-tester replay reached final report and History scan.",
+      "requiredEvidence": "Aggregate final-report count for all invited Cohort 1 testers."
+    },
+    "feedbackSubmissions": {
+      "status": "partial",
+      "knownProofCount": 1,
+      "source": "VET-1570C History feedback submission for symptom check 5aeff251-4b54-4e45-99b6-e99aa1550ce4 returned HTTP 200 with ok true.",
+      "requiredEvidence": "Aggregate feedback submissions for all invited Cohort 1 testers."
+    },
+    "failedOrStalledFlows": {
+      "status": "partial",
+      "items": [
+        {
+          "ticket": "VET-1570C / issue #585",
+          "status": "closed",
+          "severity": "P1",
+          "summary": "Current-production cough symptom-check timeout stalled the owner flow before final report; fixed and production replay passed."
+        },
+        {
+          "ticket": "VET-1571C / issue #587",
+          "status": "closed",
+          "severity": "P1",
+          "summary": "Product-intelligence history GET failed with missing daily_readiness_snapshots table; production persistence/RLS smoke passed after recovery."
+        },
+        {
+          "ticket": "VET-1569C / issue #582",
+          "status": "open",
+          "severity": "P2",
+          "summary": "Production Supabase REST/Auth and DATABASE_URL still point at different projects; no longer active Cohort 1 blocker after direct gswj schema repair, but still operational debt."
+        },
+        {
+          "ticket": "VET-1572C / issue #588",
+          "status": "open",
+          "severity": "release_blocker",
+          "summary": "VET-1563 model-promotion frozen output evidence remains blocked by missing candidate identity and capture authorization."
+        }
+      ],
+      "requiredEvidence": "Full stalled-flow inventory from real Cohort 1 sessions, not just known issue-linked smokes."
+    },
+    "urgencyDistribution": {
+      "status": "unknown",
+      "emergency": null,
+      "urgent": null,
+      "monitor": null,
+      "questionOrInsufficientInfo": null,
+      "source": "No full Cohort 1 result dataset is present.",
+      "requiredEvidence": "Report/result export grouped by urgency for all completed Cohort 1 symptom checks."
+    },
+    "ownerVisibleLeakageScan": {
+      "status": "partial_pass",
+      "source": "VET-1570C saved-tester replay recorded leakage-clean owner-visible output.",
+      "knownScope": "single saved-tester replay",
+      "requiredEvidence": "Leakage scan over all Cohort 1 owner-visible reports, History entries, and feedback surfaces."
+    },
+    "appInsightsLatency": {
+      "status": "partial",
+      "source": "issue #339 / issue #585 VET-1570C closeout",
+      "eventName": "api.ai.symptom-chat",
+      "events": 5,
+      "errors": 0,
+      "durationMs": {
+        "p95": 41604
+      },
+      "extractionMs": {
+        "p95": 0
+      },
+      "secondOpinionMs": {
+        "p95": 8075
+      },
+      "requiredEvidence": "Cohort-window App Insights readout across all invited Cohort 1 testers."
+    },
+    "schedulerShadowReadout": {
+      "status": "HOLD",
+      "reportCount": 0,
+      "shadowComparisonCount": 0,
+      "note": "Recorded scheduler/shadow readout remains empty. This is backend proof and does not replace owner-visible UX proof.",
+      "requiredEvidence": "Scheduler/readout output with nonzero reports and shadow comparisons where relevant."
+    }
+  },
+  "ownerVisibleUxProof": {
+    "status": "partial_pass",
+    "passedEvidence": [
+      "Saved tester authenticated session and saved dog profile were available in VET-1570C replay.",
+      "Cough flow reached symptom-check completion.",
+      "Final report rendered.",
+      "History scan found the report.",
+      "Feedback submission from History returned HTTP 200 with ok true.",
+      "Owner-visible leakage scan was clean in that saved-tester replay."
+    ],
+    "limitations": [
+      "This is one saved-tester replay, not a full Cohort 1 outcome readout.",
+      "Fresh current-deployment positive-admin proof is unavailable from this machine.",
+      "Invite-send proof is missing."
+    ]
+  },
+  "backendReadoutProof": {
+    "status": "partial",
+    "passedEvidence": [
+      "VET-1570C sampled Vercel logs showed no HTTP 500 rows and symptom-chat/feedback rows returned HTTP 200.",
+      "App Insights VET-1570C saved-tester window recorded events=5, errors=0, p95DurationMs=41604, p95ExtractionMs=0, p95SecondOpinionMs=8075.",
+      "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed."
+    ],
+    "limitations": [
+      "Scheduler/shadow readout remains empty.",
+      "No full Cohort 1 telemetry window or admin API error summary exists in repo evidence.",
+      "Backend telemetry proof is not owner-visible UX proof."
+    ]
+  },
+  "productQualityTriage": {
+    "policy": "Only triage defects proven by Cohort 1 or saved-tester production evidence.",
+    "items": [
+      {
+        "issue": "#585 / VET-1570C",
+        "category": "symptom-check stall",
+        "status": "closed_verified",
+        "evidence": "Production saved-tester replay passed after the timeout fix."
+      },
+      {
+        "issue": "#587 / VET-1571C",
+        "category": "product-intelligence history persistence",
+        "status": "closed_verified",
+        "evidence": "Production saved-tester owner smoke and RLS denial proof passed."
+      },
+      {
+        "issue": "#582 / VET-1569C",
+        "category": "operational data-source drift",
+        "status": "open_watchpoint",
+        "evidence": "REST/Auth and DATABASE_URL project split remains open operational debt."
+      }
+    ]
+  },
+  "sourceEvidence": [
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4617138671",
+      "summary": "Same-deployment admin-positive, non-admin denial, and feedback persistence GO on dpl_APRuoBLQtj3uYeK4EBQXW2e2iMcA."
+    },
+    {
+      "type": "issue",
+      "id": "issue #585",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/585#issuecomment-4626041190",
+      "summary": "VET-1570C production closeout: saved tester flow, final report, History, feedback, leakage scan, logs, and App Insights metrics passed on dpl_581C9m5utNovKZXFGoEhybXFGqWa."
+    },
+    {
+      "type": "issue",
+      "id": "issue #587",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
+      "summary": "VET-1571C product-intelligence production recovery passed schema, owner smoke, RLS, focused tests, claim-language review, and post-smoke log query."
+    },
+    {
+      "type": "issue",
+      "id": "issue #588",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#issuecomment-4631900396",
+      "summary": "VET-1563 model-promotion evidence remains HOLD after PR #590."
+    },
+    {
+      "type": "issue",
+      "id": "issue #582",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/582#issuecomment-4617138684",
+      "summary": "Supabase REST/Auth and DATABASE_URL split remains operational debt but no longer active Cohort 1 blocker."
+    },
+    {
+      "type": "artifact",
+      "path": "docs/private-tester-cohort-1-report-template.md",
+      "summary": "Blank post-48-hour report template exists but is not a completed Cohort 1 readout."
+    },
+    {
+      "type": "artifact",
+      "path": "docs/private-tester-cohort-1-registry-template.csv",
+      "summary": "Registry template exists with example row only; no completed tester registry is present."
+    }
+  ],
+  "knownBlockersToCompletedReadout": [
+    "Export or record intended private-tester invite count and active tester count.",
+    "Record invite-send proof for the intended private-tester cohort.",
+    "Aggregate completed symptom checks, final reports, and feedback submissions across all invited testers.",
+    "Export urgency distribution for completed Cohort 1 checks.",
+    "Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.",
+    "Capture full Cohort 1 App Insights latency/error window for admin API, feedback API, symptom-chat, durationMs, extractionMs, and secondOpinionMs.",
+    "Record scheduler/shadow readout status from the formal runner where relevant.",
+    "Re-prove current-deployment authorized-admin command-center/API access or explicitly classify it as historical only."
+  ],
+  "finalGate": {
+    "cohort1EvidenceReadout": "PARTIAL",
+    "cohort1LaunchExecution": "UNPROVEN_FULL_COHORT",
+    "ownerVisibleUxProof": "PARTIAL_PASS",
+    "backendReadoutProof": "PARTIAL",
+    "publicBeta": "HOLD"
+  }
+}
