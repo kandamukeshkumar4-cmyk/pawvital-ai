@@ -1,10 +1,10 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-05T13:30:00.000Z",
-  "evidenceCutoff": "2026-06-05T13:20:28.000Z",
+  "generatedAt": "2026-06-05T18:58:52.000Z",
+  "evidenceCutoff": "2026-06-05T18:58:52.000Z",
   "decision": "HOLD",
-  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, and rollback gates. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, but fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, and VET-1563 model-promotion evidence are still missing.",
+  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, and rollback gates. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes and VET-1576C now has current-deployment daily-readiness/product-intelligence write proof, but fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, and VET-1563 model-promotion evidence are still missing.",
   "scope": {
     "allowed": [
       "point-in-time public-beta readout",
@@ -22,7 +22,9 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-05T13:30:00.000Z",
+    "performedAt": "2026-06-05T18:58:52.000Z",
+    "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
     "results": [
       {
@@ -139,9 +141,22 @@
     ]
   },
   "productIntelligenceReadiness": {
-    "decision": "GO_FOR_PERSISTENCE_SLICE_ONLY",
+    "decision": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
     "publicBetaDecision": "HOLD",
-    "summary": "VET-1571C recovered production product-intelligence persistence on dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL with live gswj schema proof, saved-tester owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and zero post-smoke 500 records.",
+    "summary": "VET-1576C PR #594 adds current-deployment product-intelligence daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb. The controlled owner smoke wrote tester-owned daily-readiness row 61c44ae9-5b30-482d-8207-efbaf6598140 for 2026-06-05, history read returned the row, unowned pet read returned 404, owner-visible claim/leakage scan had 0 findings, and post-smoke Vercel error-log query returned 0 JSON error records. This updates the earlier VET-1571C persistence proof on dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL.",
+    "currentDeploymentProof": {
+      "source": "PR #594 / issue #339 VET-1576C update",
+      "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+      "rowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
+      "snapshotDate": "2026-06-05",
+      "writeStatus": 201,
+      "historyReadStatus": 200,
+      "unownedPetReadStatus": 404,
+      "claimLanguageFindings": 0,
+      "leakageFindings": 0,
+      "postSmokeErrorJsonRecordCount": 0,
+      "prState": "OPEN_BLOCKED_NOT_MERGED"
+    },
     "ownerVisibleClaimLanguage": {
       "status": "pass",
       "artifact": "plans/VET-1564C-claim-language-review.json",
@@ -152,7 +167,7 @@
         "runtime NIM or adapter route influencing readiness copy"
       ]
     },
-    "artifactCaveat": "plans/VET-1564-production-readiness.json is a stale pre-smoke review artifact and still records liveMigrationApplied=false and authenticatedProductionSmokeComplete=false; later production proof lives in issue #587."
+    "artifactCaveat": "This PR #591 branch does not include the PR #594 generated VET-1564 artifact updates. Treat PR #594 and issue #339 comment 4634470145 as the current product-intelligence evidence source until #594 lands. Recovery-checkpoint production write remains HOLD."
   },
   "modelPromotionStatus": {
     "extractionCandidateIdentity": {
@@ -219,7 +234,7 @@
     "Issue #588 remains open; VET-1563 model-promotion evidence chain is incomplete.",
     "Privacy, terms, consent persistence, and public-beta support readiness are not proven.",
     "Scheduler/shadow readout remains empty and must not be treated as owner-visible UX proof.",
-    "Product-intelligence persistence is GO for the recovered slice only; public-facing launch claims still require claim-language review after any copy changes."
+    "Product-intelligence daily-readiness persistence is GO on the current deployment in PR #594 evidence only; recovery-checkpoint write, public-beta launch claims, and any new owner-visible copy still require their own proof/review."
   ],
   "sourceEvidence": [
     {
@@ -245,6 +260,18 @@
       "id": "issue #339",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
       "summary": "VET-1571C product-intelligence persistence recovered on dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL; public beta still HOLD."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #594",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/594",
+      "summary": "VET-1576C current-production write-proof branch records daily-readiness/product-intelligence persistence GO on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb, but PR #594 is still open and mergeStateStatus=BLOCKED."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4634470145",
+      "summary": "Current-deployment write smoke created daily-readiness row 61c44ae9-5b30-482d-8207-efbaf6598140, history read returned it, RLS/unowned read denied, owner-visible scan was clean, and public beta remained HOLD."
     },
     {
       "type": "issue",
@@ -288,7 +315,7 @@
     "publicBeta": "HOLD",
     "privateCohort1AdminAuthority": "HISTORICAL_GO_CURRENT_DEPLOYMENT_UNPROVEN",
     "privateCohort1LaunchReadout": "PARTIAL_HOLD_FOR_INVITE_AND_FULL_COHORT_COUNTS",
-    "productIntelligenceSlice": "GO_FOR_PERSISTENCE_ONLY",
+    "productIntelligenceSlice": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
     "candidateIntakeHarness": "GO_REVIEW_ONLY",
     "modelPromotion": "HOLD"
   }

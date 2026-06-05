@@ -2,11 +2,13 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-05T13:20:28Z.
+Evidence cutoff: 2026-06-05T18:58:52Z.
 
 ## Why Public Beta Is HOLD
 
 Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, and rollback gates. The current evidence is strong in several private-cohort lanes, but it is not complete enough for public beta.
+
+Current production alias checked for this refresh: `https://pawvital-ai.vercel.app` resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`.
 
 Known current blockers:
 
@@ -37,6 +39,7 @@ Passed, but partial:
 
 - App Insights for the VET-1570C saved-tester smoke window recorded `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, and p95 secondOpinionMs=8075.
 - Product-intelligence persistence recovered on `dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL` with saved-tester owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and zero post-smoke 500 records.
+- PR #594 adds newer current-deployment product-intelligence daily-readiness write proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON error records in the post-smoke Vercel error-log query.
 
 ## Backend And Model Proof
 
@@ -53,9 +56,9 @@ Scheduler/shadow readout remains HOLD where recorded: `report_count=0`, `shadow_
 
 ## Product Intelligence
 
-VET-1571C is GO for the recovered product-intelligence persistence slice only. This is not a public-beta GO by itself.
+VET-1576C / PR #594 is GO for current-deployment daily-readiness/product-intelligence persistence only. This is not a public-beta GO by itself, and PR #594 is still open/blocked rather than landed on `master`.
 
-The local `plans/VET-1564-production-readiness.json` artifact is a stale pre-smoke review artifact and still records `liveMigrationApplied=false` / `authenticatedProductionSmokeComplete=false`; later production proof lives in issue #587. Claim-language review in `plans/VET-1564C-claim-language-review.json` is pass, and must be rerun after any owner-visible copy changes.
+The current proof is limited to daily-readiness/product-intelligence persistence. Recovery-checkpoint production write remains HOLD. Claim-language review in `plans/VET-1564C-claim-language-review.json` is pass, and must be rerun after any owner-visible copy changes.
 
 ## Monitoring And Rollback
 
@@ -65,6 +68,7 @@ Monitoring is partial:
 
 - VET-1570C sampled Vercel logs showed no HTTP 500 rows and App Insights metrics were captured.
 - VET-1571C post-smoke 500 log query returned 0 JSON records.
+- VET-1576C current-deployment product-intelligence write smoke reported 0 JSON error records after the daily-readiness write.
 - No full Cohort 1 monitoring/readout packet exists for public beta.
 
 ## Final Gate
@@ -72,6 +76,6 @@ Monitoring is partial:
 - Public beta: HOLD
 - Private Cohort 1 admin authority: historical GO, current deployment unproven from this machine
 - Private Cohort 1 launch/readout: partial HOLD for invite-send proof and full cohort counts
-- Product-intelligence slice: GO for persistence only
+- Product-intelligence slice: GO for current-deployment daily-readiness persistence only
 - Candidate intake harness: GO review-only
 - Model/NIM promotion: HOLD
