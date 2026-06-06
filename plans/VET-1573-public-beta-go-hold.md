@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-05T18:58:52Z.
+Evidence cutoff: 2026-06-06T22:07:17Z.
 
 ## Why Public Beta Is HOLD
 
@@ -58,7 +58,9 @@ Scheduler/shadow readout remains HOLD where recorded: `report_count=0`, `shadow_
 
 VET-1576C / PR #594 is GO for current-deployment daily-readiness/product-intelligence persistence only. This is not a public-beta GO by itself, and PR #594 is still open/blocked rather than landed on `master`.
 
-The current proof is limited to daily-readiness/product-intelligence persistence. Recovery-checkpoint production write remains HOLD. Claim-language review in `plans/VET-1564C-claim-language-review.json` is pass, and must be rerun after any owner-visible copy changes.
+VET-1578C / PR #595 is GO for review of the owner-visible recovery checkpoint UI branch only. It adds local focused tests, claim-language scan proof, Bumblebee proof, local Playwright smoke, AutoScientists verification, and TecjLead GO, but PR #595 is still open/blocked with no GitHub checks attached and is not landed on `master`.
+
+The current production proof is limited to daily-readiness/product-intelligence persistence. Recovery-checkpoint owner-visible UI is review-ready in PR #595, but authenticated production recovery-checkpoint write/smoke remains HOLD. Claim-language review in `plans/VET-1564C-claim-language-review.json` is pass for the earlier surface; PR #595 includes a changed-file claim scan and must still be treated as PR review evidence until merged/deployed.
 
 ## Monitoring And Rollback
 
@@ -77,5 +79,6 @@ Monitoring is partial:
 - Private Cohort 1 admin authority: historical GO, current deployment unproven from this machine
 - Private Cohort 1 launch/readout: partial HOLD for invite-send proof and full cohort counts
 - Product-intelligence slice: GO for current-deployment daily-readiness persistence only
+- Product-intelligence recovery checkpoint UI: GO for PR #595 review only; production write/smoke HOLD
 - Candidate intake harness: GO review-only
 - Model/NIM promotion: HOLD

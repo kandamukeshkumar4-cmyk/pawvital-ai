@@ -1,10 +1,10 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-05T18:58:52.000Z",
-  "evidenceCutoff": "2026-06-05T18:58:52.000Z",
+  "generatedAt": "2026-06-06T22:07:17.000Z",
+  "evidenceCutoff": "2026-06-06T22:07:17.000Z",
   "decision": "HOLD",
-  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, and rollback gates. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes and VET-1576C now has current-deployment daily-readiness/product-intelligence write proof, but fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, and VET-1563 model-promotion evidence are still missing.",
+  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, and rollback gates. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, and VET-1578C has review-ready recovery checkpoint UI proof in PR #595, but fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, and VET-1563 model-promotion evidence are still missing.",
   "scope": {
     "allowed": [
       "point-in-time public-beta readout",
@@ -22,7 +22,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-05T18:58:52.000Z",
+    "performedAt": "2026-06-06T22:07:17.000Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
@@ -143,7 +143,7 @@
   "productIntelligenceReadiness": {
     "decision": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
     "publicBetaDecision": "HOLD",
-    "summary": "VET-1576C PR #594 adds current-deployment product-intelligence daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb. The controlled owner smoke wrote tester-owned daily-readiness row 61c44ae9-5b30-482d-8207-efbaf6598140 for 2026-06-05, history read returned the row, unowned pet read returned 404, owner-visible claim/leakage scan had 0 findings, and post-smoke Vercel error-log query returned 0 JSON error records. This updates the earlier VET-1571C persistence proof on dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL.",
+    "summary": "VET-1576C PR #594 adds current-deployment product-intelligence daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb. The controlled owner smoke wrote tester-owned daily-readiness row 61c44ae9-5b30-482d-8207-efbaf6598140 for 2026-06-05, history read returned the row, unowned pet read returned 404, owner-visible claim/leakage scan had 0 findings, and post-smoke Vercel error-log query returned 0 JSON error records. VET-1578C PR #595 adds review-ready owner-visible recovery checkpoint UI proof with focused tests, local smoke, claim scan, AutoScientists verification, and TecjLead GO. This updates the earlier VET-1571C persistence proof on dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL without claiming production recovery-checkpoint write readiness.",
     "currentDeploymentProof": {
       "source": "PR #594 / issue #339 VET-1576C update",
       "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
@@ -157,6 +157,22 @@
       "postSmokeErrorJsonRecordCount": 0,
       "prState": "OPEN_BLOCKED_NOT_MERGED"
     },
+    "recoveryCheckpointUiProof": {
+      "source": "PR #595 / VET-1578C recovery checkpoint UI branch",
+      "decision": "GO_REVIEW_BRANCH_ONLY",
+      "commit": "c629a4d08b012d96f2c61240350eff97ba8bf0ec",
+      "prState": "OPEN_BLOCKED_NOT_MERGED",
+      "mergeStateStatus": "BLOCKED",
+      "statusCheckRollupCount": 0,
+      "focusedTests": "4 suites / 21 tests passed",
+      "localSmoke": "Biscuit selected on local analytics smoke; recovery checkpoint visible; save hidden in demo mode; unsafe affirmative claims false.",
+      "claimLanguageFindings": 0,
+      "bumblebeeFindings": 0,
+      "autoScientistsVerifier": "pass",
+      "tecjLeadReview": "GO, no findings",
+      "productionWriteDecision": "HOLD",
+      "publicBetaDecision": "HOLD"
+    },
     "ownerVisibleClaimLanguage": {
       "status": "pass",
       "artifact": "plans/VET-1564C-claim-language-review.json",
@@ -167,7 +183,7 @@
         "runtime NIM or adapter route influencing readiness copy"
       ]
     },
-    "artifactCaveat": "This PR #591 branch does not include the PR #594 generated VET-1564 artifact updates. Treat PR #594 and issue #339 comment 4634470145 as the current product-intelligence evidence source until #594 lands. Recovery-checkpoint production write remains HOLD."
+    "artifactCaveat": "This PR #591 branch does not include the PR #594 generated VET-1564 artifact updates or the PR #595 runtime UI branch. Treat PR #594 and issue #339 comment 4634470145 as the current product-intelligence daily-readiness evidence source until #594 lands, and treat PR #595 as recovery checkpoint UI review evidence until it lands and receives authenticated production smoke. Recovery-checkpoint production write remains HOLD."
   },
   "modelPromotionStatus": {
     "extractionCandidateIdentity": {
@@ -234,7 +250,8 @@
     "Issue #588 remains open; VET-1563 model-promotion evidence chain is incomplete.",
     "Privacy, terms, consent persistence, and public-beta support readiness are not proven.",
     "Scheduler/shadow readout remains empty and must not be treated as owner-visible UX proof.",
-    "Product-intelligence daily-readiness persistence is GO on the current deployment in PR #594 evidence only; recovery-checkpoint write, public-beta launch claims, and any new owner-visible copy still require their own proof/review."
+    "Product-intelligence daily-readiness persistence is GO on the current deployment in PR #594 evidence only; PR #594 is still open/blocked and not landed on master.",
+    "Recovery-checkpoint owner-visible UI is GO for PR #595 review only; PR #595 is still open/blocked with no checks attached, and authenticated production recovery-checkpoint write/smoke remains missing."
   ],
   "sourceEvidence": [
     {
@@ -266,6 +283,12 @@
       "id": "PR #594",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/594",
       "summary": "VET-1576C current-production write-proof branch records daily-readiness/product-intelligence persistence GO on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb, but PR #594 is still open and mergeStateStatus=BLOCKED."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #595",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/595",
+      "summary": "VET-1578C recovery checkpoint UI branch is review-ready at c629a4d with focused tests, local smoke, claim scan, Bumblebee, AutoScientists, and TecjLead GO, but PR #595 is still open and mergeStateStatus=BLOCKED with no checks attached."
     },
     {
       "type": "issue",
@@ -316,6 +339,7 @@
     "privateCohort1AdminAuthority": "HISTORICAL_GO_CURRENT_DEPLOYMENT_UNPROVEN",
     "privateCohort1LaunchReadout": "PARTIAL_HOLD_FOR_INVITE_AND_FULL_COHORT_COUNTS",
     "productIntelligenceSlice": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
+    "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_BRANCH_ONLY_PRODUCTION_WRITE_HOLD",
     "candidateIntakeHarness": "GO_REVIEW_ONLY",
     "modelPromotion": "HOLD"
   }
