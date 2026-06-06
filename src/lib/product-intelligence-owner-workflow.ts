@@ -1,3 +1,9 @@
+import type { SymptomCheckEntry } from "@/components/timeline/types";
+import {
+  buildRecoveryCheckpoint,
+  type RecoveryCheckpoint,
+} from "@/lib/recovery-checkpoint";
+
 export interface ProductIntelligenceHistory {
   readiness: unknown[];
   recovery: unknown[];
@@ -56,6 +62,37 @@ async function throwIfNotOk(response: { ok: boolean; json: () => Promise<unknown
 
 export function formatSavedReadinessCount(count: number): string {
   return `${count} saved readiness record${count === 1 ? "" : "s"}`;
+}
+
+export function selectRecoveryReportSourceId(
+  entries: SymptomCheckEntry[]
+): string | null {
+  const sorted = entries.toSorted(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  return (
+    sorted.find((entry) => Boolean(entry.report_summary?.trim()))?.id ??
+    sorted[0]?.id ??
+    null
+  );
+}
+
+export function buildOwnerRecoveryCheckpoint(input: {
+  petId: string | null;
+  entries: SymptomCheckEntry[];
+  generatedAt: string;
+}): RecoveryCheckpoint | null {
+  if (!input.petId) return null;
+  const reportSourceId = selectRecoveryReportSourceId(input.entries);
+  if (!reportSourceId) return null;
+
+  return buildRecoveryCheckpoint({
+    petId: input.petId,
+    reportSourceId,
+    entries: input.entries,
+    generatedAt: input.generatedAt,
+  });
 }
 
 export async function loadProductIntelligenceHistory(

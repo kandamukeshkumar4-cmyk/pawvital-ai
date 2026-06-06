@@ -4,6 +4,7 @@ import * as React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import ProductIntelligencePanel from "@/components/analytics/product-intelligence-panel";
 import type { ProductIntelligenceSnapshot } from "@/lib/product-intelligence";
+import type { RecoveryCheckpoint } from "@/lib/recovery-checkpoint";
 
 interface BaselineShiftForTest {
   direction: string;
@@ -49,6 +50,28 @@ function buildSnapshot(
       "Evidence only - not a diagnosis, prognosis, treatment plan, or emergency clearance.",
     persistenceAllowed: false,
     persistenceBlockedReasons: ["insufficient evidence coverage"],
+    ...overrides,
+  };
+}
+
+function buildRecoveryCheckpoint(
+  overrides: Partial<RecoveryCheckpoint> = {}
+): RecoveryCheckpoint {
+  return {
+    petId: "pet-1",
+    reportSourceId: "check-follow-up",
+    checkpointDate: "2026-06-02",
+    generatedAt: "2026-06-02T15:00:00.000Z",
+    status: "ready",
+    sourceCheckIds: ["check-follow-up", "check-baseline"],
+    ownerSummary:
+      "Recovery checkpoint is based on report-linked follow-up evidence and comparable history.",
+    claimGuard:
+      "Evidence only - not a diagnosis, prognosis, treatment plan, or emergency clearance.",
+    deterministicOverride: null,
+    nextEvidencePrompt: null,
+    persistenceAllowed: true,
+    persistenceBlockedReasons: [],
     ...overrides,
   };
 }
@@ -159,5 +182,49 @@ describe("ProductIntelligencePanel", () => {
     expect(screen.getByText("-14")).toBeTruthy();
     expect(screen.getByText("Latest 78 / baseline 92")).toBeTruthy();
     expect(screen.queryByText(/disease progression|diagnosed|treat with|safe to wait/i)).toBeNull();
+  });
+
+  it("renders and saves a ready recovery checkpoint", () => {
+    const onSaveRecoveryCheckpoint = jest.fn();
+
+    render(
+      React.createElement(ProductIntelligencePanel, {
+        snapshot: buildSnapshot(),
+        recoveryCheckpoint: buildRecoveryCheckpoint(),
+        recoveryHistoryCount: 1,
+        onSaveRecoveryCheckpoint,
+      })
+    );
+
+    expect(screen.getByText("Recovery checkpoint")).toBeTruthy();
+    expect(screen.getByText("Ready")).toBeTruthy();
+    expect(screen.getByText("1 saved recovery checkpoint")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save checkpoint" }));
+
+    expect(onSaveRecoveryCheckpoint).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByText(/diagnosed|recovered|safe to wait|emergency clearance granted/i)
+    ).toBeNull();
+  });
+
+  it("shows blocked recovery reasons without a save command", () => {
+    render(
+      React.createElement(ProductIntelligencePanel, {
+        snapshot: buildSnapshot(),
+        recoveryCheckpoint: buildRecoveryCheckpoint({
+          status: "insufficient_evidence",
+          persistenceAllowed: false,
+          ownerSummary: "Recovery checkpoint needs more evidence before it can be saved.",
+          nextEvidencePrompt: "Add a report-linked follow-up before saving recovery history.",
+          persistenceBlockedReasons: ["missing report-linked follow-up evidence"],
+        }),
+        onSaveRecoveryCheckpoint: jest.fn(),
+      })
+    );
+
+    expect(screen.getByText("Needs evidence")).toBeTruthy();
+    expect(screen.getByText("missing report-linked follow-up evidence")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save checkpoint" })).toBeNull();
   });
 });

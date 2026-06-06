@@ -18,6 +18,7 @@ import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-ch
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { buildProductIntelligenceSnapshot } from "@/lib/product-intelligence";
 import {
+  buildOwnerRecoveryCheckpoint,
   loadProductIntelligenceHistory,
   saveProductIntelligenceSnapshot,
   type ProductIntelligenceHistory,
@@ -33,6 +34,24 @@ const RANGE_OPTIONS = [
   { value: "all", label: "All time" },
 ];
 
+interface ProductIntelligenceUiState {
+  history: ProductIntelligenceHistory | null;
+  historyLoading: boolean;
+  readinessSaving: boolean;
+  readinessStatus: string | null;
+  recoverySaving: boolean;
+  recoveryStatus: string | null;
+}
+
+const INITIAL_PRODUCT_UI_STATE: ProductIntelligenceUiState = {
+  history: null,
+  historyLoading: false,
+  readinessSaving: false,
+  readinessStatus: null,
+  recoverySaving: false,
+  recoveryStatus: null,
+};
+
 function inDateRange(entry: SymptomCheckEntry, rangeKey: string, now: Date): boolean {
   if (rangeKey === "all") return true;
   const days = parseInt(rangeKey, 10);
@@ -47,10 +66,9 @@ function AnalyticsPageContent() {
   const [loading, setLoading] = useState(true);
   const [petId, setPetId] = useState<string>("all");
   const [range, setRange] = useState<string>("90");
-  const [productHistory, setProductHistory] = useState<ProductIntelligenceHistory | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [savingSnapshot, setSavingSnapshot] = useState(false);
-  const [saveSnapshotStatus, setSaveSnapshotStatus] = useState<string | null>(null);
+  const [productUiState, setProductUiState] = useState<ProductIntelligenceUiState>(
+    INITIAL_PRODUCT_UI_STATE
+  );
 
   const loadChecks = useCallback(async () => {
     if (!isSupabaseConfigured) {
@@ -126,22 +144,32 @@ function AnalyticsPageContent() {
     [filtered]
   );
   const selectedPetIdForPersistence = isSupabaseConfigured && petId !== "all" ? petId : null;
+  const selectedPetIdForRecovery = petId !== "all" ? petId : null;
+  const recoveryCheckpoint = useMemo(
+    () =>
+      buildOwnerRecoveryCheckpoint({
+        petId: selectedPetIdForRecovery,
+        entries: filtered,
+        generatedAt: now.toISOString(),
+      }),
+    [filtered, now, selectedPetIdForRecovery]
+  );
 
   const loadProductHistory = useCallback(async () => {
     if (!selectedPetIdForPersistence) {
-      setProductHistory(null);
+      setProductUiState((current) => ({ ...current, history: null }));
       return;
     }
 
-    setHistoryLoading(true);
+    setProductUiState((current) => ({ ...current, historyLoading: true }));
     try {
       const history = await loadProductIntelligenceHistory(selectedPetIdForPersistence);
-      setProductHistory(history);
+      setProductUiState((current) => ({ ...current, history }));
     } catch (error) {
       console.error("Product intelligence history load failed:", error);
-      setProductHistory(null);
+      setProductUiState((current) => ({ ...current, history: null }));
     } finally {
-      setHistoryLoading(false);
+      setProductUiState((current) => ({ ...current, historyLoading: false }));
     }
   }, [selectedPetIdForPersistence]);
 
@@ -154,8 +182,11 @@ function AnalyticsPageContent() {
       return;
     }
 
-    setSavingSnapshot(true);
-    setSaveSnapshotStatus(null);
+    setProductUiState((current) => ({
+      ...current,
+      readinessSaving: true,
+      readinessStatus: null,
+    }));
     try {
       await saveProductIntelligenceSnapshot({
         petId: selectedPetIdForPersistence,
@@ -164,15 +195,57 @@ function AnalyticsPageContent() {
           sourceCheckIds: filtered.map((entry) => entry.id),
         },
       });
-      setSaveSnapshotStatus("Snapshot saved");
+      setProductUiState((current) => ({ ...current, readinessStatus: "Snapshot saved" }));
       await loadProductHistory();
     } catch (error) {
       console.error("Product intelligence snapshot save failed:", error);
-      setSaveSnapshotStatus("Snapshot save failed");
+      setProductUiState((current) => ({ ...current, readinessStatus: "Snapshot save failed" }));
     } finally {
-      setSavingSnapshot(false);
+      setProductUiState((current) => ({ ...current, readinessSaving: false }));
     }
   }, [filtered, loadProductHistory, productSnapshot.persistenceAllowed, selectedPetIdForPersistence]);
+
+  const saveRecoveryCheckpoint = useCallback(async () => {
+    if (
+      !selectedPetIdForPersistence ||
+      !recoveryCheckpoint?.persistenceAllowed ||
+      !recoveryCheckpoint.reportSourceId
+    ) {
+      return;
+    }
+
+    setProductUiState((current) => ({
+      ...current,
+      recoverySaving: true,
+      recoveryStatus: null,
+    }));
+    try {
+      await saveProductIntelligenceSnapshot({
+        petId: selectedPetIdForPersistence,
+        recovery: {
+          reportSourceId: recoveryCheckpoint.reportSourceId,
+          generatedAt: new Date().toISOString(),
+          sourceCheckIds: filtered.map((entry) => entry.id),
+        },
+      });
+      setProductUiState((current) => ({ ...current, recoveryStatus: "Checkpoint saved" }));
+      await loadProductHistory();
+    } catch (error) {
+      console.error("Product intelligence recovery checkpoint save failed:", error);
+      setProductUiState((current) => ({
+        ...current,
+        recoveryStatus: "Checkpoint save failed",
+      }));
+    } finally {
+      setProductUiState((current) => ({ ...current, recoverySaving: false }));
+    }
+  }, [
+    filtered,
+    loadProductHistory,
+    recoveryCheckpoint?.reportSourceId,
+    recoveryCheckpoint?.persistenceAllowed,
+    selectedPetIdForPersistence,
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -221,11 +294,19 @@ function AnalyticsPageContent() {
           <Card className="p-6">
             <ProductIntelligencePanel
               snapshot={productSnapshot}
-              historyCount={productHistory?.readiness.length}
+              historyCount={productUiState.history?.readiness.length}
               onSaveSnapshot={selectedPetIdForPersistence ? saveReadinessSnapshot : undefined}
-              saveSnapshotDisabled={historyLoading}
-              saveSnapshotInProgress={savingSnapshot}
-              saveSnapshotStatus={saveSnapshotStatus}
+              saveSnapshotDisabled={productUiState.historyLoading}
+              saveSnapshotInProgress={productUiState.readinessSaving}
+              saveSnapshotStatus={productUiState.readinessStatus}
+              recoveryCheckpoint={recoveryCheckpoint}
+              recoveryHistoryCount={productUiState.history?.recovery.length}
+              onSaveRecoveryCheckpoint={
+                selectedPetIdForPersistence ? saveRecoveryCheckpoint : undefined
+              }
+              saveRecoveryDisabled={productUiState.historyLoading}
+              saveRecoveryInProgress={productUiState.recoverySaving}
+              saveRecoveryStatus={productUiState.recoveryStatus}
             />
           </Card>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
