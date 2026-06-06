@@ -3,7 +3,7 @@
   "parentTicket": "VET-1563",
   "relatedIssue": 588,
   "mode": "review-only-model-evidence-blocker-readout",
-  "generatedAt": "2026-06-06T22:21:16.000Z",
+  "generatedAt": "2026-06-06T23:19:26.000Z",
   "sourceBranchBase": {
     "branch": "codex/vet-1575c-model-evidence-blocker-readout",
     "baseCommit": "81cae52d0f1b97920a3392493327625ce701ca87",
@@ -13,13 +13,13 @@
     "currentProductionDeploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "publicBetaPacketPr": {
       "pr": 591,
-      "head": "9ca5b9f293b1f70d838005a8b0c1b6a58c7bf4ce",
+      "head": "83219b47bfe86fd63e0d0ecfdb8fe1b8619ec7e4",
       "state": "OPEN_BLOCKED",
       "effectOnModelPromotion": "none; public beta remains HOLD and model lane remains HOLD"
     },
     "cohortReadoutPr": {
       "pr": 592,
-      "head": "1598f880066c3af9669e45e98d6ae2b383f7f980",
+      "head": "bb2b3a47b6cbc86b237b0d4a1ecd90937279aa05",
       "state": "OPEN_BLOCKED",
       "effectOnModelPromotion": "none; Cohort 1 readout remains PARTIAL"
     },
@@ -34,6 +34,18 @@
       "head": "c629a4d08b012d96f2c61240350eff97ba8bf0ec",
       "state": "OPEN_BLOCKED",
       "effectOnModelPromotion": "none; owner-visible recovery checkpoint UI proof does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "thresholdGateRecoveryPr": {
+      "pr": 596,
+      "head": "745a1173db546805afdedfe788677081cec2a93b",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; workflow/check recovery evidence does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "launchStackPrGate": {
+      "decision": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
+      "statusCheckRollupCount": 0,
+      "manualDispatchError": "HTTP 422: Actions has been disabled for this user",
+      "effectOnModelPromotion": "none; this blocks merge readiness for review artifacts but does not change model evidence gates"
     }
   },
   "scopeGuardrails": {
@@ -51,7 +63,7 @@
     "modelNimPromotion": "HOLD",
     "promotionPr": "HOLD",
     "publicBetaModelLane": "HOLD",
-    "reason": "The review-only intake harness exists, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594/#595 public-beta, cohort-readout, and product-intelligence evidence does not satisfy any model-promotion gate."
+    "reason": "The review-only intake harness exists, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594/#595/#596 public-beta, cohort-readout, product-intelligence, and PR-gate evidence does not satisfy any model-promotion gate."
   },
   "sourceArtifacts": {
     "candidateApprovalIntake": {
@@ -98,7 +110,7 @@
   "evidenceSummary": {
     "candidateApprovalRecordTarget": "plans/VET-1563-extraction-candidate-approval-record.json",
     "candidateApprovalRecordExists": false,
-    "candidateApprovalRecordCheckedAt": "2026-06-06T22:21:16.000Z",
+    "candidateApprovalRecordCheckedAt": "2026-06-06T23:19:26.000Z",
     "candidateApprovalIntakeStatus": "blocked",
     "candidateApprovalMissingFieldCount": 11,
     "candidateIdentityResolved": false,
