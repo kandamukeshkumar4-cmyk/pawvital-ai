@@ -4,7 +4,7 @@ Readout status: PARTIAL.
 
 Public beta decision: HOLD.
 
-Evidence cutoff: 2026-06-05T19:14:11Z.
+Evidence cutoff: 2026-06-06T23:04:02Z.
 
 This is a point-in-time readout from current issue evidence, existing repo templates, and read-only production probes. It is not a completed 48-hour Cohort 1 report because the repo does not contain a completed tester registry, invite-send proof, full cohort counts, or an urgency distribution.
 
@@ -17,6 +17,15 @@ Read-only probe:
 - `/api/admin/private-tester`: HTTP 403 unauthenticated
 
 Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`. This proves the public home is reachable and unauthenticated admin denial still holds. It does not prove current positive-admin access.
+
+## Current Production Monitoring Refresh
+
+Read-only Vercel production monitoring was refreshed with explicit project scope because this worktree is not linked to a Vercel project.
+
+- `vercel logs --project pawvital-ai --environment production --since 1h --level error --json --no-branch --no-follow`: `ERROR_JSON_ROWS=0`
+- `vercel logs --project pawvital-ai --environment production --since 1h --status-code 500 --json --no-branch --no-follow`: `STATUS_500_JSON_ROWS=0`
+
+This is a useful current log sample, but it is not a full Cohort 1 monitoring window and does not provide a fresh App Insights latency readout for `durationMs`, `extractionMs`, or `secondOpinionMs`.
 
 ## Core Metrics
 
@@ -58,6 +67,7 @@ Partial backend proof exists:
 - VET-1570C App Insights recorded `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, p95 secondOpinionMs=8075.
 - VET-1571C product-intelligence persistence recovery passed owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and post-smoke 500 log query.
 - VET-1576C / PR #594 adds current-deployment daily-readiness/product-intelligence proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.
+- Current last-hour Vercel production log sample returned zero error JSON rows and zero HTTP 500 JSON rows.
 
 Backend proof limits:
 
@@ -65,6 +75,16 @@ Backend proof limits:
 - No full Cohort 1 telemetry window exists in repo evidence.
 - Backend telemetry does not replace owner-visible UX proof.
 - PR #594 is open/blocked, so this is evidence-in-PR, not landed master truth.
+
+## PR Gate And Merge Readiness
+
+PR #592 merge readiness is HOLD.
+
+- PR #592 is open, non-draft, and mergeable, but `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`.
+- `gh run list --branch codex/vet-1574c-cohort1-evidence-readout` returns no workflow runs.
+- `gh pr checks 592` reports no checks.
+- PR #596 attempted workflow-only recovery for the required `Threshold Review Gate`, but issue #339 records that manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
+- This merge-gate blocker does not change Cohort 1 evidence status. The readout remains PARTIAL and public beta remains HOLD.
 
 ## Product-Quality Triage From Real Evidence
 
@@ -83,6 +103,7 @@ Backend proof limits:
 - Capture full Cohort 1 App Insights latency/error window for admin API, feedback API, symptom-chat, durationMs, extractionMs, and secondOpinionMs.
 - Record scheduler/shadow readout status from the formal runner where relevant.
 - Re-prove current-deployment authorized-admin command-center/API access or explicitly keep it historical only.
+- Restore GitHub Actions scheduling/check attachment so PR #592 receives the required `Threshold Review Gate` and other required contexts.
 
 ## Final Gate
 
@@ -90,5 +111,7 @@ Backend proof limits:
 - Cohort 1 launch execution: UNPROVEN_FULL_COHORT
 - Owner-visible UX proof: PARTIAL_PASS
 - Backend readout proof: PARTIAL
+- Current production error/500 log sample: PASS, zero JSON rows in the last hour
 - Product-intelligence backend proof: GO current-production daily-readiness only, in open PR #594
+- Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
 - Public beta: HOLD

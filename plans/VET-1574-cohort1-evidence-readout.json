@@ -1,11 +1,11 @@
 {
   "ticket": "VET-1574C",
   "mode": "cohort1-evidence-readout",
-  "generatedAt": "2026-06-05T19:14:11.000Z",
-  "evidenceCutoff": "2026-06-05T19:14:11.000Z",
+  "generatedAt": "2026-06-06T23:04:02.000Z",
+  "evidenceCutoff": "2026-06-06T23:04:02.000Z",
   "readoutStatus": "PARTIAL",
   "publicBetaDecision": "HOLD",
-  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, but it does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, and VET-1563 model evidence keep public beta on HOLD.",
+  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, and the latest read-only production monitoring refresh found zero last-hour production error JSON rows and zero last-hour HTTP 500 JSON rows. It still does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
   "scope": {
     "allowed": [
       "point-in-time Cohort 1 evidence readout",
@@ -24,7 +24,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-05T19:14:11.000Z",
+    "performedAt": "2026-06-06T23:04:02.000Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
@@ -183,7 +183,8 @@
       "VET-1570C sampled Vercel logs showed no HTTP 500 rows and symptom-chat/feedback rows returned HTTP 200.",
       "App Insights VET-1570C saved-tester window recorded events=5, errors=0, p95DurationMs=41604, p95ExtractionMs=0, p95SecondOpinionMs=8075.",
       "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed.",
-      "VET-1576C PR #594 records current-deployment daily-readiness/product-intelligence write proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb: row 61c44ae9-5b30-482d-8207-efbaf6598140, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records."
+      "VET-1576C PR #594 records current-deployment daily-readiness/product-intelligence write proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb: row 61c44ae9-5b30-482d-8207-efbaf6598140, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.",
+      "2026-06-06T23:04Z read-only Vercel production monitoring refresh with explicit project scope returned ERROR_JSON_ROWS=0 and STATUS_500_JSON_ROWS=0 for the last hour."
     ],
     "limitations": [
       "Scheduler/shadow readout remains empty.",
@@ -191,6 +192,35 @@
       "Backend telemetry proof is not owner-visible UX proof.",
       "PR #594 is open and mergeStateStatus=BLOCKED, so current product-intelligence write proof is evidence-in-PR, not landed master truth."
     ]
+  },
+  "currentMonitoringRefresh": {
+    "performedAt": "2026-06-06T23:04:02.000Z",
+    "readOnly": true,
+    "commands": [
+      "vercel logs --project pawvital-ai --environment production --since 1h --level error --json --no-branch --no-follow",
+      "vercel logs --project pawvital-ai --environment production --since 1h --status-code 500 --json --no-branch --no-follow"
+    ],
+    "results": {
+      "productionErrorJsonRowsLastHour": 0,
+      "productionHttp500JsonRowsLastHour": 0
+    },
+    "limitations": [
+      "This is a current last-hour production log sample, not a full Cohort 1 monitoring window.",
+      "It does not provide App Insights durationMs, extractionMs, or secondOpinionMs for a cohort window.",
+      "It does not prove invite-send, full cohort counts, current authorized-admin positive proof, or owner-visible UX completion."
+    ]
+  },
+  "prGateRecovery": {
+    "decision": "HOLD",
+    "source": "PR #596 / issue #339 comment 4640668934 and PR #591 refresh comment 4640704962",
+    "affectedReadoutPr": "PR #592",
+    "affectedReadoutBranch": "codex/vet-1574c-cohort1-evidence-readout",
+    "affectedReadoutCommitBeforeRefresh": "1598f880066c3af9669e45e98d6ae2b383f7f980",
+    "affectedReadoutMergeStateStatus": "BLOCKED",
+    "affectedReadoutStatusCheckRollupCount": 0,
+    "affectedReadoutWorkflowRunCount": 0,
+    "manualDispatchError": "HTTP 422: Actions has been disabled for this user",
+    "effectOnReadout": "The artifact can be reviewed as evidence, but PR #592 cannot merge until GitHub Actions scheduling/check attachment is restored and required checks pass."
   },
   "productQualityTriage": {
     "policy": "Only triage defects proven by Cohort 1 or saved-tester production evidence.",
@@ -241,6 +271,24 @@
       "summary": "VET-1576C current-production product-intelligence branch records daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb, row 61c44ae9-5b30-482d-8207-efbaf6598140; PR remains open/blocked."
     },
     {
+      "type": "pull_request",
+      "id": "PR #596",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/596",
+      "summary": "VET-1577C threshold-gate recovery branch is review-only at 745a1173; checks still did not attach and the PR remains open/blocked."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4640668934",
+      "summary": "PR #596 recovery attempt did not restore checks: PRs #591-#596 have no attached checks, the recovery branch has no workflow runs, manual dispatch fails with Actions disabled for this user, and public beta remains HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4640704962",
+      "summary": "PR #591 public-beta packet records launch-stack PR gate HOLD after PR #596 evidence; this also affects PR #592 merge readiness."
+    },
+    {
       "type": "issue",
       "id": "issue #339",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4634671521",
@@ -277,14 +325,17 @@
     "Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.",
     "Capture full Cohort 1 App Insights latency/error window for admin API, feedback API, symptom-chat, durationMs, extractionMs, and secondOpinionMs.",
     "Record scheduler/shadow readout status from the formal runner where relevant.",
-    "Re-prove current-deployment authorized-admin command-center/API access or explicitly classify it as historical only."
+    "Re-prove current-deployment authorized-admin command-center/API access or explicitly classify it as historical only.",
+    "Restore GitHub Actions scheduling/check attachment so PR #592 can receive the required Threshold Review Gate and other required contexts."
   ],
   "finalGate": {
     "cohort1EvidenceReadout": "PARTIAL",
     "cohort1LaunchExecution": "UNPROVEN_FULL_COHORT",
     "ownerVisibleUxProof": "PARTIAL_PASS",
     "backendReadoutProof": "PARTIAL",
+    "currentProductionErrorLogSample": "PASS_ZERO_ERROR_AND_500_JSON_ROWS_LAST_HOUR",
     "productIntelligenceBackendProof": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY_IN_OPEN_PR",
+    "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
     "publicBeta": "HOLD"
   }
 }
