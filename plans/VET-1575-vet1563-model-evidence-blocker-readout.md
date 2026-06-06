@@ -1,6 +1,6 @@
 # VET-1575C - VET-1563 Model Evidence Blocker Readout
 
-Generated: 2026-06-05T19:28:38.000Z
+Generated: 2026-06-06T22:21:16.000Z
 
 ## Decision
 
@@ -18,11 +18,12 @@ Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjz
 
 The newer launch/readout/product PRs do not change this model evidence decision:
 
-- PR #591 (`be30714b129e05dfaaa68d6707e0fb32d83ec481`) refreshes the public-beta packet and still keeps public beta HOLD.
-- PR #592 (`b76e247edac9a3916349cfa653aa65b6b73d0a0b`) refreshes the Cohort 1 readout and still keeps the readout PARTIAL.
-- PR #594 (`9357e02ee5a3caabc5a38e96ca0c43249f632ab7`) records current-deployment daily-readiness/product-intelligence persistence proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
+- PR #591 (`9ca5b9f293b1f70d838005a8b0c1b6a58c7bf4ce`) refreshes the public-beta packet and still keeps public beta HOLD.
+- PR #592 (`1598f880066c3af9669e45e98d6ae2b383f7f980`) refreshes the Cohort 1 readout and still keeps the readout PARTIAL.
+- PR #594 (`53d29b03378eb1a78f01c38513174cce6fe26592`) records current-deployment daily-readiness/product-intelligence persistence proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
+- PR #595 (`c629a4d08b012d96f2c61240350eff97ba8bf0ec`) records owner-visible recovery checkpoint UI proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
 
-All three PRs are open/blocked, not merged to `master`.
+All four PRs are open/blocked, not merged to `master`.
 
 ## Source Artifacts
 
@@ -39,7 +40,7 @@ All three PRs are open/blocked, not merged to `master`.
 
 ## Current Evidence
 
-- Candidate approval record target: `plans/VET-1563-extraction-candidate-approval-record.json`; file exists: false.
+- Candidate approval record target: `plans/VET-1563-extraction-candidate-approval-record.json`; file exists: false; checked at 2026-06-06T22:21:16.000Z.
 - Candidate approval intake: `status=blocked`, missing fields: 11.
 - Candidate identity resolved: false; candidate-selection blockers: 6.
 - Provider capture authorization: `readyForProviderCapture=false`; blockers: 4.
