@@ -1,10 +1,10 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-06T22:07:17.000Z",
-  "evidenceCutoff": "2026-06-06T22:07:17.000Z",
+  "generatedAt": "2026-06-06T22:47:34.000Z",
+  "evidenceCutoff": "2026-06-06T22:47:34.000Z",
   "decision": "HOLD",
-  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, and rollback gates. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, and VET-1578C has review-ready recovery checkpoint UI proof in PR #595, but fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, and VET-1563 model-promotion evidence are still missing.",
+  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, and VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate. Public beta remains HOLD because fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
   "scope": {
     "allowed": [
       "point-in-time public-beta readout",
@@ -22,7 +22,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-06T22:07:17.000Z",
+    "performedAt": "2026-06-06T22:47:34.000Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
@@ -217,6 +217,20 @@
     "scope": "review-only intake harness",
     "guardrail": "This GO does not authorize provider capture or runtime/model promotion."
   },
+  "prGateRecovery": {
+    "decision": "HOLD",
+    "source": "PR #596 / issue #339 comment 4640668934",
+    "branch": "codex/vet-1579c-threshold-gate-recovery",
+    "commit": "745a1173db546805afdedfe788677081cec2a93b",
+    "prState": "OPEN_BLOCKED_NOT_MERGED",
+    "mergeStateStatus": "BLOCKED",
+    "mergeable": "MERGEABLE",
+    "statusCheckRollupCount": 0,
+    "workflowRunCountOnBranch": 0,
+    "manualDispatchError": "HTTP 422: Actions has been disabled for this user",
+    "rulesetContext": "Protectmaster requires Threshold Review Gate; current user cannot bypass it.",
+    "effectOnPublicBeta": "Launch-stack PR merges remain blocked until GitHub Actions scheduling is restored and required checks attach/pass. This does not change product/model evidence decisions."
+  },
   "privacyTermsSupportGaps": {
     "decision": "HOLD",
     "gaps": [
@@ -239,6 +253,7 @@
       "No current-deployment authorized-admin positive proof from this machine.",
       "No invite-send proof for the intended private tester cohort.",
       "No full Cohort 1 readout with tester count, urgency distribution, and stalled-flow inventory.",
+      "Launch-stack PRs #591-#596 have no attached checks, including the required Threshold Review Gate context.",
       "Scheduler/shadow readout remains empty."
     ]
   },
@@ -251,7 +266,8 @@
     "Privacy, terms, consent persistence, and public-beta support readiness are not proven.",
     "Scheduler/shadow readout remains empty and must not be treated as owner-visible UX proof.",
     "Product-intelligence daily-readiness persistence is GO on the current deployment in PR #594 evidence only; PR #594 is still open/blocked and not landed on master.",
-    "Recovery-checkpoint owner-visible UI is GO for PR #595 review only; PR #595 is still open/blocked with no checks attached, and authenticated production recovery-checkpoint write/smoke remains missing."
+    "Recovery-checkpoint owner-visible UI is GO for PR #595 review only; PR #595 is still open/blocked with no checks attached, and authenticated production recovery-checkpoint write/smoke remains missing.",
+    "Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #596 has no workflow runs on its branch, and manual workflow dispatch fails with Actions disabled for this user."
   ],
   "sourceEvidence": [
     {
@@ -289,6 +305,18 @@
       "id": "PR #595",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/595",
       "summary": "VET-1578C recovery checkpoint UI branch is review-ready at c629a4d with focused tests, local smoke, claim scan, Bumblebee, AutoScientists, and TecjLead GO, but PR #595 is still open and mergeStateStatus=BLOCKED with no checks attached."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #596",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/596",
+      "summary": "VET-1577C workflow-only threshold-gate recovery branch is review-only at 745a1173; it is open/non-draft/mergeable but mergeStateStatus=BLOCKED with statusCheckRollup empty."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4640668934",
+      "summary": "PR #596 recovery attempt did not restore checks: PRs #591-#596 have no attached checks, the recovery branch has no workflow runs, manual dispatch fails with Actions disabled for this user, and public beta remains HOLD."
     },
     {
       "type": "issue",
@@ -341,6 +369,7 @@
     "productIntelligenceSlice": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
     "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_BRANCH_ONLY_PRODUCTION_WRITE_HOLD",
     "candidateIntakeHarness": "GO_REVIEW_ONLY",
-    "modelPromotion": "HOLD"
+    "modelPromotion": "HOLD",
+    "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING"
   }
 }

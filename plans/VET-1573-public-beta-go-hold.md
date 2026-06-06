@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-06T22:07:17Z.
+Evidence cutoff: 2026-06-06T22:47:34Z.
 
 ## Why Public Beta Is HOLD
 
@@ -19,6 +19,7 @@ Known current blockers:
 - Issue #588 remains open; VET-1563 model-promotion evidence is incomplete.
 - Privacy, terms, consent persistence, and public-beta support readiness are not proven.
 - Scheduler/shadow readout remains empty and must stay separate from owner-visible UX proof.
+- Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, the required `Threshold Review Gate` is absent, the PR #596 recovery branch has no workflow runs, and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
 
 ## Owner-Visible UX Proof
 
@@ -62,6 +63,16 @@ VET-1578C / PR #595 is GO for review of the owner-visible recovery checkpoint UI
 
 The current production proof is limited to daily-readiness/product-intelligence persistence. Recovery-checkpoint owner-visible UI is review-ready in PR #595, but authenticated production recovery-checkpoint write/smoke remains HOLD. Claim-language review in `plans/VET-1564C-claim-language-review.json` is pass for the earlier surface; PR #595 includes a changed-file claim scan and must still be treated as PR review evidence until merged/deployed.
 
+## PR Gate And Merge Readiness
+
+Launch-stack PR gate readiness is HOLD.
+
+- PRs #591-#596 are open, non-draft, and mergeable, but each currently reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`.
+- PR #596 (`codex/vet-1579c-threshold-gate-recovery` at `745a1173db546805afdedfe788677081cec2a93b`) attempted a workflow-only recovery for the required `Threshold Review Gate`.
+- `gh run list --branch codex/vet-1579c-threshold-gate-recovery` returned no workflow runs.
+- Manual dispatch failed with `HTTP 422: Actions has been disabled for this user`.
+- This is an external PR-check attachment blocker. It does not convert any product-intelligence, model-promotion, admin, invite, cohort-readout, privacy/support, or public-beta lane to GO.
+
 ## Monitoring And Rollback
 
 Private-cohort rollback and pause instructions exist in `docs/private-tester-incident-runbook.md`. The runbook covers pause criteria, tester disablement, feedback/report failure checks, emergency review, and deletion requests.
@@ -82,3 +93,4 @@ Monitoring is partial:
 - Product-intelligence recovery checkpoint UI: GO for PR #595 review only; production write/smoke HOLD
 - Candidate intake harness: GO review-only
 - Model/NIM promotion: HOLD
+- Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
