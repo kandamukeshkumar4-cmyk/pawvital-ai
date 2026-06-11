@@ -1,8 +1,8 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-06T22:47:34.000Z",
-  "evidenceCutoff": "2026-06-06T22:47:34.000Z",
+  "generatedAt": "2026-06-11T14:31:40.000Z",
+  "evidenceCutoff": "2026-06-11T14:31:40.000Z",
   "decision": "HOLD",
   "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, and VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate. Public beta remains HOLD because fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
   "scope": {
@@ -22,7 +22,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-06T22:47:34.000Z",
+    "performedAt": "2026-06-11T14:31:40.000Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
@@ -42,6 +42,16 @@
         "url": "https://pawvital-ai.vercel.app/api/admin/private-tester",
         "status": 403,
         "meaning": "unauthenticated admin API denial still holds"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/api/product-intelligence/snapshots?pet_id=prod-proof-readonly",
+        "status": 401,
+        "meaning": "unauthenticated product-intelligence history read is denied; this is not authenticated recovery persistence proof"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/api/notifications",
+        "status": 401,
+        "meaning": "unauthenticated notification read is denied; this is not owner notification flow proof"
       }
     ],
     "limitations": [
@@ -143,7 +153,7 @@
   "productIntelligenceReadiness": {
     "decision": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
     "publicBetaDecision": "HOLD",
-    "summary": "VET-1576C PR #594 adds current-deployment product-intelligence daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb. The controlled owner smoke wrote tester-owned daily-readiness row 61c44ae9-5b30-482d-8207-efbaf6598140 for 2026-06-05, history read returned the row, unowned pet read returned 404, owner-visible claim/leakage scan had 0 findings, and post-smoke Vercel error-log query returned 0 JSON error records. VET-1578C PR #595 adds review-ready owner-visible recovery checkpoint UI proof with focused tests, local smoke, claim scan, AutoScientists verification, and TecjLead GO. This updates the earlier VET-1571C persistence proof on dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL without claiming production recovery-checkpoint write readiness.",
+    "summary": "VET-1576C PR #594 adds current-deployment product-intelligence daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb. The controlled owner smoke wrote tester-owned daily-readiness row 61c44ae9-5b30-482d-8207-efbaf6598140 for 2026-06-05, history read returned the row, unowned pet read returned 404, owner-visible claim/leakage scan had 0 findings, and post-smoke Vercel error-log query returned 0 JSON error records. VET-1578C PR #595 is review-ready at a9ad1ba953974f8c463812d24304b8ed74a3d4dd with owner-visible recovery checkpoint UI proof, focused tests, local smoke, refreshed claim-language/readiness evidence, AutoScientists verification, and formal TecjLead GO_REVIEW_ONLY. This updates the earlier VET-1571C persistence proof on dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL without claiming production recovery-checkpoint write readiness.",
     "currentDeploymentProof": {
       "source": "PR #594 / issue #339 VET-1576C update",
       "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
@@ -159,17 +169,22 @@
     },
     "recoveryCheckpointUiProof": {
       "source": "PR #595 / VET-1578C recovery checkpoint UI branch",
-      "decision": "GO_REVIEW_BRANCH_ONLY",
-      "commit": "c629a4d08b012d96f2c61240350eff97ba8bf0ec",
+      "decision": "GO_REVIEW_ONLY",
+      "commit": "a9ad1ba953974f8c463812d24304b8ed74a3d4dd",
       "prState": "OPEN_BLOCKED_NOT_MERGED",
       "mergeStateStatus": "BLOCKED",
       "statusCheckRollupCount": 0,
       "focusedTests": "4 suites / 21 tests passed",
       "localSmoke": "Biscuit selected on local analytics smoke; recovery checkpoint visible; save hidden in demo mode; unsafe affirmative claims false.",
       "claimLanguageFindings": 0,
+      "claimLanguageReview": "plans/VET-1564C-claim-language-review.json in PR #595 head a9ad1ba reviews 497 strings with verdict pass and findings empty.",
       "bumblebeeFindings": 0,
       "autoScientistsVerifier": "pass",
-      "tecjLeadReview": "GO, no findings",
+      "tecjLeadReview": "GO_REVIEW_ONLY, no blocking findings",
+      "tecjLeadNotes": [
+        "Local master was stale versus origin/master; review used origin/master...HEAD and gh pr diff 595.",
+        "Claim-language generator scans quoted/template strings rather than every JSX text node; manual added-copy review found no unsafe claim language."
+      ],
       "productionWriteDecision": "HOLD",
       "publicBetaDecision": "HOLD"
     },
@@ -266,7 +281,7 @@
     "Privacy, terms, consent persistence, and public-beta support readiness are not proven.",
     "Scheduler/shadow readout remains empty and must not be treated as owner-visible UX proof.",
     "Product-intelligence daily-readiness persistence is GO on the current deployment in PR #594 evidence only; PR #594 is still open/blocked and not landed on master.",
-    "Recovery-checkpoint owner-visible UI is GO for PR #595 review only; PR #595 is still open/blocked with no checks attached, and authenticated production recovery-checkpoint write/smoke remains missing.",
+    "Recovery-checkpoint owner-visible UI is GO_REVIEW_ONLY for PR #595 at a9ad1ba953974f8c463812d24304b8ed74a3d4dd; PR #595 is still open/blocked with no checks attached, and authenticated production recovery-checkpoint write/smoke remains missing.",
     "Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #596 has no workflow runs on its branch, and manual workflow dispatch fails with Actions disabled for this user."
   ],
   "sourceEvidence": [
@@ -304,7 +319,13 @@
       "type": "pull_request",
       "id": "PR #595",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/595",
-      "summary": "VET-1578C recovery checkpoint UI branch is review-ready at c629a4d with focused tests, local smoke, claim scan, Bumblebee, AutoScientists, and TecjLead GO, but PR #595 is still open and mergeStateStatus=BLOCKED with no checks attached."
+      "summary": "VET-1578C recovery checkpoint UI branch is review-ready at a9ad1ba953974f8c463812d24304b8ed74a3d4dd with focused tests, local smoke, refreshed claim-language/readiness evidence, AutoScientists, and formal TecjLead GO_REVIEW_ONLY, but PR #595 is still open and mergeStateStatus=BLOCKED with no checks attached."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4681631329",
+      "summary": "Formal TecjLead gate for PR #595 recovered on 2026-06-11: verdict GO_REVIEW_ONLY with no blocking findings; PR merge, recovery production smoke, public beta, and model/NIM promotion remain HOLD."
     },
     {
       "type": "pull_request",
@@ -367,7 +388,7 @@
     "privateCohort1AdminAuthority": "HISTORICAL_GO_CURRENT_DEPLOYMENT_UNPROVEN",
     "privateCohort1LaunchReadout": "PARTIAL_HOLD_FOR_INVITE_AND_FULL_COHORT_COUNTS",
     "productIntelligenceSlice": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
-    "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_BRANCH_ONLY_PRODUCTION_WRITE_HOLD",
+    "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_ONLY_PRODUCTION_WRITE_HOLD",
     "candidateIntakeHarness": "GO_REVIEW_ONLY",
     "modelPromotion": "HOLD",
     "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING"

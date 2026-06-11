@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-06T22:47:34Z.
+Evidence cutoff: 2026-06-11T14:31:40Z.
 
 ## Why Public Beta Is HOLD
 
@@ -59,9 +59,11 @@ Scheduler/shadow readout remains HOLD where recorded: `report_count=0`, `shadow_
 
 VET-1576C / PR #594 is GO for current-deployment daily-readiness/product-intelligence persistence only. This is not a public-beta GO by itself, and PR #594 is still open/blocked rather than landed on `master`.
 
-VET-1578C / PR #595 is GO for review of the owner-visible recovery checkpoint UI branch only. It adds local focused tests, claim-language scan proof, Bumblebee proof, local Playwright smoke, AutoScientists verification, and TecjLead GO, but PR #595 is still open/blocked with no GitHub checks attached and is not landed on `master`.
+VET-1578C / PR #595 is `GO_REVIEW_ONLY` for the owner-visible recovery checkpoint UI branch. It adds local focused tests, refreshed claim-language/readiness proof, Bumblebee proof, local Playwright smoke, AutoScientists verification, and formal TecjLead `GO_REVIEW_ONLY`, but PR #595 is still open/blocked with no GitHub checks attached and is not landed on `master`.
 
-The current production proof is limited to daily-readiness/product-intelligence persistence. Recovery-checkpoint owner-visible UI is review-ready in PR #595, but authenticated production recovery-checkpoint write/smoke remains HOLD. Claim-language review in `plans/VET-1564C-claim-language-review.json` is pass for the earlier surface; PR #595 includes a changed-file claim scan and must still be treated as PR review evidence until merged/deployed.
+Current PR #595 head is `a9ad1ba953974f8c463812d24304b8ed74a3d4dd`. Its formal TecjLead review is `GO_REVIEW_ONLY` with no blocking findings, and its refreshed claim-language/readiness evidence reviews 497 strings with `findings=[]`.
+
+The current production proof is limited to daily-readiness/product-intelligence persistence. Recovery-checkpoint owner-visible UI is review-ready in PR #595, but authenticated production recovery-checkpoint write/smoke remains HOLD. Claim-language review in PR #595 covers the recovery checkpoint builder, owner workflow helper, analytics page, panel, and VET-1564 artifacts, but PR #595 must still be treated as PR review evidence until merged/deployed and production-smoked.
 
 ## PR Gate And Merge Readiness
 
@@ -90,7 +92,7 @@ Monitoring is partial:
 - Private Cohort 1 admin authority: historical GO, current deployment unproven from this machine
 - Private Cohort 1 launch/readout: partial HOLD for invite-send proof and full cohort counts
 - Product-intelligence slice: GO for current-deployment daily-readiness persistence only
-- Product-intelligence recovery checkpoint UI: GO for PR #595 review only; production write/smoke HOLD
+- Product-intelligence recovery checkpoint UI: GO_REVIEW_ONLY for PR #595 at `a9ad1ba953974f8c463812d24304b8ed74a3d4dd`; production write/smoke HOLD
 - Candidate intake harness: GO review-only
 - Model/NIM promotion: HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
