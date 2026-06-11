@@ -12,7 +12,8 @@ Use this after the first 48 hours of Cohort 1.
 
 ## Core metrics
 
-- Testers invited:
+- Testers allowlisted:
+- Invitations sent (attach manual proof):
 - Testers signed in:
 - Symptom checks started:
 - Symptom checks completed:

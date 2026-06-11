@@ -248,6 +248,7 @@ describe("private tester cohort command center helpers", () => {
       dataDeletionRequests: 1,
       emergencyResults: 1,
       feedbackSubmitted: 3,
+      allowlistedTesters: 5,
       negativeFeedback: 2,
       questionFlowIssueFlags: 1,
       repeatedQuestionFlags: 1,
@@ -255,8 +256,11 @@ describe("private tester cohort command center helpers", () => {
       reportsOpened: 3,
       signedInTesters: 2,
       testerAccessDisabled: 1,
-      testersInvited: 5,
     });
+    expect(dashboard.summary).not.toHaveProperty("testersInvited");
+    expect(dashboard.notes).toContain(
+      "Allowlisted tester count comes from private-tester configuration; sent invitation delivery must be verified separately."
+    );
     expect(dashboard.filters.failedSignInOrAccessSessions).toEqual([
       expect.objectContaining({
         accessDisabled: true,

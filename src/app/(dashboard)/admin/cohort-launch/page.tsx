@@ -84,7 +84,7 @@ export default async function AdminCohortLaunchPage() {
   });
 
   const summaryCards = [
-    ["Testers invited", commandCenter.summary.testersInvited],
+    ["Allowlisted testers", commandCenter.summary.allowlistedTesters],
     ["Signed-in testers", commandCenter.summary.signedInTesters],
     ["Completed symptom checks", commandCenter.summary.completedSymptomChecks],
     ["Report-linked cases", commandCenter.summary.reportsOpened],

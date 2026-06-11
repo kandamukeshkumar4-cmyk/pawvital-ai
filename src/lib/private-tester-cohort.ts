@@ -53,7 +53,7 @@ export interface PrivateTesterCohortCommandCenter {
     signInFailures: number;
     signedInTesters: number;
     testerAccessDisabled: number;
-    testersInvited: number;
+    allowlistedTesters: number;
   };
   triage: Record<PrivateTesterTriageSeverity, PrivateTesterTriageCase[]>;
 }
@@ -207,6 +207,7 @@ function buildNotes(
   const notes = [
     "Sign-in failures and deletion-request counts remain zero until a dedicated auth/admin incident log is wired into production storage.",
     "Reports opened is derived from report-linked case rows in the founder review ledger, not browser-level analytics.",
+    "Allowlisted tester count comes from private-tester configuration; sent invitation delivery must be verified separately.",
     "The current command center is cohort-aware only when private-tester cases are present in the stored feedback ledger.",
   ];
 
@@ -298,7 +299,7 @@ export function buildPrivateTesterCohortCommandCenter(input: {
       signInFailures: 0,
       signedInTesters: input.privateTesterDashboard.testers.length,
       testerAccessDisabled: input.privateTesterDashboard.summary.authAccessDisabled,
-      testersInvited: input.privateTesterDashboard.config.allowedEmailCount,
+      allowlistedTesters: input.privateTesterDashboard.config.allowedEmailCount,
     },
     triage: {
       P0: triageEntries.filter((entry) => entry.severity === "P0"),
