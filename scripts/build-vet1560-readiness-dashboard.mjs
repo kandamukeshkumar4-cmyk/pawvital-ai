@@ -178,7 +178,7 @@ function buildDashboard() {
           : claimReview.blockedReason,
       nextAction:
         claimReview.verdict === "pass"
-          ? "Rerun npm run product:claim-language-review after any owner-visible copy change."
+          ? "Rerun node scripts/build-product-claim-language-review.mjs --write after any owner-visible copy change."
           : "Resolve blocked claim-language findings before expanding product copy.",
     },
     {

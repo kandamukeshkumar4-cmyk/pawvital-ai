@@ -1,7 +1,7 @@
 {
   "ticket": "VET-1560",
   "mode": "review-only-completion-audit",
-  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "generatedAt": "2026-06-06T23:45:11.000Z",
   "objective": "Apply FareedKhan-dev/train-llm-from-scratch and syndicalt/tugboat techniques to PawVital, create project-manager tickets, improve NIM/AI model path, build toward a Whoop-for-Dogs app, and update local.config for next agents.",
   "overallStatus": "incomplete",
   "summary": "58 blocker(s) remain before the full objective can be marked complete.",
@@ -9,7 +9,7 @@
     {
       "path": "plans/VET-1560-readiness-dashboard.json",
       "exists": true,
-      "sha256": "00f13cdcda4c1fb2520bc1139af8fec5e183c88c3c343151dfca95fac3d1ce89"
+      "sha256": "942e14af909dc72555c3c20fb0b9bbb324f220acb21c30502054dece3a1d79c0"
     },
     {
       "path": "plans/VET-1560-project-manager-tickets.json",
@@ -104,7 +104,7 @@
     {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "543f4e0341c0e8e70656d8c172d5b7602515606a7281c24303b0c29ee95ef06d"
+      "sha256": "1d2282cc70a2c0d1a454aaa2a5b6bde594b446836d795ea86ebc740577916694"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
@@ -114,7 +114,7 @@
     {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "b4aec836949a75079d75efe7cfcc6bc8fcfdac88663ce37f0a5cb613886c009c"
+      "sha256": "a585f10910e8806090629cd9a670aeed3f7bffe2729406d606a3e37420948d7b"
     },
     {
       "path": "plans/VET-1564-production-smoke-runbook.json",
@@ -144,7 +144,7 @@
     {
       "path": "src/app/(dashboard)/analytics/page.tsx",
       "exists": true,
-      "sha256": "a81c7fad6dc4afe3d99a2cbfa0c35d281ce147360d6c9c42c5faf7721947d5d4"
+      "sha256": "7bd431842cdeebfa965b32bb0b832f7724e362cbaae79ef8d9d650bf620f8123"
     },
     {
       "path": "plans/VET-1565-tugboat-governance-plan.json",
@@ -283,7 +283,7 @@
       "status": "partial",
       "evidence": [
         "4 implementation tickets defined; production smoke ready=true, live migration applied=false; smoke runbook has 5 evidence steps.",
-        "397 strings reviewed with no blocked findings.",
+        "497 strings reviewed with no blocked findings.",
         "4 implementation tickets defined.",
         "Production readiness packet: readyForProductionSmoke=true, liveMigrationApplied=false, authenticatedProductionSmokeComplete=false.",
         "Production smoke runbook: 3 migration steps and 5 smoke evidence steps defined.",
@@ -299,7 +299,7 @@
       "status": "proved",
       "evidence": [
         "Claim-language verdict: pass.",
-        "397 strings reviewed."
+        "497 strings reviewed."
       ],
       "blockers": []
     },

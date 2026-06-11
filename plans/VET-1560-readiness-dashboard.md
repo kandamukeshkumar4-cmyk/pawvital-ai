@@ -1,6 +1,6 @@
 # VET-1560 Readiness Dashboard
 
-Generated: 2026-05-31T00:00:00.000Z
+Generated: 2026-06-06T23:45:11.000Z
 Mode: review-only-dashboard
 Overall status: BLOCKED
 
@@ -12,7 +12,7 @@ Overall status: BLOCKED
 |---|---|---|---|
 | Project-manager sync | READY | 5 tickets queued in the local project-manager fallback; queue validation=passed; 5/5 verifier artifacts present; 3/3 dependency edges ordered; Azure live sync remains blocked by: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PAT. | Use plans/VET-1560-project-manager-local-sync.json as the current execution queue; add Azure credentials only in a separate live-sync pass. |
 | Model/NIM promotion | BLOCKED | 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6. | validation=0, holdout=0, threshold=4.2 |
-| Claim-language review | READY | 397 strings reviewed with no blocked findings. | Rerun npm run product:claim-language-review after any owner-visible copy change. |
+| Claim-language review | READY | 497 strings reviewed with no blocked findings. | Rerun node scripts/build-product-claim-language-review.mjs --write after any owner-visible copy change. |
 | Whoop-style product contract | READY | 4 implementation tickets defined; production smoke ready=true, live migration applied=false; smoke runbook has 5 evidence steps. | Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json. |
 | Instruction governance | READY | VET-1565 defines a proposal-only Tugboat adoption plan with 4 phases and 6 PawVital boundaries. | Use VET-1565 for any Tugboat-style instruction observability work; do not install, run llmff, or apply instruction patches without a separate approved trace bundle and reviewer decision. |
 
@@ -50,9 +50,9 @@ Overall status: BLOCKED
 - `plans/VET-1563-protected-clinical-diff-proof.json` (fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8)
 - `plans/VET-1563-extraction-runtime-promotion-ticket.json` (1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f)
 - `plans/VET-1563-extraction-owner-approval-request.json` (5af6d83182802c37a365c78de62ce67f99df3d54aa0317a7dd90528efe8b7243)
-- `plans/VET-1564C-claim-language-review.json` (543f4e0341c0e8e70656d8c172d5b7602515606a7281c24303b0c29ee95ef06d)
+- `plans/VET-1564C-claim-language-review.json` (1d2282cc70a2c0d1a454aaa2a5b6bde594b446836d795ea86ebc740577916694)
 - `plans/VET-1564-longitudinal-readiness-contract.json` (c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96)
-- `plans/VET-1564-production-readiness.json` (b4aec836949a75079d75efe7cfcc6bc8fcfdac88663ce37f0a5cb613886c009c)
+- `plans/VET-1564-production-readiness.json` (a585f10910e8806090629cd9a670aeed3f7bffe2729406d606a3e37420948d7b)
 - `plans/VET-1564-production-smoke-runbook.json` (1643880a8d48c9ef1c68b95d744da274a8b0b2c65b06d88470b6da667e2d56d7)
 - `plans/VET-1565-tugboat-governance-plan.json` (5df3fd43414c3b2da9e8ba51304aa44edb86f51ab00826d12a26a940c058f151)
 - `plans/VET-1560-regeneration-summary.json` (regeneration summary is finalized after the dashboard; hashing it here would make regeneration non-idempotent)

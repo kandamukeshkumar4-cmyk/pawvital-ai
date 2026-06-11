@@ -91,6 +91,8 @@ function buildReadiness() {
     selectedDogHistoryRead: ownerWorkflowTest.includes("2 saved readiness records"),
     readinessSavePost: ownerWorkflowTest.includes("/api/product-intelligence/snapshots") &&
       ownerWorkflowTest.includes("method: \"POST\""),
+    recoverySavePost: ownerWorkflowTest.includes("report_source_id") &&
+      ownerWorkflowTest.includes("check-follow-up"),
     credentialedRequest: ownerWorkflowTest.includes("credentials: \"include\""),
   };
   const missingRouteGuards = Object.entries(routeGuards)
