@@ -4,7 +4,7 @@ Readout status: PARTIAL.
 
 Public beta decision: HOLD.
 
-Evidence cutoff: 2026-06-11T14:49:33Z.
+Evidence cutoff: 2026-06-11T18:21:19Z.
 
 This is a point-in-time readout from current issue evidence, existing repo templates, and read-only production probes. It is not a completed 48-hour Cohort 1 report because the repo does not contain a completed tester registry, invite-send proof, full cohort counts, or an urgency distribution.
 
@@ -34,6 +34,7 @@ This is a useful current log sample, but it is not a full Cohort 1 monitoring wi
 | Metric | Status | Current evidence |
 |---|---|---|
 | Tester count | Unknown | No completed Cohort 1 registry or admin export found. |
+| Allowlist vs invite semantics | GO_REVIEW_ONLY in draft PR #598; invite-send proof HOLD | PR #598 changes the command-center count to `Allowlisted testers` and separates manual invitation-send proof in the report template. It does not prove invitations were sent. |
 | Completed symptom checks | Partial, known proof count 1 | VET-1570C saved-tester replay reached symptom-check completion. |
 | Final reports | Partial, known proof count 1 | VET-1570C saved-tester replay reached final report and History. |
 | Feedback submissions | Partial, known proof count 1 | History feedback submission for symptom check `5aeff251-4b54-4e45-99b6-e99aa1550ce4` returned HTTP 200 with `ok: true`. |
@@ -58,7 +59,7 @@ Passed for a saved-tester replay:
 Limits:
 
 - This is one saved-tester replay, not a full Cohort 1 dataset.
-- Invite-send proof is missing.
+- Invite-send proof is missing. PR #598 fixes the command-center allowlist-vs-invite label boundary, but it is not invitation-send proof.
 - Current-deployment positive-admin proof is unavailable from this machine after later deployments.
 
 ## Backend Readout Proof
@@ -80,6 +81,7 @@ Backend proof limits:
 - PR #594 is open/blocked, so this is evidence-in-PR, not landed master truth.
 - PR #595 is open/blocked, so recovery checkpoint UI remains review-only evidence, not landed production truth.
 - PR #591 is open/blocked, so the public-beta HOLD packet is evidence-in-PR, not landed master truth.
+- PR #598 is draft/open/blocked, so command-center invite-semantics proof is evidence-in-PR, not landed master truth, and it does not prove invitations were sent.
 
 ## PR Gate And Merge Readiness
 
@@ -93,18 +95,21 @@ PR #592 merge readiness is HOLD.
 
 PR #591 now records the recovered PR #595 formal TecjLead evidence at `d676b1d98de4757ae96165419b31900a8e0a83ce`, but PR #591 also remains open/blocked with no checks attached.
 
+PR #591 now also records PR #598 command-center invite semantics evidence at `84d0e3dcf8b9a764b51318e97d06113cc7be661d`. This keeps public beta HOLD and does not complete the Cohort 1 invite-send proof lane.
+
 ## Product-Quality Triage From Real Evidence
 
 - #585 / VET-1570C: symptom-check stall, closed and production-verified.
 - #587 / VET-1571C: product-intelligence history persistence failure, closed and production-verified; PR #594 refreshed current-deployment daily-readiness write proof.
 - PR #595 / VET-1578C: recovery checkpoint owner-visible UI, `GO_REVIEW_ONLY`; authenticated production recovery write/smoke still HOLD.
+- PR #598 / VET-1580C: command-center invite-proof semantics, `GO_REVIEW_ONLY` in draft PR; invitation-send proof still HOLD.
 - #582 / VET-1569C: REST/Auth versus `DATABASE_URL` project split, open operational debt.
 - #588 / VET-1572C: model-promotion evidence chain, open release blocker; do not promote model flags.
 
 ## Required To Complete The Cohort 1 Readout
 
 - Export or record intended private-tester invite count and active tester count.
-- Record invite-send proof for the intended private-tester cohort.
+- Record invite-send proof for the intended private-tester cohort; do not count allowlisted testers as invitations sent.
 - Aggregate completed symptom checks, final reports, and feedback submissions across all invited testers.
 - Export urgency distribution for completed Cohort 1 checks.
 - Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.
@@ -120,6 +125,7 @@ PR #591 now records the recovered PR #595 formal TecjLead evidence at `d676b1d98
 - Owner-visible UX proof: PARTIAL_PASS
 - Backend readout proof: PARTIAL
 - Current production error/500 log sample: PASS, zero JSON rows in the last hour
+- Cohort command-center invite-proof semantics: GO_REVIEW_ONLY in draft PR #598; invitation-send proof HOLD
 - Product-intelligence backend proof: GO current-production daily-readiness only, in open PR #594
 - Product-intelligence recovery checkpoint UI: GO_REVIEW_ONLY in open PR #595; production write/smoke HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching

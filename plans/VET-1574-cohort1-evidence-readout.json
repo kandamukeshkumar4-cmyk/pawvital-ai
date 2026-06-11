@@ -1,11 +1,11 @@
 {
   "ticket": "VET-1574C",
   "mode": "cohort1-evidence-readout",
-  "generatedAt": "2026-06-11T14:49:33.000Z",
-  "evidenceCutoff": "2026-06-11T14:49:33.000Z",
+  "generatedAt": "2026-06-11T18:21:19.000Z",
+  "evidenceCutoff": "2026-06-11T18:21:19.000Z",
   "readoutStatus": "PARTIAL",
   "publicBetaDecision": "HOLD",
-  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh found zero last-hour production error JSON rows and zero last-hour HTTP 500 JSON rows, and PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence now reflected in PR #591. It still does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
+  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh found zero last-hour production error JSON rows and zero last-hour HTTP 500 JSON rows, PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence now reflected in PR #591, and PR #598 corrects the owner-visible command-center allowlist-vs-invite proof semantics. It still does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
   "scope": {
     "allowed": [
       "point-in-time Cohort 1 evidence readout",
@@ -24,7 +24,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-11T14:49:33.000Z",
+    "performedAt": "2026-06-11T18:21:19.000Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
@@ -64,7 +64,15 @@
     },
     "inviteSendProof": {
       "status": "missing",
-      "note": "The repo contains a private-tester invite document and registry template, but no completed invite-send evidence."
+      "note": "The repo contains a private-tester invite document and registry template, but no completed invite-send evidence. PR #598 corrects the command-center copy/model so allowlisted testers are not mislabeled as sent invitations."
+    },
+    "allowlistVsInviteSemantics": {
+      "status": "GO_REVIEW_ONLY_IN_DRAFT_PR",
+      "source": "PR #598 / VET-1580C",
+      "commit": "4a9e88d368070ffc8690344eb11b38ef5c857d61",
+      "prState": "DRAFT_OPEN_BLOCKED_NOT_MERGED",
+      "decision": "INVITE_SEND_PROOF_HOLD",
+      "note": "The command-center semantics fix is useful owner-copy evidence, but it does not send invitations or prove invitations were delivered."
     },
     "testerAccess": {
       "status": "partial",
@@ -81,7 +89,8 @@
       "invited": null,
       "active": null,
       "source": "No completed cohort registry/admin export found.",
-      "requiredEvidence": "Cohort registry or admin export from /admin/cohort-launch."
+      "requiredEvidence": "Cohort registry or admin export from /admin/cohort-launch.",
+      "semanticsNote": "After PR #598, allowlist count must remain separate from sent-invitation proof."
     },
     "completedSymptomChecks": {
       "status": "partial",
@@ -184,7 +193,7 @@
     "limitations": [
       "This is one saved-tester replay, not a full Cohort 1 outcome readout.",
       "Fresh current-deployment positive-admin proof is unavailable from this machine.",
-      "Invite-send proof is missing."
+      "Invite-send proof is missing; PR #598 only fixes the allowlist-vs-invite label boundary."
     ]
   },
   "backendReadoutProof": {
@@ -207,7 +216,7 @@
     ]
   },
   "currentMonitoringRefresh": {
-    "performedAt": "2026-06-11T14:49:33.000Z",
+    "performedAt": "2026-06-11T18:21:19.000Z",
     "readOnly": true,
     "commands": [
       "vercel logs --project pawvital-ai --environment production --since 1h --level error --json --no-branch --no-follow",
@@ -225,24 +234,33 @@
   },
   "prGateRecovery": {
     "decision": "HOLD",
-    "source": "PR #596 / issue #339 comment 4640668934, PR #591 refresh comments 4640704962 and 4681786168",
+    "source": "PR #596 / issue #339 comment 4640668934, PR #591 refresh comments 4640704962, 4681786168, and 4683642339; PR #598 status",
     "affectedReadoutPr": "PR #592",
     "affectedReadoutBranch": "codex/vet-1574c-cohort1-evidence-readout",
     "affectedReadoutCommitBeforeRefresh": "bb2b3a47b6cbc86b237b0d4a1ecd90937279aa05",
     "affectedReadoutMergeStateStatus": "BLOCKED",
     "affectedReadoutStatusCheckRollupCount": 0,
     "affectedReadoutWorkflowRunCount": 0,
+    "relatedBlockedPrs": [
+      "PR #591",
+      "PR #592",
+      "PR #594",
+      "PR #595",
+      "PR #596",
+      "PR #598"
+    ],
     "manualDispatchError": "HTTP 422: Actions has been disabled for this user",
     "effectOnReadout": "The artifact can be reviewed as evidence, but PR #592 cannot merge until GitHub Actions scheduling/check attachment is restored and required checks pass."
   },
   "publicBetaPacketContext": {
-    "source": "PR #591 / issue #339 comment 4681786168",
-    "commit": "d676b1d98de4757ae96165419b31900a8e0a83ce",
+    "source": "PR #591 / issue #339 comment 4683642339",
+    "commit": "84d0e3dcf8b9a764b51318e97d06113cc7be661d",
     "decision": "HOLD",
     "recoveryCheckpointUiDecision": "GO_REVIEW_ONLY_PRODUCTION_WRITE_HOLD",
+    "cohortInviteProofSemanticsDecision": "GO_REVIEW_ONLY_IN_DRAFT_PR_INVITE_SEND_HOLD",
     "mergeStateStatus": "BLOCKED",
     "statusCheckRollupCount": 0,
-    "effectOnReadout": "Public-beta packet now reflects PR #595 formal TecjLead recovery evidence, but it does not complete Cohort 1 counts, production recovery smoke, model promotion, or PR merge readiness."
+    "effectOnReadout": "Public-beta packet now reflects PR #595 formal TecjLead recovery evidence and PR #598 invite-semantics evidence, but it does not complete invite-send proof, Cohort 1 counts, production recovery smoke, model promotion, or PR merge readiness."
   },
   "productQualityTriage": {
     "policy": "Only triage defects proven by Cohort 1 or saved-tester production evidence.",
@@ -264,6 +282,12 @@
         "category": "operational data-source drift",
         "status": "open_watchpoint",
         "evidence": "REST/Auth and DATABASE_URL project split remains open operational debt."
+      },
+      {
+        "issue": "PR #598 / VET-1580C",
+        "category": "owner-copy invite proof semantics",
+        "status": "go_review_only_in_draft_pr",
+        "evidence": "Command center and Cohort 1 report template now separate allowlisted testers from invitation-send proof; this does not prove invitations were sent."
       }
     ]
   },
@@ -308,7 +332,13 @@
       "type": "pull_request",
       "id": "PR #591",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/591",
-      "summary": "VET-1573C public-beta HOLD packet is refreshed at d676b1d98de4757ae96165419b31900a8e0a83ce with PR #595 TecjLead recovery evidence, but PR #591 remains open/blocked."
+      "summary": "VET-1573C public-beta HOLD packet is refreshed at 84d0e3dcf8b9a764b51318e97d06113cc7be661d with PR #595 TecjLead recovery evidence and PR #598 invite semantics evidence, but PR #591 remains open/blocked."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4683642339",
+      "summary": "VET-1573C public-beta HOLD packet refresh records PR #598 command-center invite semantics GO_REVIEW_ONLY while keeping invitation-send proof, Cohort 1 launch, public beta, and model/NIM promotion HOLD."
     },
     {
       "type": "issue",
@@ -321,6 +351,18 @@
       "id": "issue #339",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4640668934",
       "summary": "PR #596 recovery attempt did not restore checks: PRs #591-#596 have no attached checks, the recovery branch has no workflow runs, manual dispatch fails with Actions disabled for this user, and public beta remains HOLD."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #598",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/598",
+      "summary": "VET-1580C draft branch clarifies Cohort 1 command-center invite proof semantics at 4a9e88d368070ffc8690344eb11b38ef5c857d61: allowlist count is labeled `Allowlisted testers`, report template separates manual invitation-send proof, and TecjLead returned GO_REVIEW_ONLY; PR #598 is draft/open/blocked with no checks attached and does not prove invitations were sent."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4683530128",
+      "summary": "Tracker update for PR #598 records command-center semantics GO_REVIEW_ONLY, full lint/build timeout gaps, and public beta/model promotion HOLD."
     },
     {
       "type": "issue",
@@ -359,7 +401,7 @@
   ],
   "knownBlockersToCompletedReadout": [
     "Export or record intended private-tester invite count and active tester count.",
-    "Record invite-send proof for the intended private-tester cohort.",
+    "Record invite-send proof for the intended private-tester cohort; do not count allowlisted testers as invitations sent.",
     "Aggregate completed symptom checks, final reports, and feedback submissions across all invited testers.",
     "Export urgency distribution for completed Cohort 1 checks.",
     "Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.",
@@ -374,6 +416,7 @@
     "ownerVisibleUxProof": "PARTIAL_PASS",
     "backendReadoutProof": "PARTIAL",
     "currentProductionErrorLogSample": "PASS_ZERO_ERROR_AND_500_JSON_ROWS_LAST_HOUR",
+    "cohortInviteProofSemantics": "GO_REVIEW_ONLY_IN_DRAFT_PR_INVITE_SEND_HOLD",
     "productIntelligenceBackendProof": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY_IN_OPEN_PR",
     "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_WRITE_HOLD",
     "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
