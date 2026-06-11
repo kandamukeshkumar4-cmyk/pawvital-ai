@@ -4,7 +4,7 @@ Readout status: PARTIAL.
 
 Public beta decision: HOLD.
 
-Evidence cutoff: 2026-06-06T23:04:02Z.
+Evidence cutoff: 2026-06-11T14:49:33Z.
 
 This is a point-in-time readout from current issue evidence, existing repo templates, and read-only production probes. It is not a completed 48-hour Cohort 1 report because the repo does not contain a completed tester registry, invite-send proof, full cohort counts, or an urgency distribution.
 
@@ -15,8 +15,10 @@ Read-only probe:
 - `https://pawvital-ai.vercel.app/`: HTTP 200
 - `/admin/cohort-launch`: HTTP 307 to `/login?redirect=%2Fadmin%2Fcohort-launch&reason=session_expired`
 - `/api/admin/private-tester`: HTTP 403 unauthenticated
+- `/api/product-intelligence/snapshots?pet_id=prod-proof-readonly`: HTTP 401 unauthenticated
+- `/api/notifications`: HTTP 401 unauthenticated
 
-Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`. This proves the public home is reachable and unauthenticated admin denial still holds. It does not prove current positive-admin access.
+Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`. This proves the public home is reachable and unauthenticated admin/product/notification denial still holds. It does not prove current positive-admin access, authenticated product-intelligence persistence, or owner notification flow.
 
 ## Current Production Monitoring Refresh
 
@@ -67,6 +69,7 @@ Partial backend proof exists:
 - VET-1570C App Insights recorded `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, p95 secondOpinionMs=8075.
 - VET-1571C product-intelligence persistence recovery passed owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and post-smoke 500 log query.
 - VET-1576C / PR #594 adds current-deployment daily-readiness/product-intelligence proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.
+- VET-1578C / PR #595 records recovery checkpoint UI `GO_REVIEW_ONLY` at `a9ad1ba953974f8c463812d24304b8ed74a3d4dd`, with refreshed claim-language/readiness evidence and formal TecjLead no-blocker review.
 - Current last-hour Vercel production log sample returned zero error JSON rows and zero HTTP 500 JSON rows.
 
 Backend proof limits:
@@ -75,6 +78,8 @@ Backend proof limits:
 - No full Cohort 1 telemetry window exists in repo evidence.
 - Backend telemetry does not replace owner-visible UX proof.
 - PR #594 is open/blocked, so this is evidence-in-PR, not landed master truth.
+- PR #595 is open/blocked, so recovery checkpoint UI remains review-only evidence, not landed production truth.
+- PR #591 is open/blocked, so the public-beta HOLD packet is evidence-in-PR, not landed master truth.
 
 ## PR Gate And Merge Readiness
 
@@ -86,10 +91,13 @@ PR #592 merge readiness is HOLD.
 - PR #596 attempted workflow-only recovery for the required `Threshold Review Gate`, but issue #339 records that manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
 - This merge-gate blocker does not change Cohort 1 evidence status. The readout remains PARTIAL and public beta remains HOLD.
 
+PR #591 now records the recovered PR #595 formal TecjLead evidence at `d676b1d98de4757ae96165419b31900a8e0a83ce`, but PR #591 also remains open/blocked with no checks attached.
+
 ## Product-Quality Triage From Real Evidence
 
 - #585 / VET-1570C: symptom-check stall, closed and production-verified.
 - #587 / VET-1571C: product-intelligence history persistence failure, closed and production-verified; PR #594 refreshed current-deployment daily-readiness write proof.
+- PR #595 / VET-1578C: recovery checkpoint owner-visible UI, `GO_REVIEW_ONLY`; authenticated production recovery write/smoke still HOLD.
 - #582 / VET-1569C: REST/Auth versus `DATABASE_URL` project split, open operational debt.
 - #588 / VET-1572C: model-promotion evidence chain, open release blocker; do not promote model flags.
 
@@ -113,5 +121,6 @@ PR #592 merge readiness is HOLD.
 - Backend readout proof: PARTIAL
 - Current production error/500 log sample: PASS, zero JSON rows in the last hour
 - Product-intelligence backend proof: GO current-production daily-readiness only, in open PR #594
+- Product-intelligence recovery checkpoint UI: GO_REVIEW_ONLY in open PR #595; production write/smoke HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
 - Public beta: HOLD
