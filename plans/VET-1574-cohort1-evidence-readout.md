@@ -4,7 +4,7 @@ Readout status: PARTIAL.
 
 Public beta decision: HOLD.
 
-Evidence cutoff: 2026-06-11T18:21:19Z.
+Evidence cutoff: 2026-06-11T18:53:17.034Z.
 
 This is a point-in-time readout from current issue evidence, existing repo templates, and read-only production probes. It is not a completed 48-hour Cohort 1 report because the repo does not contain a completed tester registry, invite-send proof, full cohort counts, or an urgency distribution.
 
@@ -29,6 +29,15 @@ Read-only Vercel production monitoring was refreshed with explicit project scope
 
 This is a useful current log sample, but it is not a full Cohort 1 monitoring window and does not provide a fresh App Insights latency readout for `durationMs`, `extractionMs`, or `secondOpinionMs`.
 
+Current App Insights query refresh:
+
+- Resource: `pawvital-appinsights` in `pawvital-rg`, workspace `managed-pawvital-appinsights-ws`
+- 24h route `customEvents` for `pawvital.route.request` / `pawvital.route.error`: event count 0, `durationMs` count 0, `extractionMs` count 0, `secondOpinionMs` count 0
+- 7d route `customEvents`: event count 0, `durationMs` count 0, `extractionMs` count 0, `secondOpinionMs` count 0
+- 30d tables: `customEvents` count 0, `requests` count 0, `traces` count 0, `customMetrics` count 0
+
+This is a blocker for the current Cohort 1 latency/error readout, not a pass. The current App Insights workspace query returned no fresh queryable cohort-window evidence for `durationMs`, `extractionMs`, or `secondOpinionMs`.
+
 ## Core Metrics
 
 | Metric | Status | Current evidence |
@@ -41,7 +50,7 @@ This is a useful current log sample, but it is not a full Cohort 1 monitoring wi
 | Failed/stalled flows | Partial | #585 timeout fixed/verified; #587 product-intelligence history fixed/verified; PR #594 adds current-deployment daily-readiness write proof but is open/blocked; #582 operational debt open; #588 model evidence open. |
 | Urgency distribution | Unknown | No full Cohort 1 result dataset is present. |
 | Owner-visible leakage scan | Partial pass | VET-1570C saved-tester replay was leakage-clean. No full-cohort leakage scan exists. |
-| App Insights latency | Partial | `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, p95 secondOpinionMs=8075. |
+| App Insights latency | Partial, current query HOLD | Historical VET-1570C evidence recorded `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, p95 secondOpinionMs=8075. The 2026-06-11 read-only App Insights refresh returned zero queryable route/custom event, request, trace, or custom metric rows in 24h/7d/30d windows, so no fresh cohort-window latency readout is available. |
 | Scheduler/shadow readout | HOLD | Recorded `report_count=0`, `shadow_comparison_count=0`; backend proof remains empty. |
 
 ## Owner-Visible UX Proof
@@ -72,9 +81,11 @@ Partial backend proof exists:
 - VET-1576C / PR #594 adds current-deployment daily-readiness/product-intelligence proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.
 - VET-1578C / PR #595 records recovery checkpoint UI `GO_REVIEW_ONLY` at `a9ad1ba953974f8c463812d24304b8ed74a3d4dd`, with refreshed claim-language/readiness evidence and formal TecjLead no-blocker review.
 - Current last-hour Vercel production log sample returned zero error JSON rows and zero HTTP 500 JSON rows.
+- 2026-06-11 read-only App Insights query refresh returned zero queryable route/custom event, request, trace, or custom metric rows in 24h/7d/30d windows, so no fresh `durationMs`, `extractionMs`, or `secondOpinionMs` cohort-window latency readout is available from App Insights today.
 
 Backend proof limits:
 
+- Current App Insights query refresh returned zero rows across `customEvents`, `requests`, `traces`, and `customMetrics`, so the required Cohort 1 latency/error window remains missing rather than improved.
 - Scheduler/shadow readout is still empty where recorded.
 - No full Cohort 1 telemetry window exists in repo evidence.
 - Backend telemetry does not replace owner-visible UX proof.
@@ -114,6 +125,7 @@ PR #591 now also records PR #598 command-center invite semantics evidence at `84
 - Export urgency distribution for completed Cohort 1 checks.
 - Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.
 - Capture full Cohort 1 App Insights latency/error window for admin API, feedback API, symptom-chat, durationMs, extractionMs, and secondOpinionMs.
+- Resolve App Insights ingestion/queryability or run a fresh authenticated cohort-window symptom-check telemetry capture so `durationMs`, `extractionMs`, and `secondOpinionMs` are queryable from the production App Insights resource.
 - Record scheduler/shadow readout status from the formal runner where relevant.
 - Re-prove current-deployment authorized-admin command-center/API access or explicitly keep it historical only.
 - Restore GitHub Actions scheduling/check attachment so PR #592 receives the required `Threshold Review Gate` and other required contexts.
@@ -125,6 +137,7 @@ PR #591 now also records PR #598 command-center invite semantics evidence at `84
 - Owner-visible UX proof: PARTIAL_PASS
 - Backend readout proof: PARTIAL
 - Current production error/500 log sample: PASS, zero JSON rows in the last hour
+- Current App Insights query refresh: HOLD, zero queryable telemetry rows in checked windows
 - Cohort command-center invite-proof semantics: GO_REVIEW_ONLY in draft PR #598; invitation-send proof HOLD
 - Product-intelligence backend proof: GO current-production daily-readiness only, in open PR #594
 - Product-intelligence recovery checkpoint UI: GO_REVIEW_ONLY in open PR #595; production write/smoke HOLD

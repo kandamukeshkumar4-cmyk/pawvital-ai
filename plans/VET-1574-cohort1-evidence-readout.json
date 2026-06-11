@@ -2,7 +2,7 @@
   "ticket": "VET-1574C",
   "mode": "cohort1-evidence-readout",
   "generatedAt": "2026-06-11T18:21:19.000Z",
-  "evidenceCutoff": "2026-06-11T18:21:19.000Z",
+  "evidenceCutoff": "2026-06-11T18:53:17.034Z",
   "readoutStatus": "PARTIAL",
   "publicBetaDecision": "HOLD",
   "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh found zero last-hour production error JSON rows and zero last-hour HTTP 500 JSON rows, PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence now reflected in PR #591, and PR #598 corrects the owner-visible command-center allowlist-vs-invite proof semantics. It still does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
@@ -170,6 +170,47 @@
       "secondOpinionMs": {
         "p95": 8075
       },
+      "currentReadOnlyQuery": {
+        "performedAt": "2026-06-11T18:53:17.034Z",
+        "resource": {
+          "app": "pawvital-appinsights",
+          "resourceGroup": "pawvital-rg",
+          "applicationId": "pawvital-appinsights",
+          "workspace": "managed-pawvital-appinsights-ws"
+        },
+        "windows": {
+          "routeEvents24h": {
+            "eventCount": 0,
+            "durationCount": 0,
+            "extractionCount": 0,
+            "secondOpinionCount": 0
+          },
+          "routeEvents7d": {
+            "eventCount": 0,
+            "durationCount": 0,
+            "extractionCount": 0,
+            "secondOpinionCount": 0
+          },
+          "customEvents30d": {
+            "eventCount": 0
+          },
+          "requests30d": {
+            "requestCount": 0
+          },
+          "traces30d": {
+            "traceCount": 0
+          },
+          "customMetrics30d": {
+            "metricCount": 0
+          }
+        },
+        "commands": [
+          "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(24h) | where name in ('pawvital.route.request','pawvital.route.error') | summarize ...\"",
+          "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(7d) | summarize ... by name\"",
+          "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents/requests/traces/customMetrics | where timestamp > ago(30d) | summarize ...\""
+        ],
+        "interpretation": "Current App Insights workspace queries returned no route/custom event, request, trace, or custom metric rows in the checked windows. This does not disprove older VET-1570C evidence, but it means there is no fresh queryable App Insights cohort-window latency evidence for durationMs, extractionMs, or secondOpinionMs today."
+      },
       "requiredEvidence": "Cohort-window App Insights readout across all invited Cohort 1 testers."
     },
     "schedulerShadowReadout": {
@@ -204,9 +245,11 @@
       "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed.",
       "VET-1576C PR #594 records current-deployment daily-readiness/product-intelligence write proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb: row 61c44ae9-5b30-482d-8207-efbaf6598140, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.",
       "PR #595 records owner-visible recovery checkpoint UI GO_REVIEW_ONLY at a9ad1ba953974f8c463812d24304b8ed74a3d4dd with refreshed claim-language/readiness evidence and formal TecjLead no-blocker review, but authenticated production recovery write/smoke remains HOLD.",
-      "2026-06-11T14:49Z read-only Vercel production monitoring refresh with explicit project scope returned ERROR_JSON_ROWS=0 and STATUS_500_JSON_ROWS=0 for the last hour."
+      "2026-06-11T14:49Z read-only Vercel production monitoring refresh with explicit project scope returned ERROR_JSON_ROWS=0 and STATUS_500_JSON_ROWS=0 for the last hour.",
+      "2026-06-11 read-only App Insights query refresh found zero queryable route/custom event, request, trace, or custom metric rows in 24h/7d/30d windows, so no fresh durationMs/extractionMs/secondOpinionMs cohort-window latency readout is available from App Insights today."
     ],
     "limitations": [
+      "Current App Insights query refresh returned zero rows across customEvents, requests, traces, and customMetrics, so the required Cohort 1 latency/error window remains missing rather than improved.",
       "Scheduler/shadow readout remains empty.",
       "No full Cohort 1 telemetry window or admin API error summary exists in repo evidence.",
       "Backend telemetry proof is not owner-visible UX proof.",
@@ -397,6 +440,16 @@
       "type": "artifact",
       "path": "docs/private-tester-cohort-1-registry-template.csv",
       "summary": "Registry template exists with example row only; no completed tester registry is present."
+    },
+    {
+      "type": "command",
+      "id": "app-insights-query-refresh-2026-06-11",
+      "summary": "Read-only Azure App Insights queries against pawvital-appinsights returned zero rows for route customEvents over 24h/7d and zero rows for customEvents, requests, traces, and customMetrics over 30d; current App Insights cohort latency evidence remains missing.",
+      "commands": [
+        "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(24h) | where name in ('pawvital.route.request','pawvital.route.error') | summarize ...\"",
+        "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(7d) | summarize ... by name\"",
+        "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents/requests/traces/customMetrics | where timestamp > ago(30d) | summarize ...\""
+      ]
     }
   ],
   "knownBlockersToCompletedReadout": [
@@ -406,6 +459,7 @@
     "Export urgency distribution for completed Cohort 1 checks.",
     "Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.",
     "Capture full Cohort 1 App Insights latency/error window for admin API, feedback API, symptom-chat, durationMs, extractionMs, and secondOpinionMs.",
+    "Resolve App Insights ingestion/queryability or run a fresh authenticated cohort-window symptom-check telemetry capture so durationMs, extractionMs, and secondOpinionMs are queryable from the production App Insights resource.",
     "Record scheduler/shadow readout status from the formal runner where relevant.",
     "Re-prove current-deployment authorized-admin command-center/API access or explicitly classify it as historical only.",
     "Restore GitHub Actions scheduling/check attachment so PR #592 can receive the required Threshold Review Gate and other required contexts."
