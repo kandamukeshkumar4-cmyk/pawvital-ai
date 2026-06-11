@@ -1,10 +1,10 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-11T14:31:40.000Z",
-  "evidenceCutoff": "2026-06-11T14:31:40.000Z",
+  "generatedAt": "2026-06-11T18:11:13.000Z",
+  "evidenceCutoff": "2026-06-11T18:11:13.000Z",
   "decision": "HOLD",
-  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, and VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate. Public beta remains HOLD because fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
+  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate, and VET-1580C/PR #598 corrects the command-center allowlist-vs-invite proof semantics. Public beta remains HOLD because fresh current-deployment admin-positive proof, invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
   "scope": {
     "allowed": [
       "point-in-time public-beta readout",
@@ -71,6 +71,13 @@
       "status": "unknown",
       "value": null,
       "note": "No full private-tester cohort registry/readout count is present in the current repo evidence."
+    },
+    "inviteProofSemantics": {
+      "status": "GO_REVIEW_ONLY_IN_DRAFT_PR",
+      "source": "PR #598 / VET-1580C",
+      "commit": "4a9e88d368070ffc8690344eb11b38ef5c857d61",
+      "note": "The command center no longer treats private-tester allowlist count as sent-invitation proof; it labels the value as allowlisted testers and separates manual invitation-send proof in the Cohort 1 report template. This does not prove invitations were sent.",
+      "publicBetaDecision": "HOLD"
     },
     "completedSymptomChecks": {
       "status": "partial",
@@ -268,13 +275,13 @@
       "No current-deployment authorized-admin positive proof from this machine.",
       "No invite-send proof for the intended private tester cohort.",
       "No full Cohort 1 readout with tester count, urgency distribution, and stalled-flow inventory.",
-      "Launch-stack PRs #591-#596 have no attached checks, including the required Threshold Review Gate context.",
+      "Launch-stack PRs #591-#596 and draft PR #598 have no attached checks, including the required Threshold Review Gate context where applicable.",
       "Scheduler/shadow readout remains empty."
     ]
   },
   "knownBlockers": [
     "Fresh current-deployment authorized-admin positive command-center and admin API proof is missing.",
-    "Invite-send proof for the intended private-tester cohort is missing.",
+    "Invite-send proof for the intended private-tester cohort is missing; PR #598 only corrects the command-center allowlist label and report-template semantics.",
     "Full Cohort 1 tester count, completed-check count, final-report count, feedback count, stalled-flow inventory, and urgency distribution are missing.",
     "Issue #582 remains open as Supabase REST/Auth versus DATABASE_URL operational debt.",
     "Issue #588 remains open; VET-1563 model-promotion evidence chain is incomplete.",
@@ -282,7 +289,7 @@
     "Scheduler/shadow readout remains empty and must not be treated as owner-visible UX proof.",
     "Product-intelligence daily-readiness persistence is GO on the current deployment in PR #594 evidence only; PR #594 is still open/blocked and not landed on master.",
     "Recovery-checkpoint owner-visible UI is GO_REVIEW_ONLY for PR #595 at a9ad1ba953974f8c463812d24304b8ed74a3d4dd; PR #595 is still open/blocked with no checks attached, and authenticated production recovery-checkpoint write/smoke remains missing.",
-    "Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #596 has no workflow runs on its branch, and manual workflow dispatch fails with Actions disabled for this user."
+    "Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, draft PR #598 is also open/mergeable/blocked with no attached checks, PR #596 has no workflow runs on its branch, and manual workflow dispatch fails with Actions disabled for this user."
   ],
   "sourceEvidence": [
     {
@@ -340,6 +347,18 @@
       "summary": "PR #596 recovery attempt did not restore checks: PRs #591-#596 have no attached checks, the recovery branch has no workflow runs, manual dispatch fails with Actions disabled for this user, and public beta remains HOLD."
     },
     {
+      "type": "pull_request",
+      "id": "PR #598",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/598",
+      "summary": "VET-1580C draft branch clarifies Cohort 1 command-center invite proof semantics at 4a9e88d368070ffc8690344eb11b38ef5c857d61: allowlist count is labeled `Allowlisted testers`, report template separates manual invitation-send proof, focused tests/type/targeted lint passed, TecjLead verdict GO_REVIEW_ONLY, but PR #598 is draft/open/blocked with no checks attached and does not prove invitations were sent."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4683530128",
+      "summary": "Tracker update for PR #598 records command-center semantics GO_REVIEW_ONLY, full lint/build timeout gaps, and public beta/model promotion HOLD."
+    },
+    {
       "type": "issue",
       "id": "issue #339",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4634470145",
@@ -387,6 +406,7 @@
     "publicBeta": "HOLD",
     "privateCohort1AdminAuthority": "HISTORICAL_GO_CURRENT_DEPLOYMENT_UNPROVEN",
     "privateCohort1LaunchReadout": "PARTIAL_HOLD_FOR_INVITE_AND_FULL_COHORT_COUNTS",
+    "cohortInviteProofSemantics": "GO_REVIEW_ONLY_IN_DRAFT_PR_INVITE_SEND_HOLD",
     "productIntelligenceSlice": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY",
     "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_ONLY_PRODUCTION_WRITE_HOLD",
     "candidateIntakeHarness": "GO_REVIEW_ONLY",
