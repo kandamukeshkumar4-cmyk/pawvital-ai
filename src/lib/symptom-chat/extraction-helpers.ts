@@ -727,12 +727,19 @@ export function buildDeterministicQuestionFallback(
 ): string {
   const memory = ensureStructuredCaseMemory(session);
   const chiefComplaint = memory.chief_complaints[0]?.replace(/_/g, " ") || null;
+  const confirmedSummary = buildConfirmedQASummary(session, 1);
+  const latestAnswer = confirmedSummary
+    .split("\n")
+    .map((line) => line.match(/^- .+ -> (.+)$/)?.[1]?.trim())
+    .find(Boolean);
 
   let acknowledgment: string;
   if (hasPhoto && allowPhotoMention) {
     acknowledgment = `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`;
+  } else if (latestAnswer) {
+    acknowledgment = `Got it - ${latestAnswer}.`;
   } else if (chiefComplaint) {
-    acknowledgment = `I'm keeping track of what you've shared so far about ${petName}'s ${chiefComplaint}.`;
+    acknowledgment = `Thanks for telling me about ${petName}'s ${chiefComplaint}.`;
   } else {
     acknowledgment = `Thanks for sharing that about ${petName}.`;
   }

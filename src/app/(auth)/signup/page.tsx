@@ -8,13 +8,18 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
-  buildBrowserCallbackUrl,
+  buildSignupCallbackUrl,
   getAuthFeedbackMessage,
   getAuthActionErrorMessage,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
 import { replaceWithBrowser } from "@/lib/browser-navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+
+const EXPIRED_CONFIRMATION_ERRORS = new Set([
+  "otp_expired",
+  "confirm_link_expired",
+]);
 
 const benefits = [
   "7-day free trial, no credit card required",
@@ -29,9 +34,16 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [confirmationCode, setConfirmationCode] = useState("");
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const redirectTarget = resolvePostAuthRedirect(searchParams.get("redirect"));
+  const urlError = searchParams.get("error");
+  const hasExpiredLinkError =
+    urlError !== null && EXPIRED_CONFIRMATION_ERRORS.has(urlError);
+  const showResendButton = hasExpiredLinkError || Boolean(successMessage);
   const authFeedback = getAuthFeedbackMessage(
     searchParams.get("reason"),
     searchParams.get("error")
@@ -53,24 +65,39 @@ export default function SignupPage() {
         replaceWithBrowser(redirectTarget);
         return;
       }
-      const supabase = createClient();
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: name },
-          emailRedirectTo: buildBrowserCallbackUrl(window.location.origin, redirectTarget),
-        },
+      const signupResponse = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          name,
+          next: redirectTarget,
+        }),
       });
+      const signupPayload = (await signupResponse.json()) as {
+        ok?: boolean;
+        redirect?: string;
+        requiresConfirmation?: boolean;
+        message?: string;
+      };
 
-      if (authError) throw authError;
+      if (!signupResponse.ok) {
+        throw new Error(
+          signupPayload.message ||
+            "We couldn't create your account right now. Please try again."
+        );
+      }
 
-      if (data.session) {
-        replaceWithBrowser(redirectTarget);
+      if (signupPayload.requiresConfirmation) {
+        setSuccessMessage(
+          signupPayload.message ||
+            "Check your email to confirm your account and continue."
+        );
         return;
       }
 
-      setSuccessMessage("Check your email to confirm your account and continue.");
+      replaceWithBrowser(signupPayload.redirect || redirectTarget);
     } catch (err: unknown) {
       console.error("Failed to create account", err);
       const message = getAuthActionErrorMessage(
@@ -81,6 +108,112 @@ export default function SignupPage() {
       setError(message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerifyConfirmationCode = async () => {
+    const trimmedEmail = email.trim();
+    const trimmedCode = confirmationCode.trim();
+
+    if (!trimmedEmail) {
+      setError("Enter your email above to confirm your account.");
+      return;
+    }
+
+    if (!trimmedCode) {
+      setError("Enter the 6-digit confirmation code from your email.");
+      return;
+    }
+
+    setVerifyLoading(true);
+    setError("");
+
+    try {
+      if (!isSupabaseConfigured) {
+        replaceWithBrowser(redirectTarget);
+        return;
+      }
+
+      const verifyResponse = await fetch("/api/auth/verify-signup-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: trimmedEmail,
+          token: trimmedCode,
+          next: redirectTarget,
+        }),
+      });
+      const verifyPayload = (await verifyResponse.json()) as {
+        ok?: boolean;
+        redirect?: string;
+        message?: string;
+      };
+
+      if (!verifyResponse.ok) {
+        throw new Error(
+          verifyPayload.message ||
+            "That confirmation code is invalid or has expired. Please resend the email and try again."
+        );
+      }
+
+      replaceWithBrowser(verifyPayload.redirect || redirectTarget);
+    } catch (err: unknown) {
+      console.error("Failed to verify signup confirmation code", err);
+      const message = getAuthActionErrorMessage(
+        err,
+        "signup",
+        "That confirmation code is invalid or has expired. Please resend the email and try again."
+      );
+      setError(message);
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Enter your email above to resend the confirmation link.");
+      return;
+    }
+
+    setResendLoading(true);
+    setError("");
+
+    try {
+      if (!isSupabaseConfigured) {
+        setSuccessMessage(
+          "Check your email to confirm your account and continue."
+        );
+        return;
+      }
+
+      const supabase = createClient();
+      const emailRedirectTo = buildSignupCallbackUrl(
+        window.location.origin,
+        redirectTarget
+      );
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email: trimmedEmail,
+        options: { emailRedirectTo },
+      });
+
+      if (resendError) throw resendError;
+
+      setSuccessMessage(
+        "We sent another confirmation email. Enter the 6-digit code from that email below."
+      );
+    } catch (err: unknown) {
+      console.error("Failed to resend confirmation email", err);
+      const message = getAuthActionErrorMessage(
+        err,
+        "signup",
+        "We couldn't resend the confirmation email right now. Please try again."
+      );
+      setError(message);
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -177,6 +310,45 @@ export default function SignupPage() {
               <Button type="submit" loading={loading} className="w-full" size="lg">
                 Start Free Trial
               </Button>
+
+              {showResendButton && (
+                <>
+                  <p className="text-xs text-gray-500 text-center">
+                    Email links can expire if opened by security scanners.
+                    Resend the confirmation email, then enter the 6-digit code
+                    from the new email. Do not click the link.
+                  </p>
+                  <Input
+                    label="Confirmation code"
+                    value={confirmationCode}
+                    onChange={(e) => setConfirmationCode(e.target.value)}
+                    placeholder="6-digit code"
+                    icon={<Mail className="w-5 h-5" />}
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                  />
+                  <Button
+                    type="button"
+                    loading={verifyLoading}
+                    className="w-full"
+                    size="lg"
+                    onClick={() => void handleVerifyConfirmationCode()}
+                  >
+                    Confirm with code
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    loading={resendLoading}
+                    className="w-full"
+                    size="lg"
+                    onClick={() => void handleResendConfirmation()}
+                  >
+                    Resend confirmation email
+                  </Button>
+                </>
+              )}
 
               <p className="text-xs text-gray-500 text-center">
                 By signing up, you agree to our Terms of Service and Privacy Policy.

@@ -48,7 +48,7 @@ describe("security header config", () => {
     expect(headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(headers.get("X-Frame-Options")).toBe("DENY");
     expect(headers.get("Permissions-Policy")).toBe(
-      "camera=(), geolocation=(), microphone=()",
+      "camera=(), geolocation=(), microphone=(self)",
     );
     expect(headers.get("Strict-Transport-Security")).toBe(
       "max-age=63072000; includeSubDomains; preload",

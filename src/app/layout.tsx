@@ -5,6 +5,7 @@ import {
   isPrivateTesterModeEnabled,
   PRIVATE_TESTER_MODE_RUNTIME_ATTRIBUTE,
 } from "@/lib/private-tester-access";
+import AuthErrorRedirect from "@/components/auth/auth-error-redirect";
 import RecoveryRedirect from "@/components/auth/recovery-redirect";
 import "./globals.css";
 
@@ -75,6 +76,7 @@ export default function RootLayout({
         }}
       >
         <RecoveryRedirect />
+        <AuthErrorRedirect />
         {children}
         <SpeedInsights />
       </body>

@@ -16,4 +16,5 @@ VET-1362 keeps the browser hardening policy centralized in `next.config.ts` so t
 
 - `frame-ancestors 'none'` and `X-Frame-Options: DENY` both block framing/clickjacking attempts.
 - `Strict-Transport-Security` is production-only so local HTTP development stays usable while deployed environments enforce long-lived HTTPS.
-- `Referrer-Policy`, `Permissions-Policy`, and `X-Content-Type-Options` remain explicit and app-wide.
+- `Permissions-Policy` keeps camera and geolocation disabled, while allowing same-origin microphone access for the symptom-checker speech input. Cross-origin frames still cannot request microphone access.
+- `Referrer-Policy` and `X-Content-Type-Options` remain explicit and app-wide.

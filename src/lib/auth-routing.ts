@@ -23,6 +23,10 @@ export const AUTH_PAGE_PREFIXES = ["/login", "/signup", "/forgot-password"];
 export const AUTH_CALLBACK_ERROR_MESSAGES: Record<string, string> = {
   auth_callback_failed: "We couldn't complete sign-in from that link. Please try again.",
   invalid_reset_link: "That password reset link is invalid or has expired.",
+  otp_expired:
+    "That email confirmation link has expired. Please sign up again to receive a new one.",
+  confirm_link_expired:
+    "That email confirmation link has expired. Please sign up again to receive a new one.",
 };
 
 export const AUTH_REASON_MESSAGES: Record<string, string> = {
@@ -160,6 +164,16 @@ export function buildCallbackUrl(origin: string, redirectTarget: string | null |
   return url.toString();
 }
 
+export function buildSignupCallbackUrl(
+  origin: string,
+  redirectTarget: string | null | undefined
+) {
+  const url = new URL(buildCallbackUrl(origin, redirectTarget));
+  url.searchParams.set("type", "signup");
+
+  return url.toString();
+}
+
 export function buildBrowserCallbackUrl(
   origin: string,
   redirectTarget: string | null | undefined
@@ -203,6 +217,26 @@ export function buildLoginPath(
 
   if (options?.reason) {
     url.searchParams.set("reason", options.reason);
+  }
+
+  if (options?.error) {
+    url.searchParams.set("error", options.error);
+  }
+
+  return `${url.pathname}${url.search}`;
+}
+
+export function buildSignupPath(
+  redirectTarget: string | null | undefined,
+  options?: {
+    error?: string;
+  }
+) {
+  const url = new URL("/signup", INTERNAL_BASE_URL);
+  const safeTarget = sanitizeRedirectTarget(redirectTarget);
+
+  if (safeTarget) {
+    url.searchParams.set("redirect", safeTarget);
   }
 
   if (options?.error) {
