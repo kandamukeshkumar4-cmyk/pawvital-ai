@@ -5,6 +5,7 @@ import {
   buildBrowserCallbackUrl,
   buildLoginPath,
   buildRecoveryRedirectPath,
+  buildSignupPath,
   DEFAULT_AUTH_REDIRECT,
   RESET_PASSWORD_PATH,
   resolvePostAuthRedirect,
@@ -22,16 +23,15 @@ const OTP_TYPES = new Set<EmailOtpType>([
 function buildFailureRedirect(
   request: NextRequest,
   redirectTarget: string,
-  errorCode = "auth_callback_failed"
+  errorCode = "auth_callback_failed",
+  destination: "login" | "signup" = "login"
 ) {
-  return NextResponse.redirect(
-    new URL(
-      buildLoginPath(redirectTarget, {
-        error: errorCode,
-      }),
-      request.url
-  )
-  );
+  const failurePath =
+    destination === "signup"
+      ? buildSignupPath(redirectTarget, { error: errorCode })
+      : buildLoginPath(redirectTarget, { error: errorCode });
+
+  return NextResponse.redirect(new URL(failurePath, request.url));
 }
 
 function createRouteHandlerSupabaseClient(
@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
         rawFlow === "recovery" ||
         rawType === "recovery" ||
         Boolean(rawNext?.includes(RESET_PASSWORD_PATH));
+      const isSignupFlow = rawType === "signup";
       const redirectTarget = isRecoveryFlow
         ? recoveryTarget.startsWith(RESET_PASSWORD_PATH)
           ? recoveryTarget
@@ -105,7 +106,12 @@ export async function GET(request: NextRequest) {
 
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
-        return buildFailureRedirect(request, nextTarget);
+        return buildFailureRedirect(
+          request,
+          nextTarget,
+          "auth_callback_failed",
+          isSignupFlow ? "signup" : "login"
+        );
       }
       return response;
     }
@@ -129,9 +135,20 @@ export async function GET(request: NextRequest) {
       });
 
       if (error) {
-        const errorCode =
-          type === "recovery" ? "invalid_reset_link" : "auth_callback_failed";
-        return buildFailureRedirect(request, nextTarget, errorCode);
+        const isSignupFlow = type === "signup";
+        let errorCode = "auth_callback_failed";
+        if (isSignupFlow) {
+          errorCode = "confirm_link_expired";
+        } else if (type === "recovery") {
+          errorCode = "invalid_reset_link";
+        }
+
+        return buildFailureRedirect(
+          request,
+          nextTarget,
+          errorCode,
+          isSignupFlow ? "signup" : "login"
+        );
       }
 
       return response;

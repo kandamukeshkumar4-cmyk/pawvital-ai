@@ -29,7 +29,7 @@ export default function LoginPage() {
   const feedbackClasses =
     authFeedback?.tone === "error"
       ? "bg-red-50 text-red-700"
-      : "bg-blue-50 text-blue-700";
+      : "bg-honey-soft text-clay-deep";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,23 +64,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-cream p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
           <Link href="/" target="_top" prefetch={false} className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white fill-white" />
-            </div>
-            <span className="text-2xl font-bold text-gray-900">PawVital AI</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay">
+              <Heart className="h-6 w-6 fill-white text-white" />
+            </span>
+            <span className="font-display text-2xl font-semibold text-ink">PawVital</span>
           </Link>
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">Welcome back</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="mt-6 font-display text-2xl font-semibold text-ink">Welcome back</h1>
+          <p className="mt-2 text-muted-warm">
             Sign in to continue your dog&apos;s symptom checks and vet handoff
             summaries
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+        <div className="rounded-3xl border border-line bg-paper p-8 shadow-[0_24px_70px_-50px_rgba(43,33,28,0.5)]">
           <form onSubmit={handleLogin} className="space-y-5">
             {authFeedback && !error && (
               <div className={`${feedbackClasses} rounded-xl p-3 text-sm`}>
@@ -115,29 +115,29 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2">
-                <input type="checkbox" className="rounded border-gray-300" />
-                <span className="text-gray-600">Remember me</span>
+                <input type="checkbox" className="rounded border-line" />
+                <span className="text-muted-warm">Remember me</span>
               </label>
               <a
                 href={appendRedirectParam("/forgot-password", redirectTarget)}
                 target="_top"
-                className="text-blue-600 hover:text-blue-700 font-medium"
+                className="font-medium text-clay hover:text-clay-deep"
               >
                 Forgot password?
               </a>
             </div>
 
-            <Button type="submit" loading={loading} className="w-full" size="lg">
+            <Button type="submit" variant="warm" loading={loading} className="w-full" size="lg">
               Sign In
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-muted-warm">
             Don&apos;t have an account?{" "}
             <a
               href={appendRedirectParam("/signup", redirectTarget)}
               target="_top"
-              className="text-blue-600 hover:text-blue-700 font-semibold"
+              className="font-semibold text-clay hover:text-clay-deep"
             >
               Start your free trial
             </a>

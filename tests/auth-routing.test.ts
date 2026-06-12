@@ -6,6 +6,8 @@ import {
   buildRecoveryPageUrl,
   buildRecoveryRedirectPath,
   buildRedirectTarget,
+  buildSignupConfirmCallbackUrl,
+  buildSignupConfirmPath,
   buildLoginPath,
   getAuthFeedbackMessage,
   getAuthActionErrorMessage,
@@ -72,6 +74,17 @@ describe("VET-1215 auth routing helpers", () => {
     expect(buildRecoveryPageUrl("https://pawvital.ai", "/pets/1")).toBe(
       "https://pawvital.ai/reset-password?redirect=%2Fpets%2F1"
     );
+    expect(buildSignupConfirmPath("/dashboard")).toBe(
+      "/signup/confirm?next=%2Fdashboard"
+    );
+    expect(
+      buildSignupConfirmCallbackUrl("https://pawvital.ai", "/dashboard", {
+        tokenHash: "hash-123",
+        type: "signup",
+      })
+    ).toBe(
+      "https://pawvital.ai/api/auth/callback?token_hash=hash-123&type=signup&next=%2Fdashboard"
+    );
   });
 
   it("surfaces private-tester access redirects as friendly login feedback", () => {
@@ -126,5 +139,26 @@ describe("VET-1215 auth routing helpers", () => {
         "Fallback"
       )
     ).toBe("Invalid login credentials");
+  });
+
+  it("surfaces expired email confirmation links with friendly signup feedback", () => {
+    expect(getAuthFeedbackMessage(null, "otp_expired")).toEqual({
+      tone: "error",
+      text: "That email confirmation link has expired. Please sign up again to receive a new one.",
+    });
+    expect(getAuthFeedbackMessage(null, "confirm_link_expired")).toEqual({
+      tone: "error",
+      text: "That email confirmation link has expired. Please sign up again to receive a new one.",
+    });
+  });
+
+  it("routes signup email confirmation through the API callback instead of the browser page", () => {
+    const apiCallback = buildCallbackUrl("https://pawvital.ai", "/dashboard");
+    const browserCallback = buildBrowserCallbackUrl("https://pawvital.ai", "/dashboard");
+
+    expect(apiCallback).toBe("https://pawvital.ai/api/auth/callback?next=%2Fdashboard");
+    expect(browserCallback).toBe("https://pawvital.ai/auth/callback?next=%2Fdashboard");
+    expect(new URL(apiCallback).pathname).toBe("/api/auth/callback");
+    expect(new URL(browserCallback).pathname).toBe("/auth/callback");
   });
 });
