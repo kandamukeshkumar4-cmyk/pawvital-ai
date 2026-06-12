@@ -10,9 +10,10 @@ const MINIMAX_API_KEY = (
   ""
 ).trim();
 
-// Timeout for MiniMax API calls (45 seconds to handle network latency)
+// Timeout for MiniMax API calls. Compression is best-effort and must not
+// dominate the owner-visible symptom-chat turn budget.
 // Can be overridden via MINIMAX_TIMEOUT_MS environment variable
-const MINIMAX_TIMEOUT_MS = Number(process.env.MINIMAX_TIMEOUT_MS) || 45000;
+const MINIMAX_TIMEOUT_MS = Number(process.env.MINIMAX_TIMEOUT_MS) || 8000;
 const MINIMAX_MEMORY_MAX_TOKENS =
   Number(process.env.MINIMAX_MEMORY_MAX_TOKENS) || 800;
 
@@ -24,6 +25,11 @@ const MEMORY_MODEL_CANDIDATES = [
 ].filter((value, index, list): value is string => Boolean(value) && list.indexOf(value) === index);
 
 let minimaxClient: OpenAI | null | undefined;
+
+export interface MiniMaxCompressionOptions {
+  deadlineAtMs?: number;
+  timeoutMs?: number;
+}
 
 function getMiniMaxClient(): OpenAI | null {
   if (minimaxClient !== undefined) {
@@ -77,7 +83,42 @@ function isAbortLikeError(error: unknown): boolean {
   return false;
 }
 
-export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
+function isTimeoutLikeError(error: unknown): boolean {
+  if (isAbortLikeError(error)) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return /timeout|timed out|deadline exhausted/i.test(message);
+}
+
+function createMiniMaxDeadlineError(model: string): Error {
+  const error = new Error(`MiniMax compression deadline exhausted before ${model}`);
+  error.name = "AbortError";
+  return error;
+}
+
+function resolveMiniMaxAttemptTimeoutMs(
+  options: MiniMaxCompressionOptions
+): number {
+  const requestedTimeout = Number.isFinite(options.timeoutMs)
+    ? Math.max(1, Math.floor(options.timeoutMs as number))
+    : MINIMAX_TIMEOUT_MS;
+  const configuredTimeout = Math.max(1, Math.floor(MINIMAX_TIMEOUT_MS));
+  const baseTimeout = Math.min(configuredTimeout, requestedTimeout);
+
+  if (options.deadlineAtMs === undefined) {
+    return baseTimeout;
+  }
+
+  const remainingMs = Math.floor(options.deadlineAtMs - Date.now());
+  return Math.max(0, Math.min(baseTimeout, remainingMs));
+}
+
+export async function compressCaseMemoryWithMiniMax(
+  prompt: string,
+  options: MiniMaxCompressionOptions = {}
+): Promise<{
   summary: string;
   model: string;
 }> {
@@ -89,8 +130,13 @@ export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
   let lastError: Error | null = null;
 
   for (const model of MEMORY_MODEL_CANDIDATES) {
+    const timeoutMs = resolveMiniMaxAttemptTimeoutMs(options);
+    if (timeoutMs <= 0) {
+      throw lastError || createMiniMaxDeadlineError(model);
+    }
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), MINIMAX_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       console.log(`[MiniMax] Attempting compression with model: ${model}`);
@@ -114,6 +160,7 @@ export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
         },
         {
           signal: controller.signal,
+          timeout: timeoutMs,
         }
       );
 
@@ -135,6 +182,9 @@ export async function compressCaseMemoryWithMiniMax(prompt: string): Promise<{
       console.error(`[MiniMax] Error with ${model}: ${errorMessage}${isAbortError ? " (timeout/aborted)" : ""}`);
       lastError =
         error instanceof Error ? error : new Error("MiniMax compression failed");
+      if (isTimeoutLikeError(error)) {
+        throw lastError;
+      }
     }
   }
 

@@ -266,6 +266,7 @@ describe("Azure Document Intelligence vet record intake", () => {
       fetchDocumentIntelligence: fetchDocument,
       pollIntervalMs: 0,
       secretClientFactory: secretClientFactory(BASE_SECRETS),
+      transport: jest.fn(),
     });
 
     expect(result).toMatchObject({
@@ -319,6 +320,7 @@ describe("Azure Document Intelligence vet record intake", () => {
       fetchDocumentIntelligence: fetchDocument,
       pollIntervalMs: 0,
       secretClientFactory: secretClientFactory(BASE_SECRETS),
+      transport: jest.fn(),
     });
 
     expect(result).toMatchObject({
@@ -366,6 +368,7 @@ describe("Azure Document Intelligence vet record intake", () => {
       fetchDocumentIntelligence: fetchDocument,
       pollIntervalMs: 0,
       secretClientFactory: secretClientFactory(BASE_SECRETS),
+      transport: jest.fn(),
     });
 
     expect(result).toEqual({
@@ -411,6 +414,7 @@ describe("Azure Document Intelligence vet record intake", () => {
         fetchDocumentIntelligence: fetchDocument,
         pollIntervalMs: 0,
         secretClientFactory: missingContentSafetyFactory,
+        transport: jest.fn(),
       }),
     ).resolves.toEqual({
       enabled: false,
@@ -434,6 +438,7 @@ describe("Azure Document Intelligence vet record intake", () => {
       env: CONFIGURED_ENV,
       fetchDocumentIntelligence: fetchDocument,
       secretClientFactory: secretClientFactory(BASE_SECRETS),
+      transport: jest.fn(),
     });
 
     expect(result).toEqual({

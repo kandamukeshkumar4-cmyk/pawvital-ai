@@ -1,4 +1,8 @@
 import type { TriageSession } from "@/lib/triage-engine";
+import {
+  fetchWithDeadline,
+  type DeadlineFetchOptions,
+} from "@/lib/deadline-fetch";
 
 export interface ImageMeta {
   width: number;
@@ -23,9 +27,15 @@ interface HfClassificationResult {
   score: number;
 }
 
+export interface ImageGateOptions extends DeadlineFetchOptions {
+  skipRemoteClassification?: boolean;
+}
+
 const HF_IMAGE_MODEL = "google/vit-base-patch16-224";
 const HF_IMAGE_ENDPOINT = `https://router.huggingface.co/hf-inference/models/${HF_IMAGE_MODEL}`;
 const HF_NOT_CLOSE_UP_SCORE = 0.45;
+const HF_IMAGE_GATE_TIMEOUT_MS =
+  Number(process.env.HF_IMAGE_GATE_TIMEOUT_MS) || 3_000;
 
 const WOUND_KEYWORDS = [
   "wound",
@@ -99,22 +109,21 @@ export function shouldAnalyzeWoundImage(
 
 export async function evaluateImageGate(
   image: string,
-  imageMeta?: Partial<ImageMeta> | null
+  imageMeta?: Partial<ImageMeta> | null,
+  options: ImageGateOptions = {}
 ): Promise<ImageGateWarning | null> {
   const normalizedMeta = normalizeImageMeta(imageMeta);
 
-  if (normalizedMeta && normalizedMeta.blurScore < 15) {
-    return { reason: "blurry" };
+  const localWarning = evaluateLocalImageGate(normalizedMeta);
+  if (localWarning) {
+    return localWarning;
   }
 
-  if (normalizedMeta) {
-    const longestSide = Math.max(normalizedMeta.width, normalizedMeta.height);
-    if (longestSide < 512 || normalizedMeta.estimatedKb < 60) {
-      return { reason: "low_resolution" };
-    }
+  if (options.skipRemoteClassification) {
+    return null;
   }
 
-  const hfResult = await classifyWithHuggingFace(image);
+  const hfResult = await classifyWithHuggingFace(image, options);
   if (
     hfResult &&
     hfResult.score >= HF_NOT_CLOSE_UP_SCORE &&
@@ -125,6 +134,23 @@ export async function evaluateImageGate(
       topLabel: hfResult.label,
       topScore: hfResult.score,
     };
+  }
+
+  return null;
+}
+
+function evaluateLocalImageGate(
+  normalizedMeta: ImageMeta | null
+): ImageGateWarning | null {
+  if (normalizedMeta && normalizedMeta.blurScore < 15) {
+    return { reason: "blurry" };
+  }
+
+  if (normalizedMeta) {
+    const longestSide = Math.max(normalizedMeta.width, normalizedMeta.height);
+    if (longestSide < 512 || normalizedMeta.estimatedKb < 60) {
+      return { reason: "low_resolution" };
+    }
   }
 
   return null;
@@ -158,7 +184,8 @@ function normalizeImageMeta(
 }
 
 async function classifyWithHuggingFace(
-  image: string
+  image: string,
+  options: DeadlineFetchOptions = {}
 ): Promise<HfClassificationResult | null> {
   const token = process.env.HF_TOKEN?.trim();
   if (!token) return null;
@@ -169,14 +196,20 @@ async function classifyWithHuggingFace(
       type: contentType,
     });
 
-    const response = await fetch(HF_IMAGE_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": contentType,
+    const response = await fetchWithDeadline(
+      HF_IMAGE_ENDPOINT,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": contentType,
+        },
+        body: binaryImage,
       },
-      body: binaryImage,
-    });
+      options,
+      HF_IMAGE_GATE_TIMEOUT_MS,
+      "HF image gate"
+    );
 
     if (!response.ok) {
       throw new Error(`HF gate request failed with ${response.status}`);
@@ -204,6 +237,9 @@ async function classifyWithHuggingFace(
       score: topResult.score,
     };
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw error;
+    }
     console.error("[Image Gate] Hugging Face classification failed:", error);
     return null;
   }

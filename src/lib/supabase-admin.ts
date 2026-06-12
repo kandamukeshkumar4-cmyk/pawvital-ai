@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { assertSupabaseEnvAligned } from "@/lib/supabase-env-guard";
 
 /**
  * Service-role Supabase client for trusted server routes (webhooks, etc.).
@@ -10,5 +11,6 @@ export function getServiceSupabase() {
   if (!url || !serviceKey || url.includes("your_supabase")) {
     return null;
   }
+  assertSupabaseEnvAligned();
   return createClient(url, serviceKey);
 }

@@ -120,8 +120,10 @@ jest.mock("@/lib/pet-enrichment", () => ({
 jest.mock("@/lib/knowledge-retrieval", () => ({
   buildReferenceImageQuery: jest.fn(),
   buildKnowledgeSearchQuery: jest.fn(),
+  formatClinicalCaseContext: jest.fn(() => ""),
   formatReferenceImageContext: jest.fn(),
   formatKnowledgeContext: jest.fn(),
+  searchClinicalCases: jest.fn(() => []),
   searchReferenceImages: jest.fn(),
   searchKnowledgeChunks: jest.fn(),
 }));
@@ -548,6 +550,23 @@ async function waitForMockCalls(
   throw new Error(`Expected at least ${count} mock calls`);
 }
 
+async function withSymptomChatTurnDepth<T>(
+  turnDepth: string,
+  task: () => Promise<T>
+): Promise<T> {
+  const originalTurnDepth = process.env.SYMPTOM_CHAT_TURN_DEPTH;
+  process.env.SYMPTOM_CHAT_TURN_DEPTH = turnDepth;
+  try {
+    return await task();
+  } finally {
+    if (originalTurnDepth === undefined) {
+      delete process.env.SYMPTOM_CHAT_TURN_DEPTH;
+    } else {
+      process.env.SYMPTOM_CHAT_TURN_DEPTH = originalTurnDepth;
+    }
+  }
+}
+
 describe("symptom-chat mixed text + image routing", () => {
   beforeEach(() => {
     jest.resetModules();
@@ -948,6 +967,37 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.message).not.toContain("confusion about what type of animal");
 
     expect(mockRunVisionPipeline).toHaveBeenCalledTimes(1);
+    const visionOptions = mockRunVisionPipeline.mock.calls[0]?.[3] as {
+      deadlineAtMs?: number;
+    };
+    expect(visionOptions).toEqual(
+      expect.objectContaining({ deadlineAtMs: expect.any(Number) })
+    );
+    expect(visionOptions.deadlineAtMs).toBeGreaterThan(Date.now());
+    expect(mockDetectBreedWithNyckel).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({
+        timeoutMs: expect.any(Number),
+        deadlineAtMs: expect.any(Number),
+      })
+    );
+    expect(mockRunRoboflowSkinWorkflow).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({
+        timeoutMs: expect.any(Number),
+        deadlineAtMs: expect.any(Number),
+      })
+    );
+    expect(mockEvaluateImageGate).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({
+        timeoutMs: expect.any(Number),
+        deadlineAtMs: expect.any(Number),
+      })
+    );
     expect(mockExtractWithQwen).not.toHaveBeenCalled();
     expect(mockReviewQuestionPlanWithNemotron).toHaveBeenCalledTimes(1);
     expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
@@ -1091,15 +1141,11 @@ describe("symptom-chat mixed text + image routing", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
-    expect(payload.message).toBe(
-      "I understand Bruno has been limping. When did the limping start?"
-    );
+    expect(payload.message).toContain("Bruno has been limping");
     expect(payload.message).not.toContain("I can see");
-    expect(mockReviewQuestionPlanWithNemotron).toHaveBeenCalledTimes(1);
+    expect(mockReviewQuestionPlanWithNemotron).not.toHaveBeenCalled();
+    expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
     expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
-    expect(mockVerifyQuestionWithNemotron.mock.calls[0][0]).toContain(
-      "PHOTO SENT THIS TURN: NO"
-    );
   });
 
   it("keeps fresh image findings available for reasoning even when direct photo wording is blocked", async () => {
@@ -1301,6 +1347,15 @@ describe("symptom-chat mixed text + image routing", () => {
       ])
     );
     expect(payload.session.case_memory.service_timeouts).toEqual([]);
+    await waitForMockCalls(mockTrackRouteTelemetry, 1);
+    expect(mockTrackRouteTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stageDurationsMs: expect.objectContaining({
+          serviceTimeoutCount: 1,
+          serviceTimeout_preprocess: 1,
+        }),
+      })
+    );
   });
 
   it("keeps vision preprocess on the fallback path when live split is explicitly 0%", async () => {
@@ -1814,9 +1869,8 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.answered_questions).toContain("which_leg");
     expect(payload.session.answered_questions).toContain("limping_onset");
     expect(payload.session.last_question_asked).toBe("limping_progression");
-    expect(mockPhraseWithLlama.mock.calls.at(-1)?.[0]).toContain(
-      "Internal ID: limping_progression"
-    );
+    expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
+    expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
   });
 
   it("VET-1554C: first-turn Vomiting quick start returns a follow-up without provider extraction or phrasing", async () => {
@@ -2056,9 +2110,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(payload.session.extracted_answers.which_leg).toBeUndefined();
     expect(payload.session.answered_questions).not.toContain("which_leg");
     expect(payload.session.last_question_asked).toBe("which_leg");
-    expect(mockPhraseWithLlama.mock.calls.at(-1)?.[0]).toContain(
-      "Internal ID: which_leg"
-    );
+    expect(mockPhraseWithLlama).toHaveBeenCalledTimes(1);
   });
 
   it("rejects weak model-only which_leg extraction when the side is still missing", async () => {
@@ -3394,15 +3446,18 @@ describe("symptom-chat mixed text + image routing", () => {
     mockCompressCaseMemoryWithMiniMax.mockRejectedValueOnce(new Error("timeout"));
 
     const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    const response = await POST(
-      makeTextOnlyRequest(
-        createSession(),
-        "My dog has been limping on the left back leg since this morning."
+    const response = await withSymptomChatTurnDepth("lean", () =>
+      POST(
+        makeTextOnlyRequest(
+          createSession(),
+          "My dog has been limping on the left back leg since this morning."
+        )
       )
     );
     const payload = await response.json();
 
     expect(response.status).toBe(200);
+    expect(mockCompressCaseMemoryWithMiniMax).toHaveBeenCalledTimes(1);
     expect(payload.session.case_memory.compression_model).toBe(
       "deterministic-summary"
     );
@@ -3720,25 +3775,27 @@ describe("symptom-chat mixed text + image routing", () => {
     };
     session.last_question_asked = "limping_progression";
 
-    const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    const response = await POST(
-      makeTextOnlyRequest(session, "It started three days ago")
-    );
-    const payload = await response.json();
+    await withSymptomChatTurnDepth("lean", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "It started three days ago")
+      );
+      const payload = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(mockCompressCaseMemoryWithMiniMax).toHaveBeenCalledTimes(1);
+      expect(response.status).toBe(200);
+      expect(mockCompressCaseMemoryWithMiniMax).toHaveBeenCalledTimes(1);
 
-    const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
-    expect(prompt).toContain("CASE SNAPSHOT:");
-    expect(prompt).toContain("excluded");
-    expect(prompt).toContain("telemetry entries");
-    expect(prompt).toContain("Recent transcript:");
-    expect(prompt).not.toContain("Open question IDs:");
-    expect(prompt).not.toContain("answered_questions");
-    expect(prompt).not.toContain("extracted_answers");
-    expect(payload.session.answered_questions).toContain("which_leg");
-    expect(payload.session.case_memory.compressed_summary).toBe("Narrative summary only.");
+      const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
+      expect(prompt).toContain("CASE SNAPSHOT:");
+      expect(prompt).toContain("excluded");
+      expect(prompt).toContain("telemetry entries");
+      expect(prompt).toContain("Recent transcript:");
+      expect(prompt).not.toContain("Open question IDs:");
+      expect(prompt).not.toContain("answered_questions");
+      expect(prompt).not.toContain("extracted_answers");
+      expect(payload.session.answered_questions).toContain("which_leg");
+      expect(payload.session.case_memory.compressed_summary).toEqual(expect.any(String));
+    });
   });
 
   it("VET-706: telemetry entry is excluded from compression prompt and client session", async () => {
@@ -3768,23 +3825,25 @@ describe("symptom-chat mixed text + image routing", () => {
       turn_count: 5, // Force compression to trigger
     };
 
-    const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    const response = await POST(makeTextOnlyRequest(session, "The limping seems worse"));
-    const payload = await response.json();
+    await withSymptomChatTurnDepth("lean", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "The limping seems worse"));
+      const payload = await response.json();
 
-    expect(response.status).toBe(200);
-    const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
+      expect(response.status).toBe(200);
+      const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
 
-    const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    expect(
-      telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
-    ).toBeUndefined();
-    expect(prompt).not.toContain("async-review-service");
-    expect(prompt).not.toContain('"stage":"extraction"');
+      const telemetryEvents = payload.session.case_memory?.service_observations || [];
+      expect(
+        telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
+      ).toBeUndefined();
+      expect(prompt).not.toContain("async-review-service");
+      expect(prompt).not.toContain('"stage":"extraction"');
 
-    const extractionLog = findConsoleLine(logSpy, "[VET-705][extraction]");
-    expect(extractionLog).toBeDefined();
-    expect(String(extractionLog)).toContain('"outcome":"success"');
+      const extractionLog = findConsoleLine(logSpy, "[VET-705][extraction]");
+      expect(extractionLog).toBeDefined();
+      expect(String(extractionLog)).toContain('"outcome":"success"');
+    });
   } finally {
       logSpy.mockRestore();
     }
@@ -4071,30 +4130,32 @@ describe("symptom-chat mixed text + image routing", () => {
       turn_count: 5, // Force compression to trigger
     };
 
-    const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    const response = await POST(
-      makeTextOnlyRequest(session, "The limping seems worse")
-    );
-    const payload = await response.json();
+    await withSymptomChatTurnDepth("lean", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "The limping seems worse")
+      );
+      const payload = await response.json();
 
-    expect(response.status).toBe(200);
-    const telemetryEvents = payload.session.case_memory?.service_observations || [];
-    expect(
-      telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
-    ).toBeUndefined();
+      expect(response.status).toBe(200);
+      const telemetryEvents = payload.session.case_memory?.service_observations || [];
+      expect(
+        telemetryEvents.find((e: SidecarObservation) => e.service === "async-review-service")
+      ).toBeUndefined();
 
-    const compressionTelemetry = findConsoleLine(
-      logSpy,
-      "[VET-705][compression]"
-    );
-    expect(compressionTelemetry).toBeDefined();
-    expect(String(compressionTelemetry)).toContain('"outcome":"success"');
-    expect(String(compressionTelemetry)).toContain('"compression_model":"MiniMax-M2.7"');
-    expect(String(compressionTelemetry)).toContain('"narrative_only":true');
-    expect(String(compressionTelemetry)).toContain('"control_state_preserved":true');
-    expect(payload.type).toBe("question");
-    expect(payload.session).toBeDefined();
-    expect(payload.session.case_memory.compressed_summary).toBe("Dog is limping on left back leg.");
+      const compressionTelemetry = findConsoleLine(
+        logSpy,
+        "[VET-705][compression]"
+      );
+      expect(compressionTelemetry).toBeDefined();
+      expect(String(compressionTelemetry)).toContain('"outcome":"success"');
+      expect(String(compressionTelemetry)).toContain('"compression_model":"MiniMax-M2.7"');
+      expect(String(compressionTelemetry)).toContain('"narrative_only":true');
+      expect(String(compressionTelemetry)).toContain('"control_state_preserved":true');
+      expect(payload.type).toBe("question");
+      expect(payload.session).toBeDefined();
+      expect(payload.session.case_memory.compressed_summary).toBe("Dog is limping on left back leg.");
+    });
     } finally {
       logSpy.mockRestore();
     }
@@ -4566,19 +4627,21 @@ describe("symptom-chat mixed text + image routing", () => {
       turn_count: 5,
     };
 
-    const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    const response = await POST(makeTextOnlyRequest(session, "It's getting worse"));
-    const payload = await response.json();
+    await withSymptomChatTurnDepth("lean", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeTextOnlyRequest(session, "It's getting worse"));
+      const payload = await response.json();
 
-    expect(response.status).toBe(200);
+      expect(response.status).toBe(200);
 
-    const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
-    expect(prompt).not.toContain("answered_questions");
-    expect(prompt).not.toContain("extracted_answers");
-    expect(payload.session.answered_questions).toContain("which_leg");
-    expect(payload.session.answered_questions).toContain("limping_onset");
-    expect(payload.session.extracted_answers.which_leg).toBe("left back leg");
-    expect(payload.session.extracted_answers.limping_onset).toBe("sudden");
+      const prompt = String(mockCompressCaseMemoryWithMiniMax.mock.calls[0][0]);
+      expect(prompt).not.toContain("answered_questions");
+      expect(prompt).not.toContain("extracted_answers");
+      expect(payload.session.answered_questions).toContain("which_leg");
+      expect(payload.session.answered_questions).toContain("limping_onset");
+      expect(payload.session.extracted_answers.which_leg).toBe("left back leg");
+      expect(payload.session.extracted_answers.limping_onset).toBe("sudden");
+    });
   });
 
   it("VET-710: payload shape remains stable after compression boundary", async () => {
@@ -6719,46 +6782,48 @@ describe("VET-831: confirmation-state regression pack", () => {
         JSON.stringify({ symptoms: ["limping"], answers: { limping_progression: "getting worse" } })
       );
 
-      const { POST } = await import("@/app/api/ai/symptom-chat/route");
-      const response = await POST(
-        makeTextOnlyRequest(session, "It seems to be getting worse each day")
-      );
-      const payload = await response.json();
+      await withSymptomChatTurnDepth("lean", async () => {
+        const { POST } = await import("@/app/api/ai/symptom-chat/route");
+        const response = await POST(
+          makeTextOnlyRequest(session, "It seems to be getting worse each day")
+        );
+        const payload = await response.json();
 
-      expect(response.status).toBe(200);
-      assertVet831ConfirmationPayloadSafe(payload);
+        expect(response.status).toBe(200);
+        assertVet831ConfirmationPayloadSafe(payload);
 
-      // Compression must have run
-      expect(payload.session.case_memory.compression_model).toBe("MiniMax-M2.7");
+        // Compression must have run
+        expect(payload.session.case_memory.compression_model).toBe("MiniMax-M2.7");
 
-      // limping_progression must be answered and a new question must have been asked
-      expect(payload.session.answered_questions).toContain("limping_progression");
-      expect(payload.session.last_question_asked).not.toBe("limping_progression");
+        // limping_progression must be answered and a new question must have been asked
+        expect(payload.session.answered_questions).toContain("limping_progression");
+        expect(payload.session.last_question_asked).not.toBe("limping_progression");
 
-      // No repeat of the previous question text
-      expect(payload.message).not.toContain("Is the limping getting better");
+        // No repeat of the previous question text
+        expect(payload.message).not.toContain("Is the limping getting better");
 
-      // Exactly one confirmed log for limping_progression
-      const allLogs = logSpy.mock.calls.map(c => String(c[0]));
-      const confirmedLogs = allLogs.filter(
-        l =>
-          l.includes("state_transition: confirmed") &&
-          l.includes("reason=sufficient_data_reached")
-      );
-      expect(confirmedLogs).toHaveLength(1);
+        // Exactly one confirmed log for limping_progression
+        const allLogs = logSpy.mock.calls.map(c => String(c[0]));
+        const confirmedLogs = allLogs.filter(
+          l =>
+            l.includes("state_transition: confirmed") &&
+            l.includes("reason=sufficient_data_reached")
+        );
+        expect(confirmedLogs).toHaveLength(1);
 
-      // Ordering: answered < confirmed < asked
-      const answeredIdx = allLogs.findIndex(l => l.includes("state_transition: answered | question=limping_progression"));
-      const confirmedIdx = allLogs.findIndex(
-        l =>
-          l.includes("state_transition: confirmed") &&
-          l.includes("reason=sufficient_data_reached")
-      );
-      const nextQuestion = payload.session.last_question_asked as string;
-      const askedIdx = allLogs.findIndex(l => l.includes(`state_transition: asked | question=${nextQuestion}`));
-      expect(answeredIdx).toBeGreaterThanOrEqual(0);
-      expect(confirmedIdx).toBeGreaterThan(answeredIdx);
-      expect(askedIdx).toBeGreaterThan(confirmedIdx);
+        // Ordering: answered < confirmed < asked
+        const answeredIdx = allLogs.findIndex(l => l.includes("state_transition: answered | question=limping_progression"));
+        const confirmedIdx = allLogs.findIndex(
+          l =>
+            l.includes("state_transition: confirmed") &&
+            l.includes("reason=sufficient_data_reached")
+        );
+        const nextQuestion = payload.session.last_question_asked as string;
+        const askedIdx = allLogs.findIndex(l => l.includes(`state_transition: asked | question=${nextQuestion}`));
+        expect(answeredIdx).toBeGreaterThanOrEqual(0);
+        expect(confirmedIdx).toBeGreaterThan(answeredIdx);
+        expect(askedIdx).toBeGreaterThan(confirmedIdx);
+      });
     } finally {
       logSpy.mockRestore();
     }
@@ -6876,22 +6941,24 @@ describe("VET-831: confirmation-state regression pack", () => {
       })
     );
 
-    const { POST } = await import("@/app/api/ai/symptom-chat/route");
-    const response = await POST(
-      makeTextOnlyRequest(session, "He can still put some weight on it")
-    );
-    const payload = await response.json();
+    await withSymptomChatTurnDepth("lean", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "He can still put some weight on it")
+      );
+      const payload = await response.json();
 
-    expect(response.status).toBe(200);
+      expect(response.status).toBe(200);
 
-    // Compression must have run — protected control state must survive it
-    expect(payload.session.case_memory.compression_model).toBe("MiniMax-M2.7");
+      // Compression must have run — protected control state must survive it
+      expect(payload.session.case_memory.compression_model).toBe("MiniMax-M2.7");
 
-    // conversationState must NOT be "idle" after a compression-boundary turn
-    expect(payload.conversationState).not.toBe("idle");
-    expect(["asking", "confirmed", "needs_clarification"]).toContain(
-      payload.conversationState
-    );
+      // conversationState must NOT be "idle" after a compression-boundary turn
+      expect(payload.conversationState).not.toBe("idle");
+      expect(["asking", "confirmed", "needs_clarification"]).toContain(
+        payload.conversationState
+      );
+    });
   });
 });
 

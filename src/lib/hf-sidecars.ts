@@ -237,6 +237,28 @@ interface FetchJsonError extends Error {
   statusCode?: number;
 }
 
+function resolveBoundedTimeoutMs(
+  requestedTimeoutMs: number | undefined,
+  defaultTimeoutMs: number
+): number {
+  const safeDefaultTimeoutMs = Math.max(1, Math.floor(defaultTimeoutMs));
+  if (!Number.isFinite(requestedTimeoutMs)) {
+    return safeDefaultTimeoutMs;
+  }
+
+  return Math.max(
+    1,
+    Math.min(safeDefaultTimeoutMs, Math.floor(requestedTimeoutMs as number))
+  );
+}
+
+function resolveRetryCountForTimeout(
+  requestedTimeoutMs: number | undefined,
+  defaultRetries: number
+): number {
+  return Number.isFinite(requestedTimeoutMs) ? 0 : defaultRetries;
+}
+
 async function fetchJson<T>(
   url: string,
   payload: Record<string, unknown>,
@@ -407,6 +429,7 @@ export async function preprocessVeterinaryImage(input: {
   breed?: string;
   ageYears?: number;
   weight?: number;
+  timeoutMs?: number;
 }): Promise<VisionPreprocessResult> {
   if (!VISION_PREPROCESS_URL) {
     throw new Error("Vision preprocess sidecar is not configured");
@@ -422,7 +445,15 @@ export async function preprocessVeterinaryImage(input: {
       age_years: input.ageYears,
       weight: input.weight,
     },
-    { timeoutMs: VISION_PREPROCESS_TIMEOUT_MS, retries: 2, baseDelayMs: 500, maxDelayMs: 4000 }
+    {
+      timeoutMs: resolveBoundedTimeoutMs(
+        input.timeoutMs,
+        VISION_PREPROCESS_TIMEOUT_MS
+      ),
+      retries: resolveRetryCountForTimeout(input.timeoutMs, 2),
+      baseDelayMs: 500,
+      maxDelayMs: 4000,
+    }
   );
 
   const normalized = {
@@ -523,6 +554,7 @@ export async function retrieveVeterinaryTextEvidenceFromSidecar(input: {
   conditionHints?: string[];
   dogOnly?: boolean;
   textLimit?: number;
+  timeoutMs?: number;
 }): Promise<{
   textChunks: RetrievalTextEvidence[];
   rerankScores: number[];
@@ -542,7 +574,15 @@ export async function retrieveVeterinaryTextEvidenceFromSidecar(input: {
       dog_only: input.dogOnly ?? true,
       text_limit: input.textLimit ?? 4,
     },
-    { timeoutMs: TEXT_RETRIEVAL_SERVICE_TIMEOUT_MS, retries: 2, baseDelayMs: 500, maxDelayMs: 4000 }
+    {
+      timeoutMs: resolveBoundedTimeoutMs(
+        input.timeoutMs,
+        TEXT_RETRIEVAL_SERVICE_TIMEOUT_MS
+      ),
+      retries: resolveRetryCountForTimeout(input.timeoutMs, 2),
+      baseDelayMs: 500,
+      maxDelayMs: 4000,
+    }
   );
 
   const textChunks = normalizeTextEvidence(
@@ -575,6 +615,7 @@ export async function retrieveVeterinaryImageEvidenceFromSidecar(input: {
   conditionHints?: string[];
   dogOnly?: boolean;
   imageLimit?: number;
+  timeoutMs?: number;
 }): Promise<{
   imageMatches: RetrievalImageEvidence[];
   sourceCitations: string[];
@@ -593,7 +634,15 @@ export async function retrieveVeterinaryImageEvidenceFromSidecar(input: {
       dog_only: input.dogOnly ?? true,
       image_limit: input.imageLimit ?? 4,
     },
-    { timeoutMs: IMAGE_RETRIEVAL_SERVICE_TIMEOUT_MS, retries: 2, baseDelayMs: 500, maxDelayMs: 4000 }
+    {
+      timeoutMs: resolveBoundedTimeoutMs(
+        input.timeoutMs,
+        IMAGE_RETRIEVAL_SERVICE_TIMEOUT_MS
+      ),
+      retries: resolveRetryCountForTimeout(input.timeoutMs, 2),
+      baseDelayMs: 500,
+      maxDelayMs: 4000,
+    }
   );
 
   return {
@@ -618,6 +667,7 @@ export async function retrieveVeterinaryEvidenceFromSidecar(input: {
   dogOnly?: boolean;
   textLimit?: number;
   imageLimit?: number;
+  timeoutMs?: number;
 }): Promise<RetrievalBundle> {
   const results = await Promise.allSettled([
     isTextRetrievalConfigured()
@@ -681,6 +731,7 @@ export async function consultWithMultimodalSidecar(input: {
   contradictions: string[];
   deterministicFacts: Record<string, string | boolean | number>;
   mode?: "sync" | "async";
+  timeoutMs?: number;
 }): Promise<ConsultOpinion> {
   if (!MULTIMODAL_CONSULT_URL) {
     throw new Error("Multimodal consult sidecar is not configured");
@@ -699,10 +750,13 @@ export async function consultWithMultimodalSidecar(input: {
       deterministic_facts: input.deterministicFacts,
     },
     {
-      timeoutMs: MULTIMODAL_CONSULT_TIMEOUT_MS,
-      retries: 2,
+      timeoutMs: resolveBoundedTimeoutMs(
+        input.timeoutMs,
+        MULTIMODAL_CONSULT_TIMEOUT_MS
+      ),
+      retries: resolveRetryCountForTimeout(input.timeoutMs, 2),
       baseDelayMs: 500,
-      maxDelayMs: 4000
+      maxDelayMs: 4000,
     }
   );
 

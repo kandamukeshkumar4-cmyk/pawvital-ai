@@ -9,6 +9,7 @@ import {
   stripThinkingBlocks,
 } from "@/lib/llm-output";
 import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
+import type { ServiceTimeoutRecord } from "@/lib/clinical-evidence";
 import { buildCaseMemorySnapshot } from "@/lib/symptom-memory";
 import { type PetProfile, type TriageSession } from "@/lib/triage-engine";
 import {
@@ -31,13 +32,30 @@ export interface QuestionGateDecision {
   reason: string;
 }
 
+export type OptionalModelTimeoutRecorder = (
+  record: ServiceTimeoutRecord
+) => void;
+
+function isTimeoutLikeError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.name === "AbortError" ||
+    /\b(abort|timeout|timed out|deadline exhausted)\b/i.test(error.message)
+  );
+}
+
 function getTextTurnOwnerVisibleDeadline(
   hasPhoto: boolean,
   ownerVisibleDeadlineMs?: number | null
 ): number | null {
-  return hasPhoto
-    ? null
-    : ownerVisibleDeadlineMs ?? Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
+  if (ownerVisibleDeadlineMs !== undefined) {
+    return ownerVisibleDeadlineMs;
+  }
+
+  return hasPhoto ? null : Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
 }
 
 export function sanitizeQuestionDraft(
@@ -79,7 +97,8 @@ export async function gateQuestionBeforePhrasing(
   latestUserMessage: string,
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean,
-  ownerVisibleDeadlineMs?: number | null
+  ownerVisibleDeadlineMs?: number | null,
+  recordOptionalModelTimeout?: OptionalModelTimeoutRecorder
 ): Promise<QuestionGateDecision> {
   const defaultDecision: QuestionGateDecision = {
     includeImageContext: Boolean(photoAnalyzedThisTurn && phrasingContext),
@@ -126,25 +145,17 @@ RULES:
       console.warn(
         "Question preflight gate exceeded text-turn owner-visible budget; using default gate decision."
       );
+      recordOptionalModelTimeout?.({
+        service: "nvidia-nemotron",
+        stage: "question_plan_review",
+        reason: "turn_deadline_exhausted",
+      });
       return { ...defaultDecision, reason: "text-turn-budget-timeout" };
     }
 
-    const decisionResult =
-      budgetMs !== null
-        ? await withTimeout(reviewQuestionPlanWithNemotron(prompt), budgetMs)
-        : {
-            timedOut: false as const,
-            value: await reviewQuestionPlanWithNemotron(prompt),
-          };
-
-    if (decisionResult.timedOut) {
-      console.warn(
-        "Question preflight gate exceeded text-turn owner-visible budget; using default gate decision."
-      );
-      return { ...defaultDecision, reason: "text-turn-budget-timeout" };
-    }
-
-    const rawDecision = decisionResult.value;
+    const rawDecision = await reviewQuestionPlanWithNemotron(prompt, {
+      timeoutMs: budgetMs ?? undefined,
+    });
     const parsed = parseLooseJsonRecord(rawDecision);
     const includeImageContext =
       Boolean(parsed.include_image_context) &&
@@ -158,6 +169,17 @@ RULES:
     };
   } catch (error) {
     console.error("Question preflight gate failed:", error);
+    if (isTimeoutLikeError(error)) {
+      console.warn(
+        "Question preflight gate exceeded text-turn owner-visible budget; using default gate decision."
+      );
+      recordOptionalModelTimeout?.({
+        service: "nvidia-nemotron",
+        stage: "question_plan_review",
+        reason: "timeout",
+      });
+      return { ...defaultDecision, reason: "text-turn-budget-timeout" };
+    }
     return defaultDecision;
   }
 }
@@ -260,7 +282,9 @@ async function verifyQuestionDraft(
   hasPhoto: boolean,
   allowPhotoMentionInWording: boolean,
   sanitizedDraft: string,
-  fallbackMessage: string
+  fallbackMessage: string,
+  timeoutMs?: number,
+  recordOptionalModelTimeout?: OptionalModelTimeoutRecorder
 ): Promise<string> {
   if (!useNvidia) {
     return sanitizedDraft;
@@ -276,7 +300,10 @@ async function verifyQuestionDraft(
       allowPhotoMentionInWording,
       sanitizedDraft
     );
-    const verified = await verifyQuestionWithNemotron(verificationPrompt);
+    const verified = await verifyQuestionWithNemotron(verificationPrompt, {
+      allowFallbacks: hasPhoto,
+      timeoutMs,
+    });
     const parsed = parseLooseJsonRecord(verified);
     const verifiedMessage = typeof parsed.message === "string" ? parsed.message : "";
 
@@ -287,30 +314,14 @@ async function verifyQuestionDraft(
     );
   } catch (verificationError) {
     console.error("Question verification failed:", verificationError);
-    return sanitizedDraft;
-  }
-}
-
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number
-): Promise<{ timedOut: false; value: T } | { timedOut: true }> {
-  if (timeoutMs <= 0) {
-    return { timedOut: true };
-  }
-
-  let timeoutId: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise.then((value) => ({ timedOut: false as const, value })),
-      new Promise<{ timedOut: true }>((resolve) => {
-        timeoutId = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
-      }),
-    ]);
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+    if (isTimeoutLikeError(verificationError)) {
+      recordOptionalModelTimeout?.({
+        service: "nvidia-nemotron",
+        stage: "question_verification",
+        reason: "timeout",
+      });
     }
+    return fallbackMessage;
   }
 }
 
@@ -325,7 +336,9 @@ async function phraseQuestionV2(
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
   forceDeterministicFallback = false,
-  ownerVisibleDeadlineMs?: number | null
+  ownerVisibleDeadlineMs?: number | null,
+  recordOptionalModelTimeout?: OptionalModelTimeoutRecorder,
+  verifyDraft = true
 ): Promise<string> {
   const answerType = FOLLOW_UP_QUESTIONS[questionId]?.data_type || "string";
   const hasPhoto = Boolean(photoAnalyzedThisTurn);
@@ -369,22 +382,18 @@ async function phraseQuestionV2(
       console.warn(
         "Question phrasing exceeded text-turn owner-visible budget; using deterministic fallback."
       );
+      recordOptionalModelTimeout?.({
+        service: "nvidia-llama",
+        stage: "question_phrasing",
+        reason: "turn_deadline_exhausted",
+      });
       return fallbackMessage;
     }
 
-    const draftResult =
-      draftBudgetMs !== null
-        ? await withTimeout(phraseWithLlama(prompt), draftBudgetMs)
-        : { timedOut: false as const, value: await phraseWithLlama(prompt) };
-
-    if (draftResult.timedOut) {
-      console.warn(
-        "Question phrasing exceeded text-turn owner-visible budget; using deterministic fallback."
-      );
-      return fallbackMessage;
-    }
-
-    const draft = draftResult.value;
+    const draft = await phraseWithLlama(prompt, {
+      allowFallbacks: hasPhoto && verifyDraft,
+      timeoutMs: draftBudgetMs ?? undefined,
+    });
     console.log("[Engine] Phrasing primary: Llama 3.3 70B Instruct");
 
     const sanitizedDraft = sanitizeQuestionDraft(
@@ -393,34 +402,33 @@ async function phraseQuestionV2(
       allowPhotoMentionInWording
     );
 
+    if (!verifyDraft) {
+      return sanitizedDraft;
+    }
+
     if (budgetDeadline) {
       const verificationBudget = budgetDeadline - Date.now();
       if (verificationBudget <= 0) {
-        return sanitizedDraft;
+        recordOptionalModelTimeout?.({
+          service: "nvidia-nemotron",
+          stage: "question_verification",
+          reason: "turn_deadline_exhausted",
+        });
+        return fallbackMessage;
       }
 
-      const verifiedResult = await withTimeout(
-        verifyQuestionDraft(
-          questionText,
-          questionId,
-          memorySnapshot,
-          phrasingContext,
-          hasPhoto,
-          allowPhotoMentionInWording,
-          sanitizedDraft,
-          fallbackMessage
-        ),
-        verificationBudget
+      return await verifyQuestionDraft(
+        questionText,
+        questionId,
+        memorySnapshot,
+        phrasingContext,
+        hasPhoto,
+        allowPhotoMentionInWording,
+        sanitizedDraft,
+        fallbackMessage,
+        verificationBudget,
+        recordOptionalModelTimeout
       );
-
-      if (verifiedResult.timedOut) {
-        console.warn(
-          "Question verification exceeded text-turn owner-visible budget; using sanitized draft."
-        );
-        return sanitizedDraft;
-      }
-
-      return verifiedResult.value;
     }
 
     return verifyQuestionDraft(
@@ -431,10 +439,19 @@ async function phraseQuestionV2(
       hasPhoto,
       allowPhotoMentionInWording,
       sanitizedDraft,
-      fallbackMessage
+      fallbackMessage,
+      undefined,
+      recordOptionalModelTimeout
     );
   } catch (error) {
     console.error("Phrasing failed:", error);
+    if (isTimeoutLikeError(error)) {
+      recordOptionalModelTimeout?.({
+        service: "nvidia-llama",
+        stage: "question_phrasing",
+        reason: "timeout",
+      });
+    }
     return fallbackMessage;
   }
 }
@@ -450,7 +467,9 @@ export async function phraseQuestion(
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
   forceDeterministicFallback = false,
-  ownerVisibleDeadlineMs?: number | null
+  ownerVisibleDeadlineMs?: number | null,
+  recordOptionalModelTimeout?: OptionalModelTimeoutRecorder,
+  verifyDraft = true
 ): Promise<string> {
   return phraseQuestionV2(
     questionText,
@@ -463,6 +482,8 @@ export async function phraseQuestion(
     photoAnalyzedThisTurn,
     allowPhotoMentionInWording,
     forceDeterministicFallback,
-    ownerVisibleDeadlineMs
+    ownerVisibleDeadlineMs,
+    recordOptionalModelTimeout,
+    verifyDraft
   );
 }

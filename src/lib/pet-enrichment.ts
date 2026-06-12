@@ -1,13 +1,24 @@
 import type { PetProfile, TriageSession } from "@/lib/triage-engine";
 import { searchReferenceImages, type ReferenceImageMatch } from "@/lib/knowledge-retrieval";
+import {
+  fetchWithDeadline,
+  resolveDeadlineTimeoutMs,
+  type DeadlineFetchOptions,
+} from "@/lib/deadline-fetch";
 
 const NYCKEL_TOKEN_URL = "https://www.nyckel.com/connect/token";
 const NYCKEL_DOG_BREED_FUNCTION = "dog-breed-identifier";
 const NYCKEL_MIN_CONFIDENCE = 0.8;
+const NYCKEL_REQUEST_TIMEOUT_MS =
+  Number(process.env.NYCKEL_REQUEST_TIMEOUT_MS) || 4_000;
 
 const API_NINJAS_DOGS_URL = "https://api.api-ninjas.com/v1/dogs";
+const API_NINJAS_REQUEST_TIMEOUT_MS =
+  Number(process.env.API_NINJAS_REQUEST_TIMEOUT_MS) || 3_000;
 
 const ROBOFLOW_BASE_URL = "https://serverless.roboflow.com";
+const ROBOFLOW_REQUEST_TIMEOUT_MS =
+  Number(process.env.ROBOFLOW_REQUEST_TIMEOUT_MS) || 4_500;
 
 const PLACEHOLDER_BREED_TERMS = [
   "unknown",
@@ -161,7 +172,8 @@ export function getEffectivePetProfile(
 
 export async function detectBreedWithNyckel(
   image: string,
-  pet: PetProfile
+  pet: PetProfile,
+  options: DeadlineFetchOptions = {}
 ): Promise<BreedDetectionResult | null> {
   if (!isLikelyDogContext(pet)) return null;
 
@@ -170,8 +182,12 @@ export async function detectBreedWithNyckel(
   if (!clientId || !clientSecret) return null;
 
   try {
-    const accessToken = await getNyckelAccessToken(clientId, clientSecret);
-    const response = await fetch(
+    const accessToken = await getNyckelAccessToken(
+      clientId,
+      clientSecret,
+      options
+    );
+    const response = await fetchWithDeadline(
       `https://www.nyckel.com/v1/functions/${NYCKEL_DOG_BREED_FUNCTION}/invoke?labelCount=3&capture=false`,
       {
         method: "POST",
@@ -182,7 +198,10 @@ export async function detectBreedWithNyckel(
         body: JSON.stringify({
           data: ensureDataUri(image),
         }),
-      }
+      },
+      options,
+      NYCKEL_REQUEST_TIMEOUT_MS,
+      "Nyckel breed detection"
     );
 
     if (!response.ok) {
@@ -208,7 +227,8 @@ export async function detectBreedWithNyckel(
 
 export async function fetchBreedProfile(
   breed: string,
-  pet: PetProfile
+  pet: PetProfile,
+  options: DeadlineFetchOptions = {}
 ): Promise<BreedProfileResult | null> {
   if (!breed.trim() || !isLikelyDogContext(pet)) return null;
 
@@ -216,13 +236,16 @@ export async function fetchBreedProfile(
   if (!apiKey) return null;
 
   try {
-    const response = await fetch(
+    const response = await fetchWithDeadline(
       `${API_NINJAS_DOGS_URL}?name=${encodeURIComponent(breed)}`,
       {
         headers: {
           "X-Api-Key": apiKey,
         },
-      }
+      },
+      options,
+      API_NINJAS_REQUEST_TIMEOUT_MS,
+      "API Ninjas breed profile lookup"
     );
 
     if (!response.ok) {
@@ -270,7 +293,8 @@ export async function findReferenceImagesForSkinLabels(
 
 export async function runRoboflowSkinWorkflow(
   image: string,
-  pet: PetProfile
+  pet: PetProfile,
+  options: DeadlineFetchOptions = {}
 ): Promise<SkinFlagResult | null> {
   if (!isLikelyDogContext(pet)) return null;
 
@@ -280,7 +304,7 @@ export async function runRoboflowSkinWorkflow(
   if (!apiKey || !workspaceName || !workflowId) return null;
 
   try {
-    const response = await fetch(
+    const response = await fetchWithDeadline(
       `${ROBOFLOW_BASE_URL}/${workspaceName}/workflows/${workflowId}`,
       {
         method: "POST",
@@ -296,7 +320,10 @@ export async function runRoboflowSkinWorkflow(
             },
           },
         }),
-      }
+      },
+      options,
+      ROBOFLOW_REQUEST_TIMEOUT_MS,
+      "Roboflow skin workflow"
     );
 
     if (!response.ok) {
@@ -324,11 +351,14 @@ export async function runRoboflowSkinWorkflow(
       source: "roboflow",
     };
 
-    // Cross-reference with reference image corpus (non-fatal)
-    try {
-      result.reference_images = await findReferenceImagesForSkinLabels(matchedLabels, 5);
-    } catch (err) {
-      console.warn('[pet-enrichment] Reference image lookup failed:', err instanceof Error ? err.message : err);
+    // Cross-reference with reference image corpus (non-fatal). This is optional
+    // enrichment, so skip it rather than spending the route deadline tail.
+    if (resolveDeadlineTimeoutMs(options, 1_500) >= 750) {
+      try {
+        result.reference_images = await findReferenceImagesForSkinLabels(matchedLabels, 5);
+      } catch (err) {
+        console.warn('[pet-enrichment] Reference image lookup failed:', err instanceof Error ? err.message : err);
+      }
     }
 
     return result;
@@ -348,23 +378,30 @@ function stripDataUri(image: string): string {
 
 async function getNyckelAccessToken(
   clientId: string,
-  clientSecret: string
+  clientSecret: string,
+  options: DeadlineFetchOptions = {}
 ): Promise<string> {
   if (nyckelTokenCache && nyckelTokenCache.expiresAt > Date.now() + 60_000) {
     return nyckelTokenCache.token;
   }
 
-  const response = await fetch(NYCKEL_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+  const response = await fetchWithDeadline(
+    NYCKEL_TOKEN_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "client_credentials",
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
     },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
+    options,
+    NYCKEL_REQUEST_TIMEOUT_MS,
+    "Nyckel token request"
+  );
 
   if (!response.ok) {
     throw new Error(`Nyckel token request failed with ${response.status}`);

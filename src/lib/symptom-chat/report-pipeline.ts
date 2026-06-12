@@ -3,7 +3,10 @@ import {
   diagnoseWithDeepSeek,
   isNvidiaConfigured,
 } from "@/lib/nvidia-models";
-import type { RetrievalBundle } from "@/lib/clinical-evidence";
+import type {
+  RetrievalBundle,
+  ServiceTimeoutRecord,
+} from "@/lib/clinical-evidence";
 import {
   buildDiagnosisContext,
   type PetProfile,
@@ -47,8 +50,13 @@ import {
   type SecondOpinionTraceTelemetry,
   type TelemetryGateEvent,
 } from "@/lib/symptom-memory";
-import { createModelBudgetState } from "@/lib/model-budget";
+import { createModelBudgetState, getModelBudgetPolicy } from "@/lib/model-budget";
 import { getRoleTimeoutMs } from "@/lib/model-router";
+import {
+  getMandatoryModelTimeoutMs,
+  getOptionalExternalStageTimeoutMs,
+  type TurnBudget,
+} from "@/lib/symptom-chat/turn-budget";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
   describeLiveTrafficDecision,
@@ -122,6 +130,8 @@ const REPORT_CLAIM_SECTION_PATTERNS = [
   /top differentials:/i,
   /recommended diagnostics:/i,
 ] as const;
+const REPORT_BREED_PROFILE_TIMEOUT_MS = 3_000;
+const REPORT_SUPPLEMENTAL_LOOKUP_TIMEOUT_MS = 1_500;
 
 export interface SymptomChatMessage {
   role: string;
@@ -135,6 +145,8 @@ interface GenerateReportInput {
   image?: string;
   requestOrigin?: string;
   verifiedUserId?: string | null;
+  turnBudget?: TurnBudget;
+  serviceTimeouts?: ServiceTimeoutRecord[];
 }
 
 interface GenerateTerminalOutcomeReportInput {
@@ -142,6 +154,77 @@ interface GenerateTerminalOutcomeReportInput {
   pet: PetProfile;
   terminalOutcome: UncertaintyTerminalOutcome;
   verifiedUserId?: string | null;
+}
+
+function createReportOptionalStageTimeoutError(stage: string): Error {
+  const error = new Error(`${stage} turn deadline exhausted`);
+  error.name = "AbortError";
+  return error;
+}
+
+function recordReportServiceTimeout(
+  serviceTimeouts: ServiceTimeoutRecord[] | undefined,
+  service: string,
+  stage: string,
+  reason = "turn_deadline_budget_exhausted"
+): void {
+  serviceTimeouts?.push({ service, stage, reason });
+}
+
+async function runOptionalReportStage<T>(input: {
+  turnBudget?: TurnBudget;
+  serviceTimeouts?: ServiceTimeoutRecord[];
+  service: string;
+  stage: string;
+  defaultTimeoutMs: number;
+  fallback: T;
+  task: () => Promise<T>;
+}): Promise<T> {
+  const timeoutMs = getOptionalExternalStageTimeoutMs(
+    input.turnBudget,
+    input.defaultTimeoutMs
+  );
+  if (timeoutMs === null) {
+    recordReportServiceTimeout(
+      input.serviceTimeouts,
+      input.service,
+      input.stage
+    );
+    return input.fallback;
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      input.task(),
+      new Promise<T>((_resolve, reject) => {
+        timeoutId = setTimeout(
+          () => reject(createReportOptionalStageTimeoutError(input.stage)),
+          timeoutMs
+        );
+      }),
+    ]);
+  } catch (error) {
+    const timedOut =
+      error instanceof Error &&
+      (error.name === "AbortError" || /deadline exhausted|timeout/i.test(error.message));
+    if (timedOut) {
+      recordReportServiceTimeout(
+        input.serviceTimeouts,
+        input.service,
+        input.stage,
+        "timeout"
+      );
+    }
+    if (!timedOut) {
+      console.error(`[Report] Optional ${input.stage} failed:`, error);
+    }
+    return input.fallback;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 function buildPersistenceResponse(
@@ -744,9 +827,11 @@ function findSecondOpinionReportTraceQuestionId(
 async function appendReportSecondOpinionTraceIfMissing({
   session,
   ownerMessage,
+  turnBudget,
 }: {
   session: TriageSession;
   ownerMessage: string;
+  turnBudget?: TurnBudget;
 }): Promise<TriageSession> {
   const mode = getSecondOpinionExtractorMode();
   if (mode === "off" || hasSecondOpinionTrace(session)) {
@@ -857,7 +942,10 @@ async function appendReportSecondOpinionTraceIfMissing({
       deterministicResolved: hasRecordedAnswer,
       clarificationAttempts: shadowSamplingClarificationAttempts,
       knownSymptomsBeforeTurn: session.known_symptoms,
-      timeoutMs: REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS,
+      timeoutMs: getMandatoryModelTimeoutMs(
+        turnBudget,
+        REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS
+      ),
       budgetState: reconstructionBudgetState,
       isShadowSampling: true,
     });
@@ -1191,20 +1279,48 @@ export async function generateReport({
   image,
   requestOrigin,
   verifiedUserId,
+  turnBudget,
+  serviceTimeouts,
 }: GenerateReportInput) {
   if (
     isLikelyDogContext(pet) &&
     pet.breed &&
     (!session.breed_profile_summary || session.breed_profile_name !== pet.breed)
   ) {
-    try {
-      const breedProfile = await fetchBreedProfile(pet.breed, pet);
-      if (breedProfile) {
-        session.breed_profile_name = breedProfile.breed;
-        session.breed_profile_summary = breedProfile.summary;
+    const breedProfileTimeoutMs = getOptionalExternalStageTimeoutMs(
+      turnBudget,
+      REPORT_BREED_PROFILE_TIMEOUT_MS
+    );
+    if (breedProfileTimeoutMs === null) {
+      recordReportServiceTimeout(
+        serviceTimeouts,
+        "api-ninjas",
+        "breed-profile"
+      );
+    } else {
+      try {
+        const breedProfile = await fetchBreedProfile(pet.breed, pet, {
+          timeoutMs: breedProfileTimeoutMs,
+        });
+        if (breedProfile) {
+          session.breed_profile_name = breedProfile.breed;
+          session.breed_profile_summary = breedProfile.summary;
+        }
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.name === "AbortError" ||
+            /deadline exhausted|timeout/i.test(error.message))
+        ) {
+          recordReportServiceTimeout(
+            serviceTimeouts,
+            "api-ninjas",
+            "breed-profile",
+            "timeout"
+          );
+        }
+        console.error("[Report] Deferred breed profile fetch failed:", error);
       }
-    } catch (error) {
-      console.error("[Report] Deferred breed profile fetch failed:", error);
     }
   }
 
@@ -1227,7 +1343,11 @@ export async function generateReport({
       pet,
       knowledgeQuery,
       referenceImageQuery,
-      rankedConditions
+      rankedConditions,
+      {
+        turnBudget,
+        serviceTimeouts,
+      }
     );
     session = retrievalResult.session;
     retrievalBundle = retrievalResult.bundle;
@@ -1256,23 +1376,31 @@ export async function generateReport({
   let breedRiskContext = "";
 
   if (pet.breed) {
-    try {
-      const breedRiskProfiles = await getBreedRiskProfiles(pet.breed);
-      breedRiskContext = formatBreedRiskContext(breedRiskProfiles);
-    } catch (error) {
-      console.error("[Report] Breed risk lookup failed:", error);
-    }
+    const breedRiskProfiles = await runOptionalReportStage({
+      turnBudget,
+      serviceTimeouts,
+      service: "supabase",
+      stage: "breed-risk",
+      defaultTimeoutMs: REPORT_SUPPLEMENTAL_LOOKUP_TIMEOUT_MS,
+      fallback: [],
+      task: () => getBreedRiskProfiles(pet.breed),
+    });
+    breedRiskContext = formatBreedRiskContext(breedRiskProfiles);
   }
 
   let clinicalCaseContext = "";
-  try {
-    const topSymptoms = session.known_symptoms.slice(0, 6);
-    if (topSymptoms.length > 0) {
-      const clinicalCases = await searchClinicalCases(topSymptoms, pet.breed, 5);
-      clinicalCaseContext = formatClinicalCaseContext(clinicalCases);
-    }
-  } catch {
-    // Non-fatal — clinical case search is supplementary
+  const topSymptoms = session.known_symptoms.slice(0, 6);
+  if (topSymptoms.length > 0) {
+    const clinicalCases = await runOptionalReportStage({
+      turnBudget,
+      serviceTimeouts,
+      service: "supabase",
+      stage: "clinical-case-search",
+      defaultTimeoutMs: REPORT_SUPPLEMENTAL_LOOKUP_TIMEOUT_MS,
+      fallback: [],
+      task: () => searchClinicalCases(topSymptoms, pet.breed, 5),
+    });
+    clinicalCaseContext = formatClinicalCaseContext(clinicalCases);
   }
 
   const top5Formatted = context.top5
@@ -1313,7 +1441,12 @@ export async function generateReport({
           referenceImageContext,
           clinicalCaseContext,
         });
-        const rawReport = await diagnoseWithDeepSeek(reportPrompt);
+        const rawReport = await diagnoseWithDeepSeek(reportPrompt, {
+          timeoutMs: getMandatoryModelTimeoutMs(
+            turnBudget,
+            getRoleTimeoutMs("diagnosis")
+          ),
+        });
         console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
 
         const report = parseReportJSON(rawReport);
@@ -1342,7 +1475,12 @@ export async function generateReport({
     finalReport.evidenceChain = structuredEvidenceChain;
     if (usedModelNarrative) {
       try {
-        finalReport = await safetyVerify(finalReport, pet, context);
+        finalReport = await safetyVerify(finalReport, pet, context, {
+          timeoutMs: getMandatoryModelTimeoutMs(
+            turnBudget,
+            getRoleTimeoutMs("safety")
+          ),
+        });
         console.log("[Engine] Safety: GLM-5 verified");
       } catch (safetyError) {
         console.error("Safety verification failed (non-blocking):", safetyError);
@@ -1508,6 +1646,10 @@ export async function generateReport({
         new Set([...context.red_flags, ...session.red_flags_triggered])
       ),
       generatedVetHandoffDraft,
+      timeoutMs: getMandatoryModelTimeoutMs(
+        turnBudget,
+        getModelBudgetPolicy("grok_final_safety").timeoutMs
+      ),
       budgetState: createModelBudgetState(
         ensureStructuredCaseMemory(session).model_budget_state
       ),
@@ -1574,6 +1716,7 @@ export async function generateReport({
     const reportPersistenceSession = await appendReportSecondOpinionTraceIfMissing({
       session,
       ownerMessage: getLastOwnerMessageContent(messages),
+      turnBudget,
     });
 
     const persistedShadowTelemetrySnapshot = {

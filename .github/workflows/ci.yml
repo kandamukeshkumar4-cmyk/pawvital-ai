@@ -70,6 +70,8 @@ jobs:
         with:
           path: node_modules
           key: nm-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ hashFiles('package-lock.json') }}
+      - name: Supabase env split-brain guard
+        run: npm run ops:supabase-env-guard
       - run: npm run lint
         id: lint
       - name: Comment on failure

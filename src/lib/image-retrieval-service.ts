@@ -13,6 +13,7 @@ export async function retrieveVeterinaryImageEvidence(input: {
   conditionHints?: string[];
   dogOnly?: boolean;
   imageLimit?: number;
+  timeoutMs?: number;
 }) {
   return retrieveVeterinaryImageEvidenceFromSidecar(input);
 }

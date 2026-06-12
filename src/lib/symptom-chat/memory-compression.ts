@@ -1,4 +1,5 @@
 import type { PetProfile, TriageSession } from "@/lib/triage-engine";
+import type { ServiceTimeoutRecord } from "@/lib/clinical-evidence";
 import {
   buildDeterministicCaseSummary,
   buildNarrativeSnapshot,
@@ -12,6 +13,11 @@ import {
   compressCaseMemoryWithMiniMax,
   isMiniMaxConfigured,
 } from "@/lib/minimax";
+import {
+  buildOptionalModelTimeoutRecord,
+  shouldSkipOptionalModelStage,
+  type TurnBudget,
+} from "@/lib/symptom-chat/turn-budget";
 
 export interface SymptomChatMessage {
   role: "user" | "assistant";
@@ -22,6 +28,10 @@ export interface MemoryCompressionOptions {
   imageAnalyzed: boolean;
   changedSymptoms: string[];
   changedAnswers: string[];
+  modelCompressionDisabled?: boolean;
+  modelCompressionDisabledReason?: string;
+  turnBudget?: TurnBudget;
+  serviceTimeouts?: ServiceTimeoutRecord[];
 }
 
 export async function maybeCompressStructuredCaseMemory(
@@ -45,11 +55,69 @@ export async function maybeCompressStructuredCaseMemory(
     };
   }
 
+  if (options.modelCompressionDisabled) {
+    const reason =
+      options.modelCompressionDisabledReason ?? "model_compression_disabled";
+    const telemetrySession = recordConversationTelemetry(session, {
+      event: "compression",
+      turn_count: session.case_memory?.turn_count ?? 0,
+      outcome: "fallback",
+      model: "deterministic-summary",
+      compression_used: false,
+      compression_model: "deterministic-summary",
+      reason,
+      narrative_only: true,
+      control_state_preserved: true,
+      fallback_used: true,
+    });
+    const latestCaseMemory = ensureStructuredCaseMemory(telemetrySession);
+    return {
+      ...telemetrySession,
+      case_memory: {
+        ...latestCaseMemory,
+        compressed_summary: fallbackSummary,
+        compression_model: "deterministic-summary",
+        last_compressed_turn: caseMemory.turn_count,
+      },
+    };
+  }
+
   if (!isMiniMaxConfigured()) {
     return {
       ...session,
       case_memory: {
         ...caseMemory,
+        compressed_summary: fallbackSummary,
+        compression_model: "deterministic-summary",
+        last_compressed_turn: caseMemory.turn_count,
+      },
+    };
+  }
+
+  if (shouldSkipOptionalModelStage(options.turnBudget, "memory_compression")) {
+    const timeoutRecord = buildOptionalModelTimeoutRecord("memory_compression");
+    options.serviceTimeouts?.push(timeoutRecord);
+    const telemetrySession = recordConversationTelemetry(session, {
+      event: "compression",
+      turn_count: session.case_memory?.turn_count ?? 0,
+      outcome: "fallback",
+      model: "deterministic-summary",
+      compression_used: false,
+      compression_model: "deterministic-summary",
+      reason: timeoutRecord.reason,
+      narrative_only: true,
+      control_state_preserved: true,
+      fallback_used: true,
+    });
+    const latestCaseMemory = ensureStructuredCaseMemory(telemetrySession);
+    return {
+      ...telemetrySession,
+      case_memory: {
+        ...latestCaseMemory,
+        service_timeouts: [
+          ...(latestCaseMemory.service_timeouts ?? []),
+          timeoutRecord,
+        ],
         compressed_summary: fallbackSummary,
         compression_model: "deterministic-summary",
         last_compressed_turn: caseMemory.turn_count,
@@ -77,7 +145,9 @@ ${buildNarrativeSnapshot(session, messages, latestUserMessage)}
 Return ONLY the summary text.`;
 
   try {
-    const compressed = await compressCaseMemoryWithMiniMax(prompt);
+    const compressed = await compressCaseMemoryWithMiniMax(prompt, {
+      deadlineAtMs: options.turnBudget?.deadlineAtMs,
+    });
     const mergedSession = mergeCompressionResult(
       session,
       compressed,
@@ -95,6 +165,20 @@ Return ONLY the summary text.`;
     });
   } catch (error) {
     console.error("MiniMax memory compression failed:", error);
+    const timedOut =
+      error instanceof Error &&
+      (error.name === "AbortError" || /timeout|deadline exhausted/i.test(error.message));
+    const timeoutRecord = timedOut
+      ? buildOptionalModelTimeoutRecord(
+          "memory_compression",
+          error instanceof Error && error.name === "AbortError"
+            ? "timeout"
+            : "turn_deadline_budget_exhausted"
+        )
+      : null;
+    if (timeoutRecord) {
+      options.serviceTimeouts?.push(timeoutRecord);
+    }
     const telemetrySession = recordConversationTelemetry(session, {
       event: "compression",
       turn_count: session.case_memory?.turn_count ?? 0,
@@ -111,6 +195,13 @@ Return ONLY the summary text.`;
       ...telemetrySession,
       case_memory: {
         ...ensureStructuredCaseMemory(telemetrySession),
+        service_timeouts: timeoutRecord
+          ? [
+              ...(ensureStructuredCaseMemory(telemetrySession)
+                .service_timeouts ?? []),
+              timeoutRecord,
+            ].slice(-10)
+          : ensureStructuredCaseMemory(telemetrySession).service_timeouts,
         compressed_summary: fallbackSummary,
         compression_model: "deterministic-summary",
         last_compressed_turn: caseMemory.turn_count,
