@@ -97,6 +97,7 @@ next-env.d.ts
 !/scripts/shadow-readout-gate-runner.mjs
 !/scripts/shadow-readout-gate-runner-logic.cjs
 !/scripts/check-supabase-env-split-brain.mjs
+!/scripts/check-symptom-turn-depth-config.mjs
 !/scripts/synthetic-prod-probe.mjs
 !/scripts/synthetic-latency-scorecard.mjs
 !/scripts/build-model-candidate-selection-packet.mjs

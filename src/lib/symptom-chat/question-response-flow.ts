@@ -49,6 +49,7 @@ interface BuildQuestionResponseFlowInput {
 }
 
 export type SymptomChatTurnDepth = "lean" | "standard" | "deep";
+export const DEFAULT_SYMPTOM_CHAT_TURN_DEPTH: SymptomChatTurnDepth = "standard";
 
 export function getSymptomChatTurnDepth(
   rawValue = process.env.SYMPTOM_CHAT_TURN_DEPTH
@@ -62,7 +63,7 @@ export function getSymptomChatTurnDepth(
     return normalized;
   }
 
-  return "standard";
+  return DEFAULT_SYMPTOM_CHAT_TURN_DEPTH;
 }
 
 export async function buildQuestionResponseFlow(
