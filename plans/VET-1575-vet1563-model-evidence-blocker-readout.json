@@ -3,7 +3,7 @@
   "parentTicket": "VET-1563",
   "relatedIssue": 588,
   "mode": "review-only-model-evidence-blocker-readout",
-  "generatedAt": "2026-06-12T15:07:18.578Z",
+  "generatedAt": "2026-06-12T16:33:15.944Z",
   "sourceBranchBase": {
     "branch": "codex/vet-1575c-model-evidence-blocker-readout",
     "baseCommit": "81cae52d0f1b97920a3392493327625ce701ca87",
@@ -13,15 +13,15 @@
     "currentProductionDeploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "publicBetaPacketPr": {
       "pr": 591,
-      "head": "7fb9d9794682581f3bfd6055d83f60556eefdc49",
+      "head": "00b2baffa135fed0337253ada53f339885553296",
       "state": "OPEN_BLOCKED",
-      "effectOnModelPromotion": "none; public beta remains HOLD and model lane remains HOLD"
+      "effectOnModelPromotion": "none; public beta remains HOLD and model lane remains HOLD, including after PR #600 invite-send validator evidence was added"
     },
     "cohortReadoutPr": {
       "pr": 592,
-      "head": "66079673c27b2d72e4b3edc5d57cced294853e1e",
+      "head": "a5d68e924b668860fa4de00677e089cda1e488ca",
       "state": "OPEN_BLOCKED",
-      "effectOnModelPromotion": "none; Cohort 1 readout remains PARTIAL"
+      "effectOnModelPromotion": "none; Cohort 1 readout remains PARTIAL, and PR #600 invite-send validator evidence does not satisfy any model-promotion gate"
     },
     "productIntelligenceReadinessPr": {
       "pr": 594,
@@ -53,6 +53,18 @@
       "state": "OPEN_BLOCKED",
       "effectOnModelPromotion": "none; candidate approval validation hardening improves the review-only gate but does not create an approval record, resolve candidate identity, authorize provider capture, populate frozen outputs, score scorecards, grant owner approval, or execute promotion smoke"
     },
+    "cohortInviteSendProofValidatorPr": {
+      "pr": 600,
+      "head": "30629f052bb8bc3215097fd02cd59f692d7e6a27",
+      "state": "OPEN_CLEAN_AGAINST_PR598_BASE_NO_CHECKS",
+      "effectOnModelPromotion": "none; invite-send proof validation is launch proof-harness evidence only and does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "serverlessReliabilityPr": {
+      "pr": 601,
+      "head": "b72c3620510d14fe5e2669e16adac876dfe112d7",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; serverless reliability budget hardening is runtime reliability evidence only and does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
     "launchStackPrGate": {
       "decision": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
       "statusCheckRollupCount": 0,
@@ -74,8 +86,10 @@
     "providerCapture": "HOLD",
     "modelNimPromotion": "HOLD",
     "promotionPr": "HOLD",
+    "runtimeChange": "HOLD",
+    "weightUpdate": "HOLD",
     "publicBetaModelLane": "HOLD",
-    "reason": "The review-only intake harness exists, and PR #599 adds candidate approval validation hardening as review-only gate evidence, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594/#595/#596/#598/#599 public-beta, cohort-readout, product-intelligence, PR-gate, invite-semantics, and approval-validation evidence does not satisfy any model-promotion gate."
+    "reason": "The review-only intake harness exists, and PR #599 adds candidate approval validation hardening as review-only gate evidence, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594/#595/#596/#598/#599/#600/#601 public-beta, cohort-readout, product-intelligence, PR-gate, invite-semantics, approval-validation, invite-send-validator, and serverless-reliability evidence does not satisfy any model-promotion gate."
   },
   "sourceArtifacts": {
     "candidateApprovalIntake": {
@@ -122,7 +136,7 @@
   "evidenceSummary": {
     "candidateApprovalRecordTarget": "plans/VET-1563-extraction-candidate-approval-record.json",
     "candidateApprovalRecordExists": false,
-    "candidateApprovalRecordCheckedAt": "2026-06-12T15:07:18.578Z",
+    "candidateApprovalRecordCheckedAt": "2026-06-12T16:33:15.944Z",
     "candidateApprovalIntakeStatus": "blocked",
     "candidateApprovalMissingFieldCount": 11,
     "candidateIdentityResolved": false,
