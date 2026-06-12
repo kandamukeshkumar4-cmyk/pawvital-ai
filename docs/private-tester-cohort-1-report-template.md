@@ -28,6 +28,16 @@ Use this after the first 48 hours of Cohort 1.
 - Tester access disabled:
 - Data deletion requests:
 
+Before filling this section, run the invite-send proof validator:
+
+```bash
+node scripts/build-cohort1-invite-send-proof.mjs --write
+```
+
+The generated VET-1582 readout must show invite-send proof `GO_REVIEW_ONLY`
+before the report treats invitations as sent. Allowlisted tester count alone is
+not invitation-send proof.
+
 ## Trust and comprehension
 
 - Trust score summary:
