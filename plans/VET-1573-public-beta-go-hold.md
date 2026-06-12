@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-12T14:52:16Z.
+Evidence cutoff: 2026-06-12T16:22:51Z.
 
 ## Why Public Beta Is HOLD
 
@@ -13,13 +13,13 @@ Current production alias checked for this refresh: `https://pawvital-ai.vercel.a
 Known current blockers:
 
 - Fresh current-deployment authorized-admin command-center and admin API proof is missing from this machine.
-- Invite-send proof for the intended private-tester cohort is missing. PR #598 corrects the command-center allowlist-vs-invite proof semantics, but it does not prove invitations were sent.
+- Invite-send proof for the intended private-tester cohort is missing. PR #598 corrects the command-center allowlist-vs-invite proof semantics, and PR #600 adds a validator/readout, but the current registry still contains only the example/template row and is not invitation-send proof.
 - Full Cohort 1 readout counts are missing: tester count, completed symptom checks, final reports, feedback submissions, stalled flows, and urgency distribution.
 - Issue #582 remains open as Supabase REST/Auth versus `DATABASE_URL` operational debt.
 - Issue #588 remains open; VET-1563 model-promotion evidence is incomplete.
 - Privacy, terms, consent persistence, and public-beta support readiness are not proven.
 - Scheduler/shadow readout remains empty and must stay separate from owner-visible UX proof.
-- Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #598 is also open/non-draft/mergeable/blocked with no attached checks, the required `Threshold Review Gate` is absent where applicable, the PR #596 recovery branch has no workflow runs, and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
+- Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #598 is also open/non-draft/mergeable/blocked with no attached checks, PR #600 is clean only against the PR #598 base with no reported checks, the required `Threshold Review Gate` is absent where applicable, the PR #596 recovery branch has no workflow runs, and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
 
 ## Owner-Visible UX Proof
 
@@ -38,6 +38,7 @@ New owner-copy correction:
 
 - VET-1580C / PR #598 is `GO_REVIEW_ONLY` for command-center/registry proof semantics at `2ee6d4c1ef48c68e3ce1398467dd1861391f6b87`. It changes the admin command-center count from `Testers invited` to `Allowlisted testers`, separates registry `allowlist_status` from manual `invitation_sent_proof`, adds an operational note that invitation delivery must be verified separately, and splits `Testers allowlisted` from `Invitations sent (attach manual proof)` in the Cohort 1 report template.
 - This removes an owner-visible overclaim, but PR #598 is open/non-draft/blocked and does not supply invitation-send proof.
+- VET-1582C / PR #600 is `GO_REVIEW_ONLY` for the invite-send proof validator at `30629f052bb8bc3215097fd02cd59f692d7e6a27`. Its generated readout currently reports one example/template row, intended tester count 0, rows with invitation proof 0, and blockers `NO_INTENDED_TESTERS` plus `PLACEHOLDER_ROWS_PRESENT`; this proves the current registry is still HOLD, not that invitations were sent.
 
 ## Backend And Monitoring Proof
 
@@ -76,6 +77,7 @@ Launch-stack PR gate readiness is HOLD.
 
 - PRs #591-#596 are open, non-draft, and mergeable, but each currently reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`.
 - PR #598 is open/non-draft/mergeable but also reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`.
+- PR #600 is open/non-draft/mergeable and `CLEAN` against PR #598's branch, but it has no reported checks and remains dependent review evidence until PR #598 lands and the validator is run against a completed registry.
 - PR #596 (`codex/vet-1579c-threshold-gate-recovery` at `745a1173db546805afdedfe788677081cec2a93b`) attempted a workflow-only recovery for the required `Threshold Review Gate`.
 - `gh run list --branch codex/vet-1579c-threshold-gate-recovery` returned no workflow runs.
 - Manual dispatch failed with `HTTP 422: Actions has been disabled for this user`.
@@ -91,6 +93,7 @@ Monitoring is partial:
 - VET-1571C post-smoke 500 log query returned 0 JSON records.
 - VET-1576C current-deployment product-intelligence write smoke reported 0 JSON error records after the daily-readiness write.
 - 2026-06-12 read-only Vercel production monitoring refresh emitted zero JSON error rows and zero JSON HTTP 500 rows for the last hour.
+- PR #600 adds a review-only invite-send proof validator, and PR #592 now records its placeholder-registry HOLD result in the Cohort 1 readout.
 - No full Cohort 1 monitoring/readout packet exists for public beta.
 
 ## Final Gate
@@ -99,6 +102,7 @@ Monitoring is partial:
 - Private Cohort 1 admin authority: historical GO, current deployment unproven from this machine
 - Private Cohort 1 launch/readout: partial HOLD for invite-send proof and full cohort counts
 - Cohort command-center/registry invite-proof semantics: GO_REVIEW_ONLY in open PR #598; invitation-send proof HOLD
+- Cohort invite-send proof validator: GO_REVIEW_ONLY in open dependent PR #600; current registry proof HOLD
 - Product-intelligence slice: GO for current-deployment daily-readiness persistence only
 - Product-intelligence recovery checkpoint UI: GO_REVIEW_ONLY for PR #595 at `a9ad1ba953974f8c463812d24304b8ed74a3d4dd`; production write/smoke HOLD
 - Candidate intake harness: GO review-only
