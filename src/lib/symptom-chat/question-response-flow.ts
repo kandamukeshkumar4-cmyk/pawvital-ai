@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { ServiceTimeoutRecord } from "@/lib/clinical-evidence";
 import {
   getQuestionText,
   isReadyForDiagnosis,
@@ -23,6 +24,12 @@ import {
   phraseQuestion,
   type SymptomChatTurnMessage,
 } from "@/lib/symptom-chat/question-phrasing";
+import {
+  buildOptionalModelTimeoutRecord,
+  getTurnBudgetDeadlineMs,
+  shouldSkipOptionalModelStage,
+  type TurnBudget,
+} from "@/lib/symptom-chat/turn-budget";
 
 interface BuildQuestionResponseFlowInput {
   session: TriageSession;
@@ -37,6 +44,25 @@ interface BuildQuestionResponseFlowInput {
   visionSeverity?: "normal" | "needs_review" | "urgent";
   image?: string;
   forceDeterministicQuestionFallback?: boolean;
+  turnBudget?: TurnBudget;
+  serviceTimeouts?: ServiceTimeoutRecord[];
+}
+
+export type SymptomChatTurnDepth = "lean" | "standard" | "deep";
+
+export function getSymptomChatTurnDepth(
+  rawValue = process.env.SYMPTOM_CHAT_TURN_DEPTH
+): SymptomChatTurnDepth {
+  const normalized = rawValue?.trim().toLowerCase();
+  if (
+    normalized === "lean" ||
+    normalized === "standard" ||
+    normalized === "deep"
+  ) {
+    return normalized;
+  }
+
+  return "standard";
 }
 
 export async function buildQuestionResponseFlow(
@@ -142,10 +168,22 @@ async function phraseNextQuestion(
     )
       ? buildQuestionPhrasingContext(input.session, input.visionSeverity)
       : null;
-  const textTurnPhrasingDeadlineMs = hasLiveVisionThisTurn
+  const routeDeadlineMs = getTurnBudgetDeadlineMs(input.turnBudget);
+  const textTurnDeadlineMs = hasLiveVisionThisTurn
     ? null
     : Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
-  if (input.forceDeterministicQuestionFallback) {
+  const textTurnPhrasingDeadlineMs = minNullableDeadline(
+    textTurnDeadlineMs,
+    routeDeadlineMs
+  );
+  const recordTimeout = (record: ServiceTimeoutRecord): void => {
+    input.serviceTimeouts?.push(record);
+  };
+  const textTurnDepth = getSymptomChatTurnDepth();
+  const useDeterministicTextQuestion =
+    input.forceDeterministicQuestionFallback ||
+    (!hasLiveVisionThisTurn && textTurnDepth === "lean");
+  if (useDeterministicTextQuestion) {
     return phraseQuestion(
       questionText,
       input.nextQuestionId,
@@ -157,21 +195,60 @@ async function phraseNextQuestion(
       hasLiveVisionThisTurn,
       false,
       true,
-      textTurnPhrasingDeadlineMs
+      textTurnPhrasingDeadlineMs,
+      recordTimeout,
+      false
     );
   }
 
-  const questionGate = await gateQuestionBeforePhrasing(
-    input.nextQuestionId,
-    questionText,
-    input.session,
-    input.effectivePet,
-    input.messages,
-    input.lastUserMessage,
-    basePhrasingContext,
-    hasLiveVisionThisTurn,
-    textTurnPhrasingDeadlineMs
-  );
+  if (!hasLiveVisionThisTurn) {
+    return phraseQuestion(
+      questionText,
+      input.nextQuestionId,
+      input.session,
+      input.effectivePet,
+      input.messages,
+      input.lastUserMessage,
+      basePhrasingContext,
+      hasLiveVisionThisTurn,
+      false,
+      false,
+      textTurnPhrasingDeadlineMs,
+      recordTimeout,
+      true
+    );
+  }
+
+  const questionGate = shouldSkipOptionalModelStage(
+    input.turnBudget,
+    "question_plan_review"
+  )
+    ? (() => {
+        recordTimeout(buildOptionalModelTimeoutRecord("question_plan_review"));
+        return {
+          includeImageContext: Boolean(hasLiveVisionThisTurn && basePhrasingContext),
+          useDeterministicFallback: false,
+          reason: "turn-deadline-budget",
+        };
+      })()
+    : await gateQuestionBeforePhrasing(
+        input.nextQuestionId,
+        questionText,
+        input.session,
+        input.effectivePet,
+        input.messages,
+        input.lastUserMessage,
+        basePhrasingContext,
+        hasLiveVisionThisTurn,
+        textTurnPhrasingDeadlineMs,
+        recordTimeout
+      );
+  const forcePhrasingFallback =
+    questionGate.useDeterministicFallback ||
+    shouldSkipOptionalModelStage(input.turnBudget, "question_phrasing");
+  if (forcePhrasingFallback && !questionGate.useDeterministicFallback) {
+    recordTimeout(buildOptionalModelTimeoutRecord("question_phrasing"));
+  }
 
   return phraseQuestion(
     questionText,
@@ -183,7 +260,17 @@ async function phraseNextQuestion(
     basePhrasingContext,
     hasLiveVisionThisTurn,
     hasLiveVisionThisTurn && questionGate.includeImageContext,
-    questionGate.useDeterministicFallback,
-    textTurnPhrasingDeadlineMs
+    forcePhrasingFallback,
+    textTurnPhrasingDeadlineMs,
+    recordTimeout
   );
+}
+
+function minNullableDeadline(
+  first: number | null,
+  second: number | null
+): number | null {
+  if (first === null) return second;
+  if (second === null) return first;
+  return Math.min(first, second);
 }

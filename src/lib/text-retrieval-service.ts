@@ -13,6 +13,7 @@ export async function retrieveVeterinaryTextEvidence(input: {
   conditionHints?: string[];
   dogOnly?: boolean;
   textLimit?: number;
+  timeoutMs?: number;
 }) {
   return retrieveVeterinaryTextEvidenceFromSidecar(input);
 }

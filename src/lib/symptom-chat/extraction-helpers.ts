@@ -10,8 +10,13 @@ import {
   stripThinkingBlocks,
 } from "@/lib/llm-output";
 import { extractWithQwen } from "@/lib/nvidia-models";
+import { getRoleTimeoutMs } from "@/lib/model-router";
 import { CLINICAL_ARCHITECTURE_FOOTER } from "@/lib/clinical/llm-narrative-contract";
 import { ensureStructuredCaseMemory } from "@/lib/symptom-memory";
+import {
+  getMandatoryModelTimeoutMs,
+  type TurnBudget,
+} from "@/lib/symptom-chat/turn-budget";
 
 export async function extractDataFromMessage(
   message: string,
@@ -19,7 +24,8 @@ export async function extractDataFromMessage(
   pet: PetProfile,
   schema: ReturnType<typeof getExtractionSchema>,
   compactImageSignals?: string,
-  fallbackSymptoms?: string[]
+  fallbackSymptoms?: string[],
+  options: { turnBudget?: TurnBudget } = {}
 ): Promise<{
   symptoms: string[];
   answers: Record<string, string | boolean | number>;
@@ -71,7 +77,12 @@ Output ONLY the JSON object. No explanation, no thinking, no markdown.
 ${CLINICAL_ARCHITECTURE_FOOTER}`;
 
   try {
-    const rawText = await extractWithQwen(prompt);
+    const rawText = await extractWithQwen(prompt, {
+      timeoutMs: getMandatoryModelTimeoutMs(
+        options.turnBudget,
+        getRoleTimeoutMs("extraction")
+      ),
+    });
     console.log("[Engine] Extraction: Qwen 3.5 122B");
 
     const parsed = parseExtractionResponse(rawText);

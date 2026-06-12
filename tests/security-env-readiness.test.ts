@@ -33,6 +33,8 @@ describe("security env readiness", () => {
     delete process.env.VERCEL_URL;
     delete process.env.ASYNC_REVIEW_WEBHOOK_SECRET;
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_URL;
+    delete process.env.DATABASE_URL;
   });
 
   afterAll(() => {
@@ -101,5 +103,17 @@ describe("security env readiness", () => {
     const { getServiceSupabase } = await import("@/lib/supabase-admin");
 
     expect(getServiceSupabase()).toBeNull();
+  });
+
+  it("fails closed when service-role Supabase env points at split projects", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL =
+      "https://gswjpmgxidofwmjngavh.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    process.env.DATABASE_URL =
+      "postgresql://postgres:secret@db.cvkdmbgujgcfuqtqgtxv.supabase.co:5432/postgres";
+
+    const { getServiceSupabase } = await import("@/lib/supabase-admin");
+
+    expect(() => getServiceSupabase()).toThrow("SUPABASE_ENV_SPLIT_BRAIN");
   });
 });

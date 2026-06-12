@@ -25,6 +25,7 @@
 *.pem
 __pycache__/
 /.tmp/
+/tmp/
 
 # debug
 npm-debug.log*
@@ -95,6 +96,9 @@ next-env.d.ts
 !/scripts/run-rate-limit-failover-harness.cjs
 !/scripts/shadow-readout-gate-runner.mjs
 !/scripts/shadow-readout-gate-runner-logic.cjs
+!/scripts/check-supabase-env-split-brain.mjs
+!/scripts/synthetic-prod-probe.mjs
+!/scripts/synthetic-latency-scorecard.mjs
 !/scripts/build-model-candidate-selection-packet.mjs
 !/scripts/build-model-dataset-manifest.mjs
 !/scripts/build-model-experiment-package.mjs
@@ -137,6 +141,7 @@ scripts/devops/*
 # Generated benchmark/deployment run reports
 /data/benchmark/scorecard-*.json
 /data/benchmark/shadow-*.json
+/data/latency/
 /runpod-benchmark-report.json
 /runpod-benchmark-gold-report.json
 

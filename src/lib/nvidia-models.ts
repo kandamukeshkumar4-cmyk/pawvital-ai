@@ -38,42 +38,124 @@ export {
 export type { ModelRole };
 
 const roleInflight = new Map<ModelRole, number>();
-const roleQueues = new Map<ModelRole, Array<() => void>>();
+type RoleQueueWaiter = {
+  reject: (error: Error) => void;
+  resolve: () => void;
+  settled: boolean;
+  timeoutId?: ReturnType<typeof setTimeout>;
+};
+
+const roleQueues = new Map<ModelRole, RoleQueueWaiter[]>();
+
+function buildRoleDeadlineError(role: ModelRole, phase: string): Error {
+  const error = new Error(`${MODELS[role].role} deadline exhausted ${phase}`);
+  error.name = "AbortError";
+  return error;
+}
+
+function removeRoleQueueWaiter(
+  role: ModelRole,
+  waiter: RoleQueueWaiter
+): void {
+  const queue = roleQueues.get(role);
+  if (!queue) return;
+
+  const index = queue.indexOf(waiter);
+  if (index >= 0) {
+    queue.splice(index, 1);
+  }
+  if (queue.length === 0) {
+    roleQueues.delete(role);
+  }
+}
+
+function wakeNextRoleQueueWaiter(role: ModelRole): void {
+  const queue = roleQueues.get(role);
+  while (queue && queue.length > 0) {
+    const next = queue.shift();
+    if (queue.length === 0) {
+      roleQueues.delete(role);
+    }
+    if (!next || next.settled) {
+      continue;
+    }
+
+    next.settled = true;
+    if (next.timeoutId) {
+      clearTimeout(next.timeoutId);
+    }
+    roleInflight.set(role, (roleInflight.get(role) ?? 0) + 1);
+    next.resolve();
+    return;
+  }
+}
+
+function releaseRoleSlot(role: ModelRole): void {
+  const remaining = (roleInflight.get(role) ?? 1) - 1;
+  if (remaining <= 0) {
+    roleInflight.delete(role);
+  } else {
+    roleInflight.set(role, remaining);
+  }
+
+  wakeNextRoleQueueWaiter(role);
+}
+
+async function acquireRoleSlot(
+  role: ModelRole,
+  deadlineAtMs?: number
+): Promise<() => void> {
+  const limit = getRoleConcurrencyLimit(role);
+  if (!limit) return () => undefined;
+
+  const active = roleInflight.get(role) ?? 0;
+  if (active < limit) {
+    roleInflight.set(role, active + 1);
+    return () => releaseRoleSlot(role);
+  }
+
+  const queueWaitMs =
+    deadlineAtMs === undefined ? null : Math.floor(deadlineAtMs - Date.now());
+  if (queueWaitMs !== null && queueWaitMs <= 0) {
+    throw buildRoleDeadlineError(role, "while waiting for concurrency slot");
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const waiter: RoleQueueWaiter = {
+      reject,
+      resolve,
+      settled: false,
+    };
+    if (queueWaitMs !== null) {
+      waiter.timeoutId = setTimeout(() => {
+        if (waiter.settled) return;
+        waiter.settled = true;
+        removeRoleQueueWaiter(role, waiter);
+        reject(
+          buildRoleDeadlineError(role, "while waiting for concurrency slot")
+        );
+      }, queueWaitMs);
+    }
+
+    const queue = roleQueues.get(role) ?? [];
+    queue.push(waiter);
+    roleQueues.set(role, queue);
+  });
+
+  return () => releaseRoleSlot(role);
+}
 
 async function withRoleConcurrency<T>(
   role: ModelRole,
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
+  options: { deadlineAtMs?: number } = {}
 ): Promise<T> {
-  const limit = getRoleConcurrencyLimit(role);
-  if (!limit) return fn();
-
-  const active = roleInflight.get(role) ?? 0;
-  if (active >= limit) {
-    await new Promise<void>((resolve) => {
-      const queue = roleQueues.get(role) ?? [];
-      queue.push(resolve);
-      roleQueues.set(role, queue);
-    });
-  }
-
-  roleInflight.set(role, (roleInflight.get(role) ?? 0) + 1);
+  const release = await acquireRoleSlot(role, options.deadlineAtMs);
 
   try {
     return await fn();
   } finally {
-    const remaining = (roleInflight.get(role) ?? 1) - 1;
-    if (remaining <= 0) {
-      roleInflight.delete(role);
-    } else {
-      roleInflight.set(role, remaining);
-    }
-
-    const queue = roleQueues.get(role);
-    const next = queue?.shift();
-    if (queue && queue.length === 0) {
-      roleQueues.delete(role);
-    }
-    next?.();
+    release();
   }
 }
 
@@ -149,6 +231,50 @@ interface CompletionOptions {
   maxTokens?: number;
   providerPriority?: readonly ModelProvider[];
   temperature?: number;
+  allowFallbacks?: boolean;
+  timeoutMs?: number;
+}
+
+interface ModelCallOptions {
+  allowFallbacks?: boolean;
+  timeoutMs?: number;
+}
+
+interface VisionCallOptions {
+  allowFallbacks?: boolean;
+  deadlineAtMs?: number;
+  timeoutMs?: number;
+}
+
+function resolveRequestedTimeoutMs(
+  role: ModelRole,
+  requestedTimeoutMs: number | undefined
+): number {
+  const roleTimeoutMs = getRoleTimeoutMs(role);
+  if (
+    requestedTimeoutMs === undefined ||
+    !Number.isFinite(requestedTimeoutMs)
+  ) {
+    return roleTimeoutMs;
+  }
+
+  return Math.max(1, Math.min(roleTimeoutMs, Math.floor(requestedTimeoutMs)));
+}
+
+function resolveAttemptTimeoutMs(
+  role: ModelRole,
+  deadlineAtMs: number,
+  nowMs = Date.now()
+): number {
+  const remainingMs = Math.floor(deadlineAtMs - nowMs);
+  return Math.max(0, Math.min(getRoleTimeoutMs(role), remainingMs));
+}
+
+function isTimeoutLikeError(error: Error): boolean {
+  return (
+    error.name === "AbortError" ||
+    /\b(abort|timeout|timed out|deadline exhausted)\b/i.test(error.message)
+  );
 }
 
 export async function complete({
@@ -158,17 +284,24 @@ export async function complete({
   maxTokens = 1024,
   providerPriority,
   temperature = 0.6,
+  allowFallbacks = true,
+  timeoutMs: requestedTimeoutMs,
 }: CompletionOptions): Promise<string> {
   const configuredProviders = getModelProviderChain(role);
-  const providers = providerPriority
+  const prioritizedProviders = providerPriority
     ? providerPriority.filter((provider) =>
         configuredProviders.includes(provider)
       )
     : configuredProviders;
+  const providers = allowFallbacks
+    ? prioritizedProviders
+    : prioritizedProviders.slice(0, 1);
   if (providers.length === 0) {
     throw new Error(`${MODELS[role].role} model not configured`);
   }
 
+  const callDeadlineAtMs =
+    Date.now() + resolveRequestedTimeoutMs(role, requestedTimeoutMs);
   let lastError: Error | null = null;
   for (const provider of providers) {
     const client = getClient(role, provider);
@@ -176,7 +309,10 @@ export async function complete({
       continue;
     }
 
-    for (const model of getModelsToTry(role, provider)) {
+    const modelsToTry = allowFallbacks
+      ? getModelsToTry(role, provider)
+      : getModelsToTry(role, provider).slice(0, 1);
+    for (const model of modelsToTry) {
       const finalSystemPrompt = buildSystemPromptForModel(model, systemPrompt);
       const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [];
       if (finalSystemPrompt) {
@@ -184,30 +320,39 @@ export async function complete({
       }
       messages.push({ role: "user", content: prompt });
 
-      const timeoutMs = getRoleTimeoutMs(role);
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
       try {
-        const response = await withRoleConcurrency(role, () =>
-          client.chat.completions.create(
-            {
-              model,
-              messages,
-              max_tokens: maxTokens,
-              temperature,
-              top_p: role === "diagnosis" ? 0.7 : 0.9,
-              stream: false,
-              ...buildModelExtras(model),
-            },
-            {
-              signal: controller.signal,
-              timeout: timeoutMs,
+        const response = await withRoleConcurrency(
+          role,
+          async () => {
+            const timeoutMs = resolveAttemptTimeoutMs(role, callDeadlineAtMs);
+            if (timeoutMs <= 0) {
+              throw buildRoleDeadlineError(role, "before model call");
             }
-          )
-        );
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-        clearTimeout(timeoutId);
+            try {
+              return await client.chat.completions.create(
+                {
+                  model,
+                  messages,
+                  max_tokens: maxTokens,
+                  temperature,
+                  top_p: role === "diagnosis" ? 0.7 : 0.9,
+                  stream: false,
+                  ...buildModelExtras(model),
+                },
+                {
+                  signal: controller.signal,
+                  timeout: timeoutMs,
+                }
+              );
+            } finally {
+              clearTimeout(timeoutId);
+            }
+          },
+          { deadlineAtMs: callDeadlineAtMs }
+        );
 
         const message = response.choices[0]?.message;
         const content =
@@ -222,15 +367,23 @@ export async function complete({
         }
         return content.trim();
       } catch (err) {
-        clearTimeout(timeoutId);
         lastError = err instanceof Error ? err : new Error(String(err));
         const providerLabel = getProviderLabel(provider);
+        const stopFallbacks = !allowFallbacks || isTimeoutLikeError(lastError);
         console.error(
-          `[${providerLabel}] ${model} failed, trying next backend...`,
+          `[${providerLabel}] ${model} failed${
+            stopFallbacks ? "; stopping fallbacks." : ", trying next backend..."
+          }`,
           lastError.message
         );
+        if (stopFallbacks) {
+          throw lastError;
+        }
         continue;
       }
+    }
+    if (Date.now() >= callDeadlineAtMs) {
+      break;
     }
   }
 
@@ -243,12 +396,17 @@ export async function complete({
  * Extract structured data from user message using Qwen 3.5 122B.
  * Falls back to 397B if 122B fails. Returns parsed JSON with symptoms and answers.
  */
-export async function extractWithQwen(prompt: string): Promise<string> {
+export async function extractWithQwen(
+  prompt: string,
+  options: ModelCallOptions = {}
+): Promise<string> {
   return complete({
     role: "extraction",
     prompt,
     maxTokens: 384,
     temperature: 0.1,
+    allowFallbacks: options.allowFallbacks,
+    timeoutMs: options.timeoutMs,
   });
 }
 
@@ -256,17 +414,23 @@ export async function extractWithQwen(prompt: string): Promise<string> {
  * Phrase a clinical question naturally using Llama 3.3 70B Instruct.
  * Returns a warm, empathetic question string.
  */
-export async function phraseWithLlama(prompt: string): Promise<string> {
+export async function phraseWithLlama(
+  prompt: string,
+  options: ModelCallOptions = {}
+): Promise<string> {
   return complete({
     role: "phrasing",
     prompt,
     maxTokens: 320,
     temperature: 0.25,
+    allowFallbacks: options.allowFallbacks,
+    timeoutMs: options.timeoutMs,
   });
 }
 
 export async function verifyQuestionWithNemotron(
-  prompt: string
+  prompt: string,
+  options: ModelCallOptions = {}
 ): Promise<string> {
   return complete({
     role: "phrasing_verifier",
@@ -274,11 +438,14 @@ export async function verifyQuestionWithNemotron(
     maxTokens: 320,
     temperature: 0.1,
     systemPrompt: "/no_think",
+    allowFallbacks: options.allowFallbacks,
+    timeoutMs: options.timeoutMs,
   });
 }
 
 export async function reviewQuestionPlanWithNemotron(
-  prompt: string
+  prompt: string,
+  options: ModelCallOptions = {}
 ): Promise<string> {
   return complete({
     role: "phrasing_verifier",
@@ -286,6 +453,8 @@ export async function reviewQuestionPlanWithNemotron(
     maxTokens: 240,
     temperature: 0.1,
     systemPrompt: "/no_think",
+    allowFallbacks: options.allowFallbacks,
+    timeoutMs: options.timeoutMs,
   });
 }
 
@@ -293,12 +462,17 @@ export async function reviewQuestionPlanWithNemotron(
  * Generate clinical diagnosis report using Nemotron Ultra 253B.
  * Falls back to DeepSeek V3.2. Deep reasoning for differential diagnosis ranking.
  */
-export async function diagnoseWithDeepSeek(prompt: string): Promise<string> {
+export async function diagnoseWithDeepSeek(
+  prompt: string,
+  options: ModelCallOptions = {}
+): Promise<string> {
   return complete({
     role: "diagnosis",
     prompt,
     maxTokens: 3072,
     temperature: 0.4,
+    allowFallbacks: options.allowFallbacks,
+    timeoutMs: options.timeoutMs,
   });
 }
 
@@ -306,12 +480,17 @@ export async function diagnoseWithDeepSeek(prompt: string): Promise<string> {
  * Safety verification using GLM-5.
  * Reviews diagnosis for missed emergencies and dangerous advice.
  */
-export async function verifyWithGLM(prompt: string): Promise<string> {
+export async function verifyWithGLM(
+  prompt: string,
+  options: ModelCallOptions = {}
+): Promise<string> {
   return complete({
     role: "safety",
     prompt,
     maxTokens: 640,
     temperature: 0.1,
+    allowFallbacks: options.allowFallbacks,
+    timeoutMs: options.timeoutMs,
   });
 }
 
@@ -341,14 +520,15 @@ async function callVisionModel(
   imageUrls: string[],
   prompt: string,
   maxTokens: number = 512,
-  temperature: number = 0.2
+  temperature: number = 0.2,
+  options: VisionCallOptions = {}
 ): Promise<string> {
   const client = getClient(role, "nvidia");
   if (!client) throw new Error(`Vision model ${MODELS[role].role} not configured`);
 
   const modelsToTry: string[] = [MODELS[role].name];
   const fallback = MODELS[role].fallback;
-  if (fallback) modelsToTry.push(fallback);
+  if (fallback && options.allowFallbacks !== false) modelsToTry.push(fallback);
 
   // Kimi K2.5 needs thinking disabled
   const extras: Record<string, unknown> = {};
@@ -357,36 +537,48 @@ async function callVisionModel(
   }
 
   let lastError: Error | null = null;
+  const deadlineAtMs =
+    options.deadlineAtMs ??
+    Date.now() + resolveRequestedTimeoutMs(role, options.timeoutMs);
   for (const model of modelsToTry) {
-    const timeoutMs = getRoleTimeoutMs(role);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
     try {
-      const response = await withRoleConcurrency(role, () =>
-        client.chat.completions.create({
-          model,
-          messages: [{
-            role: "user",
-            content: [
-              ...imageUrls.map((url) => ({
-                type: "image_url" as const,
-                image_url: { url },
-              })),
-              { type: "text", text: prompt },
-            ],
-          }],
-          max_tokens: maxTokens,
-          temperature,
-          stream: false,
-          ...extras,
-        }, {
-          signal: controller.signal,
-          timeout: timeoutMs,
-        })
-      );
+      const response = await withRoleConcurrency(
+        role,
+        async () => {
+          const timeoutMs = resolveAttemptTimeoutMs(role, deadlineAtMs);
+          if (timeoutMs <= 0) {
+            throw buildRoleDeadlineError(role, "before model call");
+          }
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      clearTimeout(timeoutId);
+          try {
+            return await client.chat.completions.create({
+              model,
+              messages: [{
+                role: "user",
+                content: [
+                  ...imageUrls.map((url) => ({
+                    type: "image_url" as const,
+                    image_url: { url },
+                  })),
+                  { type: "text", text: prompt },
+                ],
+              }],
+              max_tokens: maxTokens,
+              temperature,
+              stream: false,
+              ...extras,
+            }, {
+              signal: controller.signal,
+              timeout: timeoutMs,
+            });
+          } finally {
+            clearTimeout(timeoutId);
+          }
+        },
+        { deadlineAtMs }
+      );
 
       const message = response.choices[0]?.message;
       const content =
@@ -400,9 +592,11 @@ async function callVisionModel(
       // Strip thinking tags
       return stripThinkingBlocks(content);
     } catch (err) {
-      clearTimeout(timeoutId);
       lastError = err instanceof Error ? err : new Error(String(err));
       console.error(`[Vision ${MODELS[role].role}] ${model} failed:`, lastError.message);
+      if (options.allowFallbacks === false || isTimeoutLikeError(lastError)) {
+        throw lastError;
+      }
       continue;
     }
   }
@@ -428,7 +622,7 @@ export async function analyzeImageWithVision(
   base64Image: string,
   textContext?: string,
   breedInfo?: { breed: string; age_years: number; weight: number },
-  options?: { preprocess?: VisionPreprocessResult }
+  options?: { deadlineAtMs?: number; preprocess?: VisionPreprocessResult }
 ): Promise<string> {
   const result = await runVisionPipeline(
     base64Image,
@@ -443,7 +637,7 @@ export async function runVisionPipeline(
   base64Image: string,
   textContext?: string,
   breedInfo?: { breed: string; age_years: number; weight: number },
-  options?: { preprocess?: VisionPreprocessResult }
+  options?: { deadlineAtMs?: number; preprocess?: VisionPreprocessResult }
 ): Promise<VisionPipelineResult> {
   const imageUrl = base64Image.startsWith("data:")
     ? base64Image
@@ -516,7 +710,14 @@ Output ONLY valid JSON:
 }`;
 
   console.log("[Vision Pipeline] Tier 1: Llama 3.2 11B Vision (fast triage)...");
-  const tier1Raw = await callVisionModel("vision_fast", imageUrls, tier1Prompt, 640, 0.1);
+  const tier1Raw = await callVisionModel(
+    "vision_fast",
+    imageUrls,
+    tier1Prompt,
+    640,
+    0.1,
+    { deadlineAtMs: options?.deadlineAtMs }
+  );
   console.log("[Vision Pipeline] Tier 1 complete");
 
   // Parse Tier 1 to decide routing
@@ -641,7 +842,14 @@ Output ONLY valid JSON:
 
     try {
       console.log("[Vision Pipeline] Tier 2: Llama 3.2 90B Vision (detailed analysis)...");
-      tier2Raw = await callVisionModel("vision_detailed", imageUrls, tier2Prompt, 900, 0.15);
+      tier2Raw = await callVisionModel(
+        "vision_detailed",
+        imageUrls,
+        tier2Prompt,
+        900,
+        0.15,
+        { deadlineAtMs: options?.deadlineAtMs }
+      );
       try {
         tier2Data = parseLooseJsonObject(tier2Raw);
       } catch {
@@ -727,7 +935,14 @@ Output ONLY valid JSON:
 
     try {
       console.log("[Vision Pipeline] Tier 3: Kimi K2.5 (deep reasoning)...");
-      tier3Raw = await callVisionModel("vision_deep", imageUrls, tier3Prompt, 700, 0.2);
+      tier3Raw = await callVisionModel(
+        "vision_deep",
+        imageUrls,
+        tier3Prompt,
+        700,
+        0.2,
+        { deadlineAtMs: options?.deadlineAtMs }
+      );
       console.log("[Vision Pipeline] Tier 3 complete");
     } catch (err) {
       console.error("[Vision Pipeline] Tier 3 failed (non-blocking):", err);

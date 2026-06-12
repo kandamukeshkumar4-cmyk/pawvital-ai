@@ -13,6 +13,7 @@ import {
   inferSupportedImageDomain,
   type ConsultOpinion,
   type RetrievalBundle,
+  type ServiceTimeoutRecord,
   type SupportedImageDomain,
   type VisionClinicalEvidence,
   type VisionPreprocessResult,
@@ -41,8 +42,19 @@ import {
 } from "@/lib/sidecar-observability";
 import { ensureStructuredCaseMemory } from "@/lib/symptom-memory";
 import { verifyWithGLM } from "@/lib/nvidia-models";
+import {
+  getOptionalExternalStageTimeoutMs,
+  type TurnBudget,
+} from "@/lib/symptom-chat/turn-budget";
 
 type DiagnosisContext = ReturnType<typeof buildDiagnosisContext>;
+const REPORT_RETRIEVAL_TIMEOUT_MS = 5_000;
+const REPORT_FALLBACK_RETRIEVAL_TIMEOUT_MS = 2_500;
+
+interface ReportRetrievalOptions {
+  turnBudget?: TurnBudget;
+  serviceTimeouts?: ServiceTimeoutRecord[];
+}
 
 export function buildFallbackPreprocessResult(
   domain: SupportedImageDomain
@@ -285,12 +297,62 @@ export function didVisualEvidenceInfluenceQuestion(
   );
 }
 
+function createReportRetrievalTimeoutError(stage: string): Error {
+  const error = new Error(`${stage} turn deadline exhausted`);
+  error.name = "AbortError";
+  return error;
+}
+
+function recordReportRetrievalTimeout(
+  session: TriageSession,
+  options: ReportRetrievalOptions,
+  service: string,
+  stage: string,
+  reason = "turn_deadline_budget_exhausted"
+): TriageSession {
+  const timeoutRecord = { service, stage, reason };
+  options.serviceTimeouts?.push(timeoutRecord);
+  const caseMemory = ensureStructuredCaseMemory(session);
+  return {
+    ...session,
+    case_memory: {
+      ...caseMemory,
+      service_timeouts: [...caseMemory.service_timeouts, timeoutRecord].slice(
+        -10
+      ),
+    },
+  };
+}
+
+async function runReportFallbackRetrievalWithTimeout(
+  task: Promise<RetrievalBundle>,
+  timeoutMs: number
+): Promise<RetrievalBundle> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      task,
+      new Promise<RetrievalBundle>((_resolve, reject) => {
+        timeoutId = setTimeout(
+          () => reject(createReportRetrievalTimeoutError("fallback retrieval")),
+          timeoutMs
+        );
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 export async function buildReportRetrievalBundle(
   session: TriageSession,
   pet: PetProfile,
   knowledgeQuery: string,
   referenceImageQuery: string,
-  conditionHints: string[]
+  conditionHints: string[],
+  options: ReportRetrievalOptions = {}
 ): Promise<{ session: TriageSession; bundle: RetrievalBundle }> {
   const domain = session.latest_image_domain || null;
   const retrievalUrgency = buildDiagnosisContext(session, pet).highest_urgency;
@@ -318,14 +380,59 @@ export async function buildReportRetrievalBundle(
     session,
     additionalKey: referenceImageQuery,
   });
-  const shouldInvokeTextRetrieval =
+  const wantsTextRetrieval =
     isTextRetrievalConfigured() &&
     (textShadowDecision.enabled || textLiveDecision.enabled);
-  const shouldInvokeImageRetrieval =
+  const wantsImageRetrieval =
     isImageRetrievalConfigured() &&
     (imageShadowDecision.enabled || imageLiveDecision.enabled);
+  const retrievalTimeoutMs = getOptionalExternalStageTimeoutMs(
+    options.turnBudget,
+    REPORT_RETRIEVAL_TIMEOUT_MS
+  );
+  const shouldInvokeTextRetrieval =
+    wantsTextRetrieval && retrievalTimeoutMs !== null;
+  const shouldInvokeImageRetrieval =
+    wantsImageRetrieval && retrievalTimeoutMs !== null;
 
   let sidecarBundle: RetrievalBundle | null = null;
+
+  if (retrievalTimeoutMs === null && (wantsTextRetrieval || wantsImageRetrieval)) {
+    if (wantsTextRetrieval) {
+      session = appendSidecarObservation(session, {
+        service: "text-retrieval-service",
+        stage: "report-retrieval",
+        latencyMs: 0,
+        outcome: "timeout",
+        shadowMode: textShadowDecision.enabled,
+        fallbackUsed: true,
+        note: `skipped before sidecar call because turn deadline budget was exhausted; ${describeShadowModeDecision(textShadowDecision)}; ${describeLiveTrafficDecision(textLiveDecision)}`,
+      });
+      session = recordReportRetrievalTimeout(
+        session,
+        options,
+        "text-retrieval-service",
+        "report-retrieval"
+      );
+    }
+    if (wantsImageRetrieval) {
+      session = appendSidecarObservation(session, {
+        service: "image-retrieval-service",
+        stage: "report-retrieval",
+        latencyMs: 0,
+        outcome: "timeout",
+        shadowMode: imageShadowDecision.enabled,
+        fallbackUsed: true,
+        note: `skipped before sidecar call because turn deadline budget was exhausted; ${describeShadowModeDecision(imageShadowDecision)}; ${describeLiveTrafficDecision(imageLiveDecision)}`,
+      });
+      session = recordReportRetrievalTimeout(
+        session,
+        options,
+        "image-retrieval-service",
+        "report-retrieval"
+      );
+    }
+  }
 
   if (isTextRetrievalConfigured() || isImageRetrievalConfigured()) {
     const textStarted = Date.now();
@@ -339,6 +446,7 @@ export async function buildReportRetrievalBundle(
             conditionHints,
             dogOnly: true,
             textLimit: 3,
+            timeoutMs: retrievalTimeoutMs ?? undefined,
           })
         : Promise.resolve({
             textChunks: [],
@@ -353,6 +461,7 @@ export async function buildReportRetrievalBundle(
             conditionHints,
             dogOnly: true,
             imageLimit: 4,
+            timeoutMs: retrievalTimeoutMs ?? undefined,
           })
         : Promise.resolve({
             imageMatches: [],
@@ -382,6 +491,11 @@ export async function buildReportRetrievalBundle(
         note: `${timedOut ? "text retrieval timeout" : "text retrieval failed"}; ${describeShadowModeDecision(textShadowDecision)}; ${describeLiveTrafficDecision(textLiveDecision)}`,
       });
       if (timedOut) {
+        options.serviceTimeouts?.push({
+          service: "text-retrieval-service",
+          stage: "report-retrieval",
+          reason: "timeout",
+        });
         session.case_memory = {
           ...ensureStructuredCaseMemory(session),
           service_timeouts: [
@@ -421,6 +535,11 @@ export async function buildReportRetrievalBundle(
         note: `${timedOut ? "image retrieval timeout" : "image retrieval failed"}; ${describeShadowModeDecision(imageShadowDecision)}; ${describeLiveTrafficDecision(imageLiveDecision)}`,
       });
       if (timedOut) {
+        options.serviceTimeouts?.push({
+          service: "image-retrieval-service",
+          stage: "report-retrieval",
+          reason: "timeout",
+        });
         session.case_memory = {
           ...ensureStructuredCaseMemory(session),
           service_timeouts: [
@@ -435,11 +554,46 @@ export async function buildReportRetrievalBundle(
       }
     }
 
-    const fallbackBundle = await buildFallbackRetrievalBundle(
-      knowledgeQuery,
-      referenceImageQuery,
-      domain
+    const fallbackTimeoutMs = getOptionalExternalStageTimeoutMs(
+      options.turnBudget,
+      REPORT_FALLBACK_RETRIEVAL_TIMEOUT_MS
     );
+    let fallbackBundle: RetrievalBundle = {
+      textChunks: [],
+      imageMatches: [],
+      rerankScores: [],
+      sourceCitations: [],
+    };
+    if (fallbackTimeoutMs === null) {
+      session = recordReportRetrievalTimeout(
+        session,
+        options,
+        "text-retrieval-service",
+        "fallback-report-retrieval"
+      );
+    } else {
+      try {
+        fallbackBundle = await runReportFallbackRetrievalWithTimeout(
+          buildFallbackRetrievalBundle(knowledgeQuery, referenceImageQuery, domain),
+          fallbackTimeoutMs
+        );
+      } catch (error) {
+        const timedOut = isSidecarAbortError(error);
+        if (timedOut) {
+          session = recordReportRetrievalTimeout(
+            session,
+            options,
+            "text-retrieval-service",
+            "fallback-report-retrieval",
+            "timeout"
+          );
+        }
+        console.error(
+          "[Report] Fallback retrieval failed, continuing without retrieval context:",
+          error
+        );
+      }
+    }
 
     if (
       shouldInvokeTextRetrieval &&
@@ -528,7 +682,24 @@ export async function buildReportRetrievalBundle(
     const combinedLiveMode =
       !combinedShadowMode &&
       (textLiveDecision.enabled || imageLiveDecision.enabled);
-    if (combinedShadowMode || combinedLiveMode) {
+    if ((combinedShadowMode || combinedLiveMode) && retrievalTimeoutMs === null) {
+      session = appendSidecarObservation(session, {
+        service: "text-retrieval-service",
+        stage: "legacy-combined-retrieval",
+        latencyMs: 0,
+        outcome: "timeout",
+        shadowMode: combinedShadowMode,
+        fallbackUsed: true,
+        note: `skipped before combined sidecar call because turn deadline budget was exhausted; text=${describeShadowModeDecision(textShadowDecision)}; image=${describeShadowModeDecision(imageShadowDecision)}; textLive=${describeLiveTrafficDecision(textLiveDecision)}; imageLive=${describeLiveTrafficDecision(imageLiveDecision)}`,
+      });
+      session = recordReportRetrievalTimeout(
+        session,
+        options,
+        "text-retrieval-service",
+        "legacy-combined-retrieval"
+      );
+    }
+    if ((combinedShadowMode || combinedLiveMode) && retrievalTimeoutMs !== null) {
       try {
         const combinedBundle = await retrieveVeterinaryEvidenceFromSidecar({
           query: knowledgeQuery,
@@ -538,6 +709,7 @@ export async function buildReportRetrievalBundle(
           dogOnly: true,
           textLimit: 3,
           imageLimit: 4,
+          timeoutMs: retrievalTimeoutMs,
         });
         session = appendSidecarObservation(session, {
           service: "text-retrieval-service",
@@ -553,27 +725,72 @@ export async function buildReportRetrievalBundle(
         }
       } catch (error) {
         console.error("[HF Retrieval Sidecar] failed:", error);
+        const timedOut = isSidecarAbortError(error);
         session = appendSidecarObservation(session, {
           service: "text-retrieval-service",
           stage: "legacy-combined-retrieval",
           latencyMs: Date.now() - startedAt,
-          outcome: isSidecarAbortError(error) ? "timeout" : "error",
+          outcome: timedOut ? "timeout" : "error",
           shadowMode: combinedShadowMode,
           fallbackUsed: true,
           note: `legacy combined retrieval failed; text=${describeShadowModeDecision(textShadowDecision)}; image=${describeShadowModeDecision(imageShadowDecision)}; textLive=${describeLiveTrafficDecision(textLiveDecision)}; imageLive=${describeLiveTrafficDecision(imageLiveDecision)}`,
         });
+        if (timedOut) {
+          session = recordReportRetrievalTimeout(
+            session,
+            options,
+            "text-retrieval-service",
+            "legacy-combined-retrieval",
+            "timeout"
+          );
+        }
       }
     }
   }
 
-  const fallbackBundle = await buildFallbackRetrievalBundle(
-    knowledgeQuery,
-    referenceImageQuery,
-    domain
-  );
-
   if (sidecarBundle) {
     return { session, bundle: sidecarBundle };
+  }
+
+  const fallbackTimeoutMs = getOptionalExternalStageTimeoutMs(
+    options.turnBudget,
+    REPORT_FALLBACK_RETRIEVAL_TIMEOUT_MS
+  );
+  let fallbackBundle: RetrievalBundle = {
+    textChunks: [],
+    imageMatches: [],
+    rerankScores: [],
+    sourceCitations: [],
+  };
+  if (fallbackTimeoutMs === null) {
+    session = recordReportRetrievalTimeout(
+      session,
+      options,
+      "text-retrieval-service",
+      "fallback-report-retrieval"
+    );
+  } else {
+    try {
+      fallbackBundle = await runReportFallbackRetrievalWithTimeout(
+        buildFallbackRetrievalBundle(knowledgeQuery, referenceImageQuery, domain),
+        fallbackTimeoutMs
+      );
+    } catch (error) {
+      const timedOut = isSidecarAbortError(error);
+      if (timedOut) {
+        session = recordReportRetrievalTimeout(
+          session,
+          options,
+          "text-retrieval-service",
+          "fallback-report-retrieval",
+          "timeout"
+        );
+      }
+      console.error(
+        "[Report] Fallback retrieval failed, continuing without retrieval context:",
+        error
+      );
+    }
   }
 
   session = appendSidecarObservation(session, {
@@ -594,23 +811,26 @@ async function buildFallbackRetrievalBundle(
   referenceImageQuery: string,
   domain: SupportedImageDomain | null
 ): Promise<RetrievalBundle> {
-  const knowledgeChunks = (await searchKnowledgeChunks(knowledgeQuery, 3)) || [];
-  const referenceImageMatches =
-    (await searchReferenceImages(referenceImageQuery, 4, [], {
+  const [knowledgeChunks, referenceImageMatches] = await Promise.all([
+    searchKnowledgeChunks(knowledgeQuery, 3),
+    searchReferenceImages(referenceImageQuery, 4, [], {
       domain,
       dogOnly: true,
       liveOnly: true,
-    })) || [];
+    }),
+  ]);
+  const safeKnowledgeChunks = knowledgeChunks || [];
+  const safeReferenceImageMatches = referenceImageMatches || [];
 
   return {
-    textChunks: knowledgeChunks.map((chunk) => ({
+    textChunks: safeKnowledgeChunks.map((chunk) => ({
       title: chunk.sourceTitle,
       citation: chunk.citation || chunk.sourceUrl,
       score: chunk.score,
       summary: chunk.textContent,
       sourceUrl: chunk.sourceUrl,
     })),
-    imageMatches: referenceImageMatches.map((match) => ({
+    imageMatches: safeReferenceImageMatches.map((match) => ({
       title: match.sourceTitle,
       citation: match.datasetUrl || match.assetUrl,
       score: match.similarity,
@@ -624,10 +844,10 @@ async function buildFallbackRetrievalBundle(
     })),
     rerankScores: [],
     sourceCitations: [
-      ...knowledgeChunks
+      ...safeKnowledgeChunks
         .map((chunk) => chunk.citation || chunk.sourceUrl || "")
         .filter(Boolean),
-      ...referenceImageMatches
+      ...safeReferenceImageMatches
         .map((match) => match.datasetUrl || match.assetUrl || "")
         .filter(Boolean),
     ].slice(0, 8),
@@ -815,7 +1035,8 @@ export function parseReportJSON(rawText: string): Record<string, unknown> {
 export async function safetyVerify(
   report: Record<string, unknown>,
   pet: PetProfile,
-  context: DiagnosisContext
+  context: DiagnosisContext,
+  options: { timeoutMs?: number } = {}
 ): Promise<Record<string, unknown>> {
   const safetyPrompt = `You are a veterinary safety review system. Your ONLY job is to check a diagnosis report for dangerous oversights.
 
@@ -845,7 +1066,9 @@ Output ONLY valid JSON (no thinking, no markdown):
   "reasoning": "Brief explanation of why changes were needed, or 'Report is clinically sound' if no changes"
 }`;
 
-  const rawResponse = await verifyWithGLM(safetyPrompt);
+  const rawResponse = await verifyWithGLM(safetyPrompt, {
+    timeoutMs: options.timeoutMs,
+  });
 
   let safety: {
     safe?: boolean;

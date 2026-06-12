@@ -13,6 +13,8 @@ import {
 
 const MAX_REQUEST_BYTES = 24 * 1024;
 
+export const maxDuration = 60;
+
 const PetSchema = z
   .object({
     name: z.string().trim().min(1).optional(),

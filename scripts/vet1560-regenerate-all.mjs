@@ -242,6 +242,9 @@ const forbiddenLiveCommands = [
   "scripts/apply-rag-schema.mjs",
   "scripts/sync-sidecar-vercel-envs.mjs",
 ];
+const transientOpenErrorPattern =
+  /\b(?:UNKNOWN|EBUSY|EPERM|EACCES)\b[\s\S]{0,240}\bsyscall:\s*'open'|\bsyscall:\s*'open'[\s\S]{0,240}\b(?:UNKNOWN|EBUSY|EPERM|EACCES)\b/i;
+const maxCommandAttempts = 3;
 
 function sha256(relativePath) {
   return createHash("sha256")
@@ -277,6 +280,21 @@ function capturedLines(output) {
     .slice(-8);
 }
 
+function isTransientOpenFailure(result) {
+  if (result.status === 0) {
+    return false;
+  }
+
+  return transientOpenErrorPattern.test(
+    [result.stdout ?? "", result.stderr ?? ""].join("\n")
+  );
+}
+
+function waitBeforeRetry(attempt) {
+  const delayMs = 150 * attempt;
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delayMs);
+}
+
 function verifyReviewOnlyPlan() {
   const violations = commands.filter((command) =>
     forbiddenLiveCommands.some((forbidden) => {
@@ -295,6 +313,16 @@ function verifyReviewOnlyPlan() {
   }
 }
 
+function spawnCommand(command, env) {
+  return spawnSync(process.execPath, command.args, {
+    cwd: process.cwd(),
+    env,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: false,
+  });
+}
+
 function runCommand(command) {
   const env = {
     ...process.env,
@@ -309,13 +337,13 @@ function runCommand(command) {
       : {}),
   };
   const startedAt = timestamp();
-  const result = spawnSync(process.execPath, command.args, {
-    cwd: process.cwd(),
-    env,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-    shell: false,
-  });
+  let result = spawnCommand(command, env);
+  let attempt = 1;
+  while (attempt < maxCommandAttempts && isTransientOpenFailure(result)) {
+    attempt += 1;
+    waitBeforeRetry(attempt);
+    result = spawnCommand(command, env);
+  }
   const status = result.status === 0 ? "success" : "failed";
   return {
     id: command.id,

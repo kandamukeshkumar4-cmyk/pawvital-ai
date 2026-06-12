@@ -156,13 +156,22 @@ import {
 } from "@/lib/symptom-chat/extraction-helpers";
 import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
-import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
+import {
+  buildQuestionResponseFlow,
+  getSymptomChatTurnDepth,
+} from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
 import {
   generateReport,
   generateTerminalOutcomeReport,
 } from "@/lib/symptom-chat/report-pipeline";
+import {
+  createTurnBudget,
+  getOptionalExternalStageTimeoutMs,
+  getRemainingTurnBudgetMs,
+  isTurnBudgetExceeded,
+} from "@/lib/symptom-chat/turn-budget";
 import {
   trackException,
   trackRouteTelemetry,
@@ -192,6 +201,13 @@ import {
 // Detect which engine to use
 const useNvidia = isNvidiaConfigured();
 const ROUTE_NAME = "api.ai.symptom-chat";
+// Next.js segment config must be a statically analyzable literal.
+// Keep this aligned with SYMPTOM_CHAT_MAX_DURATION_SECONDS in turn-budget.ts.
+export const maxDuration = 60;
+const IMAGE_ENRICHMENT_TIMEOUT_MS = 4_500;
+const IMAGE_GATE_TIMEOUT_MS = 3_000;
+const VISION_PREPROCESS_TIMEOUT_MS = 5_500;
+const MULTIMODAL_CONSULT_TIMEOUT_MS = 9_000;
 
 interface RequestBody {
   messages: { role: "user" | "assistant"; content: string }[];
@@ -1213,7 +1229,9 @@ function buildDeterministicEmergencyMessage(
 
 export async function POST(request: Request) {
   const startedAtMs = Date.now();
+  const turnBudget = createTurnBudget(startedAtMs);
   const stageDurationsMs: Record<string, number> = {};
+  const serviceTimeouts: ServiceTimeoutRecord[] = [];
   // Internal-only per-stage latency accumulator. Surfaced to App Insights via
   // trackRouteTelemetry measurements; never enters the route response payload.
   const recordStageMs = (stage: string, startedAt: number): void => {
@@ -1240,7 +1258,7 @@ export async function POST(request: Request) {
       symptomChatLimiter,
       getRateLimitId(request)
     );
-    if (!rlResult.success) {
+    if (rlResult && rlResult.success === false) {
       statusCode = 429;
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
@@ -1288,7 +1306,6 @@ export async function POST(request: Request) {
     let imagePreprocess: VisionPreprocessResult | null = null;
     let visualEvidence: VisionClinicalEvidence | null = null;
     let consultOpinion: ConsultOpinion | null = null;
-    const serviceTimeouts: ServiceTimeoutRecord[] = [];
     const ambiguityFlags: string[] = [];
     let alternateObservableOutcome: AlternateObservableRecoveryOutcome | null =
       null;
@@ -1337,6 +1354,8 @@ export async function POST(request: Request) {
         image,
         requestOrigin: new URL(request.url).origin,
         verifiedUserId,
+        turnBudget,
+        serviceTimeouts,
       });
     }
 
@@ -1387,10 +1406,31 @@ export async function POST(request: Request) {
 
     if (image && isLikelyDogContext(effectivePet)) {
       if (session.image_enrichment_hash !== imageHash) {
-        const [breedDetection, skinFlag] = await Promise.all([
-          detectBreedWithNyckel(image, effectivePet),
-          runRoboflowSkinWorkflow(image, effectivePet),
-        ]);
+        const imageEnrichmentTimeoutMs = getOptionalExternalStageTimeoutMs(
+          turnBudget,
+          IMAGE_ENRICHMENT_TIMEOUT_MS
+        );
+        const [breedDetection, skinFlag] =
+          imageEnrichmentTimeoutMs === null
+            ? [null, null]
+            : await Promise.all([
+                detectBreedWithNyckel(image, effectivePet, {
+                  timeoutMs: imageEnrichmentTimeoutMs,
+                  deadlineAtMs: turnBudget.deadlineAtMs,
+                }),
+                runRoboflowSkinWorkflow(image, effectivePet, {
+                  timeoutMs: imageEnrichmentTimeoutMs,
+                  deadlineAtMs: turnBudget.deadlineAtMs,
+                }),
+              ]);
+
+        if (imageEnrichmentTimeoutMs === null) {
+          serviceTimeouts.push({
+            service: "image-enrichment",
+            stage: "nyckel-roboflow",
+            reason: "turn_deadline_budget_exhausted",
+          });
+        }
 
         if (breedDetection) {
           session.image_inferred_breed = breedDetection.breed;
@@ -1437,8 +1477,28 @@ export async function POST(request: Request) {
         visionPreprocessDecision.enabled || visionLiveDecision.enabled;
       if (isVisionPreprocessConfigured()) {
         if (shouldInvokeVisionPreprocess) {
+          const preprocessTimeoutMs = getOptionalExternalStageTimeoutMs(
+            turnBudget,
+            VISION_PREPROCESS_TIMEOUT_MS
+          );
           const startedAt = Date.now();
-          try {
+          if (preprocessTimeoutMs === null) {
+            serviceTimeouts.push({
+              service: "vision-preprocess-service",
+              stage: "preprocess",
+              reason: "turn_deadline_budget_exhausted",
+            });
+            session = appendSidecarObservation(session, {
+              service: "vision-preprocess-service",
+              stage: "preprocess",
+              latencyMs: 0,
+              outcome: "timeout",
+              shadowMode: visionPreprocessDecision.enabled,
+              fallbackUsed: true,
+              note: `skipped before sidecar call because turn deadline budget was exhausted; ${describeShadowModeDecision(visionPreprocessDecision)}; ${describeLiveTrafficDecision(visionLiveDecision)}`,
+            });
+          } else {
+            try {
             const preprocessedImage = await preprocessVeterinaryImage({
               image,
               ownerText: lastUserMessage.content,
@@ -1446,6 +1506,7 @@ export async function POST(request: Request) {
               breed: effectivePet.breed,
               ageYears: effectivePet.age_years,
               weight: effectivePet.weight,
+              timeoutMs: preprocessTimeoutMs,
             });
             session = appendSidecarObservation(session, {
               service: "vision-preprocess-service",
@@ -1491,6 +1552,7 @@ export async function POST(request: Request) {
               });
             }
           }
+          }
         }
       }
 
@@ -1524,10 +1586,47 @@ export async function POST(request: Request) {
 
     if (image && shouldRunWoundVision && gateOverride !== true) {
       const gateCacheKey = buildGateCacheKey(imageHash || "", imageMeta);
-      const gateWarning =
+      let gateWarning =
         session.gate_cache_key === gateCacheKey
           ? readCachedGateWarning(session)
-          : await evaluateAndCacheGate(session, gateCacheKey, image, imageMeta);
+          : null;
+      if (session.gate_cache_key !== gateCacheKey) {
+        const gateTimeoutMs = getOptionalExternalStageTimeoutMs(
+          turnBudget,
+          IMAGE_GATE_TIMEOUT_MS
+        );
+        if (gateTimeoutMs === null) {
+          serviceTimeouts.push({
+            service: "hf-image-gate",
+            stage: "image-gate",
+            reason: "turn_deadline_budget_exhausted",
+          });
+        }
+        try {
+          gateWarning = await evaluateAndCacheGate(
+            session,
+            gateCacheKey,
+            image,
+            imageMeta,
+            gateTimeoutMs === null
+              ? { skipRemoteClassification: true }
+              : {
+                  timeoutMs: gateTimeoutMs,
+                  deadlineAtMs: turnBudget.deadlineAtMs,
+                }
+          );
+        } catch (error) {
+          if (isSidecarAbortError(error)) {
+            serviceTimeouts.push({
+              service: "hf-image-gate",
+              stage: "image-gate",
+              reason: "timeout",
+            });
+          }
+          console.error("[Image Gate] Evaluation failed:", error);
+          gateWarning = null;
+        }
+      }
       if (gateWarning) {
         console.log(
           `[Image Gate] warning=${gateWarning.reason}, label=${gateWarning.topLabel || "n/a"}`
@@ -1570,6 +1669,7 @@ export async function POST(request: Request) {
             weight: effectivePet.weight,
           },
           {
+            deadlineAtMs: turnBudget.deadlineAtMs,
             preprocess: imagePreprocess || undefined,
           }
         );
@@ -1758,7 +1858,8 @@ export async function POST(request: Request) {
         effectivePet,
         extractionSchema,
         compactImageSignals,
-        keywordSymptoms
+        keywordSymptoms,
+        { turnBudget }
       ));
     recordStageMs("extractionMs", extractionStartedAt);
 
@@ -2500,8 +2601,28 @@ export async function POST(request: Request) {
         const shouldInvokeConsult =
           consultShadowDecision.enabled || consultLiveDecision.enabled;
         if (shouldInvokeConsult) {
+          const consultTimeoutMs = getOptionalExternalStageTimeoutMs(
+            turnBudget,
+            MULTIMODAL_CONSULT_TIMEOUT_MS
+          );
           const startedAt = Date.now();
-          try {
+          if (consultTimeoutMs === null) {
+            serviceTimeouts.push({
+              service: "multimodal-consult-service",
+              stage: "sync-consult",
+              reason: "turn_deadline_budget_exhausted",
+            });
+            session = appendSidecarObservation(session, {
+              service: "multimodal-consult-service",
+              stage: "sync-consult",
+              latencyMs: 0,
+              outcome: "timeout",
+              shadowMode: consultShadowDecision.enabled,
+              fallbackUsed: true,
+              note: `skipped before sidecar call because turn deadline budget was exhausted; ${describeShadowModeDecision(consultShadowDecision)}; ${describeLiveTrafficDecision(consultLiveDecision)}`,
+            });
+          } else {
+            try {
             const nextConsultOpinion = await consultWithMultimodalSidecar({
               image,
               ownerText: lastUserMessage.content,
@@ -2518,6 +2639,7 @@ export async function POST(request: Request) {
               contradictions,
               deterministicFacts: session.extracted_answers,
               mode: "sync",
+              timeoutMs: consultTimeoutMs,
             });
             session = appendSidecarObservation(session, {
               service: "multimodal-consult-service",
@@ -2564,6 +2686,7 @@ export async function POST(request: Request) {
                 reason: "timeout",
               });
             }
+          }
           }
         }
       }
@@ -2719,6 +2842,12 @@ export async function POST(request: Request) {
     const nextQuestionId = nextQuestionState.nextQuestionId;
     const needsClarificationQuestionId =
       nextQuestionState.needsClarificationQuestionId;
+    const textOnlyQuestionWillUsePhrasingModel =
+      !image &&
+      !visionAnalysis &&
+      Boolean(nextQuestionId) &&
+      !textOnlyQuickStartExtraction &&
+      getSymptomChatTurnDepth() !== "lean";
     session = await maybeCompressStructuredCaseMemory(
       session,
       effectivePet,
@@ -2728,10 +2857,14 @@ export async function POST(request: Request) {
         imageAnalyzed: Boolean(visionAnalysis),
         changedSymptoms: changedSymptomsThisTurn,
         changedAnswers: changedAnswerKeys,
+        modelCompressionDisabled: textOnlyQuestionWillUsePhrasingModel,
+        modelCompressionDisabledReason: "text_turn_model_call_cap",
+        turnBudget,
+        serviceTimeouts,
       }
     );
 
-    return buildQuestionResponseFlow({
+    return await buildQuestionResponseFlow({
       session,
       nextQuestionId,
       needsClarificationQuestionId,
@@ -2744,6 +2877,8 @@ export async function POST(request: Request) {
       visionSeverity,
       image,
       forceDeterministicQuestionFallback: Boolean(textOnlyQuickStartExtraction),
+      turnBudget,
+      serviceTimeouts,
     });
   } catch (error) {
     errorCode = "symptom_chat_unhandled";
@@ -2763,6 +2898,20 @@ export async function POST(request: Request) {
     // POST settles. Capture the response time now so a deferred `durationMs`
     // still reflects real turn latency, not post-response scheduling delay.
     const endedAtMs = Date.now();
+    const remainingBudgetMs = getRemainingTurnBudgetMs(turnBudget, endedAtMs);
+    stageDurationsMs.deadlineRemainingMs =
+      remainingBudgetMs === null ? 0 : Math.max(0, remainingBudgetMs);
+    stageDurationsMs.deadlineExceeded = isTurnBudgetExceeded(turnBudget, endedAtMs)
+      ? 1
+      : 0;
+    if (serviceTimeouts.length > 0) {
+      stageDurationsMs.serviceTimeoutCount = serviceTimeouts.length;
+      for (const timeout of serviceTimeouts) {
+        const stageKey = timeout.stage.replace(/[^A-Za-z0-9]+/g, "_");
+        const metricName = `serviceTimeout_${stageKey}`;
+        stageDurationsMs[metricName] = (stageDurationsMs[metricName] ?? 0) + 1;
+      }
+    }
     runAfterSafely(async () => {
       await trackRouteTelemetry({
         routeName: ROUTE_NAME,

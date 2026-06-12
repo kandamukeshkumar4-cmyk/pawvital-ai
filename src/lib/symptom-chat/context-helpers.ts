@@ -8,6 +8,7 @@ import {
 import { FOLLOW_UP_QUESTIONS, SYMPTOM_MAP } from "@/lib/clinical-matrix";
 import {
   evaluateImageGate,
+  type ImageGateOptions,
   type ImageGateWarning,
   type ImageMeta,
 } from "@/lib/image-gate";
@@ -641,9 +642,10 @@ export async function evaluateAndCacheGate(
   session: TriageSession,
   gateCacheKey: string,
   image: string,
-  imageMeta?: ImageMeta
+  imageMeta?: ImageMeta,
+  options: ImageGateOptions = {}
 ): Promise<ImageGateWarning | null> {
-  const gateWarning = await evaluateImageGate(image, imageMeta);
+  const gateWarning = await evaluateImageGate(image, imageMeta, options);
   session.gate_cache_key = gateCacheKey;
   session.gate_warning_reason = gateWarning?.reason;
   session.gate_warning_label = gateWarning?.topLabel;

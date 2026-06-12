@@ -1,0 +1,137 @@
+name: Production Latency Monitor
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production base URL to probe"
+        required: false
+        default: "https://pawvital-ai.vercel.app"
+      max_latency_ms:
+        description: "Maximum acceptable latency in milliseconds"
+        required: false
+        default: "10000"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  probe:
+    name: Synthetic production probe
+    runs-on: ubuntu-latest
+    env:
+      PAWVITAL_PROBE_BASE_URL: ${{ github.event.inputs.base_url || 'https://pawvital-ai.vercel.app' }}
+      PAWVITAL_PROBE_MAX_LATENCY_MS: ${{ github.event.inputs.max_latency_ms || '10000' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Run hourly synthetic probe
+        continue-on-error: ${{ github.event.schedule == '17 5 * * *' || github.event_name == 'workflow_dispatch' }}
+        run: node scripts/synthetic-prod-probe.mjs
+
+      - name: Add daily scorecard samples
+        if: always() && github.event.schedule == '17 5 * * *'
+        run: |
+          for run in 1 2 3 4; do
+            node scripts/synthetic-prod-probe.mjs || true
+          done
+
+      - name: Build daily latency scorecard
+        if: always() && (github.event.schedule == '17 5 * * *' || github.event_name == 'workflow_dispatch')
+        run: node scripts/synthetic-latency-scorecard.mjs --min-samples 1
+
+      - name: Publish latency monitor issue
+        if: always() && (failure() || github.event.schedule == '17 5 * * *' || github.event_name == 'workflow_dispatch')
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const { owner, repo } = context.repo;
+            const title = "VET-1572 production latency scorecard";
+            const marker = "<!-- pawvital-production-latency-scorecard -->";
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            function readText(filePath, fallback) {
+              return fs.existsSync(filePath)
+                ? fs.readFileSync(filePath, "utf8").trim()
+                : fallback;
+            }
+
+            const scorecard = readText(
+              path.join("data", "latency", "prod-latency-scorecard.md"),
+              "_Daily scorecard was not generated in this run._"
+            );
+            const latestProbe = readText(
+              path.join("data", "latency", "prod-probe-latest.json"),
+              "{}"
+            );
+
+            const body = [
+              marker,
+              "# Production Latency Monitor",
+              "",
+              `Updated from [workflow run](${runUrl}).`,
+              `Threshold: ${process.env.PAWVITAL_PROBE_MAX_LATENCY_MS || "10000"} ms`,
+              "",
+              "## Scorecard",
+              "",
+              scorecard,
+              "",
+              "## Latest Probe",
+              "",
+              "```json",
+              latestProbe,
+              "```",
+              "",
+              "_This issue is maintained by `.github/workflows/production-latency-monitor.yml`._",
+            ].join("\n");
+
+            const issues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = issues.data.find(
+              (issue) => !issue.pull_request && issue.title === title
+            );
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Upload latency artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pawvital-production-latency
+          path: |
+            data/latency/prod-probe-latest.json
+            data/latency/prod-probe.jsonl
+            data/latency/prod-latency-scorecard.json
+            data/latency/prod-latency-scorecard.md
+          if-no-files-found: ignore
