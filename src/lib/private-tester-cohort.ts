@@ -315,16 +315,21 @@ export function buildPrivateTesterRegistryTemplateRows(
 ) {
   return testers.map((tester) => ({
     access_disabled: tester.access.blocked ? "yes" : "no",
+    allowlist_status: tester.access.allowed
+      ? "allowlisted"
+      : tester.access.blocked
+        ? "blocked"
+        : "not_allowlisted",
     consent_status: "manual-verify",
     deletion_requested: "manual-verify",
-    device_browser: "capture-during-invite",
-    dog_age: "capture-during-invite",
-    dog_breed_size: "capture-during-invite",
+    device_browser: "capture-during-onboarding",
+    dog_age: "capture-during-onboarding",
+    dog_breed_size: "capture-during-onboarding",
     email: tester.user.email ?? "",
     feedback_submitted: tester.counts.outcomeFeedbackEntries > 0 ? "yes" : "no",
     first_login_timestamp: "capture-during-launch",
     first_symptom_check_timestamp: tester.recentCases.at(-1)?.createdAt ?? "",
-    invite_status: tester.access.allowed ? "invited" : tester.access.blocked ? "blocked" : "not-invited",
+    invitation_sent_proof: "manual-verify",
     tester_alias: tester.user.fullName ?? tester.user.id,
   }));
 }

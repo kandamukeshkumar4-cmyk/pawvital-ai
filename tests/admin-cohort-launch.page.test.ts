@@ -189,6 +189,8 @@ describe("AdminCohortLaunchPage", () => {
     expect(html).toContain("Founder triage queue");
     expect(html).toContain("Allowlisted testers");
     expect(html).not.toContain("Testers invited");
+    expect(html).not.toContain("not-invited");
+    expect(html).not.toContain("needs invite follow-up");
     expect(html).toContain("Question-flow flags");
     expect(html).toContain("question_flow_issue");
     expect(html).not.toContain("Repeated-question flags");

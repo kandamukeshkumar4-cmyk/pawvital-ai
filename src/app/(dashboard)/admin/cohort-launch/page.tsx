@@ -289,7 +289,7 @@ export default async function AdminCohortLaunchPage() {
           <div className="mt-4 space-y-3">
             {commandCenter.filters.failedSignInOrAccessSessions.length === 0 ? (
               <p className="text-sm text-slate-500">
-                No blocked or not-invited tester accounts are currently surfaced.
+                No blocked or not-allowlisted tester accounts are currently surfaced.
               </p>
             ) : (
               commandCenter.filters.failedSignInOrAccessSessions.map((entry) => (
@@ -301,7 +301,8 @@ export default async function AdminCohortLaunchPage() {
                     {entry.email || entry.testerId}
                   </p>
                   <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
-                    {entry.blocked ? "blocked" : "needs invite follow-up"} • {entry.accessReason}
+                    {entry.blocked ? "blocked" : "needs access follow-up"} •{" "}
+                    {entry.accessReason}
                   </p>
                   <p className="mt-2 text-sm text-slate-700">
                     Symptom checks: {entry.symptomChecks} • Negative feedback:{" "}

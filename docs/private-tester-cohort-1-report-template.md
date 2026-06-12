@@ -7,7 +7,7 @@ Use this after the first 48 hours of Cohort 1.
 - Date window:
 - Release branch / commit:
 - Founder reviewer:
-- Invite count:
+- Allowlisted tester count:
 - Active tester count:
 
 ## Core metrics
