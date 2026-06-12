@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-12T16:22:51Z.
+Evidence cutoff: 2026-06-12T16:59:19Z.
 
 ## Why Public Beta Is HOLD
 
@@ -19,6 +19,7 @@ Known current blockers:
 - Issue #588 remains open; VET-1563 model-promotion evidence is incomplete.
 - Privacy, terms, consent persistence, and public-beta support readiness are not proven.
 - Scheduler/shadow readout remains empty and must stay separate from owner-visible UX proof.
+- Serverless reliability PR #601 is open/blocked with no checks attached; production alias/env/maxDuration proof and live synthetic latency scorecard evidence are still missing.
 - Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #598 is also open/non-draft/mergeable/blocked with no attached checks, PR #600 is clean only against the PR #598 base with no reported checks, the required `Threshold Review Gate` is absent where applicable, the PR #596 recovery branch has no workflow runs, and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
 
 ## Owner-Visible UX Proof
@@ -47,6 +48,7 @@ Passed, but partial:
 - App Insights for the VET-1570C saved-tester smoke window recorded `api.ai.symptom-chat` events=5, errors=0, p95 durationMs=41604, p95 extractionMs=0, and p95 secondOpinionMs=8075.
 - Product-intelligence persistence recovered on `dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL` with saved-tester owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and zero post-smoke 500 records.
 - PR #594 adds newer current-deployment product-intelligence daily-readiness write proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON error records in the post-smoke Vercel error-log query.
+- PR #601 is `GO_REVIEW_ONLY` for serverless reliability budget hardening in an open blocked PR at `b72c3620510d14fe5e2669e16adac876dfe112d7`, but it is not merged/deployed and still lacks production alias/env/maxDuration proof plus live synthetic latency probe/scorecard evidence.
 
 ## Backend And Model Proof
 
@@ -78,6 +80,7 @@ Launch-stack PR gate readiness is HOLD.
 - PRs #591-#596 are open, non-draft, and mergeable, but each currently reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`.
 - PR #598 is open/non-draft/mergeable but also reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`.
 - PR #600 is open/non-draft/mergeable and `CLEAN` against PR #598's branch, but it has no reported checks and remains dependent review evidence until PR #598 lands and the validator is run against a completed registry.
+- PR #601 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only reliability evidence until checks attach/pass and production latency proof is captured.
 - PR #596 (`codex/vet-1579c-threshold-gate-recovery` at `745a1173db546805afdedfe788677081cec2a93b`) attempted a workflow-only recovery for the required `Threshold Review Gate`.
 - `gh run list --branch codex/vet-1579c-threshold-gate-recovery` returned no workflow runs.
 - Manual dispatch failed with `HTTP 422: Actions has been disabled for this user`.
@@ -94,6 +97,7 @@ Monitoring is partial:
 - VET-1576C current-deployment product-intelligence write smoke reported 0 JSON error records after the daily-readiness write.
 - 2026-06-12 read-only Vercel production monitoring refresh emitted zero JSON error rows and zero JSON HTTP 500 rows for the last hour.
 - PR #600 adds a review-only invite-send proof validator, and PR #592 now records its placeholder-registry HOLD result in the Cohort 1 readout.
+- PR #601 adds review-ready serverless reliability budget hardening and a latency probe/scorecard workflow, but production alias/env/maxDuration proof and live synthetic scorecard evidence remain missing.
 - No full Cohort 1 monitoring/readout packet exists for public beta.
 
 ## Final Gate
@@ -107,4 +111,5 @@ Monitoring is partial:
 - Product-intelligence recovery checkpoint UI: GO_REVIEW_ONLY for PR #595 at `a9ad1ba953974f8c463812d24304b8ed74a3d4dd`; production write/smoke HOLD
 - Candidate intake harness: GO review-only
 - Model/NIM promotion: HOLD
+- Serverless reliability budget hardening: GO_REVIEW_ONLY in open PR #601; production alias/maxDuration/synthetic scorecard proof HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
