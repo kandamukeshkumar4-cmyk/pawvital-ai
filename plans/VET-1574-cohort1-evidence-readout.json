@@ -1,11 +1,11 @@
 {
   "ticket": "VET-1574C",
   "mode": "cohort1-evidence-readout",
-  "generatedAt": "2026-06-12T15:57:16.361Z",
-  "evidenceCutoff": "2026-06-12T15:57:16.361Z",
+  "generatedAt": "2026-06-12T17:10:45.781Z",
+  "evidenceCutoff": "2026-06-12T17:10:45.781Z",
   "readoutStatus": "PARTIAL",
   "publicBetaDecision": "HOLD",
-  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh emitted zero JSON error/500 rows, PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence, PR #598 is non-draft GO_REVIEW_ONLY at 2ee6d4c with command-center/registry allowlist-vs-invite semantics fixed, and PR #600 adds a review-only invite-send proof validator at 30629f0. The validator currently proves the repo registry is still placeholder-only: intendedTesterCount=0 and rowsWithInvitationProof=0, so invite-send proof remains HOLD. Missing real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
+  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh emitted zero JSON error/500 rows, PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence, PR #598 is non-draft GO_REVIEW_ONLY at 2ee6d4c with command-center/registry allowlist-vs-invite semantics fixed, PR #600 adds a review-only invite-send proof validator at 30629f0, and PR #601 adds review-ready serverless reliability-budget hardening at b72c362. The invite validator currently proves the repo registry is still placeholder-only: intendedTesterCount=0 and rowsWithInvitationProof=0, so invite-send proof remains HOLD. PR #601 remains production-proof HOLD because it is open/blocked with no checks, not merged/deployed, and still lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence. Missing real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
   "scope": {
     "allowed": [
       "point-in-time Cohort 1 evidence readout",
@@ -24,7 +24,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-12T15:57:16.361Z",
+    "performedAt": "2026-06-12T17:10:45.781Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
@@ -263,7 +263,8 @@
       "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed.",
       "VET-1576C PR #594 records current-deployment daily-readiness/product-intelligence write proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb: row 61c44ae9-5b30-482d-8207-efbaf6598140, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.",
       "PR #595 records owner-visible recovery checkpoint UI GO_REVIEW_ONLY at a9ad1ba953974f8c463812d24304b8ed74a3d4dd with refreshed claim-language/readiness evidence and formal TecjLead no-blocker review, but authenticated production recovery write/smoke remains HOLD.",
-      "2026-06-12T14:34Z read-only Vercel production monitoring refresh with explicit project scope emitted zero JSON error rows and zero JSON HTTP 500 rows for the last hour.",
+      "2026-06-12T17:10Z read-only Vercel production monitoring refresh with explicit project scope emitted zero JSON error rows and zero JSON HTTP 500 rows for the last hour.",
+      "PR #601 records review-ready serverless reliability budget hardening and latency probe/scorecard workflow at b72c3620510d14fe5e2669e16adac876dfe112d7, but production proof remains HOLD.",
       "2026-06-12 read-only App Insights query refresh found zero queryable route/custom event rows in 24h/7d windows and zero 30d union rows, so no fresh durationMs/extractionMs/secondOpinionMs cohort-window latency readout is available from App Insights today."
     ],
     "limitations": [
@@ -273,11 +274,12 @@
       "Backend telemetry proof is not owner-visible UX proof.",
       "PR #594 is open and mergeStateStatus=BLOCKED, so current product-intelligence write proof is evidence-in-PR, not landed master truth.",
       "PR #595 is open and mergeStateStatus=BLOCKED, so recovery checkpoint UI proof is review-only PR evidence, not landed production truth.",
-      "PR #591 is open and mergeStateStatus=BLOCKED, so the public-beta HOLD packet is evidence-in-PR, not landed master truth."
+      "PR #591 is open and mergeStateStatus=BLOCKED, so the public-beta HOLD packet is evidence-in-PR, not landed master truth.",
+      "PR #601 is open and mergeStateStatus=BLOCKED, so serverless reliability hardening is review-only PR evidence, not landed production proof."
     ]
   },
   "currentMonitoringRefresh": {
-    "performedAt": "2026-06-12T15:57:16.361Z",
+    "performedAt": "2026-06-12T17:10:45.781Z",
     "readOnly": true,
     "commands": [
       "vercel logs --project pawvital-ai --environment production --since 1h --level error --json --no-branch --no-follow",
@@ -292,6 +294,25 @@
       "It does not provide App Insights durationMs, extractionMs, or secondOpinionMs for a cohort window.",
       "It does not prove invite-send, full cohort counts, current authorized-admin positive proof, or owner-visible UX completion."
     ]
+  },
+  "serverlessReliabilityReadiness": {
+    "decision": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
+    "source": "PR #601 / VET-1571",
+    "commit": "b72c3620510d14fe5e2669e16adac876dfe112d7",
+    "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+    "passedEvidence": [
+      "PR #601 body records local P0 implementation PASS.",
+      "PR #601 body records clean-branch proof and split-brain guard PASS.",
+      "PR #601 adds production latency probe and scorecard workflow scaffolding."
+    ],
+    "remainingGaps": [
+      "PR #601 has no attached/passing checks.",
+      "PR #601 is not merged or deployed to production.",
+      "Production alias/env/maxDuration proof is still required.",
+      "Live synthetic latency probe/scorecard evidence is still required."
+    ],
+    "effectOnCohortReadout": "Review-ready reliability hardening improves the evidence path for symptom-check route failures and latency readout, but it does not provide a full Cohort 1 monitoring window or App Insights durationMs/extractionMs/secondOpinionMs evidence.",
+    "publicBetaDecision": "HOLD"
   },
   "prGateRecovery": {
     "decision": "HOLD",
@@ -309,21 +330,23 @@
       "PR #595",
       "PR #596",
       "PR #598",
-      "PR #600"
+      "PR #600",
+      "PR #601"
     ],
     "manualDispatchError": "HTTP 422: Actions has been disabled for this user",
     "effectOnReadout": "The artifact can be reviewed as evidence, but PR #592 cannot merge until GitHub Actions scheduling/check attachment is restored and required checks pass. PR #600 is clean against the PR #598 base but has no reported checks and is dependent on PR #598 landing."
   },
   "publicBetaPacketContext": {
-    "source": "PR #591 / issue #339 comments 4692470215 and 4692846743",
-    "commit": "7fb9d9794682581f3bfd6055d83f60556eefdc49",
+    "source": "PR #591 / issue #339 comments 4693179351 and 4693470637",
+    "commit": "2fa21beae3060b6f8f8fb157f2e2d5af41b49d6d",
     "decision": "HOLD",
     "recoveryCheckpointUiDecision": "GO_REVIEW_ONLY_PRODUCTION_WRITE_HOLD",
     "cohortInviteProofSemanticsDecision": "GO_REVIEW_ONLY_IN_OPEN_PR_INVITE_SEND_HOLD",
-    "cohortInviteSendProofValidatorDecision": "PR_591_STALE_ON_PR600_VALIDATOR_REFRESH_REQUIRED",
+    "cohortInviteSendProofValidatorDecision": "GO_REVIEW_ONLY_IN_OPEN_DEPENDENT_PR_CURRENT_REGISTRY_HOLD",
+    "serverlessReliabilityDecision": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
     "mergeStateStatus": "BLOCKED",
     "statusCheckRollupCount": 0,
-    "effectOnReadout": "The public-beta packet now records PR #598's non-draft GO_REVIEW_ONLY semantics and PR #592 readout evidence, but it does not yet record PR #600's invite-send proof validator. Public beta remains HOLD and PR #591 should be refreshed separately for PR #600."
+    "effectOnReadout": "The public-beta packet now records PR #600's invite-send proof validator and PR #601's serverless reliability evidence, while keeping invite-send proof, production reliability proof, public beta, model/NIM promotion, and PR merge readiness HOLD."
   },
   "productQualityTriage": {
     "policy": "Only triage defects proven by Cohort 1 or saved-tester production evidence.",
@@ -434,6 +457,18 @@
       "summary": "VET-1582C adds a review-only invite-send proof validator at 30629f052bb8bc3215097fd02cd59f692d7e6a27. It is open/non-draft and clean against the PR #598 base, but no checks are reported. The generated VET-1582 readout currently keeps invite-send proof HOLD because the registry has no intended tester rows and no invitation proof rows."
     },
     {
+      "type": "pull_request",
+      "id": "PR #601",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/601",
+      "summary": "VET-1571 serverless reliability budget hardening is open at b72c3620510d14fe5e2669e16adac876dfe112d7 with local P0 implementation PASS, but PR #601 is blocked with no checks, not merged, and still requires production alias/env/maxDuration proof plus live synthetic latency probe/scorecard evidence."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4693470637",
+      "summary": "Tracker update for PR #591 records PR #601 as GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD and keeps public beta HOLD because production reliability proof and checks are missing."
+    },
+    {
       "type": "issue",
       "id": "issue #339",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4686872651",
@@ -498,6 +533,7 @@
     "Export urgency distribution for completed Cohort 1 checks.",
     "Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.",
     "Capture full Cohort 1 App Insights latency/error window for admin API, feedback API, symptom-chat, durationMs, extractionMs, and secondOpinionMs.",
+    "Treat PR #601 serverless reliability hardening as review-only until checks attach/pass, the branch lands, and production alias/env/maxDuration plus live synthetic latency scorecard evidence exists.",
     "Resolve App Insights ingestion/queryability or run a fresh authenticated cohort-window symptom-check telemetry capture so durationMs, extractionMs, and secondOpinionMs are queryable from the production App Insights resource.",
     "Record scheduler/shadow readout status from the formal runner where relevant.",
     "Re-prove current-deployment authorized-admin command-center/API access or explicitly classify it as historical only.",
@@ -513,6 +549,7 @@
     "cohortInviteSendProofValidator": "GO_REVIEW_ONLY_IN_OPEN_DEPENDENT_PR_CURRENT_REGISTRY_HOLD",
     "productIntelligenceBackendProof": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY_IN_OPEN_PR",
     "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_WRITE_HOLD",
+    "serverlessReliabilityBudgetHardening": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
     "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
     "publicBeta": "HOLD"
   }
