@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-12T18:11:37Z.
+Evidence cutoff: 2026-06-12T18:27:24Z.
 
 ## Why Public Beta Is HOLD
 

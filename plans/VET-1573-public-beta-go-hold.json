@@ -1,8 +1,8 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-12T18:11:37.314Z",
-  "evidenceCutoff": "2026-06-12T18:11:37.314Z",
+  "generatedAt": "2026-06-12T18:27:24.209Z",
+  "evidenceCutoff": "2026-06-12T18:27:24.209Z",
   "decision": "HOLD",
   "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate, VET-1580C/PR #598 is open/non-draft and corrects the command-center/registry allowlist-vs-invite proof semantics, VET-1582C/PR #600 adds a review-only invite-send proof validator, PR #592 now records that validator in the Cohort 1 readout, VET-1571/PR #601 adds review-ready serverless reliability-budget hardening and a latency probe/scorecard workflow, VET-1560/PR #603 adds review-only launch-readiness gate artifacts, and the current read-only Vercel production inspect still resolves the alias to the same ready deployment. Public beta remains HOLD because the invite validator currently proves the registry is placeholder-only, PR #601 is open/blocked with no checks and still lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence, PR #603 is open/blocked with no checks and keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD, fresh current-deployment admin-positive proof, real invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
   "scope": {
@@ -22,7 +22,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-12T16:59:19.700Z",
+    "performedAt": "2026-06-12T18:27:24.209Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
