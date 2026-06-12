@@ -1,10 +1,10 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-12T16:59:19.700Z",
-  "evidenceCutoff": "2026-06-12T16:59:19.700Z",
+  "generatedAt": "2026-06-12T18:11:37.314Z",
+  "evidenceCutoff": "2026-06-12T18:11:37.314Z",
   "decision": "HOLD",
-  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate, VET-1580C/PR #598 is open/non-draft and corrects the command-center/registry allowlist-vs-invite proof semantics, VET-1582C/PR #600 adds a review-only invite-send proof validator, PR #592 now records that validator in the Cohort 1 readout, VET-1571/PR #601 adds review-ready serverless reliability-budget hardening and a latency probe/scorecard workflow, and the current read-only Vercel production inspect still resolves the alias to the same ready deployment. Public beta remains HOLD because the invite validator currently proves the registry is placeholder-only, PR #601 is open/blocked with no checks and still lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence, fresh current-deployment admin-positive proof, real invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
+  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate, VET-1580C/PR #598 is open/non-draft and corrects the command-center/registry allowlist-vs-invite proof semantics, VET-1582C/PR #600 adds a review-only invite-send proof validator, PR #592 now records that validator in the Cohort 1 readout, VET-1571/PR #601 adds review-ready serverless reliability-budget hardening and a latency probe/scorecard workflow, VET-1560/PR #603 adds review-only launch-readiness gate artifacts, and the current read-only Vercel production inspect still resolves the alias to the same ready deployment. Public beta remains HOLD because the invite validator currently proves the registry is placeholder-only, PR #601 is open/blocked with no checks and still lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence, PR #603 is open/blocked with no checks and keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD, fresh current-deployment admin-positive proof, real invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
   "scope": {
     "allowed": [
       "point-in-time public-beta readout",
@@ -298,6 +298,31 @@
     ],
     "publicBetaDecision": "HOLD"
   },
+  "vet1560LaunchReadinessGates": {
+    "decision": "GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD",
+    "source": "PR #603 / VET-1560",
+    "commit": "b52ebd1d8cef869ef3d869fe2fd192cfc97a094a",
+    "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+    "scope": [
+      "VET-1560 launch-readiness gate artifact",
+      "readiness dashboard gate visibility",
+      "completion audit and regeneration sequence",
+      "focused model-evidence coverage"
+    ],
+    "passedEvidence": [
+      "PR #603 adds a review-only VET-1560 launch-readiness gate snapshot.",
+      "PR body records launch-readiness generator/regeneration checks, git diff hygiene, protected-surface scan, and focused Jest pass summary."
+    ],
+    "remainingGaps": [
+      "PR #603 is not merged, has no attached checks, and reports mergeStateStatus=BLOCKED.",
+      "The VET-1560 gates themselves keep public beta HOLD.",
+      "The VET-1560 gates keep Cohort 1 launch execution HOLD until intended-cohort invite/send/access/check/report/history/feedback evidence is complete.",
+      "The VET-1560 gates keep model/NIM promotion HOLD until provider identity, frozen-output hashes, scorecards, owner approval, rollback, and smoke proof pass."
+    ],
+    "cohortLaunchDecision": "HOLD",
+    "publicBetaDecision": "HOLD",
+    "modelPromotionDecision": "HOLD"
+  },
   "privacyTermsSupportGaps": {
     "decision": "HOLD",
     "gaps": [
@@ -317,13 +342,15 @@
       "VET-1571C issue evidence includes post-smoke 500 log query with 0 JSON records.",
       "2026-06-12 read-only Vercel production monitoring refresh emitted zero JSON error rows and zero JSON HTTP 500 rows for the last hour.",
       "PR #600 adds a review-only invite-send proof validator, and PR #592 now records its placeholder-registry HOLD result in the Cohort 1 readout.",
-      "PR #601 adds review-ready serverless reliability budget hardening and a latency probe/scorecard workflow in an open blocked PR."
+      "PR #601 adds review-ready serverless reliability budget hardening and a latency probe/scorecard workflow in an open blocked PR.",
+      "PR #603 adds review-only VET-1560 launch-readiness gate visibility in an open blocked PR."
     ],
     "remainingGaps": [
       "No current-deployment authorized-admin positive proof from this machine.",
       "No invite-send proof for the intended private tester cohort; PR #600 currently proves only that the placeholder registry is not launch evidence.",
       "No full Cohort 1 readout with tester count, urgency distribution, and stalled-flow inventory.",
       "PR #601 is not merged, has no checks attached, and still requires production alias/env/maxDuration proof plus live synthetic latency probe/scorecard evidence.",
+      "PR #603 is not merged, has no checks attached, and its VET-1560 gates keep Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.",
       "Launch-stack PRs #591-#596 and PR #598 have no attached checks, including the required Threshold Review Gate context where applicable; PR #600 is clean only against the PR #598 base and has no checks reported.",
       "Scheduler/shadow readout remains empty."
     ]
@@ -339,6 +366,7 @@
     "Product-intelligence daily-readiness persistence is GO on the current deployment in PR #594 evidence only; PR #594 is still open/blocked and not landed on master.",
     "Recovery-checkpoint owner-visible UI is GO_REVIEW_ONLY for PR #595 at a9ad1ba953974f8c463812d24304b8ed74a3d4dd; PR #595 is still open/blocked with no checks attached, and authenticated production recovery-checkpoint write/smoke remains missing.",
     "Serverless reliability PR #601 is open/blocked with no checks attached; production alias/env/maxDuration proof and live synthetic latency scorecard evidence are still missing.",
+    "VET-1560 launch-readiness gate PR #603 is open/blocked with no checks attached; it is review-only evidence and explicitly keeps Cohort 1 launch execution, public beta, and model/NIM promotion HOLD.",
     "Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #598 is also open/non-draft/mergeable/blocked with no attached checks, PR #600 is clean only against the PR #598 base with no reported checks, PR #596 has no workflow runs on its branch, and manual workflow dispatch fails with Actions disabled for this user."
   ],
   "sourceEvidence": [
@@ -433,6 +461,12 @@
       "summary": "VET-1571 serverless reliability budget hardening is open at b72c3620510d14fe5e2669e16adac876dfe112d7 with local P0 implementation PASS, but PR #601 is blocked with no checks, not merged, and still requires production alias/env/maxDuration proof plus live synthetic latency probe/scorecard evidence."
     },
     {
+      "type": "pull_request",
+      "id": "PR #603",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/603",
+      "summary": "VET-1560 launch-readiness gate sync is open at b52ebd1d8cef869ef3d869fe2fd192cfc97a094a with review-only gate artifact/dashboard/audit/regeneration evidence, but PR #603 is blocked with no checks, not merged, and keeps Cohort 1 launch execution, public beta, and model/NIM promotion HOLD."
+    },
+    {
       "type": "issue",
       "id": "issue #339",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4693025653",
@@ -493,6 +527,7 @@
     "candidateIntakeHarness": "GO_REVIEW_ONLY",
     "modelPromotion": "HOLD",
     "serverlessReliabilityBudgetHardening": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
+    "vet1560LaunchReadinessGates": "GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD",
     "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING"
   }
 }
