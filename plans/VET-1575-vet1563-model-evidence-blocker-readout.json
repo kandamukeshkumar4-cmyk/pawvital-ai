@@ -3,7 +3,7 @@
   "parentTicket": "VET-1563",
   "relatedIssue": 588,
   "mode": "review-only-model-evidence-blocker-readout",
-  "generatedAt": "2026-06-06T23:19:26.000Z",
+  "generatedAt": "2026-06-12T02:03:37.362Z",
   "sourceBranchBase": {
     "branch": "codex/vet-1575c-model-evidence-blocker-readout",
     "baseCommit": "81cae52d0f1b97920a3392493327625ce701ca87",
@@ -41,6 +41,12 @@
       "state": "OPEN_BLOCKED",
       "effectOnModelPromotion": "none; workflow/check recovery evidence does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
     },
+    "candidateApprovalValidationPr": {
+      "pr": 599,
+      "head": "fef270d08fd4f2f37db81af71ae88d31a3fc0ec7",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; candidate approval validation hardening improves the review-only gate but does not create an approval record, resolve candidate identity, authorize provider capture, populate frozen outputs, score scorecards, grant owner approval, or execute promotion smoke"
+    },
     "launchStackPrGate": {
       "decision": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
       "statusCheckRollupCount": 0,
@@ -63,7 +69,7 @@
     "modelNimPromotion": "HOLD",
     "promotionPr": "HOLD",
     "publicBetaModelLane": "HOLD",
-    "reason": "The review-only intake harness exists, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594/#595/#596 public-beta, cohort-readout, product-intelligence, and PR-gate evidence does not satisfy any model-promotion gate."
+    "reason": "The review-only intake harness exists, and PR #599 adds candidate approval validation hardening as review-only gate evidence, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594/#595/#596/#599 public-beta, cohort-readout, product-intelligence, PR-gate, and approval-validation evidence does not satisfy any model-promotion gate."
   },
   "sourceArtifacts": {
     "candidateApprovalIntake": {
@@ -110,7 +116,7 @@
   "evidenceSummary": {
     "candidateApprovalRecordTarget": "plans/VET-1563-extraction-candidate-approval-record.json",
     "candidateApprovalRecordExists": false,
-    "candidateApprovalRecordCheckedAt": "2026-06-06T23:19:26.000Z",
+    "candidateApprovalRecordCheckedAt": "2026-06-12T02:03:37.362Z",
     "candidateApprovalIntakeStatus": "blocked",
     "candidateApprovalMissingFieldCount": 11,
     "candidateIdentityResolved": false,
@@ -207,6 +213,7 @@
   ],
   "nextAllowedActions": [
     "Owner/operator supplies an explicit candidate approval record for the exact model or adapter identity and validation-output-capture scope.",
+    "Candidate approval record must pass structural validation for SHA-256 artifact hash, ISO-8601 UTC approval timestamps, reviewable approval references, and validation-output-capture-only scope before it can resolve candidate identity.",
     "Rerun the candidate-selection packet and output-capture authorization after the approval record exists.",
     "Perform a separate authorized review-only capture run for validation baseline and candidate outputs only after authorization reports the lane ready.",
     "Freeze schema-valid outputs and hashes before human scoring.",

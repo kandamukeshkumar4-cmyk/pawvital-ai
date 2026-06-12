@@ -1,6 +1,6 @@
 # VET-1575C - VET-1563 Model Evidence Blocker Readout
 
-Generated: 2026-06-06T23:19:26.000Z
+Generated: 2026-06-12T02:03:37.362Z
 
 ## Decision
 
@@ -16,15 +16,16 @@ Generated: 2026-06-06T23:19:26.000Z
 
 Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`.
 
-The newer launch/readout/product PRs do not change this model evidence decision:
+The newer launch/readout/product/model-harness PRs do not change this model evidence decision:
 
 - PR #591 (`83219b47bfe86fd63e0d0ecfdb8fe1b8619ec7e4`) refreshes the public-beta packet and still keeps public beta HOLD.
 - PR #592 (`bb2b3a47b6cbc86b237b0d4a1ecd90937279aa05`) refreshes the Cohort 1 readout and still keeps the readout PARTIAL.
 - PR #594 (`53d29b03378eb1a78f01c38513174cce6fe26592`) records current-deployment daily-readiness/product-intelligence persistence proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
 - PR #595 (`c629a4d08b012d96f2c61240350eff97ba8bf0ec`) records owner-visible recovery checkpoint UI proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
 - PR #596 (`745a1173db546805afdedfe788677081cec2a93b`) records workflow/check recovery evidence only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
+- PR #599 (`fef270d08fd4f2f37db81af71ae88d31a3fc0ec7`) hardens candidate approval validation in the review-only harness only. It does not create an approval record, resolve candidate identity, authorize provider capture, populate frozen outputs, score scorecards, grant owner approval, or execute promotion smoke.
 
-All five PRs are open/blocked, not merged to `master`. Launch-stack PR gate readiness is also HOLD because checks are not attaching and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`. That blocks merge readiness for review artifacts, but it does not change any model evidence gate.
+All six PRs are open/blocked, not merged to `master`. Launch-stack PR gate readiness is also HOLD because checks are not attaching and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`. That blocks merge readiness for review artifacts, but it does not change any model evidence gate.
 
 ## Source Artifacts
 
@@ -41,8 +42,9 @@ All five PRs are open/blocked, not merged to `master`. Launch-stack PR gate read
 
 ## Current Evidence
 
-- Candidate approval record target: `plans/VET-1563-extraction-candidate-approval-record.json`; file exists: false; checked at 2026-06-06T23:19:26.000Z.
+- Candidate approval record target: `plans/VET-1563-extraction-candidate-approval-record.json`; file exists: false; checked at 2026-06-12T02:03:37.362Z.
 - Candidate approval intake: `status=blocked`, missing fields: 11.
+- Candidate approval validation: PR #599 is `GO_REVIEW_ONLY` for harness hardening; approval record evidence itself is still absent.
 - Candidate identity resolved: false; candidate-selection blockers: 6.
 - Provider capture authorization: `readyForProviderCapture=false`; blockers: 4.
 - Frozen outputs: 0/3 cases ready for human review; missing baseline outputs: 3; missing candidate outputs: 3.
@@ -65,12 +67,13 @@ All five PRs are open/blocked, not merged to `master`. Launch-stack PR gate read
 ## Next Allowed Actions
 
 1. Owner/operator supplies an explicit candidate approval record for the exact candidate identity and validation-output-capture scope.
-2. Rerun candidate selection and output-capture authorization after the approval record exists.
-3. Run a separate authorized review-only capture for validation baseline and candidate outputs only when authorization reports ready.
-4. Freeze schema-valid outputs and hashes before human scoring.
-5. Populate scorecard reviewer, numeric scores, and evidence for validation first.
-6. Keep holdout gated until validation outputs are frozen and reviewed.
-7. Prepare owner approval and promotion PR only after preflight reports `readyForPromotionTicket=true`.
+2. Candidate approval record must pass structural validation for SHA-256 artifact hash, ISO-8601 UTC approval timestamps, reviewable approval references, and validation-output-capture-only scope before it can resolve candidate identity.
+3. Rerun candidate selection and output-capture authorization after the approval record exists.
+4. Run a separate authorized review-only capture for validation baseline and candidate outputs only when authorization reports ready.
+5. Freeze schema-valid outputs and hashes before human scoring.
+6. Populate scorecard reviewer, numeric scores, and evidence for validation first.
+7. Keep holdout gated until validation outputs are frozen and reviewed.
+8. Prepare owner approval and promotion PR only after preflight reports `readyForPromotionTicket=true`.
 
 ## Guardrails
 
