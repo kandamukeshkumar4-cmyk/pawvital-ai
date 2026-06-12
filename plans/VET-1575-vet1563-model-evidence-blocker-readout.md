@@ -1,6 +1,6 @@
 # VET-1575C - VET-1563 Model Evidence Blocker Readout
 
-Generated: 2026-06-12T02:03:37.362Z
+Generated: 2026-06-12T15:07:18.578Z
 
 ## Decision
 
@@ -18,14 +18,15 @@ Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjz
 
 The newer launch/readout/product/model-harness PRs do not change this model evidence decision:
 
-- PR #591 (`83219b47bfe86fd63e0d0ecfdb8fe1b8619ec7e4`) refreshes the public-beta packet and still keeps public beta HOLD.
-- PR #592 (`bb2b3a47b6cbc86b237b0d4a1ecd90937279aa05`) refreshes the Cohort 1 readout and still keeps the readout PARTIAL.
+- PR #591 (`7fb9d9794682581f3bfd6055d83f60556eefdc49`) refreshes the public-beta packet and still keeps public beta HOLD.
+- PR #592 (`66079673c27b2d72e4b3edc5d57cced294853e1e`) refreshes the Cohort 1 readout and still keeps the readout PARTIAL.
 - PR #594 (`53d29b03378eb1a78f01c38513174cce6fe26592`) records current-deployment daily-readiness/product-intelligence persistence proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
-- PR #595 (`c629a4d08b012d96f2c61240350eff97ba8bf0ec`) records owner-visible recovery checkpoint UI proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
+- PR #595 (`a9ad1ba953974f8c463812d24304b8ed74a3d4dd`) records owner-visible recovery checkpoint UI proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
 - PR #596 (`745a1173db546805afdedfe788677081cec2a93b`) records workflow/check recovery evidence only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
+- PR #598 (`2ee6d4c1ef48c68e3ce1398467dd1861391f6b87`) records command-center/registry allowlist-vs-invite semantics proof only. It does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence.
 - PR #599 (`fef270d08fd4f2f37db81af71ae88d31a3fc0ec7`) hardens candidate approval validation in the review-only harness only. It does not create an approval record, resolve candidate identity, authorize provider capture, populate frozen outputs, score scorecards, grant owner approval, or execute promotion smoke.
 
-All six PRs are open/blocked, not merged to `master`. Launch-stack PR gate readiness is also HOLD because checks are not attaching and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`. That blocks merge readiness for review artifacts, but it does not change any model evidence gate.
+All seven PRs are open/blocked, not merged to `master`. Launch-stack PR gate readiness is also HOLD because checks are not attaching and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`. That blocks merge readiness for review artifacts, but it does not change any model evidence gate.
 
 ## Source Artifacts
 
@@ -42,7 +43,7 @@ All six PRs are open/blocked, not merged to `master`. Launch-stack PR gate readi
 
 ## Current Evidence
 
-- Candidate approval record target: `plans/VET-1563-extraction-candidate-approval-record.json`; file exists: false; checked at 2026-06-12T02:03:37.362Z.
+- Candidate approval record target: `plans/VET-1563-extraction-candidate-approval-record.json`; file exists: false; checked at 2026-06-12T15:07:18.578Z.
 - Candidate approval intake: `status=blocked`, missing fields: 11.
 - Candidate approval validation: PR #599 is `GO_REVIEW_ONLY` for harness hardening; approval record evidence itself is still absent.
 - Candidate identity resolved: false; candidate-selection blockers: 6.
