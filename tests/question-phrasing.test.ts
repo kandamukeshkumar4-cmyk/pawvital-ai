@@ -245,6 +245,30 @@ describe("question phrasing helpers", () => {
     }
   });
 
+  it("skips Nemotron verification on standard turn depth", async () => {
+    mockPhraseWithLlama.mockResolvedValue(
+      "Since Mochi has been drinking less than usual, is she drinking less than usual?"
+    );
+
+    const result = await phraseQuestion(
+      "Is she drinking less than usual?",
+      "water_intake",
+      createSession(),
+      pet,
+      messages,
+      "She is drinking less than usual.",
+      null,
+      false,
+      false,
+      false,
+      null,
+      "standard"
+    );
+
+    expect(result).toContain("drinking less than usual");
+    expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+  });
+
   it("falls back when Nemotron verification reintroduces banned photo wording", async () => {
     const session = createSession();
     mockPhraseWithLlama.mockResolvedValue(

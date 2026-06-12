@@ -57,6 +57,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm run security:secrets
 
+  supabase-env-check:
+    name: Supabase Env Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm run check:supabase-env
+
   lint:
     name: Lint
     needs: install

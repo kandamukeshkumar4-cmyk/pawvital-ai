@@ -155,6 +155,13 @@ import {
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
 import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
+import { createTurnDeadline } from "@/lib/symptom-chat/turn-deadline";
+import { resolveTurnDepth } from "@/lib/symptom-chat/turn-depth";
+import { checkSupabaseEnvConsistency } from "@/lib/supabase-env-guard";
+import {
+  appendClinicalTurnOrchestratorShadow,
+  runClinicalTurnOrchestrator,
+} from "@/lib/clinical-intelligence/clinical-turn-orchestrator";
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
@@ -191,6 +198,8 @@ import {
 
 // Detect which engine to use
 const useNvidia = isNvidiaConfigured();
+export const maxDuration = 60;
+
 const ROUTE_NAME = "api.ai.symptom-chat";
 
 interface RequestBody {
@@ -1213,6 +1222,7 @@ function buildDeterministicEmergencyMessage(
 
 export async function POST(request: Request) {
   const startedAtMs = Date.now();
+  const turnDeadline = createTurnDeadline(startedAtMs);
   const stageDurationsMs: Record<string, number> = {};
   // Internal-only per-stage latency accumulator. Surfaced to App Insights via
   // trackRouteTelemetry measurements; never enters the route response payload.
@@ -1252,6 +1262,23 @@ export async function POST(request: Request) {
             ),
           },
         }
+      );
+    }
+
+    const supabaseEnvGuard = checkSupabaseEnvConsistency();
+    if (!supabaseEnvGuard.ok) {
+      console.error(
+        "Supabase environment mismatch detected at runtime.",
+        supabaseEnvGuard.refs
+      );
+      statusCode = 503;
+      return NextResponse.json(
+        {
+          type: "error",
+          message:
+            "Service configuration error. Please try again later or contact support.",
+        },
+        { status: 503 }
       );
     }
 
@@ -2719,6 +2746,24 @@ export async function POST(request: Request) {
     const nextQuestionId = nextQuestionState.nextQuestionId;
     const needsClarificationQuestionId =
       nextQuestionState.needsClarificationQuestionId;
+
+    const turnDepth = resolveTurnDepth({
+      hasImage: Boolean(image),
+      redFlagsTriggered: session.red_flags_triggered.length > 0,
+      isReportTurn: false,
+      isEmergencyEscalation: session.red_flags_triggered.length > 0,
+    });
+
+    const orchestratorResult = runClinicalTurnOrchestrator({
+      session,
+      ownerText: lastUserMessage.content,
+      productionQuestionId: nextQuestionId,
+    });
+    session = appendClinicalTurnOrchestratorShadow(
+      session,
+      orchestratorResult.shadowComparisonRecord
+    );
+
     session = await maybeCompressStructuredCaseMemory(
       session,
       effectivePet,
@@ -2728,6 +2773,8 @@ export async function POST(request: Request) {
         imageAnalyzed: Boolean(visionAnalysis),
         changedSymptoms: changedSymptomsThisTurn,
         changedAnswers: changedAnswerKeys,
+        turnDeadline,
+        turnDepth,
       }
     );
 
@@ -2744,6 +2791,8 @@ export async function POST(request: Request) {
       visionSeverity,
       image,
       forceDeterministicQuestionFallback: Boolean(textOnlyQuickStartExtraction),
+      turnDeadline,
+      turnDepth,
     });
   } catch (error) {
     errorCode = "symptom_chat_unhandled";
