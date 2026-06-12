@@ -4,12 +4,12 @@
   "generatedAt": "2026-05-31T00:00:00.000Z",
   "objective": "Apply FareedKhan-dev/train-llm-from-scratch and syndicalt/tugboat techniques to PawVital, create project-manager tickets, improve NIM/AI model path, build toward a Whoop-for-Dogs app, and update local.config for next agents.",
   "overallStatus": "incomplete",
-  "summary": "58 blocker(s) remain before the full objective can be marked complete.",
+  "summary": "64 blocker(s) remain before the full objective can be marked complete.",
   "artifacts": [
     {
       "path": "plans/VET-1560-readiness-dashboard.json",
       "exists": true,
-      "sha256": "00f13cdcda4c1fb2520bc1139af8fec5e183c88c3c343151dfca95fac3d1ce89"
+      "sha256": "3c4154055aaa69768ef0082c009738012f742432a18d94a6e8de7222847d949e"
     },
     {
       "path": "plans/VET-1560-project-manager-tickets.json",
@@ -25,6 +25,11 @@
       "path": "plans/VET-1560-azure-live-sync-runbook.json",
       "exists": true,
       "sha256": "ecc5c7131a83ba9f4d5a07b5ed1fd57e3e356f51d6edb4d482f1c06af37bdf35"
+    },
+    {
+      "path": "plans/VET-1560-launch-readiness-gates.json",
+      "exists": true,
+      "sha256": "63fb04dced0c675df9e92348f7bfe80de54de78296c6d794d9611781ed4d07be"
     },
     {
       "path": "plans/VET-1560-model-technique-intake-snapshot.json",
@@ -195,6 +200,26 @@
       "blockers": []
     },
     {
+      "id": "launch-public-beta-readiness",
+      "requirement": "Keep Cohort 1 launch, monitoring, rollback, owner-visible UX proof, and public-beta decision gates aligned with current production evidence.",
+      "status": "blocked",
+      "evidence": [
+        "7 launch gates reviewed; public beta=hold; model promotion=hold; owner-visible UX proof=partial; backend readout proof=hold.",
+        "Public beta decision: hold; Critical production, Cohort 1, monitoring, product-intelligence, model-promotion, and support/privacy evidence remains incomplete.",
+        "Owner-visible UX proof: partial; not proved=3.",
+        "Backend scheduler/readout proof: hold; not proved=3.",
+        "Launch gates reviewed: 7."
+      ],
+      "blockers": [
+        "launch-readiness: Cohort 1 launch execution: Cohort 1 launch execution is not proved complete by this branch; PR #592 carries the latest partial readout.",
+        "launch-readiness: Monitoring and telemetry: Recent Vercel error probes returned no rows, but current App Insights latency/queryability evidence remains unproven.",
+        "launch-readiness: Symptom-check reliability budget: PR #601 has review-only local implementation evidence, but production alias/env/maxDuration and live synthetic scorecard proof remain HOLD.",
+        "launch-readiness: Owner-visible product intelligence: Whoop-style readiness/product-intelligence work has review-only artifacts and open PRs, but production persistence smoke is not complete.",
+        "launch-readiness: Model/NIM promotion: Model/NIM promotion remains evidence-gated; intake packet may proceed review-only, but runtime promotion is HOLD.",
+        "launch-readiness: Public beta decision: Public beta is HOLD until admin, tester, feedback, symptom-check, History, monitoring, owner copy, privacy/support, and rollback lanes all pass."
+      ]
+    },
+    {
       "id": "nim-and-ai-model-improvement",
       "requirement": "Make the NIM models and AI models better for PawVital.",
       "status": "blocked",
@@ -317,6 +342,12 @@
     }
   ],
   "blockers": [
+    "launch-public-beta-readiness: launch-readiness: Cohort 1 launch execution: Cohort 1 launch execution is not proved complete by this branch; PR #592 carries the latest partial readout.",
+    "launch-public-beta-readiness: launch-readiness: Monitoring and telemetry: Recent Vercel error probes returned no rows, but current App Insights latency/queryability evidence remains unproven.",
+    "launch-public-beta-readiness: launch-readiness: Symptom-check reliability budget: PR #601 has review-only local implementation evidence, but production alias/env/maxDuration and live synthetic scorecard proof remain HOLD.",
+    "launch-public-beta-readiness: launch-readiness: Owner-visible product intelligence: Whoop-style readiness/product-intelligence work has review-only artifacts and open PRs, but production persistence smoke is not complete.",
+    "launch-public-beta-readiness: launch-readiness: Model/NIM promotion: Model/NIM promotion remains evidence-gated; intake packet may proceed review-only, but runtime promotion is HOLD.",
+    "launch-public-beta-readiness: launch-readiness: Public beta decision: Public beta is HOLD until admin, tester, feedback, symptom-check, History, monitoring, owner copy, privacy/support, and rollback lanes all pass.",
     "nim-and-ai-model-improvement: scorecard-populated: validation average 0 below threshold 4.2",
     "nim-and-ai-model-improvement: scorecard-populated: holdout average 0 below threshold 4.2",
     "nim-and-ai-model-improvement: scorecard-populated: scorecard still contains unresolved issues",
@@ -378,6 +409,6 @@
   ],
   "completionDecision": {
     "canMarkGoalComplete": false,
-    "reason": "The full objective still requires live project-manager sync and model/NIM promotion evidence; product work is partial."
+    "reason": "The full objective still requires launch/public-beta production evidence, live project-manager sync, and model/NIM promotion evidence; product work is partial."
   }
 }

@@ -135,6 +135,32 @@ type ReadinessDashboard = {
   }>;
 };
 
+type LaunchReadinessGates = {
+  overallStatus: string;
+  publicBetaDecision: {
+    status: string;
+    reason: string;
+  };
+  modelPromotionDecision: {
+    status: string;
+  };
+  ownerVisibleUxProof: {
+    status: string;
+    notProved: string[];
+  };
+  backendSchedulerReadoutProof: {
+    status: string;
+    notProved: string[];
+  };
+  gates: Array<{
+    id: string;
+    status: string;
+    summary: string;
+    missing: string[];
+  }>;
+  blockers: string[];
+};
+
 type CompletionAudit = {
   requirements: Array<{
     id: string;
@@ -681,6 +707,91 @@ describe("VET-1560 model evidence readouts", () => {
       expect.arrayContaining([
         expect.objectContaining({
           path: "plans/VET-1563-extraction-promotion-readiness-preflight.json",
+          exists: true,
+        }),
+      ]),
+    );
+    expect(audit.completionDecision.canMarkGoalComplete).toBe(false);
+  });
+
+  it("surfaces launch readiness HOLD separately from roadmap readiness", () => {
+    const launchReadiness = runJson<LaunchReadinessGates>([
+      "scripts/build-vet1560-launch-readiness-gates.mjs",
+    ]);
+    const publicBetaGate = requireDefined(
+      launchReadiness.gates.find((item) => item.id === "public-beta-decision"),
+      "public beta launch gate",
+    );
+    const cohortGate = requireDefined(
+      launchReadiness.gates.find(
+        (item) => item.id === "cohort1-launch-execution",
+      ),
+      "Cohort 1 launch gate",
+    );
+
+    expect(launchReadiness.overallStatus).toBe("hold");
+    expect(launchReadiness.publicBetaDecision.status).toBe("hold");
+    expect(launchReadiness.modelPromotionDecision.status).toBe("hold");
+    expect(launchReadiness.ownerVisibleUxProof.status).toBe("partial");
+    expect(launchReadiness.backendSchedulerReadoutProof.status).toBe("hold");
+    expect(publicBetaGate.status).toBe("hold");
+    expect(publicBetaGate.missing).toEqual(
+      expect.arrayContaining([
+        "completed Cohort 1 launch outcome summary",
+        "production symptom-check reliability proof",
+      ]),
+    );
+    expect(cohortGate.summary).toContain("PR #592");
+    expect(launchReadiness.ownerVisibleUxProof.notProved).toContain(
+      "full intended-cohort invitation and tester-access completion",
+    );
+    expect(launchReadiness.backendSchedulerReadoutProof.notProved).toContain(
+      "current App Insights durationMs, extractionMs, and secondOpinionMs queries",
+    );
+    expect(launchReadiness.blockers).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Public beta decision"),
+        expect.stringContaining("Model/NIM promotion"),
+      ]),
+    );
+
+    const dashboard = runJson<ReadinessDashboard>([
+      "scripts/build-vet1560-readiness-dashboard.mjs",
+    ]);
+    const launchLane = requireDefined(
+      dashboard.lanes.find((item) => item.id === "launch-public-beta"),
+      "launch/public beta dashboard lane",
+    );
+    expect(launchLane.status).toBe("blocked");
+    expect(launchLane.summary).toContain("public beta=hold");
+    expect(launchLane.summary).toContain("owner-visible UX proof=partial");
+
+    const audit = runJson<CompletionAudit>([
+      "scripts/build-vet1560-completion-audit.mjs",
+    ]);
+    const launchRequirement = requireDefined(
+      audit.requirements.find(
+        (item) => item.id === "launch-public-beta-readiness",
+      ),
+      "launch/public beta audit requirement",
+    );
+    expect(launchRequirement.status).toBe("blocked");
+    expect(launchRequirement.evidence).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Public beta decision: hold"),
+        expect.stringContaining("Owner-visible UX proof: partial"),
+        expect.stringContaining("Backend scheduler/readout proof: hold"),
+      ]),
+    );
+    expect(audit.blockers).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("launch-readiness: Public beta decision"),
+      ]),
+    );
+    expect(audit.artifacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "plans/VET-1560-launch-readiness-gates.json",
           exists: true,
         }),
       ]),

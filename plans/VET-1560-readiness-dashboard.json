@@ -3,7 +3,7 @@
   "mode": "review-only-dashboard",
   "generatedAt": "2026-05-31T00:00:00.000Z",
   "overallStatus": "blocked",
-  "summary": "1 lane(s) blocked before the full objective is complete.",
+  "summary": "2 lane(s) blocked before the full objective is complete.",
   "artifacts": [
     {
       "path": "plans/VET-1560-azure-sync-preflight.json",
@@ -24,6 +24,11 @@
       "path": "plans/VET-1560-project-manager-local-sync.json",
       "exists": true,
       "sha256": "3dcaf9b97e308e3f963f771c1d0769e57cb7f06e866d7491eccd7bcc03803850"
+    },
+    {
+      "path": "plans/VET-1560-launch-readiness-gates.json",
+      "exists": true,
+      "sha256": "63fb04dced0c675df9e92348f7bfe80de54de78296c6d794d9611781ed4d07be"
     },
     {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
@@ -143,6 +148,13 @@
       "nextAction": "validation=0, holdout=0, threshold=4.2"
     },
     {
+      "id": "launch-public-beta",
+      "label": "Launch/public beta readiness",
+      "status": "blocked",
+      "summary": "7 launch gates reviewed; public beta=hold; model promotion=hold; owner-visible UX proof=partial; backend readout proof=hold.",
+      "nextAction": "Critical production, Cohort 1, monitoring, product-intelligence, model-promotion, and support/privacy evidence remains incomplete."
+    },
+    {
       "id": "claim-language",
       "label": "Claim-language review",
       "status": "ready",
@@ -165,7 +177,8 @@
     }
   ],
   "blockers": [
-    "Model/NIM promotion: 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6."
+    "Model/NIM promotion: 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6.",
+    "Launch/public beta readiness: 7 launch gates reviewed; public beta=hold; model promotion=hold; owner-visible UX proof=partial; backend readout proof=hold."
   ],
   "guardrails": [
     "Do not treat local project-manager fallback evidence as Azure Boards live-sync evidence.",
@@ -174,6 +187,7 @@
     "Do not weaken protected deterministic clinical files while improving product intelligence.",
     "Keep owner-visible readiness copy tied to evidence coverage and claim-language review.",
     "Keep Tugboat-style instruction optimization proposal-only until a reviewer approves a trace bundle, policy file, eval suite, and rollback plan.",
-    "Use npm run vet1560:regenerate-all to refresh this evidence chain before handoff."
+    "Use npm run vet1560:regenerate-all to refresh this evidence chain before handoff.",
+    "Keep launch/public-beta GO separate from review-only roadmap readiness; public beta requires current production evidence."
   ]
 }
