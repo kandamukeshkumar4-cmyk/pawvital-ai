@@ -18,7 +18,8 @@ import {
 } from "@/lib/symptom-chat/extraction-helpers";
 
 const useNvidia = isNvidiaConfigured();
-export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 10_000;
+// Shared between Nemotron preflight gate + Llama phrasing on text-only turns.
+export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 25_000;
 
 export interface SymptomChatTurnMessage {
   role: "user" | "assistant";

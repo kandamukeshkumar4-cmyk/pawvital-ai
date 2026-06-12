@@ -37,7 +37,7 @@ export function SpeechInputButton({
     return null;
   }
 
-  const isUnavailable = state === "disabled";
+  const isUnavailable = state === "disabled" && !error;
   const title = titleForState(state, error);
 
   return (

@@ -39,6 +39,7 @@ import {
   gateQuestionBeforePhrasing,
   phraseQuestion,
   sanitizeQuestionDraft,
+  TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS,
 } from "@/lib/symptom-chat/question-phrasing";
 
 const pet: PetProfile = {
@@ -118,7 +119,7 @@ describe("question phrasing helpers", () => {
         settled = true;
       });
 
-      await jest.advanceTimersByTimeAsync(10_001);
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
 
       expect(settled).toBe(true);
       await expect(resultPromise).resolves.toEqual({
@@ -188,7 +189,7 @@ describe("question phrasing helpers", () => {
         settled = true;
       });
 
-      await jest.advanceTimersByTimeAsync(10_001);
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
 
       expect(settled).toBe(true);
       await expect(resultPromise).resolves.toBe(
@@ -231,7 +232,7 @@ describe("question phrasing helpers", () => {
         settled = true;
       });
 
-      await jest.advanceTimersByTimeAsync(10_001);
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
 
       expect(settled).toBe(true);
       await expect(resultPromise).resolves.toBe(

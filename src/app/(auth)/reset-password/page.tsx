@@ -225,22 +225,22 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-cream p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
           <Link href="/" target="_top" prefetch={false} className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white fill-white" />
-            </div>
-            <span className="text-2xl font-bold text-gray-900">PawVital AI</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay">
+              <Heart className="h-6 w-6 fill-white text-white" />
+            </span>
+            <span className="font-display text-2xl font-semibold text-ink">PawVital</span>
           </Link>
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">Choose a new password</h1>
-          <p className="mt-2 text-gray-600">Use a strong password you haven&apos;t used before</p>
+          <h1 className="mt-6 font-display text-2xl font-semibold text-ink">Choose a new password</h1>
+          <p className="mt-2 text-muted-warm">Use a strong password you haven&apos;t used before</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+        <div className="rounded-3xl border border-line bg-paper p-8 shadow-[0_24px_70px_-50px_rgba(43,33,28,0.5)]">
           {checkingSession ? (
-            <p className="text-sm text-gray-600 text-center">Checking your reset link...</p>
+            <p className="text-center text-sm text-muted-warm">Checking your reset link...</p>
           ) : sessionReady ? (
             <form onSubmit={handleReset} className="space-y-5">
               {error && (
@@ -269,19 +269,19 @@ export default function ResetPasswordPage() {
                 minLength={8}
               />
 
-              <Button type="submit" loading={loading} className="w-full" size="lg">
+              <Button type="submit" variant="warm" loading={loading} className="w-full" size="lg">
                 Update Password
               </Button>
             </form>
           ) : (
             <div className="space-y-4 text-center">
-              <div className="bg-amber-50 text-amber-800 rounded-xl p-3 text-sm">
+              <div className="rounded-xl bg-honey-soft p-3 text-sm text-clay-deep">
                 {error || "This password reset link is invalid or has expired."}
               </div>
               <a
                 href={appendRedirectParam("/forgot-password", redirectTarget)}
                 target="_top"
-                className={buttonClassName({ className: "w-full", size: "lg" })}
+                className={buttonClassName({ variant: "warm", className: "w-full", size: "lg" })}
               >
                 Request a New Reset Link
               </a>
@@ -292,7 +292,7 @@ export default function ResetPasswordPage() {
             <a
               href={appendRedirectParam("/login", redirectTarget)}
               target="_top"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1 text-sm font-medium text-clay hover:text-clay-deep"
             >
               <ArrowLeft className="w-4 h-4" /> Back to login
             </a>

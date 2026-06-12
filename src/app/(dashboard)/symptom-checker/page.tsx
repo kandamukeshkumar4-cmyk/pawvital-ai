@@ -48,6 +48,8 @@ import type {
   TriageLiveUpdateStatus,
 } from "@/lib/azure/web-pubsub";
 import { SYMPTOM_CHAT_REQUEST_TIMEOUT_MS } from "@/lib/symptom-chat/request-timeout";
+import { computeConversationProgress } from "@/lib/symptom-checker/session-progress";
+import type { TriageSession } from "@/lib/triage-engine";
 import { useSymptomTranslator } from "@/hooks/useSymptomTranslator";
 
 // --- Types ---
@@ -481,23 +483,11 @@ export default function SymptomCheckerPage() {
       return;
     }
 
-    const {
-      answered_questions: answeredQuestions,
-      unresolved_question_ids: unresolvedQuestionIds,
-    } = session as {
-      answered_questions?: Record<string, unknown>;
-      unresolved_question_ids?: unknown[];
-    };
-
-    const answered = answeredQuestions
-      ? Object.keys(answeredQuestions).length
-      : 0;
-    const unresolved = Array.isArray(unresolvedQuestionIds)
-      ? unresolvedQuestionIds.length
-      : 0;
-
+    const { answered, total } = computeConversationProgress(
+      session as TriageSession
+    );
     setAnsweredCount(answered);
-    setTotalQuestions(answered + unresolved);
+    setTotalQuestions(total);
   };
 
   // --- Send message to hybrid /api/ai/symptom-chat ---

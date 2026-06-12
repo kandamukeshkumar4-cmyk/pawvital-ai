@@ -125,8 +125,25 @@ describe("useAzureSpeechInput", () => {
     expect(screen.getByTestId("speech-state").textContent).toBe("idle");
   });
 
-  it("disables itself without calling the SDK when no token is available", async () => {
+  it("falls back to browser speech when Azure token is unavailable", async () => {
     const { sdk } = makeSpeechSdk("ignored transcript");
+    const start = jest.fn();
+    const stop = jest.fn();
+    const SpeechRecognitionMock = jest.fn(() => ({
+      continuous: false,
+      interimResults: false,
+      lang: "en-US",
+      maxAlternatives: 1,
+      onerror: null,
+      onresult: null,
+      start,
+      stop,
+    }));
+
+    Object.defineProperty(window, "SpeechRecognition", {
+      configurable: true,
+      value: SpeechRecognitionMock,
+    });
 
     render(
       React.createElement(SpeechHarness, {
@@ -142,10 +159,18 @@ describe("useAzureSpeechInput", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "start" }));
 
+    await waitFor(() => expect(start).toHaveBeenCalled());
+    const recognition = SpeechRecognitionMock.mock.results[0]?.value;
+    recognition.onresult({
+      results: { 0: { 0: { transcript: "my dog is limping" } } },
+    });
+
     await waitFor(() =>
-      expect(screen.getByTestId("speech-state").textContent).toBe("disabled")
+      expect(screen.getByTestId("transcript").textContent).toBe(
+        "my dog is limping"
+      )
     );
     expect(sdk.SpeechRecognizer).not.toHaveBeenCalled();
-    expect(screen.getByTestId("transcript").textContent).toBe("");
+    expect(screen.getByTestId("speech-state").textContent).toBe("idle");
   });
 });
