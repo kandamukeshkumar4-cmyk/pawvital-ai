@@ -556,6 +556,67 @@ describe("VET-1560 model evidence readouts", () => {
     }
   });
 
+  it("keeps candidate selection blocked for malformed approval evidence fields", () => {
+    const approvalRecordPath = path.join(
+      repoRoot,
+      "plans",
+      "VET-1563-extraction-candidate-approval-record.json",
+    );
+    writeFileSync(
+      approvalRecordPath,
+      `${JSON.stringify(
+        {
+          ticket: "VET-1563",
+          role: "extraction",
+          mode: "candidate-approval-record",
+          candidate: {
+            modelOrAdapterId: "nvidia/example-extraction-candidate",
+            provider: "nvidia-nim",
+            artifactType: "provider-model-id",
+            artifactSha256: "not-a-sha256",
+            offlineTrainingEvalManifest:
+              "provider-model-id proof: no local weight artifact",
+            approvedBy: "owner@example.com",
+            approvedAt: "June 4, 2026",
+            approvalRecord: "approved verbally",
+            captureApproval: {
+              scope: "validation-output-capture-only",
+              approvedBy: "owner@example.com",
+              approvedAt: "2026-99-99T00:00:00.000Z",
+              approvalRecord: "capture ok",
+              promotionApproval: false,
+            },
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+
+    try {
+      const packet = runJson<CandidateSelectionPacket>([
+        "scripts/build-model-candidate-selection-packet.mjs",
+        "--role=extraction",
+      ]);
+
+      expect(packet.status).toBe("blocked");
+      expect(packet.candidateIdentityResolved).toBe(false);
+      expect(packet.blockers).toEqual(
+        expect.arrayContaining([
+          "candidate artifact hash must be a 64-character SHA-256 hex digest",
+          "candidate approval timestamp must be an ISO-8601 UTC timestamp",
+          "candidate approval record reference must be a URL, issue/PR/ticket reference, or repo artifact path",
+          "candidate validation-output-capture approval timestamp must be an ISO-8601 UTC timestamp",
+          "candidate validation-output-capture approval record reference must be a URL, issue/PR/ticket reference, or repo artifact path",
+        ]),
+      );
+    } finally {
+      if (existsSync(approvalRecordPath)) {
+        unlinkSync(approvalRecordPath);
+      }
+    }
+  });
+
   it("can consume a future candidate approval record without inferring identity from manifests", () => {
     const approvalRecordPath = path.join(
       repoRoot,
