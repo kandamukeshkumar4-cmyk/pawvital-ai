@@ -1,11 +1,11 @@
 {
   "ticket": "VET-1574C",
   "mode": "cohort1-evidence-readout",
-  "generatedAt": "2026-06-11T18:21:19.000Z",
-  "evidenceCutoff": "2026-06-11T18:53:17.034Z",
+  "generatedAt": "2026-06-12T14:34:50.458Z",
+  "evidenceCutoff": "2026-06-12T14:34:50.458Z",
   "readoutStatus": "PARTIAL",
   "publicBetaDecision": "HOLD",
-  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh found zero last-hour production error JSON rows and zero last-hour HTTP 500 JSON rows, PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence now reflected in PR #591, and PR #598 corrects the owner-visible command-center allowlist-vs-invite proof semantics. It still does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
+  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh emitted zero JSON error/500 rows, PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence, and PR #598 is now non-draft GO_REVIEW_ONLY at 2ee6d4c with command-center/registry allowlist-vs-invite semantics fixed. It still does not prove full Cohort 1 launch execution or aggregate cohort outcomes. Missing invite-send proof, real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
   "scope": {
     "allowed": [
       "point-in-time Cohort 1 evidence readout",
@@ -24,7 +24,7 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-11T18:21:19.000Z",
+    "performedAt": "2026-06-12T14:34:50.458Z",
     "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
     "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
@@ -67,12 +67,12 @@
       "note": "The repo contains a private-tester invite document and registry template, but no completed invite-send evidence. PR #598 corrects the command-center copy/model so allowlisted testers are not mislabeled as sent invitations."
     },
     "allowlistVsInviteSemantics": {
-      "status": "GO_REVIEW_ONLY_IN_DRAFT_PR",
+      "status": "GO_REVIEW_ONLY_IN_OPEN_PR",
       "source": "PR #598 / VET-1580C",
-      "commit": "4a9e88d368070ffc8690344eb11b38ef5c857d61",
-      "prState": "DRAFT_OPEN_BLOCKED_NOT_MERGED",
+      "commit": "2ee6d4c1ef48c68e3ce1398467dd1861391f6b87",
+      "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
       "decision": "INVITE_SEND_PROOF_HOLD",
-      "note": "The command-center semantics fix is useful owner-copy evidence, but it does not send invitations or prove invitations were delivered."
+      "note": "The command-center and registry semantics fix is useful owner-copy evidence, and registry rows now separate allowlist_status from manual invitation_sent_proof. It does not send invitations or prove invitations were delivered."
     },
     "testerAccess": {
       "status": "partial",
@@ -171,7 +171,7 @@
         "p95": 8075
       },
       "currentReadOnlyQuery": {
-        "performedAt": "2026-06-11T18:53:17.034Z",
+        "performedAt": "2026-06-12T14:34:50.458Z",
         "resource": {
           "app": "pawvital-appinsights",
           "resourceGroup": "pawvital-rg",
@@ -245,8 +245,8 @@
       "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed.",
       "VET-1576C PR #594 records current-deployment daily-readiness/product-intelligence write proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb: row 61c44ae9-5b30-482d-8207-efbaf6598140, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.",
       "PR #595 records owner-visible recovery checkpoint UI GO_REVIEW_ONLY at a9ad1ba953974f8c463812d24304b8ed74a3d4dd with refreshed claim-language/readiness evidence and formal TecjLead no-blocker review, but authenticated production recovery write/smoke remains HOLD.",
-      "2026-06-11T14:49Z read-only Vercel production monitoring refresh with explicit project scope returned ERROR_JSON_ROWS=0 and STATUS_500_JSON_ROWS=0 for the last hour.",
-      "2026-06-11 read-only App Insights query refresh found zero queryable route/custom event, request, trace, or custom metric rows in 24h/7d/30d windows, so no fresh durationMs/extractionMs/secondOpinionMs cohort-window latency readout is available from App Insights today."
+      "2026-06-12T14:34Z read-only Vercel production monitoring refresh with explicit project scope emitted zero JSON error rows and zero JSON HTTP 500 rows for the last hour.",
+      "2026-06-12 read-only App Insights query refresh found zero queryable route/custom event rows in 24h/7d windows and zero 30d union rows, so no fresh durationMs/extractionMs/secondOpinionMs cohort-window latency readout is available from App Insights today."
     ],
     "limitations": [
       "Current App Insights query refresh returned zero rows across customEvents, requests, traces, and customMetrics, so the required Cohort 1 latency/error window remains missing rather than improved.",
@@ -259,7 +259,7 @@
     ]
   },
   "currentMonitoringRefresh": {
-    "performedAt": "2026-06-11T18:21:19.000Z",
+    "performedAt": "2026-06-12T14:34:50.458Z",
     "readOnly": true,
     "commands": [
       "vercel logs --project pawvital-ai --environment production --since 1h --level error --json --no-branch --no-follow",
@@ -277,7 +277,7 @@
   },
   "prGateRecovery": {
     "decision": "HOLD",
-    "source": "PR #596 / issue #339 comment 4640668934, PR #591 refresh comments 4640704962, 4681786168, and 4683642339; PR #598 status",
+    "source": "PR #596 / issue #339 comment 4640668934, PR #591 refresh comments 4640704962, 4681786168, and 4683642339; PR #598 current status from issue #339 comment 4686872651",
     "affectedReadoutPr": "PR #592",
     "affectedReadoutBranch": "codex/vet-1574c-cohort1-evidence-readout",
     "affectedReadoutCommitBeforeRefresh": "bb2b3a47b6cbc86b237b0d4a1ecd90937279aa05",
@@ -296,14 +296,14 @@
     "effectOnReadout": "The artifact can be reviewed as evidence, but PR #592 cannot merge until GitHub Actions scheduling/check attachment is restored and required checks pass."
   },
   "publicBetaPacketContext": {
-    "source": "PR #591 / issue #339 comment 4683642339",
+    "source": "PR #591 / issue #339 comments 4683642339 and 4686872651",
     "commit": "84d0e3dcf8b9a764b51318e97d06113cc7be661d",
     "decision": "HOLD",
     "recoveryCheckpointUiDecision": "GO_REVIEW_ONLY_PRODUCTION_WRITE_HOLD",
-    "cohortInviteProofSemanticsDecision": "GO_REVIEW_ONLY_IN_DRAFT_PR_INVITE_SEND_HOLD",
+    "cohortInviteProofSemanticsDecision": "PR_591_STALE_ON_PR598_READY_STATE_REFRESH_REQUIRED",
     "mergeStateStatus": "BLOCKED",
     "statusCheckRollupCount": 0,
-    "effectOnReadout": "Public-beta packet now reflects PR #595 formal TecjLead recovery evidence and PR #598 invite-semantics evidence, but it does not complete invite-send proof, Cohort 1 counts, production recovery smoke, model promotion, or PR merge readiness."
+    "effectOnReadout": "The existing public-beta packet still reflects the prior PR #598 draft snapshot. This VET-1574 refresh records PR #598's current non-draft GO_REVIEW_ONLY state, but public beta remains HOLD and PR #591 should be refreshed separately."
   },
   "productQualityTriage": {
     "policy": "Only triage defects proven by Cohort 1 or saved-tester production evidence.",
@@ -329,8 +329,8 @@
       {
         "issue": "PR #598 / VET-1580C",
         "category": "owner-copy invite proof semantics",
-        "status": "go_review_only_in_draft_pr",
-        "evidence": "Command center and Cohort 1 report template now separate allowlisted testers from invitation-send proof; this does not prove invitations were sent."
+        "status": "go_review_only_in_open_pr",
+        "evidence": "Command center, registry rows, registry template, and Cohort 1 report template now separate allowlisted testers from invitation-send proof; this does not prove invitations were sent."
       }
     ]
   },
@@ -375,7 +375,7 @@
       "type": "pull_request",
       "id": "PR #591",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/591",
-      "summary": "VET-1573C public-beta HOLD packet is refreshed at 84d0e3dcf8b9a764b51318e97d06113cc7be661d with PR #595 TecjLead recovery evidence and PR #598 invite semantics evidence, but PR #591 remains open/blocked."
+      "summary": "VET-1573C public-beta HOLD packet is refreshed at 84d0e3dcf8b9a764b51318e97d06113cc7be661d with PR #595 TecjLead recovery evidence and the older PR #598 draft invite-semantics snapshot; PR #591 remains open/blocked and now needs a follow-up refresh for PR #598's non-draft state."
     },
     {
       "type": "issue",
@@ -399,13 +399,13 @@
       "type": "pull_request",
       "id": "PR #598",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/598",
-      "summary": "VET-1580C draft branch clarifies Cohort 1 command-center invite proof semantics at 4a9e88d368070ffc8690344eb11b38ef5c857d61: allowlist count is labeled `Allowlisted testers`, report template separates manual invitation-send proof, and TecjLead returned GO_REVIEW_ONLY; PR #598 is draft/open/blocked with no checks attached and does not prove invitations were sent."
+      "summary": "VET-1580C clarifies Cohort 1 command-center and registry invite-proof semantics at 2ee6d4c1ef48c68e3ce1398467dd1861391f6b87: allowlist count is labeled `Allowlisted testers`, registry rows separate allowlist_status from manual invitation_sent_proof, report/template copy separates manual invitation-send proof, and TecjLead returned GO_REVIEW_ONLY; PR #598 is open/non-draft/blocked with no checks attached and does not prove invitations were sent."
     },
     {
       "type": "issue",
       "id": "issue #339",
-      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4683530128",
-      "summary": "Tracker update for PR #598 records command-center semantics GO_REVIEW_ONLY, full lint/build timeout gaps, and public beta/model promotion HOLD."
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4686872651",
+      "summary": "Tracker update for PR #598 records non-draft GO_REVIEW_ONLY command-center/registry semantics, focused tests/lint/build passing, checks still not attached, and Cohort 1 launch/public beta/model promotion HOLD."
     },
     {
       "type": "issue",
@@ -470,7 +470,7 @@
     "ownerVisibleUxProof": "PARTIAL_PASS",
     "backendReadoutProof": "PARTIAL",
     "currentProductionErrorLogSample": "PASS_ZERO_ERROR_AND_500_JSON_ROWS_LAST_HOUR",
-    "cohortInviteProofSemantics": "GO_REVIEW_ONLY_IN_DRAFT_PR_INVITE_SEND_HOLD",
+    "cohortInviteProofSemantics": "GO_REVIEW_ONLY_IN_OPEN_PR_INVITE_SEND_HOLD",
     "productIntelligenceBackendProof": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY_IN_OPEN_PR",
     "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_WRITE_HOLD",
     "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",

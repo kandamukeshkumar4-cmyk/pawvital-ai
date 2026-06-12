@@ -4,7 +4,7 @@ Readout status: PARTIAL.
 
 Public beta decision: HOLD.
 
-Evidence cutoff: 2026-06-11T18:53:17.034Z.
+Evidence cutoff: 2026-06-12T14:34:50.458Z.
 
 This is a point-in-time readout from current issue evidence, existing repo templates, and read-only production probes. It is not a completed 48-hour Cohort 1 report because the repo does not contain a completed tester registry, invite-send proof, full cohort counts, or an urgency distribution.
 
@@ -43,7 +43,7 @@ This is a blocker for the current Cohort 1 latency/error readout, not a pass. Th
 | Metric | Status | Current evidence |
 |---|---|---|
 | Tester count | Unknown | No completed Cohort 1 registry or admin export found. |
-| Allowlist vs invite semantics | GO_REVIEW_ONLY in draft PR #598; invite-send proof HOLD | PR #598 changes the command-center count to `Allowlisted testers` and separates manual invitation-send proof in the report template. It does not prove invitations were sent. |
+| Allowlist vs invite semantics | GO_REVIEW_ONLY in open PR #598; invite-send proof HOLD | PR #598 changes the command-center count to `Allowlisted testers`, separates registry `allowlist_status` from manual `invitation_sent_proof`, and separates manual invitation-send proof in the report template. It does not prove invitations were sent. |
 | Completed symptom checks | Partial, known proof count 1 | VET-1570C saved-tester replay reached symptom-check completion. |
 | Final reports | Partial, known proof count 1 | VET-1570C saved-tester replay reached final report and History. |
 | Feedback submissions | Partial, known proof count 1 | History feedback submission for symptom check `5aeff251-4b54-4e45-99b6-e99aa1550ce4` returned HTTP 200 with `ok: true`. |
@@ -68,7 +68,7 @@ Passed for a saved-tester replay:
 Limits:
 
 - This is one saved-tester replay, not a full Cohort 1 dataset.
-- Invite-send proof is missing. PR #598 fixes the command-center allowlist-vs-invite label boundary, but it is not invitation-send proof.
+- Invite-send proof is missing. PR #598 fixes the command-center/registry allowlist-vs-invite boundary, but it is not invitation-send proof.
 - Current-deployment positive-admin proof is unavailable from this machine after later deployments.
 
 ## Backend Readout Proof
@@ -80,8 +80,8 @@ Partial backend proof exists:
 - VET-1571C product-intelligence persistence recovery passed owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and post-smoke 500 log query.
 - VET-1576C / PR #594 adds current-deployment daily-readiness/product-intelligence proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.
 - VET-1578C / PR #595 records recovery checkpoint UI `GO_REVIEW_ONLY` at `a9ad1ba953974f8c463812d24304b8ed74a3d4dd`, with refreshed claim-language/readiness evidence and formal TecjLead no-blocker review.
-- Current last-hour Vercel production log sample returned zero error JSON rows and zero HTTP 500 JSON rows.
-- 2026-06-11 read-only App Insights query refresh returned zero queryable route/custom event, request, trace, or custom metric rows in 24h/7d/30d windows, so no fresh `durationMs`, `extractionMs`, or `secondOpinionMs` cohort-window latency readout is available from App Insights today.
+- Current last-hour Vercel production log sample emitted zero error JSON rows and zero HTTP 500 JSON rows.
+- 2026-06-12 read-only App Insights query refresh returned zero queryable route/custom event rows in 24h/7d windows and zero 30d union rows, so no fresh `durationMs`, `extractionMs`, or `secondOpinionMs` cohort-window latency readout is available from App Insights today.
 
 Backend proof limits:
 
@@ -92,7 +92,7 @@ Backend proof limits:
 - PR #594 is open/blocked, so this is evidence-in-PR, not landed master truth.
 - PR #595 is open/blocked, so recovery checkpoint UI remains review-only evidence, not landed production truth.
 - PR #591 is open/blocked, so the public-beta HOLD packet is evidence-in-PR, not landed master truth.
-- PR #598 is draft/open/blocked, so command-center invite-semantics proof is evidence-in-PR, not landed master truth, and it does not prove invitations were sent.
+- PR #598 is open/non-draft/blocked, so command-center/registry invite-semantics proof is evidence-in-PR, not landed master truth, and it does not prove invitations were sent.
 
 ## PR Gate And Merge Readiness
 
@@ -106,14 +106,14 @@ PR #592 merge readiness is HOLD.
 
 PR #591 now records the recovered PR #595 formal TecjLead evidence at `d676b1d98de4757ae96165419b31900a8e0a83ce`, but PR #591 also remains open/blocked with no checks attached.
 
-PR #591 now also records PR #598 command-center invite semantics evidence at `84d0e3dcf8b9a764b51318e97d06113cc7be661d`. This keeps public beta HOLD and does not complete the Cohort 1 invite-send proof lane.
+PR #591 still records the older PR #598 draft-state invite semantics evidence at `84d0e3dcf8b9a764b51318e97d06113cc7be661d`. This VET-1574 refresh records PR #598's current non-draft GO_REVIEW_ONLY state, keeps public beta HOLD, and leaves a follow-up refresh needed for PR #591.
 
 ## Product-Quality Triage From Real Evidence
 
 - #585 / VET-1570C: symptom-check stall, closed and production-verified.
 - #587 / VET-1571C: product-intelligence history persistence failure, closed and production-verified; PR #594 refreshed current-deployment daily-readiness write proof.
 - PR #595 / VET-1578C: recovery checkpoint owner-visible UI, `GO_REVIEW_ONLY`; authenticated production recovery write/smoke still HOLD.
-- PR #598 / VET-1580C: command-center invite-proof semantics, `GO_REVIEW_ONLY` in draft PR; invitation-send proof still HOLD.
+- PR #598 / VET-1580C: command-center/registry invite-proof semantics, `GO_REVIEW_ONLY` in open non-draft PR; invitation-send proof still HOLD.
 - #582 / VET-1569C: REST/Auth versus `DATABASE_URL` project split, open operational debt.
 - #588 / VET-1572C: model-promotion evidence chain, open release blocker; do not promote model flags.
 
@@ -138,7 +138,7 @@ PR #591 now also records PR #598 command-center invite semantics evidence at `84
 - Backend readout proof: PARTIAL
 - Current production error/500 log sample: PASS, zero JSON rows in the last hour
 - Current App Insights query refresh: HOLD, zero queryable telemetry rows in checked windows
-- Cohort command-center invite-proof semantics: GO_REVIEW_ONLY in draft PR #598; invitation-send proof HOLD
+- Cohort command-center/registry invite-proof semantics: GO_REVIEW_ONLY in open PR #598; invitation-send proof HOLD
 - Product-intelligence backend proof: GO current-production daily-readiness only, in open PR #594
 - Product-intelligence recovery checkpoint UI: GO_REVIEW_ONLY in open PR #595; production write/smoke HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
