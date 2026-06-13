@@ -159,9 +159,9 @@ import { createTurnDeadline } from "@/lib/symptom-chat/turn-deadline";
 import { resolveTurnDepth } from "@/lib/symptom-chat/turn-depth";
 import { checkSupabaseEnvConsistency } from "@/lib/supabase-env-guard";
 import {
-  appendClinicalTurnOrchestratorShadow,
   runClinicalTurnOrchestrator,
 } from "@/lib/clinical-intelligence/clinical-turn-orchestrator";
+import { shouldPromptVetRecordUpload } from "@/lib/symptom-chat/vet-record-prompt";
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
@@ -2758,10 +2758,17 @@ export async function POST(request: Request) {
       session,
       ownerText: lastUserMessage.content,
       productionQuestionId: nextQuestionId,
+      pet: effectivePet,
+      hasImage: Boolean(image),
     });
-    session = appendClinicalTurnOrchestratorShadow(
+    session = orchestratorResult.session;
+
+    const effectiveQuestionId =
+      orchestratorResult.selectedQuestionId ?? nextQuestionId;
+    const askingBecause = orchestratorResult.askingBecause;
+    const promptVetRecord = shouldPromptVetRecordUpload(
       session,
-      orchestratorResult.shadowComparisonRecord
+      effectiveQuestionId
     );
 
     session = await maybeCompressStructuredCaseMemory(
@@ -2780,7 +2787,7 @@ export async function POST(request: Request) {
 
     return buildQuestionResponseFlow({
       session,
-      nextQuestionId,
+      nextQuestionId: effectiveQuestionId,
       needsClarificationQuestionId,
       pet,
       effectivePet,
@@ -2793,6 +2800,8 @@ export async function POST(request: Request) {
       forceDeterministicQuestionFallback: Boolean(textOnlyQuickStartExtraction),
       turnDeadline,
       turnDepth,
+      askingBecause,
+      promptVetRecord,
     });
   } catch (error) {
     errorCode = "symptom_chat_unhandled";

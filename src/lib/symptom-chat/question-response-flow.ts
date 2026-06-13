@@ -46,6 +46,8 @@ interface BuildQuestionResponseFlowInput {
   forceDeterministicQuestionFallback?: boolean;
   turnDeadline?: TurnDeadline;
   turnDepth?: TurnDepth;
+  askingBecause?: string | null;
+  promptVetRecord?: boolean;
 }
 
 export async function buildQuestionResponseFlow(
@@ -74,6 +76,8 @@ export async function buildQuestionResponseFlow(
     conversationState: input.needsClarificationQuestionId
       ? "needs_clarification"
       : inferConversationState(getStateSnapshot(session)),
+    asking_because: input.askingBecause ?? session.case_memory?.asking_because ?? null,
+    prompt_vet_record: Boolean(input.promptVetRecord),
   });
 }
 

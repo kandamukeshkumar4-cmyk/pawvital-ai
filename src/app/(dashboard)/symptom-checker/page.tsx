@@ -87,6 +87,8 @@ interface ChatMessage {
   reasonCode?: string | null;
   ownerMessage?: string | null;
   recommendedNextStep?: string | null;
+  askingBecause?: string | null;
+  promptVetRecord?: boolean;
   timestamp: Date;
 }
 
@@ -212,6 +214,12 @@ function ChatBubble({
             <span>Let me clarify...</span>
           </p>
         )}
+        {message.askingBecause && !isUser && (
+          <p className="mb-2 text-xs text-purple-700/90 border-l-2 border-purple-300 pl-2">
+            <span className="font-medium">Why I&apos;m asking: </span>
+            {message.askingBecause}
+          </p>
+        )}
         <p className="text-sm leading-relaxed whitespace-pre-wrap">
           {message.content}
         </p>
@@ -258,6 +266,7 @@ export default function SymptomCheckerPage() {
   const [pendingGateImage, setPendingGateImage] = useState<string | null>(null);
   const [pendingGateImageMeta, setPendingGateImageMeta] =
     useState<ImageMeta | null>(null);
+  const [promptVetRecord, setPromptVetRecord] = useState(false);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<SymptomReport | null>(null);
   const [reportPersistenceMessage, setReportPersistenceMessage] =
@@ -273,7 +282,10 @@ export default function SymptomCheckerPage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const liveSessionIdRef = useRef<string>(createLiveSessionId());
+  const liveSessionIdRef = useRef<string | null>(null);
+  if (liveSessionIdRef.current === null) {
+    liveSessionIdRef.current = createLiveSessionId();
+  }
   const [, setLiveUpdateStatus] = useState<TriageLiveUpdateStatus | null>(null);
   const [, setLiveConnectionState] =
     useState<TriageLiveUpdateConnectionState>("disabled");
@@ -360,6 +372,19 @@ export default function SymptomCheckerPage() {
       const trimmedCurrent = current.trimEnd();
       return trimmedCurrent ? `${trimmedCurrent}\n\n${context}` : context;
     });
+    const session = triageSessionRef.current;
+    if (session) {
+      const nextSession = {
+        ...session,
+        case_memory: {
+          ...(session.case_memory ?? {}),
+          vet_record_context: context,
+        },
+      };
+      setTriageSession(nextSession);
+      triageSessionRef.current = nextSession;
+    }
+    setPromptVetRecord(false);
     inputRef.current?.focus();
   };
 
@@ -660,6 +685,9 @@ export default function SymptomCheckerPage() {
       } else {
         const isTerminalOutcome =
           data.type === "cannot_assess" || data.type === "out_of_scope";
+        if (typeof data.prompt_vet_record === "boolean") {
+          setPromptVetRecord(data.prompt_vet_record);
+        }
         setMessages((prev) => [
           ...prev,
           {
@@ -673,6 +701,10 @@ export default function SymptomCheckerPage() {
                 ? terminalOwnerText.apiContent
                 : assistantText?.apiContent,
             type: data.type,
+            askingBecause:
+              typeof data.asking_because === "string"
+                ? data.asking_because
+                : null,
             terminalState:
               isTerminalOutcome && typeof data.terminal_state === "string"
                 ? data.terminal_state
@@ -1070,6 +1102,15 @@ export default function SymptomCheckerPage() {
                     >
                       <X className="w-3 h-3" />
                     </button>
+                  </div>
+                )}
+                {promptVetRecord && (
+                  <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                    <p className="font-medium">Prior vet records help</p>
+                    <p className="mt-1 text-xs text-blue-800">
+                      Upload a PDF from a recent visit so I can factor in labs,
+                      vaccines, and medications.
+                    </p>
                   </div>
                 )}
                 <div className="flex flex-col gap-2 sm:flex-row">

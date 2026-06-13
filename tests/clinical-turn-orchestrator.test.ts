@@ -17,5 +17,6 @@ describe("clinical turn orchestrator", () => {
         shadowStrategy: expect.any(String),
       })
     );
+    expect(result.session.case_memory?.clinical_case_state).toBeTruthy();
   });
 });

@@ -95,6 +95,12 @@ export interface StructuredCaseMemory {
   compressed_summary?: string;
   compression_model?: string;
   last_compressed_turn?: number;
+  /** Serialized ClinicalCaseState JSON — protected from compression (VET-1581) */
+  clinical_case_state?: string;
+  /** Planner shortReason for current question (VET-1576) */
+  asking_because?: string;
+  /** Doc Intel vet record summary when uploaded */
+  vet_record_context?: string;
 }
 
 export interface PetProfile {

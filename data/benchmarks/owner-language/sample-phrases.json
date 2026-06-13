@@ -1,0 +1,17 @@
+[
+  {
+    "id": "limping-natural-1",
+    "ownerText": "He's been favoring his back left paw since yesterday.",
+    "expectedSymptomHints": ["limping", "leg"]
+  },
+  {
+    "id": "vomit-natural-1",
+    "ownerText": "She threw up twice this morning and won't eat.",
+    "expectedSymptomHints": ["vomiting", "appetite"]
+  },
+  {
+    "id": "unknown-duration-1",
+    "ownerText": "Not sure when it started but he's been really itchy.",
+    "expectedSymptomHints": ["itching"]
+  }
+]
