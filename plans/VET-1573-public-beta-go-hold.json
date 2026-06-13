@@ -1,10 +1,10 @@
 {
   "ticket": "VET-1573C",
   "mode": "public-beta-go-hold-evidence-refresh",
-  "generatedAt": "2026-06-13T01:44:34.589Z",
-  "evidenceCutoff": "2026-06-13T01:44:34.589Z",
+  "generatedAt": "2026-06-13T02:18:44.596Z",
+  "evidenceCutoff": "2026-06-13T02:18:44.596Z",
   "decision": "HOLD",
-  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate, VET-1580C/PR #598 is open/non-draft and corrects the command-center/registry allowlist-vs-invite proof semantics, VET-1582C/PR #600 adds a review-only invite-send proof validator, PR #592 now records that validator plus PR #603/PR #605 context in the Cohort 1 readout, VET-1571/PR #601 adds review-ready serverless reliability-budget hardening and a latency probe/scorecard workflow, VET-1560/PR #603 adds review-only launch-readiness gate artifacts, PR #605 adds a draft stacked review-only turn-depth standard guard, PR #606 adds open blocked signup/symptom-check reliability fixes, PR #607 adds an open blocked P0 runtime reliability stack, and the current read-only Vercel production inspect still resolves the alias to the same ready deployment. Public beta remains HOLD because the invite validator currently proves the registry is placeholder-only, PR #606 is open/blocked with no checks and its manual signup/login/symptom-check smoke plus NVIDIA phrasing configuration remain incomplete, PR #607 is open/blocked with no checks, stacks on PR #606, touches runtime/protected clinical surfaces, and still requires operator Supabase env alignment plus NVIDIA phrasing configuration, PR #601 is open/blocked with no checks and still lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence, PR #603 is open/blocked with no checks and keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD, PR #605 is draft, stacked on draft parent PR #604, has no attached checks, and lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence, fresh current-deployment admin-positive proof, real invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
+  "decisionReason": "Public beta requires same-current-production proof across admin, tester, feedback, symptom-check, History, monitoring, owner copy, invite, privacy/support, rollback, and protected PR gate readiness. Current evidence is partial: key owner-visible flows have passed in prior same-deployment smokes, VET-1576C has current-deployment daily-readiness/product-intelligence write proof, VET-1578C has review-ready recovery checkpoint UI proof in PR #595, VET-1577C/PR #596 documents a workflow-only recovery attempt for the missing Threshold Review Gate, VET-1580C/PR #598 is open/non-draft and corrects the command-center/registry allowlist-vs-invite proof semantics, VET-1582C/PR #600 adds a review-only invite-send proof validator, PR #592 records that validator plus PR #603/PR #605 and pre-merge PR #606/#607 context in the Cohort 1 readout, VET-1571/PR #601 adds review-ready serverless reliability-budget hardening and a latency probe/scorecard workflow, VET-1560/PR #603 adds review-only launch-readiness gate artifacts, PR #605 adds a draft stacked review-only turn-depth standard guard, PR #606 is closed unmerged after signup/symptom-check reliability work, PR #607 has now merged to master as merge commit 250d0b3c517d285003c2d072c91f8d876e4c5026 at 2026-06-13T02:03:33Z while its PR body still states it stacks on PR #606, and the current read-only Vercel production inspect resolves the alias to Ready deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr created before that merge with 60-second AI route lambdas. Public beta remains HOLD because the invite validator currently proves the registry is placeholder-only, PR #606 is closed unmerged and its manual signup/login/symptom-check smoke plus NVIDIA phrasing configuration remain incomplete, PR #607 is merged to master but not proven on the current production alias, still reports no attached checks, still lists operator Supabase env alignment and NVIDIA_API_KEY TODOs, touches runtime/protected clinical surfaces, and still requires production deployment/smoke plus full runtime/protected-clinical review before any launch claim, PR #601 is open/blocked with no checks and still lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence, PR #603 is open/blocked with no checks and keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD, PR #605 is draft, stacked on draft parent PR #604, has no attached checks, and lacks production alias/env/maxDuration proof plus live synthetic latency scorecard evidence, fresh current-deployment admin-positive proof, real invite-send proof, full cohort readout counts, privacy/support readiness, scheduler/shadow evidence, authenticated production recovery-checkpoint write/smoke proof, VET-1563 model-promotion evidence, and launch-stack PR check attachment remain missing or blocked.",
   "scope": {
     "allowed": [
       "point-in-time public-beta readout",
@@ -22,9 +22,9 @@
   },
   "currentProductionProbe": {
     "alias": "https://pawvital-ai.vercel.app",
-    "performedAt": "2026-06-13T01:44:34.589Z",
-    "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
-    "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
+    "performedAt": "2026-06-13T02:18:44.596Z",
+    "deploymentId": "dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr",
+    "deploymentUrl": "https://pawvital-dp66rzs3o-kandasubbarao4-5462s-projects.vercel.app",
     "readOnly": true,
     "results": [
       {
@@ -348,10 +348,10 @@
     "publicBetaDecision": "HOLD"
   },
   "signupSymptomReliabilityReadiness": {
-    "decision": "GO_REVIEW_ONLY_IN_OPEN_PR_MANUAL_SMOKE_HOLD",
+    "decision": "HOLD_CLOSED_UNMERGED_MANUAL_SMOKE_CONFIG_MISSING",
     "source": "PR #606 / VET-LAND",
     "commit": "d790dc097b8bc97950d5cb5ad3bd3253b365ebd0",
-    "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+    "prState": "CLOSED_UNMERGED_NO_CHECKS",
     "scope": [
       "server-side signup auto-confirm path when service role is configured",
       "symptom-checker client timeout and deterministic phrasing fallback",
@@ -363,7 +363,7 @@
       "PR #606 body records focused tests for auth/signup/session-progress/azure-speech/question-phrasing/verify-signup patterns."
     ],
     "remainingGaps": [
-      "PR #606 is not merged and has no attached/passing checks.",
+      "PR #606 is closed without mergeCommit/mergedAt and has no attached/passing checks.",
       "Manual signup -> login -> symptom-check first-turn smoke remains unchecked.",
       "NVIDIA_API_KEY local/Vercel phrasing configuration is still an operator TODO.",
       "This PR does not prove current-production Cohort 1 launch execution or public-beta readiness."
@@ -371,12 +371,14 @@
     "publicBetaDecision": "HOLD"
   },
   "p0RuntimeReliabilityStack": {
-    "decision": "GO_REVIEW_ONLY_IN_OPEN_PR_RUNTIME_PROOF_HOLD",
+    "decision": "MERGED_TO_MASTER_PRODUCTION_DEPLOY_SMOKE_HOLD_PARENT_PR606_CLOSED",
     "source": "PR #607 / P0 runtime reliability stack",
-    "commit": "8e5dfce03bdf57b8244be3f778368f399b68508e",
+    "commit": "1ca37f8db6d1a0a2458c509a02ecc721d1962250",
+    "mergeCommit": "250d0b3c517d285003c2d072c91f8d876e4c5026",
+    "mergedAt": "2026-06-13T02:03:33Z",
     "base": "master",
     "stackedOn": "PR #606 / codex/vet-land-signup-symptom",
-    "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+    "prState": "MERGED_TO_MASTER_NO_CHECKS_PRODUCTION_ALIAS_PRE_MERGE_PARENT_PR606_CLOSED_UNMERGED",
     "scope": [
       "VET-1571 serverless maxDuration, MiniMax default timeout, and per-turn budget skips",
       "VET-1573 standard/deep turn-depth routing",
@@ -387,8 +389,9 @@
       "PR #607 body records focused tests for turn-depth, turn-deadline, supabase-env-guard, clinical-turn-orchestrator, memory-compression, and question-phrasing."
     ],
     "remainingGaps": [
-      "PR #607 is not merged and has no attached/passing checks.",
-      "PR #607 stacks on unmerged PR #606.",
+      "PR #607 merged to master as 250d0b3c517d285003c2d072c91f8d876e4c5026, but current production alias deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr was created before that merge and is not proof of the merged runtime stack.",
+      "PR #607 still states it stacks on PR #606, but PR #606 is closed unmerged; stack/content lineage requires review.",
+      "No attached status checks were reported by gh pr view 607.",
       "Operator Supabase env alignment remains required for #582.",
       "NVIDIA_API_KEY Vercel phrasing configuration remains required.",
       "The runtime/protected clinical diff requires full review and production smoke before any launch claim.",
@@ -419,8 +422,9 @@
       "PR #601 adds review-ready serverless reliability budget hardening and a latency probe/scorecard workflow in an open blocked PR.",
       "PR #603 adds review-only VET-1560 launch-readiness gate visibility in an open blocked PR.",
       "PR #605 adds a review-only turn-depth standard guard in a draft stacked PR, and PR #592 now records it separately from production proof.",
-      "PR #606 adds open blocked signup/symptom-check reliability fixes, but manual signup/login/symptom smoke and NVIDIA phrasing configuration remain incomplete.",
-      "PR #607 adds an open blocked P0 runtime reliability stack, but it is not merged, has no checks, stacks on PR #606, and still needs operator env/config proof plus production smoke."
+      "PR #606 adds signup/symptom-check reliability fixes, but it is now closed unmerged and manual signup/login/symptom smoke plus NVIDIA phrasing configuration remain incomplete.",
+      "PR #607 P0 runtime reliability stack merged to master as 250d0b3c517d285003c2d072c91f8d876e4c5026 after the current production alias deployment was created, still reports no attached checks, still states it stacks on closed-unmerged PR #606, and still needs operator env/config proof plus production smoke.",
+      "Current production inspect resolves the alias to Ready deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr with 60-second AI route lambdas, but this is deployment-shape proof only and not Cohort 1 launch proof."
     ],
     "remainingGaps": [
       "No current-deployment authorized-admin positive proof from this machine.",
@@ -429,8 +433,8 @@
       "PR #601 is not merged, has no checks attached, and still requires production alias/env/maxDuration proof plus live synthetic latency probe/scorecard evidence.",
       "PR #603 is not merged, has no checks attached, and its VET-1560 gates keep Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.",
       "PR #605 is draft, stacked on draft parent PR #604, has no checks attached, and still requires production alias/env/maxDuration proof plus live synthetic latency scorecard evidence.",
-      "PR #606 is open/blocked with no checks and still lacks manual signup/login/symptom smoke proof plus NVIDIA phrasing configuration.",
-      "PR #607 is open/blocked with no checks, stacks on PR #606, touches runtime/protected clinical surfaces, and still lacks operator Supabase env alignment, NVIDIA phrasing configuration, full review, and production smoke proof.",
+      "PR #606 is closed unmerged with no checks and still lacks manual signup/login/symptom smoke proof plus NVIDIA phrasing configuration.",
+      "PR #607 is merged to master but has no attached checks reported, still stacks on closed-unmerged PR #606 per its body, touches runtime/protected clinical surfaces, and still lacks current-production deployment/smoke proof, operator Supabase env alignment, NVIDIA phrasing configuration, and full review proof.",
       "Launch-stack PRs #591-#596 and PR #598 have no attached checks, including the required Threshold Review Gate context where applicable; PR #600 is clean only against the PR #598 base and has no checks reported.",
       "Scheduler/shadow readout remains empty."
     ]
@@ -448,8 +452,8 @@
     "Serverless reliability PR #601 is open/blocked with no checks attached; production alias/env/maxDuration proof and live synthetic latency scorecard evidence are still missing.",
     "VET-1560 launch-readiness gate PR #603 is open/blocked with no checks attached; it is review-only evidence and explicitly keeps Cohort 1 launch execution, public beta, and model/NIM promotion HOLD.",
     "Turn-depth standard guard PR #605 is draft, stacked on draft parent PR #604, has no attached checks, and is review-only until accepted, merged/deployed, and production alias/env/maxDuration plus live synthetic latency scorecard proof exist.",
-    "Signup/symptom-check reliability PR #606 is open/blocked with no checks, and manual signup/login/symptom smoke plus NVIDIA phrasing configuration remain incomplete.",
-    "P0 runtime reliability PR #607 is open/blocked with no checks, stacks on PR #606, touches runtime/protected clinical surfaces, and still needs operator Supabase env alignment, NVIDIA phrasing configuration, full review, and production smoke proof.",
+    "Signup/symptom-check reliability PR #606 is closed unmerged with no checks, and manual signup/login/symptom smoke plus NVIDIA phrasing configuration remain incomplete.",
+    "P0 runtime reliability PR #607 merged to master as 250d0b3c517d285003c2d072c91f8d876e4c5026, but the current production alias deployment predates that merge; no production smoke, attached checks, operator Supabase env alignment, NVIDIA phrasing configuration, or full runtime/protected-clinical review proof is present.",
     "Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #598 is also open/non-draft/mergeable/blocked with no attached checks, PR #600 is clean only against the PR #598 base with no reported checks, PR #596 has no workflow runs on its branch, and manual workflow dispatch fails with Actions disabled for this user."
   ],
   "sourceEvidence": [
@@ -523,7 +527,7 @@
       "type": "pull_request",
       "id": "PR #592",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/592",
-      "summary": "VET-1574C Cohort 1 evidence readout now records PR #603 and PR #605 gate context at 61333ee05e5aca73f83bf5796e06dc1857e6ae3d, while keeping Cohort 1 readout PARTIAL, public beta HOLD, model/NIM promotion HOLD, and PR merge readiness HOLD."
+      "summary": "VET-1574C Cohort 1 evidence readout records PR #606 closed-unmerged state and pre-merge PR #607 parent-closed runtime blocker context at 07f5ad5ff4d9228129538c11ba3b6e834d701b70, while keeping Cohort 1 readout PARTIAL, public beta HOLD, model/NIM promotion HOLD, and PR merge readiness HOLD."
     },
     {
       "type": "issue",
@@ -568,16 +572,22 @@
       "summary": "Tracker update for PR #592 records PR #603 as GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD and PR #605 as GO_REVIEW_ONLY_IN_DRAFT_STACKED_PR_PARENT_PR604_HOLD while keeping Cohort 1 readout PARTIAL, public beta HOLD, and model/NIM promotion HOLD."
     },
     {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4697110734",
+      "summary": "Tracker update for PR #592 records PR #606 as HOLD_CLOSED_UNMERGED_MANUAL_SMOKE_CONFIG_MISSING and pre-merge PR #607 parent-closed runtime blocker context while keeping Cohort 1 readout PARTIAL, public beta HOLD, and model/NIM promotion HOLD."
+    },
+    {
       "type": "pull_request",
       "id": "PR #606",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/606",
-      "summary": "VET-LAND signup and symptom-checker reliability fixes are open at d790dc097b8bc97950d5cb5ad3bd3253b365ebd0 with focused tests recorded in the PR body, but PR #606 is blocked with no checks and still lacks manual signup/login/symptom smoke plus NVIDIA phrasing configuration."
+      "summary": "VET-LAND signup and symptom-checker reliability fixes are closed unmerged at d790dc097b8bc97950d5cb5ad3bd3253b365ebd0 with focused tests recorded in the PR body, but manual signup/login/symptom smoke plus NVIDIA phrasing configuration remain incomplete, so this is not landed production proof."
     },
     {
       "type": "pull_request",
       "id": "PR #607",
       "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/607",
-      "summary": "P0 runtime reliability stack is open at 8e5dfce03bdf57b8244be3f778368f399b68508e and stacks on PR #606. It records VET-1571/VET-1573/VET-1569C/VET-1580 focused tests in the PR body, but remains blocked with no checks and still requires operator Supabase env alignment, NVIDIA phrasing configuration, full runtime/protected-clinical review, and production smoke proof."
+      "summary": "P0 runtime reliability stack merged to master at 2026-06-13T02:03:33Z as merge commit 250d0b3c517d285003c2d072c91f8d876e4c5026 from head 1ca37f8db6d1a0a2458c509a02ecc721d1962250. Its body still states it stacks on PR #606, which is closed unmerged, and it still lists operator Supabase env alignment plus NVIDIA_API_KEY TODOs. Current production alias deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr was created before the merge, so production smoke and public-beta proof remain HOLD."
     },
     {
       "type": "issue",
@@ -642,8 +652,8 @@
     "serverlessReliabilityBudgetHardening": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
     "vet1560LaunchReadinessGates": "GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD",
     "turnDepthStandardGuard": "GO_REVIEW_ONLY_IN_DRAFT_STACKED_PR_PARENT_PR604_HOLD",
-    "signupSymptomReliabilityReadiness": "GO_REVIEW_ONLY_IN_OPEN_PR_MANUAL_SMOKE_HOLD",
-    "p0RuntimeReliabilityStack": "GO_REVIEW_ONLY_IN_OPEN_PR_RUNTIME_PROOF_HOLD",
+    "signupSymptomReliabilityReadiness": "HOLD_CLOSED_UNMERGED_MANUAL_SMOKE_CONFIG_MISSING",
+    "p0RuntimeReliabilityStack": "MERGED_TO_MASTER_PRODUCTION_DEPLOY_SMOKE_HOLD_PARENT_PR606_CLOSED",
     "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING"
   }
 }
