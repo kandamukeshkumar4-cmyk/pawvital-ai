@@ -12,13 +12,18 @@ import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
 import { buildCaseMemorySnapshot } from "@/lib/symptom-memory";
 import { type PetProfile, type TriageSession } from "@/lib/triage-engine";
 import {
+  shouldRunNemotronQuestionVerify,
+  type TurnDepth,
+} from "@/lib/symptom-chat/turn-depth";
+import {
   buildConfirmedQASummary,
   buildDeterministicQuestionFallback,
   parseLooseJsonRecord,
 } from "@/lib/symptom-chat/extraction-helpers";
 
 const useNvidia = isNvidiaConfigured();
-export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 10_000;
+// Shared between Nemotron preflight gate + Llama phrasing on text-only turns.
+export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 25_000;
 
 export interface SymptomChatTurnMessage {
   role: "user" | "assistant";
@@ -325,7 +330,8 @@ async function phraseQuestionV2(
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
   forceDeterministicFallback = false,
-  ownerVisibleDeadlineMs?: number | null
+  ownerVisibleDeadlineMs?: number | null,
+  turnDepth?: TurnDepth
 ): Promise<string> {
   const answerType = FOLLOW_UP_QUESTIONS[questionId]?.data_type || "string";
   const hasPhoto = Boolean(photoAnalyzedThisTurn);
@@ -399,6 +405,10 @@ async function phraseQuestionV2(
         return sanitizedDraft;
       }
 
+      if (turnDepth && !shouldRunNemotronQuestionVerify(turnDepth)) {
+        return sanitizedDraft;
+      }
+
       const verifiedResult = await withTimeout(
         verifyQuestionDraft(
           questionText,
@@ -421,6 +431,10 @@ async function phraseQuestionV2(
       }
 
       return verifiedResult.value;
+    }
+
+    if (turnDepth && !shouldRunNemotronQuestionVerify(turnDepth)) {
+      return sanitizedDraft;
     }
 
     return verifyQuestionDraft(
@@ -450,7 +464,8 @@ export async function phraseQuestion(
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
   forceDeterministicFallback = false,
-  ownerVisibleDeadlineMs?: number | null
+  ownerVisibleDeadlineMs?: number | null,
+  turnDepth?: TurnDepth
 ): Promise<string> {
   return phraseQuestionV2(
     questionText,
@@ -463,6 +478,7 @@ export async function phraseQuestion(
     photoAnalyzedThisTurn,
     allowPhotoMentionInWording,
     forceDeterministicFallback,
-    ownerVisibleDeadlineMs
+    ownerVisibleDeadlineMs,
+    turnDepth
   );
 }

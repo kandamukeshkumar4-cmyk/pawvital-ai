@@ -317,6 +317,9 @@ export function mergeCompressionResult(
       question_asked_counts: protectedState.question_asked_counts,
       clarification_attempts: protectedState.clarification_attempts,
       answer_source_messages: protectedState.answer_source_messages,
+      clinical_case_state: caseMemory.clinical_case_state,
+      asking_because: caseMemory.asking_because,
+      vet_record_context: caseMemory.vet_record_context,
       // Only these fields come from compression
       compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
       compression_model: compressed.model,
@@ -604,6 +607,9 @@ export function ensureStructuredCaseMemory(
     compressed_summary: existing?.compressed_summary,
     compression_model: existing?.compression_model,
     last_compressed_turn: existing?.last_compressed_turn,
+    clinical_case_state: existing?.clinical_case_state,
+    asking_because: existing?.asking_because,
+    vet_record_context: existing?.vet_record_context,
   };
 }
 

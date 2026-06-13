@@ -114,4 +114,40 @@ describe("memory-compression helper", () => {
     expect(mockCompressCaseMemoryWithMiniMax).not.toHaveBeenCalled();
     expect(mockRecordConversationTelemetry).not.toHaveBeenCalled();
   });
+
+  it("skips MiniMax when the turn depth is standard", async () => {
+    mockShouldCompressCaseMemory.mockReturnValue(true);
+    mockIsMiniMaxConfigured.mockReturnValue(true);
+    mockEnsureStructuredCaseMemory.mockImplementation((session: TriageSession) => ({
+      turn_count: 6,
+      compressed_summary: "",
+      service_timeouts: session.case_memory?.service_timeouts ?? [],
+    }));
+
+    const { maybeCompressStructuredCaseMemory } = await import(
+      "@/lib/symptom-chat/memory-compression"
+    );
+
+    const result = await maybeCompressStructuredCaseMemory(
+      SESSION,
+      PET,
+      [...MESSAGES],
+      MESSAGES[0].content,
+      {
+        imageAnalyzed: false,
+        changedSymptoms: ["limping"],
+        changedAnswers: ["which_leg"],
+        turnDepth: "standard",
+      }
+    );
+
+    expect(mockCompressCaseMemoryWithMiniMax).not.toHaveBeenCalled();
+    expect(result.case_memory?.service_timeouts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reason: "turn-depth-standard",
+        }),
+      ])
+    );
+  });
 });

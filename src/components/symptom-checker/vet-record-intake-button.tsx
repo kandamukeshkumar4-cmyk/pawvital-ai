@@ -100,6 +100,7 @@ export function VetRecordIntakeButton({
       <input
         ref={inputRef}
         accept="application/pdf"
+        aria-label="Upload vet record PDF"
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];

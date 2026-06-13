@@ -18,11 +18,18 @@ import {
   shouldIncludeImageContextInQuestion,
 } from "@/lib/symptom-chat/context-helpers";
 import {
-  TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS,
   gateQuestionBeforePhrasing,
   phraseQuestion,
   type SymptomChatTurnMessage,
 } from "@/lib/symptom-chat/question-phrasing";
+import {
+  resolveOwnerVisiblePhrasingDeadline,
+  type TurnDeadline,
+} from "@/lib/symptom-chat/turn-deadline";
+import {
+  shouldRunNemotronQuestionGate,
+  type TurnDepth,
+} from "@/lib/symptom-chat/turn-depth";
 
 interface BuildQuestionResponseFlowInput {
   session: TriageSession;
@@ -37,6 +44,10 @@ interface BuildQuestionResponseFlowInput {
   visionSeverity?: "normal" | "needs_review" | "urgent";
   image?: string;
   forceDeterministicQuestionFallback?: boolean;
+  turnDeadline?: TurnDeadline;
+  turnDepth?: TurnDepth;
+  askingBecause?: string | null;
+  promptVetRecord?: boolean;
 }
 
 export async function buildQuestionResponseFlow(
@@ -65,6 +76,8 @@ export async function buildQuestionResponseFlow(
     conversationState: input.needsClarificationQuestionId
       ? "needs_clarification"
       : inferConversationState(getStateSnapshot(session)),
+    asking_because: input.askingBecause ?? session.case_memory?.asking_because ?? null,
+    prompt_vet_record: Boolean(input.promptVetRecord),
   });
 }
 
@@ -142,10 +155,14 @@ async function phraseNextQuestion(
     )
       ? buildQuestionPhrasingContext(input.session, input.visionSeverity)
       : null;
-  const textTurnPhrasingDeadlineMs = hasLiveVisionThisTurn
-    ? null
-    : Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
-  if (input.forceDeterministicQuestionFallback) {
+  const textTurnPhrasingDeadlineMs = resolveOwnerVisiblePhrasingDeadline(
+    hasLiveVisionThisTurn,
+    input.turnDeadline
+  );
+  if (
+    input.forceDeterministicQuestionFallback ||
+    (input.turnDepth && !shouldRunNemotronQuestionGate(input.turnDepth))
+  ) {
     return phraseQuestion(
       questionText,
       input.nextQuestionId,
@@ -157,7 +174,8 @@ async function phraseNextQuestion(
       hasLiveVisionThisTurn,
       false,
       true,
-      textTurnPhrasingDeadlineMs
+      textTurnPhrasingDeadlineMs,
+      input.turnDepth
     );
   }
 
@@ -184,6 +202,7 @@ async function phraseNextQuestion(
     hasLiveVisionThisTurn,
     hasLiveVisionThisTurn && questionGate.includeImageContext,
     questionGate.useDeterministicFallback,
-    textTurnPhrasingDeadlineMs
+    textTurnPhrasingDeadlineMs,
+    input.turnDepth
   );
 }
