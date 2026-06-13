@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-12T18:27:24Z.
+Evidence cutoff: 2026-06-13T01:18:20Z.
 
 ## Why Public Beta Is HOLD
 
@@ -21,6 +21,7 @@ Known current blockers:
 - Scheduler/shadow readout remains empty and must stay separate from owner-visible UX proof.
 - Serverless reliability PR #601 is open/blocked with no checks attached; production alias/env/maxDuration proof and live synthetic latency scorecard evidence are still missing.
 - VET-1560 launch-readiness gate PR #603 is open/blocked with no checks attached. It is review-only gate visibility and keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.
+- Turn-depth standard guard PR #605 is draft, stacked on draft parent PR #604, has no attached checks, and remains review-only until accepted, merged/deployed, and backed by production alias/env/maxDuration proof plus live synthetic latency scorecard evidence.
 - Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #598 is also open/non-draft/mergeable/blocked with no attached checks, PR #600 is clean only against the PR #598 base with no reported checks, PR #603 is open/non-draft/mergeable/blocked with no attached checks, the required `Threshold Review Gate` is absent where applicable, the PR #596 recovery branch has no workflow runs, and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
 
 ## Owner-Visible UX Proof
@@ -83,6 +84,8 @@ Launch-stack PR gate readiness is HOLD.
 - PR #600 is open/non-draft/mergeable and `CLEAN` against PR #598's branch, but it has no reported checks and remains dependent review evidence until PR #598 lands and the validator is run against a completed registry.
 - PR #601 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only reliability evidence until checks attach/pass and production latency proof is captured.
 - PR #603 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only VET-1560 launch-readiness gate evidence and explicitly keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.
+- PR #604 is an open draft parent for the serverless-duration branch, reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`, and is not merged.
+- PR #605 is an open draft stacked PR on PR #604, reports `mergeStateStatus=CLEAN` against that parent with `statusCheckRollup=[]`, and remains review-only turn-depth guard evidence until checks attach/pass, the stack lands, and production proof is captured.
 - PR #596 (`codex/vet-1579c-threshold-gate-recovery` at `745a1173db546805afdedfe788677081cec2a93b`) attempted a workflow-only recovery for the required `Threshold Review Gate`.
 - `gh run list --branch codex/vet-1579c-threshold-gate-recovery` returned no workflow runs.
 - Manual dispatch failed with `HTTP 422: Actions has been disabled for this user`.
@@ -101,6 +104,7 @@ Monitoring is partial:
 - PR #600 adds a review-only invite-send proof validator, and PR #592 now records its placeholder-registry HOLD result in the Cohort 1 readout.
 - PR #601 adds review-ready serverless reliability budget hardening and a latency probe/scorecard workflow, but production alias/env/maxDuration proof and live synthetic scorecard evidence remain missing.
 - PR #603 adds review-only VET-1560 launch-readiness gate visibility, but the gate artifact itself keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.
+- PR #605 adds a review-only turn-depth standard guard in a draft stacked PR. PR #592 now records it as `GO_REVIEW_ONLY_IN_DRAFT_STACKED_PR_PARENT_PR604_HOLD`, separate from production reliability proof.
 - No full Cohort 1 monitoring/readout packet exists for public beta.
 
 ## Final Gate
@@ -116,4 +120,5 @@ Monitoring is partial:
 - Model/NIM promotion: HOLD
 - Serverless reliability budget hardening: GO_REVIEW_ONLY in open PR #601; production alias/maxDuration/synthetic scorecard proof HOLD
 - VET-1560 launch-readiness gates: GO_REVIEW_ONLY in open PR #603; Cohort 1 launch execution, public beta, and model/NIM promotion HOLD
+- Turn-depth standard guard: GO_REVIEW_ONLY in draft stacked PR #605; parent PR #604, production alias/env/maxDuration proof, and live synthetic latency scorecard proof HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
