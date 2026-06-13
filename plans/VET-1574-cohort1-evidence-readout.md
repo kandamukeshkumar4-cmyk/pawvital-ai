@@ -4,7 +4,7 @@ Readout status: PARTIAL.
 
 Public beta decision: HOLD.
 
-Evidence cutoff: 2026-06-12T19:48:54.732Z.
+Evidence cutoff: 2026-06-13T01:57:10.252Z.
 
 This is a point-in-time readout from current issue evidence, existing repo templates, and read-only production probes. It is not a completed 48-hour Cohort 1 report because the repo does not contain a completed tester registry, invite-send proof, full cohort counts, or an urgency distribution.
 
@@ -18,7 +18,7 @@ Read-only probe:
 - `/api/product-intelligence/snapshots?pet_id=prod-proof-readonly`: HTTP 401 unauthenticated
 - `/api/notifications`: HTTP 401 unauthenticated
 
-Current production alias resolves to deployment `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`. This proves the public home is reachable and unauthenticated admin/product/notification denial still holds. It does not prove current positive-admin access, authenticated product-intelligence persistence, or owner notification flow.
+Current production alias resolves to deployment `dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr` (`https://pawvital-dp66rzs3o-kandasubbarao4-5462s-projects.vercel.app`). The Vercel inspect output shows 60-second AI route lambdas on this deployment. This proves the public home is reachable, unauthenticated admin/product/notification denial still holds, and the current deployment shape has 60-second AI route lambdas. It does not prove current positive-admin access, authenticated product-intelligence persistence, owner notification flow, PR #606/#607 landing, or completed Cohort 1 flows.
 
 ## Current Production Monitoring Refresh
 
@@ -34,6 +34,10 @@ PR #601 adds review-ready serverless reliability budget hardening and a latency 
 PR #603 adds review-only VET-1560 launch-readiness gate sync at `b52ebd1d8cef869ef3d869fe2fd192cfc97a094a`, but it is open/blocked with no checks and does not execute Cohort 1 launch operations. Treat it as gate traceability evidence, not public-beta GO.
 
 PR #605 adds a draft stacked turn-depth standard guard at `979bca6ee1ba229f0e45599d1131ac7753f8dc96`, but it is stacked on PR #604, draft, not merged/deployed, and has no checks. Treat it as review-only drift protection, not production latency proof.
+
+PR #606 added signup and symptom-check reliability fixes at `d790dc097b8bc97950d5cb5ad3bd3253b365ebd0`, but live GitHub state now shows it is closed unmerged with no checks. Manual signup -> login -> symptom-check smoke and NVIDIA phrasing configuration remain incomplete, so this is not landed production proof.
+
+PR #607 adds a P0 runtime reliability stack at `8e5dfce03bdf57b8244be3f778368f399b68508e`, but it is open/blocked with no checks, still states it stacks on PR #606, touches runtime/protected clinical surfaces, and needs operator env/config proof plus production smoke. Treat it as review-only runtime evidence, not Cohort 1 completion proof.
 
 Current App Insights query refresh:
 
@@ -61,6 +65,8 @@ This is a blocker for the current Cohort 1 latency/error readout, not a pass. Th
 | Serverless reliability hardening | GO_REVIEW_ONLY in open PR #601; production proof HOLD | PR #601 adds maxDuration/budget/deadline hardening and latency probe/scorecard workflow, but no checks are attached and production alias/env/maxDuration plus live synthetic latency scorecard proof are still missing. |
 | VET-1560 launch-readiness gate sync | GO_REVIEW_ONLY in open PR #603; public beta HOLD | PR #603 adds review-only VET-1560 launch-readiness gate snapshot/dashboard/completion-audit wiring, but it has no checks, is not merged, and does not prove Cohort 1 launch execution. |
 | Turn-depth standard guard | GO_REVIEW_ONLY in draft stacked PR #605; parent/prod proof HOLD | PR #605 pins `SYMPTOM_CHAT_TURN_DEPTH=standard` in repo-visible config with guard tests, but it is draft, stacked on PR #604, has no checks, is not merged/deployed, and requires maintainer acceptance of the non-secret `vercel.json` env choice. |
+| Signup/symptom reliability | HOLD, PR #606 closed unmerged | PR #606 records focused signup/symptom-check tests, but it is closed without merge proof, manual signup/login/symptom smoke remains unchecked, and NVIDIA phrasing configuration remains incomplete. |
+| P0 runtime reliability stack | GO_REVIEW_ONLY in open PR #607; parent/runtime proof HOLD | PR #607 records focused test evidence and the current deployment has 60-second AI route lambdas, but PR #607 is open/blocked, has no checks, still stacks on closed-unmerged PR #606, touches runtime/protected clinical surfaces, and lacks operator env/config proof plus production smoke. |
 | Scheduler/shadow readout | HOLD | Recorded `report_count=0`, `shadow_comparison_count=0`; backend proof remains empty. |
 
 ## Owner-Visible UX Proof
@@ -93,6 +99,8 @@ Partial backend proof exists:
 - VET-1571 / PR #601 records serverless reliability hardening `GO_REVIEW_ONLY` at `b72c3620510d14fe5e2669e16adac876dfe112d7`, with local P0 implementation PASS and a latency probe/scorecard workflow.
 - VET-1560 / PR #603 records launch-readiness gate sync `GO_REVIEW_ONLY` at `b52ebd1d8cef869ef3d869fe2fd192cfc97a094a`, with public beta and model/NIM promotion still HOLD.
 - VET-1573 / PR #605 records turn-depth standard guard `GO_REVIEW_ONLY` at `979bca6ee1ba229f0e45599d1131ac7753f8dc96`, with focused guard/Jest/build/Bumblebee/AutoScientists/TecjLead proof but draft/stacked/no-checks status.
+- VET-LAND / PR #606 records signup/symptom-check reliability tests at `d790dc097b8bc97950d5cb5ad3bd3253b365ebd0`, but the PR is closed unmerged, manual smoke remains unchecked, and NVIDIA phrasing configuration remains incomplete.
+- P0 runtime reliability / PR #607 records focused turn-depth/deadline/Supabase guard/orchestrator tests at `8e5dfce03bdf57b8244be3f778368f399b68508e`, but it is open/blocked with no checks, stacks on closed-unmerged PR #606, and still lacks operator env/config proof, full runtime/protected-clinical review, and production smoke.
 - Current last-hour Vercel production log sample emitted zero error JSON rows and zero HTTP 500 JSON rows.
 - 2026-06-12 read-only App Insights query refresh returned zero queryable route/custom event rows in 24h/7d windows and zero 30d union rows, so no fresh `durationMs`, `extractionMs`, or `secondOpinionMs` cohort-window latency readout is available from App Insights today.
 
@@ -110,6 +118,8 @@ Backend proof limits:
 - PR #601 is open/non-draft/blocked with no checks reported, so serverless reliability hardening is review-only evidence until merged/deployed and production alias/env/maxDuration plus live latency scorecard proof exists.
 - PR #603 is open/non-draft/blocked with no checks reported, so VET-1560 launch-readiness gate sync is review-only artifact evidence, not public-beta readiness or launch execution proof.
 - PR #605 is draft/stacked on PR #604 with no checks reported, so turn-depth guard evidence is review-only and not production latency or public-beta proof.
+- PR #606 is closed unmerged with no checks reported, so signup/symptom reliability work is not landed master or production proof.
+- PR #607 is open/non-draft/blocked with no checks reported and still stacks on closed-unmerged PR #606, so the P0 runtime reliability stack is review-only and not production latency, scheduler/shadow, or public-beta proof.
 
 ## PR Gate And Merge Readiness
 
@@ -121,10 +131,12 @@ PR #592 merge readiness is HOLD.
 - PR #601 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only reliability evidence until checks attach/pass and production latency proof is captured.
 - PR #603 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only VET-1560 gate evidence until checks attach/pass and the branch lands.
 - PR #605 is open/draft/mergeable and clean against PR #604, but reports `statusCheckRollup=[]`; it remains review-only turn-depth guard evidence until the parent stack and checks are resolved.
+- PR #606 is closed without `mergedAt` or `mergeCommit`; it remains non-production evidence only.
+- PR #607 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only P0 runtime evidence until parent/stack state, checks, operator env/config, full review, and production smoke are resolved.
 - PR #596 attempted workflow-only recovery for the required `Threshold Review Gate`, but issue #339 records that manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
 - This merge-gate blocker does not change Cohort 1 evidence status. The readout remains PARTIAL and public beta remains HOLD.
 
-PR #591 now records the recovered PR #595 formal TecjLead evidence, PR #598 non-draft invite-semantics evidence, PR #600 invite-send proof validator, PR #601 serverless reliability context, PR #603 VET-1560 gate context, and PR #592 readout evidence at `319a8a5743d04d825e09f4fdbe0081b8c614396b`, but PR #591 also remains open/blocked with no checks attached and does not yet record PR #605.
+PR #591 now records the recovered PR #595 formal TecjLead evidence, PR #598 non-draft invite-semantics evidence, PR #600 invite-send proof validator, PR #601 serverless reliability context, PR #603 VET-1560 gate context, PR #605 turn-depth context, and PR #606/#607 reliability context at `8c15f800f418d8012f1b2e20acdad49e5ee040e4`. PR #591 remains open/blocked with no checks attached and now needs a follow-up refresh because PR #606 changed to closed-unmerged after that packet commit.
 
 ## Product-Quality Triage From Real Evidence
 
@@ -136,6 +148,8 @@ PR #591 now records the recovered PR #595 formal TecjLead evidence, PR #598 non-
 - PR #601 / VET-1571: serverless reliability hardening, `GO_REVIEW_ONLY` in open PR; production alias/env/maxDuration proof and live synthetic latency scorecard remain HOLD.
 - PR #603 / VET-1560: launch-readiness gate sync, `GO_REVIEW_ONLY` in open PR; public beta remains HOLD and the gate snapshot does not execute Cohort 1 launch operations.
 - PR #605 / VET-1573: turn-depth standard guard, `GO_REVIEW_ONLY` in draft stacked PR; parent PR #604, checks, merge/deploy, and production latency proof remain HOLD.
+- PR #606 / VET-LAND: signup/symptom reliability, HOLD because the PR is closed unmerged and still lacks manual smoke/configuration proof.
+- PR #607 / P0 runtime reliability: `GO_REVIEW_ONLY` in open blocked PR; parent PR #606, checks, operator env/config proof, protected runtime/clinical review, and production smoke remain HOLD.
 - #582 / VET-1569C: REST/Auth versus `DATABASE_URL` project split, open operational debt.
 - #588 / VET-1572C: model-promotion evidence chain, open release blocker; do not promote model flags.
 
@@ -151,6 +165,9 @@ PR #591 now records the recovered PR #595 formal TecjLead evidence, PR #598 non-
 - Treat PR #601 serverless reliability hardening as review-only until checks attach/pass, the branch lands, and production alias/env/maxDuration plus live synthetic latency scorecard evidence exists.
 - Treat PR #603 VET-1560 launch-readiness gate sync as review-only until checks attach/pass and the branch lands; it does not replace Cohort 1 launch execution evidence.
 - Treat PR #605 turn-depth guard as review-only until checks attach/pass, the parent PR #604 is resolved, the branch lands, and production alias/env/maxDuration plus live synthetic latency scorecard evidence exists.
+- Treat PR #606 signup/symptom reliability work as not landed because the PR is closed unmerged and still lacks manual signup/login/symptom smoke plus NVIDIA phrasing configuration.
+- Treat PR #607 P0 runtime reliability stack as review-only until checks attach/pass, the parent/stack status is resolved after PR #606 closed unmerged, operator env/config proof exists, protected clinical/runtime review passes, and production smoke is captured.
+- Refresh the public-beta packet again if it remains the final decision artifact because PR #591 still records PR #606 as open/blocked, while live GitHub state now shows PR #606 closed unmerged.
 - Resolve App Insights ingestion/queryability or run a fresh authenticated cohort-window symptom-check telemetry capture so `durationMs`, `extractionMs`, and `secondOpinionMs` are queryable from the production App Insights resource.
 - Record scheduler/shadow readout status from the formal runner where relevant.
 - Re-prove current-deployment authorized-admin command-center/API access or explicitly keep it historical only.
@@ -171,5 +188,7 @@ PR #591 now records the recovered PR #595 formal TecjLead evidence, PR #598 non-
 - Serverless reliability budget hardening: GO_REVIEW_ONLY in open PR #601; production alias/maxDuration/synthetic scorecard proof HOLD
 - VET-1560 launch-readiness gate sync: GO_REVIEW_ONLY in open PR #603; public beta HOLD
 - Turn-depth standard guard: GO_REVIEW_ONLY in draft stacked PR #605; parent PR #604 and production proof HOLD
+- Signup/symptom reliability: HOLD, PR #606 closed unmerged; manual smoke/configuration proof missing
+- P0 runtime reliability stack: GO_REVIEW_ONLY in open PR #607; parent PR #606 closed unmerged, env/config/full-review/production-smoke proof HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
 - Public beta: HOLD
