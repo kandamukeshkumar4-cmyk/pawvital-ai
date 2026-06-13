@@ -2,7 +2,7 @@
 
 Decision: HOLD for public beta.
 
-Evidence cutoff: 2026-06-13T01:18:20Z.
+Evidence cutoff: 2026-06-13T01:44:34Z.
 
 ## Why Public Beta Is HOLD
 
@@ -22,6 +22,8 @@ Known current blockers:
 - Serverless reliability PR #601 is open/blocked with no checks attached; production alias/env/maxDuration proof and live synthetic latency scorecard evidence are still missing.
 - VET-1560 launch-readiness gate PR #603 is open/blocked with no checks attached. It is review-only gate visibility and keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.
 - Turn-depth standard guard PR #605 is draft, stacked on draft parent PR #604, has no attached checks, and remains review-only until accepted, merged/deployed, and backed by production alias/env/maxDuration proof plus live synthetic latency scorecard evidence.
+- Signup/symptom-check reliability PR #606 is open/blocked with no checks; manual signup/login/symptom smoke and NVIDIA phrasing configuration remain incomplete.
+- P0 runtime reliability PR #607 is open/blocked with no checks, stacks on PR #606, touches runtime/protected clinical surfaces, and still needs operator Supabase env alignment, NVIDIA phrasing configuration, full review, and production smoke proof.
 - Launch-stack PR gate recovery is blocked: PRs #591-#596 are open/non-draft/mergeable but have no attached checks, PR #598 is also open/non-draft/mergeable/blocked with no attached checks, PR #600 is clean only against the PR #598 base with no reported checks, PR #603 is open/non-draft/mergeable/blocked with no attached checks, the required `Threshold Review Gate` is absent where applicable, the PR #596 recovery branch has no workflow runs, and manual dispatch fails with `HTTP 422: Actions has been disabled for this user`.
 
 ## Owner-Visible UX Proof
@@ -51,6 +53,8 @@ Passed, but partial:
 - Product-intelligence persistence recovered on `dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL` with saved-tester owner GET/POST/GET, RLS denial proof, focused tests, claim-language review, and zero post-smoke 500 records.
 - PR #594 adds newer current-deployment product-intelligence daily-readiness write proof on `dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb`: row `61c44ae9-5b30-482d-8207-efbaf6598140`, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON error records in the post-smoke Vercel error-log query.
 - PR #601 is `GO_REVIEW_ONLY` for serverless reliability budget hardening in an open blocked PR at `b72c3620510d14fe5e2669e16adac876dfe112d7`, but it is not merged/deployed and still lacks production alias/env/maxDuration proof plus live synthetic latency probe/scorecard evidence.
+- PR #606 is `GO_REVIEW_ONLY` for signup and symptom-checker reliability fixes at `d790dc097b8bc97950d5cb5ad3bd3253b365ebd0`, but it is open/blocked with no checks and still lacks manual signup/login/symptom smoke plus NVIDIA phrasing configuration.
+- PR #607 is `GO_REVIEW_ONLY` for the P0 runtime reliability stack at `8e5dfce03bdf57b8244be3f778368f399b68508e`, but it is open/blocked with no checks, stacks on PR #606, touches runtime/protected clinical surfaces, and still lacks operator Supabase env alignment, NVIDIA phrasing configuration, full review, and production smoke proof.
 
 ## Backend And Model Proof
 
@@ -86,6 +90,8 @@ Launch-stack PR gate readiness is HOLD.
 - PR #603 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only VET-1560 launch-readiness gate evidence and explicitly keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.
 - PR #604 is an open draft parent for the serverless-duration branch, reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`, and is not merged.
 - PR #605 is an open draft stacked PR on PR #604, reports `mergeStateStatus=CLEAN` against that parent with `statusCheckRollup=[]`, and remains review-only turn-depth guard evidence until checks attach/pass, the stack lands, and production proof is captured.
+- PR #606 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only signup/symptom reliability evidence until checks, manual smoke, and configuration proof pass.
+- PR #607 is open/non-draft/mergeable but reports `mergeStateStatus=BLOCKED` with `statusCheckRollup=[]`; it remains review-only P0 runtime reliability evidence until checks, parent PR #606, operator env/config proof, full review, and production smoke pass.
 - PR #596 (`codex/vet-1579c-threshold-gate-recovery` at `745a1173db546805afdedfe788677081cec2a93b`) attempted a workflow-only recovery for the required `Threshold Review Gate`.
 - `gh run list --branch codex/vet-1579c-threshold-gate-recovery` returned no workflow runs.
 - Manual dispatch failed with `HTTP 422: Actions has been disabled for this user`.
@@ -105,6 +111,8 @@ Monitoring is partial:
 - PR #601 adds review-ready serverless reliability budget hardening and a latency probe/scorecard workflow, but production alias/env/maxDuration proof and live synthetic scorecard evidence remain missing.
 - PR #603 adds review-only VET-1560 launch-readiness gate visibility, but the gate artifact itself keeps Cohort 1 launch execution, public beta, and model/NIM promotion on HOLD.
 - PR #605 adds a review-only turn-depth standard guard in a draft stacked PR. PR #592 now records it as `GO_REVIEW_ONLY_IN_DRAFT_STACKED_PR_PARENT_PR604_HOLD`, separate from production reliability proof.
+- PR #606 adds review-only signup/symptom reliability fixes, but manual smoke and NVIDIA phrasing configuration remain missing.
+- PR #607 adds review-only P0 runtime reliability stack evidence, but checks, parent PR #606, operator env/config proof, full runtime/protected-clinical review, and production smoke remain missing.
 - No full Cohort 1 monitoring/readout packet exists for public beta.
 
 ## Final Gate
@@ -121,4 +129,6 @@ Monitoring is partial:
 - Serverless reliability budget hardening: GO_REVIEW_ONLY in open PR #601; production alias/maxDuration/synthetic scorecard proof HOLD
 - VET-1560 launch-readiness gates: GO_REVIEW_ONLY in open PR #603; Cohort 1 launch execution, public beta, and model/NIM promotion HOLD
 - Turn-depth standard guard: GO_REVIEW_ONLY in draft stacked PR #605; parent PR #604, production alias/env/maxDuration proof, and live synthetic latency scorecard proof HOLD
+- Signup/symptom-check reliability fixes: GO_REVIEW_ONLY in open PR #606; manual smoke/configuration/checks HOLD
+- P0 runtime reliability stack: GO_REVIEW_ONLY in open PR #607; parent PR #606, operator env/config proof, full review, production smoke, and checks HOLD
 - Launch-stack PR gate: HOLD, Actions disabled/checks not attaching
