@@ -235,6 +235,21 @@ describe("VET-1215 auth callback route", () => {
     );
   });
 
+  it("routes Supabase expired signup callback errors back to signup", async () => {
+    const { GET } = await import("@/app/api/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "https://app.pawvital.ai/api/auth/callback?error=access_denied&error_code=otp_expired&type=signup&next=%2Fdashboard"
+      )
+    );
+
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+    expect(mockVerifyOtp).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe(
+      "https://app.pawvital.ai/signup?redirect=%2Fdashboard&error=confirm_link_expired"
+    );
+  });
+
   it("exchanges signup PKCE codes and redirects to the post-confirmation target", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
 

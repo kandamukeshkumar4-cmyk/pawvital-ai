@@ -66,6 +66,8 @@ export async function GET(request: NextRequest) {
   const rawType = searchParams.get("type");
   const rawFlow = searchParams.get("flow");
   const rawNext = searchParams.get("next");
+  const rawErrorCode =
+    searchParams.get("error_code") || searchParams.get("error");
   const nextTarget = resolvePostAuthRedirect(rawNext, {
     allowedOrigin: origin,
     fallback: DEFAULT_AUTH_REDIRECT,
@@ -77,6 +79,21 @@ export async function GET(request: NextRequest) {
   });
 
   try {
+    if (rawErrorCode) {
+      const isSignupFlow = rawType === "signup";
+      const errorCode =
+        isSignupFlow && rawErrorCode === "otp_expired"
+          ? "confirm_link_expired"
+          : "auth_callback_failed";
+
+      return buildFailureRedirect(
+        request,
+        nextTarget,
+        errorCode,
+        isSignupFlow ? "signup" : "login"
+      );
+    }
+
     if (code) {
       const isRecoveryFlow =
         rawFlow === "recovery" ||
