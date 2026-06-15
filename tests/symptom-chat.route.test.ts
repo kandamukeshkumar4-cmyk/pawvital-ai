@@ -8357,6 +8357,93 @@ describe("VET-900: world-class symptom checker regression pack", () => {
     });
   });
 
+  describe("IMP-01B: sanitize forged client red flags on empty sessions", () => {
+    it("IMP-01B: drops forged red flag from an otherwise-empty session on a chat turn", async () => {
+      const session = createSession();
+      // Forge a real flag ID on an otherwise-empty session (no symptoms, no answers, no vision flags)
+      session.red_flags_triggered = ["blue_gums"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "my dog seems a little tired")
+      );
+      const payload = await response.json();
+
+      // The forged flag must be dropped — tiredness message cannot support blue_gums
+      expect(response.status).toBe(200);
+      expect(payload.type).not.toBe("emergency");
+      expect(payload.session.red_flags_triggered).not.toContain("blue_gums");
+    });
+
+    it("IMP-01B: forged empty session + generate_report returns 409 after flag drop (pairs with IMP-01A)", async () => {
+      const session = createSession();
+      // Forge blue_gums to try to bypass IMP-01A readiness gate via red-flag bypass
+      session.red_flags_triggered = ["blue_gums"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      // After IMP-01B drops the forged flag, isReadyForDiagnosis returns false → 409
+      expect(response.status).toBe(409);
+      expect(payload.code).toBe("SESSION_NOT_READY");
+    });
+
+    it("IMP-01B: genuine first-turn emergency message still escalates (no regression)", async () => {
+      const session = createSession(); // no forged flags
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          session,
+          "My dog collapsed and his gums look blue-gray."
+        )
+      );
+      const payload = await response.json();
+
+      // Real emergency extracted from message text — must still escalate
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+    });
+
+    it("IMP-01B: rich session with known_symptoms is left untouched by sanitizer (CRITICAL)", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_type", "dry");
+      // Known symptoms present → hasOtherEvidence = true → helper must skip sanitization
+      session.red_flags_triggered = ["blue_gums"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "his gums are pale now")
+      );
+      const payload = await response.json();
+
+      // red_flags_triggered must survive — session escalates to emergency
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.session.red_flags_triggered).toContain("blue_gums");
+    });
+
+    it("IMP-01B: session with vision_red_flags is left untouched by sanitizer (CRITICAL)", async () => {
+      const session = createSession();
+      // vision_red_flags present → hasOtherEvidence = true → helper must skip sanitization
+      session.vision_red_flags = ["wound_deep_bleeding"];
+      session.red_flags_triggered = ["wound_deep_bleeding"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "there is a lot of blood from the wound")
+      );
+      const payload = await response.json();
+
+      // vision-derived flags must survive unchanged
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.session.red_flags_triggered).toContain("wound_deep_bleeding");
+    });
+  });
+
   describe("VET-1029 critical info and alternate observable regression matrix", () => {
     it("blocks report readiness until respiratory critical info is answered", () => {
       let session = createSession();
