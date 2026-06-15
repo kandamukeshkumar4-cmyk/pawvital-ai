@@ -446,6 +446,8 @@ function buildModerateReportSession() {
   let session = createSession();
   session = addSymptoms(session, ["excessive_scratching"]);
   session = recordAnswer(session, "scratch_location", "ears");
+  session = recordAnswer(session, "scratch_duration", "about 2 weeks");
+  session = recordAnswer(session, "flea_prevention", true);
   session.case_memory = {
     ...session.case_memory!,
     latest_owner_turn: "He keeps scratching around his ears.",
@@ -1440,7 +1442,15 @@ describe("symptom-chat mixed text + image routing", () => {
 
     const session = createSession();
     session.known_symptoms = ["wound_skin_issue"];
-    session.extracted_answers = { wound_location: "left hind leg" };
+    session.answered_questions = ["wound_location", "wound_size", "wound_duration", "wound_discharge", "wound_licking", "trauma_history"];
+    session.extracted_answers = {
+      wound_location: "left hind leg",
+      wound_size: "quarter-sized",
+      wound_duration: "2 days",
+      wound_discharge: "none",
+      wound_licking: false,
+      trauma_history: "no_trauma",
+    };
     session.vision_analysis = "Superficial moist lesion on the left hind leg.";
     session.vision_severity = "needs_review";
     session.latest_image_domain = "skin_wound";
@@ -1750,7 +1760,15 @@ describe("symptom-chat mixed text + image routing", () => {
 
       const session = createSession();
       session.known_symptoms = ["wound_skin_issue"];
-      session.extracted_answers = { wound_location: "left hind leg" };
+      session.answered_questions = ["wound_location", "wound_size", "wound_duration", "wound_discharge", "wound_licking", "trauma_history"];
+      session.extracted_answers = {
+        wound_location: "left hind leg",
+        wound_size: "small",
+        wound_duration: "1 day",
+        wound_discharge: "none",
+        wound_licking: false,
+        trauma_history: "no_trauma",
+      };
       session.vision_analysis = "Superficial moist lesion on the left hind leg.";
       session.vision_severity = "needs_review";
       session.latest_image_domain = "skin_wound";
@@ -8282,6 +8300,59 @@ describe("VET-900: world-class symptom checker regression pack", () => {
       expect(payload.owner_message).toContain(
         "How long did the seizure or collapse episode last?"
       );
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("IMP-01A: server-side readiness gate on generate_report", () => {
+    it("IMP-01A: forged not-ready session is rejected with 409 SESSION_NOT_READY", async () => {
+      const session = createSession();
+      // Empty session: no symptoms, no answers, no red flags — classic forgery
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      expect(response.status).toBe(409);
+      expect(payload.code).toBe("SESSION_NOT_READY");
+      expect(payload.ready_for_report).toBe(false);
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+
+    it("IMP-01A: ready session still generates report (no regression)", async () => {
+      const session = buildModerateReportSession();
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      // Guard must NOT fire — status 409 / SESSION_NOT_READY is the only wrong outcome to prevent
+      expect(response.status).not.toBe(409);
+      expect(payload.code).not.toBe("SESSION_NOT_READY");
+      // The route proceeds to report generation (may be report or fail-safe depending on mock setup)
+      expect(payload.type).toBe("report");
+    });
+
+    it("IMP-01A: blocking-critical-info terminal outcome unchanged by readiness gate", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["difficulty_breathing"]);
+      session = recordAnswer(session, "breathing_rate", 40);
+      session = recordAnswer(session, "gum_color", "pink_normal");
+      session = recordAnswer(session, "position_preference", "standing");
+      // breathing_onset is still unanswered — triggers findReportBlockingCriticalInfo
+      session.case_memory = {
+        ...session.case_memory!,
+        latest_owner_turn: "He is breathing hard and his gums still look pink.",
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      // findReportBlockingCriticalInfo fires FIRST — readiness guard must not interfere
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_breathing_onset");
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
     });
   });
