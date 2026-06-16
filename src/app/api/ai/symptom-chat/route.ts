@@ -1357,6 +1357,20 @@ export async function POST(request: Request) {
         });
       }
 
+      if (!isReadyForDiagnosis(session)) {
+        statusCode = 409;
+        return NextResponse.json(
+          {
+            type: "error",
+            message:
+              "This session does not yet have enough information to generate a report.",
+            code: "SESSION_NOT_READY",
+            ready_for_report: false,
+          },
+          { status: 409 }
+        );
+      }
+
       return await generateReport({
         session,
         pet: effectivePet,
