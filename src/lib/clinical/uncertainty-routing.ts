@@ -207,13 +207,20 @@ export function detectOutOfScopeTurn(input: {
   pet: PetProfile;
   session: TriageSession;
   message: string;
+  messages?: { role: string; content: string }[];
 }): UncertaintyTerminalOutcome | null {
-  const { pet, session, message } = input;
+  const { pet, session, message, messages } = input;
 
   if (normalizeSpecies(pet.species) !== "dog") {
+    // Scan the full conversation so cross-turn signals (e.g. "male" in one turn,
+    // "straining" in another) are combined for emergency detection.
+    const allText = [
+      ...(messages ?? []).map((m) => m.content),
+      message,
+    ].join(" ");
     const emergencyStep = detectNonDogEmergency(
       normalizeSpecies(pet.species),
-      message
+      allText
     );
     return {
       type: "out_of_scope",
@@ -260,18 +267,22 @@ function detectNonDogEmergency(
 
   if (species === "cat") {
     // Male cat straining/not urinating = urethral obstruction = can die in 24-48h
+    // "hes" is the common no-apostrophe form of "he's"
     const maleIndicators =
-      /\b(male|neutered male|tom|tomcat|he|his)\b/.test(lower);
+      /\b(male|neutered male|tom|tomcat|he|his|hes)\b/.test(lower);
     const urinaryStraining =
       /\b(straining|trying to pee|trying to urinate|can'?t pee|can'?t urinate|no urine|barely any urine|nothing comes out|going to the litter box|litter box over and over|repeated trips|squatting)\b/.test(
         lower
       );
 
-    if (maleIndicators && urinaryStraining) {
+    // Urethral obstruction is primarily a male-cat emergency but any cat straining/not urinating needs ER
+    if (urinaryStraining) {
+      const urgencyPrefix = maleIndicators
+        ? "A male cat straining to urinate may have a urethral obstruction, which is life-threatening and can be fatal within 24–48 hours."
+        : "A cat straining to urinate or producing little to no urine may have a urinary blockage, which can become life-threatening rapidly.";
       return (
-        "⚠️ EMERGENCY — A male cat straining to urinate may have a urethral obstruction, " +
-        "which is life-threatening and can be fatal within 24–48 hours. " +
-        "Take him to an emergency veterinary hospital IMMEDIATELY — do not wait until morning."
+        `⚠️ EMERGENCY — ${urgencyPrefix} ` +
+        "Take to an emergency veterinary hospital IMMEDIATELY — do not wait."
       );
     }
 
