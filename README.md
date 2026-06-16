@@ -74,11 +74,12 @@ Browser
     ├── POST /api/ai/async-review      → background session review
     ├── GET  /api/ai/shadow-rollout    → shadow comparison admin
     ├── POST /api/pets/[id]            → pet profile management
-    ├── POST /api/reports              → report generation + sharing
-    └── POST /api/triage               → triage session persistence
+    ├── POST /api/reports/pdf          → report PDF rendering
+    ├── POST /api/reports/share        → shareable report links
+    └── POST /api/triage/next          → deterministic next-question step
         │
         ├── Supabase Auth    — session validation on every request
-        ├── Upstash Redis    — usage_log rate limiting (per user, per day)
+        ├── Upstash Redis    — sliding-window rate limiting (per user, per minute; in-process fallback)
         ├── Supabase Postgres — chat history, pet profiles, health scores
         └── NVIDIA NIM API   — multi-model calls with Anthropic fallback
 ```
@@ -89,7 +90,7 @@ Browser
 - **Deterministic answer coercion before LLM extraction.** When a user says "yes" or "about two days", the system coerces the answer deterministically using the pending question as an anchor before falling back to the model.
 - **Structured state cannot be mutated by model output.** `answered_questions`, `extracted_answers`, and `unresolved_question_ids` are protected from compression side effects and LLM hallucination.
 - **Multi-model fallback.** If NVIDIA NIM is unavailable, `sideModel()` automatically switches to the next ranked model. Anthropic Claude handles second-opinion and final report paths.
-- **Rate limiting via Postgres.** A `usage_log` table with an indexed `(user_id, created_at)` compound key counts daily requests without an external counter. Falls back gracefully if Redis is unavailable.
+- **Rate limiting via Upstash Redis.** Sliding-window limiters per scope (symptom-chat, image analysis, general API, translator) defined in `src/lib/rate-limit.ts`. When Redis errors at call time, an in-process fallback limiter enforces the same per-scope limits.
 - **Row-Level Security on every table.** Supabase RLS policies ensure users can only read and write their own data, enforced at the database layer.
 - **Multimodal support.** Chat and photo routes accept base64-encoded images and route them to vision-capable models.
 - **AI-gated merges.** A GitHub Models review gate checks every PR for clinical correctness before the auto-merge step runs.
@@ -164,21 +165,26 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Database Schema
 
-Seven tables, all with RLS enabled:
+Ten tables, all with RLS enabled (`supabase-schema.sql`):
 
 - **`profiles`** — synced from `auth.users` via trigger on signup; stores display name, subscription tier, and pet count
+- **`subscriptions`** — per-user subscription / billing state
 - **`pets`** — pet profiles with breed, age, weight, sex, and medical history; foreign-keyed to `profiles`
-- **`triage_sessions`** — one row per symptom-checker session; stores structured state (`answered_questions`, `extracted_answers`, `urgency_level`)
-- **`chat_messages`** — per-turn message log for every triage session; used for report generation and async review
 - **`health_scores`** — AI-generated health score history per pet; indexed by `(pet_id, created_at)`
-- **`usage_log`** — per-user daily AI request counter; `(user_id, created_at)` compound index; rate-limit fallback if Redis is unavailable
-- **`outcome_feedback`** — owner-reported triage outcome (resolved / vet visit / emergency); feeds back into shadow evaluation benchmarks
+- **`symptom_checks`** — one row per symptom check; stores symptoms text, AI response, severity, and recommendation
+- **`supplements`** — AI supplement recommendations per pet
+- **`reminders`** — scheduled care reminders per pet
+- **`journal_entries`** — owner health-journal entries per pet
+- **`community_posts`** — community forum posts
+- **`community_comments`** — comments on community forum posts
 
 ---
 
 ## Python Sidecars
 
 Five optional microservices under `services/`. Run locally via `docker-compose.sidecars.yml` or deploy to HuggingFace Spaces / RunPod.
+
+Hosting note: `vision-preprocess-service` also runs as a standalone Vercel FastAPI deployment. The four heavier model-backed sidecars exceed Vercel's Lambda size limits and deploy via the Docker GPU-host bundle in `deploy/sidecars-gpu-host/` (see `plans/SIDECAR_DEPLOYMENT_RUNBOOK.md`).
 
 | Service | Port | Purpose |
 |---|---|---|
