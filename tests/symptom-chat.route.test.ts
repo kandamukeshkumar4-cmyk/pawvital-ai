@@ -725,6 +725,69 @@ describe("symptom-chat mixed text + image routing", () => {
     });
   });
 
+  describe("IMP-02: request body size cap", () => {
+    it("rejects an oversized body (large content-length) with 413 PAYLOAD_TOO_LARGE", async () => {
+      const oversizedImage = "a".repeat(10 * 1024 * 1024 + 1024);
+      const request = new Request("http://localhost/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "chat",
+          pet: PET,
+          session: createSession(),
+          image: oversizedImage,
+          messages: [{ role: "user", content: "my dog is limping" }],
+        }),
+      });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(request);
+      const payload = await response.json();
+
+      expect(response.status).toBe(413);
+      expect(payload.code).toBe("PAYLOAD_TOO_LARGE");
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
+    });
+
+    it("rejects an oversized streamed body with no content-length via the streaming cap", async () => {
+      const oneMb = new TextEncoder().encode("a".repeat(1024 * 1024));
+      let emitted = 0;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (emitted >= 11) {
+            controller.close();
+            return;
+          }
+          controller.enqueue(oneMb);
+          emitted += 1;
+        },
+      });
+      const request = new Request("http://localhost/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        // Stream bodies require duplex; not yet in the lib RequestInit type.
+        duplex: "half",
+      } as RequestInit & { duplex: "half" });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(request);
+      const payload = await response.json();
+
+      expect(response.status).toBe(413);
+      expect(payload.code).toBe("PAYLOAD_TOO_LARGE");
+    });
+
+    it("still parses a normal-sized chat request (not 413)", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+
+      expect(response.status).not.toBe(413);
+    });
+  });
+
   it("records sanitized route telemetry for rate-limited symptom-chat requests", async () => {
     mockCheckRateLimit.mockResolvedValue({
       success: false,

@@ -1220,6 +1220,109 @@ function buildDeterministicEmergencyMessage(
   return `Based on the symptoms you've shared${details}, ${petName} may be having a medical emergency. Please go to the nearest emergency veterinary hospital now. I have enough information to prepare an emergency summary for the vet while you're on the way.`;
 }
 
+// Cap the request body (which can carry a base64 image) so an oversized or
+// buggy client cannot force unbounded buffering/parsing on the busiest AI
+// route. 10 MB matches the image-bearing async-review route. Pattern mirrors
+// the capped reader in symptom-check/route.ts. Route-local (not exported) so
+// the file keeps exporting only POST + maxDuration.
+const MAX_REQUEST_BYTES = 10 * 1024 * 1024;
+
+type BodyParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; response: Response };
+
+function jsonError(error: string, status: number, code: string) {
+  return NextResponse.json({ error, code }, { status });
+}
+
+function decodeUtf8(chunks: Uint8Array[], totalBytes: number) {
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(merged);
+}
+
+async function readJsonBody<T>(
+  request: Request,
+  maxBytes: number
+): Promise<BodyParseResult<T>> {
+  const declaredLength = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return {
+      ok: false,
+      response: jsonError("Request body too large", 413, "PAYLOAD_TOO_LARGE"),
+    };
+  }
+
+  const reader = request.body?.getReader();
+  if (!reader) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!value) {
+        continue;
+      }
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {}
+
+        return {
+          ok: false,
+          response: jsonError(
+            "Request body too large",
+            413,
+            "PAYLOAD_TOO_LARGE"
+          ),
+        };
+      }
+
+      chunks.push(value);
+    }
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+
+  const rawBody = decodeUtf8(chunks, totalBytes).trim();
+  if (!rawBody) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  try {
+    return { ok: true, value: JSON.parse(rawBody) as T };
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+}
+
 export async function POST(request: Request) {
   const startedAtMs = Date.now();
   const turnDeadline = createTurnDeadline(startedAtMs);
@@ -1282,7 +1385,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const body: RequestBody = await request.json();
+    const parsedBody = await readJsonBody<RequestBody>(
+      request,
+      MAX_REQUEST_BYTES
+    );
+    if (!parsedBody.ok) {
+      statusCode = parsedBody.response.status;
+      return parsedBody.response;
+    }
+    const body = parsedBody.value;
     const {
       messages,
       pet,
