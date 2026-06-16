@@ -6,6 +6,10 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
   pull_request_review:
     types: [submitted, dismissed, edited]
+  push:
+    branches:
+      - "codex/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,6 +20,8 @@ jobs:
     name: Threshold Review Gate
     runs-on: ubuntu-latest
     if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
       github.event.pull_request.base.ref == 'master'
     env:
       THRESHOLD_ENGINEERING_REVIEWER: ${{ vars.THRESHOLD_ENGINEERING_REVIEWER || 'kandamukeshkumar4-cmyk' }}
@@ -25,13 +31,42 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const pr = context.payload.pull_request;
+            let pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+
             if (!pr) {
-              core.info("No pull request payload found; skipping.");
+              const branch = context.ref.replace(/^refs\/heads\//, "");
+              const matchingPulls = await github.paginate(github.rest.pulls.list, {
+                owner,
+                repo,
+                state: "open",
+                base: "master",
+                head: `${owner}:${branch}`,
+                per_page: 100,
+              });
+
+              if (matchingPulls.length === 0) {
+                await core.summary
+                  .addHeading("Threshold Review Gate", 2)
+                  .addRaw(`No open pull request to \`master\` found for branch \`${branch}\`. Gate skipped.`)
+                  .addEOL()
+                  .write();
+                return;
+              }
+
+              pr = matchingPulls[0];
+              core.info(`Resolved PR #${pr.number} from branch ${branch}.`);
+            }
+
+            if (pr.base.ref !== "master") {
+              await core.summary
+                .addHeading("Threshold Review Gate", 2)
+                .addRaw(`PR #${pr.number} targets \`${pr.base.ref}\`, not \`master\`. Gate skipped.`)
+                .addEOL()
+                .write();
               return;
             }
 
-            const { owner, repo } = context.repo;
             const protectedMatchers = [
               /^src\/lib\/threshold-proposals\.ts$/,
               /^src\/lib\/admin-threshold-proposals\.ts$/,
