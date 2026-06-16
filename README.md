@@ -212,6 +212,7 @@ Deployed on Vercel. Set the environment variables from the table above in your V
 ```bash
 # Validate before pushing
 npm run lint
+npm run typecheck
 npm run build
 npm test
 npm run security:secrets
