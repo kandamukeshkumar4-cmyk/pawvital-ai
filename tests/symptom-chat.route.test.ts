@@ -7375,7 +7375,7 @@ describe("VET-900 comprehensive scenarios", () => {
       expect(mockExtractWithQwen).not.toHaveBeenCalled();
     });
 
-    it("fails open when the billing gate check throws", async () => {
+    it("fails closed with 503 when the billing gate check throws", async () => {
       const consoleErrorSpy = jest
         .spyOn(console, "error")
         .mockImplementation(() => undefined);
@@ -7389,16 +7389,35 @@ describe("VET-900 comprehensive scenarios", () => {
       );
       const payload = await response.json();
 
-      expect(response.status).toBe(200);
-      expect(payload.type).toBe("question");
-      expect(mockExtractWithQwen).toHaveBeenCalled();
+      expect(response.status).toBe(503);
+      expect(payload.type).toBe("usage_limit");
+      expect(payload.code).toBe("USAGE_GATE_UNAVAILABLE");
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
       expect(
         consoleErrorSpy.mock.calls.some((call) =>
-          String(call[0]).includes("[Billing] Usage gate failed open:")
+          String(call[0]).includes(
+            "[Billing] Usage gate unavailable, failing closed for new chat:"
+          )
         )
       ).toBe(true);
 
       consoleErrorSpy.mockRestore();
+    });
+
+    it("still passes (demo mode) when the billing client throws DEMO_MODE", async () => {
+      mockCreateServerSupabaseClient.mockRejectedValueOnce(
+        new Error("DEMO_MODE")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
     });
 
     it("bypasses the usage gate for emergency-start conversations", async () => {
