@@ -1,0 +1,774 @@
+{
+  "ticket": "VET-1574C",
+  "mode": "cohort1-evidence-readout",
+  "generatedAt": "2026-06-13T02:52:03.716Z",
+  "evidenceCutoff": "2026-06-13T02:52:03.716Z",
+  "readoutStatus": "PARTIAL",
+  "publicBetaDecision": "HOLD",
+  "decisionReason": "Current evidence proves several private-cohort and saved-tester lanes, the latest read-only production monitoring refresh emitted zero JSON error/500 rows, PR #595 has formal TecjLead GO_REVIEW_ONLY recovery-checkpoint UI evidence, PR #598 is non-draft GO_REVIEW_ONLY at 2ee6d4c with command-center/registry allowlist-vs-invite semantics fixed, PR #600 adds a review-only invite-send proof validator at 30629f0, PR #601 adds review-ready serverless reliability-budget hardening at b72c362, PR #603 adds review-only VET-1560 launch-readiness gate sync at b52ebd1, PR #605 adds a draft stacked turn-depth standard guard at 979bca6, PR #606 is closed unmerged at d790dc0 after signup/symptom reliability work, PR #607 merged to master as 250d0b3 after adding the P0 runtime reliability stack, and PR #608 is open at 2567709 with a safe-signup hotfix for the unsafe public signup auto-confirm behavior that landed through #607. The invite validator currently proves the repo registry is still placeholder-only: intendedTesterCount=0 and rowsWithInvitationProof=0, so invite-send proof remains HOLD. The current production alias still resolves to dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr, created before PR #607 merged and before PR #608 opened, so it does not prove the merged runtime stack or safe-signup hotfix is deployed. PR #608 has current-head focused auth Jest 6 suites / 48 tests, build, route-scan, empty reviewThreads, TecjLead/code-review, and AutoScientists proof, but it is open/blocked with no checks and still needs browser signup smoke after deployment. Missing real cohort counts, urgency distribution, current-deployment positive admin proof from this machine, privacy/support readiness, scheduler/shadow proof, VET-1563 model evidence, authenticated production recovery-checkpoint smoke, and blocked launch-stack PR checks keep the readout partial and public beta on HOLD.",
+  "scope": {
+    "allowed": [
+      "point-in-time Cohort 1 evidence readout",
+      "source-evidence matrix",
+      "known gaps and blocker classification"
+    ],
+    "forbidden": [
+      "invite mutations",
+      "admin writes",
+      "Vercel environment mutation",
+      "Supabase schema mutation",
+      "model flag mutation",
+      "provider calls",
+      "clinical logic changes"
+    ]
+  },
+  "currentProductionProbe": {
+    "alias": "https://pawvital-ai.vercel.app",
+    "performedAt": "2026-06-13T02:52:03.716Z",
+    "deploymentId": "dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr",
+    "deploymentUrl": "https://pawvital-dp66rzs3o-kandasubbarao4-5462s-projects.vercel.app",
+    "readOnly": true,
+    "results": [
+      {
+        "url": "https://pawvital-ai.vercel.app/",
+        "status": 200,
+        "meaning": "public home reachable"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/admin/cohort-launch",
+        "status": 307,
+        "location": "/login?redirect=%2Fadmin%2Fcohort-launch&reason=session_expired",
+        "meaning": "unauthenticated admin page redirects to login; this is not positive-admin proof"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/api/admin/private-tester",
+        "status": 403,
+        "meaning": "unauthenticated admin API denial still holds"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/api/product-intelligence/snapshots?pet_id=prod-proof-readonly",
+        "status": 401,
+        "meaning": "unauthenticated product-intelligence read is denied; this is not authenticated recovery persistence proof"
+      },
+      {
+        "url": "https://pawvital-ai.vercel.app/api/notifications",
+        "status": 401,
+        "meaning": "unauthenticated notifications read is denied; this is not owner notification flow proof"
+      }
+    ]
+  },
+  "launchExecution": {
+    "intendedCohortOnly": {
+      "status": "unproven",
+      "note": "No current admin export, invite-send log, or completed cohort registry is present in repo evidence."
+    },
+    "inviteSendProof": {
+      "status": "missing",
+      "note": "The repo contains a private-tester invite document and registry template, but no completed invite-send evidence. PR #598 corrects the command-center copy/model so allowlisted testers are not mislabeled as sent invitations. PR #600 adds a validator/readout, and its current generated proof remains HOLD because the registry contains only the example/template row."
+    },
+    "inviteSendProofValidator": {
+      "status": "GO_REVIEW_ONLY_IN_OPEN_DEPENDENT_PR",
+      "source": "PR #600 / VET-1582C",
+      "commit": "30629f052bb8bc3215097fd02cd59f692d7e6a27",
+      "base": "PR #598 / codex/vet-1580c-cohort-invite-proof-label",
+      "prState": "OPEN_NON_DRAFT_CLEAN_AGAINST_PR598_BASE_NO_CHECKS",
+      "generatedReadout": "plans/VET-1582-cohort1-invite-send-proof-readout.json",
+      "decision": "CURRENT_REGISTRY_INVITE_SEND_PROOF_HOLD",
+      "currentRegistryEvidence": {
+        "intendedTesterCount": 0,
+        "rowsWithInvitationProof": 0,
+        "blockers": [
+          "NO_INTENDED_TESTERS",
+          "PLACEHOLDER_ROWS_PRESENT"
+        ]
+      },
+      "note": "The validator improves the launch proof harness but does not send invitations or prove invitations were delivered. It currently confirms the template registry is not launch evidence."
+    },
+    "allowlistVsInviteSemantics": {
+      "status": "GO_REVIEW_ONLY_IN_OPEN_PR",
+      "source": "PR #598 / VET-1580C",
+      "commit": "2ee6d4c1ef48c68e3ce1398467dd1861391f6b87",
+      "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+      "decision": "INVITE_SEND_PROOF_HOLD",
+      "note": "The command-center and registry semantics fix is useful owner-copy evidence, and registry rows now separate allowlist_status from manual invitation_sent_proof. It does not send invitations or prove invitations were delivered."
+    },
+    "testerAccess": {
+      "status": "partial",
+      "passedEvidence": [
+        "Historical same-deployment admin-positive, non-admin denial, and feedback persistence passed on deployment dpl_APRuoBLQtj3uYeK4EBQXW2e2iMcA.",
+        "VET-1570C saved-tester replay on dpl_581C9m5utNovKZXFGoEhybXFGqWa confirmed non-admin 403 and admin guard behavior."
+      ],
+      "gap": "Fresh positive-admin command-center/API proof is unavailable from this machine on later deployments."
+    }
+  },
+  "metrics": {
+    "testerCount": {
+      "status": "unknown",
+      "invited": null,
+      "active": null,
+      "source": "No completed cohort registry/admin export found.",
+      "requiredEvidence": "Cohort registry or admin export from /admin/cohort-launch.",
+      "semanticsNote": "After PR #598, allowlist count must remain separate from sent-invitation proof. PR #600 adds a validator for the proof field, but the current registry is placeholder-only and invite-send proof remains HOLD."
+    },
+    "completedSymptomChecks": {
+      "status": "partial",
+      "knownProofCount": 1,
+      "source": "VET-1570C saved-tester replay reached symptom-check completion on dpl_581C9m5utNovKZXFGoEhybXFGqWa.",
+      "requiredEvidence": "Aggregate completed symptom-check count for all invited Cohort 1 testers."
+    },
+    "finalReports": {
+      "status": "partial",
+      "knownProofCount": 1,
+      "source": "VET-1570C saved-tester replay reached final report and History scan.",
+      "requiredEvidence": "Aggregate final-report count for all invited Cohort 1 testers."
+    },
+    "feedbackSubmissions": {
+      "status": "partial",
+      "knownProofCount": 1,
+      "source": "VET-1570C History feedback submission for symptom check 5aeff251-4b54-4e45-99b6-e99aa1550ce4 returned HTTP 200 with ok true.",
+      "requiredEvidence": "Aggregate feedback submissions for all invited Cohort 1 testers."
+    },
+    "failedOrStalledFlows": {
+      "status": "partial",
+      "items": [
+        {
+          "ticket": "VET-1570C / issue #585",
+          "status": "closed",
+          "severity": "P1",
+          "summary": "Current-production cough symptom-check timeout stalled the owner flow before final report; fixed and production replay passed."
+        },
+        {
+          "ticket": "VET-1571C / issue #587",
+          "status": "closed",
+          "severity": "P1",
+          "summary": "Product-intelligence history GET failed with missing daily_readiness_snapshots table; production persistence/RLS smoke passed after recovery, and PR #594 later added current-deployment daily-readiness write proof."
+        },
+        {
+          "ticket": "VET-1569C / issue #582",
+          "status": "open",
+          "severity": "P2",
+          "summary": "Production Supabase REST/Auth and DATABASE_URL still point at different projects; no longer active Cohort 1 blocker after direct gswj schema repair, but still operational debt."
+        },
+        {
+          "ticket": "VET-1572C / issue #588",
+          "status": "open",
+          "severity": "release_blocker",
+          "summary": "VET-1563 model-promotion frozen output evidence remains blocked by missing candidate identity and capture authorization."
+        }
+      ],
+      "requiredEvidence": "Full stalled-flow inventory from real Cohort 1 sessions, not just known issue-linked smokes."
+    },
+    "urgencyDistribution": {
+      "status": "unknown",
+      "emergency": null,
+      "urgent": null,
+      "monitor": null,
+      "questionOrInsufficientInfo": null,
+      "source": "No full Cohort 1 result dataset is present.",
+      "requiredEvidence": "Report/result export grouped by urgency for all completed Cohort 1 symptom checks."
+    },
+    "ownerVisibleLeakageScan": {
+      "status": "partial_pass",
+      "source": "VET-1570C saved-tester replay recorded leakage-clean owner-visible output.",
+      "knownScope": "single saved-tester replay",
+      "requiredEvidence": "Leakage scan over all Cohort 1 owner-visible reports, History entries, and feedback surfaces."
+    },
+    "appInsightsLatency": {
+      "status": "partial",
+      "source": "issue #339 / issue #585 VET-1570C closeout",
+      "eventName": "api.ai.symptom-chat",
+      "events": 5,
+      "errors": 0,
+      "durationMs": {
+        "p95": 41604
+      },
+      "extractionMs": {
+        "p95": 0
+      },
+      "secondOpinionMs": {
+        "p95": 8075
+      },
+      "currentReadOnlyQuery": {
+        "performedAt": "2026-06-12T14:34:50.458Z",
+        "resource": {
+          "app": "pawvital-appinsights",
+          "resourceGroup": "pawvital-rg",
+          "applicationId": "pawvital-appinsights",
+          "workspace": "managed-pawvital-appinsights-ws"
+        },
+        "windows": {
+          "routeEvents24h": {
+            "eventCount": 0,
+            "durationCount": 0,
+            "extractionCount": 0,
+            "secondOpinionCount": 0
+          },
+          "routeEvents7d": {
+            "eventCount": 0,
+            "durationCount": 0,
+            "extractionCount": 0,
+            "secondOpinionCount": 0
+          },
+          "customEvents30d": {
+            "eventCount": 0
+          },
+          "requests30d": {
+            "requestCount": 0
+          },
+          "traces30d": {
+            "traceCount": 0
+          },
+          "customMetrics30d": {
+            "metricCount": 0
+          }
+        },
+        "commands": [
+          "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(24h) | where name in ('pawvital.route.request','pawvital.route.error') | summarize ...\"",
+          "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(7d) | summarize ... by name\"",
+          "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents/requests/traces/customMetrics | where timestamp > ago(30d) | summarize ...\""
+        ],
+        "interpretation": "Current App Insights workspace queries returned no route/custom event, request, trace, or custom metric rows in the checked windows. This does not disprove older VET-1570C evidence, but it means there is no fresh queryable App Insights cohort-window latency evidence for durationMs, extractionMs, or secondOpinionMs today."
+      },
+      "requiredEvidence": "Cohort-window App Insights readout across all invited Cohort 1 testers."
+    },
+    "schedulerShadowReadout": {
+      "status": "HOLD",
+      "reportCount": 0,
+      "shadowComparisonCount": 0,
+      "note": "Recorded scheduler/shadow readout remains empty. This is backend proof and does not replace owner-visible UX proof.",
+      "requiredEvidence": "Scheduler/readout output with nonzero reports and shadow comparisons where relevant."
+    }
+  },
+  "ownerVisibleUxProof": {
+    "status": "partial_pass",
+    "passedEvidence": [
+      "Saved tester authenticated session and saved dog profile were available in VET-1570C replay.",
+      "Cough flow reached symptom-check completion.",
+      "Final report rendered.",
+      "History scan found the report.",
+      "Feedback submission from History returned HTTP 200 with ok true.",
+      "Owner-visible leakage scan was clean in that saved-tester replay."
+    ],
+    "limitations": [
+      "This is one saved-tester replay, not a full Cohort 1 outcome readout.",
+      "Fresh current-deployment positive-admin proof is unavailable from this machine.",
+      "Invite-send proof is missing; PR #598 only fixes the allowlist-vs-invite label boundary."
+    ]
+  },
+  "backendReadoutProof": {
+    "status": "partial",
+    "passedEvidence": [
+      "VET-1570C sampled Vercel logs showed no HTTP 500 rows and symptom-chat/feedback rows returned HTTP 200.",
+      "App Insights VET-1570C saved-tester window recorded events=5, errors=0, p95DurationMs=41604, p95ExtractionMs=0, p95SecondOpinionMs=8075.",
+      "VET-1571C product-intelligence post-smoke 500 log query returned 0 JSON records and RLS denial proof passed.",
+      "VET-1576C PR #594 records current-deployment daily-readiness/product-intelligence write proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb: row 61c44ae9-5b30-482d-8207-efbaf6598140, history read pass, unowned pet read 404, clean owner-visible claim/leakage scan, and 0 JSON post-smoke error records.",
+      "PR #595 records owner-visible recovery checkpoint UI GO_REVIEW_ONLY at a9ad1ba953974f8c463812d24304b8ed74a3d4dd with refreshed claim-language/readiness evidence and formal TecjLead no-blocker review, but authenticated production recovery write/smoke remains HOLD.",
+      "2026-06-13T02:52Z read-only Vercel production monitoring refresh with explicit project scope emitted zero JSON error rows and zero JSON HTTP 500 rows for the last hour.",
+      "PR #601 records review-ready serverless reliability budget hardening and latency probe/scorecard workflow at b72c3620510d14fe5e2669e16adac876dfe112d7, but production proof remains HOLD.",
+      "PR #603 records review-only VET-1560 launch-readiness gate sync at b52ebd1d8cef869ef3d869fe2fd192cfc97a094a, but public beta and model promotion remain HOLD.",
+      "PR #605 records draft stacked turn-depth standard guard evidence at 979bca6ee1ba229f0e45599d1131ac7753f8dc96, but it is not merged, has no checks, and depends on PR #604.",
+      "PR #606 records signup/symptom-check reliability fixes at d790dc097b8bc97950d5cb5ad3bd3253b365ebd0, but the PR is closed unmerged, has no checks, and still lacks manual signup/login/symptom-check smoke plus NVIDIA phrasing configuration.",
+      "PR #607 merged to master as 250d0b3c517d285003c2d072c91f8d876e4c5026 from head 1ca37f8db6d1a0a2458c509a02ecc721d1962250 with P0 runtime reliability stack evidence, but current production alias deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr predates the merge and no production smoke/operator env proof is present.",
+      "PR #608 adds a safe-signup hotfix at 25677099a8b3e10eab195ab52d44a151baa60f17 after #607 introduced unsafe public signup auto-confirm behavior. Its current body records focused auth Jest 6 suites / 48 tests, build, route scan, git diff --check, AutoScientists verifier, empty reviewThreads, and TecjLead/code-review GO_REVIEW_ONLY evidence.",
+      "2026-06-13 read-only production inspect shows the alias still resolves to Ready deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr with 60-second AI route lambdas, but this deployment predates PR #607 and PR #608 and does not prove Cohort 1 flows completed.",
+      "2026-06-12 read-only App Insights query refresh found zero queryable route/custom event rows in 24h/7d windows and zero 30d union rows, so no fresh durationMs/extractionMs/secondOpinionMs cohort-window latency readout is available from App Insights today."
+    ],
+    "limitations": [
+      "Current App Insights query refresh returned zero rows across customEvents, requests, traces, and customMetrics, so the required Cohort 1 latency/error window remains missing rather than improved.",
+      "Scheduler/shadow readout remains empty.",
+      "No full Cohort 1 telemetry window or admin API error summary exists in repo evidence.",
+      "Backend telemetry proof is not owner-visible UX proof.",
+      "PR #594 is open and mergeStateStatus=BLOCKED, so current product-intelligence write proof is evidence-in-PR, not landed master truth.",
+      "PR #595 is open and mergeStateStatus=BLOCKED, so recovery checkpoint UI proof is review-only PR evidence, not landed production truth.",
+      "PR #591 is open and mergeStateStatus=BLOCKED, so the public-beta HOLD packet is evidence-in-PR, not landed master truth.",
+      "PR #601 is open and mergeStateStatus=BLOCKED, so serverless reliability hardening is review-only PR evidence, not landed production proof.",
+      "PR #603 is open and mergeStateStatus=BLOCKED, so VET-1560 launch-readiness gate sync is review-only PR evidence, not landed public-beta gate truth.",
+      "PR #605 is draft and stacked on PR #604, so turn-depth guard evidence is review-only and cannot be counted as merged production reliability proof.",
+      "PR #606 is closed unmerged, so its signup/symptom reliability work cannot be counted as landed master or production proof.",
+      "PR #607 is merged to master but cannot be counted as current-production proof until a post-merge production deployment and smoke are captured.",
+      "PR #608 is open/blocked with no checks, so the safe-signup hotfix cannot be counted as landed master or production proof."
+    ]
+  },
+  "currentMonitoringRefresh": {
+    "performedAt": "2026-06-13T02:52:03.716Z",
+    "readOnly": true,
+    "commands": [
+      "vercel logs --project pawvital-ai --environment production --level error --since 1h --json --no-branch --limit 100",
+      "vercel logs --project pawvital-ai --environment production --status-code 500 --since 1h --json --no-branch --limit 100"
+    ],
+    "results": {
+      "productionErrorJsonRowsLastHour": 0,
+      "productionHttp500JsonRowsLastHour": 0
+    },
+    "limitations": [
+      "This is a current last-hour production log sample, not a full Cohort 1 monitoring window.",
+      "It does not provide App Insights durationMs, extractionMs, or secondOpinionMs for a cohort window.",
+      "It does not prove invite-send, full cohort counts, current authorized-admin positive proof, or owner-visible UX completion."
+    ]
+  },
+  "serverlessReliabilityReadiness": {
+    "decision": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
+    "source": "PR #601 / VET-1571",
+    "commit": "b72c3620510d14fe5e2669e16adac876dfe112d7",
+    "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+    "passedEvidence": [
+      "PR #601 body records local P0 implementation PASS.",
+      "PR #601 body records clean-branch proof and split-brain guard PASS.",
+      "PR #601 adds production latency probe and scorecard workflow scaffolding."
+    ],
+    "remainingGaps": [
+      "PR #601 has no attached/passing checks.",
+      "PR #601 is not merged or deployed to production.",
+      "Production alias/env/maxDuration proof is still required.",
+      "Live synthetic latency probe/scorecard evidence is still required."
+    ],
+    "effectOnCohortReadout": "Review-ready reliability hardening improves the evidence path for symptom-check route failures and latency readout, but it does not provide a full Cohort 1 monitoring window or App Insights durationMs/extractionMs/secondOpinionMs evidence.",
+    "publicBetaDecision": "HOLD"
+  },
+  "vet1560LaunchReadinessGateSync": {
+    "decision": "GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD",
+    "source": "PR #603 / VET-1560",
+    "commit": "b52ebd1d8cef869ef3d869fe2fd192cfc97a094a",
+    "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+    "passedEvidence": [
+      "PR #603 body records VET-1560 launch-readiness gate snapshot generation.",
+      "PR #603 body records dashboard/completion-audit/regeneration wiring.",
+      "PR #603 body records focused Jest pass summary, diff check, and protected-surface scan."
+    ],
+    "remainingGaps": [
+      "PR #603 has no attached/passing checks.",
+      "PR #603 is not merged to master.",
+      "PR #603 is a review-only artifact/generator sync and does not execute Cohort 1 launch operations.",
+      "Public beta still lacks invite-send proof, full Cohort 1 readout, current admin-positive proof, privacy/support readiness, scheduler/shadow proof, and model-promotion evidence."
+    ],
+    "effectOnCohortReadout": "The gate snapshot improves review traceability for launch/public-beta/model boundaries, but it does not provide missing Cohort 1 counts or production launch execution proof.",
+    "publicBetaDecision": "HOLD"
+  },
+  "turnDepthStandardGuard": {
+    "decision": "GO_REVIEW_ONLY_IN_DRAFT_STACKED_PR_PARENT_PR604_HOLD",
+    "source": "PR #605 / VET-1573",
+    "commit": "979bca6ee1ba229f0e45599d1131ac7753f8dc96",
+    "base": "PR #604 / codex/vet-1571-serverless-duration-pr",
+    "prState": "OPEN_DRAFT_CLEAN_AGAINST_PR604_BASE_NO_CHECKS",
+    "passedEvidence": [
+      "PR #605 body records `SYMPTOM_CHAT_TURN_DEPTH=standard` in repo env/deployment config.",
+      "PR #605 body records focused Jest 2 suites / 10 tests passed.",
+      "PR #605 body records guard script, build, Bumblebee, AutoScientists verifier, and TecjLead review pass."
+    ],
+    "remainingGaps": [
+      "PR #605 is draft and has no attached/passing checks.",
+      "PR #605 is stacked on draft PR #604 and is not merged or deployed.",
+      "Maintainers still need to accept the top-level non-secret `vercel.json` env setting.",
+      "Production alias/env/maxDuration proof and live synthetic latency scorecard evidence remain missing."
+    ],
+    "effectOnCohortReadout": "The guard improves review-time drift protection for symptom-chat turn depth, but it does not provide a full Cohort 1 monitoring window, App Insights latency proof, or production launch readiness.",
+    "publicBetaDecision": "HOLD"
+  },
+  "signupSymptomReliabilityReadiness": {
+    "decision": "HOLD_CLOSED_UNMERGED_MANUAL_SMOKE_CONFIG_MISSING",
+    "source": "PR #606 / VET-LAND",
+    "commit": "d790dc097b8bc97950d5cb5ad3bd3253b365ebd0",
+    "prState": "CLOSED_UNMERGED_NO_CHECKS",
+    "passedEvidence": [
+      "PR #606 body records focused tests for auth/signup/session-progress/azure-speech/question-phrasing/verify-signup patterns."
+    ],
+    "remainingGaps": [
+      "PR #606 is closed without mergeCommit/mergedAt and has no attached/passing checks.",
+      "Manual signup -> login -> symptom-check first-turn smoke remains unchecked.",
+      "NVIDIA_API_KEY local/Vercel phrasing configuration remains an operator TODO.",
+      "This PR does not prove current-production Cohort 1 launch execution or public-beta readiness."
+    ],
+    "effectOnCohortReadout": "The closed PR is useful issue history for signup/symptom reliability triage, but it is not landed master or production proof and does not complete any Cohort 1 aggregate metric.",
+    "publicBetaDecision": "HOLD"
+  },
+  "safeSignupHotfixReadiness": {
+    "decision": "GO_REVIEW_ONLY_IN_OPEN_PR_DEPLOY_BROWSER_SMOKE_HOLD",
+    "source": "PR #608 / VET-LAND hotfix",
+    "commit": "25677099a8b3e10eab195ab52d44a151baa60f17",
+    "base": "master",
+    "prState": "OPEN_NON_DRAFT_BLOCKED_NOT_MERGED_NO_CHECKS",
+    "scope": [
+      "restore public signup to anon Supabase signUp boundary",
+      "keep owners on signup when email confirmation is required",
+      "preserve Supabase PKCE verifier cookies for confirmation-required signup",
+      "tag signup callback and resend URLs with type=signup",
+      "route expired signup callbacks back to signup",
+      "add regression coverage proving the public endpoint does not confirm existing accounts"
+    ],
+    "passedEvidence": [
+      "PR #608 current body records focused auth Jest 6 suites / 48 tests passed after the final amended push.",
+      "PR #608 body records build pass, route service/admin scan pass, git diff --check pass, and AutoScientists verifier pass.",
+      "Final amended PR head includes the expired-signup callback regression and reran the focused auth verifier with 6 suites / 48 tests passing.",
+      "Continuation reran the public signup route scan for service/admin/createUser/email_confirm/signInWithPassword/listUsers/updateUserById with no matches.",
+      "PR #608 reviewThreads are empty.",
+      "TecjLead/code-review subagent returned GO_REVIEW_ONLY for the code path after PKCE-cookie and expired-link regression gaps were fixed."
+    ],
+    "remainingGaps": [
+      "PR #608 is open/blocked and has no attached/passing checks.",
+      "PR #608 is not merged to master or deployed to the production alias.",
+      "Browser signup smoke is still required after deployment.",
+      "This hotfix does not prove invite-send, full Cohort 1 counts, current positive-admin access, App Insights cohort-window latency, or public-beta readiness."
+    ],
+    "effectOnCohortReadout": "The hotfix improves the review path for weak onboarding/signup reliability after the #607 regression, but it is not landed production proof and does not complete any Cohort 1 aggregate metric.",
+    "publicBetaDecision": "HOLD"
+  },
+  "p0RuntimeReliabilityStack": {
+    "decision": "MERGED_TO_MASTER_PRODUCTION_DEPLOY_SMOKE_HOLD_PARENT_PR606_CLOSED",
+    "source": "PR #607 / P0 runtime reliability stack",
+    "commit": "1ca37f8db6d1a0a2458c509a02ecc721d1962250",
+    "mergeCommit": "250d0b3c517d285003c2d072c91f8d876e4c5026",
+    "mergedAt": "2026-06-13T02:03:33Z",
+    "base": "master",
+    "stackedOn": "PR #606 / codex/vet-land-signup-symptom",
+    "prState": "MERGED_TO_MASTER_NO_CHECKS_PRODUCTION_ALIAS_PRE_MERGE_PARENT_PR606_CLOSED_UNMERGED",
+    "passedEvidence": [
+      "PR #607 body records focused tests for turn-depth, turn-deadline, supabase-env-guard, clinical-turn-orchestrator, memory-compression, and question-phrasing.",
+      "Read-only production inspect shows the current alias has 60-second AI route lambdas on deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr."
+    ],
+    "remainingGaps": [
+      "PR #607 merged to master as 250d0b3c517d285003c2d072c91f8d876e4c5026, but current production alias deployment dpl_HzCVqnom3J9v1Dpaacz9K3gibgDr was created before that merge and is not proof of the merged runtime stack.",
+      "PR #607 still states it stacks on PR #606, but PR #606 is closed unmerged; stack/content lineage requires review.",
+      "No attached status checks were reported by gh pr view 607.",
+      "Operator Supabase env alignment remains required for #582.",
+      "NVIDIA_API_KEY Vercel phrasing configuration remains required.",
+      "The runtime/protected clinical diff requires full review and production smoke before any launch claim.",
+      "ClinicalTurnOrchestrator live promotion remains behind CLINICAL_TURN_ORCHESTRATOR_LIVE=1 and is not promoted by this readout."
+    ],
+    "effectOnCohortReadout": "The merged PR improves the code path for symptom-check stalls, latency budgets, and scheduler/shadow readiness, but it is not current-production proof and does not provide Cohort 1 aggregate counts or App Insights latency evidence.",
+    "publicBetaDecision": "HOLD",
+    "modelPromotionDecision": "HOLD"
+  },
+  "prGateRecovery": {
+    "decision": "HOLD",
+    "source": "PR #596 / issue #339 comment 4640668934, PR #591 refresh comments 4640704962, 4681786168, 4683642339, 4693470637, 4694144174, 4696966972, 4697038341, and 4697168946; PR #598 current status from issue #339 comment 4686872651; PR #605/#606/#607/#608 current status from GitHub PR state",
+    "affectedReadoutPr": "PR #592",
+    "affectedReadoutBranch": "codex/vet-1574c-cohort1-evidence-readout",
+    "affectedReadoutCommitBeforeRefresh": "bb2b3a47b6cbc86b237b0d4a1ecd90937279aa05",
+    "affectedReadoutMergeStateStatus": "BLOCKED",
+    "affectedReadoutStatusCheckRollupCount": 0,
+    "affectedReadoutWorkflowRunCount": 0,
+    "relatedBlockedPrs": [
+      "PR #591",
+      "PR #592",
+      "PR #594",
+      "PR #595",
+      "PR #596",
+      "PR #598",
+      "PR #600",
+      "PR #601",
+      "PR #603",
+      "PR #604",
+      "PR #605",
+      "PR #606",
+      "PR #607",
+      "PR #608"
+    ],
+    "manualDispatchError": "HTTP 422: Actions has been disabled for this user",
+    "effectOnReadout": "The artifact can be reviewed as evidence, but PR #592 cannot merge until GitHub Actions scheduling/check attachment is restored and required checks pass. PR #600 is clean against the PR #598 base but has no reported checks and is dependent on PR #598 landing. PR #606 is closed unmerged, PR #607 is merged to master without current-production deploy/smoke proof, and PR #608 is open/blocked with no checks."
+  },
+  "publicBetaPacketContext": {
+    "source": "PR #591 live branch plus PR #608 current state",
+    "commit": "0affcb54acf665124915f9b21528dfc2b7b87b19",
+    "decision": "HOLD",
+    "recoveryCheckpointUiDecision": "GO_REVIEW_ONLY_PRODUCTION_WRITE_HOLD",
+    "cohortInviteProofSemanticsDecision": "GO_REVIEW_ONLY_IN_OPEN_PR_INVITE_SEND_HOLD",
+    "cohortInviteSendProofValidatorDecision": "GO_REVIEW_ONLY_IN_OPEN_DEPENDENT_PR_CURRENT_REGISTRY_HOLD",
+    "serverlessReliabilityDecision": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
+    "vet1560LaunchReadinessGateDecision": "GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD",
+    "turnDepthStandardGuardDecision": "GO_REVIEW_ONLY_IN_DRAFT_STACKED_PR_PARENT_PR604_HOLD",
+    "signupSymptomReliabilityDecision": "HOLD_CLOSED_UNMERGED_MANUAL_SMOKE_CONFIG_MISSING",
+    "p0RuntimeReliabilityStackDecision": "MERGED_TO_MASTER_PRODUCTION_DEPLOY_SMOKE_HOLD_PARENT_PR606_CLOSED",
+    "safeSignupHotfixDecision": "GO_REVIEW_ONLY_IN_OPEN_PR_DEPLOY_BROWSER_SMOKE_HOLD_PENDING_PACKET_REFRESH",
+    "mergeStateStatus": "BLOCKED",
+    "statusCheckRollupCount": 0,
+    "effectOnReadout": "The public-beta packet must include PR #608 current-head safe-signup hotfix evidence before it is treated as the latest final decision artifact. Public beta, model/NIM promotion, production reliability proof, invite-send proof, and PR merge readiness remain HOLD."
+  },
+  "productQualityTriage": {
+    "policy": "Only triage defects proven by Cohort 1 or saved-tester production evidence.",
+    "items": [
+      {
+        "issue": "#585 / VET-1570C",
+        "category": "symptom-check stall",
+        "status": "closed_verified",
+        "evidence": "Production saved-tester replay passed after the timeout fix."
+      },
+      {
+        "issue": "#587 / VET-1571C",
+        "category": "product-intelligence history persistence",
+        "status": "closed_verified",
+        "evidence": "Production saved-tester owner smoke and RLS denial proof passed; PR #594 later refreshed current-deployment write proof without changing this Cohort 1 count status."
+      },
+      {
+        "issue": "#582 / VET-1569C",
+        "category": "operational data-source drift",
+        "status": "open_watchpoint",
+        "evidence": "REST/Auth and DATABASE_URL project split remains open operational debt."
+      },
+      {
+        "issue": "PR #598 / VET-1580C",
+        "category": "owner-copy invite proof semantics",
+        "status": "go_review_only_in_open_pr",
+        "evidence": "Command center, registry rows, registry template, and Cohort 1 report template now separate allowlisted testers from invitation-send proof; this does not prove invitations were sent."
+      },
+      {
+        "issue": "PR #600 / VET-1582C",
+        "category": "invite-send proof validation",
+        "status": "go_review_only_in_open_dependent_pr_current_registry_hold",
+        "evidence": "The validator rejects placeholder/template registry proof and the generated VET-1582 readout currently reports intendedTesterCount=0, rowsWithInvitationProof=0, and invite-send proof HOLD."
+      },
+      {
+        "issue": "PR #605 / VET-1573",
+        "category": "symptom-check reliability guard",
+        "status": "go_review_only_in_draft_stacked_pr_parent_hold",
+        "evidence": "The turn-depth standard guard has focused test/build/Bumblebee/AutoScientists/TecjLead proof, but it is draft, stacked on PR #604, not merged/deployed, and has no checks."
+      },
+      {
+        "issue": "PR #606 / VET-LAND",
+        "category": "signup/symptom reliability",
+        "status": "closed_unmerged_hold",
+        "evidence": "Signup/symptom reliability work is useful issue history, but PR #606 is closed unmerged and still lacks manual signup/login/symptom-check smoke plus NVIDIA phrasing configuration."
+      },
+      {
+        "issue": "PR #607 / P0 runtime reliability stack",
+        "category": "symptom-check stalls / runtime reliability / scheduler-shadow",
+        "status": "merged_to_master_production_hold",
+        "evidence": "PR #607 merged to master as 250d0b3c517d285003c2d072c91f8d876e4c5026 from head 1ca37f8db6d1a0a2458c509a02ecc721d1962250, but the current production alias predates the merge and the PR body still lists operator env/config TODOs, so production smoke and public-beta proof remain HOLD."
+      },
+      {
+        "issue": "PR #608 / VET-LAND hotfix",
+        "category": "weak validation/onboarding",
+        "status": "go_review_only_in_open_pr_deploy_browser_smoke_hold",
+        "evidence": "PR #608 restores the public signup route to the anon Supabase signUp boundary after #607 introduced unsafe service-role auto-confirm behavior. Focused auth tests and route scan pass locally, but the PR is open/blocked with no checks and needs merge/deploy plus browser signup smoke before it can count as production proof."
+      }
+    ]
+  },
+  "sourceEvidence": [
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4617138671",
+      "summary": "Same-deployment admin-positive, non-admin denial, and feedback persistence GO on dpl_APRuoBLQtj3uYeK4EBQXW2e2iMcA."
+    },
+    {
+      "type": "issue",
+      "id": "issue #585",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/585#issuecomment-4626041190",
+      "summary": "VET-1570C production closeout: saved tester flow, final report, History, feedback, leakage scan, logs, and App Insights metrics passed on dpl_581C9m5utNovKZXFGoEhybXFGqWa."
+    },
+    {
+      "type": "issue",
+      "id": "issue #587",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
+      "summary": "VET-1571C product-intelligence production recovery passed schema, owner smoke, RLS, focused tests, claim-language review, and post-smoke log query."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #594",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/594",
+      "summary": "VET-1576C current-production product-intelligence branch records daily-readiness write/read proof on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb, row 61c44ae9-5b30-482d-8207-efbaf6598140; PR remains open/blocked."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #596",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/596",
+      "summary": "VET-1577C threshold-gate recovery branch is review-only at 745a1173; checks still did not attach and the PR remains open/blocked."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #595",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/595",
+      "summary": "VET-1578C recovery checkpoint UI branch is review-ready at a9ad1ba953974f8c463812d24304b8ed74a3d4dd with refreshed claim-language/readiness evidence and formal TecjLead GO_REVIEW_ONLY, but PR #595 remains open/blocked and authenticated production recovery write/smoke remains HOLD."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #591",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/591",
+      "summary": "VET-1573C public-beta HOLD packet branch is being refreshed with PR #608 current-head safe-signup evidence while preserving public beta, model/NIM promotion, invite-send proof, production reliability proof, and PR merge readiness HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4683642339",
+      "summary": "VET-1573C public-beta HOLD packet refresh records PR #598 command-center invite semantics GO_REVIEW_ONLY while keeping invitation-send proof, Cohort 1 launch, public beta, and model/NIM promotion HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4681786168",
+      "summary": "VET-1573C packet refresh after PR #595 TecjLead recovery keeps public beta, recovery production smoke, model/NIM promotion, and PR merge on HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4640668934",
+      "summary": "PR #596 recovery attempt did not restore checks: PRs #591-#596 have no attached checks, the recovery branch has no workflow runs, manual dispatch fails with Actions disabled for this user, and public beta remains HOLD."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #598",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/598",
+      "summary": "VET-1580C clarifies Cohort 1 command-center and registry invite-proof semantics at 2ee6d4c1ef48c68e3ce1398467dd1861391f6b87: allowlist count is labeled `Allowlisted testers`, registry rows separate allowlist_status from manual invitation_sent_proof, report/template copy separates manual invitation-send proof, and TecjLead returned GO_REVIEW_ONLY; PR #598 is open/non-draft/blocked with no checks attached and does not prove invitations were sent."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #600",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/600",
+      "summary": "VET-1582C adds a review-only invite-send proof validator at 30629f052bb8bc3215097fd02cd59f692d7e6a27. It is open/non-draft and clean against the PR #598 base, but no checks are reported. The generated VET-1582 readout currently keeps invite-send proof HOLD because the registry has no intended tester rows and no invitation proof rows."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #601",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/601",
+      "summary": "VET-1571 serverless reliability budget hardening is open at b72c3620510d14fe5e2669e16adac876dfe112d7 with local P0 implementation PASS, but PR #601 is blocked with no checks, not merged, and still requires production alias/env/maxDuration proof plus live synthetic latency probe/scorecard evidence."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #603",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/603",
+      "summary": "VET-1560 launch-readiness gate sync is open at b52ebd1d8cef869ef3d869fe2fd192cfc97a094a with review-only gate snapshot/dashboard/completion-audit wiring; public beta and model/NIM promotion remain HOLD, PR #603 is blocked with no checks, and it is not production launch proof."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #605",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/605",
+      "summary": "VET-1573 turn-depth standard guard is draft/open at 979bca6ee1ba229f0e45599d1131ac7753f8dc96, stacked on PR #604, with focused guard/Jest/build/Bumblebee/AutoScientists/TecjLead proof; it remains review-only because it is draft, has no checks, and is not merged or deployed."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #606",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/606",
+      "summary": "VET-LAND signup and symptom-checker reliability fixes are closed unmerged at d790dc097b8bc97950d5cb5ad3bd3253b365ebd0. The PR body records focused tests, but manual signup/login/symptom smoke and NVIDIA phrasing configuration remain unchecked, so this is not landed production proof."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #607",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/607",
+      "summary": "P0 runtime reliability stack merged to master at 2026-06-13T02:03:33Z as merge commit 250d0b3c517d285003c2d072c91f8d876e4c5026 from head 1ca37f8db6d1a0a2458c509a02ecc721d1962250. The current production alias deployment predates the merge, the PR body still states it stacks on closed-unmerged PR #606, and operator env/config plus production smoke proof remain missing."
+    },
+    {
+      "type": "pull_request",
+      "id": "PR #608",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/pull/608",
+      "summary": "VET-LAND safe-signup hotfix is open at 25677099a8b3e10eab195ab52d44a151baa60f17 to restore public signup to the anon Supabase signUp boundary after #607 introduced unsafe auto-confirm behavior. Current PR body records focused auth Jest 6 suites / 48 tests, build, route-scan, AutoScientists verifier, empty reviewThreads, and TecjLead/code-review GO_REVIEW_ONLY evidence, but the PR is open/blocked with no checks and still needs merge/deploy plus browser signup smoke."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4697038341",
+      "summary": "Tracker update for PR #591 records PR #606/#607 as public-beta blocker evidence while keeping public beta and model/NIM promotion HOLD. Live state later changed PR #606 to closed unmerged, so this readout records the newer blocker state."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4697168946",
+      "summary": "Tracker update for PR #591 records PR #606 closed-unmerged and PR #607 merged-to-master production-proof HOLD while keeping public beta and model/NIM promotion HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4693470637",
+      "summary": "Tracker update for PR #591 records PR #601 as GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD and keeps public beta HOLD because production reliability proof and checks are missing."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4694144174",
+      "summary": "Tracker update for PR #591 records PR #603 as GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD and keeps Cohort 1 launch execution, public beta, and model/NIM promotion HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4686872651",
+      "summary": "Tracker update for PR #598 records non-draft GO_REVIEW_ONLY command-center/registry semantics, focused tests/lint/build passing, checks still not attached, and Cohort 1 launch/public beta/model promotion HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4692846743",
+      "summary": "Tracker update for PR #600 records the invite-send proof validator, generated HOLD readout from the current placeholder registry, focused tests/lint passing, and continued Cohort 1 launch/public beta/model promotion HOLD."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4640704962",
+      "summary": "PR #591 public-beta packet records launch-stack PR gate HOLD after PR #596 evidence; this also affects PR #592 merge readiness."
+    },
+    {
+      "type": "issue",
+      "id": "issue #339",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4634671521",
+      "summary": "VET-1573C public-beta HOLD packet was refreshed after PR #594; public beta remains HOLD while product-intelligence daily-readiness persistence is GO only in PR #594 evidence."
+    },
+    {
+      "type": "issue",
+      "id": "issue #588",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/588#issuecomment-4631900396",
+      "summary": "VET-1563 model-promotion evidence remains HOLD after PR #590."
+    },
+    {
+      "type": "issue",
+      "id": "issue #582",
+      "url": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/582#issuecomment-4617138684",
+      "summary": "Supabase REST/Auth and DATABASE_URL split remains operational debt but no longer active Cohort 1 blocker."
+    },
+    {
+      "type": "artifact",
+      "path": "docs/private-tester-cohort-1-report-template.md",
+      "summary": "Blank post-48-hour report template exists but is not a completed Cohort 1 readout."
+    },
+    {
+      "type": "artifact",
+      "path": "docs/private-tester-cohort-1-registry-template.csv",
+      "summary": "Registry template exists with example row only; no completed tester registry is present."
+    },
+    {
+      "type": "command",
+      "id": "app-insights-query-refresh-2026-06-11",
+      "summary": "Read-only Azure App Insights queries against pawvital-appinsights returned zero rows for route customEvents over 24h/7d and zero rows for customEvents, requests, traces, and customMetrics over 30d; current App Insights cohort latency evidence remains missing.",
+      "commands": [
+        "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(24h) | where name in ('pawvital.route.request','pawvital.route.error') | summarize ...\"",
+        "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents | where timestamp > ago(7d) | summarize ... by name\"",
+        "az monitor app-insights query --app pawvital-appinsights --resource-group pawvital-rg --analytics-query \"customEvents/requests/traces/customMetrics | where timestamp > ago(30d) | summarize ...\""
+      ]
+    }
+  ],
+  "knownBlockersToCompletedReadout": [
+    "Export or record intended private-tester invite count and active tester count.",
+    "Record invite-send proof for the intended private-tester cohort; do not count allowlisted testers as invitations sent.",
+    "Run the VET-1582 invite-send proof validator against the completed registry and attach the redacted GO_REVIEW_ONLY readout before treating invitations as sent.",
+    "Aggregate completed symptom checks, final reports, and feedback submissions across all invited testers.",
+    "Export urgency distribution for completed Cohort 1 checks.",
+    "Run owner-visible leakage scan across all Cohort 1 reports, History entries, and feedback surfaces.",
+    "Capture full Cohort 1 App Insights latency/error window for admin API, feedback API, symptom-chat, durationMs, extractionMs, and secondOpinionMs.",
+    "Treat PR #601 serverless reliability hardening as review-only until checks attach/pass, the branch lands, and production alias/env/maxDuration plus live synthetic latency scorecard evidence exists.",
+    "Treat PR #603 VET-1560 launch-readiness gate sync as review-only until checks attach/pass and the branch lands; it does not replace Cohort 1 launch execution evidence.",
+    "Treat PR #605 turn-depth guard as review-only until checks attach/pass, the parent PR #604 is resolved, the branch lands, and production alias/env/maxDuration plus live synthetic latency scorecard evidence exists.",
+    "Treat PR #606 signup/symptom reliability work as not landed because the PR is closed unmerged and still lacks manual signup/login/symptom smoke plus NVIDIA phrasing configuration.",
+    "Treat PR #607 P0 runtime reliability stack as not current-production proof until a post-merge production deployment, operator env/config proof, protected clinical/runtime review, and production smoke are captured.",
+    "Treat PR #608 safe-signup hotfix as review-only until checks attach/pass, the branch lands, the production alias deploys the hotfix, and browser signup smoke passes.",
+    "Keep the PR #591 public-beta packet synchronized with PR #608 current-head safe-signup evidence; public beta remains HOLD until checks, merge/deploy, browser signup smoke, invite-send proof, cohort counts, monitoring, privacy/support, and rollback gates pass.",
+    "Resolve App Insights ingestion/queryability or run a fresh authenticated cohort-window symptom-check telemetry capture so durationMs, extractionMs, and secondOpinionMs are queryable from the production App Insights resource.",
+    "Record scheduler/shadow readout status from the formal runner where relevant.",
+    "Re-prove current-deployment authorized-admin command-center/API access or explicitly classify it as historical only.",
+    "Restore GitHub Actions scheduling/check attachment so PR #592 can receive the required Threshold Review Gate and other required contexts."
+  ],
+  "finalGate": {
+    "cohort1EvidenceReadout": "PARTIAL",
+    "cohort1LaunchExecution": "UNPROVEN_FULL_COHORT",
+    "ownerVisibleUxProof": "PARTIAL_PASS",
+    "backendReadoutProof": "PARTIAL",
+    "currentProductionErrorLogSample": "PASS_ZERO_ERROR_AND_500_JSON_ROWS_LAST_HOUR",
+    "cohortInviteProofSemantics": "GO_REVIEW_ONLY_IN_OPEN_PR_INVITE_SEND_HOLD",
+    "cohortInviteSendProofValidator": "GO_REVIEW_ONLY_IN_OPEN_DEPENDENT_PR_CURRENT_REGISTRY_HOLD",
+    "productIntelligenceBackendProof": "GO_CURRENT_PRODUCTION_DAILY_READINESS_ONLY_IN_OPEN_PR",
+    "productIntelligenceRecoveryCheckpointUi": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_WRITE_HOLD",
+    "serverlessReliabilityBudgetHardening": "GO_REVIEW_ONLY_IN_OPEN_PR_PRODUCTION_PROOF_HOLD",
+    "vet1560LaunchReadinessGateSync": "GO_REVIEW_ONLY_IN_OPEN_PR_PUBLIC_BETA_HOLD",
+    "turnDepthStandardGuard": "GO_REVIEW_ONLY_IN_DRAFT_STACKED_PR_PARENT_PR604_HOLD",
+    "signupSymptomReliabilityReadiness": "HOLD_CLOSED_UNMERGED_MANUAL_SMOKE_CONFIG_MISSING",
+    "safeSignupHotfixReadiness": "GO_REVIEW_ONLY_IN_OPEN_PR_DEPLOY_BROWSER_SMOKE_HOLD",
+    "p0RuntimeReliabilityStack": "MERGED_TO_MASTER_PRODUCTION_DEPLOY_SMOKE_HOLD_PARENT_PR606_CLOSED",
+    "launchStackPrGate": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
+    "publicBeta": "HOLD"
+  }
+}
