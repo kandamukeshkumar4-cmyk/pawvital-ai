@@ -435,7 +435,9 @@ function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
         "just started",
       ]) ||
       (session.known_symptoms.includes("swollen_abdomen") &&
-        answers.restlessness === true);
+        answers.restlessness === true) ||
+      (session.known_symptoms.includes("swollen_abdomen") &&
+        answers.abdomen_pain === true);
     case "unresponsive":
       return answers.consciousness_level === "unresponsive";
     default:
