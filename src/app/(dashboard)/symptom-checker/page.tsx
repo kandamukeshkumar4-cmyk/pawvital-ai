@@ -627,18 +627,23 @@ export default function SymptomCheckerPage() {
         setConversationState(inferred);
       }
 
-      const assistantText =
-        typeof data.message === "string"
-          ? await localizeAssistantText(data.message)
-          : null;
-      const terminalOwnerText =
-        typeof data.owner_message === "string"
-          ? await localizeAssistantText(data.owner_message)
-          : null;
-      const terminalNextStepText =
-        typeof data.recommended_next_step === "string"
-          ? await localizeAssistantText(data.recommended_next_step)
-          : null;
+      // Localize the assistant, terminal-owner, and next-step strings in
+      // parallel instead of three serial round-trips — one round-trip of
+      // latency per turn for non-English owners. Each entry is produced by the
+      // same localizeAssistantText call as before (the inputs are independent),
+      // so translation/fallback behavior is unchanged; only the ordering is.
+      const [assistantText, terminalOwnerText, terminalNextStepText] =
+        await Promise.all([
+          typeof data.message === "string"
+            ? localizeAssistantText(data.message)
+            : Promise.resolve(null),
+          typeof data.owner_message === "string"
+            ? localizeAssistantText(data.owner_message)
+            : Promise.resolve(null),
+          typeof data.recommended_next_step === "string"
+            ? localizeAssistantText(data.recommended_next_step)
+            : Promise.resolve(null),
+        ]);
 
       if (data.type === "emergency") {
         setMessages((prev) => [
