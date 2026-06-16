@@ -96,6 +96,7 @@ interface SendMessageOptions {
   imageOverride?: string | null;
   imageMetaOverride?: ImageMeta | null;
   gateOverride?: boolean;
+  gateOverrideTokenOverride?: string | null;
   appendUserMessage?: boolean;
 }
 
@@ -266,6 +267,9 @@ export default function SymptomCheckerPage() {
   const [pendingGateImage, setPendingGateImage] = useState<string | null>(null);
   const [pendingGateImageMeta, setPendingGateImageMeta] =
     useState<ImageMeta | null>(null);
+  const [pendingGateToken, setPendingGateToken] = useState<string | null>(
+    null,
+  );
   const [promptVetRecord, setPromptVetRecord] = useState(false);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<SymptomReport | null>(null);
@@ -357,6 +361,7 @@ export default function SymptomCheckerPage() {
   const clearPendingGateImage = () => {
     setPendingGateImage(null);
     setPendingGateImageMeta(null);
+    setPendingGateToken(null);
   };
 
   const appendTranscriptToInput = (transcript: string) => {
@@ -524,6 +529,7 @@ export default function SymptomCheckerPage() {
       imageOverride,
       imageMetaOverride,
       gateOverride = false,
+      gateOverrideTokenOverride,
       appendUserMessage = true,
     } = options;
     const messageText = text ?? input.trim();
@@ -592,6 +598,7 @@ export default function SymptomCheckerPage() {
           image: imageToSend, // Send the base64 image here
           imageMeta: imageMetaToSend,
           gateOverride,
+          gateOverrideToken: gateOverrideTokenOverride ?? undefined,
         }),
         signal: controller.signal,
       });
@@ -670,6 +677,11 @@ export default function SymptomCheckerPage() {
             timestamp: new Date(),
           },
         ]);
+        setPendingGateToken(
+          typeof data.gate_override_token === "string"
+            ? data.gate_override_token
+            : null,
+        );
       } else if (data.type === "ready") {
         setMessages((prev) => [
           ...prev,
@@ -860,6 +872,7 @@ export default function SymptomCheckerPage() {
       imageOverride: pendingGateImage,
       imageMetaOverride: pendingGateImageMeta,
       gateOverride: true,
+      gateOverrideTokenOverride: pendingGateToken,
       appendUserMessage: false,
     });
   };
