@@ -72,17 +72,25 @@ export function sanitizeQuestionDraft(
     return fallbackMessage;
   }
 
-  // Strip lazy "Got it — value." / "Okay." / "Understood." openers that echo
-  // the extracted answer instead of writing a proper contextual sentence.
-  // Keep everything from the first real sentence onward (must contain the "?").
-  // Match "Got it — anything here." or standalone "Okay." / "Understood." etc.
-  // Uses [^?]*? so it stops at the first period/exclamation before any question mark.
-  const strippedOpener = cleaned.replace(
-    /^(?:Got it|Okay|Understood|Noted|Sure|Alright)[^?]*?[.!]\s*/i,
-    ""
-  );
-  if (strippedOpener.includes("?")) {
-    return strippedOpener.trim();
+  // Strip lazy "Got it — value." / "Okay — value." / etc. openers.
+  // Uses a character-scan to find the first ASCII sentence boundary (". " or "! ")
+  // rather than a regex quantifier, to avoid any compiled-JS edge cases.
+  if (/^(?:Got it|Okay|Understood|Noted|Sure|Alright)\b/i.test(cleaned)) {
+    let sentenceStart = -1;
+    for (let i = 0; i < cleaned.length - 1; i++) {
+      if ((cleaned[i] === "." || cleaned[i] === "!") && cleaned[i + 1] === " ") {
+        sentenceStart = i + 2;
+        break;
+      }
+    }
+    if (sentenceStart > 0) {
+      const rest = cleaned.substring(sentenceStart).trim();
+      if (rest.includes("?")) {
+        console.log("[sanitize] opener stripped →", rest.substring(0, 60));
+        return rest;
+      }
+    }
+    console.log("[sanitize] opener detected but no boundary found:", cleaned.substring(0, 80));
   }
 
   return cleaned;
