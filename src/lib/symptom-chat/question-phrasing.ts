@@ -200,7 +200,7 @@ REQUIRED QUESTION:
 - Answer type: ${answerType}
 
 WRITE EXACTLY 2 SENTENCES:
-1. One brief acknowledgment that SPECIFICALLY references 1-2 of the confirmed answers above (e.g. "Since ${pet.name} has been drinking less than usual and this has been going on for 3 days..."). Do NOT write a generic "I'm keeping track" phrase.
+1. One acknowledgment sentence that SPECIFICALLY references 1-2 of the confirmed answers above in a full contextual sentence (e.g. "Since ${pet.name} has been vomiting for two days and has stopped eating..."). Do NOT start with "Got it", "Got it —", "Okay", "Understood", or any short echo of the extracted value alone. Write a complete sentence that sets the clinical context.
 2. Ask the exact required question in caring, simple language.
 
 HARD RULES:
