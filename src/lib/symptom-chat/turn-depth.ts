@@ -33,8 +33,8 @@ export function shouldRunNemotronQuestionGate(turnDepth: TurnDepth): boolean {
   return turnDepth === "deep";
 }
 
-export function shouldRunNemotronQuestionVerify(turnDepth: TurnDepth): boolean {
-  return turnDepth === "deep";
+export function shouldRunNemotronQuestionVerify(_turnDepth: TurnDepth): boolean {
+  return true;
 }
 
 export function shouldRunMiniMaxCompression(turnDepth: TurnDepth): boolean {

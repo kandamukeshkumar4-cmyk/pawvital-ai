@@ -733,17 +733,17 @@ export function buildDeterministicQuestionFallback(
     .map((line) => line.match(/^- .+ -> (.+)$/)?.[1]?.trim())
     .find(Boolean);
 
-  let acknowledgment: string;
   if (hasPhoto && allowPhotoMention) {
-    acknowledgment = `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`;
-  } else if (latestAnswer) {
-    acknowledgment = `Got it — ${latestAnswer}.`;
-  } else if (chiefComplaint) {
-    acknowledgment = `Thanks for telling me about ${petName}'s ${chiefComplaint}.`;
-  } else {
-    acknowledgment = `Thanks for sharing that about ${petName}.`;
+    const acknowledgment = `I'm looking at the photo alongside what you've told me about ${petName}.`;
+    return `${acknowledgment} ${questionText}`;
   }
-  return `${acknowledgment} ${questionText}`;
+  if (latestAnswer) {
+    return `Got it — ${latestAnswer}. ${questionText}`;
+  }
+  if (chiefComplaint) {
+    return `Since ${petName} has been dealing with ${chiefComplaint}, I need one more detail. ${questionText}`;
+  }
+  return questionText;
 }
 
 export function cleanQuestionDraft(rawDraft: string): string {

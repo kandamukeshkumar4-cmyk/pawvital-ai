@@ -55,7 +55,7 @@ describe("turn-depth policy", () => {
 
   it("skips optional model stages on standard depth", () => {
     expect(shouldRunNemotronQuestionGate("standard")).toBe(false);
-    expect(shouldRunNemotronQuestionVerify("standard")).toBe(false);
+    expect(shouldRunNemotronQuestionVerify("standard")).toBe(true); // verify runs on all depths
     expect(shouldRunMiniMaxCompression("standard")).toBe(false);
     expect(shouldRunNemotronQuestionGate("deep")).toBe(true);
     expect(shouldRunNemotronQuestionVerify("deep")).toBe(true);

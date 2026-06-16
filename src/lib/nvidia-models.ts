@@ -249,6 +249,7 @@ export async function extractWithQwen(prompt: string): Promise<string> {
     prompt,
     maxTokens: 384,
     temperature: 0.1,
+    systemPrompt: "/no_think",
   });
 }
 
