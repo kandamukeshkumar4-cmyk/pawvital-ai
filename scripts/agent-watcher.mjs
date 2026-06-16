@@ -634,6 +634,44 @@ if (args.includes('--stop')) {
   process.exit(0);
 }
 
+if (args.includes('--bypass-merge')) {
+  if (args.includes('--daemon')) {
+    ensureDir(STATE_DIR);
+    const child = spawn(process.execPath, [__filename, '--bypass-merge'], {
+      cwd: REPO_ROOT,
+      detached: true,
+      stdio: 'ignore',
+      env: { ...process.env, _WATCHER_DAEMON: '1' },
+    });
+    child.unref();
+    writeFileSync(BYPASS_PID_FILE, String(child.pid));
+    console.log(`Bypass-merge daemon started (PID ${child.pid})`);
+    console.log(`Log:  ${BYPASS_LOG_FILE}`);
+    console.log('Stop: node scripts/agent-watcher.mjs --bypass-merge --stop');
+    process.exit(0);
+  }
+  if (args.includes('--stop')) {
+    if (existsSync(BYPASS_PID_FILE)) {
+      const pid = readFileSync(BYPASS_PID_FILE, 'utf8').trim();
+      try { process.kill(parseInt(pid, 10)); console.log(`Stopped bypass-merge daemon (PID ${pid})`); }
+      catch (e) { console.log(`Could not stop PID ${pid}: ${e.message}`); }
+      try { unlinkSync(BYPASS_PID_FILE); } catch { /* ignore */ }
+    } else {
+      console.log('No bypass-merge daemon running.');
+    }
+    process.exit(0);
+  }
+  if (args.includes('--once')) {
+    blogLine('Running single bypass-merge check...');
+    await pollBypassMerge();
+    blogLine('Done.');
+    process.exit(0);
+  }
+  // Foreground loop
+  await bypassMergeLoop();
+  process.exit(0);
+}
+
 if (args.includes('--once')) {
   log('Running single check...');
   await pollOnce();
@@ -660,6 +698,80 @@ if (args.includes('--daemon')) {
   console.log('  node scripts/agent-watcher.mjs --status   # check status');
   console.log('  node scripts/agent-watcher.mjs --stop     # stop watcher');
   process.exit(0);
+}
+
+// ---------------------------------------------------------------------------
+// Bypass-merge mode: merge open PRs with admin flag when Actions is disabled
+// ---------------------------------------------------------------------------
+
+const BYPASS_MERGE_INTERVAL = parseInt(process.env.BYPASS_MERGE_INTERVAL || '90', 10) * 1000;
+const BYPASS_PID_FILE = join(STATE_DIR, 'bypass-merge.pid');
+const BYPASS_LOG_FILE = join(STATE_DIR, 'bypass-merge.log');
+
+function blogLine(msg) {
+  const ts = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  const line = `[${ts}] ${msg}`;
+  console.log(line);
+  try {
+    ensureDir(STATE_DIR);
+    appendFileSync(BYPASS_LOG_FILE, line + '\n');
+  } catch { /* ignore */ }
+}
+
+function bypassMergePR(pr) {
+  blogLine(`Merging PR #${pr.number}: ${pr.title}`);
+  if (DRY_RUN) {
+    blogLine(`  DRY RUN — would run: gh pr merge ${pr.number} --merge --admin`);
+    return;
+  }
+  try {
+    const out = gh(`pr merge ${pr.number} --merge --admin`);
+    blogLine(`  ✓ Merged PR #${pr.number}${out ? ': ' + out.split('\n')[0] : ''}`);
+  } catch (e) {
+    blogLine(`  ✗ Failed to merge PR #${pr.number}: ${e.message}`);
+  }
+}
+
+async function pollBypassMerge() {
+  const prs = getOpenPRs();
+  if (prs.length === 0) {
+    blogLine('No open PRs targeting master.');
+    return;
+  }
+  blogLine(`Found ${prs.length} open PR(s).`);
+  for (const pr of prs) {
+    // Fetch full PR state to check mergeability
+    const raw = gh(`pr view ${pr.number} --json state,isDraft,mergeable,reviewDecision,title,author`);
+    let details;
+    try { details = JSON.parse(raw); } catch { continue; }
+
+    if (details.state !== 'OPEN') { blogLine(`  PR #${pr.number} not open — skip`); continue; }
+    if (details.isDraft) { blogLine(`  PR #${pr.number} is draft — skip`); continue; }
+    if (details.mergeable === 'CONFLICTING') { blogLine(`  PR #${pr.number} has conflicts — skip`); continue; }
+    if (details.reviewDecision === 'CHANGES_REQUESTED') {
+      blogLine(`  PR #${pr.number} has CHANGES_REQUESTED — skip`);
+      continue;
+    }
+    // Skip bot-authored PRs (Dependabot, Renovate, etc.) — major dep bumps need human review
+    const authorLogin = details.author?.login || '';
+    const isBot = details.author?.is_bot === true || authorLogin.endsWith('[bot]') ||
+      authorLogin.startsWith('app/') || authorLogin === 'dependabot' || authorLogin === 'renovate';
+    if (isBot) {
+      blogLine(`  PR #${pr.number} authored by bot (${authorLogin}) — skip`);
+      continue;
+    }
+
+    bypassMergePR(pr);
+  }
+}
+
+async function bypassMergeLoop() {
+  blogLine('Bypass-merge daemon started (GitHub Actions disabled mode)');
+  blogLine(`Poll interval: ${BYPASS_MERGE_INTERVAL / 1000}s | Dry run: ${DRY_RUN}`);
+  await pollBypassMerge();
+  setInterval(async () => {
+    try { await pollBypassMerge(); } catch (e) { blogLine(`Poll error: ${e.message}`); }
+  }, BYPASS_MERGE_INTERVAL);
 }
 
 // Default: run in foreground
