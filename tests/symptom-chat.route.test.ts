@@ -788,6 +788,88 @@ describe("symptom-chat mixed text + image routing", () => {
     });
   });
 
+  describe("IMP-05: server-bound image gate override", () => {
+    const GATE_WARNING = {
+      reason: "blurry" as const,
+      topLabel: "blur",
+      topScore: 0.9,
+    };
+
+    function makeImageRequest(extra: Record<string, unknown> = {}) {
+      return new Request("http://localhost/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "chat",
+          pet: PET,
+          session: createSession(),
+          image: IMAGE,
+          imageMeta: {
+            width: 900,
+            height: 900,
+            blurScore: 30,
+            estimatedKb: 120,
+          },
+          messages: [
+            { role: "user", content: "my dog has a wound on its leg" },
+          ],
+          ...extra,
+        }),
+      });
+    }
+
+    it("returns image_gate + a token when gateOverride lacks a valid token", async () => {
+      mockShouldAnalyzeWoundImage.mockReturnValue(true);
+      mockEvaluateImageGate.mockResolvedValueOnce(GATE_WARNING);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeImageRequest({ gateOverride: true }));
+      const payload = await response.json();
+
+      expect(payload.type).toBe("image_gate");
+      expect(typeof payload.gate_override_token).toBe("string");
+      expect(payload.gate_override_token.length).toBeGreaterThan(0);
+    });
+
+    it("bypasses the gate when a valid token is echoed for the same image", async () => {
+      mockShouldAnalyzeWoundImage.mockReturnValue(true);
+      // Persistent (not Once): the gate WOULD warn on both requests, so only a
+      // valid token — not a consumed mock — can keep the 2nd out of image_gate.
+      mockEvaluateImageGate.mockResolvedValue(GATE_WARNING);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      // First request is gated and receives a server-issued token.
+      const gated = await (await POST(makeImageRequest())).json();
+      expect(gated.type).toBe("image_gate");
+      const token = gated.gate_override_token;
+      expect(typeof token).toBe("string");
+
+      // Re-send the SAME image with that token -> gateOverrideAccepted is true,
+      // the gate block is skipped entirely, vision proceeds.
+      const response = await POST(
+        makeImageRequest({ gateOverride: true, gateOverrideToken: token })
+      );
+      const payload = await response.json();
+      expect(payload.type).not.toBe("image_gate");
+    });
+
+    it("rejects a garbage/expired override token (gate still runs)", async () => {
+      mockShouldAnalyzeWoundImage.mockReturnValue(true);
+      mockEvaluateImageGate.mockResolvedValueOnce(GATE_WARNING);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeImageRequest({
+          gateOverride: true,
+          gateOverrideToken: "123.deadbeef",
+        })
+      );
+      const payload = await response.json();
+
+      expect(payload.type).toBe("image_gate");
+    });
+  });
+
   it("records sanitized route telemetry for rate-limited symptom-chat requests", async () => {
     mockCheckRateLimit.mockResolvedValue({
       success: false,

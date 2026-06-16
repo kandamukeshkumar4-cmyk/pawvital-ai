@@ -167,6 +167,10 @@ import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
 import {
+  issueGateOverrideToken,
+  verifyGateOverrideToken,
+} from "@/lib/symptom-chat/gate-override-token";
+import {
   generateReport,
   generateTerminalOutcomeReport,
 } from "@/lib/symptom-chat/report-pipeline";
@@ -211,6 +215,7 @@ interface RequestBody {
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
+  gateOverrideToken?: string;
 }
 
 type LiveUpdateTarget = {
@@ -1403,6 +1408,7 @@ export async function POST(request: Request) {
       image,
       imageMeta,
       gateOverride,
+      gateOverrideToken,
     } = body;
 
     let session = clientSession || createSession();
@@ -1660,7 +1666,15 @@ export async function POST(request: Request) {
           session.known_symptoms.includes("wound_skin_issue"))
       : false;
 
-    if (image && shouldRunWoundVision && gateOverride !== true) {
+    // Server-bind the gate override: an override is honored only when the
+    // client echoes a valid, unexpired HMAC token that THIS server issued for
+    // THIS image hash. A bare gateOverride:true (forged or stale) no longer
+    // bypasses the gate — it re-runs and, if it warns, re-issues a fresh token.
+    const gateOverrideAccepted =
+      gateOverride === true &&
+      verifyGateOverrideToken(gateOverrideToken, imageHash || "");
+
+    if (image && shouldRunWoundVision && !gateOverrideAccepted) {
       const gateCacheKey = buildGateCacheKey(imageHash || "", imageMeta);
       const gateWarning =
         session.gate_cache_key === gateCacheKey
@@ -1676,12 +1690,13 @@ export async function POST(request: Request) {
           session,
           gate: gateWarning,
           ready_for_report: false,
+          gate_override_token: issueGateOverrideToken(imageHash || ""),
         });
       }
     }
 
     if (image && shouldRunWoundVision) {
-      if (gateOverride === true) {
+      if (gateOverrideAccepted) {
         console.log("[Image Gate] Override accepted, continuing to vision pipeline");
       }
       try {
