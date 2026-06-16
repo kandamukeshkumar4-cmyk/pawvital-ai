@@ -450,12 +450,12 @@ export default function SymptomCheckerPage() {
         blurScore: Number(blurScore.toFixed(1)),
         estimatedKb,
       });
-      console.log(
-        `[Preprocessing] ${img.width}x${img.height} → ${width}x${height}, blur=${blurScore.toFixed(1)}, size=${Math.round((base64.length * 0.75) / 1024)}KB`,
-      );
+      URL.revokeObjectURL(img.src);
     };
 
-    img.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    img.onerror = () => URL.revokeObjectURL(objectUrl);
+    img.src = objectUrl;
 
     // Clear the input so the same file can be selected again if needed
     if (fileInputRef.current) fileInputRef.current.value = "";

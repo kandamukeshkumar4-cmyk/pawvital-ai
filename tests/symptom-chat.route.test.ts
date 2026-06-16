@@ -57,6 +57,10 @@ const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockTrackRouteTelemetry = jest.fn();
 const mockTrackException = jest.fn();
 const mockPublishTriageLiveUpdate = jest.fn();
+const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
+  user: { id: "test-user-id" },
+  supabase: {},
+});
 const mockEventType = {
   REPORT_READY: "REPORT_READY",
   URGENCY_HIGH: "URGENCY_HIGH",
@@ -130,6 +134,18 @@ jest.mock("@/lib/minimax", () => ({
   isMiniMaxConfigured: () => true,
   compressCaseMemoryWithMiniMax: (...args: unknown[]) =>
     mockCompressCaseMemoryWithMiniMax(...args),
+}));
+
+const mockShouldRunMiniMaxCompression = jest.fn(() => true);
+jest.mock("@/lib/symptom-chat/turn-depth", () => ({
+  ...jest.requireActual("@/lib/symptom-chat/turn-depth"),
+  shouldRunMiniMaxCompression: (...args: unknown[]) =>
+    mockShouldRunMiniMaxCompression(...args),
+}));
+
+jest.mock("@/lib/api-auth", () => ({
+  requireAuthenticatedApiUser: (...args: unknown[]) =>
+    mockRequireAuthenticatedApiUser(...args),
 }));
 
 jest.mock("@/lib/hf-sidecars", () => {

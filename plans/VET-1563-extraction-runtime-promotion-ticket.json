@@ -26,6 +26,7 @@
       "holdout score below 4.2",
       "scorecard contains unresolved issues",
       "frozen baseline/candidate outputs and hashes are incomplete",
+      "protected clinical diff proof missing or not ready",
       "candidate model or adapter identity is not approved",
       "explicit owner approval artifact is missing"
     ]
@@ -71,12 +72,12 @@
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
       "exists": true,
-      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
     },
     "candidateSelectionPacket": {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",

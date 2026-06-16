@@ -17,11 +17,11 @@
     "src/app/api/ai/symptom-chat/route.ts",
     "src/lib/symptom-memory.ts"
   ],
-  "status": "ready",
-  "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "diffLineCount": 0,
-  "blocker": null,
-  "proof": "No local diff in protected deterministic clinical files.",
+  "status": "blocked",
+  "diffSha256": "2d27ab77533130d9d1a6e1ee12fb00ff7fa8697ae3ed8b2db4769d4cd09065e2",
+  "diffLineCount": 34,
+  "blocker": "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
+  "proof": "Protected deterministic clinical files have a local diff.",
   "guardrails": [
     "This proof does not authorize changing protected clinical files.",
     "If a protected file diff appears, stop promotion work until an explicit clinical ticket authorizes it.",

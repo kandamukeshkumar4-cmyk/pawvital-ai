@@ -5,8 +5,8 @@
   "generatedAt": "2026-05-31T00:00:00.000Z",
   "summary": {
     "readyForPromotionTicket": false,
-    "readyEvidenceCount": 3,
-    "blockedEvidenceCount": 5,
+    "readyEvidenceCount": 2,
+    "blockedEvidenceCount": 6,
     "weightedScoreMinimum": 4.2,
     "validationAverage": 0,
     "holdoutAverage": 0,
@@ -23,7 +23,7 @@
     "checklist": {
       "path": "plans/VET-1563-extraction-promotion-checklist.json",
       "exists": true,
-      "sha256": "dc65a53e6fed8e09d214fd1c8e876cc840efb91ce4f02f0d766a50a471f9254d"
+      "sha256": "4b1def17c7cdf7ec4ee4e5044f76ac03d87473f8645a7dbcf46c458f749e5bc2"
     },
     "scorecard": {
       "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
@@ -48,7 +48,7 @@
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
+      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
@@ -59,7 +59,7 @@
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
     }
   },
   "requiredEvidence": [
@@ -108,14 +108,17 @@
         "holdout score below 4.2",
         "scorecard contains unresolved issues",
         "frozen baseline/candidate outputs and hashes are incomplete",
+        "protected clinical diff proof missing or not ready",
         "candidate model or adapter identity is not approved",
         "explicit owner approval artifact is missing"
       ]
     },
     {
       "id": "protected-clinical-no-diff",
-      "status": "ready",
-      "blockers": []
+      "status": "blocked",
+      "blockers": [
+        "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
+      ]
     },
     {
       "id": "runtime-routing-no-diff-here",
@@ -202,8 +205,10 @@
     "separate-promotion-ticket: holdout score below 4.2",
     "separate-promotion-ticket: scorecard contains unresolved issues",
     "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+    "separate-promotion-ticket: protected clinical diff proof missing or not ready",
     "separate-promotion-ticket: candidate model or adapter identity is not approved",
     "separate-promotion-ticket: explicit owner approval artifact is missing",
+    "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
     "output-capture: 3 baseline output hash(es) missing",
     "output-capture: 3 candidate output hash(es) missing"
   ],
@@ -248,8 +253,16 @@
         "holdout score below 4.2",
         "scorecard contains unresolved issues",
         "frozen baseline/candidate outputs and hashes are incomplete",
+        "protected clinical diff proof missing or not ready",
         "candidate model or adapter identity is not approved",
         "explicit owner approval artifact is missing"
+      ]
+    },
+    {
+      "evidenceId": "protected-clinical-no-diff",
+      "action": "Promotion PR must show no unauthorized diffs in deterministic clinical logic files.",
+      "blockers": [
+        "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
       ]
     }
   ],

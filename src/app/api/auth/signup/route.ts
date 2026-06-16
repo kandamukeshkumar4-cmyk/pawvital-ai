@@ -5,6 +5,11 @@ import {
   DEFAULT_AUTH_REDIRECT,
   resolvePostAuthRedirect,
 } from "@/lib/auth-routing";
+import {
+  generalApiLimiter,
+  checkRateLimit,
+  getRateLimitId,
+} from "@/lib/rate-limit";
 function createRouteHandlerSupabaseClient(
   request: NextRequest,
   response: NextResponse
@@ -53,6 +58,22 @@ async function findUserIdByEmail(
 }
 
 export async function POST(request: NextRequest) {
+  const rateLimitResult = await checkRateLimit(
+    generalApiLimiter,
+    getRateLimitId(request)
+  );
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   const origin = request.nextUrl.origin;
 
   try {

@@ -38,17 +38,17 @@
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
       "exists": true,
-      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
     },
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
+      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
     }
   },
   "baselineRoute": {
@@ -120,15 +120,18 @@
         "holdout score below 4.2",
         "scorecard contains unresolved issues",
         "frozen baseline/candidate outputs and hashes are incomplete",
+        "protected clinical diff proof missing or not ready",
         "candidate model or adapter identity is not approved",
         "explicit owner approval artifact is missing"
       ]
     },
     {
       "id": "protected-clinical-no-diff",
-      "status": "ready",
-      "evidence": "No local diff in protected deterministic clinical files.",
-      "blockers": []
+      "status": "blocked",
+      "evidence": "Promotion PR must show no unauthorized diffs in deterministic clinical logic files.",
+      "blockers": [
+        "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
+      ]
     },
     {
       "id": "runtime-routing-no-diff-here",
@@ -153,8 +156,10 @@
       "separate-promotion-ticket: holdout score below 4.2",
       "separate-promotion-ticket: scorecard contains unresolved issues",
       "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: protected clinical diff proof missing or not ready",
       "separate-promotion-ticket: candidate model or adapter identity is not approved",
-      "separate-promotion-ticket: explicit owner approval artifact is missing"
+      "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
     ]
   },
   "goodhartGuard": [

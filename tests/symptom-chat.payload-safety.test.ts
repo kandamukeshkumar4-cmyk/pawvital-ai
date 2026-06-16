@@ -10,6 +10,10 @@ import { isInternalTelemetry } from "@/lib/sidecar-observability";
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockCreateServerSupabaseClient = jest.fn();
+const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
+  user: { id: "test-user-id" },
+  supabase: {},
+});
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
 const mockReviewQuestionPlanWithNemotron = jest.fn();
@@ -51,6 +55,11 @@ jest.mock("@/lib/rate-limit", () => ({
 jest.mock("@/lib/supabase-server", () => ({
   createServerSupabaseClient: (...args: unknown[]) =>
     mockCreateServerSupabaseClient(...args),
+}));
+
+jest.mock("@/lib/api-auth", () => ({
+  requireAuthenticatedApiUser: (...args: unknown[]) =>
+    mockRequireAuthenticatedApiUser(...args),
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
