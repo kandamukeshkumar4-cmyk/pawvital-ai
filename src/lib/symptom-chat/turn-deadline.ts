@@ -3,7 +3,22 @@ import type { TriageSession } from "@/lib/triage-engine";
 import { ensureStructuredCaseMemory } from "@/lib/symptom-memory";
 import { TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS } from "@/lib/symptom-chat/question-phrasing";
 
-export const SYMPTOM_CHAT_MAX_DURATION_SEC = 60;
+// Wall-clock budget for one symptom-chat turn. Defaults to 60s — the Vercel
+// function ceiling the app currently deploys behind. Deployments with a higher
+// platform ceiling can raise it via SYMPTOM_CHAT_MAX_DURATION_SEC (Vercel Pro up
+// to 300s; Azure App Service ~230s; Azure Container Apps configurable) so turn 3
+// finishes instead of racing the deadline and 504-ing.
+// IMPORTANT: never set this above the serving platform's hard request timeout, or
+// the function is killed mid-turn. Azure Static Web Apps managed functions cap at
+// 45s — if the route is ever served from SWA, set this to 45, not higher.
+function resolveTurnBudgetSec(
+  raw: string | undefined = process.env.SYMPTOM_CHAT_MAX_DURATION_SEC
+): number {
+  const parsed = Number.parseInt(raw ?? "", 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 60;
+}
+
+export const SYMPTOM_CHAT_MAX_DURATION_SEC = resolveTurnBudgetSec();
 export const TURN_DEADLINE_SAFETY_MS = 5_000;
 
 export const TURN_STAGE_ESTIMATE_MS = {

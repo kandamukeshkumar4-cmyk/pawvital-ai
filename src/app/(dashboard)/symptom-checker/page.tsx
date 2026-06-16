@@ -293,6 +293,17 @@ export default function SymptomCheckerPage() {
   const [, setLiveUpdateStatus] = useState<TriageLiveUpdateStatus | null>(null);
   const [, setLiveConnectionState] =
     useState<TriageLiveUpdateConnectionState>("disabled");
+  // Async-turn delivery (Service Bus + Web PubSub). When the route returns 202
+  // the turn is processed by the worker; the result arrives via a live-update
+  // ping (or polling) and is applied through the same response handler.
+  const [awaitingAsyncResult, setAwaitingAsyncResult] = useState(false);
+  const asyncPendingRef = useRef<{ jobId: string } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const latestApplyResponseRef = useRef<((data: any) => Promise<void>) | null>(
+    null,
+  );
+  const fetchAsyncResultRef = useRef<(() => Promise<void>) | null>(null);
+  const fetchInFlightRef = useRef(false);
   const {
     localizeAssistantText,
     localizeReport,
@@ -337,6 +348,24 @@ export default function SymptomCheckerPage() {
 
   const handleLiveUpdate = useCallback((update: TriageLiveUpdate) => {
     setLiveUpdateStatus(update.status);
+    if (
+      update.status === "response_ready" ||
+      update.status === "report_ready"
+    ) {
+      void fetchAsyncResultRef.current?.();
+    } else if (update.status === "failed") {
+      asyncPendingRef.current = null;
+      setAwaitingAsyncResult(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I had trouble completing that. Please try again.",
+          type: "error",
+          timestamp: new Date(),
+        },
+      ]);
+    }
   }, []);
 
   const handleLiveConnectionState = useCallback(
@@ -352,6 +381,60 @@ export default function SymptomCheckerPage() {
     onUpdate: handleLiveUpdate,
     sessionId: liveSessionIdRef.current,
   });
+
+  // Fetch the async turn result and apply it through the shared response handler.
+  // Invoked by the live-update ping and by the polling fallback below.
+  const fetchAndApplyAsyncResult = async () => {
+    const pending = asyncPendingRef.current;
+    // Guard against concurrent calls from the polling interval and a
+    // live-update ping arriving simultaneously — without this, both would
+    // fetch the result and call applyResponse twice, duplicating the
+    // assistant message.
+    if (!pending || fetchInFlightRef.current) {
+      return;
+    }
+    fetchInFlightRef.current = true;
+    try {
+      const res = await fetch(
+        `/api/ai/symptom-chat/result?jobId=${encodeURIComponent(pending.jobId)}`,
+        { cache: "no-store" },
+      );
+      if (res.status === 202) {
+        return; // still processing — keep waiting / polling
+      }
+      const payload = await res.json().catch(() => null);
+      asyncPendingRef.current = null;
+      setAwaitingAsyncResult(false);
+      if (res.ok && payload?.body) {
+        await latestApplyResponseRef.current?.(payload.body);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "I had trouble completing that. Please try again.",
+            type: "error",
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    } catch {
+      // Transient — the next poll tick retries while awaitingAsyncResult holds.
+    } finally {
+      fetchInFlightRef.current = false;
+    }
+  };
+  fetchAsyncResultRef.current = fetchAndApplyAsyncResult;
+
+  useEffect(() => {
+    if (!awaitingAsyncResult) {
+      return;
+    }
+    const pollId = setInterval(() => {
+      void fetchAsyncResultRef.current?.();
+    }, 3000);
+    return () => clearInterval(pollId);
+  }, [awaitingAsyncResult]);
 
   const clearComposerImage = () => {
     setSelectedImage(null);
@@ -535,7 +618,8 @@ export default function SymptomCheckerPage() {
     const messageText = text ?? input.trim();
     const imageToSend = imageOverride ?? selectedImage;
     const imageMetaToSend = imageMetaOverride ?? selectedImageMeta;
-    if ((!messageText && !imageToSend) || loading) return;
+    if ((!messageText && !imageToSend) || loading || awaitingAsyncResult)
+      return;
 
     const normalizedUserText =
       appendUserMessage && messageText
@@ -605,6 +689,14 @@ export default function SymptomCheckerPage() {
 
       const data = await res.json();
 
+      // Apply one turn response. Shared by the synchronous reply and the result
+      // fetched after an async response_ready ping. `apiMsgs` is captured here so
+      // a later async application uses this turn's message context.
+      // IMPORTANT: defined and stored in ref BEFORE the 202 branch below so that
+      // fetchAndApplyAsyncResult always has a valid current-turn closure even when
+      // sendMessage exits early on the async-offload path.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const applyResponse = async (data: any) => {
       // Always store returned session state (both state and ref)
       if (data.session) {
         setTriageSession(data.session);
@@ -752,6 +844,22 @@ export default function SymptomCheckerPage() {
           setReadyForReport(false);
         }
       }
+      };
+      latestApplyResponseRef.current = applyResponse;
+
+      // Async offload: the worker will process this turn and deliver the result
+      // via a live-update ping (handleLiveUpdate) or the polling fallback.
+      if (
+        res.status === 202 &&
+        data?.type === "async_pending" &&
+        typeof data.jobId === "string"
+      ) {
+        asyncPendingRef.current = { jobId: data.jobId };
+        setAwaitingAsyncResult(true);
+        return;
+      }
+
+      await applyResponse(data);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
@@ -1055,13 +1163,13 @@ export default function SymptomCheckerPage() {
                           <Button
                             variant="outline"
                             onClick={handleRetakePhoto}
-                            disabled={loading}
+                            disabled={loading || awaitingAsyncResult}
                           >
                             Retake Photo
                           </Button>
                           <Button
                             onClick={handleAnalyzeAnyway}
-                            disabled={loading}
+                            disabled={loading || awaitingAsyncResult}
                           >
                             Analyze Anyway
                           </Button>
@@ -1087,7 +1195,7 @@ export default function SymptomCheckerPage() {
                 </div>
               ))}
 
-              {loading && (
+              {(loading || awaitingAsyncResult) && (
                 <div className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4 h-4 text-purple-600" />
@@ -1143,11 +1251,11 @@ export default function SymptomCheckerPage() {
                       <ImagePlus className="w-5 h-5 text-gray-500" />
                     </Button>
                     <SpeechInputButton
-                      disabled={loading}
+                      disabled={loading || awaitingAsyncResult}
                       onTranscript={appendTranscriptToInput}
                     />
                     <VetRecordIntakeButton
-                      disabled={loading}
+                      disabled={loading || awaitingAsyncResult}
                       onContext={appendVetRecordContextToInput}
                     />
                     <input
@@ -1174,7 +1282,7 @@ export default function SymptomCheckerPage() {
                   <div className="flex flex-col gap-2">
                     <Button
                       onClick={() => sendMessage()}
-                      disabled={(!input.trim() && !selectedImage) || loading}
+                      disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
                       className="w-full sm:h-full sm:w-auto"
                       aria-label="Send message"
                     >
@@ -1227,11 +1335,11 @@ export default function SymptomCheckerPage() {
                   <ImagePlus className="w-5 h-5 text-gray-500" />
                 </Button>
                 <SpeechInputButton
-                  disabled={loading}
+                  disabled={loading || awaitingAsyncResult}
                   onTranscript={appendTranscriptToInput}
                 />
                 <VetRecordIntakeButton
-                  disabled={loading}
+                  disabled={loading || awaitingAsyncResult}
                   onContext={appendVetRecordContextToInput}
                 />
                 <input
@@ -1254,7 +1362,7 @@ export default function SymptomCheckerPage() {
               <div className="flex flex-col gap-2">
                 <Button
                   onClick={() => sendMessage()}
-                  disabled={(!input.trim() && !selectedImage) || loading}
+                  disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
                   className="w-full sm:h-full sm:w-auto"
                   aria-label="Send message"
                 >

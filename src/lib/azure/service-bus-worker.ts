@@ -100,6 +100,7 @@ const SUPPORTED_JOB_TYPES = new Set<ServiceBusJobType>([
   "document-processing",
   "report-generation",
   "shadow-telemetry",
+  "symptom-chat-turn",
 ]);
 
 async function createDefaultServiceBusWorkerClient(

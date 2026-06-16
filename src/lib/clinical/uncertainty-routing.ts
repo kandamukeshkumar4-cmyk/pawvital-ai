@@ -278,8 +278,8 @@ function detectNonDogEmergency(
     // Urethral obstruction is primarily a male-cat emergency but any cat straining/not urinating needs ER
     if (urinaryStraining) {
       const urgencyPrefix = maleIndicators
-        ? "A male cat straining to urinate may have a urethral obstruction, which is life-threatening and can be fatal within 24–48 hours."
-        : "A cat straining to urinate or producing little to no urine may have a urinary blockage, which can become life-threatening rapidly.";
+        ? "A male cat straining to urinate may have a dangerous blockage that is life-threatening and can be fatal within 24–48 hours."
+        : "A cat straining to urinate or producing little to no urine may have a blockage that can become life-threatening rapidly.";
       return (
         `⚠️ EMERGENCY — ${urgencyPrefix} ` +
         "Take to an emergency veterinary hospital IMMEDIATELY — do not wait."

@@ -12,7 +12,8 @@ export type ServiceBusJobType =
   | "async-review"
   | "document-processing"
   | "report-generation"
-  | "shadow-telemetry";
+  | "shadow-telemetry"
+  | "symptom-chat-turn";
 
 export type ServiceBusSafeJsonValue =
   | boolean
