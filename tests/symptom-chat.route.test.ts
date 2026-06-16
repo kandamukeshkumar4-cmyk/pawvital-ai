@@ -1314,7 +1314,7 @@ describe("symptom-chat mixed text + image routing", () => {
       "EXPLICITLY REFERENCE PHOTO IN WORDING: NO"
     );
     expect(payload.message).toBe(
-      "Got it — left leg. How big is the affected area? Compare to a coin, golf ball, or your palm."
+      "How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(payload.message).not.toContain("photo");
   });
@@ -1339,7 +1339,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
     expect(payload.message).toBe(
-      "Got it — left leg. How big is the affected area? Compare to a coin, golf ball, or your palm."
+      "How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(mockPhraseWithLlama).not.toHaveBeenCalled();
     expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
