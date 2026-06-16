@@ -26,11 +26,24 @@ const RATE_LIMIT_ERROR_LOG_INTERVAL_MS = 60_000;
 const DEFAULT_FALLBACK_WINDOW_MS = 60_000;
 const DEFAULT_FALLBACK_LIMIT = 30;
 let lastRateLimitErrorLogAt = 0;
+let rateLimitUnconfiguredLogged = false;
 
 export type RateLimitFallbackConfig = {
   limit: number;
   scope: string;
   windowMs: number;
+};
+
+/**
+ * Config used by the in-process fallback limiter when no Upstash limiter
+ * object exists at all (production with Upstash env unset). Every scope shares
+ * one "default" bucket per identifier — coarser than the per-scope Redis
+ * limits, but strictly safer than the previous unlimited fail-open.
+ */
+const DEFAULT_FALLBACK_CONFIG: RateLimitFallbackConfig = {
+  limit: DEFAULT_FALLBACK_LIMIT,
+  scope: "default",
+  windowMs: DEFAULT_FALLBACK_WINDOW_MS,
 };
 
 type LocalFallbackState = {
@@ -151,6 +164,20 @@ function logRateLimitFailure(
   );
 }
 
+function logRateLimitUnconfiguredOnce(identifier: string) {
+  if (rateLimitUnconfiguredLogged) {
+    return;
+  }
+
+  rateLimitUnconfiguredLogged = true;
+  console.warn(
+    `[rate-limit] Upstash not configured in production; using in-process ` +
+      `fallback limiter (default scope, ${DEFAULT_FALLBACK_CONFIG.limit} per ` +
+      `${DEFAULT_FALLBACK_CONFIG.windowMs}ms). Set UPSTASH_REDIS_REST_URL and ` +
+      `UPSTASH_REDIS_REST_TOKEN to restore distributed limiting. First seen: ${identifier}.`
+  );
+}
+
 function pruneLocalFallbackState(now = Date.now()) {
   for (const [key, state] of localFallbackState.entries()) {
     if (now >= state.reset) {
@@ -159,18 +186,12 @@ function pruneLocalFallbackState(now = Date.now()) {
   }
 }
 
-function runLocalFallbackLimiter(
-  limiter: Ratelimit,
+function runLocalFallbackWithConfig(
+  config: RateLimitFallbackConfig,
   identifier: string,
   now = Date.now()
 ): RateLimitResult {
   pruneLocalFallbackState(now);
-  const config =
-    limiterFallbackConfigs.get(limiter as unknown as object) || {
-      limit: DEFAULT_FALLBACK_LIMIT,
-      scope: "default",
-      windowMs: DEFAULT_FALLBACK_WINDOW_MS,
-    };
   const key = `${config.scope}:${identifier}`;
   const existing = localFallbackState.get(key);
   const active =
@@ -199,11 +220,30 @@ function runLocalFallbackLimiter(
   };
 }
 
+function runLocalFallbackLimiter(
+  limiter: Ratelimit,
+  identifier: string,
+  now = Date.now()
+): RateLimitResult {
+  const config =
+    limiterFallbackConfigs.get(limiter as unknown as object) ||
+    DEFAULT_FALLBACK_CONFIG;
+  return runLocalFallbackWithConfig(config, identifier, now);
+}
+
 export async function checkRateLimit(
   limiter: Ratelimit | null,
   identifier: string
 ): Promise<RateLimitResult> {
-  if (!limiter) return { success: true }; // No-op in dev/demo
+  if (!limiter) {
+    // Production with no Upstash limiter must NOT run unlimited. Fall back to
+    // the in-process limiter instead of granting every request (fail-open).
+    if (process.env.NODE_ENV === "production") {
+      logRateLimitUnconfiguredOnce(identifier);
+      return runLocalFallbackWithConfig(DEFAULT_FALLBACK_CONFIG, identifier);
+    }
+    return { success: true }; // No-op in dev/demo
+  }
 
   try {
     const result = await limiter.limit(identifier);
