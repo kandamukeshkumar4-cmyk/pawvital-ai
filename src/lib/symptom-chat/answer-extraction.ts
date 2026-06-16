@@ -195,6 +195,8 @@ export function deriveDeterministicAnswerForQuestion(
       return extractLethargySeverity(rawMessage);
     case "abdomen_pain":
       return extractAbdomenPain(rawMessage);
+    case "head_tilt":
+      return extractHeadTilt(rawMessage);
     default:
       return null;
   }
@@ -210,6 +212,7 @@ function getDeterministicCandidateQuestionIds(session: TriageSession): string[] 
     "retching_present",
     "restlessness",
     "onset_during_exercise",
+    "head_tilt",
   ]) {
     questionIds.add(questionId);
   }
@@ -949,6 +952,28 @@ function extractFaceSwelling(rawMessage: string): boolean | null {
 
   if (
     /\b(face|muzzle|eyelids?)\b.*\b(swollen|swelling|puffy|puffing up|swelled up)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  return null;
+}
+
+function extractHeadTilt(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(no head tilt|no tilt|head is straight|not tilting|doesn'?t tilt|head is level|head is normal|no neurological)\b/.test(
+      lower
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    /\b(head tilt|tilting (to one side|to the (left|right)|sideways)|head stays tilted|head is tilted|permanent tilt|leans to one side)\b/.test(
       lower
     )
   ) {

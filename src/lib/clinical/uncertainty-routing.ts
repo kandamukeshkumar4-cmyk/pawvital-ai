@@ -211,14 +211,17 @@ export function detectOutOfScopeTurn(input: {
   const { pet, session, message } = input;
 
   if (normalizeSpecies(pet.species) !== "dog") {
+    const emergencyStep = detectNonDogEmergency(
+      normalizeSpecies(pet.species),
+      message
+    );
     return {
       type: "out_of_scope",
       terminalState: "out_of_scope",
       reasonCode: "species_not_supported",
       ownerMessage:
         "I can only assess dog symptom cases in this workflow right now.",
-      recommendedNextStep:
-        "Please contact a veterinarian for help with this species.",
+      recommendedNextStep: emergencyStep,
       conversationState: "idle",
     };
   }
@@ -244,6 +247,60 @@ export function detectOutOfScopeTurn(input: {
     ),
     conversationState: "idle",
   };
+}
+
+// Detect life-threatening presentations in non-dog species and return an
+// appropriately urgent recommended-next-step string. Falls back to the generic
+// "contact a veterinarian" guidance when no emergency pattern is matched.
+function detectNonDogEmergency(
+  species: string,
+  message: string
+): string {
+  const lower = message.toLowerCase();
+
+  if (species === "cat") {
+    // Male cat straining/not urinating = urethral obstruction = can die in 24-48h
+    const maleIndicators =
+      /\b(male|neutered male|tom|tomcat|he|his)\b/.test(lower);
+    const urinaryStraining =
+      /\b(straining|trying to pee|trying to urinate|can'?t pee|can'?t urinate|no urine|barely any urine|nothing comes out|going to the litter box|litter box over and over|repeated trips|squatting)\b/.test(
+        lower
+      );
+
+    if (maleIndicators && urinaryStraining) {
+      return (
+        "⚠️ EMERGENCY — A male cat straining to urinate may have a urethral obstruction, " +
+        "which is life-threatening and can be fatal within 24–48 hours. " +
+        "Take him to an emergency veterinary hospital IMMEDIATELY — do not wait until morning."
+      );
+    }
+
+    // Cat breathing distress
+    if (
+      /\b(can'?t breathe|trouble breathing|struggling to breathe|open.?mouth breathing|breathing hard|breathing fast|gasping|panting)\b/.test(
+        lower
+      )
+    ) {
+      return (
+        "⚠️ EMERGENCY — A cat with breathing difficulty needs immediate veterinary attention. " +
+        "Take to an emergency vet NOW."
+      );
+    }
+
+    // Cat collapse or unconscious
+    if (
+      /\b(collapsed|unconscious|unresponsive|can'?t stand|fell over|limp)\b/.test(
+        lower
+      )
+    ) {
+      return (
+        "⚠️ EMERGENCY — A collapsed or unresponsive cat is a life-threatening emergency. " +
+        "Take to an emergency vet NOW."
+      );
+    }
+  }
+
+  return "Please contact a veterinarian for help with this species.";
 }
 
 export function buildCannotAssessOutcome(input: {

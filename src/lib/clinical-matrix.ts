@@ -2847,7 +2847,7 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     question_text: "Is there a head tilt — where the head stays tilted to one side?",
     data_type: "boolean",
     extraction_hint: "persistent head tilt",
-    critical: true,
+    critical: false,
   },
   balance_issues: {
     id: "balance_issues",
