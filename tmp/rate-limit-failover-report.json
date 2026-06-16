@@ -1,0 +1,20 @@
+{
+  "baseUrl": "http://127.0.0.1:55545",
+  "failover": null,
+  "generatedAt": "2026-06-16T11:44:16.257Z",
+  "http": {
+    "failureCount": 0,
+    "passed": true,
+    "passedAllowedCount": 2,
+    "p50LatencyMs": 2,
+    "p95LatencyMs": 50,
+    "p99LatencyMs": 50,
+    "statusCounts": {
+      "200": 2,
+      "429": 2
+    },
+    "throttledCount": 2,
+    "totalRequests": 4
+  },
+  "targetPath": "/api/ai/symptom-chat"
+}
