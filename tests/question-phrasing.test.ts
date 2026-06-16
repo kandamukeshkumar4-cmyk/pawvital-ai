@@ -245,9 +245,14 @@ describe("question phrasing helpers", () => {
     }
   });
 
-  it("skips Nemotron verification on standard turn depth", async () => {
+  it("runs Nemotron verification on standard turn depth", async () => {
     mockPhraseWithLlama.mockResolvedValue(
       "Since Mochi has been drinking less than usual, is she drinking less than usual?"
+    );
+    mockVerifyQuestionWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        message: "Since Mochi has been drinking less than usual, is she drinking less than usual?",
+      })
     );
 
     const result = await phraseQuestion(
@@ -266,7 +271,7 @@ describe("question phrasing helpers", () => {
     );
 
     expect(result).toContain("drinking less than usual");
-    expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
   });
 
   it("falls back when Nemotron verification reintroduces banned photo wording", async () => {
