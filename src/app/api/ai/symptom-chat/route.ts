@@ -1220,6 +1220,45 @@ function buildDeterministicEmergencyMessage(
   return `Based on the symptoms you've shared${details}, ${petName} may be having a medical emergency. Please go to the nearest emergency veterinary hospital now. I have enough information to prepare an emergency summary for the vet while you're on the way.`;
 }
 
+function sanitizeUnsupportedClientRedFlags(
+  session: TriageSession,
+  messages: { role: "user" | "assistant"; content: string }[]
+): TriageSession {
+  if (session.red_flags_triggered.length === 0) return session;
+
+  // Only the blatant-forgery case is safe to validate from message text alone.
+  // If the session carries ANY other legitimate red-flag evidence source
+  // (recorded answers, known symptoms, or vision-derived flags), leave it
+  // untouched — those sources cannot be reproduced from messages and dropping
+  // them would risk discarding a real emergency. (See IMP-01B inventory.)
+  const hasOtherEvidence =
+    session.known_symptoms.length > 0 ||
+    Object.keys(session.extracted_answers).length > 0 ||
+    (session.vision_red_flags?.length ?? 0) > 0;
+  if (hasOtherEvidence) return session;
+
+  const supported = new Set<string>();
+  for (const m of messages) {
+    if (m.role !== "user") continue;
+    for (const flag of extractDeterministicEmergencyRedFlags(
+      m.content,
+      session.known_symptoms
+    )) {
+      supported.add(flag);
+    }
+  }
+
+  const validated = session.red_flags_triggered.filter((f) => supported.has(f));
+  if (validated.length === session.red_flags_triggered.length) return session;
+
+  console.warn(
+    `[session-integrity] Dropped ${
+      session.red_flags_triggered.length - validated.length
+    } client red flag(s) unsupported by an otherwise-empty session`
+  );
+  return { ...session, red_flags_triggered: validated };
+}
+
 export async function POST(request: Request) {
   const startedAtMs = Date.now();
   const turnDeadline = createTurnDeadline(startedAtMs);
@@ -1295,6 +1334,7 @@ export async function POST(request: Request) {
     } = body;
 
     let session = clientSession || createSession();
+    session = sanitizeUnsupportedClientRedFlags(session, messages);
     const usageLimitResponse = await maybeBuildUsageLimitResponse({
       action,
       messages,
