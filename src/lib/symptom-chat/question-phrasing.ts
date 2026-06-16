@@ -75,8 +75,10 @@ export function sanitizeQuestionDraft(
   // Strip lazy "Got it — value." / "Okay." / "Understood." openers that echo
   // the extracted answer instead of writing a proper contextual sentence.
   // Keep everything from the first real sentence onward (must contain the "?").
+  // Match "Got it — anything here." or standalone "Okay." / "Understood." etc.
+  // Uses [^?]*? so it stops at the first period/exclamation before any question mark.
   const strippedOpener = cleaned.replace(
-    /^(Got it[\s—–\-][^\.\?!]*?[\.\?!]\s*|(?:Got it|Okay|Understood|Noted|Sure|Alright)[\.\?!]\s*)/i,
+    /^(?:Got it|Okay|Understood|Noted|Sure|Alright)[^?]*?[.!]\s*/i,
     ""
   );
   if (strippedOpener.includes("?")) {
