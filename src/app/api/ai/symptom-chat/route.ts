@@ -165,6 +165,10 @@ import { shouldPromptVetRecordUpload } from "@/lib/symptom-chat/vet-record-promp
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
+import {
+  isAsyncWorkerReplay,
+  maybeOffloadSymptomChatTurn,
+} from "@/lib/symptom-chat/async-turn-offload";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
 import {
   issueGateOverrideToken,
@@ -202,6 +206,10 @@ import {
 
 // Detect which engine to use
 const useNvidia = isNvidiaConfigured();
+// Vercel-only function-timeout directive (ignored on Azure App Service / Container
+// Apps / SWA). The cross-platform turn budget that actually gates stage execution is
+// SYMPTOM_CHAT_MAX_DURATION_SEC in @/lib/symptom-chat/turn-deadline. Keep this literal
+// in sync with the Vercel plan ceiling when deploying on Vercel (Hobby 60s, Pro ≤300s).
 export const maxDuration = 60;
 
 const ROUTE_NAME = "api.ai.symptom-chat";
@@ -1393,11 +1401,13 @@ export async function POST(request: Request) {
 
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
-    const rlResult = await checkRateLimit(
-      symptomChatLimiter,
-      getRateLimitId(request)
-    );
-    if (!rlResult.success) {
+    // Worker replays are trusted internal calls (authenticated by the replay
+    // secret) and must not be rate limited or re-offloaded.
+    const asyncReplay = isAsyncWorkerReplay(request);
+    const rlResult = asyncReplay
+      ? null
+      : await checkRateLimit(symptomChatLimiter, getRateLimitId(request));
+    if (rlResult && !rlResult.success) {
       statusCode = 429;
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
@@ -1450,6 +1460,12 @@ export async function POST(request: Request) {
       gateOverrideToken,
     } = body;
 
+    // Pristine copy of the client-sent session for async worker replay — the
+    // live `session` object below is mutated in place during processing, so the
+    // worker must replay the original input to reproduce the turn exactly.
+    const pristineSessionForAsync =
+      !asyncReplay && clientSession ? structuredClone(clientSession) : undefined;
+
     let session = clientSession || createSession();
     session = sanitizeUnsupportedClientRedFlags(session, messages);
     const usageLimitResponse = await maybeBuildUsageLimitResponse({
@@ -1490,6 +1506,31 @@ export async function POST(request: Request) {
     // when the session cookie is absent — emissions are skipped in that case.
     const verifiedUserId = await resolveVerifiedUserId();
     const safeLiveSessionId = normalizeWebPubSubSessionId(liveSessionId);
+
+    // ── Async offload (Service Bus + Web PubSub) ────────────────────────────
+    // When async is enabled and the result can be delivered to a verified user's
+    // live session, hand the turn to the worker and return 202 immediately so
+    // the HTTP request never races the platform timeout. Falls back to inline
+    // processing whenever offload is unavailable (see maybeOffloadSymptomChatTurn).
+    // Scoped to chat turns — these are the multi-model turns that hit the timeout;
+    // report generation stays synchronous (it has its own longer budget).
+    if (!asyncReplay && action === "chat") {
+      const offloaded = await maybeOffloadSymptomChatTurn({
+        action,
+        image,
+        imageMeta,
+        messages,
+        pet,
+        session: pristineSessionForAsync,
+        sessionId: safeLiveSessionId,
+        userId: verifiedUserId,
+      });
+      if (offloaded) {
+        statusCode = 202;
+        return offloaded.response;
+      }
+    }
+
     if (verifiedUserId && safeLiveSessionId) {
       liveUpdateTarget = {
         action,
@@ -1552,6 +1593,7 @@ export async function POST(request: Request) {
       pet: effectivePet,
       session,
       message: lastUserMessage.content,
+      messages,
     });
     if (outOfScopeOutcome) {
       session = recordTerminalOutcomeTelemetry(

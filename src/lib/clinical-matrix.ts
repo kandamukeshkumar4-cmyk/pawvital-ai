@@ -2854,7 +2854,7 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     question_text: "Any loss of balance, stumbling, or walking in circles?",
     data_type: "boolean",
     extraction_hint: "vestibular signs: imbalance, circling",
-    critical: true,
+    critical: false,
   },
 
   // General systemic
