@@ -200,7 +200,7 @@ export function NearestVetFinder() {
                         <Navigation className="h-3.5 w-3.5" />
                         Map
                       </a>
-                      {clinic.website ? (
+                      {clinic.website && /^https?:\/\//i.test(clinic.website) ? (
                         <a
                           className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
                           href={clinic.website}

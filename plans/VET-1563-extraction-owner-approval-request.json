@@ -19,6 +19,7 @@
     "holdout score below 4.2",
     "scorecard contains unresolved issues",
     "frozen baseline/candidate outputs and hashes are incomplete",
+    "protected clinical diff proof missing or not ready",
     "candidate model or adapter identity is not approved",
     "explicit owner approval artifact is missing",
     "scorecard-populated: validation average 0 below threshold 4.2",
@@ -33,8 +34,10 @@
     "separate-promotion-ticket: holdout score below 4.2",
     "separate-promotion-ticket: scorecard contains unresolved issues",
     "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+    "separate-promotion-ticket: protected clinical diff proof missing or not ready",
     "separate-promotion-ticket: candidate model or adapter identity is not approved",
     "separate-promotion-ticket: explicit owner approval artifact is missing",
+    "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
     "output-capture: 3 baseline output hash(es) missing",
     "output-capture: 3 candidate output hash(es) missing",
     "frozen output status is not ready for human review",
@@ -55,6 +58,7 @@
       "holdout score below 4.2",
       "scorecard contains unresolved issues",
       "frozen baseline/candidate outputs and hashes are incomplete",
+      "protected clinical diff proof missing or not ready",
       "candidate model or adapter identity is not approved",
       "explicit owner approval artifact is missing"
     ],
@@ -72,8 +76,10 @@
       "separate-promotion-ticket: holdout score below 4.2",
       "separate-promotion-ticket: scorecard contains unresolved issues",
       "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: protected clinical diff proof missing or not ready",
       "separate-promotion-ticket: candidate model or adapter identity is not approved",
       "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
       "output-capture: 3 baseline output hash(es) missing",
       "output-capture: 3 candidate output hash(es) missing"
     ],
@@ -169,8 +175,10 @@
       "separate-promotion-ticket: holdout score below 4.2",
       "separate-promotion-ticket: scorecard contains unresolved issues",
       "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: protected clinical diff proof missing or not ready",
       "separate-promotion-ticket: candidate model or adapter identity is not approved",
       "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
       "output-capture: 3 baseline output hash(es) missing",
       "output-capture: 3 candidate output hash(es) missing"
     ]
@@ -178,11 +186,11 @@
   "inputArtifacts": {
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
-      "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
+      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
     },
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "0d5134776f860d18c1ba7611a70ca883856456c5647e460c91f8e936d934d01a"
+      "sha256": "29b8a8720e1fc6d1ec86aef799204d20a9c2052c1322434300aa445d345dedf7"
     },
     "promotionEvidencePacket": {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
@@ -191,7 +199,7 @@
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
-      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
     }
   },
   "guardrails": [

@@ -140,6 +140,21 @@ for (const file of trackedFiles) {
   }
 }
 
+// Also scan known local env files that git intentionally excludes but that must
+// never contain real secrets (they are excluded from --exclude-standard so the
+// loop above never touches them; this is an explicit extra safety pass).
+const LOCAL_ENV_FILES = [".env.local", ".env.vercel.production.local"];
+for (const localFile of LOCAL_ENV_FILES) {
+  const fullPath = path.join(ROOT, localFile);
+  try {
+    const stats = statSync(fullPath);
+    if (stats.size > MAX_FILE_BYTES) continue;
+    scanFile(localFile, readFileSync(fullPath, "utf8"), findings);
+  } catch {
+    continue;
+  }
+}
+
 if (findings.length > 0) {
   console.error("Secret scan failed. Redacted findings:");
   for (const finding of findings) {
