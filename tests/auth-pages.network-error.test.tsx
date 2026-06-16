@@ -297,7 +297,8 @@ describe("auth page network error handling", () => {
       type: "signup",
       email: "owner@example.com",
       options: {
-        emailRedirectTo: "http://localhost/api/auth/callback?next=%2Fdashboard",
+        emailRedirectTo:
+          "http://localhost/api/auth/callback?next=%2Fdashboard&type=signup",
       },
     });
     await waitFor(() =>

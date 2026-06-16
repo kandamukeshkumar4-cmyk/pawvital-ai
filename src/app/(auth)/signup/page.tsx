@@ -8,7 +8,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import {
   appendRedirectParam,
-  buildCallbackUrl,
+  buildSignupCallbackUrl,
   getAuthFeedbackMessage,
   getAuthActionErrorMessage,
   resolvePostAuthRedirect,
@@ -75,6 +75,7 @@ export default function SignupPage() {
       const signupPayload = (await signupResponse.json()) as {
         ok?: boolean;
         redirect?: string;
+        requiresConfirmation?: boolean;
         message?: string;
       };
 
@@ -83,6 +84,14 @@ export default function SignupPage() {
           signupPayload.message ||
             "We couldn't create your account right now. Please try again."
         );
+      }
+
+      if (signupPayload.requiresConfirmation) {
+        setSuccessMessage(
+          signupPayload.message ||
+            "Check your email to confirm your account and continue."
+        );
+        return;
       }
 
       replaceWithBrowser(signupPayload.redirect || redirectTarget);
@@ -177,7 +186,10 @@ export default function SignupPage() {
       }
 
       const supabase = createClient();
-      const emailRedirectTo = buildCallbackUrl(window.location.origin, redirectTarget);
+      const emailRedirectTo = buildSignupCallbackUrl(
+        window.location.origin,
+        redirectTarget
+      );
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email: trimmedEmail,

@@ -164,6 +164,16 @@ export function buildCallbackUrl(origin: string, redirectTarget: string | null |
   return url.toString();
 }
 
+export function buildSignupCallbackUrl(
+  origin: string,
+  redirectTarget: string | null | undefined
+) {
+  const url = new URL(buildCallbackUrl(origin, redirectTarget));
+  url.searchParams.set("type", "signup");
+
+  return url.toString();
+}
+
 export function buildBrowserCallbackUrl(
   origin: string,
   redirectTarget: string | null | undefined
