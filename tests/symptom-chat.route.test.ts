@@ -64,6 +64,19 @@ const mockEventType = {
   SUBSCRIPTION_CHANGED: "SUBSCRIPTION_CHANGED",
   PET_ADDED: "PET_ADDED",
 } as const;
+const originalSymptomChatTurnDepth = process.env.SYMPTOM_CHAT_TURN_DEPTH;
+
+beforeEach(() => {
+  process.env.SYMPTOM_CHAT_TURN_DEPTH = "deep";
+});
+
+afterAll(() => {
+  if (originalSymptomChatTurnDepth === undefined) {
+    delete process.env.SYMPTOM_CHAT_TURN_DEPTH;
+  } else {
+    process.env.SYMPTOM_CHAT_TURN_DEPTH = originalSymptomChatTurnDepth;
+  }
+});
 
 jest.mock("@/lib/rate-limit", () => ({
   symptomChatLimiter: {},
@@ -1301,7 +1314,7 @@ describe("symptom-chat mixed text + image routing", () => {
       "EXPLICITLY REFERENCE PHOTO IN WORDING: NO"
     );
     expect(payload.message).toBe(
-      "I'm keeping track of what you've shared so far about Bruno's limping. How big is the affected area? Compare to a coin, golf ball, or your palm."
+      "Got it — left leg. How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(payload.message).not.toContain("photo");
   });
@@ -1326,7 +1339,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
     expect(payload.message).toBe(
-      "I'm keeping track of what you've shared so far about Bruno's limping. How big is the affected area? Compare to a coin, golf ball, or your palm."
+      "Got it — left leg. How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(mockPhraseWithLlama).not.toHaveBeenCalled();
     expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
