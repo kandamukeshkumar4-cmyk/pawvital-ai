@@ -217,6 +217,14 @@ const commands = [
     blankAzureEnv: true,
   },
   {
+    id: "launch-readiness-gates",
+    args: ["scripts/build-vet1560-launch-readiness-gates.mjs", "--write"],
+    artifacts: [
+      "plans/VET-1560-launch-readiness-gates.json",
+      "plans/VET-1560-launch-readiness-gates.md",
+    ],
+  },
+  {
     id: "readiness-dashboard",
     args: ["scripts/build-vet1560-readiness-dashboard.mjs", "--write"],
     artifacts: [

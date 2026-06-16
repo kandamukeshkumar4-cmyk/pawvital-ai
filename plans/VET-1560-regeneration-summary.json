@@ -4,8 +4,8 @@
   "generatedAt": "2026-05-31T00:00:00.000Z",
   "reviewOnly": true,
   "overallStatus": "success",
-  "commandCount": 37,
-  "executedCommandCount": 37,
+  "commandCount": 38,
+  "executedCommandCount": 38,
   "failedCommandIds": [],
   "commands": [
     {
@@ -854,6 +854,35 @@
       ]
     },
     {
+      "id": "launch-readiness-gates",
+      "command": [
+        "node",
+        "scripts/build-vet1560-launch-readiness-gates.mjs",
+        "--write"
+      ],
+      "status": "success",
+      "exitCode": 0,
+      "startedAt": "2026-05-31T00:00:00.000Z",
+      "finishedAt": "2026-05-31T00:00:00.000Z",
+      "stdout": [
+        "Wrote plans/VET-1560-launch-readiness-gates.json",
+        "Wrote plans/VET-1560-launch-readiness-gates.md"
+      ],
+      "stderr": [],
+      "artifacts": [
+        {
+          "path": "plans/VET-1560-launch-readiness-gates.json",
+          "exists": true,
+          "sha256": "63fb04dced0c675df9e92348f7bfe80de54de78296c6d794d9611781ed4d07be"
+        },
+        {
+          "path": "plans/VET-1560-launch-readiness-gates.md",
+          "exists": true,
+          "sha256": "0b5d971a25d51d2cdd9cc97fb607ff3da6f6b8119d5d92579b51718f3c79da4c"
+        }
+      ]
+    },
+    {
       "id": "readiness-dashboard",
       "command": [
         "node",
@@ -873,12 +902,12 @@
         {
           "path": "plans/VET-1560-readiness-dashboard.json",
           "exists": true,
-          "sha256": "00f13cdcda4c1fb2520bc1139af8fec5e183c88c3c343151dfca95fac3d1ce89"
+          "sha256": "3c4154055aaa69768ef0082c009738012f742432a18d94a6e8de7222847d949e"
         },
         {
           "path": "plans/VET-1560-readiness-dashboard.md",
           "exists": true,
-          "sha256": "0ebb4afe33d020552d2dbee8d1a0a94d04668f188d0f62602972a4c3afc58718"
+          "sha256": "d0f2ca9a6494e4f22ccdb4b308f7c7b2206e1d6e549d6fedd59a68885c152e7e"
         }
       ]
     },
@@ -902,12 +931,12 @@
         {
           "path": "plans/VET-1560-completion-audit.json",
           "exists": true,
-          "sha256": "c5f91adb6cf03968e31dd4205520fb4f2b6604c925f47c862766c6aee5a3a87e"
+          "sha256": "710d1db5c3ab203cc5277f4d5dee6c64ee6b1fa20812092ec6ba917a0655ecc4"
         },
         {
           "path": "plans/VET-1560-completion-audit.md",
           "exists": true,
-          "sha256": "5452af2130e0738f2d728d25d9d7a642ba60c9e87c58383956ed17a1334cbca7"
+          "sha256": "abb14ce9b916bb18add79289cf26ab28a6d01afb5a55eb743e18d71bd439cb5e"
         }
       ]
     }
