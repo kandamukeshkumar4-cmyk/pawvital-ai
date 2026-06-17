@@ -170,6 +170,7 @@ import {
   maybeOffloadSymptomChatTurn,
 } from "@/lib/symptom-chat/async-turn-offload";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
+import { requireAuthenticatedApiUser } from "@/lib/api-auth";
 import {
   issueGateOverrideToken,
   verifyGateOverrideToken,
@@ -1420,6 +1421,20 @@ export async function POST(request: Request) {
           },
         }
       );
+    }
+
+    // ── Authentication guard ──────────────────────────────────────────────
+    // Demo mode (Supabase unconfigured, status 503) passes through so local
+    // development works without credentials. All other unauthenticated calls
+    // are rejected with 401 to prevent anonymous AI token consumption.
+    {
+      const authCtx = await requireAuthenticatedApiUser({
+        unauthenticatedMessage: "Sign in to use the AI symptom checker",
+      });
+      if (authCtx.response && authCtx.response.status !== 503) {
+        statusCode = authCtx.response.status;
+        return authCtx.response;
+      }
     }
 
     const supabaseEnvGuard = checkSupabaseEnvConsistency();

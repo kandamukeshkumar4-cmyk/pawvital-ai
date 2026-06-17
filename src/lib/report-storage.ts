@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 import type { SymptomReport } from "@/components/symptom-report/types";
 import type { PetProfile, TriageSession } from "./triage-engine";
 import { buildThresholdProposalDraft } from "./threshold-proposals";
@@ -6,6 +5,7 @@ import {
   extractSafeSupabaseErrorDetails,
   type SafeSupabaseErrorDetails,
 } from "./supabase-error";
+import { getServiceSupabase } from "./supabase-admin";
 
 export interface OutcomeFeedbackInput {
   symptomCheckId: string;
@@ -44,13 +44,7 @@ export interface SaveSymptomReportOptions {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function getServerSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey || url.includes("your_supabase")) {
-    return null;
-  }
-
-  return createClient(url, serviceKey);
+  return getServiceSupabase();
 }
 
 function isUuid(value: string | null | undefined): value is string {

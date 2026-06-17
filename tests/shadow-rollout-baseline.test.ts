@@ -384,6 +384,57 @@ describe("shadow rollout baseline persistence", () => {
     );
   });
 
+  it("surfaces supplemental chat telemetry DNS failures without leaking endpoint details", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-1",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 2,
+                shadowComparisonCount: 0,
+                providerErrorCount: 1,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    const dnsError = Object.assign(new TypeError("fetch failed"), {
+      cause: Object.assign(
+        new Error("getaddrinfo ENOTFOUND private-upstash-host.example"),
+        { code: "ENOTFOUND" }
+      ),
+    });
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockRejectedValue(dnsError);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(1);
+    expect(snapshot.observationCount).toBe(2);
+    expect(snapshot.shadowComparisonCount).toBe(0);
+    expect(snapshot.warning).toBe(
+      "Supplemental chat shadow telemetry read failed (dns_unreachable)."
+    );
+    expect(JSON.stringify(snapshot)).not.toContain("private-upstash-host");
+  });
+
   it("counts trace-only chat telemetry without manufacturing shadow comparisons", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [

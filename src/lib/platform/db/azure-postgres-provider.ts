@@ -18,9 +18,12 @@ export class AzurePostgresDbProvider implements PlatformDbProvider {
       const { default: pg } = await import("pg");
       const client = new pg.Client({ connectionString: databaseUrl });
       await client.connect();
-      await client.query("SELECT 1");
-      await client.end();
-      return true;
+      try {
+        await client.query("SELECT 1");
+        return true;
+      } finally {
+        await client.end().catch(() => {});
+      }
     } catch {
       return false;
     }

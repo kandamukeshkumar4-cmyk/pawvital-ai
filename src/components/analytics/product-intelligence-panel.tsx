@@ -11,6 +11,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
+import type { RecoveryCheckpoint } from "@/lib/recovery-checkpoint";
 import type {
   ProductBaselineShiftDirection,
   ProductIntelligenceSnapshot,
@@ -24,6 +25,12 @@ interface ProductIntelligencePanelProps {
   saveSnapshotDisabled?: boolean;
   saveSnapshotInProgress?: boolean;
   saveSnapshotStatus?: string | null;
+  recoveryCheckpoint?: RecoveryCheckpoint | null;
+  recoveryHistoryCount?: number;
+  onSaveRecoveryCheckpoint?: () => void;
+  saveRecoveryDisabled?: boolean;
+  saveRecoveryInProgress?: boolean;
+  saveRecoveryStatus?: string | null;
 }
 
 const STATE_LABEL: Record<ProductIntelligenceState, string> = {
@@ -49,6 +56,18 @@ const BASELINE_SHIFT_LABEL: Record<ProductBaselineShiftDirection, string> = {
   steady: "Near baseline",
   unknown: "Baseline pending",
   urgent_override: "Urgent override",
+};
+
+const RECOVERY_STATUS_LABEL: Record<RecoveryCheckpoint["status"], string> = {
+  ready: "Ready",
+  insufficient_evidence: "Needs evidence",
+  urgent_override: "Urgent override",
+};
+
+const RECOVERY_STATUS_STYLES: Record<RecoveryCheckpoint["status"], string> = {
+  ready: "bg-emerald-50 text-emerald-700",
+  insufficient_evidence: "bg-gray-100 text-gray-700",
+  urgent_override: "bg-red-50 text-red-700",
 };
 
 const BASELINE_SHIFT_STYLES: Record<
@@ -98,6 +117,12 @@ export default function ProductIntelligencePanel({
   saveSnapshotDisabled = false,
   saveSnapshotInProgress = false,
   saveSnapshotStatus,
+  recoveryCheckpoint,
+  recoveryHistoryCount,
+  onSaveRecoveryCheckpoint,
+  saveRecoveryDisabled = false,
+  saveRecoveryInProgress = false,
+  saveRecoveryStatus,
 }: ProductIntelligencePanelProps) {
   const percent = Math.round(snapshot.evidenceCoverage * 100);
   const stateStyle = STATE_STYLES[snapshot.state];
@@ -108,6 +133,13 @@ export default function ProductIntelligencePanel({
       : null;
   const canRenderSave = Boolean(onSaveSnapshot) && snapshot.persistenceAllowed;
   const saveDisabled = saveSnapshotDisabled || saveSnapshotInProgress;
+  const recoverySavedText =
+    typeof recoveryHistoryCount === "number"
+      ? `${recoveryHistoryCount} saved recovery checkpoint${recoveryHistoryCount === 1 ? "" : "s"}`
+      : null;
+  const canRenderRecoverySave =
+    Boolean(onSaveRecoveryCheckpoint) && Boolean(recoveryCheckpoint?.persistenceAllowed);
+  const recoverySaveDisabled = saveRecoveryDisabled || saveRecoveryInProgress;
   const baselineStyle = BASELINE_SHIFT_STYLES[snapshot.baselineShift.direction];
   const BaselineIcon = baselineStyle.icon;
 
@@ -232,6 +264,57 @@ export default function ProductIntelligencePanel({
           )}
         </div>
       </div>
+
+      {recoveryCheckpoint ? (
+        <div className="grid gap-3 border-t border-gray-100 pt-4 text-sm text-gray-600 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-gray-500" aria-hidden />
+              <p className="font-semibold text-gray-900">Recovery checkpoint</p>
+            </div>
+            <p className="mt-1">{recoveryCheckpoint.ownerSummary}</p>
+            {recoveryCheckpoint.deterministicOverride ? (
+              <p className="mt-1 font-medium text-red-700">
+                {recoveryCheckpoint.deterministicOverride}
+              </p>
+            ) : recoveryCheckpoint.nextEvidencePrompt ? (
+              <p className="mt-1">{recoveryCheckpoint.nextEvidencePrompt}</p>
+            ) : null}
+            {recoverySavedText ? (
+              <p className="mt-2 text-xs font-medium text-gray-500">{recoverySavedText}</p>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2 md:items-end">
+            <span
+              className={`inline-flex w-fit items-center rounded-md px-2.5 py-1 text-xs font-semibold ${RECOVERY_STATUS_STYLES[recoveryCheckpoint.status]}`}
+            >
+              {RECOVERY_STATUS_LABEL[recoveryCheckpoint.status]}
+            </span>
+            {canRenderRecoverySave ? (
+              <button
+                type="button"
+                onClick={onSaveRecoveryCheckpoint}
+                disabled={recoverySaveDisabled}
+                className="inline-flex h-9 w-fit items-center gap-2 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                <Save className="h-4 w-4" aria-hidden />
+                {saveRecoveryInProgress ? "Saving" : "Save checkpoint"}
+              </button>
+            ) : recoveryCheckpoint.persistenceBlockedReasons.length > 0 ? (
+              <div className="flex flex-wrap gap-2 md:justify-end">
+                {recoveryCheckpoint.persistenceBlockedReasons.map((reason) => (
+                  <Chip key={reason} tone="missing">
+                    {reason}
+                  </Chip>
+                ))}
+              </div>
+            ) : null}
+            {saveRecoveryStatus ? (
+              <p className="text-xs font-medium text-gray-600">{saveRecoveryStatus}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <p className="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs leading-5 text-blue-900">
         {snapshot.claimGuard}

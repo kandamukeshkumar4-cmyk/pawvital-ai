@@ -142,6 +142,28 @@ function buildDashboard() {
   const localQueueValidationSummary = localQueueValidation
     ? `queue validation=${localQueueValidation.status}; ${localQueueValidation.verifierArtifactCount}/${localQueueValidation.ticketCount} verifier artifacts present; ${localQueueValidation.orderedDependencyEdgeCount}/${localQueueValidation.dependencyEdgeCount} dependency edges ordered`
     : "queue validation unavailable";
+  const productHistoricalSmokeComplete =
+    productProductionReadiness.authenticatedProductionSmokeComplete === true;
+  const productCurrentWriteComplete =
+    productProductionReadiness.currentDeploymentAuthenticatedWriteSmokeComplete === true;
+  const productRecoveryWriteComplete =
+    productProductionReadiness.recoveryCheckpointProductionWriteExercised === true;
+  let productNextAction =
+    "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json.";
+  if (productHistoricalSmokeComplete && !productCurrentWriteComplete) {
+    productNextAction =
+      "Current deployment read-only owner-history proof passed; run a controlled current-deployment POST smoke before claiming current write coverage.";
+  } else if (productHistoricalSmokeComplete && !productRecoveryWriteComplete) {
+    productNextAction =
+      "Current-deployment daily readiness write proof passed; capture recovery-checkpoint production write or blocked-reason smoke before claiming recovery write coverage.";
+  } else if (productHistoricalSmokeComplete) {
+    productNextAction =
+      "Keep monitoring product-intelligence persistence and rerun smoke after schema, route, RLS, or copy changes.";
+  }
+  const productSummary =
+    productHistoricalSmokeComplete
+      ? `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; product-intelligence persistence=${productProductionReadiness.productionPersistenceStatus}; write deployment=${productProductionReadiness.productionEvidence?.deploymentId}; current deployment=${productProductionReadiness.productionEvidence?.currentDeploymentId}; current smoke=${productProductionReadiness.currentDeploymentSmokeStatus}; historical readiness row=${productProductionReadiness.productionEvidence?.readinessRowId}; current readiness row=${productProductionReadiness.productionEvidence?.currentReadinessRowId}; recovery checkpoint status=${productProductionReadiness.recoveryCheckpointStatus}.`
+      : `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; production smoke ready=${productProductionReadiness.readyForProductionSmoke}, live migration applied=${productProductionReadiness.liveMigrationApplied}; smoke runbook has ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps.`;
 
   const lanes = [
     {
@@ -194,16 +216,17 @@ function buildDashboard() {
           : claimReview.blockedReason,
       nextAction:
         claimReview.verdict === "pass"
-          ? "Rerun npm run product:claim-language-review after any owner-visible copy change."
+          ? "Rerun node scripts/build-product-claim-language-review.mjs --write after any owner-visible copy change."
           : "Resolve blocked claim-language findings before expanding product copy.",
     },
     {
       id: "whoop-product-contract",
       label: "Whoop-style product contract",
-      status: "ready",
-      summary: `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined; production smoke ready=${productProductionReadiness.readyForProductionSmoke}, live migration applied=${productProductionReadiness.liveMigrationApplied}; smoke runbook has ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} evidence steps.`,
-      nextAction:
-        "Apply the approved Supabase migration, then run the authenticated production owner workflow smoke from plans/VET-1564-production-readiness.json.",
+      status: productHistoricalSmokeComplete && !productCurrentWriteComplete
+        ? "partial"
+        : "ready",
+      summary: productSummary,
+      nextAction: productNextAction,
     },
     {
       id: "instruction-governance",

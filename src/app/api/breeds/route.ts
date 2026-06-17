@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { fallbackDogBreeds } from "@/lib/breed-data";
+import {
+  generalApiLimiter,
+  checkRateLimit,
+  getRateLimitId,
+} from "@/lib/rate-limit";
 
 type ExternalBreed = {
   id?: string | number;
@@ -9,6 +14,22 @@ type ExternalBreed = {
 };
 
 export async function GET(request: Request) {
+  const rateLimitResult = await checkRateLimit(
+    generalApiLimiter,
+    getRateLimitId(request)
+  );
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down.", breeds: [] },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const species = (searchParams.get("species") || "dog").trim().toLowerCase();
   const q = searchParams.get("q")?.toLowerCase() || "";

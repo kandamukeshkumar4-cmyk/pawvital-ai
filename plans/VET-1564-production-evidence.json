@@ -1,0 +1,198 @@
+{
+  "ticket": "VET-1571C",
+  "parentTicket": "VET-1564",
+  "issue": 587,
+  "mode": "reviewed-production-evidence-with-current-readonly-refresh",
+  "generatedAt": "2026-06-05T18:25:00.000Z",
+  "decision": {
+    "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
+    "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+    "currentDeploymentWriteCoverage": "GO_CURRENT_PRODUCTION_DAILY_READINESS",
+    "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
+    "publicBeta": "HOLD"
+  },
+  "production": {
+    "baseUrl": "https://pawvital-ai.vercel.app",
+    "deploymentId": "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
+    "deploymentRole": "historical authenticated owner write smoke",
+    "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
+    "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0"
+  },
+  "currentProduction": {
+    "baseUrl": "https://pawvital-ai.vercel.app",
+    "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "deploymentUrl": "https://pawvital-gcbc7zs8f-kandasubbarao4-5462s-projects.vercel.app",
+    "inspectedAt": "2026-06-05T18:23:48.687Z",
+    "readOnlyOwnerSmoke": {
+      "overallStatus": "pass",
+      "profile": "pawvital-vet-1549c-live-tester-profile",
+      "petId": "061df0e7-d835-47b1-9636-a179f208093b",
+      "mutationAttempted": false,
+      "authenticatedPage": {
+        "status": 200,
+        "loadedSymptomChecker": true
+      },
+      "ownerHistoryRead": {
+        "status": 200,
+        "readinessCount": 1,
+        "recoveryCount": 0,
+        "latestReadinessIds": [
+          "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+        ]
+      },
+      "unownedPetRead": {
+        "status": 404,
+        "error": "Pet not found"
+      },
+      "ownerVisibleScan": {
+        "status": 200,
+        "claimLanguageFindings": 0,
+        "leakageFindings": 0
+      }
+    },
+    "writeSmoke": {
+      "exercised": true,
+      "status": 201,
+      "rowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
+      "snapshotDate": "2026-06-05",
+      "readinessState": "watch",
+      "confidence": "high",
+      "displayScore": 58,
+      "evidenceCoverage": 1,
+      "generatedBy": "vet-1571c-production-smoke",
+      "sourceCheckIds": [
+        "5aeff251-4b54-4e45-99b6-e99aa1550ce4",
+        "566ff227-282c-46a9-b49f-fd67c8b9adc7"
+      ],
+      "startedAt": "2026-06-05T18:23:33.441Z",
+      "completedAt": "2026-06-05T18:23:48.687Z",
+      "historyReadAfter": {
+        "status": 200,
+        "readinessCount": 2,
+        "recoveryCount": 0,
+        "latestReadinessIds": [
+          "61c44ae9-5b30-482d-8207-efbaf6598140",
+          "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+        ]
+      },
+      "artifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
+    },
+    "readOnlyArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+    "writeArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
+  },
+  "schemaApply": {
+    "committed": true,
+    "startedAt": "2026-06-04T22:23:41.874Z",
+    "completedAt": "2026-06-04T22:23:44.206Z",
+    "tables": [
+      {
+        "name": "daily_readiness_snapshots",
+        "rlsEnabled": true
+      },
+      {
+        "name": "recovery_checkpoints",
+        "rlsEnabled": true
+      }
+    ],
+    "policyCount": 6,
+    "indexCount": 6,
+    "triggerCount": 2,
+    "postgrestSchemaReloadNotified": true
+  },
+  "ownerSmoke": {
+    "overallStatus": "pass",
+    "profile": "pawvital-vet-1549c-live-tester-profile",
+    "petId": "061df0e7-d835-47b1-9636-a179f208093b",
+    "startedAt": "2026-06-04T22:24:03.079Z",
+    "completedAt": "2026-06-04T22:24:18.992Z",
+    "sourceCheckIds": [
+      "5aeff251-4b54-4e45-99b6-e99aa1550ce4",
+      "566ff227-282c-46a9-b49f-fd67c8b9adc7"
+    ],
+    "historyReadBefore": {
+      "status": 200,
+      "readinessCount": 0,
+      "recoveryCount": 0
+    },
+    "dailyReadinessSave": {
+      "status": 201,
+      "rowId": "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
+      "readinessState": "watch",
+      "confidence": "high",
+      "displayScore": 58,
+      "evidenceCoverage": 1,
+      "generatedBy": "vet-1571c-production-smoke"
+    },
+    "historyReadAfter": {
+      "status": 200,
+      "readinessCount": 1,
+      "recoveryCount": 0,
+      "latestReadinessIds": [
+        "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+      ]
+    },
+    "recoveryCheckpointWrite": {
+      "exercised": false,
+      "reason": "The production smoke used existing owned source checks that produced a persistable daily readiness snapshot; no eligible recovery checkpoint write was forced."
+    },
+    "unownedPetRead": {
+      "status": 404,
+      "error": "Pet not found"
+    },
+    "ownerVisibleScan": {
+      "status": 200,
+      "claimLanguageFindings": 0,
+      "leakageFindings": 0
+    }
+  },
+  "rlsProof": {
+    "pass": true,
+    "startedAt": "2026-06-05T01:29:20.138Z",
+    "completedAt": "2026-06-05T01:29:22.130Z",
+    "rowId": "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
+    "ownerVisibleCount": 1,
+    "otherVisibleCount": 0,
+    "crossOwnerInsertDenied": true,
+    "crossOwnerInsertError": "new row violates row-level security policy for table \"daily_readiness_snapshots\""
+  },
+  "postSmokeErrorLogQuery": {
+    "deploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "since": "10m",
+    "statusCode": 500,
+    "level": "error",
+    "completedAt": "2026-06-05T18:28:00.000Z",
+    "jsonRecordCount": 0
+  },
+  "localVerification": {
+    "focusedJestSuites": 8,
+    "focusedJestTests": 28,
+    "claimLanguageReview": {
+      "verdict": "pass",
+      "findings": 0
+    }
+  },
+  "sourceEvidence": {
+    "issueComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
+    "parentTrackerComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
+    "autoScientistsRun": "G:/MY Website/.agents/autoscientists/runs/vet-1571c-product-intelligence-production-schema-recovery",
+    "currentDeploymentReadOnlyArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+    "currentDeploymentWriteArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+    "artifacts": [
+      "product-intelligence-schema-apply-gswj-2026-06-04.json",
+      "product-intelligence-owner-smoke-dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL-2026-06-04T22-24-03-078Z.json",
+      "product-intelligence-rls-proof-gswj-2026-06-04.json",
+      "product-intelligence-post-smoke-500-log-query-dpl_Bo7RYGj-2026-06-04.json",
+      "product-intelligence-claim-language-review-2026-06-04.json",
+      "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+      "product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
+    ]
+  },
+  "guardrails": [
+    "This checked-in evidence record does not apply schema or call production by itself; the referenced June 5 current-deployment smoke wrote one tester-owned daily-readiness row.",
+    "Do not use this VET-1564 persistence GO as a public-beta GO.",
+    "Current-deployment write coverage is limited to the daily-readiness row written by the June 5 owner smoke on dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb.",
+    "Do not claim model/NIM promotion readiness from product-intelligence persistence proof.",
+    "Do not claim recovery checkpoint production write proof until an eligible recovery checkpoint write or deterministic blocked-reason smoke is captured.",
+    "Rerun claim-language review before any owner-visible product-intelligence copy changes."
+  ]
+}
