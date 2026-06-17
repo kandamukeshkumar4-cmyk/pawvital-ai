@@ -22,6 +22,9 @@ import {
   giVomitingFrequency,
   giBloodCheck,
   giKeepWaterDownCheck,
+  recentDietChange,
+  currentMedications,
+  priorSimilarEpisode,
 } from "./question-cards/gi";
 
 import {
@@ -59,6 +62,9 @@ const SOURCE_CARDS: readonly ClinicalQuestionCard[] = [
   giVomitingFrequency,
   giBloodCheck,
   giKeepWaterDownCheck,
+  recentDietChange,
+  currentMedications,
+  priorSimilarEpisode,
   limpingWeightBearing,
   limpingTraumaOnset,
   urinaryStrainingOutput,
