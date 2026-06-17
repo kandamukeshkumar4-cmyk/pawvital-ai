@@ -86,3 +86,84 @@ export const giKeepWaterDownCheck: ClinicalQuestionCard = {
 
   sourceIds: ["internal_pending_review"],
 };
+
+export const recentDietChange: ClinicalQuestionCard = {
+  id: "recent_diet_change",
+  ownerText:
+    "Has your dog had any recent change in food, snacks, or table scraps, or gotten into something they shouldn't have (garbage, compost, or a new chew)?",
+  shortReason:
+    "A recent change in what your pet ate or getting into something unusual is one of the most common reasons for a sudden upset stomach.",
+
+  complaintFamilies: ["gastrointestinal", "vomiting", "diarrhea", "gi"],
+  bodySystems: ["gastrointestinal"],
+
+  phase: "history",
+
+  ownerAnswerability: 3,
+  urgencyImpact: 1,
+  discriminativeValue: 2,
+  reportValue: 2,
+
+  screensRedFlags: [],
+  changesUrgencyIf: {},
+
+  answerType: "free_text",
+
+  skipIfAnswered: ["gi_vomiting_frequency"],
+
+  sourceIds: ["internal_pending_review"],
+};
+
+export const currentMedications: ClinicalQuestionCard = {
+  id: "current_medications",
+  ownerText:
+    "Is your dog currently on any medicines or supplements (including flea and tick products, pain relievers, or anything started by another vet)?",
+  shortReason:
+    "Knowing what your pet is currently receiving gives the veterinary team important context about the digestive signs.",
+
+  complaintFamilies: ["gastrointestinal", "vomiting", "diarrhea", "gi"],
+  bodySystems: ["gastrointestinal"],
+
+  phase: "history",
+
+  ownerAnswerability: 3,
+  urgencyImpact: 1,
+  discriminativeValue: 2,
+  reportValue: 2,
+
+  screensRedFlags: [],
+  changesUrgencyIf: {},
+
+  answerType: "free_text",
+
+  skipIfAnswered: ["gi_vomiting_frequency"],
+
+  sourceIds: ["internal_pending_review"],
+};
+
+export const priorSimilarEpisode: ClinicalQuestionCard = {
+  id: "prior_similar_episode",
+  ownerText:
+    "Has your dog had a similar vomiting or diarrhea episode before? If so, how long did it last and how did it get better?",
+  shortReason:
+    "A history of similar past episodes helps the veterinary team understand whether this is a recurring pattern.",
+
+  complaintFamilies: ["gastrointestinal", "vomiting", "diarrhea", "gi"],
+  bodySystems: ["gastrointestinal"],
+
+  phase: "history",
+
+  ownerAnswerability: 3,
+  urgencyImpact: 1,
+  discriminativeValue: 2,
+  reportValue: 2,
+
+  screensRedFlags: [],
+  changesUrgencyIf: {},
+
+  answerType: "free_text",
+
+  skipIfAnswered: ["gi_vomiting_frequency"],
+
+  sourceIds: ["internal_pending_review"],
+};
