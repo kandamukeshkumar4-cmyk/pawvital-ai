@@ -33,6 +33,7 @@ import {
   inferSupportedImageDomain,
   type ConsultOpinion,
   type ShadowComparisonRecord,
+  type SidecarObservation,
   type ServiceTimeoutRecord,
   type VisionClinicalEvidence,
   type VisionPreprocessResult,
@@ -55,6 +56,7 @@ import {
   ensureStructuredCaseMemory,
   recordConversationTelemetry,
   type RecoverySource,
+  type SecondOpinionTraceTelemetry,
   updateStructuredCaseMemory,
 } from "@/lib/symptom-memory";
 import {
@@ -91,10 +93,12 @@ import {
   extractDeterministicAnswersForTurn,
   mergeTurnAnswers,
 } from "@/lib/symptom-chat/answer-extraction";
+import { getQuickStartSymptomAliases } from "@/lib/symptom-chat/quick-start-symptoms";
 import {
   clearPendingQuestion,
   getClarificationAttemptCount,
   getPendingQuestionId,
+  getQuestionAskedCount,
   markPendingQuestionClarificationAttempt,
   pruneAnsweredQuestionState,
 } from "@/lib/symptom-chat/pending-question-state";
@@ -124,10 +128,17 @@ import {
 } from "@/lib/symptom-chat/report-helpers";
 import { decideRepeatLoopGuard } from "@/lib/symptom-chat/repeat-loop-guard";
 import {
+  buildSecondOpinionEligibilityTrace,
   extractSecondOpinionPendingAnswer,
+  getPrimarySuccessShadowSamplingAttemptCount as resolvePrimarySuccessShadowSamplingAttemptCount,
   getSecondOpinionExtractorMode,
+  type SecondOpinionExtractorMode,
+  type SecondOpinionExtractionResult,
 } from "@/lib/symptom-chat/second-opinion-extractor";
-import { createModelBudgetState } from "@/lib/model-budget";
+import {
+  createModelBudgetState,
+  type ModelBudgetState,
+} from "@/lib/model-budget";
 import { getModelRoute } from "@/lib/model-router";
 import {
   buildAlternateObservableRecoveryResponse,
@@ -144,14 +155,39 @@ import {
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
 import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
+import { createTurnDeadline } from "@/lib/symptom-chat/turn-deadline";
+import { resolveTurnDepth } from "@/lib/symptom-chat/turn-depth";
+import { checkSupabaseEnvConsistency } from "@/lib/supabase-env-guard";
+import {
+  runClinicalTurnOrchestrator,
+} from "@/lib/clinical-intelligence/clinical-turn-orchestrator";
+import { shouldPromptVetRecordUpload } from "@/lib/symptom-chat/vet-record-prompt";
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
+import {
+  isAsyncWorkerReplay,
+  maybeOffloadSymptomChatTurn,
+} from "@/lib/symptom-chat/async-turn-offload";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
+import { requireAuthenticatedApiUser } from "@/lib/api-auth";
+import {
+  issueGateOverrideToken,
+  verifyGateOverrideToken,
+} from "@/lib/symptom-chat/gate-override-token";
 import {
   generateReport,
   generateTerminalOutcomeReport,
 } from "@/lib/symptom-chat/report-pipeline";
+import {
+  trackException,
+  trackRouteTelemetry,
+} from "@/lib/azure/telemetry";
+import {
+  normalizeWebPubSubSessionId,
+  publishTriageLiveUpdate,
+  type TriageLiveUpdateStatus,
+} from "@/lib/azure/web-pubsub";
 
 // =============================================================================
 // HYBRID STATE MACHINE API — 4-Model NVIDIA NIM Pipeline
@@ -171,45 +207,531 @@ import {
 
 // Detect which engine to use
 const useNvidia = isNvidiaConfigured();
+// Vercel-only function-timeout directive (ignored on Azure App Service / Container
+// Apps / SWA). The cross-platform turn budget that actually gates stage execution is
+// SYMPTOM_CHAT_MAX_DURATION_SEC in @/lib/symptom-chat/turn-deadline. Keep this literal
+// in sync with the Vercel plan ceiling when deploying on Vercel (Hobby 60s, Pro ≤300s).
+export const maxDuration = 60;
+
+const ROUTE_NAME = "api.ai.symptom-chat";
 
 interface RequestBody {
   messages: { role: "user" | "assistant"; content: string }[];
   pet: PetProfile;
   action: "chat" | "generate_report";
   session?: TriageSession;
+  liveSessionId?: string;
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
+  gateOverrideToken?: string;
 }
 
-function persistChatShadowTelemetrySnapshot(
-  comparison: ShadowComparisonRecord
-): void {
+type LiveUpdateTarget = {
+  action: "chat" | "generate_report";
+  sessionId: string;
+  userId: string;
+};
+
+async function scheduleTriageLiveUpdate(
+  target: LiveUpdateTarget | null,
+  status: TriageLiveUpdateStatus
+): Promise<void> {
+  if (!target) {
+    return;
+  }
+
+  try {
+    await publishTriageLiveUpdate({
+      action: target.action,
+      sessionId: target.sessionId,
+      status,
+      userId: target.userId,
+    });
+  } catch {
+    // Live status is an enhancement; never let Web PubSub affect triage output.
+  }
+}
+
+async function persistChatShadowTelemetrySnapshot({
+  serviceCalls = [],
+  shadowComparisons = [],
+}: {
+  serviceCalls?: SidecarObservation[];
+  shadowComparisons?: ShadowComparisonRecord[];
+}): Promise<boolean> {
   const snapshot = {
     generatedAt: new Date().toISOString(),
-    recentServiceCalls: [],
-    recentShadowComparisons: [comparison],
+    recentServiceCalls: serviceCalls,
+    recentShadowComparisons: shadowComparisons,
     source: "chat" as const,
   };
 
-  const persistShadowTelemetry = async () => {
-    try {
-      await appendShadowTelemetrySnapshot(snapshot);
-    } catch (shadowTelemetryError) {
-      console.error(
-        "[ShadowTelemetry] Failed to persist chat telemetry:",
-        shadowTelemetryError
-      );
-    }
-  };
-
-  if (!runAfterSafely(persistShadowTelemetry)) {
-    void persistShadowTelemetry();
+  try {
+    const persisted = await appendShadowTelemetrySnapshot(snapshot);
+    return persisted !== false;
+  } catch (shadowTelemetryError) {
+    console.error(
+      "[ShadowTelemetry] Failed to persist chat telemetry:",
+      shadowTelemetryError
+    );
+    return false;
   }
+}
+
+function getLatestSecondOpinionTraceObservation(
+  session: TriageSession
+): SidecarObservation | undefined {
+  return [...(session.case_memory?.service_observations ?? [])]
+    .reverse()
+    .find(
+      (observation) =>
+        observation.service === "async-review-service" &&
+        observation.stage === "second_opinion"
+    );
+}
+
+function getCurrentTurnClarificationAttemptCount(
+  session: TriageSession,
+  questionId: string
+): number {
+  // The current owner reply is counted before the repeat-loop path persists it.
+  return getClarificationAttemptCount(session, questionId) + 1;
+}
+
+function getPrimarySuccessShadowSamplingAttemptCount(
+  session: TriageSession,
+  questionId: string
+): number {
+  return resolvePrimarySuccessShadowSamplingAttemptCount({
+    previousClarificationAttempts: getClarificationAttemptCount(
+      session,
+      questionId
+    ),
+    questionAskedCount: getQuestionAskedCount(session, questionId),
+  });
+}
+
+function getSecondOpinionAcceptanceOutcome(
+  result: SecondOpinionExtractionResult
+): SecondOpinionTraceTelemetry["acceptance_outcome"] {
+  if (result.status === "accepted") {
+    return "accepted";
+  }
+  if (result.status === "rejected") {
+    return "rejected";
+  }
+  if (result.status === "failed") {
+    return "failed";
+  }
+  return undefined;
+}
+
+async function recordSecondOpinionNotRequestedTrace({
+  session,
+  mode,
+  pendingQuestionId,
+  ownerMessage,
+  primaryExtractionFailed,
+  deterministicResolved,
+  clarificationAttempts,
+  hadUnresolved,
+  pendingAfter,
+  budgetState,
+}: {
+  session: TriageSession;
+  mode: SecondOpinionExtractorMode;
+  pendingQuestionId: string;
+  ownerMessage: string;
+  primaryExtractionFailed: boolean;
+  deterministicResolved: boolean;
+  clarificationAttempts: number;
+  hadUnresolved: boolean;
+  pendingAfter: boolean;
+  budgetState: ModelBudgetState;
+}): Promise<TriageSession> {
+  if (mode === "off") {
+    return session;
+  }
+
+  const eligibilityTrace = buildSecondOpinionEligibilityTrace({
+    mode,
+    pendingQuestionId,
+    ownerMessage,
+    primaryExtractionFailed,
+    deterministicResolved,
+    clarificationAttempts,
+    repeatGuardAlreadyFired: false,
+    budgetState,
+  });
+
+  if (eligibilityTrace.request_outcome === "requested") {
+    return session;
+  }
+
+  const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+    ...eligibilityTrace,
+    comparison_append_outcome: "not_applicable",
+    comparison_write_outcome: "not_applicable",
+    extractor_reason: eligibilityTrace.eligibility_reason,
+  };
+  let nextSession = recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: session.case_memory?.turn_count ?? 0,
+    question_id: pendingQuestionId,
+    outcome: "second_opinion_skipped",
+    source: "second_opinion",
+    reason: eligibilityTrace.eligibility_reason,
+    pending_before: hadUnresolved,
+    pending_after: pendingAfter,
+    second_opinion_trace: secondOpinionTrace,
+  });
+
+  const latestSecondOpinionTrace =
+    getLatestSecondOpinionTraceObservation(nextSession);
+  if (!latestSecondOpinionTrace) {
+    return nextSession;
+  }
+
+  const chatTelemetryPersisted = await persistChatShadowTelemetrySnapshot({
+    serviceCalls: [latestSecondOpinionTrace],
+    shadowComparisons: [],
+  });
+  if (!chatTelemetryPersisted) {
+    nextSession = recordConversationTelemetry(nextSession, {
+      event: "second_opinion",
+      turn_count: nextSession.case_memory?.turn_count ?? 0,
+      question_id: pendingQuestionId,
+      outcome: "second_opinion_failed",
+      source: "second_opinion",
+      reason: "telemetry_write_failed",
+      pending_before: hadUnresolved,
+      pending_after: pendingAfter,
+      second_opinion_trace: {
+        ...secondOpinionTrace,
+        extractor_reason: "telemetry_write_failed",
+      },
+    });
+  }
+
+  return nextSession;
+}
+
+async function recordSecondOpinionShadowSample({
+  session,
+  pendingQuestionId,
+  ownerMessage,
+  primaryExtractionFailed,
+  clarificationAttempts,
+  knownSymptomsBeforeTurn,
+  primaryAnswerValue,
+  hadUnresolved,
+}: {
+  session: TriageSession;
+  pendingQuestionId: string;
+  ownerMessage: string;
+  primaryExtractionFailed: boolean;
+  clarificationAttempts: number;
+  knownSymptomsBeforeTurn: string[];
+  primaryAnswerValue: string | boolean | number;
+  hadUnresolved: boolean;
+}): Promise<TriageSession> {
+  const budgetState = createModelBudgetState(
+    ensureStructuredCaseMemory(session).model_budget_state
+  );
+  const eligibilityTrace = buildSecondOpinionEligibilityTrace({
+    mode: "shadow",
+    pendingQuestionId,
+    ownerMessage,
+    primaryExtractionFailed,
+    deterministicResolved: true,
+    clarificationAttempts,
+    repeatGuardAlreadyFired: false,
+    budgetState,
+    isShadowSampling: true,
+  });
+
+  const shadowResult = await extractSecondOpinionPendingAnswer({
+    mode: "shadow",
+    pendingQuestionId,
+    ownerMessage,
+    primaryExtractionFailed,
+    deterministicResolved: true,
+    clarificationAttempts,
+    knownSymptomsBeforeTurn,
+    budgetState,
+    isShadowSampling: true,
+  });
+
+  if (shadowResult.budgetState) {
+    session = {
+      ...session,
+      case_memory: {
+        ...ensureStructuredCaseMemory(session),
+        model_budget_state: shadowResult.budgetState,
+      },
+    };
+  }
+
+  let recordedShadowComparison: ShadowComparisonRecord | undefined;
+  let comparisonAppendOutcome: SecondOpinionTraceTelemetry["comparison_append_outcome"] =
+    "not_applicable";
+  let comparisonWriteOutcome: SecondOpinionTraceTelemetry["comparison_write_outcome"] =
+    "not_applicable";
+
+  if (shadowResult.status === "accepted") {
+    const disagreed =
+      String(primaryAnswerValue) === String(shadowResult.answer.answerValue)
+        ? 0
+        : 1;
+    const shadowComparison = describeShadowComparison(
+      "async-review-service",
+      "primary_extraction_succeeded",
+      "second_opinion_extractor",
+      `q=${pendingQuestionId}; shadow_answer_recorded=true; conf=${shadowResult.answer.confidence.toFixed(2)}; agreed=${disagreed === 0}`,
+      disagreed
+    );
+    session = appendShadowComparison(session, shadowComparison);
+    const recordedShadowComparisons =
+      session.case_memory?.shadow_comparisons ?? [];
+    recordedShadowComparison =
+      recordedShadowComparisons[recordedShadowComparisons.length - 1];
+    if (recordedShadowComparison) {
+      comparisonAppendOutcome = "comparison_appended";
+      comparisonWriteOutcome = "comparison_write_succeeded";
+    } else {
+      comparisonAppendOutcome = "comparison_append_failed";
+      comparisonWriteOutcome = "comparison_write_failed";
+    }
+  }
+
+  const telemetryOutcome =
+    shadowResult.status === "accepted"
+      ? "second_opinion_used"
+      : shadowResult.status === "failed"
+        ? "second_opinion_failed"
+        : shadowResult.status === "rejected"
+          ? "second_opinion_rejected"
+          : eligibilityTrace.request_outcome === "budget_exhausted"
+            ? "second_opinion_failed"
+            : "second_opinion_skipped";
+  const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+    ...eligibilityTrace,
+    acceptance_outcome: getSecondOpinionAcceptanceOutcome(shadowResult),
+    comparison_append_outcome: comparisonAppendOutcome,
+    comparison_write_outcome: comparisonWriteOutcome,
+    extractor_reason:
+      shadowResult.status === "accepted"
+        ? undefined
+        : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+  };
+  const gateEvents =
+    shadowResult.status === "accepted"
+      ? (["second_opinion_used"] as const)
+      : shadowResult.status === "failed"
+        ? (["second_opinion_failed"] as const)
+        : shadowResult.status === "rejected"
+          ? (["second_opinion_rejected"] as const)
+          : ([] as const);
+
+  session = recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: session.case_memory?.turn_count ?? 0,
+    question_id: pendingQuestionId,
+    outcome: telemetryOutcome,
+    source: "second_opinion",
+    reason:
+      shadowResult.status === "accepted"
+        ? undefined
+        : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+    model:
+      shadowResult.status === "skipped"
+        ? undefined
+        : getModelRoute("extraction").primaryModel,
+    pending_before: hadUnresolved,
+    pending_after: false,
+    second_opinion_trace: secondOpinionTrace,
+    gate_events: [...gateEvents],
+  });
+
+  const latestSecondOpinionTrace =
+    getLatestSecondOpinionTraceObservation(session);
+  if (!latestSecondOpinionTrace) {
+    return session;
+  }
+
+  const chatTelemetryPersisted = await persistChatShadowTelemetrySnapshot({
+    serviceCalls: [latestSecondOpinionTrace],
+    shadowComparisons: recordedShadowComparison
+      ? [recordedShadowComparison]
+      : [],
+  });
+  if (chatTelemetryPersisted) {
+    return session;
+  }
+
+  const telemetryPersistenceFailureReason = recordedShadowComparison
+    ? "comparison_write_failed"
+    : "telemetry_write_failed";
+  return recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: session.case_memory?.turn_count ?? 0,
+    question_id: pendingQuestionId,
+    outcome: "second_opinion_failed",
+    source: "second_opinion",
+    reason: telemetryPersistenceFailureReason,
+    pending_before: hadUnresolved,
+    pending_after: false,
+    second_opinion_trace: {
+      ...secondOpinionTrace,
+      comparison_write_outcome: recordedShadowComparison
+        ? "comparison_write_failed"
+        : secondOpinionTrace.comparison_write_outcome,
+      extractor_reason: telemetryPersistenceFailureReason,
+    },
+    gate_events: recordedShadowComparison ? ["second_opinion_failed"] : [],
+  });
 }
 
 function humanizeEmergencySignal(signal: string): string {
   return signal.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeQuickStartText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasNegatedQuickStartPrefix(prefix: string): boolean {
+  return /\b(?:no|not|never|without|don t|dont|doesn t|doesnt|didn t|didnt|isn t|isnt|wasn t|wasnt|hasn t|hasnt|haven t|havent)\b/.test(
+    prefix
+  );
+}
+
+function deniesQuickStartSuffixSymptom(prefix: string): boolean {
+  return /\b(?:don t|dont|do not|doesn t|doesnt|does not|didn t|didnt|did not)\s+(?:think|believe|suspect|feel|know)\b/.test(
+    prefix
+  );
+}
+
+function getNormalizedQuickStartSymptomTexts(symptom: string): string[] {
+  return Array.from(
+    new Set(
+      [symptom.replace(/_/g, " "), ...getQuickStartSymptomAliases(symptom)]
+        .map(normalizeQuickStartText)
+        .filter(Boolean)
+    )
+  );
+}
+
+function isChipShapedQuickStartPrefix(prefix: string): boolean {
+  if (!prefix) {
+    return false;
+  }
+
+  const words = prefix.split(/\s+/).filter(Boolean);
+  if (words.length > 3) {
+    return false;
+  }
+
+  return !hasNegatedQuickStartPrefix(prefix);
+}
+
+function isExactTextOnlyQuickStartMessage(
+  rawMessage: string,
+  keywordSymptoms: string[]
+): boolean {
+  if (keywordSymptoms.length !== 1) {
+    return false;
+  }
+
+  const normalizedRawMessage = normalizeQuickStartText(rawMessage);
+  const normalizedSymptomTexts = getNormalizedQuickStartSymptomTexts(
+    keywordSymptoms[0]
+  );
+
+  if (normalizedSymptomTexts.includes(normalizedRawMessage)) {
+    return true;
+  }
+
+  // Quick-start chips are rendered as owner text like "Milo has been vomiting".
+  // Treat that app-generated sentence as the same deterministic single-symptom
+  // start, without broadening richer owner descriptions into this fast path.
+  const chipSuffix = normalizedSymptomTexts
+    .map((symptomText) => ` has been ${symptomText}`)
+    .find((suffix) => normalizedRawMessage.endsWith(suffix));
+  if (!chipSuffix) {
+    return false;
+  }
+
+  return isChipShapedQuickStartPrefix(
+    normalizedRawMessage.slice(0, -chipSuffix.length).trim()
+  );
+}
+
+function findQuickStartChipSuffix(
+  normalizedRawMessage: string,
+  symptom: string
+): string | null {
+  return (
+    getNormalizedQuickStartSymptomTexts(symptom)
+      .map((symptomText) => ` has been ${symptomText}`)
+      .find((suffix) => normalizedRawMessage.endsWith(suffix)) ?? null
+  );
+}
+
+function shouldSuppressTextOnlyQuickStartKeywordSymptoms(
+  rawMessage: string,
+  keywordSymptoms: string[]
+): boolean {
+  if (keywordSymptoms.length !== 1) {
+    return false;
+  }
+
+  const normalizedRawMessage = normalizeQuickStartText(rawMessage);
+  const chipSuffix = findQuickStartChipSuffix(
+    normalizedRawMessage,
+    keywordSymptoms[0]
+  );
+  if (!chipSuffix) {
+    return false;
+  }
+
+  return deniesQuickStartSuffixSymptom(
+    normalizedRawMessage.slice(0, -chipSuffix.length).trim()
+  );
+}
+
+function buildTextOnlyQuickStartExtraction(
+  session: TriageSession,
+  rawMessage: string,
+  keywordSymptoms: string[],
+  hasImage: boolean
+): {
+  symptoms: string[];
+  answers: Record<string, string | boolean | number>;
+} | null {
+  const hasPendingQuestion =
+    Boolean(session.last_question_asked) || Boolean(getPendingQuestionId(session));
+  if (
+    hasImage ||
+    hasPendingQuestion ||
+    session.known_symptoms.length > 0 ||
+    session.answered_questions.length > 0 ||
+    Object.keys(session.extracted_answers).length > 0 ||
+    session.red_flags_triggered.length > 0 ||
+    !isExactTextOnlyQuickStartMessage(rawMessage, keywordSymptoms)
+  ) {
+    return null;
+  }
+
+  return {
+    symptoms: keywordSymptoms,
+    answers: {},
+  };
 }
 
 function collectDeterministicEmergencySignals(
@@ -712,14 +1234,182 @@ function buildDeterministicEmergencyMessage(
   return `Based on the symptoms you've shared${details}, ${petName} may be having a medical emergency. Please go to the nearest emergency veterinary hospital now. I have enough information to prepare an emergency summary for the vet while you're on the way.`;
 }
 
+// Cap the request body (which can carry a base64 image) so an oversized or
+// buggy client cannot force unbounded buffering/parsing on the busiest AI
+// route. 10 MB matches the image-bearing async-review route. Pattern mirrors
+// the capped reader in symptom-check/route.ts. Route-local (not exported) so
+// the file keeps exporting only POST + maxDuration.
+const MAX_REQUEST_BYTES = 10 * 1024 * 1024;
+
+type BodyParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; response: Response };
+
+function jsonError(error: string, status: number, code: string) {
+  return NextResponse.json({ error, code }, { status });
+}
+
+function decodeUtf8(chunks: Uint8Array[], totalBytes: number) {
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(merged);
+}
+
+async function readJsonBody<T>(
+  request: Request,
+  maxBytes: number
+): Promise<BodyParseResult<T>> {
+  const declaredLength = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return {
+      ok: false,
+      response: jsonError("Request body too large", 413, "PAYLOAD_TOO_LARGE"),
+    };
+  }
+
+  const reader = request.body?.getReader();
+  if (!reader) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!value) {
+        continue;
+      }
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {}
+
+        return {
+          ok: false,
+          response: jsonError(
+            "Request body too large",
+            413,
+            "PAYLOAD_TOO_LARGE"
+          ),
+        };
+      }
+
+      chunks.push(value);
+    }
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+
+  const rawBody = decodeUtf8(chunks, totalBytes).trim();
+  if (!rawBody) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  try {
+    return { ok: true, value: JSON.parse(rawBody) as T };
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+}
+
+function sanitizeUnsupportedClientRedFlags(
+  session: TriageSession,
+  messages: { role: "user" | "assistant"; content: string }[]
+): TriageSession {
+  if (session.red_flags_triggered.length === 0) return session;
+
+  // Only the blatant-forgery case is safe to validate from message text alone.
+  // If the session carries ANY other legitimate red-flag evidence source
+  // (recorded answers, known symptoms, or vision-derived flags), leave it
+  // untouched — those sources cannot be reproduced from messages and dropping
+  // them would risk discarding a real emergency. (See IMP-01B inventory.)
+  const hasOtherEvidence =
+    session.known_symptoms.length > 0 ||
+    Object.keys(session.extracted_answers).length > 0 ||
+    (session.vision_red_flags?.length ?? 0) > 0;
+  if (hasOtherEvidence) return session;
+
+  const supported = new Set<string>();
+  for (const m of messages) {
+    if (m.role !== "user") continue;
+    for (const flag of extractDeterministicEmergencyRedFlags(
+      m.content,
+      session.known_symptoms
+    )) {
+      supported.add(flag);
+    }
+  }
+
+  const validated = session.red_flags_triggered.filter((f) => supported.has(f));
+  if (validated.length === session.red_flags_triggered.length) return session;
+
+  console.warn(
+    `[session-integrity] Dropped ${
+      session.red_flags_triggered.length - validated.length
+    } client red flag(s) unsupported by an otherwise-empty session`
+  );
+  return { ...session, red_flags_triggered: validated };
+}
+
 export async function POST(request: Request) {
+  const startedAtMs = Date.now();
+  const turnDeadline = createTurnDeadline(startedAtMs);
+  const stageDurationsMs: Record<string, number> = {};
+  // Internal-only per-stage latency accumulator. Surfaced to App Insights via
+  // trackRouteTelemetry measurements; never enters the route response payload.
+  const recordStageMs = (stage: string, startedAt: number): void => {
+    stageDurationsMs[stage] =
+      (stageDurationsMs[stage] ?? 0) + Math.max(0, Date.now() - startedAt);
+  };
+  let statusCode = 200;
+  let errorCode: string | undefined;
+  let liveUpdateTarget: LiveUpdateTarget | null = null;
+  let liveUpdateChain: Promise<void> = Promise.resolve();
+  const queueTriageLiveUpdate = (
+    target: LiveUpdateTarget | null,
+    status: TriageLiveUpdateStatus
+  ): Promise<void> => {
+    liveUpdateChain = liveUpdateChain.then(() =>
+      scheduleTriageLiveUpdate(target, status)
+    );
+    return liveUpdateChain;
+  };
+
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
-    const rlResult = await checkRateLimit(
-      symptomChatLimiter,
-      getRateLimitId(request)
-    );
-    if (!rlResult.success) {
+    // Worker replays are trusted internal calls (authenticated by the replay
+    // secret) and must not be rate limited or re-offloaded.
+    const asyncReplay = isAsyncWorkerReplay(request);
+    const rlResult = asyncReplay
+      ? null
+      : await checkRateLimit(symptomChatLimiter, getRateLimitId(request));
+    if (rlResult && !rlResult.success) {
+      statusCode = 429;
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
         {
@@ -733,24 +1423,73 @@ export async function POST(request: Request) {
       );
     }
 
-    const body: RequestBody = await request.json();
+    // ── Authentication guard ──────────────────────────────────────────────
+    // Demo mode (Supabase unconfigured, status 503) passes through so local
+    // development works without credentials. All other unauthenticated calls
+    // are rejected with 401 to prevent anonymous AI token consumption.
+    {
+      const authCtx = await requireAuthenticatedApiUser({
+        unauthenticatedMessage: "Sign in to use the AI symptom checker",
+      });
+      if (authCtx.response && authCtx.response.status !== 503) {
+        statusCode = authCtx.response.status;
+        return authCtx.response;
+      }
+    }
+
+    const supabaseEnvGuard = checkSupabaseEnvConsistency();
+    if (!supabaseEnvGuard.ok) {
+      console.error(
+        "Supabase environment mismatch detected at runtime.",
+        supabaseEnvGuard.refs
+      );
+      statusCode = 503;
+      return NextResponse.json(
+        {
+          type: "error",
+          message:
+            "Service configuration error. Please try again later or contact support.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const parsedBody = await readJsonBody<RequestBody>(
+      request,
+      MAX_REQUEST_BYTES
+    );
+    if (!parsedBody.ok) {
+      statusCode = parsedBody.response.status;
+      return parsedBody.response;
+    }
+    const body = parsedBody.value;
     const {
       messages,
       pet,
       action,
       session: clientSession,
+      liveSessionId,
       image,
       imageMeta,
       gateOverride,
+      gateOverrideToken,
     } = body;
 
+    // Pristine copy of the client-sent session for async worker replay — the
+    // live `session` object below is mutated in place during processing, so the
+    // worker must replay the original input to reproduce the turn exactly.
+    const pristineSessionForAsync =
+      !asyncReplay && clientSession ? structuredClone(clientSession) : undefined;
+
     let session = clientSession || createSession();
+    session = sanitizeUnsupportedClientRedFlags(session, messages);
     const usageLimitResponse = await maybeBuildUsageLimitResponse({
       action,
       messages,
       session,
     });
     if (usageLimitResponse) {
+      statusCode = usageLimitResponse.status;
       return usageLimitResponse;
     }
 
@@ -781,6 +1520,40 @@ export async function POST(request: Request) {
     // can be emitted with a trusted userId. Falls back to null in demo mode or
     // when the session cookie is absent — emissions are skipped in that case.
     const verifiedUserId = await resolveVerifiedUserId();
+    const safeLiveSessionId = normalizeWebPubSubSessionId(liveSessionId);
+
+    // ── Async offload (Service Bus + Web PubSub) ────────────────────────────
+    // When async is enabled and the result can be delivered to a verified user's
+    // live session, hand the turn to the worker and return 202 immediately so
+    // the HTTP request never races the platform timeout. Falls back to inline
+    // processing whenever offload is unavailable (see maybeOffloadSymptomChatTurn).
+    // Scoped to chat turns — these are the multi-model turns that hit the timeout;
+    // report generation stays synchronous (it has its own longer budget).
+    if (!asyncReplay && action === "chat") {
+      const offloaded = await maybeOffloadSymptomChatTurn({
+        action,
+        image,
+        imageMeta,
+        messages,
+        pet,
+        session: pristineSessionForAsync,
+        sessionId: safeLiveSessionId,
+        userId: verifiedUserId,
+      });
+      if (offloaded) {
+        statusCode = 202;
+        return offloaded.response;
+      }
+    }
+
+    if (verifiedUserId && safeLiveSessionId) {
+      liveUpdateTarget = {
+        action,
+        sessionId: safeLiveSessionId,
+        userId: verifiedUserId,
+      };
+      void queueTriageLiveUpdate(liveUpdateTarget, "processing");
+    }
 
     if (action === "generate_report") {
       const reportBlockingCriticalInfo = findReportBlockingCriticalInfo(session);
@@ -795,6 +1568,20 @@ export async function POST(request: Request) {
           }),
           verifiedUserId,
         });
+      }
+
+      if (!isReadyForDiagnosis(session)) {
+        statusCode = 409;
+        return NextResponse.json(
+          {
+            type: "error",
+            message:
+              "This session does not yet have enough information to generate a report.",
+            code: "SESSION_NOT_READY",
+            ready_for_report: false,
+          },
+          { status: 409 }
+        );
       }
 
       return await generateReport({
@@ -821,6 +1608,7 @@ export async function POST(request: Request) {
       pet: effectivePet,
       session,
       message: lastUserMessage.content,
+      messages,
     });
     if (outOfScopeOutcome) {
       session = recordTerminalOutcomeTelemetry(
@@ -989,7 +1777,15 @@ export async function POST(request: Request) {
           session.known_symptoms.includes("wound_skin_issue"))
       : false;
 
-    if (image && shouldRunWoundVision && gateOverride !== true) {
+    // Server-bind the gate override: an override is honored only when the
+    // client echoes a valid, unexpired HMAC token that THIS server issued for
+    // THIS image hash. A bare gateOverride:true (forged or stale) no longer
+    // bypasses the gate — it re-runs and, if it warns, re-issues a fresh token.
+    const gateOverrideAccepted =
+      gateOverride === true &&
+      verifyGateOverrideToken(gateOverrideToken, imageHash || "");
+
+    if (image && shouldRunWoundVision && !gateOverrideAccepted) {
       const gateCacheKey = buildGateCacheKey(imageHash || "", imageMeta);
       const gateWarning =
         session.gate_cache_key === gateCacheKey
@@ -1005,12 +1801,13 @@ export async function POST(request: Request) {
           session,
           gate: gateWarning,
           ready_for_report: false,
+          gate_override_token: issueGateOverrideToken(imageHash || ""),
         });
       }
     }
 
     if (image && shouldRunWoundVision) {
-      if (gateOverride === true) {
+      if (gateOverrideAccepted) {
         console.log("[Image Gate] Override accepted, continuing to vision pipeline");
       }
       try {
@@ -1183,10 +1980,19 @@ export async function POST(request: Request) {
     // ═══════════════════════════════════════════════════════════════════
     // STEP 1: EXTRACT structured data — Qwen 3.5 122B
     // ═══════════════════════════════════════════════════════════════════
+    const extractedKeywordSymptoms = extractSymptomsFromKeywords(
+      lastUserMessage.content
+    );
+    const keywordSymptoms = shouldSuppressTextOnlyQuickStartKeywordSymptoms(
+      lastUserMessage.content,
+      extractedKeywordSymptoms
+    )
+      ? []
+      : extractedKeywordSymptoms;
     const seededExtractionSymptoms = Array.from(
       new Set([
         ...session.known_symptoms,
-        ...extractSymptomsFromKeywords(lastUserMessage.content),
+        ...keywordSymptoms,
         ...visionSymptoms,
       ])
     );
@@ -1200,21 +2006,31 @@ export async function POST(request: Request) {
       visionRedFlags,
       visionSeverity
     );
+    const textOnlyQuickStartExtraction = buildTextOnlyQuickStartExtraction(
+      session,
+      lastUserMessage.content,
+      keywordSymptoms,
+      Boolean(image)
+    );
+    const extractionStartedAt = Date.now();
     const extracted =
       fastPathExtraction ||
+      textOnlyQuickStartExtraction ||
       (await extractDataFromMessage(
         lastUserMessage.content,
         session,
         effectivePet,
         extractionSchema,
-        compactImageSignals
+        compactImageSignals,
+        keywordSymptoms
       ));
+    recordStageMs("extractionMs", extractionStartedAt);
 
     const isExtractionValidJson =
       typeof extracted === "object" &&
       extracted !== null &&
       !Array.isArray(extracted);
-    const usedFastPath = Boolean(fastPathExtraction);
+    const usedFastPath = Boolean(fastPathExtraction || textOnlyQuickStartExtraction);
     session = recordConversationTelemetry(session, {
       event: "extraction",
       turn_count: session.case_memory?.turn_count ?? 0,
@@ -1256,7 +2072,7 @@ export async function POST(request: Request) {
     const turnTextSymptoms = Array.from(
       new Set([
         ...(extracted.symptoms || []),
-        ...extractSymptomsFromKeywords(lastUserMessage.content),
+        ...keywordSymptoms,
       ])
     );
 
@@ -1344,6 +2160,17 @@ export async function POST(request: Request) {
         (session.case_memory?.unresolved_question_ids ?? []).includes(
           pendingTelemetryQuestionId
         );
+      const previousClarificationAttempts = getClarificationAttemptCount(
+        session,
+        pendingTelemetryQuestionId
+      );
+      const shadowSamplingClarificationAttempts =
+        getPrimarySuccessShadowSamplingAttemptCount(
+          session,
+          pendingTelemetryQuestionId
+        );
+      const recoveredPendingAnswerValue =
+        mergedAnswers[pendingTelemetryQuestionId];
       session = recordConversationTelemetry(session, {
         event: "pending_recovery",
         turn_count: session.case_memory?.turn_count ?? 0,
@@ -1363,6 +2190,51 @@ export async function POST(request: Request) {
             : []),
         ],
       });
+      const shadowSamplingMode = getSecondOpinionExtractorMode();
+      if (
+        shadowSamplingMode === "shadow" &&
+        shadowSamplingClarificationAttempts === 0 &&
+        (typeof recoveredPendingAnswerValue === "string" ||
+          typeof recoveredPendingAnswerValue === "boolean" ||
+          typeof recoveredPendingAnswerValue === "number")
+      ) {
+        const secondOpinionStartedAt = Date.now();
+        session = await recordSecondOpinionShadowSample({
+          session,
+          pendingQuestionId: pendingTelemetryQuestionId,
+          ownerMessage: lastUserMessage.content,
+          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+            extracted.answers || {},
+            pendingTelemetryQuestionId
+          ),
+          clarificationAttempts: shadowSamplingClarificationAttempts,
+          knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
+          primaryAnswerValue: recoveredPendingAnswerValue,
+          hadUnresolved: pendingWasUnresolved,
+        });
+        recordStageMs("secondOpinionMs", secondOpinionStartedAt);
+      } else {
+        session = await recordSecondOpinionNotRequestedTrace({
+          session,
+          mode: shadowSamplingMode,
+          pendingQuestionId: pendingTelemetryQuestionId,
+          ownerMessage: lastUserMessage.content,
+          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+            extracted.answers || {},
+            pendingTelemetryQuestionId
+          ),
+          deterministicResolved: true,
+          clarificationAttempts: getCurrentTurnClarificationAttemptCount(
+            session,
+            pendingTelemetryQuestionId
+          ),
+          hadUnresolved: pendingWasUnresolved,
+          pendingAfter: false,
+          budgetState: createModelBudgetState(
+            ensureStructuredCaseMemory(session).model_budget_state
+          ),
+        });
+      }
     }
 
     if (
@@ -1464,6 +2336,12 @@ export async function POST(request: Request) {
           terminalOutcome = criticalInfoDecision.outcome;
         }
       } else if (pendingAnswer !== null) {
+        const previousClarificationAttempts = getClarificationAttemptCount(
+          session,
+          pendingQ
+        );
+        const shadowSamplingClarificationAttempts =
+          getPrimarySuccessShadowSamplingAttemptCount(session, pendingQ);
         session = transitionToAnswered({
           session,
           questionId: pendingQ,
@@ -1491,22 +2369,80 @@ export async function POST(request: Request) {
               : []),
           ],
         });
+        const shadowSamplingMode = getSecondOpinionExtractorMode();
+        if (
+          shadowSamplingMode === "shadow" &&
+          shadowSamplingClarificationAttempts === 0
+        ) {
+          const secondOpinionStartedAt = Date.now();
+          session = await recordSecondOpinionShadowSample({
+            session,
+            pendingQuestionId: pendingQ,
+            ownerMessage: lastUserMessage.content,
+            primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+              extracted.answers || {},
+              pendingQ
+            ),
+            clarificationAttempts: shadowSamplingClarificationAttempts,
+            knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
+            primaryAnswerValue: pendingAnswer.value,
+            hadUnresolved,
+          });
+          recordStageMs("secondOpinionMs", secondOpinionStartedAt);
+        } else {
+          session = await recordSecondOpinionNotRequestedTrace({
+            session,
+            mode: shadowSamplingMode,
+            pendingQuestionId: pendingQ,
+            ownerMessage: lastUserMessage.content,
+            primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
+              extracted.answers || {},
+              pendingQ
+            ),
+            deterministicResolved: true,
+            clarificationAttempts: getCurrentTurnClarificationAttemptCount(
+              session,
+              pendingQ
+            ),
+            hadUnresolved,
+            pendingAfter: false,
+            budgetState: createModelBudgetState(
+              ensureStructuredCaseMemory(session).model_budget_state
+            ),
+          });
+        }
       } else {
         const secondOpinionMode = getSecondOpinionExtractorMode();
+        const secondOpinionPrimaryExtractionFailed =
+          !Object.prototype.hasOwnProperty.call(
+            extracted.answers || {},
+            pendingQ
+          );
+        const secondOpinionBudgetState = createModelBudgetState(
+          ensureStructuredCaseMemory(session).model_budget_state
+        );
+        const secondOpinionClarificationAttempts =
+          getCurrentTurnClarificationAttemptCount(session, pendingQ);
+        const secondOpinionEligibilityTrace =
+          buildSecondOpinionEligibilityTrace({
+            mode: secondOpinionMode,
+            pendingQuestionId: pendingQ,
+            ownerMessage: lastUserMessage.content,
+            primaryExtractionFailed: secondOpinionPrimaryExtractionFailed,
+            deterministicResolved: pendingQResolvedThisTurn,
+            clarificationAttempts: secondOpinionClarificationAttempts,
+            repeatGuardAlreadyFired: false,
+            budgetState: secondOpinionBudgetState,
+          });
         const secondOpinionResult = await extractSecondOpinionPendingAnswer({
           mode: secondOpinionMode,
           pendingQuestionId: pendingQ,
           ownerMessage: lastUserMessage.content,
-          primaryExtractionFailed: !Object.prototype.hasOwnProperty.call(
-            mergedAnswers,
-            pendingQ
-          ),
+          primaryExtractionFailed: secondOpinionPrimaryExtractionFailed,
           deterministicResolved: pendingQResolvedThisTurn,
-          clarificationAttempts: getClarificationAttemptCount(session, pendingQ),
+          clarificationAttempts: secondOpinionClarificationAttempts,
           knownSymptomsBeforeTurn: Array.from(knownSymptomsBeforeTurn),
-          budgetState: createModelBudgetState(
-            ensureStructuredCaseMemory(session).model_budget_state
-          ),
+          budgetState: secondOpinionBudgetState,
         });
         if (secondOpinionResult.budgetState) {
           session = {
@@ -1517,46 +2453,12 @@ export async function POST(request: Request) {
             },
           };
         }
-        if (
-          secondOpinionResult.status !== "skipped" ||
-          secondOpinionResult.reason
-        ) {
-          const secondOpinionTelemetryOutcome =
-            secondOpinionResult.status === "accepted"
-              ? "second_opinion_used"
-              : secondOpinionResult.status === "failed"
-                ? "second_opinion_failed"
-                : "second_opinion_rejected";
 
-          session = recordConversationTelemetry(session, {
-            event: "second_opinion",
-            turn_count: session.case_memory?.turn_count ?? 0,
-            question_id: pendingQ,
-            outcome: secondOpinionTelemetryOutcome,
-            source: "second_opinion",
-            reason:
-              secondOpinionResult.status === "accepted"
-                ? undefined
-                : secondOpinionResult.reason,
-            model:
-              secondOpinionResult.status === "skipped"
-                ? undefined
-                : getModelRoute("extraction").primaryModel,
-            pending_before: hadUnresolved,
-            pending_after: !(
-              secondOpinionMode === "on" &&
-              secondOpinionResult.status === "accepted"
-            ),
-            gate_events: [
-              secondOpinionTelemetryOutcome,
-              ...(secondOpinionMode === "on" &&
-              secondOpinionResult.status === "accepted"
-                ? ["pending_question_resolved" as const]
-                : []),
-            ],
-          });
-        }
-
+        let recordedShadowComparison: ShadowComparisonRecord | undefined;
+        let comparisonAppendOutcome: SecondOpinionTraceTelemetry["comparison_append_outcome"] =
+          "not_applicable";
+        let comparisonWriteOutcome: SecondOpinionTraceTelemetry["comparison_write_outcome"] =
+          "not_applicable";
         if (
           secondOpinionMode === "shadow" &&
           secondOpinionResult.status === "accepted"
@@ -1574,10 +2476,113 @@ export async function POST(request: Request) {
           );
           const recordedShadowComparisons =
             session.case_memory?.shadow_comparisons || [];
-          const recordedShadowComparison =
+          recordedShadowComparison =
             recordedShadowComparisons[recordedShadowComparisons.length - 1];
           if (recordedShadowComparison) {
-            persistChatShadowTelemetrySnapshot(recordedShadowComparison);
+            comparisonAppendOutcome = "comparison_appended";
+            comparisonWriteOutcome = "comparison_write_succeeded";
+          } else {
+            comparisonAppendOutcome = "comparison_append_failed";
+            comparisonWriteOutcome = "comparison_write_failed";
+          }
+        }
+
+        const secondOpinionTelemetryOutcome =
+          secondOpinionResult.status === "accepted"
+            ? "second_opinion_used"
+            : secondOpinionResult.status === "failed"
+              ? "second_opinion_failed"
+              : secondOpinionResult.status === "rejected"
+                ? "second_opinion_rejected"
+                : secondOpinionEligibilityTrace.request_outcome ===
+                    "budget_exhausted"
+                  ? "second_opinion_failed"
+                  : "second_opinion_skipped";
+        const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+          ...secondOpinionEligibilityTrace,
+          acceptance_outcome:
+            getSecondOpinionAcceptanceOutcome(secondOpinionResult),
+          comparison_append_outcome: comparisonAppendOutcome,
+          comparison_write_outcome: comparisonWriteOutcome,
+          extractor_reason:
+            secondOpinionResult.status === "accepted"
+              ? undefined
+              : secondOpinionResult.reason ??
+                secondOpinionEligibilityTrace.eligibility_reason,
+        };
+        const secondOpinionGateEvents =
+          secondOpinionResult.status === "accepted"
+            ? (["second_opinion_used"] as const)
+            : secondOpinionResult.status === "failed"
+              ? (["second_opinion_failed"] as const)
+              : secondOpinionResult.status === "rejected"
+                ? (["second_opinion_rejected"] as const)
+                : ([] as const);
+
+        session = recordConversationTelemetry(session, {
+          event: "second_opinion",
+          turn_count: session.case_memory?.turn_count ?? 0,
+          question_id: pendingQ,
+          outcome: secondOpinionTelemetryOutcome,
+          source: "second_opinion",
+          reason:
+            secondOpinionResult.status === "accepted"
+              ? undefined
+              : secondOpinionResult.reason ??
+                secondOpinionEligibilityTrace.eligibility_reason,
+          model:
+            secondOpinionResult.status === "skipped"
+              ? undefined
+              : getModelRoute("extraction").primaryModel,
+          pending_before: hadUnresolved,
+          pending_after: !(
+            secondOpinionMode === "on" &&
+            secondOpinionResult.status === "accepted"
+          ),
+          second_opinion_trace: secondOpinionTrace,
+          gate_events: [
+            ...secondOpinionGateEvents,
+            ...(secondOpinionMode === "on" &&
+            secondOpinionResult.status === "accepted"
+              ? ["pending_question_resolved" as const]
+              : []),
+          ],
+        });
+
+        const latestSecondOpinionTrace =
+          getLatestSecondOpinionTraceObservation(session);
+        if (latestSecondOpinionTrace) {
+          const chatTelemetryPersisted =
+            await persistChatShadowTelemetrySnapshot({
+              serviceCalls: [latestSecondOpinionTrace],
+              shadowComparisons: recordedShadowComparison
+                ? [recordedShadowComparison]
+                : [],
+            });
+          if (!chatTelemetryPersisted) {
+            const telemetryPersistenceFailureReason = recordedShadowComparison
+              ? "comparison_write_failed"
+              : "telemetry_write_failed";
+            session = recordConversationTelemetry(session, {
+              event: "second_opinion",
+              turn_count: session.case_memory?.turn_count ?? 0,
+              question_id: pendingQ,
+              outcome: "second_opinion_failed",
+              source: "second_opinion",
+              reason: telemetryPersistenceFailureReason,
+              pending_before: hadUnresolved,
+              pending_after: true,
+              second_opinion_trace: {
+                ...secondOpinionTrace,
+                comparison_write_outcome: recordedShadowComparison
+                  ? "comparison_write_failed"
+                  : secondOpinionTrace.comparison_write_outcome,
+                extractor_reason: telemetryPersistenceFailureReason,
+              },
+              gate_events: recordedShadowComparison
+                ? ["second_opinion_failed"]
+                : [],
+            });
           }
         }
 
@@ -1857,6 +2862,7 @@ export async function POST(request: Request) {
         consultOpinion,
       }),
       missingQuestionIds: getMissingQuestions(session),
+      answeredQuestionSourceIds: changedAnswerKeys,
     });
     const diagnosisContext = buildDiagnosisContext(session, effectivePet);
 
@@ -1977,6 +2983,31 @@ export async function POST(request: Request) {
     const nextQuestionId = nextQuestionState.nextQuestionId;
     const needsClarificationQuestionId =
       nextQuestionState.needsClarificationQuestionId;
+
+    const turnDepth = resolveTurnDepth({
+      hasImage: Boolean(image),
+      redFlagsTriggered: session.red_flags_triggered.length > 0,
+      isReportTurn: false,
+      isEmergencyEscalation: session.red_flags_triggered.length > 0,
+    });
+
+    const orchestratorResult = runClinicalTurnOrchestrator({
+      session,
+      ownerText: lastUserMessage.content,
+      productionQuestionId: nextQuestionId,
+      pet: effectivePet,
+      hasImage: Boolean(image),
+    });
+    session = orchestratorResult.session;
+
+    const effectiveQuestionId =
+      orchestratorResult.selectedQuestionId ?? nextQuestionId;
+    const askingBecause = orchestratorResult.askingBecause;
+    const promptVetRecord = shouldPromptVetRecordUpload(
+      session,
+      effectiveQuestionId
+    );
+
     session = await maybeCompressStructuredCaseMemory(
       session,
       effectivePet,
@@ -1986,12 +3017,14 @@ export async function POST(request: Request) {
         imageAnalyzed: Boolean(visionAnalysis),
         changedSymptoms: changedSymptomsThisTurn,
         changedAnswers: changedAnswerKeys,
+        turnDeadline,
+        turnDepth,
       }
     );
 
     return buildQuestionResponseFlow({
       session,
-      nextQuestionId,
+      nextQuestionId: effectiveQuestionId,
       needsClarificationQuestionId,
       pet,
       effectivePet,
@@ -2001,8 +3034,14 @@ export async function POST(request: Request) {
       visionAnalysis,
       visionSeverity,
       image,
+      forceDeterministicQuestionFallback: Boolean(textOnlyQuickStartExtraction),
+      turnDeadline,
+      turnDepth,
+      askingBecause,
+      promptVetRecord,
     });
   } catch (error) {
+    errorCode = "symptom_chat_unhandled";
     console.error("Symptom chat error:", error);
     return NextResponse.json(
       {
@@ -2011,6 +3050,34 @@ export async function POST(request: Request) {
           "I encountered an issue. Please try again, or contact your veterinarian directly if this is urgent.",
       },
       { status: 200 }
+    );
+  } finally {
+    // Defer telemetry to after the response flushes. On serverless the function
+    // can freeze/terminate once the response is sent (or the client aborts),
+    // dropping any un-awaited fetch; `after()` keeps the runtime alive until the
+    // POST settles. Capture the response time now so a deferred `durationMs`
+    // still reflects real turn latency, not post-response scheduling delay.
+    const endedAtMs = Date.now();
+    runAfterSafely(async () => {
+      await trackRouteTelemetry({
+        routeName: ROUTE_NAME,
+        statusCode,
+        startedAtMs,
+        endedAtMs,
+        errorCode,
+        stageDurationsMs,
+      });
+      if (errorCode) {
+        await trackException(errorCode, { routeName: ROUTE_NAME });
+      }
+    });
+    await queueTriageLiveUpdate(
+      liveUpdateTarget,
+      errorCode
+        ? "failed"
+        : liveUpdateTarget?.action === "generate_report"
+          ? "report_ready"
+          : "response_ready"
     );
   }
 }

@@ -1,0 +1,72 @@
+{
+  "ticket": "VET-1564C",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "mode": "review-only",
+  "note": "Deterministic claim-language review only. It does not call providers, generate model copy, or mutate clinical logic.",
+  "reviewedArtifacts": [
+    {
+      "path": "src/lib/product-intelligence.ts",
+      "exists": true,
+      "sha256": "96b6cb4b2d58ff878d91e47e96840b7e8589353248d54673405bdc56c65cd113"
+    },
+    {
+      "path": "src/components/analytics/product-intelligence-panel.tsx",
+      "exists": true,
+      "sha256": "5fed902f94e495571cb9089e96b7c0f0f94f8fde4c1b9e6b0228c8ec5e2bcf73"
+    },
+    {
+      "path": "plans/VET-1564-longitudinal-readiness-contract.json",
+      "exists": true,
+      "sha256": "54948b3b05e18fcfedd684f604810d57f60275ea8bb9606674108a8f9872e34f"
+    },
+    {
+      "path": "plans/VET-1564-product-intelligence-roadmap.json",
+      "exists": true,
+      "sha256": "9ed312c0405b355b0884c20a64255d49531d56e419b1adb8f89d25411e5e9a7d"
+    }
+  ],
+  "missingArtifacts": [],
+  "reviewedStringCount": 397,
+  "blockedClaimPolicy": [
+    "diagnosis-certainty",
+    "treatment-recommendation",
+    "prognosis-promise",
+    "emergency-clearance",
+    "clinical-clearance"
+  ],
+  "guardCoverage": [
+    {
+      "phrase": "not a diagnosis",
+      "present": true
+    },
+    {
+      "phrase": "not a diagnosis, prognosis, treatment plan, or emergency clearance",
+      "present": true
+    },
+    {
+      "phrase": "not a diagnosis or clearance",
+      "present": true
+    },
+    {
+      "phrase": "not disease progression certainty",
+      "present": true
+    },
+    {
+      "phrase": "not a vet discharge decision",
+      "present": true
+    },
+    {
+      "phrase": "do not delay urgent care",
+      "present": true
+    }
+  ],
+  "findings": [],
+  "verdict": "pass",
+  "blockedReason": null,
+  "reopenConditions": [
+    "Any new owner-visible readiness, trend, recovery, evidence-coach, or model-summary copy is added.",
+    "Any model-generated copy is promoted to an owner-visible surface.",
+    "Any clinical deterministic escalation copy changes.",
+    "Any runtime NIM or adapter route starts influencing readiness copy."
+  ]
+}

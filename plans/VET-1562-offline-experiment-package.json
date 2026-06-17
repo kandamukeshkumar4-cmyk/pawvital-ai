@@ -1,0 +1,75 @@
+{
+  "ticket": "VET-1562",
+  "mode": "review-only-offline-experiment-package",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Offline experiment package only. It does not train, call providers, capture outputs, or mutate runtime routing.",
+  "inputArtifacts": {
+    "datasetManifest": {
+      "path": "plans/VET-1561-model-dataset-manifest.json",
+      "exists": true,
+      "sha256": "858abe8cbb3cdf3b8f9ddcaac2c2710c64287fc556c4735fc97d3c964b3fcd80"
+    },
+    "routingMatrix": {
+      "path": "plans/VET-1563-model-routing-matrix.json",
+      "exists": true,
+      "sha256": "ec2df3a37f90d69e9cefd2c76d960421806916d2852125076087c1fae1f2d4ff"
+    },
+    "routingEvaluationPlan": {
+      "path": "plans/VET-1563-model-routing-evaluation-plan.json",
+      "exists": true,
+      "sha256": "c599193839310717a8e44ea680aebb2ac8a6e095df45e22c09842d1e404df767"
+    }
+  },
+  "baselineRoute": {
+    "role": "extraction",
+    "primaryModel": "current-runtime-extraction-route",
+    "fallbackModel": "deterministic extraction fallback",
+    "providers": [
+      "current PawVital runtime provider chain"
+    ],
+    "currentRuntimeSurface": "src/lib/symptom-chat/answer-extraction.ts"
+  },
+  "proposedExperiment": {
+    "role": "extraction",
+    "baseModel": "unresolved-review-only-candidate",
+    "tokenizer": null,
+    "contextLength": null,
+    "trainingArtifactPath": null,
+    "trainingArtifactSha256": null,
+    "adapterOrCheckpointId": null
+  },
+  "datasetSummary": {
+    "sourceCount": 3,
+    "validationSourceCount": 2,
+    "holdoutSourceCount": 1,
+    "totalRecordCount": 455
+  },
+  "promotionGate": {
+    "runtimeChangeAllowedHere": false,
+    "ownerApprovalRequired": true,
+    "frozenOutputHashesRequired": true,
+    "scorecardRequired": true,
+    "rollbackRequired": true,
+    "productionSmokeRequired": true,
+    "thresholds": {
+      "weightedScoreMinimum": 4.2,
+      "noBlockingFindings": true,
+      "latencyMustNotRegressByMoreThanPct": 20,
+      "costMustBeDocumented": true,
+      "ownerApprovalRequired": true,
+      "runtimeChangeAllowedHere": false
+    }
+  },
+  "blockers": [
+    "candidate model or adapter identity is unresolved",
+    "offline training/eval artifact is not populated",
+    "frozen baseline and candidate outputs are not captured",
+    "human scorecard is not populated",
+    "owner approval is not granted"
+  ],
+  "guardrails": [
+    "Do not use holdout cases for candidate iteration.",
+    "Do not infer a runtime model change from this package.",
+    "Do not mutate provider env or model router files."
+  ]
+}

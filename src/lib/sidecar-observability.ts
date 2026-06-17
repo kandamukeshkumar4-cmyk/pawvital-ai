@@ -10,6 +10,10 @@ import {
 } from "./admin-shadow-rollout-shared";
 import type { NormalizedContradictionRecord } from "./clinical/contradiction-detector";
 import {
+  buildSecondOpinionTraceReadoutAggregate,
+  type SecondOpinionTraceReadoutAggregate,
+} from "./second-opinion-trace-readout";
+import {
   buildDiagnosisContext,
   type PetProfile,
   type TriageSession,
@@ -148,6 +152,7 @@ export interface ShadowReadoutObservabilitySnapshot {
   fallbackCount: number;
   providerErrorCount: number;
   budgetExceededCount: number;
+  secondOpinionTrace: SecondOpinionTraceReadoutAggregate;
 }
 
 export const INTERNAL_TELEMETRY_STAGES = new Set([
@@ -167,6 +172,8 @@ export const INTERNAL_TELEMETRY_NOTE_MARKERS = [
   "conversation_state=",
   "clarification_reason=",
   "contradiction_records=",
+  "eligibility_reason=",
+  "request_outcome=",
   "gate_events=",
   "terminal_outcome_metric=",
 ];
@@ -710,6 +717,7 @@ export function buildShadowReadoutObservabilitySnapshot(
 ): ShadowReadoutObservabilitySnapshot {
   const memory = ensureStructuredCaseMemory(session);
   const observations = memory.service_observations || [];
+  const shadowComparisons = memory.shadow_comparisons || [];
   const timeoutObservationCount = observations.filter(
     (entry) => entry.outcome === "timeout"
   ).length;
@@ -720,7 +728,7 @@ export function buildShadowReadoutObservabilitySnapshot(
     reportPresent: true,
     sessionPresent: Boolean(session.case_memory),
     observationCount: observations.length,
-    shadowComparisonCount: (memory.shadow_comparisons || []).length,
+    shadowComparisonCount: shadowComparisons.length,
     timeoutCount: Math.max(
       (memory.service_timeouts || []).length,
       timeoutObservationCount
@@ -735,6 +743,10 @@ export function buildShadowReadoutObservabilitySnapshot(
     budgetExceededCount: observations.filter((entry) =>
       noteIncludes(entry, "reason=budget_exceeded")
     ).length,
+    secondOpinionTrace: buildSecondOpinionTraceReadoutAggregate(
+      observations,
+      shadowComparisons
+    ),
   };
 }
 

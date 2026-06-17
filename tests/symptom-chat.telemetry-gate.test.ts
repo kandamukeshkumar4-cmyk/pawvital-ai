@@ -6,10 +6,17 @@ import {
 } from "@/lib/triage-engine";
 import type { SidecarObservation } from "@/lib/clinical-evidence";
 import { extractTelemetryGateEventsFromObservations } from "@/lib/sidecar-observability";
+import { updateStructuredCaseMemory } from "@/lib/symptom-memory";
+import { sanitizeSessionForClient } from "@/lib/symptom-chat/context-helpers";
+import secondOpinionQualifyingFlowMatrix from "./fixtures/second-opinion-qualifying-flow-matrix.json";
 
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockCreateServerSupabaseClient = jest.fn();
+const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
+  user: { id: "test-user-id" },
+  supabase: {},
+});
 const mockIsNvidiaConfigured = jest.fn(() => true);
 const mockExtractWithQwen = jest.fn();
 const mockComplete = jest.fn();
@@ -39,6 +46,11 @@ jest.mock("@/lib/rate-limit", () => ({
 jest.mock("@/lib/supabase-server", () => ({
   createServerSupabaseClient: (...args: unknown[]) =>
     mockCreateServerSupabaseClient(...args),
+}));
+
+jest.mock("@/lib/api-auth", () => ({
+  requireAuthenticatedApiUser: (...args: unknown[]) =>
+    mockRequireAuthenticatedApiUser(...args),
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
@@ -262,6 +274,8 @@ function buildModerateReportSession() {
   let session = createSession();
   session = addSymptoms(session, ["excessive_scratching"]);
   session = recordAnswer(session, "scratch_location", "ears");
+  session = recordAnswer(session, "scratch_duration", "about 2 weeks");
+  session = recordAnswer(session, "flea_prevention", true);
   session.case_memory = {
     ...session.case_memory!,
     latest_owner_turn: "He keeps scratching around his ears.",
@@ -337,12 +351,167 @@ function getLatestShadowSnapshotGateEvents() {
   );
 }
 
+function getLatestShadowTelemetrySnapshot() {
+  return mockAppendShadowTelemetrySnapshot.mock.calls.at(-1)?.[0] as
+    | {
+        recentServiceCalls?: SidecarObservation[];
+        recentShadowComparisons?: unknown[];
+        source?: string;
+      }
+    | undefined;
+}
+
 function getSecondOpinionShadowComparisonCalls() {
   return mockAppendShadowComparison.mock.calls
     .map((call) => call[1] as { shadowStrategy?: unknown })
     .filter(
       (comparison) => comparison.shadowStrategy === "second_opinion_extractor"
     );
+}
+
+function mockAcceptedReportSecondOpinionForCoughDuration() {
+  mockComplete.mockResolvedValueOnce(
+    JSON.stringify({
+      answered: true,
+      questionId: "cough_duration",
+      answerValue: "2 days",
+      confidence: 0.91,
+      ownerPhrase: "about two days",
+      needsClarification: false,
+    })
+  );
+}
+
+function mockDelayedAcceptedReportSecondOpinionForCoughDuration(delayMs: number) {
+  mockComplete.mockImplementationOnce(
+    () =>
+      new Promise<string>((resolve) => {
+        setTimeout(() => {
+          resolve(
+            JSON.stringify({
+              answered: true,
+              questionId: "cough_duration",
+              answerValue: "2 days",
+              confidence: 0.91,
+              ownerPhrase: "about two days",
+              needsClarification: false,
+            })
+          );
+        }, delayMs);
+      })
+  );
+}
+
+function mockRejectedReportSecondOpinionForCoughDuration() {
+  mockComplete.mockResolvedValueOnce(
+    JSON.stringify({
+      answered: true,
+      questionId: "cough_duration",
+      answerValue: "2 days",
+      confidence: 0.5,
+      ownerPhrase: "about two days",
+      needsClarification: false,
+    })
+  );
+}
+
+type SecondOpinionMatrixTraceExpectation = {
+  eligibility_reason: string;
+  request_outcome: string;
+  acceptance_outcome?: string;
+  extractor_reason?: string;
+  comparison_append_outcome?: string;
+  comparison_write_outcome?: string;
+};
+
+type SecondOpinionQualifyingRouteCase = {
+  id: string;
+  description: string;
+  initialSymptoms: string[];
+  pendingQuestionId: string;
+  askedCount: number;
+  clarificationAttempts: number;
+  ownerMessage: string;
+  qwenExtraction: {
+    symptoms: string[];
+    answers: Record<string, string | boolean | number>;
+  };
+  secondOpinionModel?: {
+    response?: Record<string, unknown>;
+    rejectWith?: string;
+  };
+  expected: {
+    modelCalls: number;
+    shadowComparisons: number;
+    trace: SecondOpinionMatrixTraceExpectation;
+    ownerAnswer?: {
+      questionId: string;
+      value: string | boolean | number;
+    };
+  };
+};
+
+function buildSecondOpinionMatrixSession(
+  testCase: SecondOpinionQualifyingRouteCase
+): TriageSession {
+  let session = createSession();
+  if (testCase.initialSymptoms.length > 0) {
+    session = addSymptoms(session, testCase.initialSymptoms);
+  }
+
+  return seedPendingQuestion(session, testCase.pendingQuestionId, {
+    askedCount: testCase.askedCount,
+    clarificationAttempts: testCase.clarificationAttempts,
+  });
+}
+
+function configureSecondOpinionModelForMatrixCase(
+  testCase: SecondOpinionQualifyingRouteCase
+) {
+  if (!testCase.secondOpinionModel) {
+    return;
+  }
+
+  if (testCase.secondOpinionModel.rejectWith) {
+    mockComplete.mockRejectedValueOnce(
+      new Error(testCase.secondOpinionModel.rejectWith)
+    );
+    return;
+  }
+
+  mockComplete.mockResolvedValueOnce(
+    JSON.stringify(testCase.secondOpinionModel.response)
+  );
+}
+
+function parseTelemetryNoteParts(note: string): Record<string, string> {
+  return note.split("|").reduce<Record<string, string>>((acc, part) => {
+    const trimmedPart = part.trim();
+    const separatorIndex = trimmedPart.indexOf("=");
+    if (separatorIndex === -1) {
+      return acc;
+    }
+
+    acc[trimmedPart.slice(0, separatorIndex)] = trimmedPart.slice(
+      separatorIndex + 1
+    );
+    return acc;
+  }, {});
+}
+
+function getLatestSecondOpinionTraceParts() {
+  const latestSnapshot = getLatestShadowTelemetrySnapshot();
+  const latestTrace = latestSnapshot?.recentServiceCalls?.find(
+    (call) =>
+      call.service === "async-review-service" &&
+      call.stage === "second_opinion"
+  );
+
+  if (!latestTrace?.note) {
+    throw new Error("Expected a second-opinion trace in the latest snapshot");
+  }
+
+  return parseTelemetryNoteParts(latestTrace.note);
 }
 
 async function flushAsyncWork() {
@@ -505,8 +674,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let baselineSession = createSession();
     baselineSession = addSymptoms(baselineSession, ["coughing"]);
     baselineSession = seedPendingQuestion(baselineSession, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
@@ -517,8 +686,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       let shadowSession = createSession();
       shadowSession = addSymptoms(shadowSession, ["coughing"]);
       shadowSession = seedPendingQuestion(shadowSession, "cough_type", {
-        askedCount: 2,
-        clarificationAttempts: 1,
+        askedCount: 1,
+        clarificationAttempts: 0,
       });
 
       const shadowTurn = await postTurn(shadowSession, "It has a honking sound.");
@@ -552,6 +721,13 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(mockAppendShadowTelemetrySnapshot).toHaveBeenCalledWith(
         expect.objectContaining({
           source: "chat",
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining("eligibility_reason=eligible"),
+            }),
+          ],
           recentShadowComparisons: [
             expect.objectContaining({
               shadowStrategy: "second_opinion_extractor",
@@ -560,9 +736,130 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
           ],
         })
       );
+      const storedAcceptedTraceJson = JSON.stringify(
+        mockAppendShadowTelemetrySnapshot.mock.calls.at(-1)?.[0]
+      );
+      expect(storedAcceptedTraceJson).toContain("request_outcome=requested");
+      expect(storedAcceptedTraceJson).toContain("acceptance_outcome=accepted");
+      expect(storedAcceptedTraceJson).toContain(
+        "comparison_append_outcome=comparison_appended"
+      );
+      expect(storedAcceptedTraceJson).toContain(
+        "comparison_write_outcome=comparison_write_succeeded"
+      );
+      expect(storedAcceptedTraceJson).not.toContain("dry_honking");
+      expect(storedAcceptedTraceJson).not.toContain("honking");
     } finally {
       logSpy.mockRestore();
     }
+  });
+
+  it("requests second-opinion on the first pending-question clarification before attempts are persisted", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 1,
+      clarificationAttempts: 0,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "TRACE_OWNER_SECRET It has a honking sound."
+      );
+      const latestSnapshot = getLatestShadowTelemetrySnapshot();
+      const snapshotJson = JSON.stringify(latestSnapshot);
+      const ownerPayloadJson = JSON.stringify(payload);
+
+      expect(response.status).toBe(200);
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(getGateEventsFromLogs(logSpy)).toContain("second_opinion_used");
+      expect(latestSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining("eligibility_reason=eligible"),
+            }),
+          ],
+        })
+      );
+      expect(snapshotJson).toContain("request_outcome=requested");
+      expect(snapshotJson).toContain("first_clarification_attempt=true");
+      expect(snapshotJson).not.toContain("not_first_clarification_attempt");
+      expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+      expect(snapshotJson).not.toContain("honking");
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("keeps second-opinion fail-closed after the first clarification attempt", async () => {
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 1,
+      clarificationAttempts: 1,
+    });
+
+    const { response, payload } = await postTurn(
+      session,
+      "TRACE_OWNER_SECRET It has a honking sound."
+    );
+    const latestSnapshot = getLatestShadowTelemetrySnapshot();
+    const snapshotJson = JSON.stringify(latestSnapshot);
+    const ownerPayloadJson = JSON.stringify(payload);
+
+    expect(response.status).toBe(200);
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+    expect(latestSnapshot).toEqual(
+      expect.objectContaining({
+        source: "chat",
+        recentShadowComparisons: [],
+        recentServiceCalls: [
+          expect.objectContaining({
+            service: "async-review-service",
+            stage: "second_opinion",
+            note: expect.stringContaining(
+              "eligibility_reason=not_first_clarification_attempt"
+            ),
+          }),
+        ],
+      })
+    );
+    expect(snapshotJson).toContain("request_outcome=not_requested");
+    expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+    expect(snapshotJson).not.toContain("honking");
+    expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+    expect(ownerPayloadJson).not.toContain("request_outcome=");
+    expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
   });
 
   it("records second-opinion shadow rejection without changing the owner-facing output", async () => {
@@ -584,8 +881,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let baselineSession = createSession();
     baselineSession = addSymptoms(baselineSession, ["coughing"]);
     baselineSession = seedPendingQuestion(baselineSession, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
@@ -596,8 +893,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       let shadowSession = createSession();
       shadowSession = addSymptoms(shadowSession, ["coughing"]);
       shadowSession = seedPendingQuestion(shadowSession, "cough_type", {
-        askedCount: 2,
-        clarificationAttempts: 1,
+        askedCount: 1,
+        clarificationAttempts: 0,
       });
 
       const shadowTurn = await postTurn(shadowSession, "It has a honking sound.");
@@ -613,6 +910,253 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(
         shadowTurn.payload.session.case_memory?.shadow_comparisons ?? []
       ).toHaveLength(0);
+
+      const storedTraceSnapshot =
+        mockAppendShadowTelemetrySnapshot.mock.calls.at(-1)?.[0];
+      const storedTraceJson = JSON.stringify(storedTraceSnapshot);
+      expect(storedTraceSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentShadowComparisons: [],
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining("eligibility_reason=eligible"),
+            }),
+          ],
+        })
+      );
+      expect(storedTraceJson).toContain("request_outcome=requested");
+      expect(storedTraceJson).toContain("acceptance_outcome=rejected");
+      expect(storedTraceJson).toContain("extractor_reason=low_confidence");
+      expect(storedTraceJson).not.toContain("dry_honking");
+      expect(storedTraceJson).not.toContain("honking");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("records a sanitized not_requested trace when Bruno limping flow resolves before extractor request", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["limping"], answers: {} })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["limping"]);
+    session = seedPendingQuestion(session, "trauma_mobility", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "Bruno TRACE_OWNER_SECRET can walk but he is limping."
+      );
+      const latestSnapshot = getLatestShadowTelemetrySnapshot();
+      const snapshotJson = JSON.stringify(latestSnapshot);
+      const ownerPayloadJson = JSON.stringify(payload);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers.trauma_mobility).toBe("limping");
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(latestSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentShadowComparisons: [],
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining(
+                "eligibility_reason=primary_extraction_succeeded"
+              ),
+            }),
+          ],
+        })
+      );
+      expect(snapshotJson).toContain("request_outcome=not_requested");
+      expect(snapshotJson).toContain("comparison_append_outcome=not_applicable");
+      expect(snapshotJson).toContain("comparison_write_outcome=not_applicable");
+      expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("records deterministic_coercion_succeeded when long pending answer skips the fast path", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: [], answers: {} })
+    );
+
+    const session = seedPendingQuestion(createSession(), "dog_age_years", {
+      askedCount: 2,
+      clarificationAttempts: 1,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "TRACE_OWNER_SECRET The number is 5, and I am adding extra context so this is long enough to avoid the short pending answer fast path."
+      );
+      const latestSnapshot = getLatestShadowTelemetrySnapshot();
+      const snapshotJson = JSON.stringify(latestSnapshot);
+      const ownerPayloadJson = JSON.stringify(payload);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.extracted_answers.dog_age_years).toBe(5);
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(latestSnapshot).toEqual(
+        expect.objectContaining({
+          source: "chat",
+          recentShadowComparisons: [],
+          recentServiceCalls: [
+            expect.objectContaining({
+              service: "async-review-service",
+              stage: "second_opinion",
+              note: expect.stringContaining(
+                "eligibility_reason=deterministic_coercion_succeeded"
+              ),
+            }),
+          ],
+        })
+      );
+      expect(snapshotJson).toContain("request_outcome=not_requested");
+      expect(snapshotJson).not.toContain("TRACE_OWNER_SECRET");
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(payload.message).not.toContain("TRACE_OWNER_SECRET");
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  describe("VET-1541C second-opinion qualifying route matrix", () => {
+    const routeCases =
+      secondOpinionQualifyingFlowMatrix.routeCases as SecondOpinionQualifyingRouteCase[];
+
+    it("keeps the next live tester script production-safe and aimed at requested", () => {
+      expect(
+        secondOpinionQualifyingFlowMatrix.productionSafeTesterScript.expectedTrace
+      ).toMatchObject({
+        eligibility_reason: "shadow_primary_success_sampling",
+        request_outcome: "requested",
+      });
+      expect(
+        secondOpinionQualifyingFlowMatrix.productionSafeTesterScript.ownerTurns
+      ).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            text: "It is a dry honking cough.",
+          }),
+        ])
+      );
+
+      const ownerText =
+        secondOpinionQualifyingFlowMatrix.productionSafeTesterScript.ownerTurns
+          .map((turn) => turn.text)
+          .join(" ");
+      expect(ownerText).not.toMatch(
+        /\b(breathing trouble|blue gums|collapse|blood|seizure)\b/i
+      );
+    });
+
+    it("has at least one non-synthetic owner-turn path that requests second-opinion", () => {
+      expect(
+        routeCases.some(
+          (testCase) =>
+            testCase.expected.trace.request_outcome === "requested" &&
+            testCase.ownerMessage.length > 0 &&
+            testCase.qwenExtraction.symptoms.length > 0
+        )
+      ).toBe(true);
+    });
+
+    it.each(routeCases)("$id", async (testCase) => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockComplete.mockReset();
+      mockExtractWithQwen.mockReset();
+      mockExtractWithQwen.mockResolvedValueOnce(
+        JSON.stringify(testCase.qwenExtraction)
+      );
+      configureSecondOpinionModelForMatrixCase(testCase);
+
+      const { response, payload } = await postTurn(
+        buildSecondOpinionMatrixSession(testCase),
+        testCase.ownerMessage
+      );
+      const traceParts = getLatestSecondOpinionTraceParts();
+
+      expect(response.status).toBe(200);
+      expect(mockComplete).toHaveBeenCalledTimes(testCase.expected.modelCalls);
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(
+        testCase.expected.shadowComparisons
+      );
+      expect(traceParts).toEqual(expect.objectContaining(testCase.expected.trace));
+
+      if (testCase.expected.ownerAnswer) {
+        expect(
+          payload.session.extracted_answers[
+            testCase.expected.ownerAnswer.questionId
+          ]
+        ).toBe(testCase.expected.ownerAnswer.value);
+      }
+
+      const ownerPayloadJson = JSON.stringify(payload);
+      expect(ownerPayloadJson).not.toContain("eligibility_reason=");
+      expect(ownerPayloadJson).not.toContain("request_outcome=");
+      expect(ownerPayloadJson).not.toContain("acceptance_outcome=");
+    });
+  });
+
+  it("records a sanitized trace write failure when rejected shadow telemetry is refused", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockAppendShadowTelemetrySnapshot.mockResolvedValueOnce(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.5,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 1,
+      clarificationAttempts: 0,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "It has a honking sound."
+      );
+      const serializedLogs = JSON.stringify(logSpy.mock.calls);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
+        0
+      );
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+      expect(serializedLogs).toContain("telemetry_write_failed");
+      expect(serializedLogs).not.toContain("dry_honking");
+      expect(serializedLogs).not.toContain("honking");
     } finally {
       logSpy.mockRestore();
     }
@@ -643,8 +1187,8 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     let session = createSession();
     session = addSymptoms(session, ["coughing"]);
     session = seedPendingQuestion(session, "cough_type", {
-      askedCount: 2,
-      clarificationAttempts: 1,
+      askedCount: 1,
+      clarificationAttempts: 0,
     });
 
     try {
@@ -664,6 +1208,51 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
         0
       );
+    } finally {
+      logSpy.mockRestore();
+    }
+  });
+
+  it("records a sanitized comparison write failure when chat telemetry persistence is refused", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+    mockAppendShadowTelemetrySnapshot.mockResolvedValueOnce(false);
+    mockExtractWithQwen.mockResolvedValue(
+      JSON.stringify({ symptoms: ["coughing"], answers: {} })
+    );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "honking",
+        needsClarification: false,
+      })
+    );
+
+    let session = createSession();
+    session = addSymptoms(session, ["coughing"]);
+    session = seedPendingQuestion(session, "cough_type", {
+      askedCount: 1,
+      clarificationAttempts: 0,
+    });
+
+    try {
+      const { response, payload } = await postTurn(
+        session,
+        "It has a honking sound."
+      );
+      const serializedLogs = JSON.stringify(logSpy.mock.calls);
+
+      expect(response.status).toBe(200);
+      expect(payload.session.case_memory?.shadow_comparisons ?? []).toHaveLength(
+        0
+      );
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+      expect(serializedLogs).toContain("comparison_write_failed");
+      expect(serializedLogs).not.toContain("dry_honking");
+      expect(serializedLogs).not.toContain("honking");
     } finally {
       logSpy.mockRestore();
     }
@@ -777,5 +1366,455 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
     expect(reportTurn.payload.report.vet_handoff_summary).not.toContain(
       "report_claim_removed"
     );
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // VET-1546C-R3: report-time second-opinion trace reconstruction must not
+  // suppress genuine first-answer primary-success shadow sampling.
+  //
+  // Production scheduler readout reconstructs ONE trace per report from the
+  // sanitized client session (route-time traces are stripped). The previous
+  // reconstruction selected the MOST-RECENT answered question and used the
+  // END-of-session budget state, so fresh primary-success turns reconstructed
+  // as not_requested / budget_exhausted — never requested.
+  // ────────────────────────────────────────────────────────────────────────
+  describe("VET-1546C-R3 report-time second-opinion reconstruction", () => {
+    const pet = {
+      name: "Milo",
+      species: "dog",
+      breed: "Mixed",
+      age_years: 5,
+      weight: 28,
+    };
+
+    function buildFirstAnswerPrimarySuccessReportSession(options?: {
+      budgetExhausted?: boolean;
+      latestOwnerTurn?: string;
+      answerSourceMessages?: Record<string, string>;
+      durationAnswer?: string;
+    }): TriageSession {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      // Genuine first-answer primary success: asked once, no clarification.
+      session = recordAnswer(
+        session,
+        "cough_duration",
+        options?.durationAnswer ?? "2 days"
+      );
+      // Later question that required a clarification round (re-asked).
+      session = recordAnswer(session, "cough_type", "dry");
+
+      // Bypass the ≥3 answered-questions readiness gate without altering the
+      // question_asked_counts / clarification_attempts that VET-1546C-R3 tests.
+      session.red_flags_triggered = ["breathing_difficulty"];
+
+      const memory = session.case_memory!;
+      session.case_memory = {
+        ...memory,
+        latest_owner_turn:
+          options?.latestOwnerTurn ??
+          "It is a dry honking cough for about two days.",
+        question_asked_counts: {
+          cough_duration: 1,
+          cough_type: 2,
+        },
+        clarification_attempts: {
+          cough_duration: 0,
+          cough_type: 1,
+        },
+        ...(options?.budgetExhausted
+          ? {
+              model_budget_state: {
+                callCounts: { second_opinion: 2 },
+                circuitOpen: {},
+              },
+            }
+          : {}),
+      };
+      if (options?.answerSourceMessages) {
+        (
+          session.case_memory as typeof session.case_memory & {
+            answer_source_messages?: Record<string, string>;
+          }
+        ).answer_source_messages = options.answerSourceMessages;
+      }
+
+      return session;
+    }
+
+    it("records the first owner source turn for each newly extracted answer", () => {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_duration", "2 days");
+      session = updateStructuredCaseMemory(session, pet, {
+        latestUserMessage: "It started about two days ago.",
+        imageAnalyzed: false,
+        answeredQuestionSourceIds: ["cough_duration"],
+      });
+
+      session = recordAnswer(session, "cough_timing", "after excitement");
+      session = updateStructuredCaseMemory(session, pet, {
+        latestUserMessage: "Mostly after excitement and sometimes at night.",
+        imageAnalyzed: false,
+        answeredQuestionSourceIds: ["cough_timing"],
+      });
+
+      expect(session.case_memory?.answer_source_messages).toEqual(
+        expect.objectContaining({
+          cough_duration: "It started about two days ago.",
+          cough_timing: "Mostly after excitement and sometimes at night.",
+        })
+      );
+    });
+
+    it("keeps answer source messages in sanitized client session while stripping internal telemetry", () => {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_duration", "2 days");
+      session = updateStructuredCaseMemory(session, pet, {
+        latestUserMessage: "It started about two days ago.",
+        imageAnalyzed: false,
+        answeredQuestionSourceIds: ["cough_duration"],
+      });
+      session.case_memory!.service_observations = [
+        {
+          service: "async-review-service",
+          stage: "second_opinion",
+          outcome: "success",
+          latencyMs: 12,
+          fallbackUsed: false,
+          note: "request_outcome=requested",
+        },
+      ];
+      session.case_memory!.shadow_comparisons = [
+        {
+          service: "async-review-service",
+          usedStrategy: "primary",
+          shadowStrategy: "second_opinion_extractor",
+          summary: "internal comparison",
+          disagreementCount: 0,
+          recordedAt: "2026-05-29T18:00:00.000Z",
+        },
+      ];
+
+      const sanitized = sanitizeSessionForClient(session);
+
+      expect(sanitized.case_memory?.answer_source_messages).toEqual({
+        cough_duration: "It started about two days ago.",
+      });
+      expect(sanitized.case_memory?.service_observations).toEqual([]);
+      expect(sanitized.case_memory?.shadow_comparisons).toEqual([]);
+    });
+
+    it("reconstructs requested for a fresh first-answer primary-success session even when the most-recent answer was clarified", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockAcceptedReportSecondOpinionForCoughDuration();
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession()
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("accepted");
+      expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+      expect(traceParts.comparison_write_outcome).toBe(
+        "comparison_write_succeeded"
+      );
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+      expect(getLatestShadowTelemetrySnapshot()).toEqual(
+        expect.objectContaining({
+          source: "report",
+          recentShadowComparisons: [
+            expect.objectContaining({
+              shadowStrategy: "second_opinion_extractor",
+              summary:
+                "q=cough_duration; shadow_answer_recorded=true; conf=0.91; agreed=true",
+            }),
+          ],
+        })
+      );
+
+      // Owner-facing report must not leak the internal trace.
+      expect(JSON.stringify(payload.report)).not.toContain("request_outcome=");
+      expect(JSON.stringify(payload.report)).not.toContain("eligibility_reason=");
+    });
+
+    it("anchors report-time primary-success reconstruction to the selected answer source turn", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockAcceptedReportSecondOpinionForCoughDuration();
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({
+          latestOwnerTurn: "Mostly after excitement and sometimes at night.",
+          answerSourceMessages: {
+            cough_duration: "It started about two days ago.",
+            cough_type: "It is a dry honking cough.",
+          },
+        })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const prompt = (mockComplete.mock.calls[0]?.[0] as { prompt?: string })
+        ?.prompt;
+      expect(prompt).toContain(JSON.stringify("It started about two days ago."));
+      expect(prompt).not.toContain("Mostly after excitement");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("accepted");
+      expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+      expect(traceParts.comparison_write_outcome).toBe(
+        "comparison_write_succeeded"
+      );
+      expect(traceParts.extractor_reason).toBeUndefined();
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+    });
+
+    it("rejects legacy reconstruction with a concrete source-context reason when no selected source turn is available", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({
+          latestOwnerTurn: "Mostly after excitement and sometimes at night.",
+        })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.extractor_reason).toBe("source_context_unavailable");
+      expect(traceParts.comparison_append_outcome).toBe("not_applicable");
+      expect(traceParts.comparison_write_outcome).toBe("not_applicable");
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+    });
+
+    it("fails closed for legacy boolean answers without a selected source turn", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      let session = createSession();
+      session = addSymptoms(session, ["regurgitation"]);
+      session = recordAnswer(session, "coughing_present", true);
+      // Bypass the readiness gate; red flag does not affect the second-opinion
+      // trace reconstruction that this test validates.
+      session.red_flags_triggered = ["coughing_after_regurgitation"];
+      const memory = session.case_memory!;
+      session.case_memory = {
+        ...memory,
+        latest_owner_turn: "Mostly after excitement and sometimes at night.",
+        question_asked_counts: { coughing_present: 1 },
+        clarification_attempts: { coughing_present: 0 },
+      };
+
+      const { response, payload } = await postReport(session);
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.extractor_reason).toBe("source_context_unavailable");
+      expect(mockComplete).not.toHaveBeenCalled();
+    });
+
+    it("fails closed for legacy short-answer anchors without a selected source turn", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({
+          durationAnswer: "2",
+          latestOwnerTurn:
+            "Mostly after excitement, and he had 2 quick coughing fits.",
+        })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.extractor_reason).toBe("source_context_unavailable");
+      expect(mockComplete).not.toHaveBeenCalled();
+    });
+
+    it("allows report-time primary-success reconstruction to use the extraction role timeout budget", async () => {
+      jest.useFakeTimers();
+      try {
+        process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+        mockDelayedAcceptedReportSecondOpinionForCoughDuration(30_000);
+
+        const reportPromise = postReport(buildFirstAnswerPrimarySuccessReportSession());
+        await jest.advanceTimersByTimeAsync(30_000);
+        const { response, payload } = await reportPromise;
+        await jest.runOnlyPendingTimersAsync();
+
+        expect(response.status).toBe(200);
+        expect(payload.type).toBe("report");
+
+        const traceParts = getLatestSecondOpinionTraceParts();
+        expect(traceParts.eligibility_reason).toBe(
+          "shadow_primary_success_sampling"
+        );
+        expect(traceParts.request_outcome).toBe("requested");
+        expect(traceParts.acceptance_outcome).toBe("accepted");
+        expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+        expect(traceParts.comparison_write_outcome).toBe(
+          "comparison_write_succeeded"
+        );
+        expect(mockComplete).toHaveBeenCalledTimes(1);
+        expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it("keeps requested primary-success reconstruction observable when the report-time extractor rejects the answer", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockRejectedReportSecondOpinionForCoughDuration();
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession()
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("rejected");
+      expect(traceParts.comparison_append_outcome).toBe("not_applicable");
+      expect(traceParts.comparison_write_outcome).toBe("not_applicable");
+      expect(traceParts.extractor_reason).toBe("low_confidence");
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+      expect(getSecondOpinionShadowComparisonCalls()).toHaveLength(0);
+      expect(getLatestShadowTelemetrySnapshot()).toEqual(
+        expect.objectContaining({
+          source: "report",
+          recentShadowComparisons: [],
+        })
+      );
+      expect(JSON.stringify(payload.report)).not.toContain("request_outcome=");
+      expect(JSON.stringify(payload.report)).not.toContain("acceptance_outcome=");
+    });
+
+    it("does not let an exhausted end-of-session budget mask the first eligible primary-success sample", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+      mockAcceptedReportSecondOpinionForCoughDuration();
+
+      const { response, payload } = await postReport(
+        buildFirstAnswerPrimarySuccessReportSession({ budgetExhausted: true })
+      );
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.request_outcome).not.toBe("budget_exhausted");
+      expect(traceParts.request_outcome).toBe("requested");
+      expect(traceParts.acceptance_outcome).toBe("accepted");
+      expect(traceParts.comparison_append_outcome).toBe("comparison_appended");
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not over-broaden: a clarified-only session still reconstructs as not_requested", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      // No question qualifies as a first-answer primary success — the only
+      // answered question needed a clarification round (askedCount>1, clar=1).
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_type", "dry");
+      session.red_flags_triggered = ["breathing_difficulty"];
+      const memory = session.case_memory!;
+      session.case_memory = {
+        ...memory,
+        latest_owner_turn: "It is a dry cough.",
+        question_asked_counts: { cough_type: 2 },
+        clarification_attempts: { cough_type: 1 },
+      };
+
+      const { response, payload } = await postReport(session);
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.request_outcome).toBe("not_requested");
+      expect(traceParts.eligibility_reason).not.toBe(
+        "shadow_primary_success_sampling"
+      );
+      expect(mockComplete).not.toHaveBeenCalled();
+    });
+
+    it("never bypasses an open second-opinion circuit when reconstructing a primary-success sample", async () => {
+      process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+      // Genuine first-answer primary success, but the session-level circuit is
+      // open. The budget-count reset must NOT bypass that safety signal.
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_duration", "2 days");
+      session.red_flags_triggered = ["breathing_difficulty"];
+      const memory = session.case_memory!;
+      session.case_memory = {
+        ...memory,
+        latest_owner_turn: "For about two days.",
+        question_asked_counts: { cough_duration: 1 },
+        clarification_attempts: { cough_duration: 0 },
+        model_budget_state: {
+          callCounts: {},
+          circuitOpen: { second_opinion: true },
+        },
+      };
+
+      const { response, payload } = await postReport(session);
+      await flushAsyncWork();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+
+      const traceParts = getLatestSecondOpinionTraceParts();
+      expect(traceParts.eligibility_reason).toBe("circuit_open");
+      expect(traceParts.request_outcome).toBe("not_requested");
+      expect(mockComplete).not.toHaveBeenCalled();
+    });
   });
 });

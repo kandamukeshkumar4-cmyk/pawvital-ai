@@ -1,6 +1,7 @@
 import {
   addSymptoms,
   createSession,
+  recordAnswer,
   type PetProfile,
   type TriageSession,
 } from "@/lib/triage-engine";
@@ -9,6 +10,10 @@ import { isInternalTelemetry } from "@/lib/sidecar-observability";
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockCreateServerSupabaseClient = jest.fn();
+const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
+  user: { id: "test-user-id" },
+  supabase: {},
+});
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
 const mockReviewQuestionPlanWithNemotron = jest.fn();
@@ -18,6 +23,7 @@ const mockParseVisionForMatrix = jest.fn();
 const mockImageGuardrail = jest.fn();
 const mockDiagnoseWithDeepSeek = jest.fn();
 const mockVerifyWithGLM = jest.fn();
+const mockComplete = jest.fn();
 const mockDetectBreedWithNyckel = jest.fn();
 const mockRunRoboflowSkinWorkflow = jest.fn();
 const mockEvaluateImageGate = jest.fn();
@@ -51,6 +57,11 @@ jest.mock("@/lib/supabase-server", () => ({
     mockCreateServerSupabaseClient(...args),
 }));
 
+jest.mock("@/lib/api-auth", () => ({
+  requireAuthenticatedApiUser: (...args: unknown[]) =>
+    mockRequireAuthenticatedApiUser(...args),
+}));
+
 jest.mock("@/lib/nvidia-models", () => ({
   isNvidiaConfigured: () => true,
   extractWithQwen: (...args: unknown[]) => mockExtractWithQwen(...args),
@@ -61,6 +72,7 @@ jest.mock("@/lib/nvidia-models", () => ({
     mockVerifyQuestionWithNemotron(...args),
   diagnoseWithDeepSeek: (...args: unknown[]) => mockDiagnoseWithDeepSeek(...args),
   verifyWithGLM: (...args: unknown[]) => mockVerifyWithGLM(...args),
+  complete: (...args: unknown[]) => mockComplete(...args),
   runVisionPipeline: (...args: unknown[]) => mockRunVisionPipeline(...args),
   parseVisionForMatrix: (...args: unknown[]) => mockParseVisionForMatrix(...args),
   imageGuardrail: (...args: unknown[]) => mockImageGuardrail(...args),
@@ -290,6 +302,18 @@ function seedInternalTelemetry(session: TriageSession): TriageSession {
       note: `clarification_reason=internal_only | ${HIDDEN_MARKER}-note`,
       recordedAt: "2026-04-13T00:00:03.000Z",
     },
+    {
+      service: "async-review-service",
+      stage: "second_opinion",
+      latencyMs: 0,
+      outcome: "fallback",
+      shadowMode: false,
+      fallbackUsed: true,
+      note:
+        `eligibility_reason=eligible | request_outcome=requested | ` +
+        `acceptance_outcome=rejected | extractor_reason=low_confidence | ${HIDDEN_MARKER}-second-opinion`,
+      recordedAt: "2026-04-13T00:00:04.000Z",
+    },
   ];
 
   return session;
@@ -348,6 +372,9 @@ function expectNoInternalTelemetry(payload: ClientPayload) {
   expect(serialized).not.toContain(HIDDEN_MARKER);
   expect(serialized).not.toContain("conversation_state=");
   expect(serialized).not.toContain("question_state=");
+  expect(serialized).not.toContain("eligibility_reason=");
+  expect(serialized).not.toContain("request_outcome=");
+  expect(serialized).not.toContain("acceptance_outcome=");
   expect(serialized).not.toContain("timeout-hidden");
 }
 
@@ -410,6 +437,16 @@ describe("VET-1014 terminal payload safety pack", () => {
     });
     mockDiagnoseWithDeepSeek.mockResolvedValue("{}");
     mockVerifyWithGLM.mockResolvedValue({});
+    mockComplete.mockResolvedValue(
+      JSON.stringify({
+        answered: false,
+        questionId: "payload_safety_default",
+        answerValue: null,
+        confidence: 0,
+        ownerPhrase: "",
+        needsClarification: true,
+      })
+    );
     mockDetectBreedWithNyckel.mockResolvedValue(null);
     mockRunRoboflowSkinWorkflow.mockResolvedValue({
       positive: false,
@@ -563,9 +600,24 @@ describe("VET-1014 terminal payload safety pack", () => {
       "raw model output with provider payload",
       "reason=provider_error",
       "reason=budget_exceeded",
+      "owner said honking loudly",
+    ];
+    const ownerForbiddenMarkers = [
+      "System Notes",
+      "Recent fallbacks",
+      "Timeouts",
+      "system_observability",
+      "shadowReadout",
+      "secondOpinionTrace",
+      "fallbackCount",
+      "timeoutCount",
     ];
 
-    const session = addSymptoms(createSession(), ["vomiting"]);
+    let session = addSymptoms(createSession(), ["vomiting"]);
+    session = recordAnswer(session, "vomit_duration", "2 days");
+    session = recordAnswer(session, "vomit_frequency", "3 times");
+    session = recordAnswer(session, "vomit_blood", false);
+    session = recordAnswer(session, "toxin_exposure", "none");
     session.case_memory = {
       ...session.case_memory!,
       service_timeouts: [
@@ -596,6 +648,17 @@ describe("VET-1014 terminal payload safety pack", () => {
           fallbackUsed: true,
           note: "reason=budget_exceeded",
           recordedAt: "2026-05-19T00:00:01.000Z",
+        },
+        {
+          service: "async-review-service",
+          stage: "second_opinion",
+          latencyMs: 0,
+          outcome: "fallback",
+          shadowMode: false,
+          fallbackUsed: true,
+          note:
+            "eligibility_reason=eligible | request_outcome=requested | acceptance_outcome=rejected | comparison_append_outcome=not_applicable | comparison_write_outcome=not_applicable | extractor_reason=owner said honking loudly",
+          recordedAt: "2026-05-19T00:00:03.000Z",
         },
       ],
       shadow_comparisons: [
@@ -632,6 +695,16 @@ describe("VET-1014 terminal payload safety pack", () => {
         reasoning: "Report is safe.",
       })
     );
+    mockComplete.mockResolvedValueOnce(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.92,
+        ownerPhrase: "dry honking",
+        needsClarification: false,
+      })
+    );
 
     const { response, payload } = await runReport(session, DOG);
     const persistedReport = mockSaveSymptomReportToDB.mock.calls[0]?.[2] as
@@ -647,11 +720,7 @@ describe("VET-1014 terminal payload safety pack", () => {
 
     expect(response.status).toBe(200);
     expect(payload.type).toBe("report");
-    expect(ownerTelemetry).toEqual({
-      timeoutCount: expect.any(Number),
-      fallbackCount: expect.any(Number),
-    });
-    expect(ownerTelemetry?.shadowReadout).toBeUndefined();
+    expect(ownerTelemetry).toBeUndefined();
     expect(readout).toEqual(
       expect.objectContaining({
         reportPresent: true,
@@ -662,6 +731,16 @@ describe("VET-1014 terminal payload safety pack", () => {
         fallbackCount: expect.any(Number),
         providerErrorCount: expect.any(Number),
         budgetExceededCount: expect.any(Number),
+        secondOpinionTrace: expect.objectContaining({
+          total: 1,
+          eligibilityReasonCounts: { eligible: 1 },
+          requestOutcomeCounts: { requested: 1 },
+          acceptanceOutcomeCounts: { rejected: 1 },
+          comparisonAppendOutcomeCounts: { not_applicable: 1 },
+          comparisonWriteOutcomeCounts: { not_applicable: 1 },
+          extractorReasonCounts: { invalid_code: 1 },
+          readoutCountedCount: 0,
+        }),
       })
     );
     expect(readout?.observationCount).toBeGreaterThanOrEqual(2);
@@ -673,9 +752,224 @@ describe("VET-1014 terminal payload safety pack", () => {
 
     const ownerJson = JSON.stringify(payload);
     const persistedJson = JSON.stringify(persistedReport);
+    for (const marker of ownerForbiddenMarkers) {
+      expect(ownerJson).not.toContain(marker);
+    }
     for (const marker of forbiddenMarkers) {
       expect(ownerJson).not.toContain(marker);
       expect(persistedJson).not.toContain(marker);
+    }
+  });
+
+  it("reconstructs requested primary-success sampling for counted production reports", async () => {
+    const originalMode = process.env.SECOND_OPINION_EXTRACTOR;
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+    let session = addSymptoms(createSession(), ["coughing"]);
+    session = {
+      ...session,
+      answered_questions: ["cough_type", "cough_duration", "cough_timing"],
+      extracted_answers: {
+        ...session.extracted_answers,
+        cough_type: "dry_honking",
+        cough_duration: "3 days",
+        cough_timing: "at rest",
+      },
+      last_question_asked: "cough_duration",
+      case_memory: {
+        ...session.case_memory!,
+        latest_owner_turn: "It is a dry honking cough.",
+        pending_question_id: "cough_duration",
+        unresolved_question_ids: ["cough_duration"],
+        question_asked_counts: {
+          ...session.case_memory!.question_asked_counts,
+          cough_type: 1,
+          cough_duration: 1,
+        },
+        clarification_attempts: {
+          ...session.case_memory!.clarification_attempts,
+          cough_type: 1,
+        },
+        service_observations: [],
+        shadow_comparisons: [],
+      },
+    };
+
+    mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Cough needs veterinary follow-up",
+        explanation: "A honking cough can need veterinary follow-up.",
+        differential_diagnoses: [],
+        clinical_notes: "Monitor cough character and breathing effort.",
+        recommended_tests: [],
+        home_care: [],
+        actions: ["Call your veterinarian if coughing continues."],
+        warning_signs: ["Breathing trouble"],
+        vet_questions: [],
+        confidence: 0.7,
+      })
+    );
+    mockVerifyWithGLM.mockResolvedValueOnce(
+      JSON.stringify({
+        safe: true,
+        corrections: {},
+        reasoning: "Report is safe.",
+      })
+    );
+
+    try {
+      const { response, payload } = await runReport(session, DOG);
+      const persistedReport = mockSaveSymptomReportToDB.mock.calls[0]?.[2] as
+        | { system_observability?: Record<string, unknown> }
+        | undefined;
+      const ownerTelemetry = payload.report?.system_observability as
+        | Record<string, unknown>
+        | undefined;
+      const readout = persistedReport?.system_observability?.shadowReadout as
+        | Record<string, unknown>
+        | undefined;
+      const secondOpinionTrace = readout?.secondOpinionTrace as
+        | Record<string, unknown>
+        | undefined;
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(ownerTelemetry).toBeUndefined();
+      expect(secondOpinionTrace).toEqual(
+        expect.objectContaining({
+          total: 1,
+          eligibilityReasonCounts: { shadow_primary_success_sampling: 1 },
+          requestOutcomeCounts: { requested: 1 },
+          acceptanceOutcomeCounts: { accepted: 1 },
+          comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+          comparisonWriteOutcomeCounts: { comparison_write_succeeded: 1 },
+          extractorReasonCounts: {},
+          readoutCountedCount: 1,
+        })
+      );
+      expect(readout?.shadowComparisonCount).toBe(1);
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+
+      const ownerJson = JSON.stringify(payload);
+      expect(ownerJson).not.toContain("system_observability");
+      expect(ownerJson).not.toContain("shadowReadout");
+      expect(ownerJson).not.toContain("secondOpinionTrace");
+      expect(ownerJson).not.toContain("fallbackCount");
+      expect(ownerJson).not.toContain("timeoutCount");
+      expect(ownerJson).not.toContain("eligibility_reason=");
+      expect(ownerJson).not.toContain("request_outcome=");
+    } finally {
+      if (originalMode === undefined) {
+        delete process.env.SECOND_OPINION_EXTRACTOR;
+      } else {
+        process.env.SECOND_OPINION_EXTRACTOR = originalMode;
+      }
+    }
+  });
+
+  it("reconstructs a sanitized second-opinion report trace after client session sanitization", async () => {
+    const originalMode = process.env.SECOND_OPINION_EXTRACTOR;
+    process.env.SECOND_OPINION_EXTRACTOR = "shadow";
+
+    let session = addSymptoms(createSession(), ["limping"]);
+    session = {
+      ...session,
+      answered_questions: ["limping_onset"],
+      extracted_answers: {
+        ...session.extracted_answers,
+        limping_onset: "sudden_today",
+      },
+      red_flags_triggered: ["non_weight_bearing"],
+      last_question_asked: "limping_onset",
+      case_memory: {
+        ...session.case_memory!,
+        pending_question_id: undefined,
+        unresolved_question_ids: [],
+        question_asked_counts: {
+          ...session.case_memory!.question_asked_counts,
+          limping_onset: 2,
+        },
+        clarification_attempts: {
+          ...session.case_memory!.clarification_attempts,
+          limping_onset: 1,
+        },
+        service_observations: [],
+        shadow_comparisons: [],
+      },
+    };
+
+    mockDiagnoseWithDeepSeek.mockResolvedValueOnce(
+      JSON.stringify({
+        severity: "medium",
+        recommendation: "vet_48h",
+        title: "Limping needs veterinary follow-up",
+        explanation: "A sudden limp can reflect pain or injury.",
+        differential_diagnoses: [],
+        clinical_notes: "Monitor mobility and pain.",
+        recommended_tests: [],
+        home_care: [],
+        actions: ["Limit activity and call your veterinarian."],
+        warning_signs: ["Unable to bear weight"],
+        vet_questions: [],
+        confidence: 0.7,
+      })
+    );
+    mockVerifyWithGLM.mockResolvedValueOnce(
+      JSON.stringify({
+        safe: true,
+        corrections: {},
+        reasoning: "Report is safe.",
+      })
+    );
+
+    try {
+      const { response, payload } = await runReport(session, DOG);
+      const persistedReport = mockSaveSymptomReportToDB.mock.calls[0]?.[2] as
+        | { system_observability?: Record<string, unknown> }
+        | undefined;
+      const ownerTelemetry = payload.report?.system_observability as
+        | Record<string, unknown>
+        | undefined;
+      const readout = persistedReport?.system_observability?.shadowReadout as
+        | Record<string, unknown>
+        | undefined;
+      const secondOpinionTrace = readout?.secondOpinionTrace as
+        | Record<string, unknown>
+        | undefined;
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("report");
+      expect(ownerTelemetry).toBeUndefined();
+      expect(secondOpinionTrace).toEqual(
+        expect.objectContaining({
+          total: 1,
+          eligibilityReasonCounts: { primary_extraction_succeeded: 1 },
+          requestOutcomeCounts: { not_requested: 1 },
+          comparisonAppendOutcomeCounts: { not_applicable: 1 },
+          comparisonWriteOutcomeCounts: { not_applicable: 1 },
+          extractorReasonCounts: { primary_extraction_succeeded: 1 },
+          readoutCountedCount: 0,
+        })
+      );
+
+      const ownerJson = JSON.stringify(payload);
+      const persistedJson = JSON.stringify(persistedReport);
+      expect(ownerJson).not.toContain("system_observability");
+      expect(ownerJson).not.toContain("shadowReadout");
+      expect(ownerJson).not.toContain("secondOpinionTrace");
+      expect(ownerJson).not.toContain("fallbackCount");
+      expect(ownerJson).not.toContain("timeoutCount");
+      expect(ownerJson).not.toContain("eligibility_reason=");
+      expect(ownerJson).not.toContain("request_outcome=");
+      expect(persistedJson).not.toContain("Please generate the report.");
+    } finally {
+      if (originalMode === undefined) {
+        delete process.env.SECOND_OPINION_EXTRACTOR;
+      } else {
+        process.env.SECOND_OPINION_EXTRACTOR = originalMode;
+      }
     }
   });
 });

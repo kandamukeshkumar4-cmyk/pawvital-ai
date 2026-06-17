@@ -27,6 +27,9 @@ jest.mock("@supabase/supabase-js", () => ({
   createClient: (...args: unknown[]) => mockCreateClient(...args),
 }));
 
+const SERVICE_ROLE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UifQ.signature";
+
 describe("saveSymptomReportToDB persistence verification", () => {
   const originalPublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const originalServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,7 +38,7 @@ describe("saveSymptomReportToDB persistence verification", () => {
     jest.resetModules();
     jest.clearAllMocks();
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_JWT;
     mockSymptomCheckInsert.mockImplementation((payload: unknown) => ({
       select: jest.fn(() => ({
         maybeSingle: mockSymptomCheckMaybeSingle.mockResolvedValue({

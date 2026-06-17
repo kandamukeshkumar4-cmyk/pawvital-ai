@@ -1,0 +1,88 @@
+{
+  "ticket": "VET-1565",
+  "mode": "review-only-governance-plan",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "source": {
+    "id": "syndicalt-tugboat",
+    "url": "https://github.com/syndicalt/tugboat",
+    "type": "instruction governance repository",
+    "validatedAsOf": "2026-06-01",
+    "verdict": "Local-first sidecar pattern for observing agent instruction behavior, generating evidence-backed proposal artifacts, and governing any instruction patch through deterministic policy, evals, reviewer approval, rollback, and audit records."
+  },
+  "transferableTechniques": [
+    "treat AGENTS.md, RULES.md, AutoScientists runbooks, skills, eval definitions, and local.config.json as production instruction artifacts with owners, hashes, precedence, and protected sections",
+    "convert repeated PawVital ticket failures or user corrections into redacted trace bundles before proposing instruction changes",
+    "use a proposal-only audit/propose/eval loop for instruction drift, stale commands, missing handoff gates, and conflicting rules",
+    "require deterministic policy gates, held-out regression cases, reviewer approval, rollback notes, and audit-ledger entries before applying instruction patches",
+    "keep auto-apply disabled for protected headings, model/provider routing, deployment, secrets, approval policy, clinical logic, and sidecar authority"
+  ],
+  "nonTransferableClaims": [
+    "does not improve PawVital NIM or AI model weights",
+    "does not authorize automatic edits to AGENTS.md, RULES.md, skills, or local.config.json",
+    "does not replace AutoScientists, SIA, thermo-review, clinical review, project-manager gates, or production verification",
+    "does not justify provider-backed llmff runs, live network access, or auto-apply without explicit owner approval"
+  ],
+  "adoptionPlan": [
+    {
+      "phase": "policy-snapshot",
+      "action": "Inventory AGENTS.md, RULES.md, AutoScientists runbooks, local.config.json, skills, eval definitions, and recurring handoff requirements.",
+      "verifier": "Instruction inventory artifact records file hashes, precedence, owners, and protected sections before any proposal."
+    },
+    {
+      "phase": "trace-ingestion",
+      "action": "Convert recent PawVital ticket trajectories into redacted local trace bundles for instruction-behavior audits.",
+      "verifier": "Trace bundle contains no secrets, owner PHI, provider keys, or raw production payloads."
+    },
+    {
+      "phase": "proposal-loop",
+      "action": "Run a proposal-only audit/propose/eval loop for instruction gaps, stale commands, conflicts, and repeated handoff misses.",
+      "verifier": "Each candidate patch has base hash, rationale, evidence refs, risk class, eval result, and rollback note."
+    },
+    {
+      "phase": "governed-apply",
+      "action": "Apply only review-approved instruction patches through VCS mechanics after deterministic policy and held-out regression checks.",
+      "verifier": "No auto-apply for model routing, protected clinical instructions, deployment, secrets, approval policy, or sidecar authority."
+    }
+  ],
+  "pawvitalBoundaries": [
+    "proposal-only by default",
+    "local-first artifacts only unless explicit owner approval enables provider-backed evaluation",
+    "no live Azure work-item creation",
+    "no NIM endpoint calls",
+    "no model-router, provider env, protected clinical file, deployment, approval-policy, or secret-handling mutation",
+    "instruction changes must be evidence-backed, scoped, reversible, and reviewed"
+  ],
+  "projectManagerTicket": {
+    "id": "VET-1565",
+    "title": "Proposal-only Tugboat governance adoption",
+    "dependencies": [],
+    "acceptanceCriteria": [
+      "proposal-only phases and no-auto-apply boundaries exist"
+    ],
+    "verifier": "plans/VET-1565-tugboat-governance-plan.json",
+    "presentInProjectManagerPayload": true
+  },
+  "artifacts": {
+    "projectManagerPayload": {
+      "path": "plans/VET-1560-project-manager-tickets.json",
+      "exists": true,
+      "sha256": "a8cd5b2e84838dbec328e450ae5061d591678a8e22f7801bb395d4234601efab"
+    },
+    "localConfig": {
+      "path": "../.agents/autoscientists/local.config.json",
+      "type": "live-local-config",
+      "sourceRegistered": true,
+      "fallbackPath": "plans/VET-1560-model-technique-intake-snapshot.json",
+      "liveConfigPath": null,
+      "liveConfigExists": true
+    }
+  },
+  "readiness": {
+    "readyForLiveTugboatInstall": false,
+    "blockedReasons": [
+      "Tugboat is not installed or initialized in this repo.",
+      "No approved PawVital instruction trace bundle has been selected.",
+      "No policy file, eval suite, or reviewer approval exists for applying generated instruction patches."
+    ]
+  }
+}

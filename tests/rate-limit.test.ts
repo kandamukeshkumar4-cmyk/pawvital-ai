@@ -200,4 +200,59 @@ describe("rate-limit helper", () => {
 
     expect(getRateLimitId(spoofedHeaderRequest)).toBe("ip:203.0.113.7");
   });
+
+  it("falls closed to the in-process limiter in production when Upstash is unconfigured", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-04-14T12:00:00.000Z"));
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+
+    try {
+      const { checkRateLimit } = await import("../src/lib/rate-limit");
+
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        await expect(
+          checkRateLimit(null, "ip:prod-unconfigured")
+        ).resolves.toEqual({
+          success: true,
+          degraded: true,
+          reason: "redis_unavailable",
+        });
+      }
+
+      await expect(
+        checkRateLimit(null, "ip:prod-unconfigured")
+      ).resolves.toEqual({
+        success: false,
+        reset: expect.any(Number),
+        remaining: 0,
+      });
+
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      expect(String(warnSpy.mock.calls[0]?.[0] ?? "")).toContain(
+        "Upstash not configured in production"
+      );
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it("stays a permissive no-op outside production when Upstash is unconfigured", async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
+
+    try {
+      const { checkRateLimit } = await import("../src/lib/rate-limit");
+
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        await expect(
+          checkRateLimit(null, "ip:dev-unconfigured")
+        ).resolves.toEqual({
+          success: true,
+        });
+      }
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
 });

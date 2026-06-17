@@ -12,12 +12,18 @@ import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
 import { buildCaseMemorySnapshot } from "@/lib/symptom-memory";
 import { type PetProfile, type TriageSession } from "@/lib/triage-engine";
 import {
+  shouldRunNemotronQuestionVerify,
+  type TurnDepth,
+} from "@/lib/symptom-chat/turn-depth";
+import {
   buildConfirmedQASummary,
   buildDeterministicQuestionFallback,
   parseLooseJsonRecord,
 } from "@/lib/symptom-chat/extraction-helpers";
 
 const useNvidia = isNvidiaConfigured();
+// Shared between Nemotron preflight gate + Llama phrasing on text-only turns.
+export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 25_000;
 
 export interface SymptomChatTurnMessage {
   role: "user" | "assistant";
@@ -28,6 +34,15 @@ export interface QuestionGateDecision {
   includeImageContext: boolean;
   useDeterministicFallback: boolean;
   reason: string;
+}
+
+function getTextTurnOwnerVisibleDeadline(
+  hasPhoto: boolean,
+  ownerVisibleDeadlineMs?: number | null
+): number | null {
+  return hasPhoto
+    ? null
+    : ownerVisibleDeadlineMs ?? Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
 }
 
 export function sanitizeQuestionDraft(
@@ -57,6 +72,27 @@ export function sanitizeQuestionDraft(
     return fallbackMessage;
   }
 
+  // Strip lazy "Got it — value." / "Okay — value." / etc. openers.
+  // Uses a character-scan to find the first ASCII sentence boundary (". " or "! ")
+  // rather than a regex quantifier, to avoid any compiled-JS edge cases.
+  if (/^(?:Got it|Okay|Understood|Noted|Sure|Alright)\b/i.test(cleaned)) {
+    let sentenceStart = -1;
+    for (let i = 0; i < cleaned.length - 1; i++) {
+      if ((cleaned[i] === "." || cleaned[i] === "!") && cleaned[i + 1] === " ") {
+        sentenceStart = i + 2;
+        break;
+      }
+    }
+    if (sentenceStart > 0) {
+      const rest = cleaned.substring(sentenceStart).trim();
+      if (rest.includes("?")) {
+        console.log("[sanitize] opener stripped →", rest.substring(0, 60));
+        return rest;
+      }
+    }
+    console.log("[sanitize] opener detected but no boundary found:", cleaned.substring(0, 80));
+  }
+
   return cleaned;
 }
 
@@ -68,7 +104,8 @@ export async function gateQuestionBeforePhrasing(
   messages: SymptomChatTurnMessage[],
   latestUserMessage: string,
   phrasingContext?: string | null,
-  photoAnalyzedThisTurn?: boolean
+  photoAnalyzedThisTurn?: boolean,
+  ownerVisibleDeadlineMs?: number | null
 ): Promise<QuestionGateDecision> {
   const defaultDecision: QuestionGateDecision = {
     includeImageContext: Boolean(photoAnalyzedThisTurn && phrasingContext),
@@ -106,7 +143,34 @@ RULES:
 - Be precise, not overly cautious.`;
 
   try {
-    const rawDecision = await reviewQuestionPlanWithNemotron(prompt);
+    const budgetDeadline = getTextTurnOwnerVisibleDeadline(
+      Boolean(photoAnalyzedThisTurn),
+      ownerVisibleDeadlineMs
+    );
+    const budgetMs = budgetDeadline !== null ? budgetDeadline - Date.now() : null;
+    if (budgetMs !== null && budgetMs <= 0) {
+      console.warn(
+        "Question preflight gate exceeded text-turn owner-visible budget; using default gate decision."
+      );
+      return { ...defaultDecision, reason: "text-turn-budget-timeout" };
+    }
+
+    const decisionResult =
+      budgetMs !== null
+        ? await withTimeout(reviewQuestionPlanWithNemotron(prompt), budgetMs)
+        : {
+            timedOut: false as const,
+            value: await reviewQuestionPlanWithNemotron(prompt),
+          };
+
+    if (decisionResult.timedOut) {
+      console.warn(
+        "Question preflight gate exceeded text-turn owner-visible budget; using default gate decision."
+      );
+      return { ...defaultDecision, reason: "text-turn-budget-timeout" };
+    }
+
+    const rawDecision = decisionResult.value;
     const parsed = parseLooseJsonRecord(rawDecision);
     const includeImageContext =
       Boolean(parsed.include_image_context) &&
@@ -157,7 +221,7 @@ REQUIRED QUESTION:
 - Answer type: ${answerType}
 
 WRITE EXACTLY 2 SENTENCES:
-1. One brief acknowledgment that SPECIFICALLY references 1-2 of the confirmed answers above (e.g. "Since ${pet.name} has been drinking less than usual and this has been going on for 3 days..."). Do NOT write a generic "I'm keeping track" phrase.
+1. One acknowledgment sentence that SPECIFICALLY references 1-2 of the confirmed answers above in a full contextual sentence (e.g. "Since ${pet.name} has been vomiting for two days and has stopped eating..."). Do NOT start with "Got it", "Got it —", "Okay", "Understood", or any short echo of the extracted value alone. Write a complete sentence that sets the clinical context.
 2. Ask the exact required question in caring, simple language.
 
 HARD RULES:
@@ -253,6 +317,29 @@ async function verifyQuestionDraft(
   }
 }
 
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number
+): Promise<{ timedOut: false; value: T } | { timedOut: true }> {
+  if (timeoutMs <= 0) {
+    return { timedOut: true };
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise.then((value) => ({ timedOut: false as const, value })),
+      new Promise<{ timedOut: true }>((resolve) => {
+        timeoutId = setTimeout(() => resolve({ timedOut: true }), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function phraseQuestionV2(
   questionText: string,
   questionId: string,
@@ -263,7 +350,9 @@ async function phraseQuestionV2(
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
-  forceDeterministicFallback = false
+  forceDeterministicFallback = false,
+  ownerVisibleDeadlineMs?: number | null,
+  turnDepth?: TurnDepth
 ): Promise<string> {
   const answerType = FOLLOW_UP_QUESTIONS[questionId]?.data_type || "string";
   const hasPhoto = Boolean(photoAnalyzedThisTurn);
@@ -296,8 +385,33 @@ async function phraseQuestionV2(
     answerType
   );
 
+  const budgetDeadline = getTextTurnOwnerVisibleDeadline(
+    hasPhoto,
+    ownerVisibleDeadlineMs
+  );
+
   try {
-    const draft = await phraseWithLlama(prompt);
+    const draftBudgetMs = budgetDeadline !== null ? budgetDeadline - Date.now() : null;
+    if (draftBudgetMs !== null && draftBudgetMs <= 0) {
+      console.warn(
+        "Question phrasing exceeded text-turn owner-visible budget; using deterministic fallback."
+      );
+      return fallbackMessage;
+    }
+
+    const draftResult =
+      draftBudgetMs !== null
+        ? await withTimeout(phraseWithLlama(prompt), draftBudgetMs)
+        : { timedOut: false as const, value: await phraseWithLlama(prompt) };
+
+    if (draftResult.timedOut) {
+      console.warn(
+        "Question phrasing exceeded text-turn owner-visible budget; using deterministic fallback."
+      );
+      return fallbackMessage;
+    }
+
+    const draft = draftResult.value;
     console.log("[Engine] Phrasing primary: Llama 3.3 70B Instruct");
 
     const sanitizedDraft = sanitizeQuestionDraft(
@@ -305,6 +419,44 @@ async function phraseQuestionV2(
       fallbackMessage,
       allowPhotoMentionInWording
     );
+
+    if (budgetDeadline) {
+      const verificationBudget = budgetDeadline - Date.now();
+      if (verificationBudget <= 0) {
+        return sanitizedDraft;
+      }
+
+      if (turnDepth && !shouldRunNemotronQuestionVerify(turnDepth)) {
+        return sanitizedDraft;
+      }
+
+      const verifiedResult = await withTimeout(
+        verifyQuestionDraft(
+          questionText,
+          questionId,
+          memorySnapshot,
+          phrasingContext,
+          hasPhoto,
+          allowPhotoMentionInWording,
+          sanitizedDraft,
+          fallbackMessage
+        ),
+        verificationBudget
+      );
+
+      if (verifiedResult.timedOut) {
+        console.warn(
+          "Question verification exceeded text-turn owner-visible budget; using sanitized draft."
+        );
+        return sanitizedDraft;
+      }
+
+      return verifiedResult.value;
+    }
+
+    if (turnDepth && !shouldRunNemotronQuestionVerify(turnDepth)) {
+      return sanitizedDraft;
+    }
 
     return verifyQuestionDraft(
       questionText,
@@ -332,7 +484,9 @@ export async function phraseQuestion(
   phrasingContext?: string | null,
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
-  forceDeterministicFallback = false
+  forceDeterministicFallback = false,
+  ownerVisibleDeadlineMs?: number | null,
+  turnDepth?: TurnDepth
 ): Promise<string> {
   return phraseQuestionV2(
     questionText,
@@ -344,6 +498,8 @@ export async function phraseQuestion(
     phrasingContext,
     photoAnalyzedThisTurn,
     allowPhotoMentionInWording,
-    forceDeterministicFallback
+    forceDeterministicFallback,
+    ownerVisibleDeadlineMs,
+    turnDepth
   );
 }

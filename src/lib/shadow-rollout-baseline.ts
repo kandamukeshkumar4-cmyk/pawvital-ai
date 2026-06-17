@@ -9,6 +9,12 @@ import {
   readShadowLoadTestSummary,
   shouldPreferShadowTelemetryFileStore,
 } from "./shadow-telemetry-store";
+import {
+  buildSecondOpinionTraceReadoutAggregate,
+  createEmptySecondOpinionTraceReadoutAggregate,
+  mergeSecondOpinionTraceReadoutAggregates,
+  type SecondOpinionTraceReadoutAggregate,
+} from "./second-opinion-trace-readout";
 import { buildShadowRolloutSummary } from "./shadow-rollout";
 import type { ShadowLoadTestSummary } from "./shadow-rollout";
 import { getServiceSupabase } from "./supabase-admin";
@@ -31,6 +37,7 @@ interface PersistedShadowReadout {
   fallbackCount?: unknown;
   providerErrorCount?: unknown;
   budgetExceededCount?: unknown;
+  secondOpinionTrace?: unknown;
 }
 
 interface PersistedAiResponse {
@@ -51,12 +58,27 @@ export interface PersistedShadowServiceMetrics {
   p95LatencyMs: number | null;
 }
 
+export type PersistedShadowRowVisibilityMode =
+  | "matched_created_at_window"
+  | "outside_created_at_window"
+  | "limit_reached"
+  | "no_source_rows"
+  | "unknown";
+
 export interface PersistedShadowBaselineSnapshot {
   generatedAt: string;
   windowHours: number;
+  windowStart: string;
+  sourceTable: "symptom_checks" | "shadow_telemetry_store";
+  sourceProjectRef: string | null;
+  queryLimit: number;
+  rowVisibilityMode: PersistedShadowRowVisibilityMode;
   reportCount: number;
   parsedReportCount: number;
   malformedReportCount: number;
+  latestWindowReportCreatedAt: string | null;
+  latestParsedReportCreatedAt: string | null;
+  latestAnyReportCreatedAt: string | null;
   reportPresenceCount: number;
   sessionPresenceCount: number;
   observationCount: number;
@@ -65,6 +87,7 @@ export interface PersistedShadowBaselineSnapshot {
   fallbackCount: number;
   providerErrorCount: number;
   budgetExceededCount: number;
+  secondOpinionTrace: SecondOpinionTraceReadoutAggregate;
   summary: ReturnType<typeof buildShadowRolloutSummary>;
   loadTest: ShadowLoadTestSummary | null;
   serviceMetrics: PersistedShadowServiceMetrics[];
@@ -82,6 +105,7 @@ interface ReadoutAggregateTotals {
   fallbackCount: number;
   providerErrorCount: number;
   budgetExceededCount: number;
+  secondOpinionTrace: SecondOpinionTraceReadoutAggregate;
 }
 
 const SERVICE_NAMES: SidecarServiceName[] = [
@@ -146,6 +170,7 @@ function emptyReadoutAggregateTotals(): ReadoutAggregateTotals {
     fallbackCount: 0,
     providerErrorCount: 0,
     budgetExceededCount: 0,
+    secondOpinionTrace: createEmptySecondOpinionTraceReadoutAggregate(),
   };
 }
 
@@ -164,6 +189,10 @@ function addReadoutAggregateTotals(
     fallbackCount: totals.fallbackCount + next.fallbackCount,
     providerErrorCount: totals.providerErrorCount + next.providerErrorCount,
     budgetExceededCount: totals.budgetExceededCount + next.budgetExceededCount,
+    secondOpinionTrace: mergeSecondOpinionTraceReadoutAggregates(
+      totals.secondOpinionTrace,
+      next.secondOpinionTrace
+    ),
   };
 }
 
@@ -226,6 +255,117 @@ function classifyTelemetryReadError(error: unknown): string {
   return "unknown_error";
 }
 
+function timestampFromUnknown(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? value : null;
+}
+
+function getSupabaseProjectRef(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const hostname = new URL(value).hostname;
+    const match = hostname.match(/^([a-z0-9]{20})\.supabase\.co$/);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function newerTimestamp(
+  left: string | null,
+  right: string | null
+): string | null {
+  if (!left) return right;
+  if (!right) return left;
+  return Date.parse(right) > Date.parse(left) ? right : left;
+}
+
+function deriveRowVisibilityMode(input: {
+  reportCount: number;
+  queryLimit: number;
+  windowStart: string;
+  latestAnyReportCreatedAt: string | null;
+  latestAnyLookupFailed?: boolean;
+}): PersistedShadowRowVisibilityMode {
+  if (input.reportCount >= input.queryLimit) {
+    return "limit_reached";
+  }
+
+  if (input.reportCount > 0) {
+    return "matched_created_at_window";
+  }
+
+  if (input.latestAnyLookupFailed) {
+    return "unknown";
+  }
+
+  if (!input.latestAnyReportCreatedAt) {
+    return "no_source_rows";
+  }
+
+  const latestAnyMs = Date.parse(input.latestAnyReportCreatedAt);
+  const windowStartMs = Date.parse(input.windowStart);
+  if (
+    Number.isFinite(latestAnyMs) &&
+    Number.isFinite(windowStartMs) &&
+    latestAnyMs < windowStartMs
+  ) {
+    return "outside_created_at_window";
+  }
+
+  return "unknown";
+}
+
+function normalizeCountRecord(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const counts: Record<string, number> = {};
+  for (const [key, count] of Object.entries(value)) {
+    const normalizedKey = /^[a-z0-9_]+$/.test(key) ? key : "invalid_code";
+    counts[normalizedKey] =
+      (counts[normalizedKey] || 0) + countFromUnknown(count);
+  }
+  return counts;
+}
+
+function normalizeSecondOpinionTraceAggregate(
+  value: unknown
+): SecondOpinionTraceReadoutAggregate {
+  const empty = createEmptySecondOpinionTraceReadoutAggregate();
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return empty;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return {
+    total: countFromUnknown(candidate.total),
+    eligibilityReasonCounts: normalizeCountRecord(
+      candidate.eligibilityReasonCounts
+    ),
+    requestOutcomeCounts: normalizeCountRecord(candidate.requestOutcomeCounts),
+    acceptanceOutcomeCounts: normalizeCountRecord(
+      candidate.acceptanceOutcomeCounts
+    ),
+    comparisonAppendOutcomeCounts: normalizeCountRecord(
+      candidate.comparisonAppendOutcomeCounts
+    ),
+    comparisonWriteOutcomeCounts: normalizeCountRecord(
+      candidate.comparisonWriteOutcomeCounts
+    ),
+    extractorReasonCounts: normalizeCountRecord(candidate.extractorReasonCounts),
+    readoutCountedCount: countFromUnknown(candidate.readoutCountedCount),
+  };
+}
+
 function normalizeReadoutAggregate(
   observability: PersistedSystemObservability | undefined
 ): ReadoutAggregateTotals | null {
@@ -247,6 +387,9 @@ function normalizeReadoutAggregate(
     ),
     providerErrorCount: countFromUnknown(readout.providerErrorCount),
     budgetExceededCount: countFromUnknown(readout.budgetExceededCount),
+    secondOpinionTrace: normalizeSecondOpinionTraceAggregate(
+      readout.secondOpinionTrace
+    ),
   };
 }
 
@@ -414,6 +557,10 @@ function buildReadoutTotalsFromRecords(
     budgetExceededCount: observations.filter((entry) =>
       noteIncludes(entry, "reason=budget_exceeded")
     ).length,
+    secondOpinionTrace: buildSecondOpinionTraceReadoutAggregate(
+      observations,
+      comparisons
+    ),
   };
 }
 
@@ -439,9 +586,17 @@ function buildReadoutTotalsFromSession(
 function buildSnapshotFromSession(input: {
   session: TriageSession;
   windowHours: number;
+  windowStart?: string;
+  sourceTable?: PersistedShadowBaselineSnapshot["sourceTable"];
+  sourceProjectRef?: string | null;
+  queryLimit?: number;
+  rowVisibilityMode?: PersistedShadowRowVisibilityMode;
   reportCount: number;
   parsedReportCount: number;
   malformedReportCount: number;
+  latestWindowReportCreatedAt?: string | null;
+  latestParsedReportCreatedAt?: string | null;
+  latestAnyReportCreatedAt?: string | null;
   readoutTotals?: ReadoutAggregateTotals;
   loadTest: ShadowLoadTestSummary | null;
   warning: string | null;
@@ -457,9 +612,19 @@ function buildSnapshotFromSession(input: {
   return {
     generatedAt: new Date().toISOString(),
     windowHours: input.windowHours,
+    windowStart:
+      input.windowStart ??
+      new Date(Date.now() - input.windowHours * 60 * 60 * 1000).toISOString(),
+    sourceTable: input.sourceTable ?? "symptom_checks",
+    sourceProjectRef: input.sourceProjectRef ?? null,
+    queryLimit: input.queryLimit ?? 1000,
+    rowVisibilityMode: input.rowVisibilityMode ?? "unknown",
     reportCount: input.reportCount,
     parsedReportCount: input.parsedReportCount,
     malformedReportCount: input.malformedReportCount,
+    latestWindowReportCreatedAt: input.latestWindowReportCreatedAt ?? null,
+    latestParsedReportCreatedAt: input.latestParsedReportCreatedAt ?? null,
+    latestAnyReportCreatedAt: input.latestAnyReportCreatedAt ?? null,
     reportPresenceCount: readoutTotals.reportPresenceCount,
     sessionPresenceCount: readoutTotals.sessionPresenceCount,
     observationCount: readoutTotals.observationCount,
@@ -468,6 +633,7 @@ function buildSnapshotFromSession(input: {
     fallbackCount: readoutTotals.fallbackCount,
     providerErrorCount: readoutTotals.providerErrorCount,
     budgetExceededCount: readoutTotals.budgetExceededCount,
+    secondOpinionTrace: readoutTotals.secondOpinionTrace,
     summary: buildShadowRolloutSummary(input.session, {
       loadTest: input.loadTest,
     }),
@@ -484,6 +650,8 @@ async function buildFallbackSnapshotFromRedis(
   warning: string | null
 ): Promise<PersistedShadowBaselineSnapshot> {
   const emptySession = buildEmptySession();
+  const windowStartMs = Date.now() - windowHours * 60 * 60 * 1000;
+  const windowStart = new Date(windowStartMs).toISOString();
   let entries: Awaited<ReturnType<typeof listShadowTelemetrySnapshots>>;
 
   try {
@@ -493,6 +661,10 @@ async function buildFallbackSnapshotFromRedis(
     return buildSnapshotFromSession({
       session: emptySession,
       windowHours,
+      windowStart,
+      sourceTable: "shadow_telemetry_store",
+      queryLimit: limit,
+      rowVisibilityMode: "unknown",
       reportCount: 0,
       parsedReportCount: 0,
       malformedReportCount: 0,
@@ -510,6 +682,10 @@ async function buildFallbackSnapshotFromRedis(
     return buildSnapshotFromSession({
       session: emptySession,
       windowHours,
+      windowStart,
+      sourceTable: "shadow_telemetry_store",
+      queryLimit: limit,
+      rowVisibilityMode: "no_source_rows",
       reportCount: 0,
       parsedReportCount: 0,
       malformedReportCount: 0,
@@ -520,19 +696,31 @@ async function buildFallbackSnapshotFromRedis(
     });
   }
 
-  const windowStartMs = Date.now() - windowHours * 60 * 60 * 1000;
   let reportCount = 0;
   let parsedReportCount = 0;
   let malformedReportCount = 0;
   let readoutTotals = emptyReadoutAggregateTotals();
+  let latestAnyReportCreatedAt: string | null = null;
+  let latestWindowReportCreatedAt: string | null = null;
+  let latestParsedReportCreatedAt: string | null = null;
 
   for (const entry of entries) {
     const recordedAtMs = Date.parse(entry.generatedAt);
+    if (Number.isFinite(recordedAtMs)) {
+      latestAnyReportCreatedAt = newerTimestamp(
+        latestAnyReportCreatedAt,
+        entry.generatedAt
+      );
+    }
     if (!Number.isFinite(recordedAtMs) || recordedAtMs < windowStartMs) {
       continue;
     }
 
     reportCount += 1;
+    latestWindowReportCreatedAt = newerTimestamp(
+      latestWindowReportCreatedAt,
+      entry.generatedAt
+    );
 
     const hasArrays =
       Array.isArray(entry.recentServiceCalls) &&
@@ -543,6 +731,10 @@ async function buildFallbackSnapshotFromRedis(
     }
 
     parsedReportCount += 1;
+    latestParsedReportCreatedAt = newerTimestamp(
+      latestParsedReportCreatedAt,
+      entry.generatedAt
+    );
     const appended = appendObservabilityPayload(
       emptySession,
       entry.recentServiceCalls,
@@ -562,9 +754,21 @@ async function buildFallbackSnapshotFromRedis(
   return buildSnapshotFromSession({
     session: emptySession,
     windowHours,
+    windowStart,
+    sourceTable: "shadow_telemetry_store",
+    queryLimit: limit,
+    rowVisibilityMode: deriveRowVisibilityMode({
+      reportCount,
+      queryLimit: limit,
+      windowStart,
+      latestAnyReportCreatedAt,
+    }),
     reportCount,
     parsedReportCount,
     malformedReportCount,
+    latestWindowReportCreatedAt,
+    latestParsedReportCreatedAt,
+    latestAnyReportCreatedAt,
     readoutTotals,
     loadTest,
     warning,
@@ -634,6 +838,35 @@ async function buildSupplementalChatTelemetryTotals(
   return { readoutTotals, warning: null };
 }
 
+async function fetchLatestAnySupabaseReportCreatedAt(
+  supabase: ReturnType<typeof getServiceSupabase>
+): Promise<{ createdAt: string | null; failed: boolean }> {
+  if (!supabase) {
+    return { createdAt: null, failed: true };
+  }
+
+  try {
+    const result = await supabase
+      .from("symptom_checks")
+      .select("created_at")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (result.error) {
+      return { createdAt: null, failed: true };
+    }
+
+    const first = Array.isArray(result.data) ? result.data[0] : null;
+    const createdAt = timestampFromUnknown(
+      first && typeof first === "object"
+        ? (first as Record<string, unknown>).created_at
+        : null
+    );
+    return { createdAt, failed: false };
+  } catch {
+    return { createdAt: null, failed: true };
+  }
+}
+
 export function buildEmptyPersistedShadowBaselineSnapshot(
   warning: string | null = null,
   windowHours = 24
@@ -643,6 +876,7 @@ export function buildEmptyPersistedShadowBaselineSnapshot(
   return buildSnapshotFromSession({
     session: emptySession,
     windowHours,
+    rowVisibilityMode: "no_source_rows",
     reportCount: 0,
     parsedReportCount: 0,
     malformedReportCount: 0,
@@ -687,7 +921,7 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   try {
     const result = await supabase
       .from("symptom_checks")
-      .select("id, ai_response")
+      .select("id, created_at, ai_response")
       .gte("created_at", sinceIso)
       .order("created_at", { ascending: false })
       .limit(limit);
@@ -720,20 +954,33 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   }
 
   const emptySession = buildEmptySession();
+  const latestAnyReport = await fetchLatestAnySupabaseReportCreatedAt(supabase);
 
   let parsedReportCount = 0;
   let malformedReportCount = 0;
   let readoutTotals = emptyReadoutAggregateTotals();
   let warning: string | null = null;
+  let latestWindowReportCreatedAt: string | null = null;
+  let latestParsedReportCreatedAt: string | null = null;
 
   for (const row of data || []) {
-    const report = parseReportPayload((row as Record<string, unknown>).ai_response);
+    const candidate = row as Record<string, unknown>;
+    const createdAt = timestampFromUnknown(candidate.created_at);
+    if (!latestWindowReportCreatedAt && createdAt) {
+      latestWindowReportCreatedAt = createdAt;
+    }
+
+    const report = parseReportPayload(candidate.ai_response);
     if (!report) {
       malformedReportCount += 1;
       continue;
     }
 
     parsedReportCount += 1;
+    if (!latestParsedReportCreatedAt && createdAt) {
+      latestParsedReportCreatedAt = createdAt;
+    }
+
     const aggregateReadout = normalizeReadoutAggregate(
       report.system_observability
     );
@@ -794,9 +1041,25 @@ export async function buildPersistedShadowBaselineSnapshot(options?: {
   return buildSnapshotFromSession({
     session: emptySession,
     windowHours,
+    windowStart: sinceIso,
+    sourceTable: "symptom_checks",
+    sourceProjectRef: getSupabaseProjectRef(
+      process.env.NEXT_PUBLIC_SUPABASE_URL
+    ),
+    queryLimit: limit,
+    rowVisibilityMode: deriveRowVisibilityMode({
+      reportCount: (data || []).length,
+      queryLimit: limit,
+      windowStart: sinceIso,
+      latestAnyReportCreatedAt: latestAnyReport.createdAt,
+      latestAnyLookupFailed: latestAnyReport.failed,
+    }),
     reportCount: (data || []).length,
     parsedReportCount,
     malformedReportCount,
+    latestWindowReportCreatedAt,
+    latestParsedReportCreatedAt,
+    latestAnyReportCreatedAt: latestAnyReport.createdAt,
     readoutTotals,
     loadTest,
     warning,

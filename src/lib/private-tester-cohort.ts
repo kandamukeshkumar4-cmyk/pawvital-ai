@@ -33,6 +33,8 @@ export interface PrivateTesterCohortCommandCenter {
     latestSessions: TesterFeedbackCaseSummary[];
     negativeFeedbackSessions: TesterFeedbackCaseSummary[];
     noFeedbackSessions: TesterFeedbackCaseSummary[];
+    questionFlowIssueSessions: TesterFeedbackCaseSummary[];
+    /** @deprecated Use questionFlowIssueSessions. */
     repeatedQuestionSessions: TesterFeedbackCaseSummary[];
   };
   highRiskSessions: TesterFeedbackCaseSummary[];
@@ -43,13 +45,15 @@ export interface PrivateTesterCohortCommandCenter {
     emergencyResults: number;
     feedbackSubmitted: number;
     negativeFeedback: number;
+    questionFlowIssueFlags: number;
+    /** @deprecated Use questionFlowIssueFlags. */
     repeatedQuestionFlags: number;
     reportFailures: number;
     reportsOpened: number;
     signInFailures: number;
     signedInTesters: number;
     testerAccessDisabled: number;
-    testersInvited: number;
+    allowlistedTesters: number;
   };
   triage: Record<PrivateTesterTriageSeverity, PrivateTesterTriageCase[]>;
 }
@@ -61,7 +65,7 @@ function dedupeCases(
 
   for (const group of groups) {
     for (const entry of group) {
-      casesById.set(entry.symptomCheckId, entry);
+      casesById.set(entry.symptomCheckId, sanitizeCaseSummary(entry));
     }
   }
 
@@ -69,6 +73,40 @@ function dedupeCases(
     (left, right) =>
       new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()
   );
+}
+
+function sanitizeCaseSummary(
+  entry: TesterFeedbackCaseSummary
+): TesterFeedbackCaseSummary {
+  return {
+    answerCount: entry.answerCount,
+    answersGiven: { ...entry.answersGiven },
+    confusingAreas: [...entry.confusingAreas],
+    createdAt: entry.createdAt,
+    emergencyCase: entry.emergencyCase,
+    feedbackStatus: entry.feedbackStatus,
+    flagged: entry.flagged,
+    flagReasons: [...entry.flagReasons],
+    helpfulness: entry.helpfulness,
+    knownSymptoms: [...entry.knownSymptoms],
+    negativeFeedbackFlag: entry.negativeFeedbackFlag,
+    notes: entry.notes,
+    petId: entry.petId,
+    questionCount: entry.questionCount,
+    questionsAsked: entry.questionsAsked.map((question) => ({
+      id: question.id,
+      prompt: question.prompt,
+    })),
+    reportFailed: entry.reportFailed,
+    reportId: entry.reportId,
+    reportTitle: entry.reportTitle,
+    submittedAt: entry.submittedAt,
+    symptomCheckId: entry.symptomCheckId,
+    symptomInput: entry.symptomInput,
+    testerUserId: entry.testerUserId,
+    trustLevel: entry.trustLevel,
+    urgencyResult: entry.urgencyResult,
+  };
 }
 
 function hasQuestionFlowIssue(entry: TesterFeedbackCaseSummary) {
@@ -99,9 +137,9 @@ function classifyCase(entry: TesterFeedbackCaseSummary): PrivateTesterTriageCase
   if (hasQuestionFlowIssue(entry)) {
     return {
       caseSummary: entry,
-      category: "Repeated question / flow loop",
+      category: "Question flow issue",
       rationale:
-        "The stored case ledger flagged a repeated-question or clarification-loop issue.",
+        "The stored case ledger flagged an incomplete, confusing, or loop-prone question flow.",
       severity: "P1",
     };
   }
@@ -169,6 +207,7 @@ function buildNotes(
   const notes = [
     "Sign-in failures and deletion-request counts remain zero until a dedicated auth/admin incident log is wired into production storage.",
     "Reports opened is derived from report-linked case rows in the founder review ledger, not browser-level analytics.",
+    "Allowlisted tester count comes from private-tester configuration; sent invitation delivery must be verified separately.",
     "The current command center is cohort-aware only when private-tester cases are present in the stored feedback ledger.",
   ];
 
@@ -198,15 +237,29 @@ export function buildPrivateTesterCohortCommandCenter(input: {
   feedbackDashboard: AdminFeedbackLedgerDashboardData;
   privateTesterDashboard: PrivateTesterDashboardData;
 }): PrivateTesterCohortCommandCenter {
+  const emergencySessions = input.feedbackDashboard.emergencyCases.map(
+    sanitizeCaseSummary
+  );
+  const failedReportSessions = input.feedbackDashboard.reportFailureCases.map(
+    sanitizeCaseSummary
+  );
+  const latestSessions = input.feedbackDashboard.latestCases.map(
+    sanitizeCaseSummary
+  );
+  const negativeFeedbackSessions =
+    input.feedbackDashboard.negativeFeedbackCases.map(sanitizeCaseSummary);
+  const noFeedbackSessions = input.feedbackDashboard.noFeedbackCases.map(
+    sanitizeCaseSummary
+  );
   const allCases = dedupeCases([
-    input.feedbackDashboard.latestCases,
-    input.feedbackDashboard.emergencyCases,
-    input.feedbackDashboard.negativeFeedbackCases,
-    input.feedbackDashboard.noFeedbackCases,
-    input.feedbackDashboard.reportFailureCases,
+    latestSessions,
+    emergencySessions,
+    negativeFeedbackSessions,
+    noFeedbackSessions,
+    failedReportSessions,
   ]);
 
-  const repeatedQuestionSessions = allCases.filter(hasQuestionFlowIssue);
+  const questionFlowIssueSessions = allCases.filter(hasQuestionFlowIssue);
   const highRiskSessions = allCases.filter(
     (entry) =>
       entry.emergencyCase ||
@@ -219,13 +272,14 @@ export function buildPrivateTesterCohortCommandCenter(input: {
 
   return {
     filters: {
-      emergencySessions: input.feedbackDashboard.emergencyCases,
-      failedReportSessions: input.feedbackDashboard.reportFailureCases,
+      emergencySessions,
+      failedReportSessions,
       failedSignInOrAccessSessions: accessIssues,
-      latestSessions: input.feedbackDashboard.latestCases,
-      negativeFeedbackSessions: input.feedbackDashboard.negativeFeedbackCases,
-      noFeedbackSessions: input.feedbackDashboard.noFeedbackCases,
-      repeatedQuestionSessions,
+      latestSessions,
+      negativeFeedbackSessions,
+      noFeedbackSessions,
+      questionFlowIssueSessions,
+      repeatedQuestionSessions: questionFlowIssueSessions,
     },
     highRiskSessions,
     notes: buildNotes(input.privateTesterDashboard, accessIssues),
@@ -238,13 +292,14 @@ export function buildPrivateTesterCohortCommandCenter(input: {
       emergencyResults: input.feedbackDashboard.summary.emergencyCases,
       feedbackSubmitted: input.feedbackDashboard.summary.feedbackSubmittedCases,
       negativeFeedback: input.feedbackDashboard.summary.negativeFeedbackCases,
-      repeatedQuestionFlags: repeatedQuestionSessions.length,
+      questionFlowIssueFlags: questionFlowIssueSessions.length,
+      repeatedQuestionFlags: questionFlowIssueSessions.length,
       reportFailures: input.feedbackDashboard.summary.reportFailureCases,
       reportsOpened: allCases.filter((entry) => Boolean(entry.reportId)).length,
       signInFailures: 0,
       signedInTesters: input.privateTesterDashboard.testers.length,
       testerAccessDisabled: input.privateTesterDashboard.summary.authAccessDisabled,
-      testersInvited: input.privateTesterDashboard.config.allowedEmailCount,
+      allowlistedTesters: input.privateTesterDashboard.config.allowedEmailCount,
     },
     triage: {
       P0: triageEntries.filter((entry) => entry.severity === "P0"),
@@ -260,16 +315,21 @@ export function buildPrivateTesterRegistryTemplateRows(
 ) {
   return testers.map((tester) => ({
     access_disabled: tester.access.blocked ? "yes" : "no",
+    allowlist_status: tester.access.allowed
+      ? "allowlisted"
+      : tester.access.blocked
+        ? "blocked"
+        : "not_allowlisted",
     consent_status: "manual-verify",
     deletion_requested: "manual-verify",
-    device_browser: "capture-during-invite",
-    dog_age: "capture-during-invite",
-    dog_breed_size: "capture-during-invite",
+    device_browser: "capture-during-onboarding",
+    dog_age: "capture-during-onboarding",
+    dog_breed_size: "capture-during-onboarding",
     email: tester.user.email ?? "",
     feedback_submitted: tester.counts.outcomeFeedbackEntries > 0 ? "yes" : "no",
     first_login_timestamp: "capture-during-launch",
     first_symptom_check_timestamp: tester.recentCases.at(-1)?.createdAt ?? "",
-    invite_status: tester.access.allowed ? "invited" : tester.access.blocked ? "blocked" : "not-invited",
+    invitation_sent_proof: "manual-verify",
     tester_alias: tester.user.fullName ?? tester.user.id,
   }));
 }

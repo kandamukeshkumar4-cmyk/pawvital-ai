@@ -10,9 +10,9 @@ const MINIMAX_API_KEY = (
   ""
 ).trim();
 
-// Timeout for MiniMax API calls (45 seconds to handle network latency)
+// Timeout for MiniMax API calls (8s default — must fit inside serverless turn budget)
 // Can be overridden via MINIMAX_TIMEOUT_MS environment variable
-const MINIMAX_TIMEOUT_MS = Number(process.env.MINIMAX_TIMEOUT_MS) || 45000;
+const MINIMAX_TIMEOUT_MS = Number(process.env.MINIMAX_TIMEOUT_MS) || 8000;
 const MINIMAX_MEMORY_MAX_TOKENS =
   Number(process.env.MINIMAX_MEMORY_MAX_TOKENS) || 800;
 

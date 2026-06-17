@@ -1,0 +1,62 @@
+{
+  "ticket": "VET-1560",
+  "mode": "local-project-manager-ticket-payload",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "source": {
+    "verdict": "FareedKhan scratch-training and syndicalt Tugboat techniques are translated into review-only PawVital tickets and local evidence artifacts."
+  },
+  "tickets": [
+    {
+      "id": "VET-1561",
+      "title": "Build model dataset manifest and holdout policy",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "dataset manifest exists",
+        "holdout policy is explicit"
+      ],
+      "verifier": "plans/VET-1561-model-dataset-manifest.json"
+    },
+    {
+      "id": "VET-1562",
+      "title": "Package offline narrow-model experiment evidence",
+      "dependencies": [
+        "VET-1561"
+      ],
+      "acceptanceCriteria": [
+        "offline package exists",
+        "runtime changes are blocked"
+      ],
+      "verifier": "plans/VET-1562-offline-experiment-package.json"
+    },
+    {
+      "id": "VET-1563",
+      "title": "Prepare model promotion evidence without changing runtime routes",
+      "dependencies": [
+        "VET-1561",
+        "VET-1562"
+      ],
+      "acceptanceCriteria": [
+        "scorecard, rollback, owner approval, and smoke evidence blockers are explicit"
+      ],
+      "verifier": "plans/VET-1563-extraction-promotion-evidence-packet.json"
+    },
+    {
+      "id": "VET-1564",
+      "title": "Prepare Whoop-style product intelligence evidence contract",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "claim guard and persistence schema readiness are explicit"
+      ],
+      "verifier": "plans/VET-1564-longitudinal-readiness-contract.json"
+    },
+    {
+      "id": "VET-1565",
+      "title": "Proposal-only Tugboat governance adoption",
+      "dependencies": [],
+      "acceptanceCriteria": [
+        "proposal-only phases and no-auto-apply boundaries exist"
+      ],
+      "verifier": "plans/VET-1565-tugboat-governance-plan.json"
+    }
+  ]
+}

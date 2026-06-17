@@ -1,0 +1,44 @@
+{
+  "ticket": "VET-1561",
+  "mode": "review-only-dataset-manifest",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Dataset manifest only. It records local benchmark inputs and does not train, call providers, or mutate runtime routing.",
+  "sources": [
+    {
+      "id": "dog-triage-gold-v1-validation",
+      "split": "validation",
+      "path": "data/benchmarks/dog-triage/gold-v1-enriched.jsonl",
+      "containsOwnerLanguage": true,
+      "containsClinicalLabels": true,
+      "sha256": "208510654ae6988e592c12da071fc00f9fa48565d6fe02b54d86219667c37e43",
+      "recordCount": 226
+    },
+    {
+      "id": "dog-triage-sample-cases-validation",
+      "split": "validation",
+      "path": "data/benchmarks/dog-triage/sample-cases.json",
+      "containsOwnerLanguage": true,
+      "containsClinicalLabels": true,
+      "sha256": "5fa19dcf8d213aec926b4b9ca0d2359a26709f327a1066dac055e51f54ea4700",
+      "recordCount": 3
+    },
+    {
+      "id": "dog-triage-wave3-freeze-holdout",
+      "split": "holdout",
+      "path": "data/benchmarks/dog-triage/wave3-freeze-manifest.json",
+      "containsOwnerLanguage": true,
+      "containsClinicalLabels": true,
+      "sha256": "f35c71aeffe92c9a9983feeaea6c643f6b054556dad8578f732b975c8ad353b9",
+      "recordCount": 226
+    }
+  ],
+  "holdoutPolicy": {
+    "holdoutMayBeScoredOnlyAfterCandidateFrozen": true,
+    "holdoutMayNotBeUsedForPromptOrAdapterIteration": true
+  },
+  "guardrails": [
+    "Do not use holdout sources to choose or tune the candidate.",
+    "Do not infer promotion readiness from this manifest alone.",
+    "Do not mutate protected clinical files from this artifact."
+  ]
+}

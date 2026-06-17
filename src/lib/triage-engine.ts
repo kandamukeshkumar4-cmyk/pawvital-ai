@@ -80,6 +80,7 @@ export interface StructuredCaseMemory {
   pending_question_id?: string;
   question_asked_counts?: Record<string, number>;
   clarification_attempts?: Record<string, number>;
+  answer_source_messages?: Record<string, string>;
   timeline_notes: string[];
   visual_evidence: VisionClinicalEvidence[];
   retrieval_evidence: Array<RetrievalTextEvidence | RetrievalImageEvidence>;
@@ -94,6 +95,12 @@ export interface StructuredCaseMemory {
   compressed_summary?: string;
   compression_model?: string;
   last_compressed_turn?: number;
+  /** Serialized ClinicalCaseState JSON — protected from compression (VET-1581) */
+  clinical_case_state?: string;
+  /** Planner shortReason for current question (VET-1576) */
+  asking_because?: string;
+  /** Doc Intel vet record summary when uploaded */
+  vet_record_context?: string;
 }
 
 export interface PetProfile {
@@ -142,6 +149,7 @@ export function createSession(): TriageSession {
       pending_question_id: undefined,
       question_asked_counts: {},
       clarification_attempts: {},
+      answer_source_messages: {},
       timeline_notes: [],
       visual_evidence: [],
       retrieval_evidence: [],
@@ -427,7 +435,9 @@ function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
         "just started",
       ]) ||
       (session.known_symptoms.includes("swollen_abdomen") &&
-        answers.restlessness === true);
+        answers.restlessness === true) ||
+      (session.known_symptoms.includes("swollen_abdomen") &&
+        answers.abdomen_pain === true);
     case "unresponsive":
       return answers.consciousness_level === "unresponsive";
     default:
@@ -1166,10 +1176,14 @@ function normalizeSymptom(raw: string): string | null {
     "drinking more water than usual": "drinking_more",
     "polydipsia": "drinking_more",
     trembling: "trembling",
-    shaking: "trembling",
     "trembling/shaking": "trembling",
     tremors: "trembling",
     shivering: "trembling",
+    "shaking all over": "trembling",
+    "whole body shaking": "trembling",
+    "body is shaking": "trembling",
+    "legs shaking": "trembling",
+    "can't stop shaking": "trembling",
     "swollen abdomen": "swollen_abdomen",
     bloated: "swollen_abdomen",
     "belly swollen": "swollen_abdomen",
@@ -1184,6 +1198,11 @@ function normalizeSymptom(raw: string): string | null {
     "ear scratching": "ear_scratching",
     "ear infection": "ear_scratching",
     "shaking head": "ear_scratching",
+    "shaking his head": "ear_scratching",
+    "shaking her head": "ear_scratching",
+    "shakes his head": "ear_scratching",
+    "shakes her head": "ear_scratching",
+    "keeps shaking head": "ear_scratching",
     "weight loss": "weight_loss",
     "losing weight": "weight_loss",
     "sudden weight loss": "weight_loss",
@@ -1449,6 +1468,21 @@ function normalizeSymptom(raw: string): string | null {
     "oozing from surgery site": "postoperative_concern",
     "not recovering well": "postoperative_concern",
     "swollen after surgery": "postoperative_concern",
+
+    // Toxin ingestion — phrases map to vomiting to trigger the toxin_exposure follow-up question chain
+    "ate chocolate": "vomiting",
+    "chocolate ingestion": "vomiting",
+    "ate some chocolate": "vomiting",
+    "ate rat poison": "vomiting",
+    "ingested poison": "vomiting",
+    "ate poison": "vomiting",
+    "ate xylitol": "vomiting",
+    "ate grapes": "vomiting",
+    "ate raisins": "vomiting",
+    "ate something toxic": "vomiting",
+    "ate something poisonous": "vomiting",
+    "swallowed something": "vomiting",
+    "chocolate toxicity": "vomiting",
 
     // Medication reaction
     "reaction to medicine": "medication_reaction",

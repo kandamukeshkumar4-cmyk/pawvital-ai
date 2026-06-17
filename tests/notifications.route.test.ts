@@ -51,11 +51,11 @@ function makePutRequest(path: string, body: Record<string, unknown>) {
 type SupabaseMockOptions = {
   userId?: string | null;
   notificationsData?: unknown[] | null;
-  notificationDbError?: { message: string } | null;
+  notificationDbError?: { code?: string; message: string } | null;
   updateData?: { id: string; read: boolean } | null;
-  updateError?: { message: string } | null;
+  updateError?: { code?: string; message: string } | null;
   preferencesData?: Record<string, unknown> | null;
-  preferencesError?: { message: string } | null;
+  preferencesError?: { code?: string; message: string } | null;
 };
 
 /**
@@ -250,6 +250,24 @@ describe("GET /api/notifications", () => {
     // The chainable eq() for read=false should have been called somewhere in the chain
     expect(notifGetChain.eq).toHaveBeenCalledWith("read", false);
   });
+
+  it("returns an empty list when the optional notifications table is unavailable", async () => {
+    const { supabase } = buildSupabaseMock({
+      notificationDbError: {
+        code: "PGRST205",
+        message: "Could not find the table 'public.notifications' in the schema cache",
+      },
+    });
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { GET } = await import("@/app/api/notifications/route");
+    const res = await GET(makeGetRequest());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data).toEqual([]);
+    expect(body.code).toBe("NOTIFICATIONS_SCHEMA_UNAVAILABLE");
+  });
 });
 
 // ── PATCH /api/notifications/[id] ────────────────────────────────────────────
@@ -324,6 +342,50 @@ describe("PATCH /api/notifications/[id]", () => {
     );
 
     expect(res.status).toBe(401);
+  });
+
+  it("returns 404 instead of 500 when the optional notifications table is unavailable", async () => {
+    const { supabase } = buildSupabaseMock({
+      updateError: {
+        code: "PGRST205",
+        message: "Could not find the table 'public.notifications' in the schema cache",
+      },
+    });
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { PATCH } = await import("@/app/api/notifications/[id]/route");
+    const res = await PATCH(
+      makePatchRequest("http://localhost/api/notifications/notif-1", {
+        read: true,
+      }),
+      { params: { id: "notif-1" } }
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(body.code).toBe("NOTIFICATIONS_SCHEMA_UNAVAILABLE");
+  });
+
+  it("keeps unexpected notification update errors as 500", async () => {
+    const { supabase } = buildSupabaseMock({
+      updateError: {
+        code: "XX000",
+        message: "unexpected database failure",
+      },
+    });
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { PATCH } = await import("@/app/api/notifications/[id]/route");
+    const res = await PATCH(
+      makePatchRequest("http://localhost/api/notifications/notif-1", {
+        read: true,
+      }),
+      { params: { id: "notif-1" } }
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Unable to update notification");
   });
 });
 
@@ -437,6 +499,127 @@ describe("POST /api/notifications/mark-all-read", () => {
 
     expect(res.status).toBe(401);
   });
+
+  it("treats mark-all-read as a no-op when the optional notifications table is unavailable", async () => {
+    const selectEqReadFn = jest.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "PGRST205",
+        message: "Could not find the table 'public.notifications' in the schema cache",
+      },
+    });
+    const selectEqUserFn = jest.fn().mockReturnValue({
+      eq: selectEqReadFn,
+    });
+    const selectFn = jest.fn().mockReturnValue({
+      eq: selectEqUserFn,
+    });
+    const updateFn = jest.fn();
+
+    const supabaseCustom = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1" } },
+          error: null,
+        }),
+      },
+      from: jest.fn(() => ({ select: selectFn, update: updateFn })),
+    };
+    mockCreateServerSupabaseClient.mockResolvedValue(supabaseCustom);
+
+    const { POST } = await import(
+      "@/app/api/notifications/mark-all-read/route"
+    );
+    const res = await POST(
+      makePostRequest("http://localhost/api/notifications/mark-all-read")
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.updatedCount).toBe(0);
+    expect(body.code).toBe("NOTIFICATIONS_SCHEMA_UNAVAILABLE");
+    expect(updateFn).not.toHaveBeenCalled();
+  });
+
+  it("keeps unexpected unread-load errors as 500", async () => {
+    const selectEqReadFn = jest.fn().mockResolvedValue({
+      data: null,
+      error: { code: "XX000", message: "unexpected database failure" },
+    });
+    const selectEqUserFn = jest.fn().mockReturnValue({
+      eq: selectEqReadFn,
+    });
+    const selectFn = jest.fn().mockReturnValue({
+      eq: selectEqUserFn,
+    });
+
+    const supabaseCustom = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1" } },
+          error: null,
+        }),
+      },
+      from: jest.fn(() => ({ select: selectFn, update: jest.fn() })),
+    };
+    mockCreateServerSupabaseClient.mockResolvedValue(supabaseCustom);
+
+    const { POST } = await import(
+      "@/app/api/notifications/mark-all-read/route"
+    );
+    const res = await POST(
+      makePostRequest("http://localhost/api/notifications/mark-all-read")
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Unable to mark notifications as read");
+  });
+
+  it("keeps unexpected update errors as 500", async () => {
+    const updateEqReadFn = jest.fn().mockResolvedValue({
+      error: { code: "XX000", message: "unexpected database failure" },
+    });
+    const updateEqUserFn = jest.fn().mockReturnValue({
+      eq: updateEqReadFn,
+    });
+    const updateFn = jest.fn().mockReturnValue({
+      eq: updateEqUserFn,
+    });
+    const selectEqReadFn = jest.fn().mockResolvedValue({
+      data: [{ id: "notif-1" }],
+      error: null,
+    });
+    const selectEqUserFn = jest.fn().mockReturnValue({
+      eq: selectEqReadFn,
+    });
+    const selectFn = jest.fn().mockReturnValue({
+      eq: selectEqUserFn,
+    });
+
+    const supabaseCustom = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1" } },
+          error: null,
+        }),
+      },
+      from: jest.fn(() => ({ select: selectFn, update: updateFn })),
+    };
+    mockCreateServerSupabaseClient.mockResolvedValue(supabaseCustom);
+
+    const { POST } = await import(
+      "@/app/api/notifications/mark-all-read/route"
+    );
+    const res = await POST(
+      makePostRequest("http://localhost/api/notifications/mark-all-read")
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Unable to mark notifications as read");
+  });
 });
 
 // ── GET /api/notifications/preferences ───────────────────────────────────────
@@ -503,6 +686,50 @@ describe("GET /api/notifications/preferences", () => {
     );
 
     expect(res.status).toBe(401);
+  });
+
+  it("returns defaults when the optional preferences table is unavailable", async () => {
+    const { supabase } = buildSupabaseMock({
+      preferencesError: {
+        code: "PGRST205",
+        message:
+          "Could not find the table 'public.notification_preferences' in the schema cache",
+      },
+    });
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { GET } = await import(
+      "@/app/api/notifications/preferences/route"
+    );
+    const res = await GET(
+      makeGetRequest("http://localhost/api/notifications/preferences")
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.data.digest_frequency).toBe("daily");
+    expect(body.code).toBe("NOTIFICATIONS_SCHEMA_UNAVAILABLE");
+  });
+
+  it("keeps unexpected preference fetch errors as 500", async () => {
+    const { supabase } = buildSupabaseMock({
+      preferencesError: {
+        code: "XX000",
+        message: "unexpected database failure",
+      },
+    });
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const { GET } = await import(
+      "@/app/api/notifications/preferences/route"
+    );
+    const res = await GET(
+      makeGetRequest("http://localhost/api/notifications/preferences")
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Unable to fetch preferences");
   });
 });
 
@@ -603,5 +830,84 @@ describe("PUT /api/notifications/preferences", () => {
     );
 
     expect(res.status).toBe(401);
+  });
+
+  it("returns 503 when preferences cannot be persisted because the table is unavailable", async () => {
+    const upsertFn = jest.fn().mockReturnThis();
+    const maybeSingleFn = jest.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "PGRST205",
+        message:
+          "Could not find the table 'public.notification_preferences' in the schema cache",
+      },
+    });
+    const selectFn = jest.fn().mockReturnValue({ maybeSingle: maybeSingleFn });
+
+    const supabaseCustom = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1" } },
+          error: null,
+        }),
+      },
+      from: jest.fn(() => ({
+        upsert: upsertFn,
+        select: selectFn,
+      })),
+    };
+    mockCreateServerSupabaseClient.mockResolvedValue(supabaseCustom);
+
+    const { PUT } = await import(
+      "@/app/api/notifications/preferences/route"
+    );
+    const res = await PUT(
+      makePutRequest("http://localhost/api/notifications/preferences", {
+        email_digest: false,
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body.code).toBe("NOTIFICATIONS_SCHEMA_UNAVAILABLE");
+  });
+
+  it("keeps unexpected preference update errors as 500", async () => {
+    const upsertFn = jest.fn().mockReturnThis();
+    const maybeSingleFn = jest.fn().mockResolvedValue({
+      data: null,
+      error: {
+        code: "XX000",
+        message: "unexpected database failure",
+      },
+    });
+    const selectFn = jest.fn().mockReturnValue({ maybeSingle: maybeSingleFn });
+
+    const supabaseCustom = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({
+          data: { user: { id: "user-1" } },
+          error: null,
+        }),
+      },
+      from: jest.fn(() => ({
+        upsert: upsertFn,
+        select: selectFn,
+      })),
+    };
+    mockCreateServerSupabaseClient.mockResolvedValue(supabaseCustom);
+
+    const { PUT } = await import(
+      "@/app/api/notifications/preferences/route"
+    );
+    const res = await PUT(
+      makePutRequest("http://localhost/api/notifications/preferences", {
+        email_digest: false,
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(body.error).toBe("Unable to update preferences");
   });
 });

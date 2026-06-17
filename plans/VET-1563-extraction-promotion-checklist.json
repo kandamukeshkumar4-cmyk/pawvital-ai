@@ -1,0 +1,183 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "review-only",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "note": "Promotion checklist only. It does not call providers, train models, or mutate runtime routing.",
+  "inputArtifacts": {
+    "scorecard": {
+      "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
+      "exists": true,
+      "sha256": "c16f1506941921f733a42f5f187c7c3819b489f06c59170c62a87a37ab8811de"
+    },
+    "experimentPackage": {
+      "path": "plans/VET-1562-offline-experiment-package.json",
+      "exists": true,
+      "sha256": "f78b76c9efa7b988e8596e37e6efbf1cdaffba94d29d08ca00ad0a7308737953"
+    },
+    "evaluationPlan": {
+      "path": "plans/VET-1563-model-routing-evaluation-plan.json",
+      "exists": true,
+      "sha256": "c599193839310717a8e44ea680aebb2ac8a6e095df45e22c09842d1e404df767"
+    },
+    "outputCapturePlan": {
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+      "exists": true,
+      "sha256": "b55873cc0a61580f73239360a462d31f2a650a0acaed7aa00b902f9e26e3aeda"
+    },
+    "outputStatus": {
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
+      "exists": true,
+      "sha256": "714b0e63be9f2d47dd5ac4a76e4b1441718266bfadf01dc9e7bf1f9425db092c"
+    },
+    "rollbackPlan": {
+      "path": "plans/VET-1563-extraction-model-rollback-plan.json",
+      "exists": true,
+      "sha256": "d71f0f5475f0fa87ac2bef0ac466a6950276b670ec4f4008375edfa37986ccc8"
+    },
+    "protectedClinicalDiffProof": {
+      "path": "plans/VET-1563-protected-clinical-diff-proof.json",
+      "exists": true,
+      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
+    },
+    "promotionSmokeRunbook": {
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+      "exists": true,
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
+    },
+    "promotionTicket": {
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+      "exists": true,
+      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
+    }
+  },
+  "baselineRoute": {
+    "role": "extraction",
+    "primaryModel": "current-runtime-extraction-route",
+    "fallbackModel": "deterministic extraction fallback",
+    "providers": [
+      "current PawVital runtime provider chain"
+    ],
+    "currentRuntimeSurface": "src/lib/symptom-chat/answer-extraction.ts"
+  },
+  "promotionThresholds": {
+    "weightedScoreMinimum": 4.2,
+    "noBlockingFindings": true,
+    "latencyMustNotRegressByMoreThanPct": 20,
+    "costMustBeDocumented": true,
+    "ownerApprovalRequired": true,
+    "runtimeChangeAllowedHere": false
+  },
+  "requiredEvidence": [
+    {
+      "id": "scorecard-populated",
+      "status": "blocked",
+      "evidence": "validation=0, holdout=0, threshold=4.2",
+      "blockers": [
+        "validation average 0 below threshold 4.2",
+        "holdout average 0 below threshold 4.2",
+        "scorecard still contains unresolved issues"
+      ]
+    },
+    {
+      "id": "frozen-observed-outputs",
+      "status": "blocked",
+      "evidence": "status ready=0/3, missing baseline=3, missing candidate=3, invalid JSON=0, invalid schema=0",
+      "blockers": [
+        "3 case(s) not ready for human review",
+        "3 baseline output file(s) missing",
+        "3 candidate output file(s) missing"
+      ]
+    },
+    {
+      "id": "owner-approval",
+      "status": "blocked",
+      "evidence": "Owner approval must be recorded outside the generated artifact.",
+      "blockers": [
+        "explicit owner approval missing"
+      ]
+    },
+    {
+      "id": "rollback-plan",
+      "status": "ready",
+      "evidence": "Rollback plan ready for src/lib/symptom-chat/answer-extraction.ts.",
+      "blockers": []
+    },
+    {
+      "id": "promotion-smoke-runbook",
+      "status": "blocked",
+      "evidence": "Promotion smoke runbook defines 5 evidence steps and 5 required attachments; readyForSmoke=false.",
+      "blockers": [
+        "Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready."
+      ]
+    },
+    {
+      "id": "separate-promotion-ticket",
+      "status": "blocked",
+      "evidence": "Separate promotion ticket draft VET-1563P exists; readyToOpenPromotionPr=false.",
+      "blockers": [
+        "validation score below 4.2",
+        "holdout score below 4.2",
+        "scorecard contains unresolved issues",
+        "frozen baseline/candidate outputs and hashes are incomplete",
+        "protected clinical diff proof missing or not ready",
+        "candidate model or adapter identity is not approved",
+        "explicit owner approval artifact is missing"
+      ]
+    },
+    {
+      "id": "protected-clinical-no-diff",
+      "status": "blocked",
+      "evidence": "Promotion PR must show no unauthorized diffs in deterministic clinical logic files.",
+      "blockers": [
+        "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
+      ]
+    },
+    {
+      "id": "runtime-routing-no-diff-here",
+      "status": "ready",
+      "evidence": "Current VET-1560/VET-1563 work remains review-only and cannot mutate runtime model routing.",
+      "blockers": []
+    }
+  ],
+  "promotionDecision": {
+    "allowed": false,
+    "reason": "Runtime promotion is blocked until all checklist evidence is ready, owner approval is recorded, and a separate promotion ticket authorizes the route change.",
+    "blockers": [
+      "scorecard-populated: validation average 0 below threshold 4.2",
+      "scorecard-populated: holdout average 0 below threshold 4.2",
+      "scorecard-populated: scorecard still contains unresolved issues",
+      "frozen-observed-outputs: 3 case(s) not ready for human review",
+      "frozen-observed-outputs: 3 baseline output file(s) missing",
+      "frozen-observed-outputs: 3 candidate output file(s) missing",
+      "owner-approval: explicit owner approval missing",
+      "promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.",
+      "separate-promotion-ticket: validation score below 4.2",
+      "separate-promotion-ticket: holdout score below 4.2",
+      "separate-promotion-ticket: scorecard contains unresolved issues",
+      "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: protected clinical diff proof missing or not ready",
+      "separate-promotion-ticket: candidate model or adapter identity is not approved",
+      "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
+    ]
+  },
+  "goodhartGuard": [
+    "Do not promote from training loss alone.",
+    "Do not promote from validation-only score.",
+    "Do not train on or tune against holdout cases.",
+    "Do not improve JSON validity while weakening emergency escalation or clinical correctness.",
+    "Do not let model output override deterministic clinical state fields."
+  ],
+  "nextPromotionTicketTemplate": {
+    "title": "Promote extraction model route only after VET-1563 checklist passes",
+    "mustAttach": [
+      "populated scorecard artifact hash",
+      "frozen baseline and candidate output hashes",
+      "owner approval",
+      "rollback plan",
+      "protected clinical diff proof",
+      "production-like smoke plan"
+    ]
+  }
+}

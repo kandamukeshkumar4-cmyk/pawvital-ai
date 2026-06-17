@@ -1,0 +1,337 @@
+{
+  "ticket": "VET-1564",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "mode": "review-only",
+  "productName": "PawVital Longitudinal Readiness Contract",
+  "intent": "Define the evidence contract for a Whoop-for-dogs style daily readiness and recovery layer without creating unsupported diagnosis, prognosis, treatment, or emergency-clearance claims.",
+  "ownerVisiblePromise": "Show whether available evidence looks baseline, watchful, urgent, or unknown, and explain exactly which evidence created that state.",
+  "evidenceWindows": {
+    "dailyReadiness": {
+      "lookbackDays": 1,
+      "requiredSignals": [
+        "health score or derived wellness index",
+        "latest symptom check"
+      ],
+      "optionalSignals": [
+        "journal energy",
+        "journal mood",
+        "appetite",
+        "hydration",
+        "rest"
+      ],
+      "missingState": "unknown readiness or watch state with explicit next evidence prompt; never coerce missing evidence to zero."
+    },
+    "trend": {
+      "lookbackDays": 7,
+      "requiredSignals": [
+        "at least two symptom checks or journal entries"
+      ],
+      "optionalSignals": [
+        "outcome feedback",
+        "follow-up answers",
+        "report disposition"
+      ],
+      "missingState": "unknown trend until there are at least two comparable observations."
+    },
+    "baselineShift": {
+      "lookbackDays": 7,
+      "requiredSignals": [
+        "latest symptom check",
+        "at least one comparable prior symptom check"
+      ],
+      "optionalSignals": [
+        "health score",
+        "follow-up answer",
+        "report disposition"
+      ],
+      "missingState": "unknown baseline shift until a latest check and comparable prior check exist; never coerce missing baseline evidence to a negative shift."
+    },
+    "recovery": {
+      "lookbackDays": 14,
+      "requiredSignals": [
+        "post-event journal entries or report-linked follow-up"
+      ],
+      "optionalSignals": [
+        "energy trend",
+        "mood trend",
+        "appetite trend",
+        "hydration trend"
+      ],
+      "missingState": "unknown recovery until a baseline and at least one follow-up checkpoint exist."
+    }
+  },
+  "scoringContract": {
+    "outputShape": {
+      "state": [
+        "stable",
+        "watch",
+        "urgent",
+        "unknown"
+      ],
+      "confidence": [
+        "high",
+        "medium",
+        "low",
+        "insufficient"
+      ],
+      "baselineShift": "typed direction, latest score, baseline score, delta, evidence chips, missing evidence chips, owner summary, and deterministic override",
+      "evidenceCoverage": "available evidence fields divided by available plus missing fields",
+      "nextEvidencePrompt": "single most useful missing evidence field unless urgent override exists"
+    },
+    "forbiddenOutputs": [
+      "single magic health score without source evidence",
+      "diagnosis certainty",
+      "treatment recommendation",
+      "prognosis promise",
+      "emergency clearance",
+      "model confidence displayed as medical certainty"
+    ],
+    "deterministicOverrides": [
+      "emergency symptom check forces urgent state",
+      "same-day clinical red flag forces urgent or watch state according to deterministic clinical rules",
+      "urgent override suppresses coaching prompts that could delay care"
+    ]
+  },
+  "modelUsageBoundaries": {
+    "allowed": [
+      "normalize owner-language evidence after extraction scorecard gates pass",
+      "summarize already-determined deterministic state in owner-friendly wording",
+      "detect unsafe reassurance in generated copy through safety verifier"
+    ],
+    "blockedUntilSeparateTicket": [
+      "runtime NIM or narrow-pack route promotion",
+      "adapter or checkpoint promotion",
+      "model-owned clinical state",
+      "vision-only readiness state"
+    ]
+  },
+  "uiContract": {
+    "surface": "analytics Evidence ring",
+    "mustShow": [
+      "module state",
+      "evidence chips",
+      "missing evidence chips",
+      "deterministic override when present",
+      "claim guard",
+      "review-only or evidence-quality status while gates are not complete",
+      "save controls only when selected-dog evidence is persistable",
+      "saved snapshot history count when authenticated database reads are available"
+    ],
+    "mustNotShow": [
+      "marketing hero as primary experience",
+      "pet wellness score without evidence source",
+      "hidden missing-data penalty",
+      "clinical clearance language"
+    ]
+  },
+  "acceptanceGates": [
+    "readiness snapshot tests cover persistable, insufficient-evidence, and urgent override states",
+    "recovery checkpoint tests cover report-linked, insufficient-evidence, and urgent override states",
+    "product-intelligence unit tests cover stable, urgent, missing-data, below-baseline, unknown baseline, and baseline urgent-override states",
+    "daily readiness snapshot tests prove baseline-shift durability in the product payload",
+    "analytics panel test covers Evidence ring, coverage text, missing-data state, baseline-shift row, and claim guard",
+    "analytics owner workflow can save persistable readiness/recovery records and read back history through authenticated routes",
+    "build passes",
+    "no protected clinical file diff unless separately authorized",
+    "no runtime model routing or provider env diff",
+    "claim-language clinical review before expanding owner-visible copy"
+  ],
+  "nextImplementationTickets": [
+    {
+      "id": "VET-1564A",
+      "title": "Persist daily readiness snapshots from existing evidence",
+      "scope": "Add read-only snapshot generation from existing journal, symptom, and health-score evidence; no diagnosis claims and no model routing changes.",
+      "implementedFoundation": {
+        "module": "src/lib/readiness-snapshot.ts",
+        "persistenceMapper": "src/lib/product-intelligence-persistence.ts",
+        "readWriteRoute": "src/app/api/product-intelligence/snapshots/route.ts",
+        "schema": "supabase-product-intelligence-schema.sql",
+        "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
+        "test": "tests/readiness-snapshot.test.ts",
+        "artifactStatus": {
+          "module": {
+            "path": "src/lib/readiness-snapshot.ts",
+            "exists": true
+          },
+          "persistenceMapper": {
+            "path": "src/lib/product-intelligence-persistence.ts",
+            "exists": true
+          },
+          "readWriteRoute": {
+            "path": "src/app/api/product-intelligence/snapshots/route.ts",
+            "exists": true
+          },
+          "schema": {
+            "path": "supabase-product-intelligence-schema.sql",
+            "exists": true
+          },
+          "ownerWorkflow": {
+            "path": "src/app/(dashboard)/analytics/page.tsx",
+            "exists": true
+          },
+          "test": {
+            "path": "tests/readiness-snapshot.test.ts",
+            "exists": true
+          }
+        },
+        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
+      }
+    },
+    {
+      "id": "VET-1564B",
+      "title": "Add report-linked recovery checkpoints",
+      "scope": "Create follow-up checkpoints tied to report disposition and journal evidence, with urgent override and missing-data states.",
+      "implementedFoundation": {
+        "module": "src/lib/recovery-checkpoint.ts",
+        "persistenceMapper": "src/lib/product-intelligence-persistence.ts",
+        "readWriteRoute": "src/app/api/product-intelligence/snapshots/route.ts",
+        "schema": "supabase-product-intelligence-schema.sql",
+        "ownerWorkflow": "src/app/(dashboard)/analytics/page.tsx",
+        "test": "tests/recovery-checkpoint.test.ts",
+        "artifactStatus": {
+          "module": {
+            "path": "src/lib/recovery-checkpoint.ts",
+            "exists": true
+          },
+          "persistenceMapper": {
+            "path": "src/lib/product-intelligence-persistence.ts",
+            "exists": true
+          },
+          "readWriteRoute": {
+            "path": "src/app/api/product-intelligence/snapshots/route.ts",
+            "exists": true
+          },
+          "schema": {
+            "path": "supabase-product-intelligence-schema.sql",
+            "exists": true
+          },
+          "ownerWorkflow": {
+            "path": "src/app/(dashboard)/analytics/page.tsx",
+            "exists": true
+          },
+          "test": {
+            "path": "tests/recovery-checkpoint.test.ts",
+            "exists": true
+          }
+        },
+        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
+      }
+    },
+    {
+      "id": "VET-1564C",
+      "title": "Run owner-facing claim-language clinical review",
+      "scope": "Review readiness, trend, recovery, and evidence-coach copy for unsupported diagnosis, prognosis, treatment, or emergency-clearance claims."
+    },
+    {
+      "id": "VET-1564D",
+      "title": "Add deterministic baseline-shift product intelligence",
+      "scope": "Compare the latest symptom-check evidence against the recent comparable baseline, preserve the signal in readiness snapshots, and surface it without diagnosis, prognosis, treatment, disease-progression, or emergency-clearance claims.",
+      "implementedFoundation": {
+        "module": "src/lib/product-intelligence.ts",
+        "snapshotPayload": "src/lib/readiness-snapshot.ts",
+        "ownerSurface": "src/components/analytics/product-intelligence-panel.tsx",
+        "tests": [
+          "tests/product-intelligence.test.ts",
+          "tests/readiness-snapshot.test.ts",
+          "tests/product-intelligence-panel.test.tsx"
+        ],
+        "persistenceStatus": "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied"
+      }
+    }
+  ],
+  "dependencyArtifacts": [
+    {
+      "path": "plans/VET-1564-product-intelligence-roadmap.json",
+      "exists": true,
+      "sha256": "9ed312c0405b355b0884c20a64255d49531d56e419b1adb8f89d25411e5e9a7d"
+    },
+    {
+      "path": "src/lib/product-intelligence.ts",
+      "exists": true,
+      "sha256": "96b6cb4b2d58ff878d91e47e96840b7e8589353248d54673405bdc56c65cd113"
+    },
+    {
+      "path": "src/lib/readiness-snapshot.ts",
+      "exists": true,
+      "sha256": "8a81a53fa45d4fb17eb9b6e8346932cddc8be1c3ebd2fff3ece091ee9025c5bb"
+    },
+    {
+      "path": "src/lib/recovery-checkpoint.ts",
+      "exists": true,
+      "sha256": "0293555a8de7f6920d0c1c84921162c81952cd14c4a4ef8b634cc79560e64eb0"
+    },
+    {
+      "path": "src/lib/product-intelligence-persistence.ts",
+      "exists": true,
+      "sha256": "5e677c985eeccb23a1ca1f6ceeead3cb966fa0bced6113964ddba6a31fb74a0f"
+    },
+    {
+      "path": "supabase-product-intelligence-schema.sql",
+      "exists": true,
+      "sha256": "f6c0b944d2ad5daea36f0421226335eb0e604dec28037a92344c1b49dfc00bb0"
+    },
+    {
+      "path": "plans/VET-1564-product-persistence-schema-readiness.json",
+      "exists": true,
+      "sha256": "8ecaacb7b0c45bbc04fc8e1b1950af4033f3f3284ab0c82e162d222972b1fb69"
+    },
+    {
+      "path": "src/app/api/product-intelligence/snapshots/route.ts",
+      "exists": true,
+      "sha256": "c7a59d643303756843e61f21518feb35b7a80d207cc770ca576bc4143780344b"
+    },
+    {
+      "path": "src/app/(dashboard)/analytics/page.tsx",
+      "exists": true,
+      "sha256": "a81c7fad6dc4afe3d99a2cbfa0c35d281ce147360d6c9c42c5faf7721947d5d4"
+    },
+    {
+      "path": "src/components/analytics/product-intelligence-panel.tsx",
+      "exists": true,
+      "sha256": "5fed902f94e495571cb9089e96b7c0f0f94f8fde4c1b9e6b0228c8ec5e2bcf73"
+    },
+    {
+      "path": "tests/product-intelligence.test.ts",
+      "exists": true,
+      "sha256": "a00f8ea1a838e6206593c96495f25a4f1d5d589eb29df0f36badcf6e2bac60bd"
+    },
+    {
+      "path": "tests/readiness-snapshot.test.ts",
+      "exists": true,
+      "sha256": "b747db0bd38dfee4c91c996f7cd72eec40d77bc485883818146b2622e4073990"
+    },
+    {
+      "path": "tests/recovery-checkpoint.test.ts",
+      "exists": true,
+      "sha256": "45f55e40ae4e96768e91a985d6f799e159ea798d4404a508521e6089503db5de"
+    },
+    {
+      "path": "tests/product-intelligence-persistence.test.ts",
+      "exists": true,
+      "sha256": "209e99c00d95d8d689f7aad4037090cb61bfb185c9dbd1c6733ca9418e87c3fb"
+    },
+    {
+      "path": "tests/product-intelligence-schema.test.ts",
+      "exists": true,
+      "sha256": "46138137edc89aba14248b3a85381a8ff8922cebbdb576621cfadc629cb2bd9a"
+    },
+    {
+      "path": "tests/product-intelligence-snapshots.route.test.ts",
+      "exists": true,
+      "sha256": "a60553e70f038bf6ceedab70ca58d1c960f1cfa8ab72afb49f38852208c47b53"
+    },
+    {
+      "path": "tests/product-intelligence-panel.test.tsx",
+      "exists": true,
+      "sha256": "01a32de77a012b2bacc0e241ee796cab43f4a4db90c5475bc376f7ecf4dc0137"
+    },
+    {
+      "path": "tests/analytics-product-owner-workflow.test.ts",
+      "exists": true,
+      "sha256": "4637ed8567e057b970d8527ca5220df4250f69e419aa224e02599ed72a5d7f09"
+    }
+  ],
+  "missingDependencyArtifacts": [],
+  "status": "ready-for-review",
+  "blockers": []
+}

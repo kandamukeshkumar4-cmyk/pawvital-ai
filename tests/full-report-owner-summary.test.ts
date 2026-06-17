@@ -108,6 +108,26 @@ describe("full report owner summary", () => {
     expect(screen.getByText("Was this helpful?")).toBeTruthy();
   });
 
+  it("does not render system notes telemetry even if a persisted report still carries observability", () => {
+    const persistedReport = {
+      ...makeReport({ report_storage_id: "check-123" }),
+      system_observability: {
+        timeoutCount: 0,
+        fallbackCount: 0,
+        shadowReadout: {
+          reportPresent: true,
+          observationCount: 1,
+        },
+      },
+    } as SymptomReport;
+
+    render(React.createElement(FullReport, { report: persistedReport }));
+
+    expect(screen.queryByText("System Notes")).toBeNull();
+    expect(screen.queryByText(/Recent fallbacks/i)).toBeNull();
+    expect(screen.queryByText(/Timeouts/i)).toBeNull();
+  });
+
   it("renders provided monitor action text and limitations without synthesizing extra report language", () => {
     render(
       React.createElement(FullReport, {

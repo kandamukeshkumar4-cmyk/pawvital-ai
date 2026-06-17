@@ -9,7 +9,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ### Overview
 
-PawVital AI is a single Next.js 16.2.1 app (React 19, Tailwind 4, TypeScript 5) with optional Python sidecar microservices under `services/`. Package manager is **npm** (lockfile: `package-lock.json`).
+PawVital AI is a single Next.js 16.x app (React 19, Tailwind 4, TypeScript 5; exact pin in `package.json`) with optional Python sidecar microservices under `services/`. Package manager is **npm** (lockfile: `package-lock.json`).
 
 ### Key commands
 
@@ -66,7 +66,7 @@ The app runs in **demo mode** when Supabase environment variables are not set (`
 
 ### Gotchas
 
-- The ESLint config uses `eslint/config` with `defineConfig` and `globalIgnores` (ESLint 9 flat config). Pre-existing lint errors exist in test files (`@typescript-eslint/no-explicit-any`) and one `prefer-const` in `symptom-chat/route.ts`.
+- The ESLint config uses `eslint/config` with `defineConfig` and `globalIgnores` (ESLint 9 flat config). The repo currently lints with 0 errors and ~90 pre-existing warnings (mostly `@typescript-eslint/no-unused-vars`, a few `@next/next/no-img-element`); do not introduce new errors.
 - Jest config uses `ts-jest` with `useESM: false` and maps `@/` to `./src/`. Test environment is `node` (not jsdom).
 - `next.config.ts` externalizes `pg`, `pg-native`, `pg-pool`, `pg-protocol` from Turbopack bundling.
 - The dev server starts very fast (~265ms with Turbopack). Hot reload works without needing restart after dependency changes.

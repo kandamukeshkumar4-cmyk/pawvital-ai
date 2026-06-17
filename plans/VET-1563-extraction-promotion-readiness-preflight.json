@@ -1,0 +1,276 @@
+{
+  "ticket": "VET-1563",
+  "role": "extraction",
+  "mode": "read-only-preflight",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "summary": {
+    "readyForPromotionTicket": false,
+    "readyEvidenceCount": 2,
+    "blockedEvidenceCount": 6,
+    "weightedScoreMinimum": 4.2,
+    "validationAverage": 0,
+    "holdoutAverage": 0,
+    "outputCases": 3,
+    "outputReadyCases": 0,
+    "baselineOutputHashes": 0,
+    "candidateOutputHashes": 0,
+    "invalidJsonOutputs": 0,
+    "invalidSchemaOutputs": 0,
+    "candidateGateBlockedCount": 3,
+    "candidateContentHashWithoutEvidenceHashCount": 0
+  },
+  "inputArtifacts": {
+    "checklist": {
+      "path": "plans/VET-1563-extraction-promotion-checklist.json",
+      "exists": true,
+      "sha256": "4b1def17c7cdf7ec4ee4e5044f76ac03d87473f8645a7dbcf46c458f749e5bc2"
+    },
+    "scorecard": {
+      "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
+      "exists": true,
+      "sha256": "c16f1506941921f733a42f5f187c7c3819b489f06c59170c62a87a37ab8811de"
+    },
+    "outputCapturePlan": {
+      "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
+      "exists": true,
+      "sha256": "b55873cc0a61580f73239360a462d31f2a650a0acaed7aa00b902f9e26e3aeda"
+    },
+    "outputTemplates": {
+      "path": "plans/VET-1563-extraction-frozen-output-templates.json",
+      "exists": true,
+      "sha256": "f5576de6c0f2e30c994068c18ac9e4aa7c5b12ed9188b0375045b13464dbff83"
+    },
+    "outputStatus": {
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
+      "exists": true,
+      "sha256": "714b0e63be9f2d47dd5ac4a76e4b1441718266bfadf01dc9e7bf1f9425db092c"
+    },
+    "promotionTicket": {
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+      "exists": true,
+      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
+    },
+    "ownerApprovalRequest": {
+      "path": "plans/VET-1563-extraction-owner-approval-request.json",
+      "exists": true,
+      "sha256": null,
+      "sha256OmittedReason": "downstream artifact is generated from this preflight; hashing it here would make regeneration non-idempotent"
+    },
+    "promotionSmokeRunbook": {
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+      "exists": true,
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
+    }
+  },
+  "requiredEvidence": [
+    {
+      "id": "scorecard-populated",
+      "status": "blocked",
+      "blockers": [
+        "validation average 0 below threshold 4.2",
+        "holdout average 0 below threshold 4.2",
+        "scorecard still contains unresolved issues"
+      ]
+    },
+    {
+      "id": "frozen-observed-outputs",
+      "status": "blocked",
+      "blockers": [
+        "3 case(s) not ready for human review",
+        "3 baseline output file(s) missing",
+        "3 candidate output file(s) missing"
+      ]
+    },
+    {
+      "id": "owner-approval",
+      "status": "blocked",
+      "blockers": [
+        "explicit owner approval missing"
+      ]
+    },
+    {
+      "id": "rollback-plan",
+      "status": "ready",
+      "blockers": []
+    },
+    {
+      "id": "promotion-smoke-runbook",
+      "status": "blocked",
+      "blockers": [
+        "Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready."
+      ]
+    },
+    {
+      "id": "separate-promotion-ticket",
+      "status": "blocked",
+      "blockers": [
+        "validation score below 4.2",
+        "holdout score below 4.2",
+        "scorecard contains unresolved issues",
+        "frozen baseline/candidate outputs and hashes are incomplete",
+        "protected clinical diff proof missing or not ready",
+        "candidate model or adapter identity is not approved",
+        "explicit owner approval artifact is missing"
+      ]
+    },
+    {
+      "id": "protected-clinical-no-diff",
+      "status": "blocked",
+      "blockers": [
+        "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
+      ]
+    },
+    {
+      "id": "runtime-routing-no-diff-here",
+      "status": "ready",
+      "blockers": []
+    }
+  ],
+  "outputGateStatus": {
+    "candidateGateBlockedCount": 3,
+    "candidateContentHashWithoutEvidenceHashCount": 0,
+    "candidateGates": [
+      {
+        "caseSourceId": "dog-triage-gold-v1-validation",
+        "split": "validation",
+        "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-gold-v1-validation/candidate.json",
+        "candidateOutputSha256": null,
+        "candidateOutputContentSha256": null,
+        "candidateSchemaValid": false,
+        "candidateBlocker": "output file missing",
+        "captureGate": {
+          "status": "blocked",
+          "requiredApprovalScope": "validation-output-capture-only",
+          "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+          "candidateIdentityResolved": false,
+          "captureApprovalComplete": false,
+          "blockers": [
+            "candidate identity is not resolved",
+            "scoped validation-output-capture approval is not complete"
+          ]
+        }
+      },
+      {
+        "caseSourceId": "dog-triage-sample-cases-validation",
+        "split": "validation",
+        "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-sample-cases-validation/candidate.json",
+        "candidateOutputSha256": null,
+        "candidateOutputContentSha256": null,
+        "candidateSchemaValid": false,
+        "candidateBlocker": "output file missing",
+        "captureGate": {
+          "status": "blocked",
+          "requiredApprovalScope": "validation-output-capture-only",
+          "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+          "candidateIdentityResolved": false,
+          "captureApprovalComplete": false,
+          "blockers": [
+            "candidate identity is not resolved",
+            "scoped validation-output-capture approval is not complete"
+          ]
+        }
+      },
+      {
+        "caseSourceId": "dog-triage-wave3-freeze-holdout",
+        "split": "holdout",
+        "candidateOutputPath": "artifacts/model-shadow-eval/extraction/dog-triage-wave3-freeze-holdout/candidate.json",
+        "candidateOutputSha256": null,
+        "candidateOutputContentSha256": null,
+        "candidateSchemaValid": false,
+        "candidateBlocker": "output file missing",
+        "captureGate": {
+          "status": "blocked",
+          "requiredApprovalScope": "validation-output-capture-only",
+          "candidateSelectionArtifact": "plans/VET-1563-extraction-candidate-selection-packet.json",
+          "candidateIdentityResolved": false,
+          "captureApprovalComplete": false,
+          "blockers": [
+            "candidate identity is not resolved",
+            "scoped validation-output-capture approval is not complete"
+          ]
+        }
+      }
+    ]
+  },
+  "blockers": [
+    "scorecard-populated: validation average 0 below threshold 4.2",
+    "scorecard-populated: holdout average 0 below threshold 4.2",
+    "scorecard-populated: scorecard still contains unresolved issues",
+    "frozen-observed-outputs: 3 case(s) not ready for human review",
+    "frozen-observed-outputs: 3 baseline output file(s) missing",
+    "frozen-observed-outputs: 3 candidate output file(s) missing",
+    "owner-approval: explicit owner approval missing",
+    "promotion-smoke-runbook: Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready.",
+    "separate-promotion-ticket: validation score below 4.2",
+    "separate-promotion-ticket: holdout score below 4.2",
+    "separate-promotion-ticket: scorecard contains unresolved issues",
+    "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+    "separate-promotion-ticket: protected clinical diff proof missing or not ready",
+    "separate-promotion-ticket: candidate model or adapter identity is not approved",
+    "separate-promotion-ticket: explicit owner approval artifact is missing",
+    "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
+    "output-capture: 3 baseline output hash(es) missing",
+    "output-capture: 3 candidate output hash(es) missing"
+  ],
+  "nextActions": [
+    {
+      "evidenceId": "scorecard-populated",
+      "action": "validation=0, holdout=0, threshold=4.2",
+      "blockers": [
+        "validation average 0 below threshold 4.2",
+        "holdout average 0 below threshold 4.2",
+        "scorecard still contains unresolved issues"
+      ]
+    },
+    {
+      "evidenceId": "frozen-observed-outputs",
+      "action": "status ready=0/3, missing baseline=3, missing candidate=3, invalid JSON=0, invalid schema=0",
+      "blockers": [
+        "3 case(s) not ready for human review",
+        "3 baseline output file(s) missing",
+        "3 candidate output file(s) missing"
+      ]
+    },
+    {
+      "evidenceId": "owner-approval",
+      "action": "Owner approval must be recorded outside the generated artifact.",
+      "blockers": [
+        "explicit owner approval missing"
+      ]
+    },
+    {
+      "evidenceId": "promotion-smoke-runbook",
+      "action": "Promotion smoke runbook defines 5 evidence steps and 5 required attachments; readyForSmoke=false.",
+      "blockers": [
+        "Smoke execution remains blocked until frozen outputs, scorecard review, owner approval, and the separate promotion ticket are ready."
+      ]
+    },
+    {
+      "evidenceId": "separate-promotion-ticket",
+      "action": "Separate promotion ticket draft VET-1563P exists; readyToOpenPromotionPr=false.",
+      "blockers": [
+        "validation score below 4.2",
+        "holdout score below 4.2",
+        "scorecard contains unresolved issues",
+        "frozen baseline/candidate outputs and hashes are incomplete",
+        "protected clinical diff proof missing or not ready",
+        "candidate model or adapter identity is not approved",
+        "explicit owner approval artifact is missing"
+      ]
+    },
+    {
+      "evidenceId": "protected-clinical-no-diff",
+      "action": "Promotion PR must show no unauthorized diffs in deterministic clinical logic files.",
+      "blockers": [
+        "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
+      ]
+    }
+  ],
+  "guardrails": [
+    "Do not mutate runtime model routing from this preflight.",
+    "Do not open a promotion PR until readyForPromotionTicket is true.",
+    "Do not treat validation-only score as promotion evidence.",
+    "Do not train on or tune against holdout cases.",
+    "Keep protected clinical files authoritative unless a separate clinical ticket authorizes changes."
+  ]
+}

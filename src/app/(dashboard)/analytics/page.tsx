@@ -8,6 +8,7 @@ import Card from "@/components/ui/card";
 import Select from "@/components/ui/select";
 import {
   HealthScoreCard,
+  ProductIntelligencePanel,
   SeverityTrendChart,
   SymptomFrequencyChart,
   UrgencyDistribution,
@@ -15,6 +16,12 @@ import {
 import type { SymptomCheckEntry } from "@/components/timeline/types";
 import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-check-entry-map";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
+import { buildProductIntelligenceSnapshot } from "@/lib/product-intelligence";
+import {
+  loadProductIntelligenceHistory,
+  saveProductIntelligenceSnapshot,
+  type ProductIntelligenceHistory,
+} from "@/lib/product-intelligence-owner-workflow";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { DEMO_ANALYTICS_SYMPTOM_ENTRIES } from "@/lib/demo-health-data";
 import { useAppStore } from "@/store/app-store";
@@ -40,6 +47,10 @@ function AnalyticsPageContent() {
   const [loading, setLoading] = useState(true);
   const [petId, setPetId] = useState<string>("all");
   const [range, setRange] = useState<string>("90");
+  const [productHistory, setProductHistory] = useState<ProductIntelligenceHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [savingSnapshot, setSavingSnapshot] = useState(false);
+  const [saveSnapshotStatus, setSaveSnapshotStatus] = useState<string | null>(null);
 
   const loadChecks = useCallback(async () => {
     if (!isSupabaseConfigured) {
@@ -110,6 +121,59 @@ function AnalyticsPageContent() {
     return list;
   }, [rawEntries, range, petId, now]);
 
+  const productSnapshot = useMemo(
+    () => buildProductIntelligenceSnapshot({ entries: filtered }),
+    [filtered]
+  );
+  const selectedPetIdForPersistence = isSupabaseConfigured && petId !== "all" ? petId : null;
+
+  const loadProductHistory = useCallback(async () => {
+    if (!selectedPetIdForPersistence) {
+      setProductHistory(null);
+      return;
+    }
+
+    setHistoryLoading(true);
+    try {
+      const history = await loadProductIntelligenceHistory(selectedPetIdForPersistence);
+      setProductHistory(history);
+    } catch (error) {
+      console.error("Product intelligence history load failed:", error);
+      setProductHistory(null);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [selectedPetIdForPersistence]);
+
+  useEffect(() => {
+    void loadProductHistory();
+  }, [loadProductHistory]);
+
+  const saveReadinessSnapshot = useCallback(async () => {
+    if (!selectedPetIdForPersistence || !productSnapshot.persistenceAllowed) {
+      return;
+    }
+
+    setSavingSnapshot(true);
+    setSaveSnapshotStatus(null);
+    try {
+      await saveProductIntelligenceSnapshot({
+        petId: selectedPetIdForPersistence,
+        readiness: {
+          generatedAt: new Date().toISOString(),
+          sourceCheckIds: filtered.map((entry) => entry.id),
+        },
+      });
+      setSaveSnapshotStatus("Snapshot saved");
+      await loadProductHistory();
+    } catch (error) {
+      console.error("Product intelligence snapshot save failed:", error);
+      setSaveSnapshotStatus("Snapshot save failed");
+    } finally {
+      setSavingSnapshot(false);
+    }
+  }, [filtered, loadProductHistory, productSnapshot.persistenceAllowed, selectedPetIdForPersistence]);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -154,6 +218,16 @@ function AnalyticsPageContent() {
         </Card>
       ) : (
         <>
+          <Card className="p-6">
+            <ProductIntelligencePanel
+              snapshot={productSnapshot}
+              historyCount={productHistory?.readiness.length}
+              onSaveSnapshot={selectedPetIdForPersistence ? saveReadinessSnapshot : undefined}
+              saveSnapshotDisabled={historyLoading}
+              saveSnapshotInProgress={savingSnapshot}
+              saveSnapshotStatus={saveSnapshotStatus}
+            />
+          </Card>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="p-6">
               <HealthScoreCard entries={filtered} />

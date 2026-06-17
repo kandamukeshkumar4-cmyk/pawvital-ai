@@ -68,6 +68,7 @@ function buildCommandCenterFixture() {
       latestSessions: [{ symptomCheckId: "case-1" }],
       negativeFeedbackSessions: [],
       noFeedbackSessions: [],
+      questionFlowIssueSessions: [],
       repeatedQuestionSessions: [],
     },
     highRiskSessions: [
@@ -89,14 +90,15 @@ function buildCommandCenterFixture() {
       dataDeletionRequests: 0,
       emergencyResults: 1,
       feedbackSubmitted: 1,
+      allowlistedTesters: 1,
       negativeFeedback: 1,
+      questionFlowIssueFlags: 1,
       repeatedQuestionFlags: 1,
       reportFailures: 1,
       reportsOpened: 1,
       signInFailures: 0,
       signedInTesters: 1,
       testerAccessDisabled: 0,
-      testersInvited: 1,
     },
     triage: {
       P0: [
@@ -185,6 +187,14 @@ describe("AdminCohortLaunchPage", () => {
 
     expect(html).toContain("Private Tester Cohort 1 Command Center");
     expect(html).toContain("Founder triage queue");
+    expect(html).toContain("Allowlisted testers");
+    expect(html).not.toContain("Testers invited");
+    expect(html).not.toContain("not-invited");
+    expect(html).not.toContain("needs invite follow-up");
+    expect(html).toContain("Question-flow flags");
+    expect(html).toContain("question_flow_issue");
+    expect(html).not.toContain("Repeated-question flags");
+    expect(html).not.toContain("repeated_question");
     expect(html).toContain("Only sanitized command-center notes are rendered here.");
     expect(html).not.toContain("service-role-secret");
     expect(html).not.toContain("super-secret-service-role-value");

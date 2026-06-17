@@ -6,8 +6,8 @@ torchvision==0.20.1
 accelerate==1.2.1
 huggingface_hub[hf_xet]>=0.32.0
 qwen-vl-utils==0.0.8
-Pillow==11.3.0
-python-multipart==0.0.20
+Pillow==12.2.0
+python-multipart==0.0.27
 numpy==1.26.4
 redis==5.2.1
 httpx==0.28.1

@@ -85,10 +85,6 @@ export interface SymptomReport {
   async_review_scheduled?: boolean;
   report_storage_id?: string;
   outcome_feedback_enabled?: boolean;
-  system_observability?: {
-    timeoutCount?: number;
-    fallbackCount?: number;
-  };
   similar_cases?: SimilarCase[];
   reference_images?: ReferenceImage[];
   bayesian_differentials?: Array<{ condition: string; probability: number; evidence_count: number; confidence?: string }>;

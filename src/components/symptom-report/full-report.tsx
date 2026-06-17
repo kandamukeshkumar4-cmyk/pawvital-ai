@@ -19,6 +19,7 @@ import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
 import { BayesianDifferentials } from "./bayesian-differentials";
 import { OwnerSummarySection } from "./owner-summary";
+import { NearestVetFinder } from "./nearest-vet-finder";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
@@ -237,6 +238,10 @@ export function FullReport({
         warningTitle={presentation.warningTitle}
       />
 
+      {!readOnlyShared &&
+        (report.recommendation === "emergency_vet" ||
+          report.severity === "emergency") && <NearestVetFinder />}
+
       <OwnerSummarySection
         canExport={canExport}
         confidenceCalibration={
@@ -416,18 +421,6 @@ export function FullReport({
           )}
         </div>
       ) : null}
-
-      {!readOnlyShared && report.system_observability && (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            System Notes
-          </p>
-          <p className="mt-1 text-xs text-gray-600">
-            Recent fallbacks: {report.system_observability.fallbackCount ?? 0} |
-            Timeouts: {report.system_observability.timeoutCount ?? 0}
-          </p>
-        </div>
-      )}
 
       <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
         <p className="text-xs text-gray-500 leading-relaxed">

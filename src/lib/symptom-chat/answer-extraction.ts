@@ -191,6 +191,12 @@ export function deriveDeterministicAnswerForQuestion(
       return extractRestlessness(rawMessage);
     case "onset_during_exercise":
       return extractOnsetDuringExercise(rawMessage);
+    case "lethargy_severity":
+      return extractLethargySeverity(rawMessage);
+    case "abdomen_pain":
+      return extractAbdomenPain(rawMessage);
+    case "head_tilt":
+      return extractHeadTilt(rawMessage);
     default:
       return null;
   }
@@ -206,6 +212,7 @@ function getDeterministicCandidateQuestionIds(session: TriageSession): string[] 
     "retching_present",
     "restlessness",
     "onset_during_exercise",
+    "head_tilt",
   ]) {
     questionIds.add(questionId);
   }
@@ -954,6 +961,28 @@ function extractFaceSwelling(rawMessage: string): boolean | null {
   return null;
 }
 
+function extractHeadTilt(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(no head tilt|no tilt|head is straight|not tilting|doesn'?t tilt|head is level|head is normal|no neurological)\b/.test(
+      lower
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    /\b(head tilt|tilting (to one side|to the (left|right)|sideways)|head stays tilted|head is tilted|permanent tilt|leans to one side)\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  return null;
+}
+
 function extractHivesWithBreathing(rawMessage: string): boolean | null {
   const lower = rawMessage.toLowerCase();
   const hasHives = /\b(hives?|welts?|rash)\b/.test(lower);
@@ -1025,6 +1054,58 @@ function extractOnsetDuringExercise(rawMessage: string): string | null {
     )
   ) {
     return "during";
+  }
+
+  return null;
+}
+
+function extractLethargySeverity(rawMessage: string): string | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(lies there|barely moves?|not moving|won'?t move|can'?t get up|unable to get up|collapse|collapsed|won'?t stand|not standing)\b/.test(
+      lower
+    )
+  ) {
+    return "severe";
+  }
+
+  if (
+    /\b(somewhat lethargic|pretty tired|quite tired|moderately lethargic|a (bit|little) more lethargic)\b/.test(
+      lower
+    )
+  ) {
+    return "moderate";
+  }
+
+  if (
+    /\b(less active than usual|a (bit|little) slow(?:er)?|slightly less active|not as active|low energy|tired but)\b/.test(
+      lower
+    )
+  ) {
+    return "mild";
+  }
+
+  return null;
+}
+
+function extractAbdomenPain(rawMessage: string): boolean | null {
+  const lower = rawMessage.toLowerCase();
+
+  if (
+    /\b(yelped|cried out|flinched|winced|react(?:s|ed) when|painful when|sore (belly|abdomen|stomach)|pain when (touched|pressed)|sensitive (belly|abdomen|stomach))\b/.test(
+      lower
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    /\b(doesn'?t react|no (pain|reaction|sensitivity)|not sensitive|not painful|not sore)\b/.test(
+      lower
+    )
+  ) {
+    return false;
   }
 
   return null;

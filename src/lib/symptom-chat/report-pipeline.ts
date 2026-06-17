@@ -7,6 +7,7 @@ import type { RetrievalBundle } from "@/lib/clinical-evidence";
 import {
   buildDiagnosisContext,
   type PetProfile,
+  type StructuredCaseMemory,
   type TriageSession,
 } from "@/lib/triage-engine";
 import type { UncertaintyTerminalOutcome } from "@/lib/clinical/uncertainty-routing";
@@ -30,19 +31,24 @@ import {
 import { appendShadowTelemetrySnapshot } from "@/lib/shadow-telemetry-store";
 import { saveTesterFeedbackCaseLedgerToDB } from "@/lib/tester-feedback-storage";
 import {
+  appendShadowComparison,
   appendSidecarObservation,
   buildInternalShadowTelemetrySnapshot,
   buildObservabilitySnapshot,
   buildShadowReadoutObservabilitySnapshot,
+  describeShadowComparison,
   describeShadowModeDecision,
   getShadowModeDecision,
 } from "@/lib/sidecar-observability";
 import {
   buildDeterministicCaseSummary,
   ensureStructuredCaseMemory,
+  recordConversationTelemetry,
+  type SecondOpinionTraceTelemetry,
   type TelemetryGateEvent,
 } from "@/lib/symptom-memory";
 import { createModelBudgetState } from "@/lib/model-budget";
+import { getRoleTimeoutMs } from "@/lib/model-router";
 import { enqueueAsyncReview } from "@/lib/async-review-client";
 import {
   describeLiveTrafficDecision,
@@ -67,6 +73,13 @@ import {
   getFinalSafetyVerifierMode,
   verifyFinalUrgencyAndHandoffSafety,
 } from "./final-safety-verifier";
+import {
+  buildSecondOpinionEligibilityTrace,
+  extractSecondOpinionPendingAnswer,
+  getPrimarySuccessShadowSamplingAttemptCount,
+  getSecondOpinionExtractorMode,
+  type SecondOpinionExtractionResult,
+} from "./second-opinion-extractor";
 
 const useNvidia = isNvidiaConfigured();
 const EMPTY_RETRIEVAL_BUNDLE: RetrievalBundle = {
@@ -86,6 +99,24 @@ const URGENCY_TO_RECOMMENDATION: Record<string, string> = {
   high: "vet_24h",
   moderate: "vet_48h",
   low: "monitor",
+};
+const REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS =
+  getRoleTimeoutMs("extraction");
+const REPORT_SECOND_OPINION_SOURCE_UNAVAILABLE_REASON =
+  "source_context_unavailable";
+const NUMBER_WORD_ANSWERS: Record<string, string> = {
+  "1": "one",
+  "2": "two",
+  "3": "three",
+  "4": "four",
+  "5": "five",
+  "6": "six",
+  "7": "seven",
+  "8": "eight",
+  "9": "nine",
+  "10": "ten",
+  "11": "eleven",
+  "12": "twelve",
 };
 const REPORT_CLAIM_SECTION_PATTERNS = [
   /top differentials:/i,
@@ -520,13 +551,412 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
 }`;
 }
 
-function buildClientObservabilitySnapshot(session: TriageSession) {
+function buildObservabilityCounterSnapshot(session: TriageSession) {
   const observabilitySnapshot = buildObservabilitySnapshot(session);
 
   return {
     timeoutCount: observabilitySnapshot.timeoutCount,
     fallbackCount: observabilitySnapshot.fallbackCount,
   };
+}
+
+function getLastOwnerMessageContent(
+  messages: GenerateReportInput["messages"]
+): string {
+  return [...messages].reverse().find((message) => message.role === "user")
+    ?.content ?? "";
+}
+
+function hasSecondOpinionTrace(session: TriageSession): boolean {
+  return (session.case_memory?.service_observations ?? []).some(
+    (observation) =>
+      observation.stage === "second_opinion" &&
+      typeof observation.note === "string" &&
+      observation.note.includes("request_outcome=")
+  );
+}
+
+function getSecondOpinionAcceptanceOutcome(
+  result: SecondOpinionExtractionResult
+): SecondOpinionTraceTelemetry["acceptance_outcome"] {
+  if (result.status === "accepted") {
+    return "accepted";
+  }
+  if (result.status === "rejected") {
+    return "rejected";
+  }
+  if (result.status === "failed") {
+    return "failed";
+  }
+  return undefined;
+}
+
+function getReportSecondOpinionOwnerMessage({
+  memory,
+  ownerMessage,
+  questionId,
+}: {
+  memory: StructuredCaseMemory;
+  ownerMessage: string;
+  questionId?: string;
+}): { hasQuestionSourceMessage: boolean; ownerMessage: string } {
+  const questionSourceMessage = questionId
+    ? memory.answer_source_messages?.[questionId]?.trim()
+    : undefined;
+
+  return {
+    hasQuestionSourceMessage: Boolean(questionSourceMessage),
+    ownerMessage:
+      questionSourceMessage || memory.latest_owner_turn?.trim() || ownerMessage,
+  };
+}
+
+function normalizeAnswerAnchorText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function buildAnswerAnchorCandidates(
+  answerValue: string | number
+): string[] {
+  const normalizedValue = normalizeAnswerAnchorText(String(answerValue));
+  if (!normalizedValue) {
+    return [];
+  }
+
+  const wordToNumber = Object.fromEntries(
+    Object.entries(NUMBER_WORD_ANSWERS).map(([number, word]) => [word, number])
+  );
+  const candidates = new Set<string>([normalizedValue]);
+  candidates.add(
+    normalizedValue.replace(/\b\d+\b/g, (value) => {
+      return NUMBER_WORD_ANSWERS[value] || value;
+    })
+  );
+  candidates.add(
+    normalizedValue.replace(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\b/g, (value) => {
+      return wordToNumber[value] || value;
+    })
+  );
+
+  return Array.from(candidates).filter((candidate) => candidate.length > 0);
+}
+
+function ownerMessageAnchorsAnswerValue(
+  ownerMessage: string,
+  answerValue: string | boolean | number
+): boolean {
+  if (typeof answerValue === "boolean") {
+    return false;
+  }
+
+  const normalizedOwnerMessage = normalizeAnswerAnchorText(ownerMessage);
+  const paddedOwnerMessage = ` ${normalizedOwnerMessage} `;
+  return buildAnswerAnchorCandidates(answerValue).some((candidate) =>
+    candidate.length >= 4 && paddedOwnerMessage.includes(` ${candidate} `)
+  );
+}
+
+function shouldRejectReportTraceForMissingSource({
+  primarySuccessShadowSampling,
+  hasQuestionSourceMessage,
+  primaryAnswerValue,
+  traceOwnerMessage,
+}: {
+  primarySuccessShadowSampling: boolean;
+  hasQuestionSourceMessage: boolean;
+  primaryAnswerValue: string | boolean | number;
+  traceOwnerMessage: string;
+}): boolean {
+  if (!primarySuccessShadowSampling || hasQuestionSourceMessage) {
+    return false;
+  }
+
+  return !ownerMessageAnchorsAnswerValue(traceOwnerMessage, primaryAnswerValue);
+}
+
+function isReportPrimarySuccessShadowSample(
+  session: TriageSession,
+  questionId: string
+): boolean {
+  const memory = ensureStructuredCaseMemory(session);
+  const hasExtractedAnswer = Object.prototype.hasOwnProperty.call(
+    session.extracted_answers,
+    questionId
+  );
+  const hasRecordedAnswer = (session.answered_questions ?? []).includes(
+    questionId
+  );
+  if (!hasExtractedAnswer || !hasRecordedAnswer) {
+    return false;
+  }
+
+  const shadowSamplingClarificationAttempts =
+    getPrimarySuccessShadowSamplingAttemptCount({
+      previousClarificationAttempts:
+        memory.clarification_attempts?.[questionId] ?? 0,
+      questionAskedCount: memory.question_asked_counts?.[questionId],
+    });
+
+  return shadowSamplingClarificationAttempts === 0;
+}
+
+function findSecondOpinionReportTraceQuestionId(
+  session: TriageSession
+): string | undefined {
+  const memory = ensureStructuredCaseMemory(session);
+  const clarificationAttempts = memory.clarification_attempts ?? {};
+  const questionAskedCounts = memory.question_asked_counts ?? {};
+  const answeredInOrder = session.answered_questions ?? [];
+
+  // VET-1546C-R3: Prefer the earliest answered question that qualifies as a
+  // genuine first-answer primary-success shadow sample. Route-time records that
+  // turn as `requested`; the reconstruction must mirror it instead of biasing
+  // toward the most-recent (often clarified) answer.
+  const primarySuccessAnswered = answeredInOrder.find((questionId) =>
+    isReportPrimarySuccessShadowSample(session, questionId)
+  );
+  if (primarySuccessAnswered) {
+    return primarySuccessAnswered;
+  }
+
+  const answeredQuestions = [...answeredInOrder].reverse();
+  const clarifiedAnswered = answeredQuestions.find(
+    (questionId) => clarificationAttempts[questionId] !== undefined
+  );
+  if (clarifiedAnswered) {
+    return clarifiedAnswered;
+  }
+
+  return (
+    answeredQuestions.find(
+      (questionId) =>
+        questionAskedCounts[questionId] !== undefined ||
+        clarificationAttempts[questionId] !== undefined
+    ) ??
+    memory.pending_question_id ??
+    session.last_question_asked
+  );
+}
+
+async function appendReportSecondOpinionTraceIfMissing({
+  session,
+  ownerMessage,
+}: {
+  session: TriageSession;
+  ownerMessage: string;
+}): Promise<TriageSession> {
+  const mode = getSecondOpinionExtractorMode();
+  if (mode === "off" || hasSecondOpinionTrace(session)) {
+    return session;
+  }
+
+  const memory = ensureStructuredCaseMemory(session);
+  const clarificationAttempts = memory.clarification_attempts ?? {};
+  const unresolvedQuestionIds = memory.unresolved_question_ids ?? [];
+  const questionId = findSecondOpinionReportTraceQuestionId(session);
+  const {
+    hasQuestionSourceMessage,
+    ownerMessage: traceOwnerMessage,
+  } = getReportSecondOpinionOwnerMessage({
+    memory,
+    ownerMessage,
+    questionId,
+  });
+  const hasExtractedAnswer = questionId
+    ? Object.prototype.hasOwnProperty.call(session.extracted_answers, questionId)
+    : false;
+  const hasRecordedAnswer = questionId
+    ? (session.answered_questions ?? []).includes(questionId)
+    : false;
+  const previousClarificationAttempts = questionId
+    ? (clarificationAttempts[questionId] ?? 0)
+    : 0;
+  const shadowSamplingClarificationAttempts = questionId
+    ? getPrimarySuccessShadowSamplingAttemptCount({
+        previousClarificationAttempts,
+        questionAskedCount: memory.question_asked_counts?.[questionId],
+      })
+    : 0;
+  const primarySuccessShadowSampling = Boolean(
+    questionId &&
+      mode === "shadow" &&
+      hasExtractedAnswer &&
+      hasRecordedAnswer &&
+      shadowSamplingClarificationAttempts === 0
+  );
+
+  // VET-1546C-R3: A primary-success shadow sample corresponds to the FIRST
+  // eligible second-opinion event of the session, which by definition had
+  // budget available (call count starts at zero). Reconstructing from the
+  // exhausted end-of-session call budget would mask it as `budget_exhausted`,
+  // so reset call counts for that representative while preserving a genuinely
+  // open circuit as a real safety signal.
+  const reconstructionBudgetState = primarySuccessShadowSampling
+    ? createModelBudgetState({
+        circuitOpen: memory.model_budget_state?.circuitOpen,
+      })
+    : createModelBudgetState(memory.model_budget_state);
+
+  const eligibilityTrace = buildSecondOpinionEligibilityTrace({
+    mode,
+    pendingQuestionId: questionId,
+    ownerMessage: traceOwnerMessage,
+    primaryExtractionFailed: !hasExtractedAnswer,
+    deterministicResolved: hasRecordedAnswer,
+    clarificationAttempts: primarySuccessShadowSampling
+      ? shadowSamplingClarificationAttempts
+      : previousClarificationAttempts,
+    repeatGuardAlreadyFired: false,
+    budgetState: reconstructionBudgetState,
+    isShadowSampling: primarySuccessShadowSampling,
+  });
+
+  if (
+    primarySuccessShadowSampling &&
+    eligibilityTrace.request_outcome === "requested" &&
+    questionId
+  ) {
+    const primaryAnswerValue = session.extracted_answers[questionId];
+    if (
+      shouldRejectReportTraceForMissingSource({
+        primarySuccessShadowSampling,
+        hasQuestionSourceMessage,
+        primaryAnswerValue,
+        traceOwnerMessage,
+      })
+    ) {
+      const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+        ...eligibilityTrace,
+        acceptance_outcome: "rejected",
+        comparison_append_outcome: "not_applicable",
+        comparison_write_outcome: "not_applicable",
+        extractor_reason: REPORT_SECOND_OPINION_SOURCE_UNAVAILABLE_REASON,
+      };
+
+      return recordConversationTelemetry(session, {
+        event: "second_opinion",
+        turn_count: memory.turn_count ?? 0,
+        question_id: questionId,
+        outcome: "second_opinion_rejected",
+        source: "second_opinion",
+        reason: REPORT_SECOND_OPINION_SOURCE_UNAVAILABLE_REASON,
+        pending_before: true,
+        pending_after: unresolvedQuestionIds.includes(questionId),
+        second_opinion_trace: secondOpinionTrace,
+        gate_events: ["second_opinion_rejected"],
+      });
+    }
+    const shadowResult = await extractSecondOpinionPendingAnswer({
+      mode,
+      pendingQuestionId: questionId,
+      ownerMessage: traceOwnerMessage,
+      primaryExtractionFailed: !hasExtractedAnswer,
+      deterministicResolved: hasRecordedAnswer,
+      clarificationAttempts: shadowSamplingClarificationAttempts,
+      knownSymptomsBeforeTurn: session.known_symptoms,
+      timeoutMs: REPORT_SECOND_OPINION_RECONSTRUCTION_TIMEOUT_MS,
+      budgetState: reconstructionBudgetState,
+      isShadowSampling: true,
+    });
+
+    let comparisonAppendOutcome: SecondOpinionTraceTelemetry["comparison_append_outcome"] =
+      "not_applicable";
+    let comparisonWriteOutcome: SecondOpinionTraceTelemetry["comparison_write_outcome"] =
+      "not_applicable";
+
+    if (shadowResult.status === "accepted") {
+      const previousShadowComparisonCount =
+        session.case_memory?.shadow_comparisons?.length ?? 0;
+      const disagreed =
+        String(primaryAnswerValue) === String(shadowResult.answer.answerValue)
+          ? 0
+          : 1;
+      session = appendShadowComparison(
+        session,
+        describeShadowComparison(
+          "async-review-service",
+          "primary_extraction_succeeded",
+          "second_opinion_extractor",
+          `q=${questionId}; shadow_answer_recorded=true; conf=${shadowResult.answer.confidence.toFixed(2)}; agreed=${disagreed === 0}`,
+          disagreed
+        )
+      );
+      const recordedShadowComparisons =
+        session.case_memory?.shadow_comparisons ?? [];
+      if (recordedShadowComparisons.length > previousShadowComparisonCount) {
+        comparisonAppendOutcome = "comparison_appended";
+        comparisonWriteOutcome = "comparison_write_succeeded";
+      } else {
+        comparisonAppendOutcome = "comparison_append_failed";
+        comparisonWriteOutcome = "comparison_write_failed";
+      }
+    }
+
+    const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+      ...eligibilityTrace,
+      acceptance_outcome: getSecondOpinionAcceptanceOutcome(shadowResult),
+      comparison_append_outcome: comparisonAppendOutcome,
+      comparison_write_outcome: comparisonWriteOutcome,
+      extractor_reason:
+        shadowResult.status === "accepted"
+          ? undefined
+          : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+    };
+
+    return recordConversationTelemetry(session, {
+      event: "second_opinion",
+      turn_count: memory.turn_count ?? 0,
+      question_id: questionId,
+      outcome:
+        shadowResult.status === "accepted"
+          ? "second_opinion_used"
+          : shadowResult.status === "failed"
+            ? "second_opinion_failed"
+            : shadowResult.status === "rejected"
+              ? "second_opinion_rejected"
+              : "second_opinion_skipped",
+      source: "second_opinion",
+      reason:
+        shadowResult.status === "accepted"
+          ? undefined
+          : shadowResult.reason ?? eligibilityTrace.eligibility_reason,
+      pending_before: true,
+      pending_after: unresolvedQuestionIds.includes(questionId),
+      second_opinion_trace: secondOpinionTrace,
+      gate_events:
+        shadowResult.status === "accepted"
+          ? ["second_opinion_used"]
+          : shadowResult.status === "failed"
+            ? ["second_opinion_failed"]
+            : shadowResult.status === "rejected"
+              ? ["second_opinion_rejected"]
+              : [],
+    });
+  }
+
+  const secondOpinionTrace: SecondOpinionTraceTelemetry = {
+    ...eligibilityTrace,
+    comparison_append_outcome: "not_applicable",
+    comparison_write_outcome: "not_applicable",
+    extractor_reason: eligibilityTrace.eligibility_reason,
+  };
+
+  return recordConversationTelemetry(session, {
+    event: "second_opinion",
+    turn_count: memory.turn_count ?? 0,
+    question_id: questionId,
+    outcome: "second_opinion_skipped",
+    source: "second_opinion",
+    reason: eligibilityTrace.eligibility_reason,
+    pending_before: Boolean(questionId),
+    pending_after: Boolean(
+      questionId && unresolvedQuestionIds.includes(questionId)
+    ),
+    second_opinion_trace: secondOpinionTrace,
+  });
 }
 
 function buildPersistedReportWithShadowReadout(
@@ -536,7 +966,7 @@ function buildPersistedReportWithShadowReadout(
   return {
     ...report,
     system_observability: {
-      ...buildClientObservabilitySnapshot(session),
+      ...buildObservabilityCounterSnapshot(session),
       shadowReadout: buildShadowReadoutObservabilitySnapshot(session),
     },
   };
@@ -1096,7 +1526,6 @@ export async function generateReport({
     finalReport.severity = finalSafetyResult.severity;
     finalReport.recommendation = finalSafetyResult.recommendation;
     finalReport.vet_handoff_summary = finalSafetyResult.vetHandoffSummary;
-    finalReport.system_observability = buildClientObservabilitySnapshot(session);
 
     if (
       finalSafetyResult.status !== "skipped" ||
@@ -1142,8 +1571,13 @@ export async function generateReport({
       });
     }
 
+    const reportPersistenceSession = await appendReportSecondOpinionTraceIfMissing({
+      session,
+      ownerMessage: getLastOwnerMessageContent(messages),
+    });
+
     const persistedShadowTelemetrySnapshot = {
-      ...buildInternalShadowTelemetrySnapshot(session),
+      ...buildInternalShadowTelemetrySnapshot(reportPersistenceSession),
       source: "report" as const,
     };
 
@@ -1177,7 +1611,7 @@ export async function generateReport({
     }
 
     const { persistence } = await persistFinalReportToHistory({
-      session,
+      session: reportPersistenceSession,
       pet,
       report: finalReport,
       verifiedUserId,

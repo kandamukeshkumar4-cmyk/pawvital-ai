@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useState,
+  useRef,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import {
   Stethoscope,
   AlertTriangle,
@@ -30,6 +36,21 @@ import type { ConversationState } from "@/lib/conversation-state/types";
 import { resolveConversationStateFromSession } from "./conversation-state-ui";
 import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
+import { SpeechInputButton } from "@/components/symptom-checker/speech-input-button";
+import { VetRecordIntakeButton } from "@/components/symptom-checker/vet-record-intake-button";
+import { QUICK_START_SYMPTOMS } from "@/lib/symptom-chat/quick-start-symptoms";
+import {
+  useWebPubSubLiveUpdates,
+  type TriageLiveUpdateConnectionState,
+} from "@/components/symptom-checker/use-webpubsub-live-updates";
+import type {
+  TriageLiveUpdate,
+  TriageLiveUpdateStatus,
+} from "@/lib/azure/web-pubsub";
+import { SYMPTOM_CHAT_REQUEST_TIMEOUT_MS } from "@/lib/symptom-chat/request-timeout";
+import { computeConversationProgress } from "@/lib/symptom-checker/session-progress";
+import type { TriageSession } from "@/lib/triage-engine";
+import { useSymptomTranslator } from "@/hooks/useSymptomTranslator";
 
 // --- Types ---
 
@@ -49,6 +70,8 @@ interface ImageGateWarning {
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  apiContent?: string;
+  ownerLanguage?: string | null;
   type?:
     | "question"
     | "emergency"
@@ -64,6 +87,8 @@ interface ChatMessage {
   reasonCode?: string | null;
   ownerMessage?: string | null;
   recommendedNextStep?: string | null;
+  askingBecause?: string | null;
+  promptVetRecord?: boolean;
   timestamp: Date;
 }
 
@@ -71,28 +96,33 @@ interface SendMessageOptions {
   imageOverride?: string | null;
   imageMetaOverride?: ImageMeta | null;
   gateOverride?: boolean;
+  gateOverrideTokenOverride?: string | null;
   appendUserMessage?: boolean;
 }
 
 // --- Config ---
 
-const quickSymptoms = [
-  "Not eating",
-  "Limping",
-  "Vomiting",
-  "Diarrhea",
-  "Lethargy",
-  "Excessive scratching",
-  "Coughing",
-  "Difficulty breathing",
-  "Trembling/shaking",
-  "Drinking more water than usual",
-  "Blood in stool",
-  "Swollen abdomen",
-];
+const quickSymptoms = QUICK_START_SYMPTOMS;
 
 function subscribeToHydration() {
   return () => {};
+}
+
+function createLiveSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `triage-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    (error instanceof Error && error.name === "AbortError") ||
+    (typeof DOMException !== "undefined" &&
+      error instanceof DOMException &&
+      error.name === "AbortError")
+  );
 }
 
 // --- Components ---
@@ -185,6 +215,12 @@ function ChatBubble({
             <span>Let me clarify...</span>
           </p>
         )}
+        {message.askingBecause && !isUser && (
+          <p className="mb-2 text-xs text-purple-700/90 border-l-2 border-purple-300 pl-2">
+            <span className="font-medium">Why I&apos;m asking: </span>
+            {message.askingBecause}
+          </p>
+        )}
         <p className="text-sm leading-relaxed whitespace-pre-wrap">
           {message.content}
         </p>
@@ -231,6 +267,10 @@ export default function SymptomCheckerPage() {
   const [pendingGateImage, setPendingGateImage] = useState<string | null>(null);
   const [pendingGateImageMeta, setPendingGateImageMeta] =
     useState<ImageMeta | null>(null);
+  const [pendingGateToken, setPendingGateToken] = useState<string | null>(
+    null,
+  );
+  const [promptVetRecord, setPromptVetRecord] = useState(false);
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState<SymptomReport | null>(null);
   const [reportPersistenceMessage, setReportPersistenceMessage] =
@@ -246,6 +286,30 @@ export default function SymptomCheckerPage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const liveSessionIdRef = useRef<string | null>(null);
+  if (liveSessionIdRef.current === null) {
+    liveSessionIdRef.current = createLiveSessionId();
+  }
+  const [, setLiveUpdateStatus] = useState<TriageLiveUpdateStatus | null>(null);
+  const [, setLiveConnectionState] =
+    useState<TriageLiveUpdateConnectionState>("disabled");
+  // Async-turn delivery (Service Bus + Web PubSub). When the route returns 202
+  // the turn is processed by the worker; the result arrives via a live-update
+  // ping (or polling) and is applied through the same response handler.
+  const [awaitingAsyncResult, setAwaitingAsyncResult] = useState(false);
+  const asyncPendingRef = useRef<{ jobId: string } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const latestApplyResponseRef = useRef<((data: any) => Promise<void>) | null>(
+    null,
+  );
+  const fetchAsyncResultRef = useRef<(() => Promise<void>) | null>(null);
+  const fetchInFlightRef = useRef(false);
+  const {
+    localizeAssistantText,
+    localizeReport,
+    normalizeOwnerMessage,
+    resetOwnerLanguage,
+  } = useSymptomTranslator();
 
   // Hybrid triage session — passed to/from the API each turn
   // Use both state (for re-renders) and ref (to avoid stale closures in async sendMessage)
@@ -282,6 +346,96 @@ export default function SymptomCheckerPage() {
     });
   }, [report]);
 
+  const handleLiveUpdate = useCallback((update: TriageLiveUpdate) => {
+    setLiveUpdateStatus(update.status);
+    if (
+      update.status === "response_ready" ||
+      update.status === "report_ready"
+    ) {
+      void fetchAsyncResultRef.current?.();
+    } else if (update.status === "failed") {
+      asyncPendingRef.current = null;
+      setAwaitingAsyncResult(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I had trouble completing that. Please try again.",
+          type: "error",
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  }, []);
+
+  const handleLiveConnectionState = useCallback(
+    (state: TriageLiveUpdateConnectionState) => {
+      setLiveConnectionState(state);
+    },
+    [],
+  );
+
+  useWebPubSubLiveUpdates({
+    enabled: Boolean(pet),
+    onConnectionState: handleLiveConnectionState,
+    onUpdate: handleLiveUpdate,
+    sessionId: liveSessionIdRef.current,
+  });
+
+  // Fetch the async turn result and apply it through the shared response handler.
+  // Invoked by the live-update ping and by the polling fallback below.
+  const fetchAndApplyAsyncResult = async () => {
+    const pending = asyncPendingRef.current;
+    // Guard against concurrent calls from the polling interval and a
+    // live-update ping arriving simultaneously — without this, both would
+    // fetch the result and call applyResponse twice, duplicating the
+    // assistant message.
+    if (!pending || fetchInFlightRef.current) {
+      return;
+    }
+    fetchInFlightRef.current = true;
+    try {
+      const res = await fetch(
+        `/api/ai/symptom-chat/result?jobId=${encodeURIComponent(pending.jobId)}`,
+        { cache: "no-store" },
+      );
+      if (res.status === 202) {
+        return; // still processing — keep waiting / polling
+      }
+      const payload = await res.json().catch(() => null);
+      asyncPendingRef.current = null;
+      setAwaitingAsyncResult(false);
+      if (res.ok && payload?.body) {
+        await latestApplyResponseRef.current?.(payload.body);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            content: "I had trouble completing that. Please try again.",
+            type: "error",
+            timestamp: new Date(),
+          },
+        ]);
+      }
+    } catch {
+      // Transient — the next poll tick retries while awaitingAsyncResult holds.
+    } finally {
+      fetchInFlightRef.current = false;
+    }
+  };
+  fetchAsyncResultRef.current = fetchAndApplyAsyncResult;
+
+  useEffect(() => {
+    if (!awaitingAsyncResult) {
+      return;
+    }
+    const pollId = setInterval(() => {
+      void fetchAsyncResultRef.current?.();
+    }, 3000);
+    return () => clearInterval(pollId);
+  }, [awaitingAsyncResult]);
+
   const clearComposerImage = () => {
     setSelectedImage(null);
     setSelectedImageMeta(null);
@@ -290,6 +444,36 @@ export default function SymptomCheckerPage() {
   const clearPendingGateImage = () => {
     setPendingGateImage(null);
     setPendingGateImageMeta(null);
+    setPendingGateToken(null);
+  };
+
+  const appendTranscriptToInput = (transcript: string) => {
+    setInput((current) => {
+      const trimmedCurrent = current.trimEnd();
+      return trimmedCurrent ? `${trimmedCurrent} ${transcript}` : transcript;
+    });
+    inputRef.current?.focus();
+  };
+
+  const appendVetRecordContextToInput = (context: string) => {
+    setInput((current) => {
+      const trimmedCurrent = current.trimEnd();
+      return trimmedCurrent ? `${trimmedCurrent}\n\n${context}` : context;
+    });
+    const session = triageSessionRef.current;
+    if (session) {
+      const nextSession = {
+        ...session,
+        case_memory: {
+          ...(session.case_memory ?? {}),
+          vet_record_context: context,
+        },
+      };
+      setTriageSession(nextSession);
+      triageSessionRef.current = nextSession;
+    }
+    setPromptVetRecord(false);
+    inputRef.current?.focus();
   };
 
   // ── Stage 1: Image Preprocessing ──
@@ -349,12 +533,12 @@ export default function SymptomCheckerPage() {
         blurScore: Number(blurScore.toFixed(1)),
         estimatedKb,
       });
-      console.log(
-        `[Preprocessing] ${img.width}x${img.height} → ${width}x${height}, blur=${blurScore.toFixed(1)}, size=${Math.round((base64.length * 0.75) / 1024)}KB`,
-      );
+      URL.revokeObjectURL(img.src);
     };
 
-    img.src = URL.createObjectURL(file);
+    const objectUrl = URL.createObjectURL(file);
+    img.onerror = () => URL.revokeObjectURL(objectUrl);
+    img.src = objectUrl;
 
     // Clear the input so the same file can be selected again if needed
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -402,7 +586,7 @@ export default function SymptomCheckerPage() {
       .filter((m) => m.type !== "image_gate")
       .map((m) => ({
         role: m.role as "user" | "assistant",
-        content: m.content,
+        content: m.apiContent ?? m.content,
       }));
     return extraMessages ? [...base, ...extraMessages] : base;
   };
@@ -412,23 +596,11 @@ export default function SymptomCheckerPage() {
       return;
     }
 
-    const {
-      answered_questions: answeredQuestions,
-      unresolved_question_ids: unresolvedQuestionIds,
-    } = session as {
-      answered_questions?: Record<string, unknown>;
-      unresolved_question_ids?: unknown[];
-    };
-
-    const answered = answeredQuestions
-      ? Object.keys(answeredQuestions).length
-      : 0;
-    const unresolved = Array.isArray(unresolvedQuestionIds)
-      ? unresolvedQuestionIds.length
-      : 0;
-
+    const { answered, total } = computeConversationProgress(
+      session as TriageSession
+    );
     setAnsweredCount(answered);
-    setTotalQuestions(answered + unresolved);
+    setTotalQuestions(total);
   };
 
   // --- Send message to hybrid /api/ai/symptom-chat ---
@@ -440,18 +612,29 @@ export default function SymptomCheckerPage() {
       imageOverride,
       imageMetaOverride,
       gateOverride = false,
+      gateOverrideTokenOverride,
       appendUserMessage = true,
     } = options;
     const messageText = text ?? input.trim();
     const imageToSend = imageOverride ?? selectedImage;
     const imageMetaToSend = imageMetaOverride ?? selectedImageMeta;
-    if ((!messageText && !imageToSend) || loading) return;
+    if ((!messageText && !imageToSend) || loading || awaitingAsyncResult)
+      return;
+
+    const normalizedUserText =
+      appendUserMessage && messageText
+        ? await normalizeOwnerMessage(messageText)
+        : null;
 
     let userMessage: ChatMessage | null = null;
     if (appendUserMessage) {
       const nextUserMessage: ChatMessage = {
         role: "user",
         content: messageText || "Uploaded an image for analysis.",
+        apiContent: normalizedUserText?.translated
+          ? normalizedUserText.apiText
+          : undefined,
+        ownerLanguage: normalizedUserText?.ownerLanguage,
         image: imageToSend || undefined,
         timestamp: new Date(),
       };
@@ -468,6 +651,11 @@ export default function SymptomCheckerPage() {
 
     setSessionStarted(true);
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      SYMPTOM_CHAT_REQUEST_TIMEOUT_MS,
+    );
 
     try {
       const baseMessages = getApiMessages();
@@ -475,7 +663,10 @@ export default function SymptomCheckerPage() {
         appendUserMessage && userMessage
           ? [
               ...baseMessages,
-              { role: "user" as const, content: userMessage.content },
+              {
+                role: "user" as const,
+                content: userMessage.apiContent ?? userMessage.content,
+              },
             ]
           : baseMessages;
 
@@ -487,14 +678,25 @@ export default function SymptomCheckerPage() {
           pet,
           action: "chat",
           session: triageSessionRef.current,
+          liveSessionId: liveSessionIdRef.current,
           image: imageToSend, // Send the base64 image here
           imageMeta: imageMetaToSend,
           gateOverride,
+          gateOverrideToken: gateOverrideTokenOverride ?? undefined,
         }),
+        signal: controller.signal,
       });
 
       const data = await res.json();
 
+      // Apply one turn response. Shared by the synchronous reply and the result
+      // fetched after an async response_ready ping. `apiMsgs` is captured here so
+      // a later async application uses this turn's message context.
+      // IMPORTANT: defined and stored in ref BEFORE the 202 branch below so that
+      // fetchAndApplyAsyncResult always has a valid current-turn closure even when
+      // sendMessage exits early on the async-offload path.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const applyResponse = async (data: any) => {
       // Always store returned session state (both state and ref)
       if (data.session) {
         setTriageSession(data.session);
@@ -524,12 +726,31 @@ export default function SymptomCheckerPage() {
         setConversationState(inferred);
       }
 
+      // Localize the assistant, terminal-owner, and next-step strings in
+      // parallel instead of three serial round-trips — one round-trip of
+      // latency per turn for non-English owners. Each entry is produced by the
+      // same localizeAssistantText call as before (the inputs are independent),
+      // so translation/fallback behavior is unchanged; only the ordering is.
+      const [assistantText, terminalOwnerText, terminalNextStepText] =
+        await Promise.all([
+          typeof data.message === "string"
+            ? localizeAssistantText(data.message)
+            : Promise.resolve(null),
+          typeof data.owner_message === "string"
+            ? localizeAssistantText(data.owner_message)
+            : Promise.resolve(null),
+          typeof data.recommended_next_step === "string"
+            ? localizeAssistantText(data.recommended_next_step)
+            : Promise.resolve(null),
+        ]);
+
       if (data.type === "emergency") {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: data.message,
+            content: assistantText?.content ?? data.message,
+            apiContent: assistantText?.apiContent,
             type: "emergency",
             timestamp: new Date(),
           },
@@ -541,18 +762,25 @@ export default function SymptomCheckerPage() {
           ...prev,
           {
             role: "assistant",
-            content: data.message,
+            content: assistantText?.content ?? data.message,
+            apiContent: assistantText?.apiContent,
             type: "image_gate",
             gate: data.gate,
             timestamp: new Date(),
           },
         ]);
+        setPendingGateToken(
+          typeof data.gate_override_token === "string"
+            ? data.gate_override_token
+            : null,
+        );
       } else if (data.type === "ready") {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: data.message,
+            content: assistantText?.content ?? data.message,
+            apiContent: assistantText?.apiContent,
             type: "ready",
             timestamp: new Date(),
           },
@@ -566,15 +794,26 @@ export default function SymptomCheckerPage() {
       } else {
         const isTerminalOutcome =
           data.type === "cannot_assess" || data.type === "out_of_scope";
+        if (typeof data.prompt_vet_record === "boolean") {
+          setPromptVetRecord(data.prompt_vet_record);
+        }
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
             content:
-              isTerminalOutcome && typeof data.owner_message === "string"
-                ? data.owner_message
-                : data.message,
+              isTerminalOutcome && terminalOwnerText
+                ? terminalOwnerText.content
+                : assistantText?.content ?? data.message,
+            apiContent:
+              isTerminalOutcome && terminalOwnerText
+                ? terminalOwnerText.apiContent
+                : assistantText?.apiContent,
             type: data.type,
+            askingBecause:
+              typeof data.asking_because === "string"
+                ? data.asking_because
+                : null,
             terminalState:
               isTerminalOutcome && typeof data.terminal_state === "string"
                 ? data.terminal_state
@@ -585,12 +824,12 @@ export default function SymptomCheckerPage() {
                 : null,
             ownerMessage:
               isTerminalOutcome && typeof data.owner_message === "string"
-                ? data.owner_message
+                ? terminalOwnerText?.content ?? data.owner_message
                 : null,
             recommendedNextStep:
               isTerminalOutcome &&
               typeof data.recommended_next_step === "string"
-                ? data.recommended_next_step
+                ? terminalNextStepText?.content ?? data.recommended_next_step
                 : null,
             timestamp: new Date(),
           },
@@ -605,20 +844,39 @@ export default function SymptomCheckerPage() {
           setReadyForReport(false);
         }
       }
-    } catch {
+      };
+      latestApplyResponseRef.current = applyResponse;
+
+      // Async offload: the worker will process this turn and deliver the result
+      // via a live-update ping (handleLiveUpdate) or the polling fallback.
+      if (
+        res.status === 202 &&
+        data?.type === "async_pending" &&
+        typeof data.jobId === "string"
+      ) {
+        asyncPendingRef.current = { jobId: data.jobId };
+        setAwaitingAsyncResult(true);
+        return;
+      }
+
+      await applyResponse(data);
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "I had trouble connecting. Please try again.",
+          content: isAbortError(error)
+            ? "The symptom checker took too long to respond. Please try again."
+            : "I had trouble connecting. Please try again.",
           type: "error",
           timestamp: new Date(),
         },
       ]);
+    } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      inputRef.current?.focus();
     }
-
-    setLoading(false);
-    inputRef.current?.focus();
   };
 
   const generateReport = async (
@@ -635,6 +893,7 @@ export default function SymptomCheckerPage() {
           pet,
           action: "generate_report",
           session: overrideSession || triageSessionRef.current,
+          liveSessionId: liveSessionIdRef.current,
         }),
       });
 
@@ -644,7 +903,7 @@ export default function SymptomCheckerPage() {
         (data.type === "cannot_assess" &&
           data.report?.report_mode === "terminal_cannot_assess");
       if (shouldRenderReport && data.report) {
-        setReport(data.report);
+        setReport(await localizeReport(data.report));
         setReportPersistenceMessage(
           typeof data.persistence?.message === "string"
             ? data.persistence.message
@@ -677,8 +936,12 @@ export default function SymptomCheckerPage() {
     setConversationState("idle");
     setAnsweredCount(0);
     setTotalQuestions(0);
+    resetOwnerLanguage();
     setTriageSession(null);
     triageSessionRef.current = null;
+    liveSessionIdRef.current = createLiveSessionId();
+    setLiveUpdateStatus(null);
+    setLiveConnectionState("disabled");
     setInput("");
     clearComposerImage();
     clearPendingGateImage();
@@ -717,6 +980,7 @@ export default function SymptomCheckerPage() {
       imageOverride: pendingGateImage,
       imageMetaOverride: pendingGateImageMeta,
       gateOverride: true,
+      gateOverrideTokenOverride: pendingGateToken,
       appendUserMessage: false,
     });
   };
@@ -899,13 +1163,13 @@ export default function SymptomCheckerPage() {
                           <Button
                             variant="outline"
                             onClick={handleRetakePhoto}
-                            disabled={loading}
+                            disabled={loading || awaitingAsyncResult}
                           >
                             Retake Photo
                           </Button>
                           <Button
                             onClick={handleAnalyzeAnyway}
-                            disabled={loading}
+                            disabled={loading || awaitingAsyncResult}
                           >
                             Analyze Anyway
                           </Button>
@@ -931,7 +1195,7 @@ export default function SymptomCheckerPage() {
                 </div>
               ))}
 
-              {loading && (
+              {(loading || awaitingAsyncResult) && (
                 <div className="flex gap-3">
                   <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
                     <Bot className="w-4 h-4 text-purple-600" />
@@ -966,6 +1230,15 @@ export default function SymptomCheckerPage() {
                     </button>
                   </div>
                 )}
+                {promptVetRecord && (
+                  <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                    <p className="font-medium">Prior vet records help</p>
+                    <p className="mt-1 text-xs text-blue-800">
+                      Upload a PDF from a recent visit so I can factor in labs,
+                      vaccines, and medications.
+                    </p>
+                  </div>
+                )}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="flex min-w-0 flex-1 gap-2">
                     <Button
@@ -977,6 +1250,14 @@ export default function SymptomCheckerPage() {
                     >
                       <ImagePlus className="w-5 h-5 text-gray-500" />
                     </Button>
+                    <SpeechInputButton
+                      disabled={loading || awaitingAsyncResult}
+                      onTranscript={appendTranscriptToInput}
+                    />
+                    <VetRecordIntakeButton
+                      disabled={loading || awaitingAsyncResult}
+                      onContext={appendVetRecordContextToInput}
+                    />
                     <input
                       type="file"
                       accept="image/*"
@@ -1001,7 +1282,7 @@ export default function SymptomCheckerPage() {
                   <div className="flex flex-col gap-2">
                     <Button
                       onClick={() => sendMessage()}
-                      disabled={(!input.trim() && !selectedImage) || loading}
+                      disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
                       className="w-full sm:h-full sm:w-auto"
                       aria-label="Send message"
                     >
@@ -1053,6 +1334,14 @@ export default function SymptomCheckerPage() {
                 >
                   <ImagePlus className="w-5 h-5 text-gray-500" />
                 </Button>
+                <SpeechInputButton
+                  disabled={loading || awaitingAsyncResult}
+                  onTranscript={appendTranscriptToInput}
+                />
+                <VetRecordIntakeButton
+                  disabled={loading || awaitingAsyncResult}
+                  onContext={appendVetRecordContextToInput}
+                />
                 <input
                   type="file"
                   accept="image/*"
@@ -1073,7 +1362,7 @@ export default function SymptomCheckerPage() {
               <div className="flex flex-col gap-2">
                 <Button
                   onClick={() => sendMessage()}
-                  disabled={(!input.trim() && !selectedImage) || loading}
+                  disabled={(!input.trim() && !selectedImage) || loading || awaitingAsyncResult}
                   className="w-full sm:h-full sm:w-auto"
                   aria-label="Send message"
                 >

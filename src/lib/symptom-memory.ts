@@ -43,6 +43,7 @@ export const PROTECTED_CONTROL_STATE_KEYS = [
   "pending_question_id",
   "question_asked_counts",
   "clarification_attempts",
+  "answer_source_messages",
   "last_question_asked",
 ] as const;
 
@@ -61,6 +62,7 @@ export interface ProtectedConversationState {
   pending_question_id?: string;
   question_asked_counts: Record<string, number>;
   clarification_attempts: Record<string, number>;
+  answer_source_messages: Record<string, string>;
   last_question_asked?: string;
 }
 
@@ -83,6 +85,8 @@ export function getProtectedConversationState(
       session.case_memory?.question_asked_counts ?? {},
     clarification_attempts:
       session.case_memory?.clarification_attempts ?? {},
+    answer_source_messages:
+      session.case_memory?.answer_source_messages ?? {},
     last_question_asked: session.last_question_asked,
   };
 }
@@ -238,6 +242,12 @@ export function hasControlStateChanged(
     return true;
   }
 
+  if (
+    !sameReasonMap(before.answer_source_messages, after.answer_source_messages)
+  ) {
+    return true;
+  }
+
   // last_question_asked
   if (before.last_question_asked !== after.last_question_asked) {
     return true;
@@ -306,6 +316,10 @@ export function mergeCompressionResult(
       pending_question_id: protectedState.pending_question_id,
       question_asked_counts: protectedState.question_asked_counts,
       clarification_attempts: protectedState.clarification_attempts,
+      answer_source_messages: protectedState.answer_source_messages,
+      clinical_case_state: caseMemory.clinical_case_state,
+      asking_because: caseMemory.asking_because,
+      vet_record_context: caseMemory.vet_record_context,
       // Only these fields come from compression
       compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
       compression_model: compressed.model,
@@ -456,6 +470,7 @@ interface TurnMemoryUpdate {
   ambiguityFlags?: string[];
   evidenceNotes?: string[];
   imageInfluencedQuestionSelection?: boolean;
+  answeredQuestionSourceIds?: string[];
 }
 
 function trimLines(lines: string[], limit: number): string[] {
@@ -474,6 +489,33 @@ function dedupeStrings(values: string[], limit = 12): string[] {
     deduped.push(normalized);
   }
   return deduped.slice(0, limit);
+}
+
+function buildAnswerSourceMessages(
+  existing: StructuredCaseMemory,
+  update: TurnMemoryUpdate
+): Record<string, string> {
+  const answerSourceMessages = {
+    ...(existing.answer_source_messages || {}),
+  };
+  const sourceMessage = update.latestUserMessage
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 400);
+
+  if (!sourceMessage) {
+    return answerSourceMessages;
+  }
+
+  for (const questionId of update.answeredQuestionSourceIds || []) {
+    const normalizedQuestionId = questionId.trim();
+    if (!normalizedQuestionId || answerSourceMessages[normalizedQuestionId]) {
+      continue;
+    }
+    answerSourceMessages[normalizedQuestionId] = sourceMessage;
+  }
+
+  return answerSourceMessages;
 }
 
 function summarizeFacts(
@@ -550,6 +592,7 @@ export function ensureStructuredCaseMemory(
     pending_question_id: existing?.pending_question_id,
     question_asked_counts: existing?.question_asked_counts || {},
     clarification_attempts: existing?.clarification_attempts || {},
+    answer_source_messages: existing?.answer_source_messages || {},
     timeline_notes: existing?.timeline_notes || [],
     visual_evidence: existing?.visual_evidence || [],
     retrieval_evidence: existing?.retrieval_evidence || [],
@@ -564,6 +607,9 @@ export function ensureStructuredCaseMemory(
     compressed_summary: existing?.compressed_summary,
     compression_model: existing?.compression_model,
     last_compressed_turn: existing?.last_compressed_turn,
+    clinical_case_state: existing?.clinical_case_state,
+    asking_because: existing?.asking_because,
+    vet_record_context: existing?.vet_record_context,
   };
 }
 
@@ -691,6 +737,7 @@ export function updateStructuredCaseMemory(
         ],
         12
       ),
+      answer_source_messages: buildAnswerSourceMessages(existing, update),
       timeline_notes: timelineNotes,
       visual_evidence: visualEvidence,
       retrieval_evidence: retrievalEvidence,
@@ -874,6 +921,21 @@ export interface NormalizedTerminalOutcomeMetric {
   question_id?: string;
 }
 
+export interface SecondOpinionTraceTelemetry {
+  active_pending_question: boolean;
+  primary_extraction_failed: boolean;
+  deterministic_coercion_failed: boolean;
+  first_clarification_attempt: boolean;
+  repeat_guard_not_fired: boolean;
+  budget_available: boolean;
+  eligibility_reason: string;
+  request_outcome: string;
+  acceptance_outcome?: string;
+  comparison_append_outcome?: string;
+  comparison_write_outcome?: string;
+  extractor_reason?: string;
+}
+
 /**
  * Recovery source for pending question resolution.
  */
@@ -935,6 +997,8 @@ export interface ConversationTelemetryEvent {
   contradiction_records?: NormalizedContradictionRecord[];
   /** Normalized terminal outcome metric for durable internal telemetry */
   terminal_outcome_metric?: NormalizedTerminalOutcomeMetric;
+  /** Sanitized second-opinion eligibility and comparison trace */
+  second_opinion_trace?: SecondOpinionTraceTelemetry;
   /** Stable internal gate events used by rollout regression checks */
   gate_events?: TelemetryGateEvent[];
   /** Timestamp for the event */
@@ -1077,11 +1141,43 @@ function formatTelemetryNote(event: ConversationTelemetryEvent): string {
       )}`
     );
   }
+  if (event.second_opinion_trace) {
+    appendSecondOpinionTraceNoteParts(parts, event.second_opinion_trace);
+  }
   if (event.gate_events?.length) {
     parts.push(`gate_events=${Array.from(new Set(event.gate_events)).join(",")}`);
   }
 
   return parts.join(" | ");
+}
+
+function appendSecondOpinionTraceNoteParts(
+  parts: string[],
+  trace: SecondOpinionTraceTelemetry
+): void {
+  parts.push(`active_pending_question=${trace.active_pending_question}`);
+  parts.push(`primary_extraction_failed=${trace.primary_extraction_failed}`);
+  parts.push(
+    `deterministic_coercion_failed=${trace.deterministic_coercion_failed}`
+  );
+  parts.push(`first_clarification_attempt=${trace.first_clarification_attempt}`);
+  parts.push(`repeat_guard_not_fired=${trace.repeat_guard_not_fired}`);
+  parts.push(`budget_available=${trace.budget_available}`);
+  parts.push(`eligibility_reason=${trace.eligibility_reason}`);
+  parts.push(`request_outcome=${trace.request_outcome}`);
+
+  if (trace.acceptance_outcome) {
+    parts.push(`acceptance_outcome=${trace.acceptance_outcome}`);
+  }
+  if (trace.comparison_append_outcome) {
+    parts.push(`comparison_append_outcome=${trace.comparison_append_outcome}`);
+  }
+  if (trace.comparison_write_outcome) {
+    parts.push(`comparison_write_outcome=${trace.comparison_write_outcome}`);
+  }
+  if (trace.extractor_reason) {
+    parts.push(`extractor_reason=${trace.extractor_reason}`);
+  }
 }
 
 /**
@@ -1113,6 +1209,7 @@ function emitTelemetryLog(event: ConversationTelemetryEvent): void {
     contradiction_ids: event.contradiction_ids,
     contradiction_records: event.contradiction_records,
     terminal_outcome_metric: event.terminal_outcome_metric,
+    second_opinion_trace: event.second_opinion_trace,
     gate_events: event.gate_events,
   };
 

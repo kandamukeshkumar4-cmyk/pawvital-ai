@@ -1,5 +1,8 @@
 const mockCreateClient = jest.fn();
 
+const SERVICE_ROLE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UifQ.signature";
+
 jest.mock("@supabase/supabase-js", () => ({
   createClient: (...args: unknown[]) => mockCreateClient(...args),
 }));
@@ -100,6 +103,7 @@ function buildMockSupabase(input?: {
 
 describe("private tester admin data helpers", () => {
   const envSnapshot = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     PRIVATE_TESTER_ALLOWED_EMAILS: process.env.PRIVATE_TESTER_ALLOWED_EMAILS,
     PRIVATE_TESTER_MODE: process.env.PRIVATE_TESTER_MODE,
@@ -109,14 +113,21 @@ describe("private tester admin data helpers", () => {
   beforeEach(() => {
     jest.resetModules();
     jest.clearAllMocks();
+    process.env.SUPABASE_URL = "https://service.example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.PRIVATE_TESTER_ALLOWED_EMAILS = "tester@example.com";
     process.env.PRIVATE_TESTER_MODE = "1";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_JWT;
     mockCreateClient.mockReturnValue(buildMockSupabase());
   });
 
   afterAll(() => {
+    if (envSnapshot.SUPABASE_URL === undefined) {
+      delete process.env.SUPABASE_URL;
+    } else {
+      process.env.SUPABASE_URL = envSnapshot.SUPABASE_URL;
+    }
+
     if (envSnapshot.NEXT_PUBLIC_SUPABASE_URL === undefined) {
       delete process.env.NEXT_PUBLIC_SUPABASE_URL;
     } else {
@@ -249,5 +260,41 @@ describe("private tester admin data helpers", () => {
     expect(disabled.counts.journalEntries).toBe(0);
     expect(restored.adminState.accessDisabled).toBe(false);
     expect(restored.counts.journalEntries).toBe(0);
+  });
+
+  it("prefers SUPABASE_URL for service-role admin access when the public URL is stale", async () => {
+    process.env.SUPABASE_URL = "https://service.example.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://stale.example.supabase.co\n";
+
+    const { listPrivateTesterSummaries } = await import(
+      "@/lib/private-tester-admin"
+    );
+
+    await listPrivateTesterSummaries();
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      "https://service.example.supabase.co",
+      SERVICE_ROLE_JWT,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
+  });
+
+  it("refuses malformed service-role keys before creating the admin client", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+
+    const { listPrivateTesterSummaries } = await import(
+      "@/lib/private-tester-admin"
+    );
+
+    const dashboard = await listPrivateTesterSummaries();
+
+    expect(dashboard.summary.total).toBe(1);
+    expect(dashboard.testers).toEqual([]);
+    expect(mockCreateClient).not.toHaveBeenCalled();
   });
 });

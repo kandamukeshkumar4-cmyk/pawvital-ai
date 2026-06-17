@@ -84,14 +84,14 @@ export default async function AdminCohortLaunchPage() {
   });
 
   const summaryCards = [
-    ["Testers invited", commandCenter.summary.testersInvited],
+    ["Allowlisted testers", commandCenter.summary.allowlistedTesters],
     ["Signed-in testers", commandCenter.summary.signedInTesters],
     ["Completed symptom checks", commandCenter.summary.completedSymptomChecks],
     ["Report-linked cases", commandCenter.summary.reportsOpened],
     ["Feedback submitted", commandCenter.summary.feedbackSubmitted],
     ["Negative feedback", commandCenter.summary.negativeFeedback],
     ["Emergency results", commandCenter.summary.emergencyResults],
-    ["Repeated-question flags", commandCenter.summary.repeatedQuestionFlags],
+    ["Question-flow flags", commandCenter.summary.questionFlowIssueFlags],
     ["Report failures", commandCenter.summary.reportFailures],
     ["Sign-in failures", commandCenter.summary.signInFailures],
     ["Tester access disabled", commandCenter.summary.testerAccessDisabled],
@@ -193,7 +193,7 @@ export default async function AdminCohortLaunchPage() {
                     ) : null}
                     {entry.flagReasons.includes("question_flow_issue") ? (
                       <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                        repeated_question
+                        question_flow_issue
                       </span>
                     ) : null}
                     {entry.trustLevel ? (
@@ -289,7 +289,7 @@ export default async function AdminCohortLaunchPage() {
           <div className="mt-4 space-y-3">
             {commandCenter.filters.failedSignInOrAccessSessions.length === 0 ? (
               <p className="text-sm text-slate-500">
-                No blocked or not-invited tester accounts are currently surfaced.
+                No blocked or not-allowlisted tester accounts are currently surfaced.
               </p>
             ) : (
               commandCenter.filters.failedSignInOrAccessSessions.map((entry) => (
@@ -301,7 +301,8 @@ export default async function AdminCohortLaunchPage() {
                     {entry.email || entry.testerId}
                   </p>
                   <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
-                    {entry.blocked ? "blocked" : "needs invite follow-up"} • {entry.accessReason}
+                    {entry.blocked ? "blocked" : "needs access follow-up"} •{" "}
+                    {entry.accessReason}
                   </p>
                   <p className="mt-2 text-sm text-slate-700">
                     Symptom checks: {entry.symptomChecks} • Negative feedback:{" "}

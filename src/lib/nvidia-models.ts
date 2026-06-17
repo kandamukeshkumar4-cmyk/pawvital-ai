@@ -147,6 +147,7 @@ interface CompletionOptions {
   prompt: string;
   systemPrompt?: string;
   maxTokens?: number;
+  providerPriority?: readonly ModelProvider[];
   temperature?: number;
 }
 
@@ -155,9 +156,15 @@ export async function complete({
   prompt,
   systemPrompt,
   maxTokens = 1024,
+  providerPriority,
   temperature = 0.6,
 }: CompletionOptions): Promise<string> {
-  const providers = getModelProviderChain(role);
+  const configuredProviders = getModelProviderChain(role);
+  const providers = providerPriority
+    ? providerPriority.filter((provider) =>
+        configuredProviders.includes(provider)
+      )
+    : configuredProviders;
   if (providers.length === 0) {
     throw new Error(`${MODELS[role].role} model not configured`);
   }
@@ -233,8 +240,9 @@ export async function complete({
 // --- Specialized Functions ---
 
 /**
- * Extract structured data from user message using Qwen 3.5 122B.
- * Falls back to 397B if 122B fails. Returns parsed JSON with symptoms and answers.
+ * Extract structured data from user message.
+ * Uses Mistral-Nemotron (clean JSON, function-calling) as primary; falls back to Qwen 3.5 122B.
+ * Returns parsed JSON with symptoms and answers.
  */
 export async function extractWithQwen(prompt: string): Promise<string> {
   return complete({
@@ -242,11 +250,13 @@ export async function extractWithQwen(prompt: string): Promise<string> {
     prompt,
     maxTokens: 384,
     temperature: 0.1,
+    systemPrompt: "/no_think",
   });
 }
 
 /**
- * Phrase a clinical question naturally using Llama 3.3 70B Instruct.
+ * Phrase a clinical question naturally using Llama 4 Maverick (17B-active, ~2.9s on NIM free tier).
+ * Stronger instruction following than Llama 3.3 70B (now the fallback) to reduce stray openers.
  * Returns a warm, empathetic question string.
  */
 export async function phraseWithLlama(prompt: string): Promise<string> {

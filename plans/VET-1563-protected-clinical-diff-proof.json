@@ -1,0 +1,30 @@
+{
+  "ticket": "VET-1563",
+  "mode": "review-only-protected-clinical-diff-proof",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
+  "protectedFiles": [
+    "src/lib/triage-engine.ts",
+    "src/lib/clinical-matrix.ts",
+    "src/app/api/ai/symptom-chat/route.ts",
+    "src/lib/symptom-memory.ts"
+  ],
+  "command": [
+    "git",
+    "diff",
+    "--",
+    "src/lib/triage-engine.ts",
+    "src/lib/clinical-matrix.ts",
+    "src/app/api/ai/symptom-chat/route.ts",
+    "src/lib/symptom-memory.ts"
+  ],
+  "status": "blocked",
+  "diffSha256": "2d27ab77533130d9d1a6e1ee12fb00ff7fa8697ae3ed8b2db4769d4cd09065e2",
+  "diffLineCount": 34,
+  "blocker": "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
+  "proof": "Protected deterministic clinical files have a local diff.",
+  "guardrails": [
+    "This proof does not authorize changing protected clinical files.",
+    "If a protected file diff appears, stop promotion work until an explicit clinical ticket authorizes it.",
+    "Keep deterministic clinical logic authoritative over model output."
+  ]
+}

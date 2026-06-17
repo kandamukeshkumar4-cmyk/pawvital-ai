@@ -10,8 +10,7 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Log error to telemetry in production
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "development") {
       console.error("[PawVital] Application error:", error);
     }
   }, [error]);

@@ -1,0 +1,7 @@
+[
+  {
+    "id": 501,
+    "created_at": "2026-05-28T17:00:00Z",
+    "body": "## VET-1492C Scheduled Shadow Readout\n\nStatus: `blocked_missing_secret`\nDecision: `HOLD - shadow readout secret is not configured`\nReport count: `0`\nWarning: `null`\n\nConfigure HF_SIDECAR_API_KEY or ASYNC_REVIEW_WEBHOOK_SECRET as a GitHub secret, then rerun this workflow."
+  }
+]

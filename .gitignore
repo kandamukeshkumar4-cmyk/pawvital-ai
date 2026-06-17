@@ -32,9 +32,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — only *.example templates are allowed in git
 .env*
 !.env*.example
+.envrc
+# explicitly block accidental temp/check env files
+.env.prod-check-temp
+.env.production-check2
 
 # vercel
 .vercel
@@ -73,6 +77,7 @@ next-env.d.ts
 !/scripts/validate-benchmark.ts
 !/scripts/silent-trial.ts
 !/scripts/pipeline-smoke-test.mjs
+!/scripts/azure-ecosystem-smoke.mjs
 !/scripts/enrich-benchmark-cases.mjs
 !/scripts/stamp-gold-benchmark.mjs
 !/scripts/benchmark-quota-tracker.mjs
@@ -86,8 +91,55 @@ next-env.d.ts
 !/scripts/multimodal-improvement-report.mjs
 !/scripts/multimodal-triage-pilot.mjs
 !/scripts/check-emergency-sentinels.mjs
+!/scripts/check-supabase-env.mjs
+!/scripts/check-supabase-health.mjs
+!/scripts/check-keyvault-env-template.mjs
+!/scripts/check-shadow-planner-gate.mjs
+!/scripts/owner-language-eval.mjs
+!/scripts/azure-cutover-smoke.mjs
+!/scripts/merge-azure-env-into-local.mjs
 !/scripts/rate-limit-failover-harness.ts
 !/scripts/run-rate-limit-failover-harness.cjs
+!/scripts/shadow-readout-gate-runner.mjs
+!/scripts/shadow-readout-gate-runner-logic.cjs
+!/scripts/build-model-candidate-selection-packet.mjs
+!/scripts/build-model-dataset-manifest.mjs
+!/scripts/build-model-experiment-package.mjs
+!/scripts/build-model-frozen-output-status.mjs
+!/scripts/build-model-frozen-output-templates.mjs
+!/scripts/build-model-output-capture-authorization.mjs
+!/scripts/build-model-output-capture-plan.mjs
+!/scripts/build-model-output-capture-runbook.mjs
+!/scripts/build-model-owner-approval-request.mjs
+!/scripts/build-model-promotion-checklist.mjs
+!/scripts/build-model-promotion-evidence-packet.mjs
+!/scripts/build-model-promotion-smoke-runbook.mjs
+!/scripts/build-model-promotion-ticket.mjs
+!/scripts/build-model-rollback-plan.mjs
+!/scripts/build-model-routing-evaluation-plan.mjs
+!/scripts/build-model-scorecard-review-packet.mjs
+!/scripts/build-model-shadow-eval-scaffold.mjs
+!/scripts/build-product-claim-language-review.mjs
+!/scripts/build-product-intelligence-roadmap.mjs
+!/scripts/build-product-longitudinal-readiness-contract.mjs
+!/scripts/build-product-production-readiness.mjs
+!/scripts/build-product-production-smoke-runbook.mjs
+!/scripts/build-protected-clinical-diff-proof.mjs
+!/scripts/build-tugboat-governance-plan.mjs
+!/scripts/build-vet1560-completion-audit.mjs
+!/scripts/build-vet1560-readiness-dashboard.mjs
+!/scripts/model-promotion-readiness-preflight.mjs
+!/scripts/model-routing-readout.mjs
+!/scripts/score-model-shadow-eval.mjs
+!/scripts/verify-product-intelligence-schema.mjs
+!/scripts/vet1560-model-technique-intake.mjs
+!/scripts/vet1560-regenerate-all.mjs
+!/scripts/devops/
+scripts/devops/*
+!/scripts/devops/vet1560-azure-live-sync-runbook.mjs
+!/scripts/devops/vet1560-azure-sync-preflight.mjs
+!/scripts/devops/create-vet1560-work-items.mjs
+!/scripts/devops/vet1560-sync-readiness.mjs
 
 # Generated benchmark/deployment run reports
 /data/benchmark/scorecard-*.json

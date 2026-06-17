@@ -2,6 +2,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
+import schedulerLogic from "./shadow-readout-scheduler-logic.cjs";
 
 const DEFAULT_READOUT_URL =
   "https://pawvital-ai.vercel.app/api/ai/shadow-rollout";
@@ -11,6 +12,7 @@ const DEFAULT_JSON_OUTPUT =
   "data/shadow-readout/vet-1492c-scheduled-readout.json";
 const DEFAULT_MARKDOWN_OUTPUT =
   "data/shadow-readout/vet-1492c-scheduled-readout.md";
+const { decideStatus, nextActionForStatus, summarizePayload } = schedulerLogic;
 
 function parseBoolean(value) {
   return value === "1" || value === "true" || value === "yes";
@@ -31,56 +33,18 @@ function sanitizeForLogs(value) {
     .replace(/Bearer\s+[^\s]+/gi, "Bearer [redacted]");
 }
 
-function summarizePayload(payload) {
-  const baseline = payload?.baseline ?? {};
-  const summary = payload?.summary ?? {};
-  const serviceMetrics = Array.isArray(baseline.serviceMetrics)
-    ? baseline.serviceMetrics.map((service) => ({
-        service: service.service,
-        observations: service.observations ?? service.totalObservations ?? 0,
-        shadowComparisons:
-          service.shadowComparisons ?? service.shadowComparisonCount ?? 0,
-        errors: service.errors ?? service.errorObservations ?? 0,
-        timeouts: service.timeouts ?? service.timeoutObservations ?? 0,
-      }))
-    : [];
-
-  return {
-    ok: payload?.ok === true,
-    overallStatus: summary.overallStatus ?? null,
-    reportCount: Number(baseline.reportCount ?? 0),
-    parsedReportCount: Number(baseline.parsedReportCount ?? 0),
-    malformedReportCount: Number(baseline.malformedReportCount ?? 0),
-    observationCount: Number(baseline.observationCount ?? 0),
-    shadowComparisonCount: Number(baseline.shadowComparisonCount ?? 0),
-    warning: baseline.warning ?? null,
-    serviceMetrics,
-  };
-}
-
-function decideStatus(readout) {
-  if (readout.warning) {
-    return {
-      status: "readout_warning",
-      decision: "HOLD - telemetry readout returned a warning",
-    };
-  }
-
-  if (readout.reportCount > 0 || readout.observationCount > 0) {
-    return {
-      status: "ready_for_formal_readout",
-      decision: "RUN FORMAL VET-1492C RERUN",
-    };
-  }
-
-  return {
-    status: "healthy_empty_readout",
-    decision: "HOLD - no completed production sessions found yet",
-  };
+function formatCountRecord(counts) {
+  if (!counts || typeof counts !== "object") return "none";
+  const entries = Object.entries(counts)
+    .filter(([, count]) => Number(count) > 0)
+    .sort(([left], [right]) => left.localeCompare(right));
+  if (entries.length === 0) return "none";
+  return entries.map(([key, count]) => `${key}=${count}`).join(", ");
 }
 
 function toMarkdown(report) {
   const readout = report.readout ?? {};
+  const secondOpinionTrace = readout.secondOpinionTrace ?? {};
   const lines = [
     "# VET-1492C Scheduled Shadow Readout",
     "",
@@ -96,12 +60,31 @@ function toMarkdown(report) {
     "",
     `- ok: ${readout.ok ?? "n/a"}`,
     `- overall_status: ${readout.overallStatus ?? "n/a"}`,
+    `- window_start: ${readout.windowStart ?? "n/a"}`,
+    `- source_table: ${readout.sourceTable ?? "n/a"}`,
+    `- source_project_ref: ${readout.sourceProjectRef ?? "n/a"}`,
+    `- query_limit: ${readout.queryLimit ?? "n/a"}`,
+    `- row_visibility_mode: ${readout.rowVisibilityMode ?? "n/a"}`,
+    `- latest_window_report_created_at: ${readout.latestWindowReportCreatedAt ?? "n/a"}`,
+    `- latest_parsed_report_created_at: ${readout.latestParsedReportCreatedAt ?? "n/a"}`,
+    `- latest_any_report_created_at: ${readout.latestAnyReportCreatedAt ?? "n/a"}`,
     `- report_count: ${readout.reportCount ?? "n/a"}`,
     `- parsed_report_count: ${readout.parsedReportCount ?? "n/a"}`,
     `- malformed_report_count: ${readout.malformedReportCount ?? "n/a"}`,
     `- observation_count: ${readout.observationCount ?? "n/a"}`,
     `- shadow_comparison_count: ${readout.shadowComparisonCount ?? "n/a"}`,
     `- warning: ${readout.warning ?? "null"}`,
+    "",
+    "## Second-Opinion Trace",
+    "",
+    `- total: ${secondOpinionTrace.total ?? 0}`,
+    `- eligibility: ${formatCountRecord(secondOpinionTrace.eligibilityReasonCounts)}`,
+    `- request_outcome: ${formatCountRecord(secondOpinionTrace.requestOutcomeCounts)}`,
+    `- acceptance_outcome: ${formatCountRecord(secondOpinionTrace.acceptanceOutcomeCounts)}`,
+    `- comparison_append: ${formatCountRecord(secondOpinionTrace.comparisonAppendOutcomeCounts)}`,
+    `- comparison_write: ${formatCountRecord(secondOpinionTrace.comparisonWriteOutcomeCounts)}`,
+    `- extractor_reason: ${formatCountRecord(secondOpinionTrace.extractorReasonCounts)}`,
+    `- readout_counted: ${secondOpinionTrace.readoutCountedCount ?? 0}`,
     "",
     "## Next Action",
     "",
@@ -240,10 +223,7 @@ async function main() {
         ...report,
         ...decision,
         readout,
-        nextAction:
-          decision.status === "ready_for_formal_readout"
-            ? "Start the formal VET-1492C rerun against this production window before any model promotion."
-            : "Keep flags in shadow/off and continue collecting invited tester sessions.",
+        nextAction: nextActionForStatus(decision.status),
       };
     } catch (error) {
       report = {

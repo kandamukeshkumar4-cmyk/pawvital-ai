@@ -1,5 +1,8 @@
 import {
+  SECOND_OPINION_ELIGIBILITY_REASON_CODES,
+  buildSecondOpinionEligibilityTrace,
   extractSecondOpinionPendingAnswer,
+  getPrimarySuccessShadowSamplingAttemptCount,
   getSecondOpinionExtractorMode,
   parseSecondOpinionExtractorResponse,
   shouldAttemptSecondOpinionExtraction,
@@ -93,6 +96,176 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
     ).toEqual({ shouldRun: false });
   });
 
+  it("emits stable sanitized eligibility trace reason codes", () => {
+    expect(SECOND_OPINION_ELIGIBILITY_REASON_CODES).toEqual([
+      "eligible",
+      "feature_disabled",
+      "empty_owner_message",
+      "no_active_pending_question",
+      "primary_extraction_succeeded",
+      "deterministic_coercion_succeeded",
+      "not_first_clarification_attempt",
+      "repeat_guard_fired",
+      "budget_exhausted",
+      "circuit_open",
+      "shadow_primary_success_sampling",
+    ]);
+
+    expect(
+      buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "It has been going on for two days.",
+        primaryExtractionFailed: true,
+        deterministicResolved: false,
+        clarificationAttempts: 1,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState(),
+      })
+    ).toEqual({
+      active_pending_question: true,
+      primary_extraction_failed: true,
+      deterministic_coercion_failed: true,
+      first_clarification_attempt: true,
+      repeat_guard_not_fired: true,
+      budget_available: true,
+      eligibility_reason: "eligible",
+      request_outcome: "requested",
+    });
+
+    const budgetExhaustedTrace = buildSecondOpinionEligibilityTrace({
+      mode: "shadow",
+      pendingQuestionId: "vomit_duration",
+      ownerMessage: "It has been going on for two days.",
+      primaryExtractionFailed: true,
+      deterministicResolved: false,
+      clarificationAttempts: 1,
+      repeatGuardAlreadyFired: false,
+      budgetState: {
+        ...createModelBudgetState(),
+        callCounts: {
+          second_opinion: 2,
+        },
+      },
+    });
+
+    expect(budgetExhaustedTrace).toEqual(
+      expect.objectContaining({
+        budget_available: false,
+        eligibility_reason: "budget_exhausted",
+        request_outcome: "budget_exhausted",
+      })
+    );
+    expect(JSON.stringify(budgetExhaustedTrace)).not.toContain("two days");
+  });
+
+  it.each([
+    {
+      name: "feature disabled",
+      input: { mode: "off" as const },
+      expected: {
+        budget_available: false,
+        eligibility_reason: "feature_disabled",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "empty owner message",
+      input: { ownerMessage: "   " },
+      expected: {
+        eligibility_reason: "empty_owner_message",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "no active pending question",
+      input: { pendingQuestionId: undefined },
+      expected: {
+        active_pending_question: false,
+        eligibility_reason: "no_active_pending_question",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "primary extraction already succeeded",
+      input: { primaryExtractionFailed: false },
+      expected: {
+        primary_extraction_failed: false,
+        eligibility_reason: "primary_extraction_succeeded",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "deterministic coercion already succeeded",
+      input: { deterministicResolved: true },
+      expected: {
+        deterministic_coercion_failed: false,
+        eligibility_reason: "deterministic_coercion_succeeded",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "not first clarification attempt",
+      input: { clarificationAttempts: 2 },
+      expected: {
+        first_clarification_attempt: false,
+        eligibility_reason: "not_first_clarification_attempt",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "repeat guard already fired",
+      input: { repeatGuardAlreadyFired: true },
+      expected: {
+        repeat_guard_not_fired: false,
+        eligibility_reason: "repeat_guard_fired",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "circuit open",
+      input: {
+        budgetState: createModelBudgetState({
+          circuitOpen: { second_opinion: true },
+        }),
+      },
+      expected: {
+        budget_available: false,
+        eligibility_reason: "circuit_open",
+        request_outcome: "not_requested",
+      },
+    },
+    {
+      name: "budget exhausted",
+      input: {
+        budgetState: createModelBudgetState({
+          callCounts: { second_opinion: 2 },
+        }),
+      },
+      expected: {
+        budget_available: false,
+        eligibility_reason: "budget_exhausted",
+        request_outcome: "budget_exhausted",
+      },
+    },
+  ])("resolves the sanitized trace gate for $name", ({ input, expected }) => {
+    const trace = buildSecondOpinionEligibilityTrace({
+      mode: "shadow",
+      pendingQuestionId: "vomit_duration",
+      ownerMessage: "OWNER_SECRET phrase for two days.",
+      primaryExtractionFailed: true,
+      deterministicResolved: false,
+      clarificationAttempts: 1,
+      repeatGuardAlreadyFired: false,
+      budgetState: createModelBudgetState(),
+      ...input,
+    });
+
+    expect(trace).toEqual(expect.objectContaining(expected));
+    expect(JSON.stringify(trace)).not.toContain("OWNER_SECRET");
+    expect(JSON.stringify(trace)).not.toContain("two days");
+  });
+
   it("accepts a strict JSON answer anchored to the pending duration question", () => {
     const parsed = parseSecondOpinionExtractorResponse(
       JSON.stringify({
@@ -171,6 +344,36 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
     expect(rejected).toEqual({
       status: "rejected",
       reason: "unsafe_inference",
+    });
+  });
+
+  it("accepts cough choice labels when the model mirrors slash punctuation from the question text", () => {
+    const parsed = parseSecondOpinionExtractorResponse(
+      JSON.stringify({
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "Dry/honking",
+        confidence: 0.9,
+        ownerPhrase: "dry honking cough",
+        needsClarification: false,
+      }),
+      {
+        pendingQuestionId: "cough_type",
+        ownerMessage: "It is a dry honking cough.",
+        knownSymptomsBeforeTurn: ["coughing"],
+      }
+    );
+
+    expect(parsed).toEqual({
+      status: "accepted",
+      answer: {
+        answered: true,
+        questionId: "cough_type",
+        answerValue: "dry_honking",
+        confidence: 0.9,
+        ownerPhrase: "dry honking cough",
+        needsClarification: false,
+      },
     });
   });
 
@@ -433,6 +636,47 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
     });
   });
 
+  it("accepts slow extractor responses that finish inside the supplied timeout budget", async () => {
+    const modelCaller = jest.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          setTimeout(() => {
+            resolve(
+              JSON.stringify({
+                answered: true,
+                questionId: "vomit_duration",
+                answerValue: "two days",
+                confidence: 0.9,
+                ownerPhrase: "two days",
+                needsClarification: false,
+              })
+            );
+          }, 10);
+        })
+    );
+
+    await expect(
+      extractSecondOpinionPendingAnswer({
+        mode: "on",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "for two days",
+        primaryExtractionFailed: true,
+        deterministicResolved: false,
+        clarificationAttempts: 1,
+        knownSymptomsBeforeTurn: ["vomiting"],
+        timeoutMs: 50,
+        modelCaller,
+      })
+    ).resolves.toMatchObject({
+      status: "accepted",
+      answer: {
+        questionId: "vomit_duration",
+        answerValue: "two days",
+      },
+    });
+    expect(modelCaller).toHaveBeenCalledTimes(1);
+  });
+
   it("fails closed when the second-opinion session budget is already exhausted", async () => {
     const modelCaller = jest.fn();
 
@@ -458,5 +702,151 @@ describe("VET-1425 second-opinion pending answer extractor", () => {
       reason: "budget_exceeded",
     });
     expect(modelCaller).not.toHaveBeenCalled();
+  });
+
+  describe("VET-1544C shadow primary-success sampling", () => {
+    it("uses asked-count as the stable first-answer signal", () => {
+      expect(
+        getPrimarySuccessShadowSamplingAttemptCount({
+          previousClarificationAttempts: 1,
+          questionAskedCount: 1,
+        })
+      ).toBe(0);
+      expect(
+        getPrimarySuccessShadowSamplingAttemptCount({
+          previousClarificationAttempts: 1,
+          questionAskedCount: 2,
+        })
+      ).toBe(1);
+      expect(
+        getPrimarySuccessShadowSamplingAttemptCount({
+          previousClarificationAttempts: 0,
+          questionAskedCount: 2,
+        })
+      ).toBe(1);
+    });
+
+    it("runs on the first primary-success answer turn when shadow sampling is enabled", () => {
+      expect(
+        shouldAttemptSecondOpinionExtraction({
+          mode: "shadow",
+          pendingQuestionId: "vomit_duration",
+          ownerMessage: "for about two days",
+          primaryExtractionFailed: false,
+          deterministicResolved: true,
+          clarificationAttempts: 0,
+          isShadowSampling: true,
+        })
+      ).toEqual({ shouldRun: true });
+    });
+
+    it("does not run shadow sampling on repeated clarification turns", () => {
+      expect(
+        shouldAttemptSecondOpinionExtraction({
+          mode: "shadow",
+          pendingQuestionId: "vomit_duration",
+          ownerMessage: "for about two days",
+          primaryExtractionFailed: false,
+          deterministicResolved: true,
+          clarificationAttempts: 1,
+          isShadowSampling: true,
+        })
+      ).toEqual({ shouldRun: false, reason: "not_first_clarification" });
+    });
+
+    it("emits a requested trace for eligible primary-success shadow sampling", () => {
+      const trace = buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "OWNER_SECRET It has been about two days.",
+        primaryExtractionFailed: false,
+        deterministicResolved: true,
+        clarificationAttempts: 0,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState(),
+        isShadowSampling: true,
+      });
+
+      expect(trace).toEqual({
+        active_pending_question: true,
+        primary_extraction_failed: false,
+        deterministic_coercion_failed: false,
+        first_clarification_attempt: true,
+        repeat_guard_not_fired: true,
+        budget_available: true,
+        eligibility_reason: "shadow_primary_success_sampling",
+        request_outcome: "requested",
+      });
+      expect(JSON.stringify(trace)).not.toContain("OWNER_SECRET");
+      expect(JSON.stringify(trace)).not.toContain("two days");
+    });
+
+    it("keeps primary-success shadow sampling inside the second-opinion budget", () => {
+      const trace = buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "for about two days",
+        primaryExtractionFailed: false,
+        deterministicResolved: true,
+        clarificationAttempts: 0,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState({
+          callCounts: { second_opinion: 2 },
+        }),
+        isShadowSampling: true,
+      });
+
+      expect(trace).toMatchObject({
+        budget_available: false,
+        eligibility_reason: "budget_exhausted",
+        request_outcome: "budget_exhausted",
+      });
+    });
+
+    it("calls the model on a primary-success turn only when shadow sampling is enabled", async () => {
+      const modelCaller = jest.fn().mockResolvedValue(
+        JSON.stringify({
+          answered: true,
+          questionId: "vomit_duration",
+          answerValue: "about two days",
+          confidence: 0.91,
+          ownerPhrase: "about two days",
+          needsClarification: false,
+        })
+      );
+
+      const result = await extractSecondOpinionPendingAnswer({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "It has been going on for about two days.",
+        primaryExtractionFailed: false,
+        deterministicResolved: true,
+        clarificationAttempts: 0,
+        knownSymptomsBeforeTurn: ["vomiting"],
+        modelCaller,
+        isShadowSampling: true,
+      });
+
+      expect(result.status).toBe("accepted");
+      expect(modelCaller).toHaveBeenCalledTimes(1);
+    });
+
+    it("preserves the existing primary-success skip when shadow sampling is not enabled", () => {
+      const trace = buildSecondOpinionEligibilityTrace({
+        mode: "shadow",
+        pendingQuestionId: "vomit_duration",
+        ownerMessage: "for about two days",
+        primaryExtractionFailed: false,
+        deterministicResolved: false,
+        clarificationAttempts: 1,
+        repeatGuardAlreadyFired: false,
+        budgetState: createModelBudgetState(),
+      });
+
+      expect(trace).toMatchObject({
+        eligibility_reason: "primary_extraction_succeeded",
+        request_outcome: "not_requested",
+      });
+    });
   });
 });

@@ -39,6 +39,7 @@ import {
   gateQuestionBeforePhrasing,
   phraseQuestion,
   sanitizeQuestionDraft,
+  TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS,
 } from "@/lib/symptom-chat/question-phrasing";
 
 const pet: PetProfile = {
@@ -94,6 +95,44 @@ describe("question phrasing helpers", () => {
     expect(decision.reason).toBe("ambiguous turn");
   });
 
+  it("uses the default gate decision when no-photo preflight exceeds the owner-visible budget", async () => {
+    jest.useFakeTimers();
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    mockReviewQuestionPlanWithNemotron.mockImplementation(
+      () => new Promise<string>(() => {})
+    );
+
+    try {
+      const resultPromise = gateQuestionBeforePhrasing(
+        "water_intake",
+        "Is she drinking less than usual?",
+        createSession(),
+        pet,
+        messages,
+        "She seems off today.",
+        "Prior image context is available.",
+        false
+      );
+
+      let settled = false;
+      resultPromise.then(() => {
+        settled = true;
+      });
+
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
+
+      expect(settled).toBe(true);
+      await expect(resultPromise).resolves.toEqual({
+        includeImageContext: false,
+        useDeterministicFallback: false,
+        reason: "text-turn-budget-timeout",
+      });
+    } finally {
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
   it("returns the deterministic fallback immediately when forced", async () => {
     const result = await phraseQuestion(
       "Is she drinking less than usual?",
@@ -113,6 +152,126 @@ describe("question phrasing helpers", () => {
     );
     expect(mockPhraseWithLlama).not.toHaveBeenCalled();
     expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+  });
+
+  it("falls back deterministically before text-only phrasing can exhaust the owner-visible request budget", async () => {
+    jest.useFakeTimers();
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    mockPhraseWithLlama.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          setTimeout(
+            () =>
+              resolve(
+                "Since Mochi has been drinking less than usual, is she drinking less than usual?"
+              ),
+            60_000
+          );
+        })
+    );
+
+    try {
+      const resultPromise = phraseQuestion(
+        "Is she drinking less than usual?",
+        "water_intake",
+        createSession(),
+        pet,
+        messages,
+        "She is drinking less than usual.",
+        null,
+        false,
+        false,
+        false
+      );
+
+      let settled = false;
+      resultPromise.then(() => {
+        settled = true;
+      });
+
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
+
+      expect(settled).toBe(true);
+      await expect(resultPromise).resolves.toBe(
+        "Since this could still be important, is she drinking less than usual?"
+      );
+      expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
+    } finally {
+      await jest.runOnlyPendingTimersAsync();
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  it("uses the remaining text-turn budget for verification even when prior context exists", async () => {
+    jest.useFakeTimers();
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    mockPhraseWithLlama.mockResolvedValue(
+      "Since Mochi has been drinking less than usual, is she drinking less than usual?"
+    );
+    mockVerifyQuestionWithNemotron.mockImplementation(
+      () => new Promise<string>(() => {})
+    );
+
+    try {
+      const resultPromise = phraseQuestion(
+        "Is she drinking less than usual?",
+        "water_intake",
+        createSession(),
+        pet,
+        messages,
+        "She is drinking less than usual.",
+        "Prior image reasoning context is available.",
+        false,
+        false,
+        false
+      );
+
+      let settled = false;
+      resultPromise.then(() => {
+        settled = true;
+      });
+
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
+
+      expect(settled).toBe(true);
+      await expect(resultPromise).resolves.toBe(
+        "Since Mochi has been drinking less than usual, is she drinking less than usual?"
+      );
+      expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
+    } finally {
+      warnSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+
+  it("runs Nemotron verification on standard turn depth", async () => {
+    mockPhraseWithLlama.mockResolvedValue(
+      "Since Mochi has been drinking less than usual, is she drinking less than usual?"
+    );
+    mockVerifyQuestionWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        message: "Since Mochi has been drinking less than usual, is she drinking less than usual?",
+      })
+    );
+
+    const result = await phraseQuestion(
+      "Is she drinking less than usual?",
+      "water_intake",
+      createSession(),
+      pet,
+      messages,
+      "She is drinking less than usual.",
+      null,
+      false,
+      false,
+      false,
+      null,
+      "standard"
+    );
+
+    expect(result).toContain("drinking less than usual");
+    expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
   });
 
   it("falls back when Nemotron verification reintroduces banned photo wording", async () => {

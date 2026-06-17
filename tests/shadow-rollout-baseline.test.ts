@@ -116,6 +116,117 @@ describe("shadow rollout baseline persistence", () => {
     expect(mockListShadowTelemetrySnapshots).not.toHaveBeenCalled();
   });
 
+  it("surfaces sanitized window high-watermarks for counted History rows", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-newest-malformed",
+          created_at: "2026-05-27T02:45:00.000Z",
+          ai_response: "{not-json",
+        },
+        {
+          id: "check-newest-parsed",
+          created_at: "2026-05-27T02:30:00.000Z",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 1,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(2);
+    expect(snapshot.parsedReportCount).toBe(1);
+    expect(snapshot.malformedReportCount).toBe(1);
+    expect(snapshot.latestWindowReportCreatedAt).toBe(
+      "2026-05-27T02:45:00.000Z"
+    );
+    expect(snapshot.latestParsedReportCreatedAt).toBe(
+      "2026-05-27T02:30:00.000Z"
+    );
+    expect(snapshot.windowStart).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+    );
+    expect(select).toHaveBeenCalledWith("id, created_at, ai_response");
+  });
+
+  it("diagnoses History rows excluded by the created_at readout window", async () => {
+    const inWindowLimit = jest.fn().mockResolvedValue({ data: [], error: null });
+    const inWindowOrder = jest.fn(() => ({ limit: inWindowLimit }));
+    const inWindowGte = jest.fn(() => ({ order: inWindowOrder }));
+    const inWindowSelect = jest.fn(() => ({ gte: inWindowGte }));
+
+    const latestAnyLimit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "check-outside-window",
+          created_at: "2026-05-26T22:45:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    const latestAnyOrder = jest.fn(() => ({ limit: latestAnyLimit }));
+    const latestAnySelect = jest.fn(() => ({ order: latestAnyOrder }));
+
+    const from = jest
+      .fn()
+      .mockReturnValueOnce({ select: inWindowSelect })
+      .mockReturnValueOnce({ select: latestAnySelect });
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const nowSpy = jest
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date("2026-05-28T01:06:39.498Z").getTime());
+
+    try {
+      const { buildPersistedShadowBaselineSnapshot } = await import(
+        "@/lib/shadow-rollout-baseline"
+      );
+      const snapshot = await buildPersistedShadowBaselineSnapshot({
+        windowHours: 24,
+        limit: 100,
+      });
+
+      expect(snapshot.reportCount).toBe(0);
+      expect(snapshot.windowStart).toBe("2026-05-27T01:06:39.498Z");
+      expect(snapshot.latestAnyReportCreatedAt).toBe(
+        "2026-05-26T22:45:00.000Z"
+      );
+      expect(snapshot.rowVisibilityMode).toBe("outside_created_at_window");
+      expect(snapshot.queryLimit).toBe(100);
+      expect(inWindowGte).toHaveBeenCalledWith(
+        "created_at",
+        "2026-05-27T01:06:39.498Z"
+      );
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("adds chat-turn shadow comparison snapshots to the live aggregate report shape", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [
@@ -181,6 +292,98 @@ describe("shadow rollout baseline persistence", () => {
     expect(mockListShadowTelemetrySnapshots).toHaveBeenCalledWith(100);
   });
 
+  it("counts stored chat comparisons when fresh reports only persist sanitized aggregate observations", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "8f9ecd7b-0000-4000-8000-00000000cfd5",
+          ai_response: JSON.stringify({
+            system_observability: {
+              timeoutCount: 0,
+              fallbackCount: 0,
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 2,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 2,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+        {
+          id: "50a0595f-0000-4000-8000-00000000a5ff",
+          ai_response: JSON.stringify({
+            system_observability: {
+              timeoutCount: 0,
+              fallbackCount: 0,
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 0,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockResolvedValue([
+      {
+        source: "chat",
+        generatedAt: new Date().toISOString(),
+        recentServiceCalls: [],
+        recentShadowComparisons: [
+          {
+            service: "async-review-service",
+            usedStrategy: "deterministic_extraction_failed",
+            shadowStrategy: "second_opinion_extractor",
+            summary: "q=vomit_duration; shadow_answer_recorded=true; conf=0.92",
+            disagreementCount: 1,
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+      },
+    ]);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.reportCount).toBe(2);
+    expect(snapshot.parsedReportCount).toBe(2);
+    expect(snapshot.observationCount).toBe(2);
+    expect(snapshot.providerErrorCount).toBe(2);
+    expect(snapshot.shadowComparisonCount).toBe(1);
+    expect(snapshot.warning).toBeNull();
+    expect(snapshot.serviceMetrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: "async-review-service",
+          comparisonCount: 1,
+        }),
+      ])
+    );
+  });
+
   it("surfaces supplemental chat telemetry DNS failures without leaking endpoint details", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [
@@ -232,19 +435,24 @@ describe("shadow rollout baseline persistence", () => {
     expect(JSON.stringify(snapshot)).not.toContain("private-upstash-host");
   });
 
-  it("merges persisted report aggregates with supplemental chat comparisons without double-counting report snapshots", async () => {
+  it("counts trace-only chat telemetry without manufacturing shadow comparisons", async () => {
     const limit = jest.fn().mockResolvedValue({
       data: [
         {
-          id: "check-1",
+          id: "27cf6eba-0000-4000-8000-000000001531",
           ai_response: JSON.stringify({
             system_observability: {
+              timeoutCount: 0,
+              fallbackCount: 0,
               shadowReadout: {
                 reportPresent: true,
                 sessionPresent: true,
-                observationCount: 3,
-                shadowComparisonCount: 2,
-                providerErrorCount: 1,
+                observationCount: 0,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
               },
             },
           }),
@@ -260,35 +468,22 @@ describe("shadow rollout baseline persistence", () => {
     mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
     mockListShadowTelemetrySnapshots.mockResolvedValue([
       {
-        source: "report",
-        generatedAt: new Date().toISOString(),
-        recentServiceCalls: [],
-        recentShadowComparisons: [
-          {
-            service: "async-review-service",
-            usedStrategy: "nvidia-primary",
-            shadowStrategy: "grok-final-safety-shadow",
-            summary: "report snapshot already counted",
-            disagreementCount: 2,
-            recordedAt: new Date().toISOString(),
-          },
-        ],
-      },
-      {
         source: "chat",
         generatedAt: new Date().toISOString(),
-        recentServiceCalls: [],
-        recentShadowComparisons: [
+        recentServiceCalls: [
           {
             service: "async-review-service",
-            usedStrategy: "deterministic_extraction_failed",
-            shadowStrategy: "second_opinion_extractor",
-            summary:
-              "q=cough_type; shadow_answer_recorded=true; conf=0.90; owner said honking",
-            disagreementCount: 1,
+            stage: "second_opinion",
+            latencyMs: 0,
+            outcome: "fallback",
+            shadowMode: false,
+            fallbackUsed: true,
+            note:
+              "eligibility_reason=eligible | request_outcome=requested | acceptance_outcome=rejected | extractor_reason=low_confidence",
             recordedAt: new Date().toISOString(),
           },
         ],
+        recentShadowComparisons: [],
       },
     ]);
 
@@ -301,13 +496,175 @@ describe("shadow rollout baseline persistence", () => {
     });
 
     expect(snapshot.reportCount).toBe(1);
-    expect(snapshot.observationCount).toBe(3);
-    expect(snapshot.providerErrorCount).toBe(1);
-    expect(snapshot.shadowComparisonCount).toBe(3);
-    expect(snapshot.warning).toBeNull();
-    expect(JSON.stringify(snapshot)).not.toContain("honking");
-    expect(JSON.stringify(snapshot)).not.toContain("dry_honking");
-    expect(JSON.stringify(snapshot)).not.toContain("owner said");
+    expect(snapshot.parsedReportCount).toBe(1);
+    expect(snapshot.observationCount).toBe(1);
+    expect(snapshot.shadowComparisonCount).toBe(0);
+    expect(snapshot.serviceMetrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          service: "async-review-service",
+          observationCount: 1,
+          comparisonCount: 0,
+          fallbackRate: 1,
+        }),
+      ])
+    );
+  });
+
+  it("surfaces sanitized second-opinion trace aggregates from supplemental chat telemetry", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "27cf6eba-0000-4000-8000-000000001533",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 0,
+                shadowComparisonCount: 0,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+    mockIsShadowTelemetryStoreConfigured.mockReturnValue(true);
+    mockListShadowTelemetrySnapshots.mockResolvedValue([
+      {
+        source: "chat",
+        generatedAt: new Date().toISOString(),
+        recentServiceCalls: [
+          {
+            service: "async-review-service",
+            stage: "second_opinion",
+            latencyMs: 0,
+            outcome: "fallback",
+            shadowMode: false,
+            fallbackUsed: true,
+            note:
+              "eligibility_reason=eligible | request_outcome=requested | acceptance_outcome=rejected | comparison_append_outcome=not_applicable | comparison_write_outcome=not_applicable | extractor_reason=low_confidence",
+            recordedAt: new Date().toISOString(),
+          },
+          {
+            service: "async-review-service",
+            stage: "second_opinion",
+            latencyMs: 0,
+            outcome: "success",
+            shadowMode: false,
+            fallbackUsed: false,
+            note:
+              "eligibility_reason=primary_extraction_succeeded | request_outcome=not_requested",
+            recordedAt: new Date().toISOString(),
+          },
+        ],
+        recentShadowComparisons: [],
+      },
+    ]);
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.secondOpinionTrace).toEqual({
+      total: 2,
+      eligibilityReasonCounts: {
+        eligible: 1,
+        primary_extraction_succeeded: 1,
+      },
+      requestOutcomeCounts: {
+        requested: 1,
+        not_requested: 1,
+      },
+      acceptanceOutcomeCounts: {
+        rejected: 1,
+      },
+      comparisonAppendOutcomeCounts: {
+        not_applicable: 1,
+      },
+      comparisonWriteOutcomeCounts: {
+        not_applicable: 1,
+      },
+      extractorReasonCounts: {
+        low_confidence: 1,
+      },
+      readoutCountedCount: 0,
+    });
+  });
+
+  it("adds persisted shadowReadout second-opinion trace aggregates to the baseline", async () => {
+    const limit = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: "6c58cb09-0000-4000-8000-000000001533",
+          ai_response: JSON.stringify({
+            system_observability: {
+              shadowReadout: {
+                reportPresent: true,
+                sessionPresent: true,
+                observationCount: 1,
+                shadowComparisonCount: 1,
+                timeoutCount: 0,
+                fallbackCount: 0,
+                providerErrorCount: 0,
+                budgetExceededCount: 0,
+                secondOpinionTrace: {
+                  total: 1,
+                  eligibilityReasonCounts: { eligible: 1 },
+                  requestOutcomeCounts: { requested: 1 },
+                  acceptanceOutcomeCounts: { accepted: 1 },
+                  comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+                  comparisonWriteOutcomeCounts: {
+                    comparison_write_succeeded: 1,
+                  },
+                  extractorReasonCounts: {},
+                  readoutCountedCount: 1,
+                },
+              },
+            },
+          }),
+        },
+      ],
+      error: null,
+    });
+    const order = jest.fn(() => ({ limit }));
+    const gte = jest.fn(() => ({ order }));
+    const select = jest.fn(() => ({ gte }));
+    const from = jest.fn(() => ({ select }));
+    mockGetServiceSupabase.mockReturnValue({ from });
+
+    const { buildPersistedShadowBaselineSnapshot } = await import(
+      "@/lib/shadow-rollout-baseline"
+    );
+    const snapshot = await buildPersistedShadowBaselineSnapshot({
+      windowHours: 24,
+      limit: 100,
+    });
+
+    expect(snapshot.secondOpinionTrace).toEqual({
+      total: 1,
+      eligibilityReasonCounts: { eligible: 1 },
+      requestOutcomeCounts: { requested: 1 },
+      acceptanceOutcomeCounts: { accepted: 1 },
+      comparisonAppendOutcomeCounts: { comparison_appended: 1 },
+      comparisonWriteOutcomeCounts: { comparison_write_succeeded: 1 },
+      extractorReasonCounts: {},
+      readoutCountedCount: 1,
+    });
   });
 
   it("ignores non-numeric persisted aggregate counts in symptom checks", async () => {

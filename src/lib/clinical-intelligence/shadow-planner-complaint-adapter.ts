@@ -181,7 +181,7 @@ function buildPlannerQuestionRoutingHints(
   };
 }
 
-function isPlannerFallbackResult(
+export function isPlannerFallbackResult(
   result: PlannedQuestion | PlannerFallbackResult
 ): result is PlannerFallbackResult {
   return "type" in result;

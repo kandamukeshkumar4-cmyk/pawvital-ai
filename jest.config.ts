@@ -19,10 +19,11 @@ const config: Config = {
     "<rootDir>/src/**/*.test.ts",
     "<rootDir>/src/**/*.test.tsx",
     "<rootDir>/tests/**/*.test.ts",
+    "<rootDir>/tests/**/*.test.tsx",
   ],
   // Skip files that import Next.js server modules in unit tests
   transformIgnorePatterns: ["/node_modules/(?!openai)"],
-  modulePathIgnorePatterns: ["<rootDir>/Roo-Code"],
+  modulePathIgnorePatterns: ["<rootDir>/Roo-Code", "<rootDir>/.tmp"],
 };
 
 export default config;
