@@ -245,12 +245,19 @@ export function getNextQuestion(session: TriageSession): string | null {
     (qId) => FOLLOW_UP_QUESTIONS[qId]?.critical
   );
 
+  // Inline readiness check — avoids mutual recursion with isReadyForDiagnosis.
+  // Ask trajectory when there is still more to gather (missing follow-ups or
+  // the capture turn hasn't been offered), mirroring what isReadyForDiagnosis
+  // would return without calling getNextQuestion.
+  const captureAlreadyOfferedForTrajectory =
+    session.answered_questions.includes(ADDITIONAL_CONTEXT_QUESTION_ID) ||
+    session.last_question_asked === ADDITIONAL_CONTEXT_QUESTION_ID;
   if (
     hasSymptoms &&
     sufficientHistory &&
     trajectoryNotAsked &&
     !hasPendingCriticalQuestion &&
-    !isReadyForDiagnosis(session)
+    (missing.length > 0 || !captureAlreadyOfferedForTrajectory)
   ) {
     return "condition_progression";
   }
@@ -1156,11 +1163,27 @@ export function isReadyForDiagnosis(session: TriageSession): boolean {
   // only a slightly less rich one.
   if (session.answered_questions.length >= MAX_QUESTIONS_BEFORE_READY) return true;
 
-  // Otherwise ready only when there is genuinely nothing left to ask. This now
-  // covers non-critical follow-ups and the one open-ended capture turn (see
-  // getNextQuestion), so we keep gathering context instead of stopping the
-  // moment the critical questions are cleared.
-  return getNextQuestion(session) === null;
+  // Ready only when there is genuinely nothing left to ask: no missing
+  // follow-ups, trajectory asked (or session too short for it), and the capture
+  // turn offered. Inlined here — NOT via getNextQuestion — to avoid mutual
+  // recursion (getNextQuestion calls isReadyForDiagnosis in the trajectory
+  // guard; calling back would overflow the call stack).
+  const missingForReady = getMissingQuestions(session);
+  if (missingForReady.length > 0) return false;
+
+  const sufficientHistoryForReady =
+    session.answered_questions.length >= MIN_QUESTIONS_BEFORE_READY;
+  const trajectoryNotAskedForReady =
+    !session.answered_questions.includes("condition_progression") &&
+    !session.last_question_asked?.includes("condition_progression");
+  if (sufficientHistoryForReady && trajectoryNotAskedForReady) return false;
+
+  const captureAlreadyOfferedForReady =
+    session.answered_questions.includes(ADDITIONAL_CONTEXT_QUESTION_ID) ||
+    session.last_question_asked === ADDITIONAL_CONTEXT_QUESTION_ID;
+  if (!captureAlreadyOfferedForReady) return false;
+
+  return true;
 }
 
 /**

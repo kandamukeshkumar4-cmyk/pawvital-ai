@@ -8661,8 +8661,11 @@ describe("VET-900: world-class symptom checker regression pack", () => {
 
       const readySession = recordAnswer(session, "gum_color", "pink_normal");
 
-      expect(isReadyForDiagnosis(readySession)).toBe(true);
-      expect(getNextQuestion(readySession)).toBeNull();
+      // All critical questions answered. PR-640 extended the conversation:
+      // trajectory and then the capture turn are offered before isReadyForDiagnosis
+      // returns true. The key clinical gate (blocked without gum_color) still holds.
+      expect(isReadyForDiagnosis(readySession)).toBe(false);
+      expect(getNextQuestion(readySession)).toBe("condition_progression");
     });
 
     it("routes the supported gum-color branch through one alternate observable retry before emergency", async () => {
