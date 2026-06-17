@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   getQuestionText,
-  isReadyForDiagnosis,
+  hasMinimumDiagnosticInfo,
   type PetProfile,
   type TriageSession,
 } from "@/lib/triage-engine";
@@ -78,7 +78,7 @@ export async function buildQuestionResponseFlow(
     type: "question",
     message: safeMessage,
     session: sanitizeSessionForClient(session),
-    ready_for_report: isReadyForDiagnosis(session),
+    ready_for_report: hasMinimumDiagnosticInfo(session),
     conversationState: input.needsClarificationQuestionId
       ? "needs_clarification"
       : inferConversationState(getStateSnapshot(session)),

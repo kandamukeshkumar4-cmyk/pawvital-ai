@@ -167,6 +167,18 @@ export function createSession(): TriageSession {
   };
 }
 
+// --- Question Flow Tuning ---
+// A real vet asks at least a few follow-ups before concluding, and keeps
+// gathering context (not just clearing red flags) up to a bounded ceiling.
+const MIN_QUESTIONS_BEFORE_READY = 3;
+const MAX_QUESTIONS_BEFORE_READY = 12;
+/**
+ * Generic open-ended capture turn, offered once when the structured follow-ups
+ * run out — see getNextQuestion / isReadyForDiagnosis. The entry itself lives in
+ * clinical-matrix's FOLLOW_UP_QUESTIONS.
+ */
+const ADDITIONAL_CONTEXT_QUESTION_ID = "additional_context";
+
 /**
  * Given known symptoms, return all required follow-up questions
  * minus ones already answered.
@@ -218,53 +230,75 @@ export function getMissingQuestions(session: TriageSession): string[] {
  */
 export function getNextQuestion(session: TriageSession): string | null {
   const missing = getMissingQuestions(session);
-
-  // Ask the trajectory question once — after ≥3 answered and not yet asked — but
-  // only once no CRITICAL follow-up is still pending. "Is it getting worse?" must
-  // never preempt an essential clinical question (gum colour, spay status, etc.).
-  // This also keeps getNextQuestion consistent with isReadyForDiagnosis, which
-  // gates on the critical-question contract.
   const hasSymptoms = session.known_symptoms.length > 0;
-  const sufficientHistory = session.answered_questions.length >= 3;
-  const trajectoryNotAsked = !session.answered_questions.includes("condition_progression") &&
+  const answeredCount = session.answered_questions.length;
+
+  // Hard ceiling: never keep asking past the bounded maximum.
+  if (answeredCount >= MAX_QUESTIONS_BEFORE_READY) return null;
+
+  // Ask the trajectory question once — after the minimum history and not yet asked.
+  const sufficientHistory = answeredCount >= MIN_QUESTIONS_BEFORE_READY;
+  const trajectoryNotAsked =
+    !session.answered_questions.includes("condition_progression") &&
     !session.last_question_asked?.includes("condition_progression");
   const hasPendingCriticalQuestion = missing.some(
     (qId) => FOLLOW_UP_QUESTIONS[qId]?.critical
   );
 
+  // Inline readiness check — avoids mutual recursion with isReadyForDiagnosis.
+  // Ask trajectory when there is still more to gather (missing follow-ups or
+  // the capture turn hasn't been offered), mirroring what isReadyForDiagnosis
+  // would return without calling getNextQuestion.
+  const captureAlreadyOfferedForTrajectory =
+    session.answered_questions.includes(ADDITIONAL_CONTEXT_QUESTION_ID) ||
+    session.last_question_asked === ADDITIONAL_CONTEXT_QUESTION_ID;
   if (
     hasSymptoms &&
     sufficientHistory &&
     trajectoryNotAsked &&
     !hasPendingCriticalQuestion &&
-    !isReadyForDiagnosis(session)
+    (missing.length > 0 || !captureAlreadyOfferedForTrajectory)
   ) {
     return "condition_progression";
   }
 
-  if (missing.length === 0) return null;
+  // Prefer the most informative structured follow-up still missing. The pool
+  // includes non-critical follow-ups (getMissingQuestions surfaces them once the
+  // criticals are answered), so we keep narrowing instead of stopping early.
+  if (missing.length > 0) {
+    // Score each question by how many candidate diseases it helps narrow down
+    const scored = missing.map((qId, index) => {
+      let relevanceScore = 0;
+      const qDef = FOLLOW_UP_QUESTIONS[qId];
 
-  // Score each question by how many candidate diseases it helps narrow down
-  const scored = missing.map((qId, index) => {
-    let relevanceScore = 0;
-    const qDef = FOLLOW_UP_QUESTIONS[qId];
+      // Higher score for critical questions
+      if (qDef?.critical) relevanceScore += 10;
 
-    // Higher score for critical questions
-    if (qDef?.critical) relevanceScore += 10;
-
-    // Count how many current symptoms reference this question, weighted by urgency
-    for (const symptom of session.known_symptoms) {
-      const entry = SYMPTOM_MAP[symptom];
-      if (entry?.follow_up_questions.includes(qId)) {
-        relevanceScore += 5 + getSymptomPriorityScore(symptom);
+      // Count how many current symptoms reference this question, weighted by urgency
+      for (const symptom of session.known_symptoms) {
+        const entry = SYMPTOM_MAP[symptom];
+        if (entry?.follow_up_questions.includes(qId)) {
+          relevanceScore += 5 + getSymptomPriorityScore(symptom);
+        }
       }
-    }
 
-    return { qId, score: relevanceScore, index };
-  });
+      return { qId, score: relevanceScore, index };
+    });
 
-  scored.sort((a, b) => b.score - a.score || a.index - b.index);
-  return scored[0]?.qId || null;
+    scored.sort((a, b) => b.score - a.score || a.index - b.index);
+    return scored[0]?.qId || null;
+  }
+
+  // Structured follow-ups exhausted: offer one open-ended capture turn so an
+  // owner who still has more to share isn't cut off abruptly. Asked at most once.
+  const captureAlreadyOffered =
+    session.answered_questions.includes(ADDITIONAL_CONTEXT_QUESTION_ID) ||
+    session.last_question_asked === ADDITIONAL_CONTEXT_QUESTION_ID;
+  if (hasSymptoms && !captureAlreadyOffered) {
+    return ADDITIONAL_CONTEXT_QUESTION_ID;
+  }
+
+  return null;
 }
 
 /**
@@ -1120,17 +1154,64 @@ export function isReadyForDiagnosis(session: TriageSession): boolean {
   // NEVER ready if no symptoms identified yet
   if (session.known_symptoms.length === 0) return false;
 
-  // NEVER ready if fewer than 3 questions have been answered
-  // A real vet always asks at least a few follow-up questions
-  if (session.answered_questions.length < 3) return false;
+  // Bounded: once the hard ceiling is reached, conclude regardless. A
+  // non-emergency critical could in theory still be unanswered here, but EVERY
+  // report — owner-requested or auto-concluded (the client re-issues
+  // generate_report after a "ready" turn) — funnels through the unbounded
+  // findReportBlockingCriticalInfo gate, which still blocks on emergency-grade
+  // criticals. So the ceiling can never release a dangerously premature report,
+  // only a slightly less rich one.
+  if (session.answered_questions.length >= MAX_QUESTIONS_BEFORE_READY) return true;
 
-  // Check if all critical questions are answered
-  const missing = getMissingQuestions(session);
-  const criticalMissing = missing.filter((qId) => {
-    const qDef = FOLLOW_UP_QUESTIONS[qId];
-    return qDef?.critical;
-  });
+  // Ready only when there is genuinely nothing left to ask: no missing
+  // follow-ups, trajectory asked (or session too short for it), and the capture
+  // turn offered. Inlined here — NOT via getNextQuestion — to avoid mutual
+  // recursion (getNextQuestion calls isReadyForDiagnosis in the trajectory
+  // guard; calling back would overflow the call stack).
+  const missingForReady = getMissingQuestions(session);
+  if (missingForReady.length > 0) return false;
 
+  const sufficientHistoryForReady =
+    session.answered_questions.length >= MIN_QUESTIONS_BEFORE_READY;
+  const trajectoryNotAskedForReady =
+    !session.answered_questions.includes("condition_progression") &&
+    !session.last_question_asked?.includes("condition_progression");
+  if (sufficientHistoryForReady && trajectoryNotAskedForReady) return false;
+
+  const captureAlreadyOfferedForReady =
+    session.answered_questions.includes(ADDITIONAL_CONTEXT_QUESTION_ID) ||
+    session.last_question_asked === ADDITIONAL_CONTEXT_QUESTION_ID;
+  if (!captureAlreadyOfferedForReady) return false;
+
+  return true;
+}
+
+/**
+ * Permissive readiness: does the case hold the *minimum* critical information
+ * needed to produce a safe report, even if optional follow-ups remain?
+ *
+ * Use this when the OWNER explicitly asks for a report (the "generate_report"
+ * action) or to decide whether to surface a "get the report now" affordance.
+ * It is intentionally distinct from isReadyForDiagnosis: the latter governs
+ * when the engine stops asking *on its own* (and now keeps gathering optional
+ * context first), while this lets an owner bail out to a report as soon as the
+ * case is minimally sufficient. Red flags and the critical-question contract
+ * are still required — this never lets a dangerously premature report through.
+ */
+export function hasMinimumDiagnosticInfo(session: TriageSession): boolean {
+  if (
+    session.red_flags_triggered.length > 0 ||
+    getCompositeEmergencyRedFlags(session).length > 0
+  ) {
+    return true;
+  }
+
+  if (session.known_symptoms.length === 0) return false;
+  if (session.answered_questions.length < MIN_QUESTIONS_BEFORE_READY) return false;
+
+  const criticalMissing = getMissingQuestions(session).filter(
+    (qId) => FOLLOW_UP_QUESTIONS[qId]?.critical
+  );
   return criticalMissing.length === 0;
 }
 
