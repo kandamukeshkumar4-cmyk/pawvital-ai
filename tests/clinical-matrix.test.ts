@@ -410,3 +410,48 @@ describe("Wave 3 emergency linkage regressions", () => {
     expect(answers.restlessness).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Medical history questions added in vet-level reasoning batch
+// ---------------------------------------------------------------------------
+
+describe("Medical history question keys", () => {
+  const NEW_HISTORY_KEYS = [
+    "prior_similar_episode",
+    "recent_diet_change",
+    "spay_neuter_status",
+    "last_vet_visit",
+  ] as const;
+
+  it.each(NEW_HISTORY_KEYS)(
+    '"%s" exists in FOLLOW_UP_QUESTIONS with critical: false',
+    (key) => {
+      expect(FOLLOW_UP_QUESTIONS[key]).toBeDefined();
+      expect(FOLLOW_UP_QUESTIONS[key]?.critical).toBe(false);
+    }
+  );
+
+  it("spay_neuter_status is wired into the vomiting symptom follow-up list", () => {
+    expect(SYMPTOM_MAP.vomiting.follow_up_questions).toContain("spay_neuter_status");
+  });
+
+  it("spay_neuter_status is wired into the not_eating symptom follow-up list", () => {
+    expect(SYMPTOM_MAP.not_eating.follow_up_questions).toContain("spay_neuter_status");
+  });
+
+  it("prior_similar_episode is wired into the vomiting symptom follow-up list", () => {
+    expect(SYMPTOM_MAP.vomiting.follow_up_questions).toContain("prior_similar_episode");
+  });
+
+  it("recent_diet_change is wired into the vomiting symptom follow-up list", () => {
+    expect(SYMPTOM_MAP.vomiting.follow_up_questions).toContain("recent_diet_change");
+  });
+
+  it("condition_progression is in FOLLOW_UP_QUESTIONS with choice data_type", () => {
+    expect(FOLLOW_UP_QUESTIONS.condition_progression).toBeDefined();
+    expect(FOLLOW_UP_QUESTIONS.condition_progression?.data_type).toBe("choice");
+    expect(FOLLOW_UP_QUESTIONS.condition_progression?.choices).toEqual(
+      expect.arrayContaining(["worsening", "same", "improving"])
+    );
+  });
+});

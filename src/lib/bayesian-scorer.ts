@@ -433,6 +433,11 @@ function isNegativeAnswer(value: string | boolean | number): boolean {
  * applies a 0.5x penalty to any differential whose disease is implicated
  * by a critical follow-up question that received a negative answer.
  * Probabilities are renormalized after the penalty step.
+ *
+ * ⚠️ SAFETY: Do NOT use the returned probabilities as the sole urgency gate.
+ * Emergency triage must always consult `session.red_flags_triggered` and
+ * `isReadyForDiagnosis()` independently. Bayesian probabilities are a
+ * display/ranking signal — they cannot suppress a red flag that is already set.
  */
 export async function scoreDifferentials(
   session: TriageSession,
@@ -489,6 +494,10 @@ export async function scoreDifferentials(
 /**
  * Returns the top `n` differentials for a session, sorted by probability
  * descending, with only the fields needed for display or downstream use.
+ *
+ * ⚠️ SAFETY: Do NOT use this as the sole urgency gate. Urgency must be
+ * determined from `session.red_flags_triggered` and `buildDiagnosisContext`.
+ * This function is for display ranking only.
  */
 export async function getTopDifferentials(
   session: TriageSession,

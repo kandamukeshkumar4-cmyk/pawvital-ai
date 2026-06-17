@@ -1029,6 +1029,7 @@ function buildFailSafeReport(input: {
     confidence: Math.min(deriveBaselineReportConfidence(input.context), 0.45),
     report_mode: "failsafe",
     report_unavailable_reason: input.reason,
+    soap_narrative: null,
   };
 }
 
@@ -1083,6 +1084,7 @@ function buildTerminalOutcomeReport(input: {
     report_mode: "terminal_cannot_assess",
     terminal_state: terminalOutcome.terminalState,
     reason_code: terminalOutcome.reasonCode,
+    soap_narrative: null,
   };
 }
 
