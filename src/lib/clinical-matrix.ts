@@ -186,6 +186,7 @@ function makeOphthalmicDisease(
 export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
   vomiting: {
     linked_diseases: [
+      "dietary_indiscretion",
       "gastroenteritis",
       "pancreatitis",
       "foreign_body",
@@ -239,6 +240,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
   },
   diarrhea: {
     linked_diseases: [
+      "dietary_indiscretion",
       "gastroenteritis",
       "pancreatitis",
       "ibd",
@@ -369,6 +371,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
   },
   excessive_scratching: {
     linked_diseases: [
+      "contact_dermatitis",
       "allergic_dermatitis",
       "food_allergy",
       "flea_allergy",
@@ -411,6 +414,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
   },
   trembling: {
     linked_diseases: [
+      "situational_stress",
       "pain_general",
       "toxin_ingestion",
       "hypoglycemia",
@@ -661,6 +665,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
 
   behavior_change: {
     linked_diseases: [
+      "situational_stress",
       "cognitive_dysfunction",
       "brain_tumor",
       "liver_shunt",
@@ -793,6 +798,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
 
   generalized_stiffness: {
     linked_diseases: [
+      "muscle_soreness",
       "impa",
       "osteoarthritis",
       "polymyositis",
@@ -875,6 +881,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
 
   exercise_induced_lameness: {
     linked_diseases: [
+      "muscle_soreness",
       "ccl_rupture",
       "iliopsoas_strain",
       "heart_disease",
@@ -997,6 +1004,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
 
   vomiting_diarrhea_combined: {
     linked_diseases: [
+      "dietary_indiscretion",
       "gastroenteritis",
       "pancreatitis",
       "parvovirus",
@@ -1128,6 +1136,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "pain_general",
       "bloat",
       "cognitive_dysfunction",
+      "situational_stress",
       "anxiety",
       "splenic_mass",
     ],
@@ -1523,6 +1532,60 @@ const SUPPLEMENTAL_DISEASES: Record<string, DiseaseEntry> = {
   sepsis: makeSystemicDisease("Sepsis", "Systemic Inflammatory Response to Infection", "Life-threatening body-wide response to infection causing organ failure and shock.", "emergency", 0.03),
 
   fibrocartilaginous_embolism: makeNeuroOrOrthoDisease("Fibrocartilaginous Embolism", "FCE / Spinal Stroke", "Spinal cord blood vessel blockage causes sudden one-sided paralysis without pain.", "high", 0.02),
+
+  // --- BENIGN / LOW-URGENCY DIFFERENTIALS (clinical-matrix benign expansion) ---
+  // Genuinely self-limiting or non-progressive conditions in an otherwise bright,
+  // alert, well-hydrated dog. These let mild presentations resolve to "monitor at
+  // home". They do NOT replace red-flag logic — any red flag still overrides.
+  dietary_indiscretion: makeDiseaseEntry({
+    name: "Dietary Indiscretion (Mild GI Upset)",
+    medicalTerm: "Acute Self-Limiting Dietary Indiscretion",
+    description:
+      "Mild, short-lived stomach upset after eating something new, rich, or off — a single bout of vomiting or soft stool in a dog that stays bright, alert, and drinking.",
+    urgency: "low",
+    baseProbability: 0.08,
+    ageModifier: { puppy: 0.7, adult: 1.0, senior: 0.8 },
+    keyDifferentiators: [
+      "Recent diet change, scavenging, table scraps, or new treat",
+      "One or two episodes only, dog otherwise bright and playful",
+      "No blood, still eating or interested in food, drinking normally",
+      "Resolves within 24-48 hours without escalation",
+    ],
+    typicalTests: [
+      "Usually clinical — based on history and a normal physical exam",
+      "Fecal exam if soft stool persists beyond a couple of days",
+    ],
+    typicalHomeCare: [
+      "Offer a small amount of water and rest the gut for a few hours",
+      "Feed a bland, easily digestible meal in small portions once settled",
+      "Return to normal food gradually over 2-3 days",
+      "Seek vet care if vomiting/diarrhea persists >48h, blood appears, or the dog becomes lethargic or stops drinking",
+    ],
+  }),
+  contact_dermatitis: makeDermDisease(
+    "Mild Contact / Seasonal Itch",
+    "Mild Contact or Seasonal Irritant Dermatitis",
+    "Mild localized itch or pink skin from contact with grass, pollen, or an irritant — no broken skin, no infection, and no foul odor.",
+    "low",
+    0.1,
+    { puppy: 1.1, adult: 1.0, senior: 0.9 }
+  ),
+  muscle_soreness: makeNeuroOrOrthoDisease(
+    "Mild Overexertion Muscle Soreness",
+    "Self-Limiting Myalgia from Overexertion",
+    "Transient general stiffness or mild soreness the day after unusually hard play or a long hike, with full weight-bearing and no specific painful spot.",
+    "low",
+    0.08,
+    { puppy: 0.9, adult: 1.0, senior: 0.9 }
+  ),
+  situational_stress: makeSystemicDisease(
+    "Situational Stress Response",
+    "Transient Situational / Fear-Related Stress",
+    "Short-lived trembling, pacing, or clinginess tied to a clear trigger (thunderstorm, fireworks, vet visit, new environment) that settles once the trigger passes.",
+    "low",
+    0.07,
+    { puppy: 1.2, adult: 1.0, senior: 1.0 }
+  ),
 };
 
 export const DISEASE_DB: Record<string, DiseaseEntry> = {
