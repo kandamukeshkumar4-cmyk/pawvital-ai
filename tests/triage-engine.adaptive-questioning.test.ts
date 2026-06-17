@@ -70,6 +70,30 @@ describe("Ticket 1 — deeper adaptive questioning", () => {
     expect(isReadyForDiagnosis(session)).toBe(true);
   });
 
+  it("does not re-offer the capture turn when only last_question_asked records it", () => {
+    // Production path: the capture turn is ASKED (last_question_asked set) but a
+    // long free-text reply is NOT persisted into answered_questions. Termination
+    // then relies solely on the last_question_asked half of the guard.
+    let session = createSession();
+    session = addSymptoms(session, ["wound_skin_issue"]);
+
+    let guard = 0;
+    while (guard < 30) {
+      const q = getNextQuestion(session);
+      if (!q || q === ADDITIONAL_CONTEXT_ID) break;
+      session = recordAnswer(session, q, "no");
+      guard++;
+    }
+    expect(getNextQuestion(session)).toBe(ADDITIONAL_CONTEXT_ID);
+
+    // Simulate "asked but reply not persisted as an answer".
+    session.last_question_asked = ADDITIONAL_CONTEXT_ID;
+    expect(session.answered_questions).not.toContain(ADDITIONAL_CONTEXT_ID);
+
+    expect(getNextQuestion(session)).toBeNull();
+    expect(isReadyForDiagnosis(session)).toBe(true);
+  });
+
   it("still concludes immediately when a red flag fires (regression guard)", () => {
     let session = createSession();
     session = addSymptoms(session, ["vomiting"]);

@@ -1148,10 +1148,12 @@ export function isReadyForDiagnosis(session: TriageSession): boolean {
   if (session.known_symptoms.length === 0) return false;
 
   // Bounded: once the hard ceiling is reached, conclude regardless. A
-  // non-emergency critical could in theory still be unanswered here, but the
-  // dangerous ones (emergency-grade criticals) remain enforced downstream by
-  // findReportBlockingCriticalInfo on the report path — so the ceiling can never
-  // release a dangerously premature report, only a slightly less rich one.
+  // non-emergency critical could in theory still be unanswered here, but EVERY
+  // report — owner-requested or auto-concluded (the client re-issues
+  // generate_report after a "ready" turn) — funnels through the unbounded
+  // findReportBlockingCriticalInfo gate, which still blocks on emergency-grade
+  // criticals. So the ceiling can never release a dangerously premature report,
+  // only a slightly less rich one.
   if (session.answered_questions.length >= MAX_QUESTIONS_BEFORE_READY) return true;
 
   // Otherwise ready only when there is genuinely nothing left to ask. This now
