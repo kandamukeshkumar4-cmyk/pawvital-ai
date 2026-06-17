@@ -547,6 +547,7 @@ Output ONLY valid JSON (no markdown, no code blocks, no thinking):
   "recommendation": "${URGENCY_TO_RECOMMENDATION[input.context.highest_urgency] || "vet_48h"}",
   "title": "Specific clinical title based on top differential",
   "explanation": "4-6 sentences for a dog owner. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
+  "urgency_rationale": "2-3 plain-language sentences explaining WHY the recommended urgency level — what could happen if it waits, what the vet will actually do, and why not sooner/later. Reassuring, specific, no jargon.",
   "soap_narrative": "## Subjective\n[owner symptoms and timeline]\n\n## Objective\n[exam findings from OWNER-GUIDED EXAM FINDINGS — note not assessed for any missing]\n\n## Assessment\n**Most likely:** [condition] — [explanation]\n**Also consider:** [condition 2], [condition 3]\n**Urgency:** [Emergency / See vet today / Schedule this week / Monitor at home]\n\n## Plan\n**If condition worsens, go to emergency vet immediately if:**\n- [trigger 1]\n- [trigger 2]\n\n**Next steps:** [action]",
   "differential_diagnoses": [
     {
@@ -1346,6 +1347,14 @@ export async function generateReport({
         console.log("[Engine] Diagnosis: Nemotron Ultra 253B");
 
         const report = parseReportJSON(rawReport);
+        if (
+          typeof report.urgency_rationale === "string" &&
+          report.urgency_rationale.trim().length > 0
+        ) {
+          report.urgency_rationale = report.urgency_rationale.trim();
+        } else {
+          delete report.urgency_rationale;
+        }
         if (!Array.isArray(report.evidence_chain)) {
           report.evidence_chain = buildEvidenceChainForResponse(
             session,

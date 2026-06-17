@@ -3,11 +3,13 @@
 import { useRef, useState } from "react";
 import { Download, Share2, Copy, CheckCheck } from "lucide-react";
 import type { SymptomReport } from "./types";
-import { SeverityHeader } from "./severity-header";
+import { UrgencyHero } from "./urgency-hero";
+import { WhatsHappeningSection } from "./whats-happening";
+import { UrgencyRationaleSection } from "./urgency-rationale";
+import { WhatItCouldBeSection } from "./what-it-could-be";
+import { VetHandoffCard } from "./vet-handoff-card";
 import { ConfidenceCalibrationSection } from "./confidence-calibration";
 import { EvidenceSourcesBar } from "./evidence-sources-bar";
-import { VetHandoffSection } from "./vet-handoff";
-import { DifferentialDiagnoses } from "./differential-diagnoses";
 import { ClinicalNotesSection } from "./clinical-notes";
 import { EvidenceChainSection } from "./evidence-chain";
 import { SimilarCasesSection } from "./similar-cases";
@@ -17,7 +19,6 @@ import { HomeCareSection } from "./home-care";
 import { ActionStepsSection } from "./action-steps";
 import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
-import { BayesianDifferentials } from "./bayesian-differentials";
 import { OwnerSummarySection } from "./owner-summary";
 import { NearestVetFinder } from "./nearest-vet-finder";
 import Button from "@/components/ui/button";
@@ -30,6 +31,28 @@ import {
 } from "./report-presentation";
 
 type CopyState = "idle" | "copied" | "error";
+
+const URGENCY_TIMEFRAME: Record<SymptomReport["recommendation"], string> = {
+  monitor: "monitoring at home",
+  vet_48h: "48 hours",
+  vet_24h: "24 hours",
+  emergency_vet: "right now",
+};
+
+function buildHeroSubtitle(report: SymptomReport): string {
+  const topDifferential = report.differential_diagnoses?.find((dx) =>
+    dx.condition?.trim(),
+  )?.condition;
+  if (topDifferential) {
+    return `Most likely: ${topDifferential.trim()}. A vet exam confirms the cause.`;
+  }
+  const explanation = report.explanation?.trim();
+  if (explanation) {
+    const firstSentence = explanation.split(/(?<=[.!?])\s/)[0];
+    return firstSentence?.trim() ?? "";
+  }
+  return "";
+}
 
 interface FullReportProps {
   report: SymptomReport;
@@ -212,31 +235,41 @@ export function FullReport({
 
   return (
     <div className="space-y-4 animate-fade-in sm:space-y-5">
-      <SeverityHeader
-        banner={presentation.headerBanner}
-        recommendationLabel={presentation.recommendationLabel}
+      <UrgencyHero
         report={report}
         tone={presentation.tone}
-        urgencyBody={presentation.urgencyBody}
-        urgencyLabel={presentation.urgencyLabel}
-        copyState={copyState}
-        onCopyVetSummary={copyVetSummary}
-        onJumpToHandoff={() =>
-          handoffRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          })
-        }
+        recommendationLabel={presentation.recommendationLabel}
+        subtitle={buildHeroSubtitle(report)}
         headerActions={headerActions}
+      />
+
+      <WhatsHappeningSection explanation={report.explanation} />
+
+      <UrgencyRationaleSection
+        rationale={report.urgency_rationale}
+        heading={`Why a vet — and why within ${URGENCY_TIMEFRAME[report.recommendation]}`}
+      />
+
+      <WhatItCouldBeSection
+        bayesian={report.bayesian_differentials}
+        differentials={report.differential_diagnoses}
       />
 
       <ActionStepsSection
         actions={report.actions}
-        tone={presentation.tone}
         actionTitle={presentation.actionTitle}
         warningSigns={report.warning_signs}
-        warningTitle={presentation.warningTitle}
+        warningTitle="Go sooner if you notice"
       />
+
+      <div ref={handoffRef}>
+        <VetHandoffCard
+          intro={presentation.vetHandoffIntro}
+          summary={report.vet_handoff_summary ?? ""}
+          copyState={copyState}
+          onCopy={copyVetSummary}
+        />
+      </div>
 
       {!readOnlyShared &&
         (report.recommendation === "emergency_vet" ||
@@ -349,30 +382,21 @@ export function FullReport({
 
       <EvidenceSourcesBar report={report} />
 
+      {report.recommended_tests && report.recommended_tests.length > 0 && (
+        <RecommendedTestsSection tests={report.recommended_tests} />
+      )}
+
+      {report.home_care && report.home_care.length > 0 && (
+        <HomeCareSection items={report.home_care} />
+      )}
+
+      {report.vet_questions && report.vet_questions.length > 0 && (
+        <VetQuestionsSection questions={report.vet_questions} />
+      )}
+
       <ConfidenceCalibrationSection
         calibration={report.calibrated_confidence ?? report.confidence_calibration}
       />
-
-      {report.bayesian_differentials &&
-        report.bayesian_differentials.length > 0 && (
-          <BayesianDifferentials
-            bayesian_differentials={report.bayesian_differentials}
-          />
-        )}
-
-      <div ref={handoffRef}>
-        <VetHandoffSection
-          intro={presentation.vetHandoffIntro}
-          summary={report.vet_handoff_summary ?? ""}
-          copyState={copyState}
-          onCopy={copyVetSummary}
-        />
-      </div>
-
-      {report.differential_diagnoses &&
-        report.differential_diagnoses.length > 0 && (
-          <DifferentialDiagnoses diagnoses={report.differential_diagnoses} />
-        )}
 
       {report.clinical_notes && (
         <ClinicalNotesSection notes={report.clinical_notes} />
@@ -388,18 +412,6 @@ export function FullReport({
 
       {report.reference_images && report.reference_images.length > 0 && (
         <ReferenceImagesSection images={report.reference_images} />
-      )}
-
-      {report.recommended_tests && report.recommended_tests.length > 0 && (
-        <RecommendedTestsSection tests={report.recommended_tests} />
-      )}
-
-      {report.home_care && report.home_care.length > 0 && (
-        <HomeCareSection items={report.home_care} />
-      )}
-
-      {report.vet_questions && report.vet_questions.length > 0 && (
-        <VetQuestionsSection questions={report.vet_questions} />
       )}
 
       {!readOnlyShared ? (

@@ -69,6 +69,7 @@ export interface SymptomReport {
   recommendation: "monitor" | "vet_48h" | "vet_24h" | "emergency_vet";
   title: string;
   explanation: string;
+  urgency_rationale?: string;
   differential_diagnoses?: DifferentialDiagnosis[];
   clinical_notes?: string;
   recommended_tests?: RecommendedTest[];
