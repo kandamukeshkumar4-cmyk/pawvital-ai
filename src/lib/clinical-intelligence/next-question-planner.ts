@@ -25,6 +25,13 @@ export interface PlannerOptions {
   maxQuestionsPerTurn?: number;
   preferredQuestionIds?: string[];
   discouragedQuestionIds?: string[];
+  /**
+   * The pet's breed, threaded through from the turn orchestrator. When set, a
+   * card whose `breedFamilies` matches the breed (case-insensitive substring)
+   * receives a small deterministic relevance boost. Purely additive — it never
+   * changes urgency, red-flag, or emergency-screen behavior.
+   */
+  petBreed?: string | null;
 }
 
 export interface PlannerFallbackResult {
@@ -47,6 +54,29 @@ const OFF_TOPIC_PENALTY = 15;
 const TOO_MANY_QUESTIONS_PENALTY = 10;
 const PREFERRED_QUESTION_BONUS = 20;
 const DISCOURAGED_QUESTION_PENALTY = 40;
+const BREED_RELEVANCE_BONUS = 12;
+
+function cardMatchesBreed(
+  card: ClinicalQuestionCard,
+  petBreed: string | null | undefined
+): boolean {
+  if (!petBreed || !card.breedFamilies || card.breedFamilies.length === 0) {
+    return false;
+  }
+
+  const normalizedBreed = petBreed.toLowerCase();
+  if (normalizedBreed.trim().length === 0) {
+    return false;
+  }
+
+  return card.breedFamilies.some((keyword) => {
+    const normalizedKeyword = keyword.toLowerCase().trim();
+    return (
+      normalizedKeyword.length > 0 &&
+      normalizedBreed.includes(normalizedKeyword)
+    );
+  });
+}
 
 function isQuestionAlreadyAnswered(
   card: ClinicalQuestionCard,
@@ -205,6 +235,12 @@ export function buildQuestionScoreBreakdown(
     breakdown["discouragedQuestionPenalty"] = -DISCOURAGED_QUESTION_PENALTY;
   } else {
     breakdown["discouragedQuestionPenalty"] = 0;
+  }
+
+  if (cardMatchesBreed(card, options?.petBreed)) {
+    breakdown["breedRelevance"] = BREED_RELEVANCE_BONUS;
+  } else {
+    breakdown["breedRelevance"] = 0;
   }
 
   return breakdown;

@@ -38,6 +38,12 @@ export interface BuildShadowPlannerComplaintIntegrationInput {
   ownerText: string;
   caseState: ClinicalCaseState;
   existingQuestionId?: string | null;
+  /**
+   * The pet's breed, threaded through to the planner so breed-targeted cards
+   * (cards with a matching `breedFamilies`) receive a small deterministic
+   * relevance boost. Optional and purely additive.
+   */
+  petBreed?: string | null;
 }
 
 export interface ShadowPlannerComplaintIntegrationResult {
@@ -245,6 +251,7 @@ export function buildShadowPlannerComplaintIntegration(
     activeComplaintModule: plannerActiveComplaintModule,
     preferredQuestionIds: routingHints.preferredQuestionIds,
     discouragedQuestionIds: routingHints.discouragedQuestionIds,
+    petBreed: input.petBreed ?? null,
   });
 
   const shadowPlannedQuestion = toShadowPlannedQuestion(plannerResult);

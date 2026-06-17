@@ -127,10 +127,13 @@ export function runClinicalTurnPipeline(
       : undefined,
   });
 
+  const petBreed = input.session.effective_breed ?? input.pet.breed ?? null;
+
   const integration = buildShadowPlannerComplaintIntegration({
     ownerText: input.ownerText,
     caseState,
     existingQuestionId: input.legacyQuestionId,
+    petBreed,
   });
 
   const plannerQuestionId = isPlannerFallbackResult(integration.plannerResult)
