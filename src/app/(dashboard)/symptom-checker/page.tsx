@@ -404,7 +404,6 @@ export default function SymptomCheckerPage() {
       }
       const payload = await res.json().catch(() => null);
       asyncPendingRef.current = null;
-      setAwaitingAsyncResult(false);
       if (res.ok && payload?.body) {
         await latestApplyResponseRef.current?.(payload.body);
       } else {
@@ -418,6 +417,7 @@ export default function SymptomCheckerPage() {
           },
         ]);
       }
+      setAwaitingAsyncResult(false);
     } catch {
       // Transient — the next poll tick retries while awaitingAsyncResult holds.
     } finally {

@@ -4,12 +4,11 @@ import {
   getTriageJobInput,
   getTriageJobResult,
 } from "@/lib/symptom-chat/async-turn-store";
+import { UUID_PATTERN } from "@/lib/symptom-chat/async-turn-contract";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 export const runtime = "nodejs";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function noStore(body: unknown, status: number) {
   return NextResponse.json(body, {
@@ -33,7 +32,11 @@ export async function GET(request: Request) {
     return noStore({ error: "unauthorized" }, 401);
   }
 
-  const result = await getTriageJobResult(jobId);
+  const [result, input] = await Promise.all([
+    getTriageJobResult(jobId),
+    getTriageJobInput(jobId),
+  ]);
+
   if (result) {
     if (result.userId !== userId) {
       return noStore({ error: "forbidden" }, 403);
@@ -42,7 +45,6 @@ export async function GET(request: Request) {
   }
 
   // No result yet — distinguish "still processing" (owned job) from "unknown".
-  const input = await getTriageJobInput(jobId);
   if (!input) {
     return noStore({ status: "not_found" }, 404);
   }

@@ -53,9 +53,13 @@ function resolveBaseUrl(explicit?: string): string {
   );
 }
 
+let cachedRoutePost: SymptomChatRoutePost | undefined;
 async function loadRoutePost(): Promise<SymptomChatRoutePost> {
-  const mod = await import("@/app/api/ai/symptom-chat/route");
-  return mod.POST as SymptomChatRoutePost;
+  if (!cachedRoutePost) {
+    const mod = await import("@/app/api/ai/symptom-chat/route");
+    cachedRoutePost = mod.POST as SymptomChatRoutePost;
+  }
+  return cachedRoutePost;
 }
 
 function resultStatusFor(
