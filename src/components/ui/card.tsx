@@ -3,12 +3,22 @@ interface CardProps {
   className?: string;
   hover?: boolean;
   onClick?: () => void;
+  style?: React.CSSProperties;
 }
 
-export default function Card({ children, className = "", hover = false, onClick }: CardProps) {
+export default function Card({ children, className = "", hover = false, onClick, style }: CardProps) {
   return (
     <div
-      className={`bg-white rounded-2xl border border-gray-200 shadow-sm ${hover ? "hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer" : ""} ${className}`}
+      className={`rounded-2xl border ${
+        hover
+          ? "cursor-pointer transition-all duration-200 hover:border-white/[0.12] hover:bg-[#1c1c1c]"
+          : ""
+      } ${className}`}
+      style={{
+        background: "var(--card)",
+        borderColor: "var(--border)",
+        ...style,
+      }}
       onClick={onClick}
     >
       {children}
