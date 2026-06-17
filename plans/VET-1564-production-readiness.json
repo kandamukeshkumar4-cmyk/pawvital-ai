@@ -3,23 +3,29 @@
   "mode": "review-only-production-readiness",
   "generatedAt": "2026-05-31T00:00:00.000Z",
   "readyForProductionSmoke": true,
-  "liveMigrationApplied": false,
-  "authenticatedProductionSmokeComplete": false,
+  "liveMigrationApplied": true,
+  "authenticatedProductionSmokeComplete": true,
+  "currentDeploymentReadOnlySmokePassed": true,
+  "currentDeploymentAuthenticatedWriteSmokeComplete": true,
+  "currentDeploymentSmokeStatus": "current-deployment-write-exercised",
+  "productionPersistenceStatus": "go-current-production",
+  "recoveryCheckpointProductionWriteExercised": false,
+  "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
   "inputArtifacts": {
     "schemaReadiness": {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "8ecaacb7b0c45bbc04fc8e1b1950af4033f3f3284ab0c82e162d222972b1fb69"
+      "sha256": "ade325c1183b684674d4044f5d2d10dadf669c29ebdf59d0b6d10a59866170f1"
     },
     "claimReview": {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "9f9c2ab488c54d175942d573dc6bf1da19dc630fbbe04b2ed2b7adb57f768a21"
+      "sha256": "96d593f77fcced2bada64d726bc8027b6bf942ee0f10034661cc7df4aec879e9"
     },
     "readinessContract": {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "54948b3b05e18fcfedd684f604810d57f60275ea8bb9606674108a8f9872e34f"
+      "sha256": "acb29570db047d175af91eb2f7346df5e20e162618c60ef40b0670cfb6107f59"
     },
     "route": {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -34,7 +40,101 @@
     "ownerWorkflowTest": {
       "path": "tests/analytics-product-owner-workflow.test.ts",
       "exists": true,
-      "sha256": "4637ed8567e057b970d8527ca5220df4250f69e419aa224e02599ed72a5d7f09"
+      "sha256": "7d365c52bafd2cc976e83c1a90e7a2f0c02cfd1f4985529905c9c5cebadf366a"
+    },
+    "productionEvidence": {
+      "path": "plans/VET-1564-production-evidence.json",
+      "exists": true,
+      "sha256": "73856380da716d3f2894fa2b66f8b45cb163a6a4b185099cfb3732c157179dcb"
+    }
+  },
+  "productionEvidence": {
+    "issue": 587,
+    "decision": {
+      "productIntelligencePersistence": "GO_CURRENT_PRODUCTION",
+      "dailyReadinessPersistence": "GO_CURRENT_PRODUCTION",
+      "currentDeploymentWriteCoverage": "GO_CURRENT_PRODUCTION_DAILY_READINESS",
+      "recoveryCheckpointPersistence": "READY_WITH_SCHEMA_AND_ROUTE_PROOF_PRODUCTION_WRITE_NOT_EXERCISED",
+      "publicBeta": "HOLD"
+    },
+    "deploymentId": "dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL",
+    "currentDeploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "targetDatabaseHost": "db.gswjpmgxidofwmjngavh.supabase.co:5432",
+    "schemaSha256": "F6C0B944D2AD5DAEA36F0421226335EB0E604DEC28037A92344C1B49DFC00BB0",
+    "readinessRowId": "8815e992-9b9b-4b1d-9fb4-8690578ecc24",
+    "currentReadinessRowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
+    "ownerSmokeCompletedAt": "2026-06-04T22:24:18.992Z",
+    "rlsProofCompletedAt": "2026-06-05T01:29:22.130Z",
+    "currentDeploymentReadOnlySmoke": {
+      "overallStatus": "pass",
+      "profile": "pawvital-vet-1549c-live-tester-profile",
+      "petId": "061df0e7-d835-47b1-9636-a179f208093b",
+      "mutationAttempted": false,
+      "authenticatedPage": {
+        "status": 200,
+        "loadedSymptomChecker": true
+      },
+      "ownerHistoryRead": {
+        "status": 200,
+        "readinessCount": 1,
+        "recoveryCount": 0,
+        "latestReadinessIds": [
+          "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+        ]
+      },
+      "unownedPetRead": {
+        "status": 404,
+        "error": "Pet not found"
+      },
+      "ownerVisibleScan": {
+        "status": 200,
+        "claimLanguageFindings": 0,
+        "leakageFindings": 0
+      }
+    },
+    "currentDeploymentWriteSmoke": {
+      "exercised": true,
+      "status": 201,
+      "rowId": "61c44ae9-5b30-482d-8207-efbaf6598140",
+      "snapshotDate": "2026-06-05",
+      "readinessState": "watch",
+      "confidence": "high",
+      "displayScore": 58,
+      "evidenceCoverage": 1,
+      "generatedBy": "vet-1571c-production-smoke",
+      "sourceCheckIds": [
+        "5aeff251-4b54-4e45-99b6-e99aa1550ce4",
+        "566ff227-282c-46a9-b49f-fd67c8b9adc7"
+      ],
+      "startedAt": "2026-06-05T18:23:33.441Z",
+      "completedAt": "2026-06-05T18:23:48.687Z",
+      "historyReadAfter": {
+        "status": 200,
+        "readinessCount": 2,
+        "recoveryCount": 0,
+        "latestReadinessIds": [
+          "61c44ae9-5b30-482d-8207-efbaf6598140",
+          "8815e992-9b9b-4b1d-9fb4-8690578ecc24"
+        ]
+      },
+      "artifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
+    },
+    "postSmoke500JsonRecordCount": 0,
+    "sourceEvidence": {
+      "issueComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/587#issuecomment-4627445140",
+      "parentTrackerComment": "https://github.com/kandamukeshkumar4-cmyk/pawvital-ai/issues/339#issuecomment-4627446972",
+      "autoScientistsRun": "G:/MY Website/.agents/autoscientists/runs/vet-1571c-product-intelligence-production-schema-recovery",
+      "currentDeploymentReadOnlyArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+      "currentDeploymentWriteArtifact": "G:/MY Website/.agents/autoscientists/runs/vet-1576c-vet-1564-product-intelligence-readiness-evidence-sync/artifacts/product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+      "artifacts": [
+        "product-intelligence-schema-apply-gswj-2026-06-04.json",
+        "product-intelligence-owner-smoke-dpl_Bo7RYGjXjV6HGNs5XXUMA97zs7FL-2026-06-04T22-24-03-078Z.json",
+        "product-intelligence-rls-proof-gswj-2026-06-04.json",
+        "product-intelligence-post-smoke-500-log-query-dpl_Bo7RYGj-2026-06-04.json",
+        "product-intelligence-claim-language-review-2026-06-04.json",
+        "product-intelligence-readonly-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json",
+        "product-intelligence-write-dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb-2026-06-05.json"
+      ]
     }
   },
   "routeGuards": {
@@ -50,6 +150,7 @@
     "ownerWorkflowTestExists": true,
     "selectedDogHistoryRead": true,
     "readinessSavePost": true,
+    "recoverySavePost": true,
     "credentialedRequest": true
   },
   "missingRouteGuards": [],
@@ -67,13 +168,13 @@
     "Revert the route/UI changes through the owning promotion PR if persistence corrupts owner data.",
     "Drop only the two product-intelligence tables through an approved database rollback if the migration itself must be reverted."
   ],
-  "blockers": [
-    "live Supabase migration is not applied",
-    "authenticated production owner workflow smoke is not complete"
-  ],
+  "blockers": [],
+  "currentDeploymentBlockers": [],
+  "currentDeploymentGaps": [],
   "guardrails": [
     "This packet does not apply the migration.",
     "Do not use service-role credentials in owner workflow smoke.",
+    "Do not claim current-deployment write coverage unless the current deployment POST smoke is exercised.",
     "Do not store diagnosis, prognosis, treatment, or emergency-clearance claims.",
     "Do not bypass pet ownership or RLS checks to make the smoke pass."
   ],
@@ -115,7 +216,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -155,7 +256,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -176,7 +277,7 @@
           "tests/readiness-snapshot.test.ts",
           "tests/product-intelligence-panel.test.tsx"
         ],
-        "persistenceStatus": "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied"
+        "persistenceStatus": "baseline-shift signal is stored inside the existing readiness JSON payload and was persisted in the VET-1571C daily-readiness production smoke"
       }
     }
   ]

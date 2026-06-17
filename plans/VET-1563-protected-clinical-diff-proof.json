@@ -18,8 +18,8 @@
     "src/lib/symptom-memory.ts"
   ],
   "status": "blocked",
-  "diffSha256": "2d27ab77533130d9d1a6e1ee12fb00ff7fa8697ae3ed8b2db4769d4cd09065e2",
-  "diffLineCount": 34,
+  "diffSha256": "0953ba52ed7fb56d3119ce85034a581bd4beeebe50f31f238c1dec364c216928",
+  "diffLineCount": 216,
   "blocker": "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
   "proof": "Protected deterministic clinical files have a local diff.",
   "guardrails": [

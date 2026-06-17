@@ -1,6 +1,6 @@
 {
   "ticket": "VET-1564C",
-  "generatedAt": "2026-06-06T23:45:11.000Z",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
   "mode": "review-only",
   "note": "Deterministic claim-language review only. It does not call providers, generate model copy, or mutate clinical logic.",
   "reviewedArtifacts": [
@@ -32,16 +32,16 @@
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "54948b3b05e18fcfedd684f604810d57f60275ea8bb9606674108a8f9872e34f"
+      "sha256": "acb29570db047d175af91eb2f7346df5e20e162618c60ef40b0670cfb6107f59"
     },
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "9ed312c0405b355b0884c20a64255d49531d56e419b1adb8f89d25411e5e9a7d"
+      "sha256": "58d09287fd29f6223a9c2812a1e00de80ece863fdce30b6176c0d3699a82a218"
     }
   ],
   "missingArtifacts": [],
-  "reviewedStringCount": 497,
+  "reviewedStringCount": 516,
   "blockedClaimPolicy": [
     "diagnosis-certainty",
     "treatment-recommendation",

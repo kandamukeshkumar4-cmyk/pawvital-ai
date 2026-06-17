@@ -36,7 +36,7 @@
     },
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
-      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
+      "sha256": "2295dbe3d7c5c28622c974e42c9efdab4736f5e5b7532951d94265706e828dab"
     }
   },
   "smokeRunbook": [

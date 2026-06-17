@@ -218,6 +218,10 @@ describe("FOLLOW_UP_QUESTIONS integrity", () => {
   });
 
   it("every question should be referenced by at least one symptom", () => {
+    // Session-global questions are intentionally not tied to specific symptoms —
+    // they are selected by triage-engine via session state, not by the symptom planner.
+    const SESSION_GLOBAL_QUESTIONS = new Set(["condition_progression"]);
+
     const referencedQuestions = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
       for (const qId of entry.follow_up_questions) {
@@ -225,6 +229,7 @@ describe("FOLLOW_UP_QUESTIONS integrity", () => {
       }
     }
     for (const qId of questions) {
+      if (SESSION_GLOBAL_QUESTIONS.has(qId)) continue;
       expect(referencedQuestions.has(qId)).toBe(true);
     }
   });
@@ -278,12 +283,15 @@ describe("Cross-reference consistency", () => {
   });
 
   it("no orphaned questions (in FOLLOW_UP_QUESTIONS but never referenced)", () => {
+    // Session-global questions are intentionally not in any symptom's follow_up_questions.
+    const SESSION_GLOBAL_QUESTIONS = new Set(["condition_progression"]);
+
     const referenced = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
       entry.follow_up_questions.forEach((qId) => referenced.add(qId));
     }
     const orphaned = Object.keys(FOLLOW_UP_QUESTIONS).filter(
-      (questionKey) => !referenced.has(questionKey)
+      (questionKey) => !referenced.has(questionKey) && !SESSION_GLOBAL_QUESTIONS.has(questionKey)
     );
     expect(orphaned).toEqual([]);
   });

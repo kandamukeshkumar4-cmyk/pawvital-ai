@@ -4125,6 +4125,18 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     critical: false,
   },
 
+  // Trajectory question — asked once after emergency screen to detect worsening
+  condition_progression: {
+    id: "condition_progression",
+    question_text:
+      "Compared to when this started, is [name] getting worse, staying about the same, or starting to improve?",
+    data_type: "choice",
+    choices: ["worsening", "same", "improving"],
+    extraction_hint:
+      "whether the condition is getting worse, staying the same, or improving — look for words like worse, deteriorating, declined vs same, unchanged vs better, improving",
+    critical: false,
+  },
+
   // Unknown concern questions
   chief_complaint_guess: {
     id: "chief_complaint_guess",

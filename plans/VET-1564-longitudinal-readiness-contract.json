@@ -249,7 +249,7 @@
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "027f424ca49c2b389a492e588fc0fc9826613047e47ac1813d7be87ba62d33e0"
+      "sha256": "58d09287fd29f6223a9c2812a1e00de80ece863fdce30b6176c0d3699a82a218"
     },
     {
       "path": "src/lib/product-intelligence.ts",
@@ -289,12 +289,12 @@
     {
       "path": "src/app/(dashboard)/analytics/page.tsx",
       "exists": true,
-      "sha256": "a81c7fad6dc4afe3d99a2cbfa0c35d281ce147360d6c9c42c5faf7721947d5d4"
+      "sha256": "7bd431842cdeebfa965b32bb0b832f7724e362cbaae79ef8d9d650bf620f8123"
     },
     {
       "path": "src/components/analytics/product-intelligence-panel.tsx",
       "exists": true,
-      "sha256": "5fed902f94e495571cb9089e96b7c0f0f94f8fde4c1b9e6b0228c8ec5e2bcf73"
+      "sha256": "dd7858aec3b2d5d26fbe30a9f33a0b2b4dded9148896f1e2fd7aeb1c2eb154e5"
     },
     {
       "path": "tests/product-intelligence.test.ts",
@@ -329,12 +329,12 @@
     {
       "path": "tests/product-intelligence-panel.test.tsx",
       "exists": true,
-      "sha256": "01a32de77a012b2bacc0e241ee796cab43f4a4db90c5475bc376f7ecf4dc0137"
+      "sha256": "2beffb646e8655dd4ba21d9388d518ccd2e6af98072650c4b03c610d8345aef0"
     },
     {
       "path": "tests/analytics-product-owner-workflow.test.ts",
       "exists": true,
-      "sha256": "4637ed8567e057b970d8527ca5220df4250f69e419aa224e02599ed72a5d7f09"
+      "sha256": "7d365c52bafd2cc976e83c1a90e7a2f0c02cfd1f4985529905c9c5cebadf366a"
     },
     {
       "path": "plans/VET-1564-production-evidence.json",
