@@ -1216,6 +1216,69 @@ export function hasMinimumDiagnosticInfo(session: TriageSession): boolean {
 }
 
 /**
+ * Conservative, urgency-aware probability floor for triage urgency (Ticket 2).
+ *
+ * A candidate disease only raises the case's urgency floor if its normalized
+ * probability share meets the minimum for its urgency tier. Serious tiers use a
+ * low bar (we accept escalating on a small chance of something serious); the
+ * moderate tier uses a higher bar (a long-shot moderate disease should not force
+ * a vet visit over a dominant benign explanation). Emergency tier is never gated
+ * here (min share 0) — emergencies are floored by red-flag evidence separately.
+ */
+const URGENCY_FLOOR_MIN_SHARE: Record<string, number> = {
+  emergency: 0,
+  high: 0.05,
+  moderate: 0.15,
+  low: 0,
+};
+
+/**
+ * Compute the deterministic urgency floor across candidate diseases, gating each
+ * candidate by URGENCY_FLOOR_MIN_SHARE. The single most probable candidate
+ * (index 0) always contributes so the floor is never computed over an empty set;
+ * if the gate somehow excludes everything, it falls back to the ungated maximum.
+ *
+ * Pure and exported for direct testing. `candidates` is assumed ordered by
+ * descending final_score (as produced by calculateProbabilities / top5).
+ */
+export function computeProbabilityGatedUrgency(
+  candidates: Array<{ urgency: string; final_score: number }>
+): string {
+  const urgencyOrder = ["emergency", "high", "moderate", "low"];
+  if (candidates.length === 0) return "low";
+
+  const totalScore = candidates.reduce(
+    (sum, c) => sum + Math.max(0, c.final_score),
+    0
+  );
+  const probabilityShare = (c: { final_score: number }): number =>
+    totalScore > 0 ? Math.max(0, c.final_score) / totalScore : 0;
+
+  // The most probable candidate always sets the baseline floor. This is the
+  // safety invariant: calibration can only EXCLUDE lower-probability tail
+  // candidates — it never computes the floor over an empty set and never drops
+  // below the dominant explanation.
+  let highestUrgency = candidates[0].urgency;
+  const raiseFloor = (urgency: string): void => {
+    if (urgencyOrder.indexOf(urgency) < urgencyOrder.indexOf(highestUrgency)) {
+      highestUrgency = urgency;
+    }
+  };
+
+  // Tail candidates raise the floor only if their probability share meets the
+  // urgency-aware minimum. Emergency tier (min 0) is never gated.
+  for (let i = 1; i < candidates.length; i++) {
+    const candidate = candidates[i];
+    const minShare = URGENCY_FLOOR_MIN_SHARE[candidate.urgency] ?? 0;
+    if (probabilityShare(candidate) >= minShare) {
+      raiseFloor(candidate.urgency);
+    }
+  }
+
+  return highestUrgency;
+}
+
+/**
  * Build the data package that gets injected into the final LLM prompt.
  * This is what makes the diagnosis accurate — NOT the LLM's own knowledge.
  */
@@ -1269,14 +1332,13 @@ export function buildDiagnosisContext(
     })
     .join("\n");
 
-  // Highest urgency from top candidates
-  const urgencyOrder = ["emergency", "high", "moderate", "low"];
-  let highestUrgency = "low";
-  for (const p of top5) {
-    if (urgencyOrder.indexOf(p.urgency) < urgencyOrder.indexOf(highestUrgency)) {
-      highestUrgency = p.urgency;
-    }
-  }
+  // Highest urgency from top candidates, gated by a conservative, urgency-aware
+  // probability floor so a low-probability moderate/high disease in the tail no
+  // longer dictates the whole case's urgency (see computeProbabilityGatedUrgency).
+  // Shares are computed over top5 (not the full candidate list) by design: the
+  // smaller denominator inflates each share, biasing toward escalation — the
+  // safe direction.
+  let highestUrgency = computeProbabilityGatedUrgency(top5);
 
   if (hasEmergencyFlooringEvidence) {
     highestUrgency = "emergency";
