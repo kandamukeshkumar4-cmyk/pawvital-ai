@@ -50,5 +50,73 @@
       "maxAverageLatencyMs": 20000,
       "maxDisagreementCount": 5
     }
+  },
+  "packs": {
+    "vet-1504": {
+      "name": "dermatology-pack",
+      "maxLatencyMs": 3500,
+      "maxErrorRate": 0.10,
+      "maxAbstentionRate": 0.40,
+      "maxCostPerCallUSD": 0.020,
+      "minObservations": 10,
+      "rolloutStage": "shadow",
+      "canaryTrafficFraction": 0.10,
+      "canaryMinHealthySamples": 50
+    },
+    "vet-1505": {
+      "name": "eye-ear-oral-pack",
+      "maxLatencyMs": 2500,
+      "maxErrorRate": 0.10,
+      "maxAbstentionRate": 0.45,
+      "maxCostPerCallUSD": 0.010,
+      "minObservations": 10,
+      "rolloutStage": "shadow",
+      "canaryTrafficFraction": 0.10,
+      "canaryMinHealthySamples": 50
+    },
+    "vet-1506": {
+      "name": "gait-temporal-pack",
+      "maxLatencyMs": 5000,
+      "maxErrorRate": 0.10,
+      "maxAbstentionRate": 0.50,
+      "maxCostPerCallUSD": 0.030,
+      "minObservations": 5,
+      "rolloutStage": "shadow",
+      "canaryTrafficFraction": 0.10,
+      "canaryMinHealthySamples": 30
+    },
+    "vet-1507": {
+      "name": "respiratory-audio-pack",
+      "maxLatencyMs": 4000,
+      "maxErrorRate": 0.10,
+      "maxAbstentionRate": 0.50,
+      "maxCostPerCallUSD": 0.020,
+      "minObservations": 5,
+      "rolloutStage": "shadow",
+      "canaryTrafficFraction": 0.10,
+      "canaryMinHealthySamples": 30
+    },
+    "vet-1508": {
+      "name": "gi-visual-pack",
+      "maxLatencyMs": 3500,
+      "maxErrorRate": 0.10,
+      "maxAbstentionRate": 0.40,
+      "maxCostPerCallUSD": 0.020,
+      "minObservations": 10,
+      "rolloutStage": "shadow",
+      "canaryTrafficFraction": 0.10,
+      "canaryMinHealthySamples": 50
+    },
+    "vet-1509": {
+      "name": "breed-modality-pack",
+      "maxLatencyMs": 200,
+      "maxErrorRate": 0.05,
+      "maxAbstentionRate": 0.10,
+      "maxCostPerCallUSD": 0.001,
+      "minObservations": 20,
+      "rolloutStage": "shadow",
+      "canaryTrafficFraction": 0.20,
+      "canaryMinHealthySamples": 100
+    }
   }
 }
