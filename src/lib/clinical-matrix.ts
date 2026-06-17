@@ -2432,6 +2432,20 @@ export const BREED_MODIFIERS: Record<string, BreedModifiers> = {
 // --- FOLLOW-UP QUESTION DEFINITIONS ---
 
 export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
+  // Generic open-ended context capture. Asked once, after the structured
+  // follow-ups for the known symptoms are exhausted, so an owner who still has
+  // more to share is invited to add it instead of being cut off with an abrupt
+  // "I have enough information". Deliberately NOT linked to any disease or
+  // urgency mapping — it only widens the history before the report.
+  additional_context: {
+    id: "additional_context",
+    question_text:
+      "Before I put the report together — is there anything else you've noticed about your pet? Even small changes in appetite, energy, mood, drinking, or bathroom habits can matter, even if they seem unrelated.",
+    data_type: "string",
+    extraction_hint:
+      "any additional symptoms, changes, or context the owner volunteers",
+    critical: false,
+  },
   // Limping questions
   which_leg: {
     id: "which_leg",

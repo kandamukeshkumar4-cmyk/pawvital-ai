@@ -13,6 +13,7 @@ import {
   getMissingQuestions,
   getQuestionText,
   getExtractionSchema,
+  hasMinimumDiagnosticInfo,
   isReadyForDiagnosis,
   buildDiagnosisContext,
   type TriageSession,
@@ -1570,7 +1571,7 @@ export async function POST(request: Request) {
         });
       }
 
-      if (!isReadyForDiagnosis(session)) {
+      if (!hasMinimumDiagnosticInfo(session)) {
         statusCode = 409;
         return NextResponse.json(
           {
