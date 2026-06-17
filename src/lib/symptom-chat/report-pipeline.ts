@@ -57,6 +57,7 @@ import {
 } from "@/lib/hf-sidecars";
 import {
   buildEvidenceChainForResponse,
+  buildMediaScorecard,
   buildReportRetrievalBundle,
   deriveBaselineReportConfidence,
   formatConsultEvidenceForReport,
@@ -1646,6 +1647,12 @@ export async function generateReport({
         "[Bayesian] Failed to score report differentials:",
         bayesianError
       );
+    }
+
+    // VET-1510: attach media scorecard (advisory-only; never mutates urgency)
+    const mediaScorecard = buildMediaScorecard(session);
+    if (mediaScorecard !== null) {
+      finalReport.media_scorecard = mediaScorecard;
     }
 
     const { persistence } = await persistFinalReportToHistory({
