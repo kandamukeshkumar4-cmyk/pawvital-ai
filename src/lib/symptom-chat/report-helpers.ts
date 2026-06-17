@@ -927,3 +927,47 @@ Output ONLY valid JSON (no thinking, no markdown):
 
   return report;
 }
+
+// ---------------------------------------------------------------------------
+// VET-1510: Multimodal scorecard
+// Surfaces media analysis quality, confidence, and abstention reasons in the
+// owner report. advisory_only is always true: no vision inference increases
+// clinical urgency without a deterministic matrix confirmation.
+// ---------------------------------------------------------------------------
+
+export interface MediaScorecard {
+  domain: string;
+  confidence: number;
+  quality: string;
+  abstention_reason: string | null;
+  advisory_only: boolean;
+  influenced_question_selection: boolean;
+  limitations: string[];
+}
+
+export function buildMediaScorecard(
+  session: TriageSession
+): MediaScorecard | null {
+  const ve = session.latest_visual_evidence;
+  if (!ve) return null;
+
+  const prep = session.latest_preprocess;
+  const quality = prep?.imageQuality ?? "unknown";
+
+  // An abstention reason is present when all findings are empty and at least
+  // one limitation describes why analysis was declined.
+  const abstentionReason =
+    ve.findings.length === 0 && ve.limitations.length > 0
+      ? ve.limitations[0]
+      : null;
+
+  return {
+    domain: ve.domain,
+    confidence: ve.confidence,
+    quality,
+    abstention_reason: abstentionReason,
+    advisory_only: true,
+    influenced_question_selection: Boolean(ve.influencedQuestionSelection),
+    limitations: ve.limitations,
+  };
+}
