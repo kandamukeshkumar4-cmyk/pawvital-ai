@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
-import { SYMPTOM_MAP } from "./clinical-matrix";
-import type { DiseaseProbability } from "./triage-engine";
+import { SYMPTOM_MAP, FOLLOW_UP_QUESTIONS } from "./clinical-matrix";
+import type { DiseaseProbability, TriageSession } from "./triage-engine";
 
 const PRIOR_SOURCE_SLUG = "csv-pet-health-symptoms";
 const PRIOR_SOURCE_FILES = [
@@ -389,4 +389,134 @@ export async function computeBayesianScore(
       matched_symptoms: differential.matched_symptoms,
     }))
     .sort((left, right) => right.probability - left.probability);
+}
+
+// --- Negative-evidence penalty helper (A2) ---
+
+/**
+ * Returns the set of disease keys implicated by a question.
+ * A question implicates the diseases of any symptom in the session
+ * that lists that question in its follow_up_questions.
+ */
+function getDiseasesImplicatedByQuestion(
+  questionId: string,
+  session: TriageSession
+): Set<string> {
+  const implicated = new Set<string>();
+  for (const symptomKey of session.known_symptoms) {
+    const entry = SYMPTOM_MAP[symptomKey];
+    if (!entry) continue;
+    if (entry.follow_up_questions.includes(questionId)) {
+      for (const disease of entry.linked_diseases) {
+        implicated.add(disease);
+      }
+    }
+  }
+  return implicated;
+}
+
+function isNegativeAnswer(value: string | boolean | number): boolean {
+  if (value === false) return true;
+  if (typeof value === "string") {
+    const lower = value.toLowerCase().trim();
+    return lower === "no" || lower === "none" || lower === "never";
+  }
+  return false;
+}
+
+// --- Public session-aware API (A1 + A2) ---
+
+/**
+ * Score differentials for a session with negative-evidence post-processing.
+ *
+ * Calls computeBayesianScore with the session's known symptoms, then
+ * applies a 0.5x penalty to any differential whose disease is implicated
+ * by a critical follow-up question that received a negative answer.
+ * Probabilities are renormalized after the penalty step.
+ *
+ * ⚠️ SAFETY: Do NOT use the returned probabilities as the sole urgency gate.
+ * Emergency triage must always consult `session.red_flags_triggered` and
+ * `isReadyForDiagnosis()` independently. Bayesian probabilities are a
+ * display/ranking signal — they cannot suppress a red flag that is already set.
+ */
+export async function scoreDifferentials(
+  session: TriageSession,
+  pet: { breed: string; age_years: number },
+  findings: DiseaseProbability[]
+): Promise<ScoredDifferential[]> {
+  const scored = await computeBayesianScore(
+    session.known_symptoms,
+    pet.breed,
+    pet.age_years,
+    findings
+  );
+
+  if (scored.length === 0) return scored;
+
+  // Build the set of (questionId → implicated disease keys) for every
+  // critical question that received a negative answer in this session.
+  const penaltyMap = new Map<string, Set<string>>();
+  for (const [qId, answer] of Object.entries(session.extracted_answers)) {
+    const qDef = FOLLOW_UP_QUESTIONS[qId];
+    if (!qDef?.critical) continue;
+    if (!isNegativeAnswer(answer)) continue;
+
+    const implicated = getDiseasesImplicatedByQuestion(qId, session);
+    if (implicated.size > 0) {
+      penaltyMap.set(qId, implicated);
+    }
+  }
+
+  if (penaltyMap.size === 0) return scored;
+
+  // Apply 0.5x penalty for each critical negative question that implicates
+  // the disease. Penalties are multiplicative (two negatives = 0.25x).
+  const penalized = scored.map((differential) => {
+    let probability = differential.probability;
+    for (const implicated of penaltyMap.values()) {
+      if (implicated.has(differential.disease_key)) {
+        probability *= 0.5;
+      }
+    }
+    return { ...differential, probability };
+  });
+
+  // Renormalize so probabilities still sum to ~1.
+  const total = penalized.reduce((sum, d) => sum + d.probability, 0);
+  if (total <= 0) return penalized;
+
+  return penalized.map((d) => ({
+    ...d,
+    probability: roundToFour(d.probability / total),
+  }));
+}
+
+/**
+ * Returns the top `n` differentials for a session, sorted by probability
+ * descending, with only the fields needed for display or downstream use.
+ *
+ * ⚠️ SAFETY: Do NOT use this as the sole urgency gate. Urgency must be
+ * determined from `session.red_flags_triggered` and `buildDiagnosisContext`.
+ * This function is for display ranking only.
+ */
+export async function getTopDifferentials(
+  session: TriageSession,
+  n: number,
+  pet: { breed: string; age_years: number },
+  findings: DiseaseProbability[]
+): Promise<Array<{ condition: string; probability: number; urgency: string }>> {
+  const scored = await scoreDifferentials(session, pet, findings);
+  return scored
+    .sort((a, b) => b.probability - a.probability)
+    .slice(0, n)
+    .map((d) => {
+      // Look up urgency from the findings list (ScoredDifferential does not
+      // carry urgency; the source DiseaseProbability does).
+      const source = findings.find((f) => f.disease_key === d.disease_key);
+      return {
+        condition: d.condition,
+        probability: d.probability,
+        urgency: source?.urgency ?? "unknown",
+      };
+    });
 }

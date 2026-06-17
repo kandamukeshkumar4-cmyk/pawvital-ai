@@ -458,6 +458,10 @@ function buildNarrativeReportPrompt(input: {
     .map((m) => `${m.role === "user" ? "Owner" : "Triage AI"}: ${m.content}`)
     .join("\n");
 
+  const extractedAnswerLines = Object.entries(input.session.extracted_answers)
+    .map(([key, value]) => `  ${key}: ${String(value)}`)
+    .join("\n") || "  (none recorded)";
+
   return `You are a board-certified veterinary internist (DACVIM) with 15+ years of clinical experience writing a detailed clinical report.
 
 IMPORTANT — USE CORRECT CANINE ANATOMY: "front leg/forelimb" (NOT arm/forearm), "hind leg" (NOT leg), "paw" (NOT hand/foot), "digits" (NOT fingers/toes), "carpus" (NOT wrist), "hock/tarsus" (NOT ankle), "stifle" (NOT knee), "muzzle" (NOT face). Dogs do not have human body parts.
@@ -484,6 +488,9 @@ OWNER-REPORTED FACTS:
 - Structured facts: ${Object.entries(input.session.extracted_answers)
     .map(([key, value]) => `${key}=${String(value)}`)
     .join("; ") || "none"}
+
+OWNER-GUIDED EXAM FINDINGS (use these to fill the Objective section of the SOAP narrative):
+${extractedAnswerLines}
 
 DETERMINISTIC EXTRACTED FACTS:
 ${input.context.answer_summary}
@@ -515,12 +522,32 @@ For recommended tests, be SPECIFIC:
 - Name exact diagnostic procedures (e.g., "Orthogonal radiographs of the stifle — lateral and craniocaudal views" not just "X-ray")
 - Explain what each test confirms or rules out
 
+The "soap_narrative" field must follow this exact format (it is a single markdown string with \n as literal newlines inside the JSON string):
+## Subjective
+[Owner-reported symptoms, timeline, and history in plain language]
+
+## Objective
+[Owner-guided exam findings: gum color, breathing effort, belly assessment, hydration status — note "not assessed" for any not checked. Draw from the OWNER-GUIDED EXAM FINDINGS above.]
+
+## Assessment
+**Most likely:** [condition] — [1-2 sentence explanation]
+**Also consider:** [condition 2], [condition 3]
+**Urgency:** [Emergency / See vet today / Schedule this week / Monitor at home]
+
+## Plan
+**If condition worsens, go to emergency vet immediately if:**
+- [specific trigger 1]
+- [specific trigger 2]
+
+**Next steps:** [specific action]
+
 Output ONLY valid JSON (no markdown, no code blocks, no thinking):
 {
   "severity": "${URGENCY_TO_SEVERITY[input.context.highest_urgency] || "medium"}",
   "recommendation": "${URGENCY_TO_RECOMMENDATION[input.context.highest_urgency] || "vet_48h"}",
   "title": "Specific clinical title based on top differential",
   "explanation": "4-6 sentences for a dog owner. Reference breed-specific data from the matrix. Use medical terms with plain-English parenthetical explanations.",
+  "soap_narrative": "## Subjective\n[owner symptoms and timeline]\n\n## Objective\n[exam findings from OWNER-GUIDED EXAM FINDINGS — note not assessed for any missing]\n\n## Assessment\n**Most likely:** [condition] — [explanation]\n**Also consider:** [condition 2], [condition 3]\n**Urgency:** [Emergency / See vet today / Schedule this week / Monitor at home]\n\n## Plan\n**If condition worsens, go to emergency vet immediately if:**\n- [trigger 1]\n- [trigger 2]\n\n**Next steps:** [action]",
   "differential_diagnoses": [
     {
       "condition": "Use the medical_term from the matrix calculation",
@@ -1002,6 +1029,7 @@ function buildFailSafeReport(input: {
     confidence: Math.min(deriveBaselineReportConfidence(input.context), 0.45),
     report_mode: "failsafe",
     report_unavailable_reason: input.reason,
+    soap_narrative: null,
   };
 }
 
@@ -1056,6 +1084,7 @@ function buildTerminalOutcomeReport(input: {
     report_mode: "terminal_cannot_assess",
     terminal_state: terminalOutcome.terminalState,
     reason_code: terminalOutcome.reasonCode,
+    soap_narrative: null,
   };
 }
 

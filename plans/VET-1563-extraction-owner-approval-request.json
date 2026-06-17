@@ -186,11 +186,11 @@
   "inputArtifacts": {
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
-      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
+      "sha256": "621fff9520fd12a8aa8a5b8491b2e089bde956cd6453258bb37ca5b1fa6063c4"
     },
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "29b8a8720e1fc6d1ec86aef799204d20a9c2052c1322434300aa445d345dedf7"
+      "sha256": "27d3d3b08b8e3e582462fc56f5a66b4d048700de8e4ac5de180af920bd02b4c9"
     },
     "promotionEvidencePacket": {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
@@ -199,7 +199,7 @@
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
-      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
+      "sha256": "94ec9b8ba4b3bc0deab4068f723934c4fcfe30960ad90f64231dddeaa52f804d"
     }
   },
   "guardrails": [

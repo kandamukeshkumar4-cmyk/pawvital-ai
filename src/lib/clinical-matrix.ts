@@ -203,6 +203,10 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "toxin_exposure",
       "dietary_change",
       "appetite_status",
+      "spay_neuter_status",
+      "prior_similar_episode",
+      "recent_diet_change",
+      "last_vet_visit",
     ],
     red_flags: [
       "vomit_blood",
@@ -228,6 +232,7 @@ export const SYMPTOM_MAP: Record<string, SymptomEntry> = {
       "water_intake",
       "weight_loss",
       "treats_accepted",
+      "spay_neuter_status",
     ],
     red_flags: ["no_water_24h"],
     body_systems: ["gastrointestinal", "systemic"],
@@ -3962,9 +3967,9 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
   },
   current_medications: {
     id: "current_medications",
-    question_text: "What other medications or supplements is your dog currently taking?",
+    question_text: "Is [name] currently taking any medications, supplements, or flea/tick preventatives?",
     data_type: "string",
-    extraction_hint: "list of current medications and supplements",
+    extraction_hint: "any medications, drugs, supplements, flea treatment, heartworm prevention",
     critical: false,
   },
   vaccination_timing: {
@@ -4125,6 +4130,18 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     critical: false,
   },
 
+  // Trajectory question — asked once after emergency screen to detect worsening
+  condition_progression: {
+    id: "condition_progression",
+    question_text:
+      "Compared to when this started, is [name] getting worse, staying about the same, or starting to improve?",
+    data_type: "choice",
+    choices: ["worsening", "same", "improving"],
+    extraction_hint:
+      "whether the condition is getting worse, staying the same, or improving — look for words like worse, deteriorating, declined vs same, unchanged vs better, improving",
+    critical: false,
+  },
+
   // Unknown concern questions
   chief_complaint_guess: {
     id: "chief_complaint_guess",
@@ -4139,5 +4156,36 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     data_type: "string",
     extraction_hint: "last time dog seemed normal",
     critical: true,
+  },
+
+  // Treatment and medical history questions
+  prior_similar_episode: {
+    id: "prior_similar_episode",
+    question_text: "Has [name] had anything like this before?",
+    data_type: "boolean",
+    extraction_hint: "whether the pet has had similar symptoms or this condition before",
+    critical: false,
+  },
+  recent_diet_change: {
+    id: "recent_diet_change",
+    question_text: "Has there been any change in [name]'s diet, treats, or what [he/she] eats in the last week?",
+    data_type: "boolean",
+    extraction_hint: "diet change, new food, new treats, table scraps, garbage",
+    critical: false,
+  },
+  spay_neuter_status: {
+    id: "spay_neuter_status",
+    question_text: "Is [name] spayed or neutered?",
+    data_type: "choice",
+    choices: ["yes", "no", "not_sure"],
+    extraction_hint: "whether the pet is spayed (female) or neutered (male) or intact",
+    critical: false,
+  },
+  last_vet_visit: {
+    id: "last_vet_visit",
+    question_text: "When did [name] last see a veterinarian, and was anything noted at that visit?",
+    data_type: "string",
+    extraction_hint: "last vet visit date, recent diagnosis, recent exam findings",
+    critical: false,
   },
 };

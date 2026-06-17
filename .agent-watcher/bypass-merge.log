@@ -1,0 +1,22 @@
+[2026-06-16 17:02:51] Running single bypass-merge check...
+[2026-06-16 17:02:52] Found 10 open PR(s).
+[2026-06-16 17:02:54] Merging PR #600: VET-1582C: add Cohort 1 invite-send proof validator
+[2026-06-16 17:02:54]   DRY RUN — would run: gh pr merge 600 --merge --admin
+[2026-06-16 17:02:56] Merging PR #595: VET-1578C: expose recovery checkpoint UI
+[2026-06-16 17:02:56]   DRY RUN — would run: gh pr merge 595 --merge --admin
+[2026-06-16 17:02:57] Merging PR #594: VET-1576C sync product readiness evidence
+[2026-06-16 17:02:57]   DRY RUN — would run: gh pr merge 594 --merge --admin
+[2026-06-16 17:02:59]   PR #578 authored by bot (app/github-actions) — skip
+[2026-06-16 17:03:01]   PR #532 authored by bot (app/dependabot) — skip
+[2026-06-16 17:03:03]   PR #531 authored by bot (app/dependabot) — skip
+[2026-06-16 17:03:04]   PR #520 authored by bot (app/dependabot) — skip
+[2026-06-16 17:03:06]   PR #512 is draft — skip
+[2026-06-16 17:03:08]   PR #511 is draft — skip
+[2026-06-16 17:03:09]   PR #484 authored by bot (app/dependabot) — skip
+[2026-06-16 17:03:09] Done.
+[2026-06-16 17:03:15] Bypass-merge daemon started (GitHub Actions disabled mode)
+[2026-06-16 17:05:34] Bypass-merge daemon started (GitHub Actions disabled mode)
+[2026-06-16 17:05:44] Bypass-merge daemon started (GitHub Actions disabled mode)
+[2026-06-16 17:06:25] Bypass-merge daemon started (GitHub Actions disabled mode)
+[2026-06-16 17:06:25] Poll interval: 90s | Dry run: false
+[2026-06-16 17:06:27] Found 10 open PR(s).

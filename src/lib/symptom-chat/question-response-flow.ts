@@ -30,6 +30,7 @@ import {
   shouldRunNemotronQuestionGate,
   type TurnDepth,
 } from "@/lib/symptom-chat/turn-depth";
+import { getGuideForQuestion } from "@/lib/symptom-chat/response-builders";
 
 interface BuildQuestionResponseFlowInput {
   session: TriageSession;
@@ -83,6 +84,7 @@ export async function buildQuestionResponseFlow(
       : inferConversationState(getStateSnapshot(session)),
     asking_because: input.askingBecause ?? session.case_memory?.asking_because ?? null,
     prompt_vet_record: Boolean(input.promptVetRecord),
+    selfCheckGuide: getGuideForQuestion(input.nextQuestionId) ?? null,
   });
 }
 

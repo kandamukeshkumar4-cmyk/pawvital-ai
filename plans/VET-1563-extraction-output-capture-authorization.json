@@ -18,7 +18,7 @@
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
-      "sha256": "ef36733a6f46620cd541f8d5b8304f238de3f2f0f1ccb903d279fc9266b99d67"
+      "sha256": "1b7082aea51683d65c07170637878acba43449c2342b1b8e2ad8a5d1b8016d91"
     },
     "routingMatrix": {
       "path": "plans/VET-1563-model-routing-matrix.json",

@@ -7,11 +7,11 @@
   "inputArtifacts": {
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "29b8a8720e1fc6d1ec86aef799204d20a9c2052c1322434300aa445d345dedf7"
+      "sha256": "27d3d3b08b8e3e582462fc56f5a66b4d048700de8e4ac5de180af920bd02b4c9"
     },
     "checklist": {
       "path": "plans/VET-1563-extraction-promotion-checklist.json",
-      "sha256": "4b1def17c7cdf7ec4ee4e5044f76ac03d87473f8645a7dbcf46c458f749e5bc2"
+      "sha256": "37b98b93a5ea2f3b60d15605cd9d81213d5ff39a2d569ef4bcd4137fc9101c97"
     },
     "outputCapturePlan": {
       "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
@@ -31,19 +31,19 @@
     },
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
-      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
+      "sha256": "2295dbe3d7c5c28622c974e42c9efdab4736f5e5b7532951d94265706e828dab"
     },
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
-      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
+      "sha256": "621fff9520fd12a8aa8a5b8491b2e089bde956cd6453258bb37ca5b1fa6063c4"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
-      "sha256": "ef36733a6f46620cd541f8d5b8304f238de3f2f0f1ccb903d279fc9266b99d67"
+      "sha256": "1b7082aea51683d65c07170637878acba43449c2342b1b8e2ad8a5d1b8016d91"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
-      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
+      "sha256": "94ec9b8ba4b3bc0deab4068f723934c4fcfe30960ad90f64231dddeaa52f804d"
     }
   },
   "readiness": {
@@ -323,8 +323,8 @@
     "status": "blocked",
     "attachedDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
-      "diffSha256": "2d27ab77533130d9d1a6e1ee12fb00ff7fa8697ae3ed8b2db4769d4cd09065e2",
-      "diffLineCount": 34,
+      "diffSha256": "0953ba52ed7fb56d3119ce85034a581bd4beeebe50f31f238c1dec364c216928",
+      "diffLineCount": 216,
       "proof": "Protected deterministic clinical files have a local diff."
     }
   },

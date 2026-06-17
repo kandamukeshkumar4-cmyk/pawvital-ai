@@ -218,6 +218,17 @@ export function getMissingQuestions(session: TriageSession): string[] {
  */
 export function getNextQuestion(session: TriageSession): string | null {
   const missing = getMissingQuestions(session);
+
+  // Ask trajectory question once — after ≥3 questions answered and not yet asked
+  const hasSymptoms = session.known_symptoms.length > 0;
+  const sufficientHistory = session.answered_questions.length >= 3;
+  const trajectoryNotAsked = !session.answered_questions.includes("condition_progression") &&
+    !session.last_question_asked?.includes("condition_progression");
+
+  if (hasSymptoms && sufficientHistory && trajectoryNotAsked) {
+    return "condition_progression";
+  }
+
   if (missing.length === 0) return null;
 
   // Score each question by how many candidate diseases it helps narrow down
@@ -329,6 +340,17 @@ function checkRedFlags(session: TriageSession): void {
   for (const flag of getCompositeEmergencyRedFlags(session)) {
     if (!session.red_flags_triggered.includes(flag)) {
       session.red_flags_triggered.push(flag);
+    }
+  }
+
+  // De-escalation signal — owner reports improvement; record in timeline but do not add a red flag.
+  if (
+    getUrgencyFromTrajectory(String(session.extracted_answers.condition_progression ?? "")) === "deescalate" &&
+    session.case_memory
+  ) {
+    const note = "Owner reports condition is improving (de-escalation signal).";
+    if (!session.case_memory.timeline_notes.includes(note)) {
+      session.case_memory.timeline_notes.push(note);
     }
   }
 }
@@ -576,9 +598,125 @@ function hasMajorTraumaEvidence(session: TriageSession): boolean {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Synergy rules — symptom *combinations* that together indicate emergency
+// even when individual signals are moderate in isolation.
+// ---------------------------------------------------------------------------
+
+interface SynergyRule {
+  id: string;
+  requiredSymptoms: string[];
+  requiredAnswers?: Array<{ key: string; value: string | boolean }>;
+  flag: string;
+  label: string;
+}
+
+const SYNERGY_RULES: SynergyRule[] = [
+  {
+    id: "gdv_triad",
+    requiredSymptoms: ["swollen_abdomen", "vomiting"],
+    requiredAnswers: [{ key: "retching_present", value: true }],
+    flag: "gdv_triad_present",
+    label: "GDV triad: vomiting + distended belly + retching",
+  },
+  {
+    id: "gdv_pair",
+    requiredSymptoms: ["swollen_abdomen"],
+    requiredAnswers: [
+      { key: "unproductive_retching", value: true },
+    ],
+    flag: "gdv_triad_present",
+    label: "GDV pair: distended belly + non-productive retching",
+  },
+  {
+    id: "multi_sign_shock",
+    requiredSymptoms: ["lethargy"],
+    requiredAnswers: [
+      { key: "gum_color", value: "pale_white" },
+    ],
+    flag: "multi_sign_shock_pattern",
+    label: "Shock pattern: pale gums + lethargy",
+  },
+  {
+    id: "respiratory_crisis",
+    requiredSymptoms: ["coughing_breathing_combined"],
+    requiredAnswers: [{ key: "breathing_effort", value: "severe" }],
+    flag: "respiratory_crisis_combo",
+    label: "Respiratory crisis: combined coughing/breathing + severe effort",
+  },
+  {
+    id: "spinal_herniation",
+    requiredSymptoms: ["limping"],
+    requiredAnswers: [
+      { key: "back_pain_yelp", value: true },
+    ],
+    flag: "spinal_herniation_pattern",
+    label: "Spinal pattern: limping + yelping on back touch",
+  },
+  {
+    id: "toxin_vomiting",
+    requiredSymptoms: ["vomiting"],
+    requiredAnswers: [{ key: "toxin_ingestion_confirmed", value: true }],
+    flag: "toxin_plus_vomiting",
+    label: "Toxin + vomiting: active GI absorption risk",
+  },
+];
+
+function getSymptomSynergyFlags(session: TriageSession): string[] {
+  const triggered: string[] = [];
+  const answers = session.extracted_answers;
+
+  for (const rule of SYNERGY_RULES) {
+    const hasAllSymptoms = rule.requiredSymptoms.every((s) =>
+      session.known_symptoms.includes(s)
+    );
+    if (!hasAllSymptoms) continue;
+
+    const hasAllAnswers = !rule.requiredAnswers || rule.requiredAnswers.every(
+      ({ key, value }) => answers[key] === value
+    );
+    if (!hasAllAnswers) continue;
+
+    if (!triggered.includes(rule.flag)) {
+      triggered.push(rule.flag);
+    }
+  }
+
+  return triggered;
+}
+
+export function getSynergyFlags(session: TriageSession): string[] {
+  return getSymptomSynergyFlags(session);
+}
+
+/**
+ * Translate a condition_progression answer to a triage urgency signal.
+ * "escalate"   — owner reports worsening; caller should raise urgency one tier.
+ * "deescalate" — owner reports improving; caller may note it as a positive signal.
+ * "same"       — stable or unknown; no urgency change.
+ */
+export function getUrgencyFromTrajectory(
+  answer: string
+): "escalate" | "same" | "deescalate" {
+  if (answer === "worsening") return "escalate";
+  if (answer === "improving") return "deescalate";
+  return "same";
+}
+
 function getCompositeEmergencyRedFlags(session: TriageSession): string[] {
   const flags = new Set<string>();
   const answers = session.extracted_answers;
+
+  // Urgency trajectory — owner-reported worsening is a moderate escalation signal.
+  // It is not an emergency on its own but increments urgency in buildDiagnosisContext.
+  if (getUrgencyFromTrajectory(String(answers.condition_progression ?? "")) === "escalate") {
+    flags.add("condition_worsening");
+  }
+
+  // Synergy rules fire first — these are the highest-confidence composite signals
+  for (const flag of getSymptomSynergyFlags(session)) {
+    flags.add(flag);
+  }
 
   if (hasAnyExposureEvidence(session, TOXIN_EXPOSURE_KEYWORDS)) {
     flags.add("toxin_confirmed");
@@ -874,6 +1012,31 @@ function applyAnswerModifiers(
 
   const compositeRedFlags = getCompositeEmergencyRedFlags(session);
 
+  // Synergy boosts — cross-symptom combinations strongly support specific diseases
+  if (compositeRedFlags.includes("gdv_triad_present")) {
+    if (diseaseKey === "bloat" || diseaseKey === "gastric_dilatation_volvulus") {
+      score *= 8.0;
+    }
+  }
+
+  if (compositeRedFlags.includes("multi_sign_shock_pattern")) {
+    if (diseaseKey === "anemia" || diseaseKey === "imha" || diseaseKey === "coagulopathy") {
+      score *= 4.0;
+    }
+  }
+
+  if (compositeRedFlags.includes("respiratory_crisis_combo")) {
+    if (diseaseKey === "congestive_heart_failure" || diseaseKey === "pneumonia" || diseaseKey === "laryngeal_paralysis") {
+      score *= 5.0;
+    }
+  }
+
+  if (compositeRedFlags.includes("spinal_herniation_pattern")) {
+    if (diseaseKey === "intervertebral_disc_disease" || diseaseKey === "spinal_injury") {
+      score *= 5.0;
+    }
+  }
+
   if (
     session.known_symptoms.includes("heat_intolerance") &&
     compositeRedFlags.some((flag) =>
@@ -1029,13 +1192,29 @@ export function buildDiagnosisContext(
     highestUrgency = "high";
   }
 
+  // Urgency trajectory escalation — owner-reported worsening adds one tier.
+  // Only applies when not already at emergency and owner explicitly said worsening.
+  if (
+    session.extracted_answers.condition_progression === "worsening" &&
+    highestUrgency !== "emergency"
+  ) {
+    const trajectoryOrder = ["low", "moderate", "high", "emergency"];
+    const currentIdx = trajectoryOrder.indexOf(highestUrgency);
+    if (currentIdx >= 0 && currentIdx < trajectoryOrder.length - 1) {
+      highestUrgency = trajectoryOrder[currentIdx + 1];
+    }
+  }
+
   return {
     probabilities: probs,
     top5,
     breed_risk_summary: breedRiskSummary,
     symptom_summary: symptomSummary,
     answer_summary: answerSummary,
-    red_flags: session.red_flags_triggered,
+    red_flags: [
+      ...session.red_flags_triggered,
+      ...getSymptomSynergyFlags(session),
+    ],
     body_systems: session.body_systems_involved,
     highest_urgency: highestUrgency,
   };

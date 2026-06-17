@@ -72,12 +72,12 @@
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
       "exists": true,
-      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
+      "sha256": "2295dbe3d7c5c28622c974e42c9efdab4736f5e5b7532951d94265706e828dab"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
+      "sha256": "94ec9b8ba4b3bc0deab4068f723934c4fcfe30960ad90f64231dddeaa52f804d"
     },
     "candidateSelectionPacket": {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",

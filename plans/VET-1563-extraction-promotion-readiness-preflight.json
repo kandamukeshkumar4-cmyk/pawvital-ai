@@ -23,7 +23,7 @@
     "checklist": {
       "path": "plans/VET-1563-extraction-promotion-checklist.json",
       "exists": true,
-      "sha256": "4b1def17c7cdf7ec4ee4e5044f76ac03d87473f8645a7dbcf46c458f749e5bc2"
+      "sha256": "37b98b93a5ea2f3b60d15605cd9d81213d5ff39a2d569ef4bcd4137fc9101c97"
     },
     "scorecard": {
       "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
@@ -48,7 +48,7 @@
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
+      "sha256": "621fff9520fd12a8aa8a5b8491b2e089bde956cd6453258bb37ca5b1fa6063c4"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
@@ -59,7 +59,7 @@
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
+      "sha256": "94ec9b8ba4b3bc0deab4068f723934c4fcfe30960ad90f64231dddeaa52f804d"
     }
   },
   "requiredEvidence": [

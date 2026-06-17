@@ -21,7 +21,7 @@ export type SymptomChatTurnJobRef = {
   userId: string;
 };
 
-const UUID_PATTERN =
+export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 // Mirrors SAFE_USER_ID_PATTERN in web-pubsub.ts so a ref that survives this
 // guard is always publishable to the per-user Web PubSub channel.

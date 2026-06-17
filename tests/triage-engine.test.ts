@@ -1018,3 +1018,64 @@ describe("Full triage flow simulation", () => {
     expect(ctx.highest_urgency).toBe("emergency");
   });
 });
+
+// ---------------------------------------------------------------------------
+// getUrgencyFromTrajectory + condition_worsening flag
+// ---------------------------------------------------------------------------
+
+import { getUrgencyFromTrajectory } from "@/lib/triage-engine";
+
+describe("getUrgencyFromTrajectory", () => {
+  it("returns escalate for worsening", () => {
+    expect(getUrgencyFromTrajectory("worsening")).toBe("escalate");
+  });
+
+  it("returns deescalate for improving", () => {
+    expect(getUrgencyFromTrajectory("improving")).toBe("deescalate");
+  });
+
+  it("returns same for stable", () => {
+    expect(getUrgencyFromTrajectory("same")).toBe("same");
+  });
+
+  it("returns same for empty string or unknown input", () => {
+    expect(getUrgencyFromTrajectory("")).toBe("same");
+    expect(getUrgencyFromTrajectory("unknown")).toBe("same");
+  });
+});
+
+describe("condition_worsening red flag", () => {
+  it("injects condition_worsening into red_flags_triggered when trajectory answer is worsening", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session = recordAnswer(session, "condition_progression", "worsening");
+
+    expect(session.red_flags_triggered).toContain("condition_worsening");
+  });
+
+  it("does not inject condition_worsening when trajectory is stable", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session = recordAnswer(session, "condition_progression", "same");
+
+    expect(session.red_flags_triggered).not.toContain("condition_worsening");
+  });
+
+  it("does not inject condition_worsening when trajectory is improving", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["vomiting"]);
+    session = recordAnswer(session, "condition_progression", "improving");
+
+    expect(session.red_flags_triggered).not.toContain("condition_worsening");
+  });
+
+  it("appends de-escalation note to case_memory.timeline_notes when improving", () => {
+    let session = createSession();
+    session = addSymptoms(session, ["lethargy"]);
+    session = recordAnswer(session, "condition_progression", "improving");
+
+    expect(session.case_memory?.timeline_notes).toContain(
+      "Owner reports condition is improving (de-escalation signal)."
+    );
+  });
+});
