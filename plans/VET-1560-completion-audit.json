@@ -9,7 +9,7 @@
     {
       "path": "plans/VET-1560-readiness-dashboard.json",
       "exists": true,
-      "sha256": "3c4154055aaa69768ef0082c009738012f742432a18d94a6e8de7222847d949e"
+      "sha256": "efadfe3acc0e3d5831fa707856660f928d45bc8af6e1cf7ed29702f11085e0df"
     },
     {
       "path": "plans/VET-1560-project-manager-tickets.json",
@@ -109,22 +109,22 @@
     {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "543f4e0341c0e8e70656d8c172d5b7602515606a7281c24303b0c29ee95ef06d"
+      "sha256": "9f9c2ab488c54d175942d573dc6bf1da19dc630fbbe04b2ed2b7adb57f768a21"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96"
+      "sha256": "54948b3b05e18fcfedd684f604810d57f60275ea8bb9606674108a8f9872e34f"
     },
     {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "b4aec836949a75079d75efe7cfcc6bc8fcfdac88663ce37f0a5cb613886c009c"
+      "sha256": "ff1f5ab73ada60269c5b8efc92d6f1e0a5c3159c79f2ec9d29bc8f3cc7f767e9"
     },
     {
       "path": "plans/VET-1564-production-smoke-runbook.json",
       "exists": true,
-      "sha256": "1643880a8d48c9ef1c68b95d744da274a8b0b2c65b06d88470b6da667e2d56d7"
+      "sha256": "39d890717cd92f3245c79da1f519cc7c232a094027737cf5cf1b9562dd472349"
     },
     {
       "path": "src/lib/product-intelligence-persistence.ts",
