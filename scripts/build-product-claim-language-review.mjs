@@ -19,7 +19,10 @@ const outPath = resolve(
 
 const reviewedFiles = [
   "src/lib/product-intelligence.ts",
+  "src/lib/recovery-checkpoint.ts",
+  "src/lib/product-intelligence-owner-workflow.ts",
   "src/components/analytics/product-intelligence-panel.tsx",
+  "src/app/(dashboard)/analytics/page.tsx",
   "plans/VET-1564-longitudinal-readiness-contract.json",
   "plans/VET-1564-product-intelligence-roadmap.json",
 ];
