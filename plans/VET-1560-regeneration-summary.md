@@ -45,6 +45,7 @@ Review-only: true
 | project-manager-sync-readiness | SUCCESS | node scripts/devops/vet1560-sync-readiness.mjs --write | plans/VET-1560-project-manager-sync-readiness.json |
 | project-manager-local-sync | SUCCESS | node scripts/devops/create-vet1560-work-items.mjs --from plans/VET-1560-project-manager-tickets.json --write | plans/VET-1560-project-manager-local-sync.json, plans/VET-1560-project-manager-local-sync.md |
 | project-manager-sync-readiness-final | SUCCESS | node scripts/devops/vet1560-sync-readiness.mjs --write | plans/VET-1560-project-manager-sync-readiness.json |
+| launch-readiness-gates | SUCCESS | node scripts/build-vet1560-launch-readiness-gates.mjs --write | plans/VET-1560-launch-readiness-gates.json, plans/VET-1560-launch-readiness-gates.md |
 | readiness-dashboard | SUCCESS | node scripts/build-vet1560-readiness-dashboard.mjs --write | plans/VET-1560-readiness-dashboard.json, plans/VET-1560-readiness-dashboard.md |
 | completion-audit | SUCCESS | node scripts/build-vet1560-completion-audit.mjs --write | plans/VET-1560-completion-audit.json, plans/VET-1560-completion-audit.md |
 

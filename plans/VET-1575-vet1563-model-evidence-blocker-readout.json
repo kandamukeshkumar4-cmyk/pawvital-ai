@@ -1,0 +1,258 @@
+{
+  "ticket": "VET-1575C",
+  "parentTicket": "VET-1563",
+  "relatedIssue": 588,
+  "mode": "review-only-model-evidence-blocker-readout",
+  "generatedAt": "2026-06-12T16:33:15.944Z",
+  "sourceBranchBase": {
+    "branch": "codex/vet-1575c-model-evidence-blocker-readout",
+    "baseCommit": "81cae52d0f1b97920a3392493327625ce701ca87",
+    "baseCommitNote": "PR #590 candidate approval intake harness is already merged to master."
+  },
+  "currentLaunchStackContext": {
+    "currentProductionDeploymentId": "dpl_8Yc6kfQMA6ahAxygLfrKbSMmLjzb",
+    "publicBetaPacketPr": {
+      "pr": 591,
+      "head": "00b2baffa135fed0337253ada53f339885553296",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; public beta remains HOLD and model lane remains HOLD, including after PR #600 invite-send validator evidence was added"
+    },
+    "cohortReadoutPr": {
+      "pr": 592,
+      "head": "a5d68e924b668860fa4de00677e089cda1e488ca",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; Cohort 1 readout remains PARTIAL, and PR #600 invite-send validator evidence does not satisfy any model-promotion gate"
+    },
+    "productIntelligenceReadinessPr": {
+      "pr": 594,
+      "head": "53d29b03378eb1a78f01c38513174cce6fe26592",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; daily-readiness/product-intelligence persistence proof does not provide candidate identity, frozen outputs, hashes, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "productIntelligenceRecoveryUiPr": {
+      "pr": 595,
+      "head": "a9ad1ba953974f8c463812d24304b8ed74a3d4dd",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; owner-visible recovery checkpoint UI proof does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "thresholdGateRecoveryPr": {
+      "pr": 596,
+      "head": "745a1173db546805afdedfe788677081cec2a93b",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; workflow/check recovery evidence does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "cohortInviteProofSemanticsPr": {
+      "pr": 598,
+      "head": "2ee6d4c1ef48c68e3ce1398467dd1861391f6b87",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; command-center/registry allowlist-vs-invite semantics proof does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "candidateApprovalValidationPr": {
+      "pr": 599,
+      "head": "fef270d08fd4f2f37db81af71ae88d31a3fc0ec7",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; candidate approval validation hardening improves the review-only gate but does not create an approval record, resolve candidate identity, authorize provider capture, populate frozen outputs, score scorecards, grant owner approval, or execute promotion smoke"
+    },
+    "cohortInviteSendProofValidatorPr": {
+      "pr": 600,
+      "head": "30629f052bb8bc3215097fd02cd59f692d7e6a27",
+      "state": "OPEN_CLEAN_AGAINST_PR598_BASE_NO_CHECKS",
+      "effectOnModelPromotion": "none; invite-send proof validation is launch proof-harness evidence only and does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "serverlessReliabilityPr": {
+      "pr": 601,
+      "head": "b72c3620510d14fe5e2669e16adac876dfe112d7",
+      "state": "OPEN_BLOCKED",
+      "effectOnModelPromotion": "none; serverless reliability budget hardening is runtime reliability evidence only and does not provide candidate identity, provider/artifact hash, frozen outputs, scorecards, owner approval, or promotion smoke evidence"
+    },
+    "launchStackPrGate": {
+      "decision": "HOLD_ACTIONS_DISABLED_CHECKS_NOT_ATTACHING",
+      "statusCheckRollupCount": 0,
+      "manualDispatchError": "HTTP 422: Actions has been disabled for this user",
+      "effectOnModelPromotion": "none; this blocks merge readiness for review artifacts but does not change model evidence gates"
+    }
+  },
+  "scopeGuardrails": {
+    "runtimeRoutingChanged": false,
+    "providerCallsMade": false,
+    "vercelEnvMutated": false,
+    "supabaseSchemaMutated": false,
+    "modelFlagsChanged": false,
+    "protectedClinicalFilesChanged": false,
+    "clinicalLogicChanged": false
+  },
+  "currentDecision": {
+    "candidateApprovalIntake": "GO_REVIEW_ONLY",
+    "providerCapture": "HOLD",
+    "modelNimPromotion": "HOLD",
+    "promotionPr": "HOLD",
+    "runtimeChange": "HOLD",
+    "weightUpdate": "HOLD",
+    "publicBetaModelLane": "HOLD",
+    "reason": "The review-only intake harness exists, and PR #599 adds candidate approval validation hardening as review-only gate evidence, but the candidate approval record, frozen outputs, scorecard evidence, owner approval, and promotion smoke proof remain absent or blocked. Newer PR #591/#592/#594/#595/#596/#598/#599/#600/#601 public-beta, cohort-readout, product-intelligence, PR-gate, invite-semantics, approval-validation, invite-send-validator, and serverless-reliability evidence does not satisfy any model-promotion gate."
+  },
+  "sourceArtifacts": {
+    "candidateApprovalIntake": {
+      "path": "plans/VET-1563-extraction-candidate-approval-intake.json",
+      "sha256": "d4b1aca32bf82fe8f10e576c5a735f77d87147e694a57ebc0526a2f922fa4be6"
+    },
+    "candidateSelectionPacket": {
+      "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
+      "sha256": "3a522d4010138144e30be00d7e83b1650452beadbfad013040813788b7f1cf22"
+    },
+    "outputCaptureAuthorization": {
+      "path": "plans/VET-1563-extraction-output-capture-authorization.json",
+      "sha256": "be04aa08468bca3ab2e9b8e4f34aa0d1e870fb2a002e08bb77a77a680e39a9d1"
+    },
+    "frozenOutputStatus": {
+      "path": "plans/VET-1563-extraction-frozen-output-status.json",
+      "sha256": "714b0e63be9f2d47dd5ac4a76e4b1441718266bfadf01dc9e7bf1f9425db092c"
+    },
+    "shadowEvalScorecard": {
+      "path": "plans/VET-1563-extraction-shadow-eval-scorecard.json",
+      "sha256": "c16f1506941921f733a42f5f187c7c3819b489f06c59170c62a87a37ab8811de"
+    },
+    "promotionReadinessPreflight": {
+      "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
+      "sha256": "0d5134776f860d18c1ba7611a70ca883856456c5647e460c91f8e936d934d01a"
+    },
+    "ownerApprovalRequest": {
+      "path": "plans/VET-1563-extraction-owner-approval-request.json",
+      "sha256": "5af6d83182802c37a365c78de62ce67f99df3d54aa0317a7dd90528efe8b7243"
+    },
+    "runtimePromotionTicket": {
+      "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
+      "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
+    },
+    "promotionSmokeRunbook": {
+      "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
+      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+    },
+    "protectedClinicalDiffProof": {
+      "path": "plans/VET-1563-protected-clinical-diff-proof.json",
+      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+    }
+  },
+  "evidenceSummary": {
+    "candidateApprovalRecordTarget": "plans/VET-1563-extraction-candidate-approval-record.json",
+    "candidateApprovalRecordExists": false,
+    "candidateApprovalRecordCheckedAt": "2026-06-12T16:33:15.944Z",
+    "candidateApprovalIntakeStatus": "blocked",
+    "candidateApprovalMissingFieldCount": 11,
+    "candidateIdentityResolved": false,
+    "candidateSelectionBlockerCount": 6,
+    "readyForProviderCapture": false,
+    "outputCaptureBlockerCount": 4,
+    "frozenOutputCaseCount": 3,
+    "frozenOutputReadyCaseCount": 0,
+    "missingBaselineOutputCount": 3,
+    "missingCandidateOutputCount": 3,
+    "baselineOutputHashes": 0,
+    "candidateOutputHashes": 0,
+    "scorecardCaseCount": 3,
+    "scorecardFailedCaseCount": 3,
+    "scorecardIssueCount": 44,
+    "validationAverage": 0,
+    "holdoutAverage": 0,
+    "weightedScoreMinimum": 4.2,
+    "readyEvidenceCount": 3,
+    "blockedEvidenceCount": 5,
+    "preflightBlockerCount": 16,
+    "ownerApprovalGranted": false,
+    "ownerApprovalBlockerCount": 24,
+    "promotionTicketReadyToOpen": false
+  },
+  "blockerLanes": [
+    {
+      "id": "candidate-identity-and-approval",
+      "status": "blocked",
+      "evidence": [
+        "Candidate identity is unresolved.",
+        "Candidate approval record target does not exist.",
+        "Candidate approval intake reports 11 missing required fields."
+      ],
+      "blocks": [
+        "candidate validation capture",
+        "candidate output hashes",
+        "promotion ticket readiness"
+      ]
+    },
+    {
+      "id": "provider-capture-authorization",
+      "status": "blocked",
+      "evidence": [
+        "readyForProviderCapture=false.",
+        "Output capture authorization reports 4 blockers."
+      ],
+      "blocks": [
+        "provider capture",
+        "frozen candidate outputs"
+      ]
+    },
+    {
+      "id": "frozen-output-evidence",
+      "status": "blocked",
+      "evidence": [
+        "0/3 cases are ready for human review.",
+        "3 baseline outputs and 3 candidate outputs are missing.",
+        "Baseline and candidate output hash counts are both 0."
+      ],
+      "blocks": [
+        "scorecard population",
+        "owner approval request readiness",
+        "promotion smoke execution"
+      ]
+    },
+    {
+      "id": "scorecard-and-review",
+      "status": "blocked",
+      "evidence": [
+        "Validation average is 0 against threshold 4.2.",
+        "Holdout average is 0 against threshold 4.2.",
+        "All 3 scorecard cases fail and 44 scorecard issues remain."
+      ],
+      "blocks": [
+        "promotion preflight",
+        "promotion ticket readiness"
+      ]
+    },
+    {
+      "id": "owner-approval-and-promotion-ticket",
+      "status": "blocked",
+      "evidence": [
+        "Owner approval is not granted.",
+        "Owner approval request has 24 blockers.",
+        "Runtime promotion ticket draft is not ready to open."
+      ],
+      "blocks": [
+        "runtime promotion PR",
+        "model flag promotion",
+        "public beta model lane GO"
+      ]
+    }
+  ],
+  "nextAllowedActions": [
+    "Owner/operator supplies an explicit candidate approval record for the exact model or adapter identity and validation-output-capture scope.",
+    "Candidate approval record must pass structural validation for SHA-256 artifact hash, ISO-8601 UTC approval timestamps, reviewable approval references, and validation-output-capture-only scope before it can resolve candidate identity.",
+    "Rerun the candidate-selection packet and output-capture authorization after the approval record exists.",
+    "Perform a separate authorized review-only capture run for validation baseline and candidate outputs only after authorization reports the lane ready.",
+    "Freeze schema-valid outputs and hashes before human scoring.",
+    "Populate scorecard reviewer, numeric scores, and evidence for validation first; keep holdout gated until validation outputs are frozen and reviewed.",
+    "Prepare owner approval and promotion PR only after preflight reports readyForPromotionTicket=true."
+  ],
+  "forbiddenUntilResolved": [
+    "Do not fill missing candidate fields with placeholders or inferred experiment-manifest values.",
+    "Do not call providers while output-capture authorization is blocked.",
+    "Do not use holdout capture for iteration or tuning.",
+    "Do not promote model flags or runtime routing from this readout.",
+    "Do not treat the intake packet as owner approval."
+  ],
+  "handoffStatus": {
+    "candidateIntakePacket": "GO_REVIEW_ONLY",
+    "modelPromotion": "HOLD",
+    "providerCapture": "HOLD",
+    "weightUpdate": "HOLD",
+    "runtimeChange": "HOLD",
+    "publicBetaModelLane": "HOLD"
+  }
+}

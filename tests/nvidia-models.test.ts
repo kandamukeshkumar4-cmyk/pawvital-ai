@@ -42,7 +42,8 @@ describe("nvidia-models configuration", () => {
     process.env.NVIDIA_QWEN_API_KEY = "nvapi-qwen";
 
     const models = await import("@/lib/nvidia-models");
-    expect(models.resolveNvidiaApiKey("extraction")).toBe("nvapi-qwen");
+    // extraction now prefers NVIDIA_API_KEY (Scout is primary, not Qwen)
+    expect(models.resolveNvidiaApiKey("extraction")).toBe("nvapi-shared");
   });
 
   it("uses NVIDIA_KIMI_API_KEY for vision_deep before the shared key", async () => {
@@ -131,7 +132,7 @@ describe("nvidia-models configuration", () => {
         baseURL: "https://narrow-pack.example/v1",
         apiKey: "sidecar-secret",
         request: expect.objectContaining({
-          model: "qwen/qwen3.5-122b-a10b",
+          model: "mistralai/mistral-nemotron",
         }),
       })
     );
@@ -141,7 +142,7 @@ describe("nvidia-models configuration", () => {
         baseURL: "https://integrate.api.nvidia.com/v1",
         apiKey: "nvapi-shared",
         request: expect.objectContaining({
-          model: "qwen/qwen3.5-122b-a10b",
+          model: "mistralai/mistral-nemotron",
         }),
       })
     );
@@ -175,7 +176,7 @@ describe("nvidia-models configuration", () => {
         baseURL: "https://integrate.api.nvidia.com/v1",
         apiKey: "nvapi-shared",
         request: expect.objectContaining({
-          model: "qwen/qwen3.5-122b-a10b",
+          model: "mistralai/mistral-nemotron",
         }),
       })
     );

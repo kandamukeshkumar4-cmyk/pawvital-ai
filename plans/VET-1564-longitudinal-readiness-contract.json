@@ -319,7 +319,7 @@
     {
       "path": "tests/product-intelligence-schema.test.ts",
       "exists": true,
-      "sha256": "065c4bc022492cf9bcdf234ac0bd40042a0616e301edda256e04dc37a9a9c92a"
+      "sha256": "46138137edc89aba14248b3a85381a8ff8922cebbdb576621cfadc629cb2bd9a"
     },
     {
       "path": "tests/product-intelligence-snapshots.route.test.ts",

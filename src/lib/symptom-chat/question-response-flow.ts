@@ -18,11 +18,18 @@ import {
   shouldIncludeImageContextInQuestion,
 } from "@/lib/symptom-chat/context-helpers";
 import {
-  TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS,
   gateQuestionBeforePhrasing,
   phraseQuestion,
   type SymptomChatTurnMessage,
 } from "@/lib/symptom-chat/question-phrasing";
+import {
+  resolveOwnerVisiblePhrasingDeadline,
+  type TurnDeadline,
+} from "@/lib/symptom-chat/turn-deadline";
+import {
+  shouldRunNemotronQuestionGate,
+  type TurnDepth,
+} from "@/lib/symptom-chat/turn-depth";
 
 interface BuildQuestionResponseFlowInput {
   session: TriageSession;
@@ -37,6 +44,10 @@ interface BuildQuestionResponseFlowInput {
   visionSeverity?: "normal" | "needs_review" | "urgent";
   image?: string;
   forceDeterministicQuestionFallback?: boolean;
+  turnDeadline?: TurnDeadline;
+  turnDepth?: TurnDepth;
+  askingBecause?: string | null;
+  promptVetRecord?: boolean;
 }
 
 export async function buildQuestionResponseFlow(
@@ -57,15 +68,42 @@ export async function buildQuestionResponseFlow(
     nextQuestionId: input.nextQuestionId,
   });
 
+  // Final safety strip: remove any "Got it — X." / "Okay." / "Understood." opener
+  // that survived phrasing model sanitization. Acts as the authoritative last gate
+  // before the message reaches the client.
+  const safeMessage = stripOpenerPhrase(phrasedQuestion);
+
   return NextResponse.json({
     type: "question",
-    message: phrasedQuestion,
+    message: safeMessage,
     session: sanitizeSessionForClient(session),
     ready_for_report: isReadyForDiagnosis(session),
     conversationState: input.needsClarificationQuestionId
       ? "needs_clarification"
       : inferConversationState(getStateSnapshot(session)),
+    asking_because: input.askingBecause ?? session.case_memory?.asking_because ?? null,
+    prompt_vet_record: Boolean(input.promptVetRecord),
   });
+}
+
+function stripOpenerPhrase(text: string): string {
+  if (!/^(?:Got it|Okay|Understood|Noted|Sure|Alright)\b/i.test(text)) return text;
+  // Find the first ASCII sentence boundary (". " or "! ") after the opener
+  const ptIdx = text.indexOf(". ");
+  const exIdx = text.indexOf("! ");
+  const boundary =
+    ptIdx >= 0 && exIdx >= 0
+      ? Math.min(ptIdx, exIdx) + 2
+      : ptIdx >= 0
+        ? ptIdx + 2
+        : exIdx >= 0
+          ? exIdx + 2
+          : -1;
+  if (boundary <= 0) return text;
+  const rest = text.substring(boundary).trim();
+  if (!rest.includes("?")) return text;
+  console.log("[flow] opener stripped:", text.substring(0, 70));
+  return rest;
 }
 
 function buildNoQuestionPayload(
@@ -142,10 +180,14 @@ async function phraseNextQuestion(
     )
       ? buildQuestionPhrasingContext(input.session, input.visionSeverity)
       : null;
-  const textTurnPhrasingDeadlineMs = hasLiveVisionThisTurn
-    ? null
-    : Date.now() + TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS;
-  if (input.forceDeterministicQuestionFallback) {
+  const textTurnPhrasingDeadlineMs = resolveOwnerVisiblePhrasingDeadline(
+    hasLiveVisionThisTurn,
+    input.turnDeadline
+  );
+  if (
+    input.forceDeterministicQuestionFallback ||
+    (input.turnDepth && !shouldRunNemotronQuestionGate(input.turnDepth))
+  ) {
     return phraseQuestion(
       questionText,
       input.nextQuestionId,
@@ -157,7 +199,8 @@ async function phraseNextQuestion(
       hasLiveVisionThisTurn,
       false,
       true,
-      textTurnPhrasingDeadlineMs
+      textTurnPhrasingDeadlineMs,
+      input.turnDepth
     );
   }
 
@@ -184,6 +227,7 @@ async function phraseNextQuestion(
     hasLiveVisionThisTurn,
     hasLiveVisionThisTurn && questionGate.includeImageContext,
     questionGate.useDeterministicFallback,
-    textTurnPhrasingDeadlineMs
+    textTurnPhrasingDeadlineMs,
+    input.turnDepth
   );
 }

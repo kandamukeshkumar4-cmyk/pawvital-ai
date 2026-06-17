@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 
 const mockExchangeCodeForSession = jest.fn();
 const mockVerifyOtp = jest.fn();
+
 const mockCreateServerClient = jest.fn(
   (
     _url: string,
@@ -193,6 +194,92 @@ describe("VET-1215 auth callback route", () => {
 
     expect(response.headers.get("location")).toBe(
       "https://app.pawvital.ai/login?redirect=%2Fdashboard&error=auth_callback_failed"
+    );
+  });
+
+  it("verifies signup email links with token_hash and redirects to the post-confirmation target", async () => {
+    mockVerifyOtp.mockResolvedValue({ error: null });
+
+    const { GET } = await import("@/app/api/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "https://app.pawvital.ai/api/auth/callback?token_hash=signup-token&type=signup&next=%2Fpets%2Fpet-1"
+      )
+    );
+
+    expect(mockVerifyOtp).toHaveBeenCalledWith({
+      token_hash: "signup-token",
+      type: "signup",
+    });
+    expect(response.headers.get("location")).toBe(
+      "https://app.pawvital.ai/pets/pet-1"
+    );
+    expect(response.headers.get("set-cookie")).toContain("sb-test-auth-token");
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it("redirects expired signup confirmation links back to signup with a friendly error", async () => {
+    mockVerifyOtp.mockResolvedValue({
+      error: new Error("Email link is invalid or has expired"),
+    });
+
+    const { GET } = await import("@/app/api/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "https://app.pawvital.ai/api/auth/callback?token_hash=signup-token&type=signup&next=%2Fdashboard"
+      )
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://app.pawvital.ai/signup?redirect=%2Fdashboard&error=confirm_link_expired"
+    );
+  });
+
+  it("routes Supabase expired signup callback errors back to signup", async () => {
+    const { GET } = await import("@/app/api/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "https://app.pawvital.ai/api/auth/callback?error=access_denied&error_code=otp_expired&type=signup&next=%2Fdashboard"
+      )
+    );
+
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+    expect(mockVerifyOtp).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe(
+      "https://app.pawvital.ai/signup?redirect=%2Fdashboard&error=confirm_link_expired"
+    );
+  });
+
+  it("exchanges signup PKCE codes and redirects to the post-confirmation target", async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ error: null });
+
+    const { GET } = await import("@/app/api/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "https://app.pawvital.ai/api/auth/callback?code=signup-code&type=signup&next=%2Fdashboard"
+      )
+    );
+
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith("signup-code");
+    expect(mockVerifyOtp).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://app.pawvital.ai/dashboard");
+    expect(response.headers.get("set-cookie")).toContain("sb-test-auth-token");
+  });
+
+  it("redirects failed signup PKCE exchanges back to signup with a friendly error", async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      error: new Error("PKCE code verifier not found"),
+    });
+
+    const { GET } = await import("@/app/api/auth/callback/route");
+    const response = await GET(
+      new NextRequest(
+        "https://app.pawvital.ai/api/auth/callback?code=signup-code&type=signup&next=%2Fdashboard"
+      )
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://app.pawvital.ai/signup?redirect=%2Fdashboard&error=auth_callback_failed"
     );
   });
 });

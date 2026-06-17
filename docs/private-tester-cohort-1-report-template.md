@@ -7,12 +7,13 @@ Use this after the first 48 hours of Cohort 1.
 - Date window:
 - Release branch / commit:
 - Founder reviewer:
-- Invite count:
+- Allowlisted tester count:
 - Active tester count:
 
 ## Core metrics
 
-- Testers invited:
+- Testers allowlisted:
+- Invitations sent (attach manual proof):
 - Testers signed in:
 - Symptom checks started:
 - Symptom checks completed:
@@ -26,6 +27,16 @@ Use this after the first 48 hours of Cohort 1.
 - Sign-in failures:
 - Tester access disabled:
 - Data deletion requests:
+
+Before filling this section, run the invite-send proof validator:
+
+```bash
+node scripts/build-cohort1-invite-send-proof.mjs --write
+```
+
+The generated VET-1582 readout must show invite-send proof `GO_REVIEW_ONLY`
+before the report treats invitations as sent. Allowlisted tester count alone is
+not invitation-send proof.
 
 ## Trust and comprehension
 

@@ -13,6 +13,10 @@ import secondOpinionQualifyingFlowMatrix from "./fixtures/second-opinion-qualify
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockCreateServerSupabaseClient = jest.fn();
+const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
+  user: { id: "test-user-id" },
+  supabase: {},
+});
 const mockIsNvidiaConfigured = jest.fn(() => true);
 const mockExtractWithQwen = jest.fn();
 const mockComplete = jest.fn();
@@ -42,6 +46,11 @@ jest.mock("@/lib/rate-limit", () => ({
 jest.mock("@/lib/supabase-server", () => ({
   createServerSupabaseClient: (...args: unknown[]) =>
     mockCreateServerSupabaseClient(...args),
+}));
+
+jest.mock("@/lib/api-auth", () => ({
+  requireAuthenticatedApiUser: (...args: unknown[]) =>
+    mockRequireAuthenticatedApiUser(...args),
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
@@ -265,6 +274,8 @@ function buildModerateReportSession() {
   let session = createSession();
   session = addSymptoms(session, ["excessive_scratching"]);
   session = recordAnswer(session, "scratch_location", "ears");
+  session = recordAnswer(session, "scratch_duration", "about 2 weeks");
+  session = recordAnswer(session, "flea_prevention", true);
   session.case_memory = {
     ...session.case_memory!,
     latest_owner_turn: "He keeps scratching around his ears.",
@@ -1393,6 +1404,10 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       // Later question that required a clarification round (re-asked).
       session = recordAnswer(session, "cough_type", "dry");
 
+      // Bypass the ≥3 answered-questions readiness gate without altering the
+      // question_asked_counts / clarification_attempts that VET-1546C-R3 tests.
+      session.red_flags_triggered = ["breathing_difficulty"];
+
       const memory = session.case_memory!;
       session.case_memory = {
         ...memory,
@@ -1602,6 +1617,9 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       let session = createSession();
       session = addSymptoms(session, ["regurgitation"]);
       session = recordAnswer(session, "coughing_present", true);
+      // Bypass the readiness gate; red flag does not affect the second-opinion
+      // trace reconstruction that this test validates.
+      session.red_flags_triggered = ["coughing_after_regurgitation"];
       const memory = session.case_memory!;
       session.case_memory = {
         ...memory,
@@ -1743,6 +1761,7 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       let session = createSession();
       session = addSymptoms(session, ["coughing"]);
       session = recordAnswer(session, "cough_type", "dry");
+      session.red_flags_triggered = ["breathing_difficulty"];
       const memory = session.case_memory!;
       session.case_memory = {
         ...memory,
@@ -1773,6 +1792,7 @@ describe("VET-1428 repeat-loop + hallucination telemetry gate", () => {
       let session = createSession();
       session = addSymptoms(session, ["coughing"]);
       session = recordAnswer(session, "cough_duration", "2 days");
+      session.red_flags_triggered = ["breathing_difficulty"];
       const memory = session.case_memory!;
       session.case_memory = {
         ...memory,

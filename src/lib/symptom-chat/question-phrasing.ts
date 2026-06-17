@@ -12,13 +12,18 @@ import { FOLLOW_UP_QUESTIONS } from "@/lib/clinical-matrix";
 import { buildCaseMemorySnapshot } from "@/lib/symptom-memory";
 import { type PetProfile, type TriageSession } from "@/lib/triage-engine";
 import {
+  shouldRunNemotronQuestionVerify,
+  type TurnDepth,
+} from "@/lib/symptom-chat/turn-depth";
+import {
   buildConfirmedQASummary,
   buildDeterministicQuestionFallback,
   parseLooseJsonRecord,
 } from "@/lib/symptom-chat/extraction-helpers";
 
 const useNvidia = isNvidiaConfigured();
-export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 10_000;
+// Shared between Nemotron preflight gate + Llama phrasing on text-only turns.
+export const TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS = 25_000;
 
 export interface SymptomChatTurnMessage {
   role: "user" | "assistant";
@@ -65,6 +70,27 @@ export function sanitizeQuestionDraft(
 
   if (!cleaned.includes("?")) {
     return fallbackMessage;
+  }
+
+  // Strip lazy "Got it — value." / "Okay — value." / etc. openers.
+  // Uses a character-scan to find the first ASCII sentence boundary (". " or "! ")
+  // rather than a regex quantifier, to avoid any compiled-JS edge cases.
+  if (/^(?:Got it|Okay|Understood|Noted|Sure|Alright)\b/i.test(cleaned)) {
+    let sentenceStart = -1;
+    for (let i = 0; i < cleaned.length - 1; i++) {
+      if ((cleaned[i] === "." || cleaned[i] === "!") && cleaned[i + 1] === " ") {
+        sentenceStart = i + 2;
+        break;
+      }
+    }
+    if (sentenceStart > 0) {
+      const rest = cleaned.substring(sentenceStart).trim();
+      if (rest.includes("?")) {
+        console.log("[sanitize] opener stripped →", rest.substring(0, 60));
+        return rest;
+      }
+    }
+    console.log("[sanitize] opener detected but no boundary found:", cleaned.substring(0, 80));
   }
 
   return cleaned;
@@ -195,7 +221,7 @@ REQUIRED QUESTION:
 - Answer type: ${answerType}
 
 WRITE EXACTLY 2 SENTENCES:
-1. One brief acknowledgment that SPECIFICALLY references 1-2 of the confirmed answers above (e.g. "Since ${pet.name} has been drinking less than usual and this has been going on for 3 days..."). Do NOT write a generic "I'm keeping track" phrase.
+1. One acknowledgment sentence that SPECIFICALLY references 1-2 of the confirmed answers above in a full contextual sentence (e.g. "Since ${pet.name} has been vomiting for two days and has stopped eating..."). Do NOT start with "Got it", "Got it —", "Okay", "Understood", or any short echo of the extracted value alone. Write a complete sentence that sets the clinical context.
 2. Ask the exact required question in caring, simple language.
 
 HARD RULES:
@@ -325,7 +351,8 @@ async function phraseQuestionV2(
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
   forceDeterministicFallback = false,
-  ownerVisibleDeadlineMs?: number | null
+  ownerVisibleDeadlineMs?: number | null,
+  turnDepth?: TurnDepth
 ): Promise<string> {
   const answerType = FOLLOW_UP_QUESTIONS[questionId]?.data_type || "string";
   const hasPhoto = Boolean(photoAnalyzedThisTurn);
@@ -399,6 +426,10 @@ async function phraseQuestionV2(
         return sanitizedDraft;
       }
 
+      if (turnDepth && !shouldRunNemotronQuestionVerify(turnDepth)) {
+        return sanitizedDraft;
+      }
+
       const verifiedResult = await withTimeout(
         verifyQuestionDraft(
           questionText,
@@ -421,6 +452,10 @@ async function phraseQuestionV2(
       }
 
       return verifiedResult.value;
+    }
+
+    if (turnDepth && !shouldRunNemotronQuestionVerify(turnDepth)) {
+      return sanitizedDraft;
     }
 
     return verifyQuestionDraft(
@@ -450,7 +485,8 @@ export async function phraseQuestion(
   photoAnalyzedThisTurn?: boolean,
   allowPhotoMentionInWording = false,
   forceDeterministicFallback = false,
-  ownerVisibleDeadlineMs?: number | null
+  ownerVisibleDeadlineMs?: number | null,
+  turnDepth?: TurnDepth
 ): Promise<string> {
   return phraseQuestionV2(
     questionText,
@@ -463,6 +499,7 @@ export async function phraseQuestion(
     photoAnalyzedThisTurn,
     allowPhotoMentionInWording,
     forceDeterministicFallback,
-    ownerVisibleDeadlineMs
+    ownerVisibleDeadlineMs,
+    turnDepth
   );
 }

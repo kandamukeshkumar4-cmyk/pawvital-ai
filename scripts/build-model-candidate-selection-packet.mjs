@@ -65,6 +65,50 @@ function hasText(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isSha256Hex(value) {
+  return hasText(value) && /^[a-f0-9]{64}$/i.test(value.trim());
+}
+
+function isIsoUtcTimestamp(value) {
+  if (!hasText(value)) {
+    return false;
+  }
+
+  const timestamp = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(timestamp)) {
+    return false;
+  }
+
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  const normalized = timestamp.includes(".")
+    ? timestamp
+    : timestamp.replace("Z", ".000Z");
+  return parsed.toISOString() === normalized;
+}
+
+function isEvidenceReference(value) {
+  if (!hasText(value)) {
+    return false;
+  }
+
+  const reference = value.trim();
+  if (reference.includes("<") || reference.includes(">")) {
+    return false;
+  }
+
+  return (
+    /^https?:\/\/\S+$/i.test(reference) ||
+    /^(docs|plans|artifacts)\/\S+$/i.test(reference) ||
+    /^#\d+/.test(reference) ||
+    /^(issue|pr)\s+#?\d+/i.test(reference) ||
+    /^VET-\d+[A-Z]?(?:\b|[-_\s])/i.test(reference)
+  );
+}
+
 const allowedArtifactTypes = new Set([
   "provider-model-id",
   "adapter",
@@ -77,14 +121,32 @@ function validArtifactType(value) {
   return hasText(value) && allowedArtifactTypes.has(value);
 }
 
-function approvedValidationCapture(captureApproval) {
-  return (
-    captureApproval?.scope === "validation-output-capture-only" &&
-    captureApproval?.promotionApproval === false &&
-    hasText(captureApproval?.approvedBy) &&
+function validationCaptureBlockers(captureApproval) {
+  return [
+    captureApproval?.scope === "validation-output-capture-only"
+      ? null
+      : "candidate validation-output-capture approval scope must be validation-output-capture-only",
+    captureApproval?.promotionApproval === false
+      ? null
+      : "candidate validation-output-capture approval must not grant promotion",
+    hasText(captureApproval?.approvedBy)
+      ? null
+      : "candidate validation-output-capture approver missing",
+    hasText(captureApproval?.approvedAt)
+      ? null
+      : "candidate validation-output-capture approval timestamp missing",
     hasText(captureApproval?.approvedAt) &&
+    !isIsoUtcTimestamp(captureApproval?.approvedAt)
+      ? "candidate validation-output-capture approval timestamp must be an ISO-8601 UTC timestamp"
+      : null,
     hasText(captureApproval?.approvalRecord)
-  );
+      ? null
+      : "candidate validation-output-capture approval record reference missing",
+    hasText(captureApproval?.approvalRecord) &&
+    !isEvidenceReference(captureApproval?.approvalRecord)
+      ? "candidate validation-output-capture approval record reference must be a URL, issue/PR/ticket reference, or repo artifact path"
+      : null,
+  ].filter(Boolean);
 }
 
 function approvalBlockers(candidateApprovalRecord) {
@@ -115,14 +177,22 @@ function approvalBlockers(candidateApprovalRecord) {
     hasText(candidate.artifactSha256)
       ? null
       : "candidate artifact hash missing",
+    hasText(candidate.artifactSha256) && !isSha256Hex(candidate.artifactSha256)
+      ? "candidate artifact hash must be a 64-character SHA-256 hex digest"
+      : null,
     hasText(candidate.approvedBy) ? null : "candidate approval approver missing",
     hasText(candidate.approvedAt) ? null : "candidate approval timestamp missing",
+    hasText(candidate.approvedAt) && !isIsoUtcTimestamp(candidate.approvedAt)
+      ? "candidate approval timestamp must be an ISO-8601 UTC timestamp"
+      : null,
     hasText(candidate.approvalRecord)
       ? null
       : "candidate approval record reference missing",
-    approvedValidationCapture(captureApproval)
-      ? null
-      : "candidate validation-output-capture approval record missing",
+    hasText(candidate.approvalRecord) &&
+    !isEvidenceReference(candidate.approvalRecord)
+      ? "candidate approval record reference must be a URL, issue/PR/ticket reference, or repo artifact path"
+      : null,
+    ...validationCaptureBlockers(captureApproval),
     hasText(candidate.offlineTrainingEvalManifest)
       ? null
       : "offline training/eval artifact is not populated",

@@ -43,8 +43,8 @@ describe("model-router registry", () => {
     const router = await import("@/lib/model-router");
 
     expect(router.getModelRoute("extraction")).toMatchObject({
-      primaryModel: "qwen/qwen3.5-122b-a10b",
-      fallbackModel: "qwen/qwen3.5-397b-a17b",
+      primaryModel: "mistralai/mistral-nemotron",
+      fallbackModel: "qwen/qwen3.5-122b-a10b",
       timeoutMs: 45000,
     });
     expect(router.getModelRoute("diagnosis")).toMatchObject({
@@ -73,7 +73,7 @@ describe("model-router registry", () => {
 
     const router = await import("@/lib/model-router");
 
-    expect(router.resolveNvidiaApiKey("extraction")).toBe("nvapi-qwen");
+    expect(router.resolveNvidiaApiKey("extraction")).toBe("nvapi-shared");
     expect(router.getModelProviderChain("extraction")).toEqual([
       "narrow-pack",
       "nvidia",

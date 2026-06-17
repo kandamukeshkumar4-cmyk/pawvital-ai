@@ -3,7 +3,7 @@
 import { ButtonHTMLAttributes, forwardRef } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "danger" | "warm" | "warmOutline";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
 }
@@ -32,6 +32,10 @@ export function buttonClassName({
       "border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500",
     ghost: "text-gray-600 hover:bg-gray-100 focus:ring-gray-500",
     danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+    warm:
+      "bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:from-orange-600 hover:to-amber-600 focus:ring-orange-500 shadow-lg shadow-orange-500/25",
+    warmOutline:
+      "border-2 border-orange-500 text-orange-700 hover:bg-orange-50 focus:ring-orange-500",
   };
 
   const sizes: Record<ButtonSize, string> = {

@@ -17,6 +17,7 @@ const artifactPaths = {
   tickets: "plans/VET-1560-project-manager-tickets.json",
   localProjectManagerSync: "plans/VET-1560-project-manager-local-sync.json",
   azureLiveSyncRunbook: "plans/VET-1560-azure-live-sync-runbook.json",
+  launchReadinessGates: "plans/VET-1560-launch-readiness-gates.json",
   modelTechniqueIntakeSnapshot: "plans/VET-1560-model-technique-intake-snapshot.json",
   modelEvidencePacket: "plans/VET-1563-extraction-promotion-evidence-packet.json",
   modelPromotionPreflight:
@@ -114,6 +115,7 @@ function buildAudit() {
     ? readJson(artifactPaths.localProjectManagerSync)
     : null;
   const azureLiveSyncRunbook = readJson(artifactPaths.azureLiveSyncRunbook);
+  const launchReadinessGates = readJson(artifactPaths.launchReadinessGates);
   const modelTechniqueIntake = loadModelTechniqueIntake();
   const modelEvidencePacket = readJson(artifactPaths.modelEvidencePacket);
   const modelPreflight = readJson(artifactPaths.modelPromotionPreflight);
@@ -146,6 +148,7 @@ function buildAudit() {
   const regenerationSummary = readJson(artifactPaths.regenerationSummary);
 
   const projectManagerLane = dashboard.lanes.find((lane) => lane.id === "project-manager");
+  const launchLane = dashboard.lanes.find((lane) => lane.id === "launch-public-beta");
   const modelLane = dashboard.lanes.find((lane) => lane.id === "model-nim-promotion");
   const productLane = dashboard.lanes.find((lane) => lane.id === "whoop-product-contract");
   const claimLane = dashboard.lanes.find((lane) => lane.id === "claim-language");
@@ -226,6 +229,22 @@ function buildAudit() {
         `Regeneration command status: ${regenerationSummary.overallStatus}.`,
       ],
       blockers: [],
+    },
+    {
+      id: "launch-public-beta-readiness",
+      requirement:
+        "Keep Cohort 1 launch, monitoring, rollback, owner-visible UX proof, and public-beta decision gates aligned with current production evidence.",
+      status: launchReadinessGates.publicBetaDecision?.status === "go" ? "proved" : "blocked",
+      evidence: [
+        launchLane?.summary ?? "launch/public beta dashboard lane missing",
+        `Public beta decision: ${launchReadinessGates.publicBetaDecision?.status}; ${launchReadinessGates.publicBetaDecision?.reason}`,
+        `Owner-visible UX proof: ${launchReadinessGates.ownerVisibleUxProof?.status}; not proved=${launchReadinessGates.ownerVisibleUxProof?.notProved?.length ?? 0}.`,
+        `Backend scheduler/readout proof: ${launchReadinessGates.backendSchedulerReadoutProof?.status}; not proved=${launchReadinessGates.backendSchedulerReadoutProof?.notProved?.length ?? 0}.`,
+        `Launch gates reviewed: ${launchReadinessGates.gates?.length ?? 0}.`,
+      ],
+      blockers: (launchReadinessGates.blockers ?? []).map(
+        (blocker) => `launch-readiness: ${blocker}`,
+      ),
     },
     {
       id: "nim-and-ai-model-improvement",
@@ -323,7 +342,7 @@ function buildAudit() {
       reason:
         blockers.length === 0
           ? "Every audited requirement has current evidence."
-          : "The full objective still requires live project-manager sync and model/NIM promotion evidence; product work is partial.",
+          : "The full objective still requires launch/public-beta production evidence, live project-manager sync, and model/NIM promotion evidence; product work is partial.",
     },
   };
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runServiceBusWorkerOnce } from "@/lib/azure/service-bus-worker";
+import { createSymptomChatTurnHandler } from "@/lib/symptom-chat/async-turn-worker";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -86,7 +87,9 @@ async function runWorker(request: Request) {
     return jsonNoStore({ error: "Unauthorized" }, 401);
   }
 
-  const result = await runServiceBusWorkerOnce();
+  const result = await runServiceBusWorkerOnce({
+    handler: createSymptomChatTurnHandler(),
+  });
   return jsonNoStore(result, statusForWorkerResult(result));
 }
 

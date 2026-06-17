@@ -141,6 +141,23 @@ function buildUsageLimitResponse(
   );
 }
 
+function buildUsageGateUnavailableResponse(session: TriageSession) {
+  return NextResponse.json(
+    {
+      type: "usage_limit",
+      code: "USAGE_GATE_UNAVAILABLE",
+      error: "We couldn't verify your plan usage",
+      message:
+        "We couldn't verify your plan usage just now. Please try starting your symptom check again in a moment.",
+      requires_upgrade: false,
+      ready_for_report: false,
+      conversationState: "idle",
+      session: sanitizeSessionForClient(session),
+    },
+    { status: 503 }
+  );
+}
+
 export async function maybeBuildUsageLimitResponse(input: {
   action: SymptomChatAction;
   messages: SymptomChatMessage[];
@@ -191,7 +208,18 @@ export async function maybeBuildUsageLimitResponse(input: {
       ? null
       : buildUsageLimitResponse(input.session, usageGate);
   } catch (error) {
-    console.error("[Billing] Usage gate failed open:", error);
-    return null;
+    // Demo mode (Supabase unconfigured) is a deliberate permissive pass —
+    // createServerSupabaseClient throws "DEMO_MODE" with no backend to gate on.
+    if (error instanceof Error && error.message === "DEMO_MODE") {
+      return null;
+    }
+    // Real lookup/database failures must fail CLOSED for a NEW chat start: an
+    // outage should not silently grant unlimited free checks. In-progress
+    // conversations and emergencies were already exempted before the try block.
+    console.error(
+      "[Billing] Usage gate unavailable, failing closed for new chat:",
+      error
+    );
+    return buildUsageGateUnavailableResponse(input.session);
   }
 }

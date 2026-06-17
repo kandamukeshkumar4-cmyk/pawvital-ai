@@ -13,7 +13,7 @@
     },
     "outputCaptureAuthorization": {
       "path": "plans/VET-1563-extraction-output-capture-authorization.json",
-      "sha256": "be04aa08468bca3ab2e9b8e4f34aa0d1e870fb2a002e08bb77a77a680e39a9d1"
+      "sha256": "f387bc9c1f275e19aac15c191e835a3510a6a8000352d61c074830e29efb67f5"
     }
   },
   "currentCandidateState": {

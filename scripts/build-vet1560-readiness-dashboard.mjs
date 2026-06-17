@@ -16,6 +16,7 @@ const artifactPaths = {
   azureLiveSyncRunbook: "plans/VET-1560-azure-live-sync-runbook.json",
   projectManagerSync: "plans/VET-1560-project-manager-sync-readiness.json",
   projectManagerLocalSync: "plans/VET-1560-project-manager-local-sync.json",
+  launchReadinessGates: "plans/VET-1560-launch-readiness-gates.json",
   modelPromotionPreflight:
     "plans/VET-1563-extraction-promotion-readiness-preflight.json",
   modelPromotionEvidencePacket:
@@ -113,6 +114,7 @@ function buildDashboard() {
     : null;
   const azurePreflight = readJson(artifactPaths.azureSyncPreflight);
   const azureLiveSyncRunbook = readJson(artifactPaths.azureLiveSyncRunbook);
+  const launchReadinessGates = readJson(artifactPaths.launchReadinessGates);
   const modelPreflight = readJson(artifactPaths.modelPromotionPreflight);
   const modelEvidencePacket = readJson(artifactPaths.modelPromotionEvidencePacket);
   const modelCandidateSelectionPacket = readJson(
@@ -191,6 +193,20 @@ function buildDashboard() {
         : modelPreflight.nextActions?.[0]?.action ?? "Populate model promotion evidence.",
     },
     {
+      id: "launch-public-beta",
+      label: "Launch/public beta readiness",
+      status:
+        launchReadinessGates.publicBetaDecision?.status === "go"
+          ? "ready"
+          : "blocked",
+      summary: `${launchReadinessGates.gates?.length ?? 0} launch gates reviewed; public beta=${launchReadinessGates.publicBetaDecision?.status}; model promotion=${launchReadinessGates.modelPromotionDecision?.status}; owner-visible UX proof=${launchReadinessGates.ownerVisibleUxProof?.status}; backend readout proof=${launchReadinessGates.backendSchedulerReadoutProof?.status}.`,
+      nextAction:
+        launchReadinessGates.publicBetaDecision?.status === "go"
+          ? "Reconfirm live production evidence immediately before public launch."
+          : launchReadinessGates.publicBetaDecision?.reason ??
+            "Refresh launch readiness gates before public beta.",
+    },
+    {
       id: "claim-language",
       label: "Claim-language review",
       status: claimReview.verdict === "pass" ? "ready" : "blocked",
@@ -247,6 +263,7 @@ function buildDashboard() {
       "Keep owner-visible readiness copy tied to evidence coverage and claim-language review.",
       "Keep Tugboat-style instruction optimization proposal-only until a reviewer approves a trace bundle, policy file, eval suite, and rollback plan.",
       "Use npm run vet1560:regenerate-all to refresh this evidence chain before handoff.",
+      "Keep launch/public-beta GO separate from review-only roadmap readiness; public beta requires current production evidence.",
     ],
   };
 }

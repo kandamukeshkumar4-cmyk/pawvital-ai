@@ -8,6 +8,11 @@ import {
 } from "@/lib/stripe";
 import { shouldBypassPlanGateForPrivateTester } from "@/lib/private-tester-access";
 import { blocksAdditionalCheckoutForUser } from "@/lib/subscription-state";
+import {
+  generalApiLimiter,
+  checkRateLimit,
+  getRateLimitId,
+} from "@/lib/rate-limit";
 
 interface ProfileSnapshot {
   email: string | null;
@@ -146,6 +151,22 @@ async function resolveStripeCustomerId(input: {
 }
 
 export async function POST(request: Request) {
+  const rateLimitResult = await checkRateLimit(
+    generalApiLimiter,
+    getRateLimitId(request)
+  );
+  if (!rateLimitResult.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   if (!isStripeConfigured) {
     return NextResponse.json(
       { error: "Stripe checkout is not configured", code: "STRIPE_NOT_CONFIGURED" },

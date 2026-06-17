@@ -18,7 +18,7 @@
       "invalidJsonOutputCount": 0,
       "invalidSchemaOutputCount": 0
     },
-    "protectedClinicalProofStatus": "ready",
+    "protectedClinicalProofStatus": "blocked",
     "rollbackPlanStatus": "ready"
   },
   "inputArtifacts": {
@@ -36,7 +36,7 @@
     },
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
-      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
     }
   },
   "smokeRunbook": [
