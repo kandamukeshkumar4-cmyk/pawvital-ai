@@ -59,7 +59,9 @@ function buildRunbook() {
       process.env.PRODUCT_PRODUCTION_SMOKE_RUNBOOK_GENERATED_AT ??
       "2026-05-31T00:00:00.000Z",
     note:
-      "Runbook only. It defines the live migration and authenticated production owner smoke evidence to collect; this command does not call production or apply migrations.",
+      readiness.authenticatedProductionSmokeComplete
+        ? "Runbook and evidence checklist. Production migration and owner smoke evidence are attached by reference; this command does not call production or apply migrations."
+        : "Runbook only. It defines the live migration and authenticated production owner smoke evidence to collect; this command does not call production or apply migrations.",
     inputArtifacts: {
       productionReadiness: artifact(
         readinessPath,
@@ -69,8 +71,15 @@ function buildRunbook() {
     },
     preconditions: {
       readyForProductionSmoke: readiness.readyForProductionSmoke === true,
-      liveMigrationApplied: false,
-      authenticatedProductionSmokeComplete: false,
+      liveMigrationApplied: readiness.liveMigrationApplied === true,
+      authenticatedProductionSmokeComplete:
+        readiness.authenticatedProductionSmokeComplete === true,
+      currentDeploymentReadOnlySmokePassed:
+        readiness.currentDeploymentReadOnlySmokePassed === true,
+      currentDeploymentAuthenticatedWriteSmokeComplete:
+        readiness.currentDeploymentAuthenticatedWriteSmokeComplete === true,
+      currentDeploymentSmokeStatus:
+        readiness.currentDeploymentSmokeStatus ?? "unknown",
       rlsPoliciesPresentInSql: hasRlsPolicies,
       rollbackTargetsPresentInSql: hasRollbackSql,
     },
@@ -135,12 +144,21 @@ function buildRunbook() {
       },
     ],
     evidencePacketTemplate: {
-      migrationApplied: false,
-      authenticatedProductionSmokeComplete: false,
+      migrationApplied: readiness.liveMigrationApplied === true,
+      authenticatedProductionSmokeComplete:
+        readiness.authenticatedProductionSmokeComplete === true,
+      currentDeploymentReadOnlySmokePassed:
+        readiness.currentDeploymentReadOnlySmokePassed === true,
+      currentDeploymentAuthenticatedWriteSmokeComplete:
+        readiness.currentDeploymentAuthenticatedWriteSmokeComplete === true,
+      productionEvidence: readiness.productionEvidence ?? null,
+      recoveryCheckpointStatus: readiness.recoveryCheckpointStatus,
       requiredAttachments: [
         "migration id or SQL run id",
         "schema verification output",
+        "current deployment id and alias inspect output",
         "owner history read response metadata",
+        "current-deployment daily readiness save response metadata before claiming current write coverage",
         "daily readiness save response metadata",
         "RLS denial response metadata",
         "claim-safety spot-check notes",
@@ -152,8 +170,8 @@ function buildRunbook() {
       "Drop only daily_readiness_snapshots and recovery_checkpoints through approved database rollback if the migration itself must be reverted.",
     ],
     blockers: [
-      "live Supabase migration is not applied",
-      "authenticated production owner workflow smoke is not complete",
+      ...(readiness.blockers ?? []),
+      ...(readiness.currentDeploymentGaps ?? []),
     ],
     guardrails: [
       "Do not use service-role credentials for owner smoke.",

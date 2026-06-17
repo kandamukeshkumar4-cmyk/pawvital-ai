@@ -174,7 +174,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -214,7 +214,7 @@
             "exists": true
           }
         },
-        "persistenceStatus": "foundation files exist locally; live migration and authenticated production smoke still required"
+        "persistenceStatus": "go-current-production; current deployment smoke status=current-deployment-write-exercised; recovery checkpoint status=schema-and-route-ready-production-write-not-exercised"
       }
     },
     {
@@ -235,15 +235,21 @@
           "tests/readiness-snapshot.test.ts",
           "tests/product-intelligence-panel.test.tsx"
         ],
-        "persistenceStatus": "baseline-shift signal is stored inside the existing readiness JSON payload; no live migration applied"
+        "persistenceStatus": "baseline-shift signal is stored inside the existing readiness JSON payload and was persisted in the VET-1571C daily-readiness production smoke"
       }
     }
   ],
+  "productionEvidenceStatus": {
+    "liveMigrationApplied": true,
+    "authenticatedProductionSmokeComplete": true,
+    "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
+    "blockers": []
+  },
   "dependencyArtifacts": [
     {
       "path": "plans/VET-1564-product-intelligence-roadmap.json",
       "exists": true,
-      "sha256": "9ed312c0405b355b0884c20a64255d49531d56e419b1adb8f89d25411e5e9a7d"
+      "sha256": "027f424ca49c2b389a492e588fc0fc9826613047e47ac1813d7be87ba62d33e0"
     },
     {
       "path": "src/lib/product-intelligence.ts",
@@ -273,7 +279,7 @@
     {
       "path": "plans/VET-1564-product-persistence-schema-readiness.json",
       "exists": true,
-      "sha256": "8ecaacb7b0c45bbc04fc8e1b1950af4033f3f3284ab0c82e162d222972b1fb69"
+      "sha256": "ade325c1183b684674d4044f5d2d10dadf669c29ebdf59d0b6d10a59866170f1"
     },
     {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -329,6 +335,11 @@
       "path": "tests/analytics-product-owner-workflow.test.ts",
       "exists": true,
       "sha256": "4637ed8567e057b970d8527ca5220df4250f69e419aa224e02599ed72a5d7f09"
+    },
+    {
+      "path": "plans/VET-1564-production-evidence.json",
+      "exists": true,
+      "sha256": "73856380da716d3f2894fa2b66f8b45cb163a6a4b185099cfb3732c157179dcb"
     }
   ],
   "missingDependencyArtifacts": [],

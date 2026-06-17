@@ -158,6 +158,18 @@ function buildAudit() {
       ? localProjectManagerSync.localFallback.validation
       : null;
   const sourceIds = modelTechniqueIntake.intake.sources?.map((source) => source.id) ?? [];
+  const productBlockers = [
+    ...(productProductionReadiness.blockers ?? []),
+    ...(productProductionReadiness.currentDeploymentGaps ?? []),
+  ];
+  if (
+    productBlockers.length === 0 &&
+    productProductionReadiness.authenticatedProductionSmokeComplete !== true
+  ) {
+    productBlockers.push(
+      "Daily readiness and recovery live migration is not applied; authenticated production owner workflow smoke is not complete."
+    );
+  }
   const requiredSources = ["fareedkhan-train-llm-from-scratch", "syndicalt-tugboat"];
   const hasRequiredSources = requiredSources.every((sourceId) => sourceIds.includes(sourceId));
   const modelBlockers = [
@@ -262,18 +274,24 @@ function buildAudit() {
     {
       id: "whoop-for-dogs-app",
       requirement: "Move the app toward a best-in-world Whoop-for-Dogs style experience.",
-      status: productLane?.status === "ready" && claimLane?.status === "ready" ? "partial" : "blocked",
+      status:
+        ["ready", "partial"].includes(productLane?.status) &&
+        claimLane?.status === "ready"
+          ? "partial"
+          : "blocked",
       evidence: [
         productLane?.summary ?? "product lane missing",
         claimLane?.summary ?? "claim lane missing",
         `${readinessContract.nextImplementationTickets?.length ?? 0} implementation tickets defined.`,
-        `Production readiness packet: readyForProductionSmoke=${productProductionReadiness.readyForProductionSmoke}, liveMigrationApplied=${productProductionReadiness.liveMigrationApplied}, authenticatedProductionSmokeComplete=${productProductionReadiness.authenticatedProductionSmokeComplete}.`,
+        `Production readiness packet: readyForProductionSmoke=${productProductionReadiness.readyForProductionSmoke}, liveMigrationApplied=${productProductionReadiness.liveMigrationApplied}, authenticatedProductionSmokeComplete=${productProductionReadiness.authenticatedProductionSmokeComplete}, currentDeploymentReadOnlySmokePassed=${productProductionReadiness.currentDeploymentReadOnlySmokePassed}, currentDeploymentAuthenticatedWriteSmokeComplete=${productProductionReadiness.currentDeploymentAuthenticatedWriteSmokeComplete}.`,
+        productProductionReadiness.productionEvidence
+          ? `Production evidence: writeDeployment=${productProductionReadiness.productionEvidence.deploymentId}, currentDeployment=${productProductionReadiness.productionEvidence.currentDeploymentId}, historicalReadinessRowId=${productProductionReadiness.productionEvidence.readinessRowId}, currentReadinessRowId=${productProductionReadiness.productionEvidence.currentReadinessRowId}, postSmoke500JsonRecordCount=${productProductionReadiness.productionEvidence.postSmoke500JsonRecordCount}.`
+          : "Production evidence artifact is not attached.",
+        `Recovery checkpoint status: ${productProductionReadiness.recoveryCheckpointStatus ?? "unknown"}.`,
         `Production smoke runbook: ${productProductionSmokeRunbook.migrationRunbook?.length ?? 0} migration steps and ${productProductionSmokeRunbook.smokeRunbook?.length ?? 0} smoke evidence steps defined.`,
         "Readiness/recovery persistence schema, pure row mappers, authenticated read/write route, and analytics save/history controls exist.",
       ],
-      blockers: [
-        "Daily readiness and recovery live migration is not applied; authenticated production owner workflow smoke is not complete.",
-      ],
+      blockers: productBlockers,
     },
     {
       id: "claim-safety",

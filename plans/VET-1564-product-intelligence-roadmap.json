@@ -9,19 +9,15 @@
     {
       "id": "VET-1564A",
       "title": "Persist daily readiness snapshots from existing evidence",
-      "status": "planned-blocked",
-      "blockers": [
-        "live Supabase migration is not applied",
-        "authenticated production smoke is not complete"
-      ]
+      "status": "go-current-production",
+      "blockers": []
     },
     {
       "id": "VET-1564B",
       "title": "Add report-linked recovery checkpoints",
-      "status": "planned-blocked",
+      "status": "schema-and-route-ready-production-write-not-exercised",
       "blockers": [
-        "live Supabase migration is not applied",
-        "authenticated production smoke is not complete"
+        "recovery checkpoint production write was not exercised by the VET-1571C owner smoke"
       ]
     },
     {
@@ -33,11 +29,8 @@
     {
       "id": "VET-1564D",
       "title": "Add deterministic baseline-shift product intelligence",
-      "status": "review-only-foundation",
-      "blockers": [
-        "live Supabase migration is not applied",
-        "authenticated production smoke is not complete"
-      ]
+      "status": "go-current-production",
+      "blockers": []
     }
   ],
   "claimGuards": [
@@ -91,8 +84,25 @@
       "path": "supabase-product-intelligence-schema.sql",
       "exists": true,
       "sha256": "f6c0b944d2ad5daea36f0421226335eb0e604dec28037a92344c1b49dfc00bb0"
+    },
+    {
+      "path": "plans/VET-1564-production-evidence.json",
+      "exists": true,
+      "sha256": "73856380da716d3f2894fa2b66f8b45cb163a6a4b185099cfb3732c157179dcb"
     }
   ],
+  "productionEvidenceStatus": {
+    "liveMigrationApplied": true,
+    "authenticatedProductionSmokeComplete": true,
+    "productionPersistenceStatus": "go-current-production",
+    "currentDeploymentReadOnlySmokePassed": true,
+    "currentDeploymentAuthenticatedWriteSmokeComplete": true,
+    "currentDeploymentSmokeStatus": "current-deployment-write-exercised",
+    "recoveryCheckpointStatus": "schema-and-route-ready-production-write-not-exercised",
+    "blockers": [],
+    "currentDeploymentBlockers": [],
+    "currentDeploymentGaps": []
+  },
   "acceptanceGates": [
     "schema readiness packet passes local review",
     "baseline-shift tests cover below-baseline, unknown, urgent override, and panel rendering states",

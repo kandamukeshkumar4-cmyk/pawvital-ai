@@ -7,6 +7,11 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import {
+  loadProductProductionEvidence,
+  productProductionEvidencePath,
+  summarizeProductProductionEvidence,
+} from "./product-production-evidence.mjs";
 
 const schemaPath = resolve(process.cwd(), "supabase-product-intelligence-schema.sql");
 const outPath = resolve(
@@ -20,6 +25,9 @@ function hasAll(text, values) {
 
 function buildReadiness() {
   const sql = existsSync(schemaPath) ? readFileSync(schemaPath, "utf8") : "";
+  const productionEvidence = loadProductProductionEvidence();
+  const productionEvidenceSummary =
+    summarizeProductProductionEvidence(productionEvidence);
   const requiredFragments = [
     "CREATE TABLE IF NOT EXISTS public.daily_readiness_snapshots",
     "CREATE TABLE IF NOT EXISTS public.recovery_checkpoints",
@@ -57,12 +65,46 @@ function buildReadiness() {
     requiredFragmentsPresent: hasAll(sql, requiredFragments),
     missingRequired,
     forbiddenClaimFragmentsPresent: forbiddenPresent,
-    liveMigrationApplied: false,
-    nextActions: [
-      "Review SQL in Supabase SQL Editor or migration workflow.",
-      "Apply only after product owner approves persistence semantics.",
-      "Verify the authenticated write route against the migrated tables before enabling owner workflow automation.",
-    ],
+    liveMigrationApplied: productionEvidenceSummary.liveMigrationApplied,
+    productionEvidence: productionEvidence
+      ? {
+          path: productProductionEvidencePath,
+          decision: productionEvidence.decision,
+          deploymentId: productionEvidence.production?.deploymentId,
+          targetDatabaseHost: productionEvidence.production?.targetDatabaseHost,
+          schemaSha256: productionEvidence.production?.schemaSha256,
+          liveMigrationApplied:
+            productionEvidenceSummary.liveMigrationApplied,
+          authenticatedProductionSmokeComplete:
+            productionEvidenceSummary.authenticatedProductionSmokeComplete,
+          productionPersistenceStatus:
+            productionEvidenceSummary.productionPersistenceStatus,
+          currentDeploymentReadOnlySmokePassed:
+            productionEvidenceSummary.currentDeploymentReadOnlySmokePassed,
+          currentDeploymentAuthenticatedWriteSmokeComplete:
+            productionEvidenceSummary.currentDeploymentAuthenticatedWriteSmokeComplete,
+          currentDeploymentSmokeStatus:
+            productionEvidenceSummary.currentDeploymentSmokeStatus,
+          recoveryCheckpointStatus:
+            productionEvidenceSummary.recoveryCheckpointStatus,
+          blockers: productionEvidenceSummary.blockers,
+          currentDeploymentBlockers:
+            productionEvidenceSummary.currentDeploymentBlockers,
+          currentDeploymentGaps:
+            productionEvidenceSummary.currentDeploymentGaps,
+        }
+      : null,
+    nextActions: productionEvidenceSummary.liveMigrationApplied
+      ? [
+          "Keep the reviewed schema evidence attached to VET-1564 production readiness.",
+          "Rerun the authenticated owner workflow smoke after any schema, route, RLS, or owner-visible copy change.",
+          "Capture a recovery-checkpoint production write or deterministic blocked-reason smoke before claiming recovery write coverage.",
+        ]
+      : [
+          "Review SQL in Supabase SQL Editor or migration workflow.",
+          "Apply only after product owner approves persistence semantics.",
+          "Verify the authenticated write route against the migrated tables before enabling owner workflow automation.",
+        ],
     guardrails: [
       "This verifier does not apply schema changes.",
       "Do not store diagnosis, treatment, prognosis, or emergency-clearance claims.",
