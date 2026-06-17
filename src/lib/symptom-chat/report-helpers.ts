@@ -809,7 +809,14 @@ export function runAfterSafely(task: () => Promise<void>): boolean {
 }
 
 export function parseReportJSON(rawText: string): Record<string, unknown> {
-  return safeParseJson<Record<string, unknown>>(rawText, "symptom chat report");
+  const parsed = safeParseJson<Record<string, unknown>>(
+    rawText,
+    "symptom chat report"
+  );
+  if (typeof parsed.urgency_rationale === "string") {
+    parsed.urgency_rationale = parsed.urgency_rationale.trim();
+  }
+  return parsed;
 }
 
 export async function safetyVerify(

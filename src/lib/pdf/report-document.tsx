@@ -68,6 +68,44 @@ function likelihoodLabel(likelihood: "high" | "moderate" | "low"): string {
   return "Less Likely";
 }
 
+const URGENCY_STEPS = [
+  "Monitor at home",
+  "Within 48 hours",
+  "Within 24 hours",
+  "Emergency now",
+];
+
+function recommendationToStep(
+  recommendation: SymptomReport["recommendation"]
+): number {
+  switch (recommendation) {
+    case "monitor":
+      return 0;
+    case "vet_48h":
+      return 1;
+    case "vet_24h":
+      return 2;
+    case "emergency_vet":
+      return 3;
+    default:
+      return 1;
+  }
+}
+
+function severityActiveColor(severity: SymptomReport["severity"]): string {
+  switch (severity) {
+    case "low":
+      return brand.emerald;
+    case "medium":
+      return brand.amber;
+    case "high":
+      return brand.orange;
+    case "emergency":
+    default:
+      return brand.red;
+  }
+}
+
 interface ReportPdfDocumentProps {
   report: SymptomReport;
   generatedAt: string;
@@ -84,6 +122,8 @@ export function ReportPdfDocument({
   const emergencyReport = isEmergencyReport(report);
   const escalatedReport = isEscalatedReport(report);
   const band = severityBandStyle(report.severity);
+  const activeStep = recommendationToStep(report.recommendation);
+  const activeStepColor = severityActiveColor(report.severity);
   const dxRows =
     report.differential_diagnoses?.map((d) => ({
       condition: d.condition,
@@ -131,8 +171,56 @@ export function ReportPdfDocument({
               )}
             </Text>
           ) : null}
-          <Text style={[pdfStyles.body, { marginTop: 8 }]}>{report.explanation}</Text>
+          <View style={pdfStyles.urgencyScaleRow}>
+            {URGENCY_STEPS.map((label, i) => {
+              const active = i === activeStep;
+              return (
+                <View
+                  key={label}
+                  style={[
+                    pdfStyles.urgencyStep,
+                    active
+                      ? {
+                          backgroundColor: activeStepColor,
+                          borderColor: activeStepColor,
+                        }
+                      : {},
+                  ]}
+                >
+                  <Text
+                    style={
+                      active
+                        ? pdfStyles.urgencyStepTextActive
+                        : pdfStyles.urgencyStepText
+                    }
+                  >
+                    {label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
+
+        <Text style={pdfStyles.sectionTitle}>What&apos;s happening</Text>
+        <Text style={pdfStyles.body}>{report.explanation}</Text>
+
+        {report.urgency_rationale ? (
+          <View style={pdfStyles.reasonBox}>
+            <Text
+              style={{
+                fontSize: 9,
+                fontFamily: "Helvetica-Bold",
+                color: brand.gray900,
+              }}
+            >
+              Why a vet — and why within this timeframe
+            </Text>
+            <Text style={[pdfStyles.body, { marginTop: 4 }]}>
+              {report.urgency_rationale}
+            </Text>
+          </View>
+        ) : null}
 
         {calibratedConfidence ? (
           <>
@@ -177,7 +265,7 @@ export function ReportPdfDocument({
 
         {report.vet_handoff_summary ? (
           <>
-            <Text style={pdfStyles.sectionTitle}>Vet handoff summary</Text>
+            <Text style={pdfStyles.sectionTitle}>For your vet</Text>
             <View style={pdfStyles.handoffBox}>
               <Text style={pdfStyles.body}>{report.vet_handoff_summary}</Text>
             </View>
@@ -186,7 +274,7 @@ export function ReportPdfDocument({
 
         {dxRows.length > 0 ? (
           <>
-            <Text style={pdfStyles.sectionTitle}>Differential diagnoses</Text>
+            <Text style={pdfStyles.sectionTitle}>What it could be</Text>
             <View style={pdfStyles.table}>
               {dxRows.map((row, i) => (
                 <View
@@ -214,9 +302,6 @@ export function ReportPdfDocument({
                         ]}
                       />
                     </View>
-                    <Text style={[pdfStyles.bodySmall, { marginTop: 2 }]}>
-                      {(row.fraction * 100).toFixed(0)}% (illustrative)
-                    </Text>
                   </View>
                 </View>
               ))}
