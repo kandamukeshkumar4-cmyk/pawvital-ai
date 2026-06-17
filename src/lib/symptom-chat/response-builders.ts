@@ -7,6 +7,24 @@ import {
 import { recordConversationTelemetry } from "@/lib/symptom-memory";
 import { sanitizeSessionForClient } from "./context-helpers";
 import type { ImageGateWarning } from "@/lib/image-gate";
+import {
+  getSelfCheckGuide,
+  type SelfCheckGuide,
+} from "@/lib/clinical/self-check-guides";
+
+export const QUESTION_TO_GUIDE_KEY: Record<string, string> = {
+  gum_color_check: "gum_color",
+  gi_keep_water_down_check: "dehydration",
+  bloat_retching_abdomen_check: "abdominal_distension",
+  breathing_effort_check: "breathing_effort",
+  dehydration_check: "dehydration",
+};
+
+export function getGuideForQuestion(questionId: string): SelfCheckGuide | null {
+  const guideKey = QUESTION_TO_GUIDE_KEY[questionId];
+  if (!guideKey) return null;
+  return getSelfCheckGuide(guideKey) ?? null;
+}
 
 interface EmergencyResponseInput {
   petName: string;

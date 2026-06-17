@@ -342,6 +342,17 @@ function checkRedFlags(session: TriageSession): void {
       session.red_flags_triggered.push(flag);
     }
   }
+
+  // De-escalation signal — owner reports improvement; record in timeline but do not add a red flag.
+  if (
+    getUrgencyFromTrajectory(String(session.extracted_answers.condition_progression ?? "")) === "deescalate" &&
+    session.case_memory
+  ) {
+    const note = "Owner reports condition is improving (de-escalation signal).";
+    if (!session.case_memory.timeline_notes.includes(note)) {
+      session.case_memory.timeline_notes.push(note);
+    }
+  }
 }
 
 function isRedFlagTriggered(flag: string, session: TriageSession): boolean {
@@ -678,9 +689,29 @@ export function getSynergyFlags(session: TriageSession): string[] {
   return getSymptomSynergyFlags(session);
 }
 
+/**
+ * Translate a condition_progression answer to a triage urgency signal.
+ * "escalate"   — owner reports worsening; caller should raise urgency one tier.
+ * "deescalate" — owner reports improving; caller may note it as a positive signal.
+ * "same"       — stable or unknown; no urgency change.
+ */
+export function getUrgencyFromTrajectory(
+  answer: string
+): "escalate" | "same" | "deescalate" {
+  if (answer === "worsening") return "escalate";
+  if (answer === "improving") return "deescalate";
+  return "same";
+}
+
 function getCompositeEmergencyRedFlags(session: TriageSession): string[] {
   const flags = new Set<string>();
   const answers = session.extracted_answers;
+
+  // Urgency trajectory — owner-reported worsening is a moderate escalation signal.
+  // It is not an emergency on its own but increments urgency in buildDiagnosisContext.
+  if (getUrgencyFromTrajectory(String(answers.condition_progression ?? "")) === "escalate") {
+    flags.add("condition_worsening");
+  }
 
   // Synergy rules fire first — these are the highest-confidence composite signals
   for (const flag of getSymptomSynergyFlags(session)) {
