@@ -53,7 +53,7 @@ export interface PrivateTesterCohortCommandCenter {
     signInFailures: number;
     signedInTesters: number;
     testerAccessDisabled: number;
-    testersInvited: number;
+    allowlistedTesters: number;
   };
   triage: Record<PrivateTesterTriageSeverity, PrivateTesterTriageCase[]>;
 }
@@ -207,6 +207,7 @@ function buildNotes(
   const notes = [
     "Sign-in failures and deletion-request counts remain zero until a dedicated auth/admin incident log is wired into production storage.",
     "Reports opened is derived from report-linked case rows in the founder review ledger, not browser-level analytics.",
+    "Allowlisted tester count comes from private-tester configuration; sent invitation delivery must be verified separately.",
     "The current command center is cohort-aware only when private-tester cases are present in the stored feedback ledger.",
   ];
 
@@ -298,7 +299,7 @@ export function buildPrivateTesterCohortCommandCenter(input: {
       signInFailures: 0,
       signedInTesters: input.privateTesterDashboard.testers.length,
       testerAccessDisabled: input.privateTesterDashboard.summary.authAccessDisabled,
-      testersInvited: input.privateTesterDashboard.config.allowedEmailCount,
+      allowlistedTesters: input.privateTesterDashboard.config.allowedEmailCount,
     },
     triage: {
       P0: triageEntries.filter((entry) => entry.severity === "P0"),
@@ -314,16 +315,21 @@ export function buildPrivateTesterRegistryTemplateRows(
 ) {
   return testers.map((tester) => ({
     access_disabled: tester.access.blocked ? "yes" : "no",
+    allowlist_status: tester.access.allowed
+      ? "allowlisted"
+      : tester.access.blocked
+        ? "blocked"
+        : "not_allowlisted",
     consent_status: "manual-verify",
     deletion_requested: "manual-verify",
-    device_browser: "capture-during-invite",
-    dog_age: "capture-during-invite",
-    dog_breed_size: "capture-during-invite",
+    device_browser: "capture-during-onboarding",
+    dog_age: "capture-during-onboarding",
+    dog_breed_size: "capture-during-onboarding",
     email: tester.user.email ?? "",
     feedback_submitted: tester.counts.outcomeFeedbackEntries > 0 ? "yes" : "no",
     first_login_timestamp: "capture-during-launch",
     first_symptom_check_timestamp: tester.recentCases.at(-1)?.createdAt ?? "",
-    invite_status: tester.access.allowed ? "invited" : tester.access.blocked ? "blocked" : "not-invited",
+    invitation_sent_proof: "manual-verify",
     tester_alias: tester.user.fullName ?? tester.user.id,
   }));
 }

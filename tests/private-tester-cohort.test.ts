@@ -1,4 +1,7 @@
-import { buildPrivateTesterCohortCommandCenter } from "@/lib/private-tester-cohort";
+import {
+  buildPrivateTesterCohortCommandCenter,
+  buildPrivateTesterRegistryTemplateRows,
+} from "@/lib/private-tester-cohort";
 import type { AdminFeedbackLedgerDashboardData } from "@/lib/admin-feedback-ledger";
 import type { PrivateTesterDashboardData } from "@/lib/private-tester-admin";
 
@@ -248,6 +251,7 @@ describe("private tester cohort command center helpers", () => {
       dataDeletionRequests: 1,
       emergencyResults: 1,
       feedbackSubmitted: 3,
+      allowlistedTesters: 5,
       negativeFeedback: 2,
       questionFlowIssueFlags: 1,
       repeatedQuestionFlags: 1,
@@ -255,8 +259,11 @@ describe("private tester cohort command center helpers", () => {
       reportsOpened: 3,
       signedInTesters: 2,
       testerAccessDisabled: 1,
-      testersInvited: 5,
     });
+    expect(dashboard.summary).not.toHaveProperty("testersInvited");
+    expect(dashboard.notes).toContain(
+      "Allowlisted tester count comes from private-tester configuration; sent invitation delivery must be verified separately."
+    );
     expect(dashboard.filters.failedSignInOrAccessSessions).toEqual([
       expect.objectContaining({
         accessDisabled: true,
@@ -281,6 +288,23 @@ describe("private tester cohort command center helpers", () => {
     expect(dashboard.triage.P0).toHaveLength(1);
     expect(dashboard.triage.P1).toHaveLength(1);
     expect(dashboard.triage.P3).toHaveLength(1);
+  });
+
+  it("keeps allowlist status separate from invitation-send proof in registry rows", () => {
+    const rows = buildPrivateTesterRegistryTemplateRows(
+      buildPrivateTesterDashboard().testers
+    );
+
+    expect(rows[0]).toMatchObject({
+      allowlist_status: "allowlisted",
+      invitation_sent_proof: "manual-verify",
+    });
+    expect(rows[0]).not.toHaveProperty("invite_status");
+    expect(rows[1]).toMatchObject({
+      access_disabled: "yes",
+      allowlist_status: "blocked",
+      invitation_sent_proof: "manual-verify",
+    });
   });
 
   it("does not propagate unexpected telemetry or secret fields from feedback cases", () => {

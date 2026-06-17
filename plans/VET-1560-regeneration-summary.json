@@ -341,7 +341,7 @@
         {
           "path": "plans/VET-1563-protected-clinical-diff-proof.json",
           "exists": true,
-          "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+          "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
         }
       ]
     },
@@ -365,7 +365,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
           "exists": true,
-          "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+          "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
         }
       ]
     },
@@ -389,7 +389,7 @@
         {
           "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
           "exists": true,
-          "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
+          "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
         }
       ]
     },
@@ -413,7 +413,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-checklist.json",
           "exists": true,
-          "sha256": "dc65a53e6fed8e09d214fd1c8e876cc840efb91ce4f02f0d766a50a471f9254d"
+          "sha256": "4b1def17c7cdf7ec4ee4e5044f76ac03d87473f8645a7dbcf46c458f749e5bc2"
         }
       ]
     },
@@ -437,7 +437,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
           "exists": true,
-          "sha256": "0d5134776f860d18c1ba7611a70ca883856456c5647e460c91f8e936d934d01a"
+          "sha256": "29b8a8720e1fc6d1ec86aef799204d20a9c2052c1322434300aa445d345dedf7"
         }
       ]
     },
@@ -461,7 +461,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
           "exists": true,
-          "sha256": "e3b16647dea0bdad36cf28bd120b8eb790c5c5ba476c4a636fcdbc7e16b7531e"
+          "sha256": "a6e229bff06194f307e22f90ef10d24409a2f7a1c60cc36b351bb5e63bb9abeb"
         }
       ]
     },
@@ -485,7 +485,7 @@
         {
           "path": "plans/VET-1563-extraction-owner-approval-request.json",
           "exists": true,
-          "sha256": "5af6d83182802c37a365c78de62ce67f99df3d54aa0317a7dd90528efe8b7243"
+          "sha256": "ef36733a6f46620cd541f8d5b8304f238de3f2f0f1ccb903d279fc9266b99d67"
         }
       ]
     },
@@ -509,7 +509,7 @@
         {
           "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
           "exists": true,
-          "sha256": "e3b16647dea0bdad36cf28bd120b8eb790c5c5ba476c4a636fcdbc7e16b7531e"
+          "sha256": "a6e229bff06194f307e22f90ef10d24409a2f7a1c60cc36b351bb5e63bb9abeb"
         }
       ]
     },
@@ -533,7 +533,7 @@
         {
           "path": "plans/VET-1563-extraction-output-capture-authorization.json",
           "exists": true,
-          "sha256": "be04aa08468bca3ab2e9b8e4f34aa0d1e870fb2a002e08bb77a77a680e39a9d1"
+          "sha256": "f387bc9c1f275e19aac15c191e835a3510a6a8000352d61c074830e29efb67f5"
         }
       ]
     },
@@ -557,7 +557,7 @@
         {
           "path": "plans/VET-1563-extraction-candidate-approval-intake.json",
           "exists": true,
-          "sha256": "d4b1aca32bf82fe8f10e576c5a735f77d87147e694a57ebc0526a2f922fa4be6"
+          "sha256": "e9d1a44cbda45b947b2a12715e3c5d20e7b2964bd8b55719ef0697adb16fc74a"
         }
       ]
     },
@@ -626,7 +626,7 @@
         {
           "path": "plans/VET-1564-longitudinal-readiness-contract.json",
           "exists": true,
-          "sha256": "c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96"
+          "sha256": "54948b3b05e18fcfedd684f604810d57f60275ea8bb9606674108a8f9872e34f"
         }
       ]
     },
@@ -649,7 +649,7 @@
         {
           "path": "plans/VET-1564C-claim-language-review.json",
           "exists": true,
-          "sha256": "543f4e0341c0e8e70656d8c172d5b7602515606a7281c24303b0c29ee95ef06d"
+          "sha256": "9f9c2ab488c54d175942d573dc6bf1da19dc630fbbe04b2ed2b7adb57f768a21"
         }
       ]
     },
@@ -672,7 +672,7 @@
         {
           "path": "plans/VET-1564-production-readiness.json",
           "exists": true,
-          "sha256": "b4aec836949a75079d75efe7cfcc6bc8fcfdac88663ce37f0a5cb613886c009c"
+          "sha256": "ff1f5ab73ada60269c5b8efc92d6f1e0a5c3159c79f2ec9d29bc8f3cc7f767e9"
         }
       ]
     },
@@ -695,7 +695,7 @@
         {
           "path": "plans/VET-1564-production-smoke-runbook.json",
           "exists": true,
-          "sha256": "1643880a8d48c9ef1c68b95d744da274a8b0b2c65b06d88470b6da667e2d56d7"
+          "sha256": "39d890717cd92f3245c79da1f519cc7c232a094027737cf5cf1b9562dd472349"
         }
       ]
     },
@@ -873,12 +873,12 @@
         {
           "path": "plans/VET-1560-readiness-dashboard.json",
           "exists": true,
-          "sha256": "00f13cdcda4c1fb2520bc1139af8fec5e183c88c3c343151dfca95fac3d1ce89"
+          "sha256": "cfd24755ea9b2e6eec07494ce864c326c1326545dae68c1283446fb9f0551dc6"
         },
         {
           "path": "plans/VET-1560-readiness-dashboard.md",
           "exists": true,
-          "sha256": "0ebb4afe33d020552d2dbee8d1a0a94d04668f188d0f62602972a4c3afc58718"
+          "sha256": "c58339c1ddd168e8a63e6c760fe684bc6e1d8e521b5cf51fa93249849101edd1"
         }
       ]
     },
@@ -902,12 +902,12 @@
         {
           "path": "plans/VET-1560-completion-audit.json",
           "exists": true,
-          "sha256": "c5f91adb6cf03968e31dd4205520fb4f2b6604c925f47c862766c6aee5a3a87e"
+          "sha256": "62b5109f132c5e170549aec7026b0d88c04e7b9f0aab5c6811d2377de7b043a7"
         },
         {
           "path": "plans/VET-1560-completion-audit.md",
           "exists": true,
-          "sha256": "5452af2130e0738f2d728d25d9d7a642ba60c9e87c58383956ed17a1334cbca7"
+          "sha256": "44d204b4dce25496673175ee53f966cc410f4fb55809c5e770c41dfdc79a15c6"
         }
       ]
     }

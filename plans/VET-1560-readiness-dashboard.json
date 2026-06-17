@@ -1,7 +1,7 @@
 {
   "ticket": "VET-1560",
   "mode": "review-only-dashboard",
-  "generatedAt": "2026-06-06T23:45:11.000Z",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
   "overallStatus": "blocked",
   "summary": "1 lane(s) blocked before the full objective is complete.",
   "artifacts": [
@@ -28,12 +28,12 @@
     {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
       "exists": true,
-      "sha256": "0d5134776f860d18c1ba7611a70ca883856456c5647e460c91f8e936d934d01a"
+      "sha256": "29b8a8720e1fc6d1ec86aef799204d20a9c2052c1322434300aa445d345dedf7"
     },
     {
       "path": "plans/VET-1563-extraction-promotion-evidence-packet.json",
       "exists": true,
-      "sha256": "e3b16647dea0bdad36cf28bd120b8eb790c5c5ba476c4a636fcdbc7e16b7531e"
+      "sha256": "a6e229bff06194f307e22f90ef10d24409a2f7a1c60cc36b351bb5e63bb9abeb"
     },
     {
       "path": "plans/VET-1563-extraction-candidate-selection-packet.json",
@@ -58,12 +58,12 @@
     {
       "path": "plans/VET-1563-extraction-output-capture-authorization.json",
       "exists": true,
-      "sha256": "be04aa08468bca3ab2e9b8e4f34aa0d1e870fb2a002e08bb77a77a680e39a9d1"
+      "sha256": "f387bc9c1f275e19aac15c191e835a3510a6a8000352d61c074830e29efb67f5"
     },
     {
       "path": "plans/VET-1563-extraction-candidate-approval-intake.json",
       "exists": true,
-      "sha256": "d4b1aca32bf82fe8f10e576c5a735f77d87147e694a57ebc0526a2f922fa4be6"
+      "sha256": "e9d1a44cbda45b947b2a12715e3c5d20e7b2964bd8b55719ef0697adb16fc74a"
     },
     {
       "path": "plans/VET-1563-extraction-scorecard-review-packet.json",
@@ -78,42 +78,42 @@
     {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
       "exists": true,
-      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
     },
     {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
       "exists": true,
-      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
     },
     {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
       "exists": true,
-      "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
+      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
     },
     {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
       "exists": true,
-      "sha256": "5af6d83182802c37a365c78de62ce67f99df3d54aa0317a7dd90528efe8b7243"
+      "sha256": "ef36733a6f46620cd541f8d5b8304f238de3f2f0f1ccb903d279fc9266b99d67"
     },
     {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "1d2282cc70a2c0d1a454aaa2a5b6bde594b446836d795ea86ebc740577916694"
+      "sha256": "9f9c2ab488c54d175942d573dc6bf1da19dc630fbbe04b2ed2b7adb57f768a21"
     },
     {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96"
+      "sha256": "54948b3b05e18fcfedd684f604810d57f60275ea8bb9606674108a8f9872e34f"
     },
     {
       "path": "plans/VET-1564-production-readiness.json",
       "exists": true,
-      "sha256": "a585f10910e8806090629cd9a670aeed3f7bffe2729406d606a3e37420948d7b"
+      "sha256": "ff1f5ab73ada60269c5b8efc92d6f1e0a5c3159c79f2ec9d29bc8f3cc7f767e9"
     },
     {
       "path": "plans/VET-1564-production-smoke-runbook.json",
       "exists": true,
-      "sha256": "1643880a8d48c9ef1c68b95d744da274a8b0b2c65b06d88470b6da667e2d56d7"
+      "sha256": "39d890717cd92f3245c79da1f519cc7c232a094027737cf5cf1b9562dd472349"
     },
     {
       "path": "plans/VET-1565-tugboat-governance-plan.json",
@@ -139,15 +139,15 @@
       "id": "model-nim-promotion",
       "label": "Model/NIM promotion",
       "status": "blocked",
-      "summary": "5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6.",
+      "summary": "6 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 6 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=7.",
       "nextAction": "validation=0, holdout=0, threshold=4.2"
     },
     {
       "id": "claim-language",
       "label": "Claim-language review",
       "status": "ready",
-      "summary": "497 strings reviewed with no blocked findings.",
-      "nextAction": "Rerun node scripts/build-product-claim-language-review.mjs --write after any owner-visible copy change."
+      "summary": "397 strings reviewed with no blocked findings.",
+      "nextAction": "Rerun npm run product:claim-language-review after any owner-visible copy change."
     },
     {
       "id": "whoop-product-contract",
@@ -165,7 +165,7 @@
     }
   ],
   "blockers": [
-    "Model/NIM promotion: 5 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 5 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=6."
+    "Model/NIM promotion: 6 blocked evidence categories; candidate selection resolved=false; candidate evidence provenance resolved=false; No approved candidate model or adapter identity was found in the VET-1562 offline package or narrow-pack experiment manifest. Sources inspected: vet-1562-offline-experiment-package=unresolved-candidate-identity, runpod-narrow-model-pack-manifest=experiment-manifest-only; candidate approval intake status=blocked, missing fields=11; promotion ticket candidate resolved=false; owner approval request ready=false; 0/3 candidate output hashes populated; candidate capture gates blocked=3; diagnostic candidate content hashes without evidence hash=0; evidence packet has 6 attachment slots; capture runbook has 5 gated steps; capture authorization ready=false; promotion smoke runbook has 5 evidence steps; promotion ticket blockers=7."
   ],
   "guardrails": [
     "Do not treat local project-manager fallback evidence as Azure Boards live-sync evidence.",

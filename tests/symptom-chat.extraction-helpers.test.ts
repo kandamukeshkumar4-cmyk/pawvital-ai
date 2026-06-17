@@ -51,4 +51,57 @@ describe("symptom chat extraction helpers", () => {
       expect.arrayContaining(["breathing_distress_at_rest", "blue_gums"])
     );
   });
+
+  // P1a regression: "shaking his head" must NOT fire trembling
+  it("P1a: shaking his head routes to ear_scratching, not trembling", () => {
+    const message =
+      "Buddy keeps shaking his head and scratching at his left ear constantly";
+
+    const symptoms = extractSymptomsFromKeywords(message);
+
+    expect(symptoms).toContain("ear_scratching");
+    expect(symptoms).not.toContain("trembling");
+  });
+
+  it("P1a: shaking her head routes to ear_scratching, not trembling", () => {
+    const symptoms = extractSymptomsFromKeywords(
+      "She keeps shaking her head and pawing at her ear."
+    );
+
+    expect(symptoms).toContain("ear_scratching");
+    expect(symptoms).not.toContain("trembling");
+  });
+
+  it("P1a: body trembling still routes to trembling", () => {
+    const symptoms = extractSymptomsFromKeywords(
+      "My dog is trembling and cannot stop shaking all over."
+    );
+
+    expect(symptoms).toContain("trembling");
+  });
+
+  // P1b regression: chocolate ingestion must bootstrap vomiting symptom track
+  it("P1b: ate chocolate triggers vomiting symptom (drives toxin_exposure follow-up)", () => {
+    const symptoms = extractSymptomsFromKeywords(
+      "I think Daisy ate some chocolate off the counter about an hour ago"
+    );
+
+    expect(symptoms).toContain("vomiting");
+  });
+
+  it("P1b: ate dark chocolate triggers vomiting symptom", () => {
+    const symptoms = extractSymptomsFromKeywords(
+      "It was dark chocolate, like baking chocolate, maybe a few squares"
+    );
+
+    expect(symptoms).toContain("vomiting");
+  });
+
+  it("P1b: xylitol ingestion triggers vomiting symptom", () => {
+    const symptoms = extractSymptomsFromKeywords(
+      "My dog ate some sugar-free gum that contains xylitol"
+    );
+
+    expect(symptoms).toContain("vomiting");
+  });
 });

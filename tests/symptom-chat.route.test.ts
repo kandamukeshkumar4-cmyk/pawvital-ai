@@ -57,6 +57,10 @@ const mockCalibrateDiagnosticConfidence = jest.fn();
 const mockTrackRouteTelemetry = jest.fn();
 const mockTrackException = jest.fn();
 const mockPublishTriageLiveUpdate = jest.fn();
+const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
+  user: { id: "test-user-id" },
+  supabase: {},
+});
 const mockEventType = {
   REPORT_READY: "REPORT_READY",
   URGENCY_HIGH: "URGENCY_HIGH",
@@ -64,6 +68,19 @@ const mockEventType = {
   SUBSCRIPTION_CHANGED: "SUBSCRIPTION_CHANGED",
   PET_ADDED: "PET_ADDED",
 } as const;
+const originalSymptomChatTurnDepth = process.env.SYMPTOM_CHAT_TURN_DEPTH;
+
+beforeEach(() => {
+  process.env.SYMPTOM_CHAT_TURN_DEPTH = "deep";
+});
+
+afterAll(() => {
+  if (originalSymptomChatTurnDepth === undefined) {
+    delete process.env.SYMPTOM_CHAT_TURN_DEPTH;
+  } else {
+    process.env.SYMPTOM_CHAT_TURN_DEPTH = originalSymptomChatTurnDepth;
+  }
+});
 
 jest.mock("@/lib/rate-limit", () => ({
   symptomChatLimiter: {},
@@ -130,6 +147,18 @@ jest.mock("@/lib/minimax", () => ({
   isMiniMaxConfigured: () => true,
   compressCaseMemoryWithMiniMax: (...args: unknown[]) =>
     mockCompressCaseMemoryWithMiniMax(...args),
+}));
+
+const mockShouldRunMiniMaxCompression = jest.fn(() => true);
+jest.mock("@/lib/symptom-chat/turn-depth", () => ({
+  ...jest.requireActual("@/lib/symptom-chat/turn-depth"),
+  shouldRunMiniMaxCompression: (...args: unknown[]) =>
+    mockShouldRunMiniMaxCompression(...args),
+}));
+
+jest.mock("@/lib/api-auth", () => ({
+  requireAuthenticatedApiUser: (...args: unknown[]) =>
+    mockRequireAuthenticatedApiUser(...args),
 }));
 
 jest.mock("@/lib/hf-sidecars", () => {
@@ -446,6 +475,8 @@ function buildModerateReportSession() {
   let session = createSession();
   session = addSymptoms(session, ["excessive_scratching"]);
   session = recordAnswer(session, "scratch_location", "ears");
+  session = recordAnswer(session, "scratch_duration", "about 2 weeks");
+  session = recordAnswer(session, "flea_prevention", true);
   session.case_memory = {
     ...session.case_memory!,
     latest_owner_turn: "He keeps scratching around his ears.",
@@ -722,6 +753,151 @@ describe("symptom-chat mixed text + image routing", () => {
     mockPublishTriageLiveUpdate.mockResolvedValue({
       enabled: true,
       published: true,
+    });
+  });
+
+  describe("IMP-02: request body size cap", () => {
+    it("rejects an oversized body (large content-length) with 413 PAYLOAD_TOO_LARGE", async () => {
+      const oversizedImage = "a".repeat(10 * 1024 * 1024 + 1024);
+      const request = new Request("http://localhost/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "chat",
+          pet: PET,
+          session: createSession(),
+          image: oversizedImage,
+          messages: [{ role: "user", content: "my dog is limping" }],
+        }),
+      });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(request);
+      const payload = await response.json();
+
+      expect(response.status).toBe(413);
+      expect(payload.code).toBe("PAYLOAD_TOO_LARGE");
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
+    });
+
+    it("rejects an oversized streamed body with no content-length via the streaming cap", async () => {
+      const oneMb = new TextEncoder().encode("a".repeat(1024 * 1024));
+      let emitted = 0;
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (emitted >= 11) {
+            controller.close();
+            return;
+          }
+          controller.enqueue(oneMb);
+          emitted += 1;
+        },
+      });
+      const request = new Request("http://localhost/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        // Stream bodies require duplex; not yet in the lib RequestInit type.
+        duplex: "half",
+      } as RequestInit & { duplex: "half" });
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(request);
+      const payload = await response.json();
+
+      expect(response.status).toBe(413);
+      expect(payload.code).toBe("PAYLOAD_TOO_LARGE");
+    });
+
+    it("still parses a normal-sized chat request (not 413)", async () => {
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+
+      expect(response.status).not.toBe(413);
+    });
+  });
+
+  describe("IMP-05: server-bound image gate override", () => {
+    const GATE_WARNING = {
+      reason: "blurry" as const,
+      topLabel: "blur",
+      topScore: 0.9,
+    };
+
+    function makeImageRequest(extra: Record<string, unknown> = {}) {
+      return new Request("http://localhost/api/ai/symptom-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "chat",
+          pet: PET,
+          session: createSession(),
+          image: IMAGE,
+          imageMeta: {
+            width: 900,
+            height: 900,
+            blurScore: 30,
+            estimatedKb: 120,
+          },
+          messages: [
+            { role: "user", content: "my dog has a wound on its leg" },
+          ],
+          ...extra,
+        }),
+      });
+    }
+
+    it("returns image_gate + a token when gateOverride lacks a valid token", async () => {
+      mockShouldAnalyzeWoundImage.mockReturnValue(true);
+      mockEvaluateImageGate.mockResolvedValueOnce(GATE_WARNING);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeImageRequest({ gateOverride: true }));
+      const payload = await response.json();
+
+      expect(payload.type).toBe("image_gate");
+      expect(typeof payload.gate_override_token).toBe("string");
+      expect(payload.gate_override_token.length).toBeGreaterThan(0);
+    });
+
+    it("bypasses the gate when a valid token is echoed for the same image", async () => {
+      mockShouldAnalyzeWoundImage.mockReturnValue(true);
+      // Persistent (not Once): the gate WOULD warn on both requests, so only a
+      // valid token — not a consumed mock — can keep the 2nd out of image_gate.
+      mockEvaluateImageGate.mockResolvedValue(GATE_WARNING);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      // First request is gated and receives a server-issued token.
+      const gated = await (await POST(makeImageRequest())).json();
+      expect(gated.type).toBe("image_gate");
+      const token = gated.gate_override_token;
+      expect(typeof token).toBe("string");
+
+      // Re-send the SAME image with that token -> gateOverrideAccepted is true,
+      // the gate block is skipped entirely, vision proceeds.
+      const response = await POST(
+        makeImageRequest({ gateOverride: true, gateOverrideToken: token })
+      );
+      const payload = await response.json();
+      expect(payload.type).not.toBe("image_gate");
+    });
+
+    it("rejects a garbage/expired override token (gate still runs)", async () => {
+      mockShouldAnalyzeWoundImage.mockReturnValue(true);
+      mockEvaluateImageGate.mockResolvedValueOnce(GATE_WARNING);
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeImageRequest({
+          gateOverride: true,
+          gateOverrideToken: "123.deadbeef",
+        })
+      );
+      const payload = await response.json();
+
+      expect(payload.type).toBe("image_gate");
     });
   });
 
@@ -1154,7 +1330,7 @@ describe("symptom-chat mixed text + image routing", () => {
       "EXPLICITLY REFERENCE PHOTO IN WORDING: NO"
     );
     expect(payload.message).toBe(
-      "I'm keeping track of what you've shared so far about Bruno's limping. How big is the affected area? Compare to a coin, golf ball, or your palm."
+      "How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(payload.message).not.toContain("photo");
   });
@@ -1179,7 +1355,7 @@ describe("symptom-chat mixed text + image routing", () => {
     expect(response.status).toBe(200);
     expect(payload.type).toBe("question");
     expect(payload.message).toBe(
-      "I'm keeping track of what you've shared so far about Bruno's limping. How big is the affected area? Compare to a coin, golf ball, or your palm."
+      "How big is the affected area? Compare to a coin, golf ball, or your palm."
     );
     expect(mockPhraseWithLlama).not.toHaveBeenCalled();
     expect(mockVerifyQuestionWithNemotron).not.toHaveBeenCalled();
@@ -1440,7 +1616,15 @@ describe("symptom-chat mixed text + image routing", () => {
 
     const session = createSession();
     session.known_symptoms = ["wound_skin_issue"];
-    session.extracted_answers = { wound_location: "left hind leg" };
+    session.answered_questions = ["wound_location", "wound_size", "wound_duration", "wound_discharge", "wound_licking", "trauma_history"];
+    session.extracted_answers = {
+      wound_location: "left hind leg",
+      wound_size: "quarter-sized",
+      wound_duration: "2 days",
+      wound_discharge: "none",
+      wound_licking: false,
+      trauma_history: "no_trauma",
+    };
     session.vision_analysis = "Superficial moist lesion on the left hind leg.";
     session.vision_severity = "needs_review";
     session.latest_image_domain = "skin_wound";
@@ -1750,7 +1934,15 @@ describe("symptom-chat mixed text + image routing", () => {
 
       const session = createSession();
       session.known_symptoms = ["wound_skin_issue"];
-      session.extracted_answers = { wound_location: "left hind leg" };
+      session.answered_questions = ["wound_location", "wound_size", "wound_duration", "wound_discharge", "wound_licking", "trauma_history"];
+      session.extracted_answers = {
+        wound_location: "left hind leg",
+        wound_size: "small",
+        wound_duration: "1 day",
+        wound_discharge: "none",
+        wound_licking: false,
+        trauma_history: "no_trauma",
+      };
       session.vision_analysis = "Superficial moist lesion on the left hind leg.";
       session.vision_severity = "needs_review";
       session.latest_image_domain = "skin_wound";
@@ -7375,7 +7567,7 @@ describe("VET-900 comprehensive scenarios", () => {
       expect(mockExtractWithQwen).not.toHaveBeenCalled();
     });
 
-    it("fails open when the billing gate check throws", async () => {
+    it("fails closed with 503 when the billing gate check throws", async () => {
       const consoleErrorSpy = jest
         .spyOn(console, "error")
         .mockImplementation(() => undefined);
@@ -7389,16 +7581,35 @@ describe("VET-900 comprehensive scenarios", () => {
       );
       const payload = await response.json();
 
-      expect(response.status).toBe(200);
-      expect(payload.type).toBe("question");
-      expect(mockExtractWithQwen).toHaveBeenCalled();
+      expect(response.status).toBe(503);
+      expect(payload.type).toBe("usage_limit");
+      expect(payload.code).toBe("USAGE_GATE_UNAVAILABLE");
+      expect(mockExtractWithQwen).not.toHaveBeenCalled();
       expect(
         consoleErrorSpy.mock.calls.some((call) =>
-          String(call[0]).includes("[Billing] Usage gate failed open:")
+          String(call[0]).includes(
+            "[Billing] Usage gate unavailable, failing closed for new chat:"
+          )
         )
       ).toBe(true);
 
       consoleErrorSpy.mockRestore();
+    });
+
+    it("still passes (demo mode) when the billing client throws DEMO_MODE", async () => {
+      mockCreateServerSupabaseClient.mockRejectedValueOnce(
+        new Error("DEMO_MODE")
+      );
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(createSession(), "my dog is limping")
+      );
+      const payload = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("question");
+      expect(mockExtractWithQwen).toHaveBeenCalled();
     });
 
     it("bypasses the usage gate for emergency-start conversations", async () => {
@@ -8283,6 +8494,146 @@ describe("VET-900: world-class symptom checker regression pack", () => {
         "How long did the seizure or collapse episode last?"
       );
       expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("IMP-01A: server-side readiness gate on generate_report", () => {
+    it("IMP-01A: forged not-ready session is rejected with 409 SESSION_NOT_READY", async () => {
+      const session = createSession();
+      // Empty session: no symptoms, no answers, no red flags — classic forgery
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      expect(response.status).toBe(409);
+      expect(payload.code).toBe("SESSION_NOT_READY");
+      expect(payload.ready_for_report).toBe(false);
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+
+    it("IMP-01A: ready session still generates report (no regression)", async () => {
+      const session = buildModerateReportSession();
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      // Guard must NOT fire — status 409 / SESSION_NOT_READY is the only wrong outcome to prevent
+      expect(response.status).not.toBe(409);
+      expect(payload.code).not.toBe("SESSION_NOT_READY");
+      // The route proceeds to report generation (may be report or fail-safe depending on mock setup)
+      expect(payload.type).toBe("report");
+    });
+
+    it("IMP-01A: blocking-critical-info terminal outcome unchanged by readiness gate", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["difficulty_breathing"]);
+      session = recordAnswer(session, "breathing_rate", 40);
+      session = recordAnswer(session, "gum_color", "pink_normal");
+      session = recordAnswer(session, "position_preference", "standing");
+      // breathing_onset is still unanswered — triggers findReportBlockingCriticalInfo
+      session.case_memory = {
+        ...session.case_memory!,
+        latest_owner_turn: "He is breathing hard and his gums still look pink.",
+      };
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      // findReportBlockingCriticalInfo fires FIRST — readiness guard must not interfere
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("cannot_assess");
+      expect(payload.reason_code).toBe("owner_cannot_assess_breathing_onset");
+      expect(mockDiagnoseWithDeepSeek).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("IMP-01B: sanitize forged client red flags on empty sessions", () => {
+    it("IMP-01B: drops forged red flag from an otherwise-empty session on a chat turn", async () => {
+      const session = createSession();
+      // Forge a real flag ID on an otherwise-empty session (no symptoms, no answers, no vision flags)
+      session.red_flags_triggered = ["blue_gums"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "my dog seems a little tired")
+      );
+      const payload = await response.json();
+
+      // The forged flag must be dropped — tiredness message cannot support blue_gums
+      expect(response.status).toBe(200);
+      expect(payload.type).not.toBe("emergency");
+      expect(payload.session.red_flags_triggered).not.toContain("blue_gums");
+    });
+
+    it("IMP-01B: forged empty session + generate_report returns 409 after flag drop (pairs with IMP-01A)", async () => {
+      const session = createSession();
+      // Forge blue_gums to try to bypass IMP-01A readiness gate via red-flag bypass
+      session.red_flags_triggered = ["blue_gums"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(makeReportRequest(session));
+      const payload = await response.json();
+
+      // After IMP-01B drops the forged flag, isReadyForDiagnosis returns false → 409
+      expect(response.status).toBe(409);
+      expect(payload.code).toBe("SESSION_NOT_READY");
+    });
+
+    it("IMP-01B: genuine first-turn emergency message still escalates (no regression)", async () => {
+      const session = createSession(); // no forged flags
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(
+          session,
+          "My dog collapsed and his gums look blue-gray."
+        )
+      );
+      const payload = await response.json();
+
+      // Real emergency extracted from message text — must still escalate
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+    });
+
+    it("IMP-01B: rich session with known_symptoms is left untouched by sanitizer (CRITICAL)", async () => {
+      let session = createSession();
+      session = addSymptoms(session, ["coughing"]);
+      session = recordAnswer(session, "cough_type", "dry");
+      // Known symptoms present → hasOtherEvidence = true → helper must skip sanitization
+      session.red_flags_triggered = ["blue_gums"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "his gums are pale now")
+      );
+      const payload = await response.json();
+
+      // red_flags_triggered must survive — session escalates to emergency
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.session.red_flags_triggered).toContain("blue_gums");
+    });
+
+    it("IMP-01B: session with vision_red_flags is left untouched by sanitizer (CRITICAL)", async () => {
+      const session = createSession();
+      // vision_red_flags present → hasOtherEvidence = true → helper must skip sanitization
+      session.vision_red_flags = ["wound_deep_bleeding"];
+      session.red_flags_triggered = ["wound_deep_bleeding"];
+
+      const { POST } = await import("@/app/api/ai/symptom-chat/route");
+      const response = await POST(
+        makeTextOnlyRequest(session, "there is a lot of blood from the wound")
+      );
+      const payload = await response.json();
+
+      // vision-derived flags must survive unchanged
+      expect(response.status).toBe(200);
+      expect(payload.type).toBe("emergency");
+      expect(payload.session.red_flags_triggered).toContain("wound_deep_bleeding");
     });
   });
 

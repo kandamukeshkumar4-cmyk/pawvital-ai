@@ -57,6 +57,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm run security:secrets
 
+  supabase-env-check:
+    name: Supabase Env Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm run check:supabase-env
+
   lint:
     name: Lint
     needs: install
@@ -269,6 +279,11 @@ jobs:
         if: always()
         run: npm run eval:benchmark:lint
         continue-on-error: true
+      - name: Owner-language eval scaffold (VET-1574)
+        id: owner_language_eval
+        if: always()
+        run: npm run eval:owner-language
+        continue-on-error: true
       - name: Upload benchmark integrity artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -282,7 +297,8 @@ jobs:
         if: always()
         run: |
           if [ "${{ steps.benchmark_validate.outcome }}" != "success" ] || \
-             [ "${{ steps.benchmark_lint.outcome }}" != "success" ]; then
+             [ "${{ steps.benchmark_lint.outcome }}" != "success" ] || \
+             [ "${{ steps.owner_language_eval.outcome }}" != "success" ]; then
             echo "Benchmark integrity checks failed"
             exit 1
           fi

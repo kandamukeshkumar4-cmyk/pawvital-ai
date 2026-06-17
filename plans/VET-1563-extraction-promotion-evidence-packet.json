@@ -7,11 +7,11 @@
   "inputArtifacts": {
     "preflight": {
       "path": "plans/VET-1563-extraction-promotion-readiness-preflight.json",
-      "sha256": "0d5134776f860d18c1ba7611a70ca883856456c5647e460c91f8e936d934d01a"
+      "sha256": "29b8a8720e1fc6d1ec86aef799204d20a9c2052c1322434300aa445d345dedf7"
     },
     "checklist": {
       "path": "plans/VET-1563-extraction-promotion-checklist.json",
-      "sha256": "dc65a53e6fed8e09d214fd1c8e876cc840efb91ce4f02f0d766a50a471f9254d"
+      "sha256": "4b1def17c7cdf7ec4ee4e5044f76ac03d87473f8645a7dbcf46c458f749e5bc2"
     },
     "outputCapturePlan": {
       "path": "plans/VET-1563-extraction-frozen-output-capture-plan.json",
@@ -31,24 +31,24 @@
     },
     "protectedClinicalDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
-      "sha256": "fccd0d008074d9fb6051b439e5e8bc9db00003485463c2f50508e75decbf72f8"
+      "sha256": "2d36095e5cc4a7d7056405db089456d58921182125d3097b28f26ef8f96841a8"
     },
     "promotionTicket": {
       "path": "plans/VET-1563-extraction-runtime-promotion-ticket.json",
-      "sha256": "1bdbd79ca1c9f3a2d05470b0e8d3e0c4143980f1aab60d85b739ea811136464f"
+      "sha256": "c288f161b8260a4199103d9e58c14bb0aa29908c9f0fec4134cf89937e56c687"
     },
     "ownerApprovalRequest": {
       "path": "plans/VET-1563-extraction-owner-approval-request.json",
-      "sha256": "5af6d83182802c37a365c78de62ce67f99df3d54aa0317a7dd90528efe8b7243"
+      "sha256": "ef36733a6f46620cd541f8d5b8304f238de3f2f0f1ccb903d279fc9266b99d67"
     },
     "promotionSmokeRunbook": {
       "path": "plans/VET-1563-extraction-promotion-smoke-runbook.json",
-      "sha256": "4469c84fbc4d709206b19b3183503d399f2d393c028652867e8c1d7af043ff73"
+      "sha256": "ca0987e6a637f2cffc3babe927d9f989953ce17a074d75b30f6c5f388aabc92d"
     }
   },
   "readiness": {
     "readyForPromotionTicket": false,
-    "blockedEvidenceCount": 5,
+    "blockedEvidenceCount": 6,
     "blockers": [
       "scorecard-populated: validation average 0 below threshold 4.2",
       "scorecard-populated: holdout average 0 below threshold 4.2",
@@ -62,8 +62,10 @@
       "separate-promotion-ticket: holdout score below 4.2",
       "separate-promotion-ticket: scorecard contains unresolved issues",
       "separate-promotion-ticket: frozen baseline/candidate outputs and hashes are incomplete",
+      "separate-promotion-ticket: protected clinical diff proof missing or not ready",
       "separate-promotion-ticket: candidate model or adapter identity is not approved",
       "separate-promotion-ticket: explicit owner approval artifact is missing",
+      "protected-clinical-no-diff: Protected deterministic clinical files have local diffs and need an authorizing clinical ticket.",
       "output-capture: 3 baseline output hash(es) missing",
       "output-capture: 3 candidate output hash(es) missing"
     ]
@@ -126,8 +128,20 @@
         "holdout score below 4.2",
         "scorecard contains unresolved issues",
         "frozen baseline/candidate outputs and hashes are incomplete",
+        "protected clinical diff proof missing or not ready",
         "candidate model or adapter identity is not approved",
         "explicit owner approval artifact is missing"
+      ],
+      "attachmentSlot": null,
+      "reviewer": null,
+      "completedAt": null
+    },
+    {
+      "id": "protected-clinical-no-diff",
+      "currentStatus": "blocked",
+      "requiredProof": "Promotion PR must show no unauthorized diffs in deterministic clinical logic files.",
+      "blockers": [
+        "Protected deterministic clinical files have local diffs and need an authorizing clinical ticket."
       ],
       "attachmentSlot": null,
       "reviewer": null,
@@ -259,6 +273,7 @@
       "holdout score below 4.2",
       "scorecard contains unresolved issues",
       "frozen baseline/candidate outputs and hashes are incomplete",
+      "protected clinical diff proof missing or not ready",
       "candidate model or adapter identity is not approved",
       "explicit owner approval artifact is missing"
     ]
@@ -305,12 +320,12 @@
       "src/lib/symptom-memory.ts"
     ],
     "diffProofCommand": "git diff -- src/lib/triage-engine.ts src/lib/clinical-matrix.ts src/app/api/ai/symptom-chat/route.ts src/lib/symptom-memory.ts",
-    "status": "ready",
+    "status": "blocked",
     "attachedDiffProof": {
       "path": "plans/VET-1563-protected-clinical-diff-proof.json",
-      "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "diffLineCount": 0,
-      "proof": "No local diff in protected deterministic clinical files."
+      "diffSha256": "2d27ab77533130d9d1a6e1ee12fb00ff7fa8697ae3ed8b2db4769d4cd09065e2",
+      "diffLineCount": 34,
+      "proof": "Protected deterministic clinical files have a local diff."
     }
   },
   "promotionDecision": {

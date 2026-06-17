@@ -1,6 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+const SERVICE_ROLE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UifQ.signature";
+const SERVICE_ROLE_JWT_WITHOUT_SIGNATURE =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UifQ";
+const SERVICE_ROLE_JWT_WITH_BAD_SIGNATURE_CHARS =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UifQ.bad!";
+const ANON_ROLE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIn0.signature";
+
 function parseEnvFile(raw: string): Record<string, string> {
   const values: Record<string, string> = {};
 
@@ -96,10 +105,65 @@ describe("security env readiness", () => {
 
   it("refuses to create a service-role client when the example Supabase URL is still present", async () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "your_supabase_url_here";
-    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_JWT;
 
     const { getServiceSupabase } = await import("@/lib/supabase-admin");
 
     expect(getServiceSupabase()).toBeNull();
+  });
+
+  it("refuses malformed and anon-role Supabase service keys", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+
+    const { getServiceSupabase, getServiceSupabaseConfigurationStatus } =
+      await import("@/lib/supabase-admin");
+
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+    expect(getServiceSupabase()).toBeNull();
+    expect(getServiceSupabaseConfigurationStatus()).toEqual({
+      configured: false,
+      reason: "service_key_malformed",
+    });
+
+    process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_JWT_WITHOUT_SIGNATURE;
+    expect(getServiceSupabase()).toBeNull();
+    expect(getServiceSupabaseConfigurationStatus()).toEqual({
+      configured: false,
+      reason: "service_key_malformed",
+    });
+
+    process.env.SUPABASE_SERVICE_ROLE_KEY =
+      SERVICE_ROLE_JWT_WITH_BAD_SIGNATURE_CHARS;
+    expect(getServiceSupabase()).toBeNull();
+    expect(getServiceSupabaseConfigurationStatus()).toEqual({
+      configured: false,
+      reason: "service_key_malformed",
+    });
+
+    process.env.SUPABASE_SERVICE_ROLE_KEY = ANON_ROLE_JWT;
+    expect(getServiceSupabase()).toBeNull();
+    expect(getServiceSupabaseConfigurationStatus()).toEqual({
+      configured: false,
+      reason: "service_key_not_service_role",
+    });
+  });
+
+  it("reports safe configuration reason codes without exposing secrets", async () => {
+    const { getServiceSupabaseConfigurationStatus } = await import(
+      "@/lib/supabase-admin"
+    );
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "not-a-url";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_JWT;
+    expect(getServiceSupabaseConfigurationStatus()).toEqual({
+      configured: false,
+      reason: "url_invalid",
+    });
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = SERVICE_ROLE_JWT;
+    expect(getServiceSupabaseConfigurationStatus()).toEqual({
+      configured: true,
+    });
   });
 });

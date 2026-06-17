@@ -155,10 +155,26 @@ import {
   extractSymptomsFromKeywords,
 } from "@/lib/symptom-chat/extraction-helpers";
 import { maybeCompressStructuredCaseMemory } from "@/lib/symptom-chat/memory-compression";
+import { createTurnDeadline } from "@/lib/symptom-chat/turn-deadline";
+import { resolveTurnDepth } from "@/lib/symptom-chat/turn-depth";
+import { checkSupabaseEnvConsistency } from "@/lib/supabase-env-guard";
+import {
+  runClinicalTurnOrchestrator,
+} from "@/lib/clinical-intelligence/clinical-turn-orchestrator";
+import { shouldPromptVetRecordUpload } from "@/lib/symptom-chat/vet-record-prompt";
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
+import {
+  isAsyncWorkerReplay,
+  maybeOffloadSymptomChatTurn,
+} from "@/lib/symptom-chat/async-turn-offload";
 import { maybeBuildUsageLimitResponse } from "@/lib/symptom-chat/usage-limit-gate";
+import { requireAuthenticatedApiUser } from "@/lib/api-auth";
+import {
+  issueGateOverrideToken,
+  verifyGateOverrideToken,
+} from "@/lib/symptom-chat/gate-override-token";
 import {
   generateReport,
   generateTerminalOutcomeReport,
@@ -191,6 +207,12 @@ import {
 
 // Detect which engine to use
 const useNvidia = isNvidiaConfigured();
+// Vercel-only function-timeout directive (ignored on Azure App Service / Container
+// Apps / SWA). The cross-platform turn budget that actually gates stage execution is
+// SYMPTOM_CHAT_MAX_DURATION_SEC in @/lib/symptom-chat/turn-deadline. Keep this literal
+// in sync with the Vercel plan ceiling when deploying on Vercel (Hobby 60s, Pro ≤300s).
+export const maxDuration = 60;
+
 const ROUTE_NAME = "api.ai.symptom-chat";
 
 interface RequestBody {
@@ -202,6 +224,7 @@ interface RequestBody {
   image?: string; // base64 image data (with or without data URL prefix)
   imageMeta?: ImageMeta;
   gateOverride?: boolean;
+  gateOverrideToken?: string;
 }
 
 type LiveUpdateTarget = {
@@ -1211,8 +1234,151 @@ function buildDeterministicEmergencyMessage(
   return `Based on the symptoms you've shared${details}, ${petName} may be having a medical emergency. Please go to the nearest emergency veterinary hospital now. I have enough information to prepare an emergency summary for the vet while you're on the way.`;
 }
 
+// Cap the request body (which can carry a base64 image) so an oversized or
+// buggy client cannot force unbounded buffering/parsing on the busiest AI
+// route. 10 MB matches the image-bearing async-review route. Pattern mirrors
+// the capped reader in symptom-check/route.ts. Route-local (not exported) so
+// the file keeps exporting only POST + maxDuration.
+const MAX_REQUEST_BYTES = 10 * 1024 * 1024;
+
+type BodyParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; response: Response };
+
+function jsonError(error: string, status: number, code: string) {
+  return NextResponse.json({ error, code }, { status });
+}
+
+function decodeUtf8(chunks: Uint8Array[], totalBytes: number) {
+  const merged = new Uint8Array(totalBytes);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(merged);
+}
+
+async function readJsonBody<T>(
+  request: Request,
+  maxBytes: number
+): Promise<BodyParseResult<T>> {
+  const declaredLength = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    return {
+      ok: false,
+      response: jsonError("Request body too large", 413, "PAYLOAD_TOO_LARGE"),
+    };
+  }
+
+  const reader = request.body?.getReader();
+  if (!reader) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      if (!value) {
+        continue;
+      }
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {}
+
+        return {
+          ok: false,
+          response: jsonError(
+            "Request body too large",
+            413,
+            "PAYLOAD_TOO_LARGE"
+          ),
+        };
+      }
+
+      chunks.push(value);
+    }
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+
+  const rawBody = decodeUtf8(chunks, totalBytes).trim();
+  if (!rawBody) {
+    return {
+      ok: false,
+      response: jsonError("Request body is required", 400, "INVALID_JSON"),
+    };
+  }
+
+  try {
+    return { ok: true, value: JSON.parse(rawBody) as T };
+  } catch {
+    return {
+      ok: false,
+      response: jsonError("Malformed JSON body", 400, "INVALID_JSON"),
+    };
+  }
+}
+
+function sanitizeUnsupportedClientRedFlags(
+  session: TriageSession,
+  messages: { role: "user" | "assistant"; content: string }[]
+): TriageSession {
+  if (session.red_flags_triggered.length === 0) return session;
+
+  // Only the blatant-forgery case is safe to validate from message text alone.
+  // If the session carries ANY other legitimate red-flag evidence source
+  // (recorded answers, known symptoms, or vision-derived flags), leave it
+  // untouched — those sources cannot be reproduced from messages and dropping
+  // them would risk discarding a real emergency. (See IMP-01B inventory.)
+  const hasOtherEvidence =
+    session.known_symptoms.length > 0 ||
+    Object.keys(session.extracted_answers).length > 0 ||
+    (session.vision_red_flags?.length ?? 0) > 0;
+  if (hasOtherEvidence) return session;
+
+  const supported = new Set<string>();
+  for (const m of messages) {
+    if (m.role !== "user") continue;
+    for (const flag of extractDeterministicEmergencyRedFlags(
+      m.content,
+      session.known_symptoms
+    )) {
+      supported.add(flag);
+    }
+  }
+
+  const validated = session.red_flags_triggered.filter((f) => supported.has(f));
+  if (validated.length === session.red_flags_triggered.length) return session;
+
+  console.warn(
+    `[session-integrity] Dropped ${
+      session.red_flags_triggered.length - validated.length
+    } client red flag(s) unsupported by an otherwise-empty session`
+  );
+  return { ...session, red_flags_triggered: validated };
+}
+
 export async function POST(request: Request) {
   const startedAtMs = Date.now();
+  const turnDeadline = createTurnDeadline(startedAtMs);
   const stageDurationsMs: Record<string, number> = {};
   // Internal-only per-stage latency accumulator. Surfaced to App Insights via
   // trackRouteTelemetry measurements; never enters the route response payload.
@@ -1236,11 +1402,13 @@ export async function POST(request: Request) {
 
   try {
     // ── Rate limiting ─────────────────────────────────────────────────────
-    const rlResult = await checkRateLimit(
-      symptomChatLimiter,
-      getRateLimitId(request)
-    );
-    if (!rlResult.success) {
+    // Worker replays are trusted internal calls (authenticated by the replay
+    // secret) and must not be rate limited or re-offloaded.
+    const asyncReplay = isAsyncWorkerReplay(request);
+    const rlResult = asyncReplay
+      ? null
+      : await checkRateLimit(symptomChatLimiter, getRateLimitId(request));
+    if (rlResult && !rlResult.success) {
       statusCode = 429;
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
@@ -1255,7 +1423,46 @@ export async function POST(request: Request) {
       );
     }
 
-    const body: RequestBody = await request.json();
+    // ── Authentication guard ──────────────────────────────────────────────
+    // Demo mode (Supabase unconfigured, status 503) passes through so local
+    // development works without credentials. All other unauthenticated calls
+    // are rejected with 401 to prevent anonymous AI token consumption.
+    {
+      const authCtx = await requireAuthenticatedApiUser({
+        unauthenticatedMessage: "Sign in to use the AI symptom checker",
+      });
+      if (authCtx.response && authCtx.response.status !== 503) {
+        statusCode = authCtx.response.status;
+        return authCtx.response;
+      }
+    }
+
+    const supabaseEnvGuard = checkSupabaseEnvConsistency();
+    if (!supabaseEnvGuard.ok) {
+      console.error(
+        "Supabase environment mismatch detected at runtime.",
+        supabaseEnvGuard.refs
+      );
+      statusCode = 503;
+      return NextResponse.json(
+        {
+          type: "error",
+          message:
+            "Service configuration error. Please try again later or contact support.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const parsedBody = await readJsonBody<RequestBody>(
+      request,
+      MAX_REQUEST_BYTES
+    );
+    if (!parsedBody.ok) {
+      statusCode = parsedBody.response.status;
+      return parsedBody.response;
+    }
+    const body = parsedBody.value;
     const {
       messages,
       pet,
@@ -1265,9 +1472,17 @@ export async function POST(request: Request) {
       image,
       imageMeta,
       gateOverride,
+      gateOverrideToken,
     } = body;
 
+    // Pristine copy of the client-sent session for async worker replay — the
+    // live `session` object below is mutated in place during processing, so the
+    // worker must replay the original input to reproduce the turn exactly.
+    const pristineSessionForAsync =
+      !asyncReplay && clientSession ? structuredClone(clientSession) : undefined;
+
     let session = clientSession || createSession();
+    session = sanitizeUnsupportedClientRedFlags(session, messages);
     const usageLimitResponse = await maybeBuildUsageLimitResponse({
       action,
       messages,
@@ -1306,6 +1521,31 @@ export async function POST(request: Request) {
     // when the session cookie is absent — emissions are skipped in that case.
     const verifiedUserId = await resolveVerifiedUserId();
     const safeLiveSessionId = normalizeWebPubSubSessionId(liveSessionId);
+
+    // ── Async offload (Service Bus + Web PubSub) ────────────────────────────
+    // When async is enabled and the result can be delivered to a verified user's
+    // live session, hand the turn to the worker and return 202 immediately so
+    // the HTTP request never races the platform timeout. Falls back to inline
+    // processing whenever offload is unavailable (see maybeOffloadSymptomChatTurn).
+    // Scoped to chat turns — these are the multi-model turns that hit the timeout;
+    // report generation stays synchronous (it has its own longer budget).
+    if (!asyncReplay && action === "chat") {
+      const offloaded = await maybeOffloadSymptomChatTurn({
+        action,
+        image,
+        imageMeta,
+        messages,
+        pet,
+        session: pristineSessionForAsync,
+        sessionId: safeLiveSessionId,
+        userId: verifiedUserId,
+      });
+      if (offloaded) {
+        statusCode = 202;
+        return offloaded.response;
+      }
+    }
+
     if (verifiedUserId && safeLiveSessionId) {
       liveUpdateTarget = {
         action,
@@ -1328,6 +1568,20 @@ export async function POST(request: Request) {
           }),
           verifiedUserId,
         });
+      }
+
+      if (!isReadyForDiagnosis(session)) {
+        statusCode = 409;
+        return NextResponse.json(
+          {
+            type: "error",
+            message:
+              "This session does not yet have enough information to generate a report.",
+            code: "SESSION_NOT_READY",
+            ready_for_report: false,
+          },
+          { status: 409 }
+        );
       }
 
       return await generateReport({
@@ -1354,6 +1608,7 @@ export async function POST(request: Request) {
       pet: effectivePet,
       session,
       message: lastUserMessage.content,
+      messages,
     });
     if (outOfScopeOutcome) {
       session = recordTerminalOutcomeTelemetry(
@@ -1522,7 +1777,15 @@ export async function POST(request: Request) {
           session.known_symptoms.includes("wound_skin_issue"))
       : false;
 
-    if (image && shouldRunWoundVision && gateOverride !== true) {
+    // Server-bind the gate override: an override is honored only when the
+    // client echoes a valid, unexpired HMAC token that THIS server issued for
+    // THIS image hash. A bare gateOverride:true (forged or stale) no longer
+    // bypasses the gate — it re-runs and, if it warns, re-issues a fresh token.
+    const gateOverrideAccepted =
+      gateOverride === true &&
+      verifyGateOverrideToken(gateOverrideToken, imageHash || "");
+
+    if (image && shouldRunWoundVision && !gateOverrideAccepted) {
       const gateCacheKey = buildGateCacheKey(imageHash || "", imageMeta);
       const gateWarning =
         session.gate_cache_key === gateCacheKey
@@ -1538,12 +1801,13 @@ export async function POST(request: Request) {
           session,
           gate: gateWarning,
           ready_for_report: false,
+          gate_override_token: issueGateOverrideToken(imageHash || ""),
         });
       }
     }
 
     if (image && shouldRunWoundVision) {
-      if (gateOverride === true) {
+      if (gateOverrideAccepted) {
         console.log("[Image Gate] Override accepted, continuing to vision pipeline");
       }
       try {
@@ -2719,6 +2983,31 @@ export async function POST(request: Request) {
     const nextQuestionId = nextQuestionState.nextQuestionId;
     const needsClarificationQuestionId =
       nextQuestionState.needsClarificationQuestionId;
+
+    const turnDepth = resolveTurnDepth({
+      hasImage: Boolean(image),
+      redFlagsTriggered: session.red_flags_triggered.length > 0,
+      isReportTurn: false,
+      isEmergencyEscalation: session.red_flags_triggered.length > 0,
+    });
+
+    const orchestratorResult = runClinicalTurnOrchestrator({
+      session,
+      ownerText: lastUserMessage.content,
+      productionQuestionId: nextQuestionId,
+      pet: effectivePet,
+      hasImage: Boolean(image),
+    });
+    session = orchestratorResult.session;
+
+    const effectiveQuestionId =
+      orchestratorResult.selectedQuestionId ?? nextQuestionId;
+    const askingBecause = orchestratorResult.askingBecause;
+    const promptVetRecord = shouldPromptVetRecordUpload(
+      session,
+      effectiveQuestionId
+    );
+
     session = await maybeCompressStructuredCaseMemory(
       session,
       effectivePet,
@@ -2728,12 +3017,14 @@ export async function POST(request: Request) {
         imageAnalyzed: Boolean(visionAnalysis),
         changedSymptoms: changedSymptomsThisTurn,
         changedAnswers: changedAnswerKeys,
+        turnDeadline,
+        turnDepth,
       }
     );
 
     return buildQuestionResponseFlow({
       session,
-      nextQuestionId,
+      nextQuestionId: effectiveQuestionId,
       needsClarificationQuestionId,
       pet,
       effectivePet,
@@ -2744,6 +3035,10 @@ export async function POST(request: Request) {
       visionSeverity,
       image,
       forceDeterministicQuestionFallback: Boolean(textOnlyQuickStartExtraction),
+      turnDeadline,
+      turnDepth,
+      askingBecause,
+      promptVetRecord,
     });
   } catch (error) {
     errorCode = "symptom_chat_unhandled";

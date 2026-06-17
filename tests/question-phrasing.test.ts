@@ -39,6 +39,7 @@ import {
   gateQuestionBeforePhrasing,
   phraseQuestion,
   sanitizeQuestionDraft,
+  TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS,
 } from "@/lib/symptom-chat/question-phrasing";
 
 const pet: PetProfile = {
@@ -118,7 +119,7 @@ describe("question phrasing helpers", () => {
         settled = true;
       });
 
-      await jest.advanceTimersByTimeAsync(10_001);
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
 
       expect(settled).toBe(true);
       await expect(resultPromise).resolves.toEqual({
@@ -188,7 +189,7 @@ describe("question phrasing helpers", () => {
         settled = true;
       });
 
-      await jest.advanceTimersByTimeAsync(10_001);
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
 
       expect(settled).toBe(true);
       await expect(resultPromise).resolves.toBe(
@@ -231,7 +232,7 @@ describe("question phrasing helpers", () => {
         settled = true;
       });
 
-      await jest.advanceTimersByTimeAsync(10_001);
+      await jest.advanceTimersByTimeAsync(TEXT_ONLY_QUESTION_PHRASING_BUDGET_MS + 1);
 
       expect(settled).toBe(true);
       await expect(resultPromise).resolves.toBe(
@@ -242,6 +243,35 @@ describe("question phrasing helpers", () => {
       warnSpy.mockRestore();
       jest.useRealTimers();
     }
+  });
+
+  it("runs Nemotron verification on standard turn depth", async () => {
+    mockPhraseWithLlama.mockResolvedValue(
+      "Since Mochi has been drinking less than usual, is she drinking less than usual?"
+    );
+    mockVerifyQuestionWithNemotron.mockResolvedValue(
+      JSON.stringify({
+        message: "Since Mochi has been drinking less than usual, is she drinking less than usual?",
+      })
+    );
+
+    const result = await phraseQuestion(
+      "Is she drinking less than usual?",
+      "water_intake",
+      createSession(),
+      pet,
+      messages,
+      "She is drinking less than usual.",
+      null,
+      false,
+      false,
+      false,
+      null,
+      "standard"
+    );
+
+    expect(result).toContain("drinking less than usual");
+    expect(mockVerifyQuestionWithNemotron).toHaveBeenCalledTimes(1);
   });
 
   it("falls back when Nemotron verification reintroduces banned photo wording", async () => {

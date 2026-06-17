@@ -1,7 +1,7 @@
 {
   "ticket": "VET-1564A/B",
   "mode": "review-only-production-readiness",
-  "generatedAt": "2026-06-06T23:45:11.000Z",
+  "generatedAt": "2026-05-31T00:00:00.000Z",
   "readyForProductionSmoke": true,
   "liveMigrationApplied": false,
   "authenticatedProductionSmokeComplete": false,
@@ -14,12 +14,12 @@
     "claimReview": {
       "path": "plans/VET-1564C-claim-language-review.json",
       "exists": true,
-      "sha256": "1d2282cc70a2c0d1a454aaa2a5b6bde594b446836d795ea86ebc740577916694"
+      "sha256": "9f9c2ab488c54d175942d573dc6bf1da19dc630fbbe04b2ed2b7adb57f768a21"
     },
     "readinessContract": {
       "path": "plans/VET-1564-longitudinal-readiness-contract.json",
       "exists": true,
-      "sha256": "c65bffa91a1122a927c54e3ea615e2dbb6816ceb3ceade04b580d39af5b8be96"
+      "sha256": "54948b3b05e18fcfedd684f604810d57f60275ea8bb9606674108a8f9872e34f"
     },
     "route": {
       "path": "src/app/api/product-intelligence/snapshots/route.ts",
@@ -34,7 +34,7 @@
     "ownerWorkflowTest": {
       "path": "tests/analytics-product-owner-workflow.test.ts",
       "exists": true,
-      "sha256": "7d365c52bafd2cc976e83c1a90e7a2f0c02cfd1f4985529905c9c5cebadf366a"
+      "sha256": "4637ed8567e057b970d8527ca5220df4250f69e419aa224e02599ed72a5d7f09"
     }
   },
   "routeGuards": {
@@ -50,7 +50,6 @@
     "ownerWorkflowTestExists": true,
     "selectedDogHistoryRead": true,
     "readinessSavePost": true,
-    "recoverySavePost": true,
     "credentialedRequest": true
   },
   "missingRouteGuards": [],

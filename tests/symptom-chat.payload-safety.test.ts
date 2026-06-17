@@ -1,6 +1,7 @@
 import {
   addSymptoms,
   createSession,
+  recordAnswer,
   type PetProfile,
   type TriageSession,
 } from "@/lib/triage-engine";
@@ -9,6 +10,10 @@ import { isInternalTelemetry } from "@/lib/sidecar-observability";
 const mockCheckRateLimit = jest.fn();
 const mockGetRateLimitId = jest.fn();
 const mockCreateServerSupabaseClient = jest.fn();
+const mockRequireAuthenticatedApiUser = jest.fn().mockResolvedValue({
+  user: { id: "test-user-id" },
+  supabase: {},
+});
 const mockExtractWithQwen = jest.fn();
 const mockPhraseWithLlama = jest.fn();
 const mockReviewQuestionPlanWithNemotron = jest.fn();
@@ -50,6 +55,11 @@ jest.mock("@/lib/rate-limit", () => ({
 jest.mock("@/lib/supabase-server", () => ({
   createServerSupabaseClient: (...args: unknown[]) =>
     mockCreateServerSupabaseClient(...args),
+}));
+
+jest.mock("@/lib/api-auth", () => ({
+  requireAuthenticatedApiUser: (...args: unknown[]) =>
+    mockRequireAuthenticatedApiUser(...args),
 }));
 
 jest.mock("@/lib/nvidia-models", () => ({
@@ -603,7 +613,11 @@ describe("VET-1014 terminal payload safety pack", () => {
       "timeoutCount",
     ];
 
-    const session = addSymptoms(createSession(), ["vomiting"]);
+    let session = addSymptoms(createSession(), ["vomiting"]);
+    session = recordAnswer(session, "vomit_duration", "2 days");
+    session = recordAnswer(session, "vomit_frequency", "3 times");
+    session = recordAnswer(session, "vomit_blood", false);
+    session = recordAnswer(session, "toxin_exposure", "none");
     session.case_memory = {
       ...session.case_memory!,
       service_timeouts: [
@@ -754,10 +768,12 @@ describe("VET-1014 terminal payload safety pack", () => {
     let session = addSymptoms(createSession(), ["coughing"]);
     session = {
       ...session,
-      answered_questions: ["cough_type"],
+      answered_questions: ["cough_type", "cough_duration", "cough_timing"],
       extracted_answers: {
         ...session.extracted_answers,
         cough_type: "dry_honking",
+        cough_duration: "3 days",
+        cough_timing: "at rest",
       },
       last_question_asked: "cough_duration",
       case_memory: {
@@ -865,6 +881,7 @@ describe("VET-1014 terminal payload safety pack", () => {
         ...session.extracted_answers,
         limping_onset: "sudden_today",
       },
+      red_flags_triggered: ["non_weight_bearing"],
       last_question_asked: "limping_onset",
       case_memory: {
         ...session.case_memory!,

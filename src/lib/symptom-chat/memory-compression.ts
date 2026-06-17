@@ -12,6 +12,15 @@ import {
   compressCaseMemoryWithMiniMax,
   isMiniMaxConfigured,
 } from "@/lib/minimax";
+import {
+  appendServiceTimeoutToSession,
+  buildStageSkipRecord,
+  type TurnDeadline,
+} from "@/lib/symptom-chat/turn-deadline";
+import {
+  shouldRunMiniMaxCompression,
+  type TurnDepth,
+} from "@/lib/symptom-chat/turn-depth";
 
 export interface SymptomChatMessage {
   role: "user" | "assistant";
@@ -22,6 +31,8 @@ export interface MemoryCompressionOptions {
   imageAnalyzed: boolean;
   changedSymptoms: string[];
   changedAnswers: string[];
+  turnDeadline?: TurnDeadline;
+  turnDepth?: TurnDepth;
 }
 
 export async function maybeCompressStructuredCaseMemory(
@@ -50,6 +61,54 @@ export async function maybeCompressStructuredCaseMemory(
       ...session,
       case_memory: {
         ...caseMemory,
+        compressed_summary: fallbackSummary,
+        compression_model: "deterministic-summary",
+        last_compressed_turn: caseMemory.turn_count,
+      },
+    };
+  }
+
+  if (options.turnDepth && !shouldRunMiniMaxCompression(options.turnDepth)) {
+    const skippedSession = appendServiceTimeoutToSession(session, {
+      service: "minimax-memory",
+      stage: "minimax_compression",
+      reason: "turn-depth-standard",
+    });
+    return {
+      ...skippedSession,
+      case_memory: {
+        ...ensureStructuredCaseMemory(skippedSession),
+        compressed_summary: fallbackSummary,
+        compression_model: "deterministic-summary",
+        last_compressed_turn: caseMemory.turn_count,
+      },
+    };
+  }
+
+  if (
+    options.turnDeadline &&
+    !options.turnDeadline.canAffordStage("minimax_compression")
+  ) {
+    const skippedSession = appendServiceTimeoutToSession(
+      session,
+      buildStageSkipRecord("minimax_compression")
+    );
+    const telemetrySession = recordConversationTelemetry(skippedSession, {
+      event: "compression",
+      turn_count: caseMemory.turn_count,
+      outcome: "skipped",
+      model: "deterministic-summary",
+      compression_used: false,
+      compression_model: "deterministic-summary",
+      reason: "turn-deadline",
+      narrative_only: true,
+      control_state_preserved: true,
+      fallback_used: true,
+    });
+    return {
+      ...telemetrySession,
+      case_memory: {
+        ...ensureStructuredCaseMemory(telemetrySession),
         compressed_summary: fallbackSummary,
         compression_model: "deterministic-summary",
         last_compressed_turn: caseMemory.turn_count,

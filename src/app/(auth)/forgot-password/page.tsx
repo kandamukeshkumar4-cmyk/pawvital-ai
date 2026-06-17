@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
   const feedbackClasses =
     authFeedback?.tone === "error"
       ? "bg-red-50 text-red-700"
-      : "bg-blue-50 text-blue-700";
+      : "bg-honey-soft text-clay-deep";
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,34 +63,34 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-cream p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-8 text-center">
           <Link href="/" target="_top" prefetch={false} className="inline-flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Heart className="w-6 h-6 text-white fill-white" />
-            </div>
-            <span className="text-2xl font-bold text-gray-900">PawVital AI</span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-clay">
+              <Heart className="h-6 w-6 fill-white text-white" />
+            </span>
+            <span className="font-display text-2xl font-semibold text-ink">PawVital</span>
           </Link>
-          <h1 className="mt-6 text-2xl font-bold text-gray-900">Reset your password</h1>
-          <p className="mt-2 text-gray-600">We&apos;ll send you a link to reset it</p>
+          <h1 className="mt-6 font-display text-2xl font-semibold text-ink">Reset your password</h1>
+          <p className="mt-2 text-muted-warm">We&apos;ll send you a link to reset it</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
+        <div className="rounded-3xl border border-line bg-paper p-8 shadow-[0_24px_70px_-50px_rgba(43,33,28,0.5)]">
           {sent ? (
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Mail className="w-8 h-8 text-green-600" />
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sage-soft">
+                <Mail className="h-8 w-8 text-sage" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-2">Check your email</h2>
-              <p className="text-gray-600 mb-6">
+              <h2 className="mb-2 font-display text-xl font-semibold text-ink">Check your email</h2>
+              <p className="mb-6 text-muted-warm">
                 We&apos;ve sent a password reset link to <strong>{email}</strong>
               </p>
               <a
                 href={appendRedirectParam("/login", redirectTarget)}
                 target="_top"
                 className={buttonClassName({
-                  variant: "outline",
+                  variant: "warmOutline",
                   className: "w-full",
                 })}
               >
@@ -116,7 +116,7 @@ export default function ForgotPasswordPage() {
                 icon={<Mail className="w-5 h-5" />}
                 required
               />
-              <Button type="submit" loading={loading} className="w-full" size="lg">
+              <Button type="submit" variant="warm" loading={loading} className="w-full" size="lg">
                 Send Reset Link
               </Button>
             </form>
@@ -127,7 +127,7 @@ export default function ForgotPasswordPage() {
               <a
                 href={appendRedirectParam("/login", redirectTarget)}
                 target="_top"
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                className="inline-flex items-center gap-1 text-sm font-medium text-clay hover:text-clay-deep"
               >
                 <ArrowLeft className="w-4 h-4" /> Back to login
               </a>

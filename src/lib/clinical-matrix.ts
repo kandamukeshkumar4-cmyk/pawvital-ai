@@ -2847,14 +2847,14 @@ export const FOLLOW_UP_QUESTIONS: Record<string, FollowUpQuestion> = {
     question_text: "Is there a head tilt — where the head stays tilted to one side?",
     data_type: "boolean",
     extraction_hint: "persistent head tilt",
-    critical: true,
+    critical: false,
   },
   balance_issues: {
     id: "balance_issues",
     question_text: "Any loss of balance, stumbling, or walking in circles?",
     data_type: "boolean",
     extraction_hint: "vestibular signs: imbalance, circling",
-    critical: true,
+    critical: false,
   },
 
   // General systemic

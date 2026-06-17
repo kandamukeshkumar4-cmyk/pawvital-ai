@@ -85,6 +85,7 @@ function buildCommandCenterFixture() {
       dataDeletionRequests: 0,
       emergencyResults: 0,
       feedbackSubmitted: 0,
+      allowlistedTesters: 1,
       negativeFeedback: 0,
       questionFlowIssueFlags: 0,
       repeatedQuestionFlags: 0,
@@ -93,7 +94,6 @@ function buildCommandCenterFixture() {
       signInFailures: 0,
       signedInTesters: 1,
       testerAccessDisabled: 0,
-      testersInvited: 1,
     },
     triage: {
       P0: [],

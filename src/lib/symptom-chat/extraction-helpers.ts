@@ -157,7 +157,13 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "drinking a lot": "drinking_more",
     thirsty: "drinking_more",
     trembl: "trembling",
-    shak: "trembling",
+    shiver: "trembling",
+    "shaking all over": "trembling",
+    "whole body shaking": "trembling",
+    "body is shaking": "trembling",
+    "legs are shaking": "trembling",
+    "legs shaking": "trembling",
+    "can't stop shaking": "trembling",
     collapse: "seizure_collapse",
     collapsed: "seizure_collapse",
     seizure: "seizure_collapse",
@@ -207,6 +213,11 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     "ear scratch": "ear_scratching",
     "shaking head": "ear_scratching",
     "head shaking": "ear_scratching",
+    "shaking his head": "ear_scratching",
+    "shaking her head": "ear_scratching",
+    "shakes his head": "ear_scratching",
+    "shakes her head": "ear_scratching",
+    "keeps shaking head": "ear_scratching",
     "ear smell": "ear_scratching",
     "scratching ears": "ear_scratching",
     "weight loss": "weight_loss",
@@ -460,6 +471,22 @@ export function extractSymptomsFromKeywords(message: string): string[] {
     )
   ) {
     pushSymptom("wound_skin_issue");
+  }
+
+  // Toxin ingestion — detect "ate/ingested/swallowed + toxic substance" or standalone high-risk toxins.
+  // Mapped to vomiting to trigger the toxin_exposure follow-up question chain.
+  const hasToxicSubstance =
+    /\b(chocolate|xylitol|grape|raisin|onion|garlic|avocado|macadamia|ibuprofen|tylenol|acetaminophen|naproxen|antifreeze|ethylene glycol)\b/.test(
+      lower
+    );
+  const hasIngestionVerb =
+    /\b(ate|eaten|ingested|swallowed|got into|consumed|chewed|licked up)\b/.test(
+      lower
+    );
+  const hasHighRiskAlone =
+    /\b(chocolate|xylitol|antifreeze|ethylene glycol)\b/.test(lower);
+  if ((hasToxicSubstance && hasIngestionVerb) || hasHighRiskAlone) {
+    pushSymptom("vomiting");
   }
 
   return symptoms;
@@ -727,16 +754,23 @@ export function buildDeterministicQuestionFallback(
 ): string {
   const memory = ensureStructuredCaseMemory(session);
   const chiefComplaint = memory.chief_complaints[0]?.replace(/_/g, " ") || null;
+  const confirmedSummary = buildConfirmedQASummary(session, 1);
+  const latestAnswer = confirmedSummary
+    .split("\n")
+    .map((line) => line.match(/^- .+ -> (.+)$/)?.[1]?.trim())
+    .find(Boolean);
 
-  let acknowledgment: string;
   if (hasPhoto && allowPhotoMention) {
-    acknowledgment = `Thanks for sharing that about ${petName}; I'm combining your answer with the photo and the rest of the history.`;
-  } else if (chiefComplaint) {
-    acknowledgment = `I'm keeping track of what you've shared so far about ${petName}'s ${chiefComplaint}.`;
-  } else {
-    acknowledgment = `Thanks for sharing that about ${petName}.`;
+    const acknowledgment = `I'm looking at the photo alongside what you've told me about ${petName}.`;
+    return `${acknowledgment} ${questionText}`;
   }
-  return `${acknowledgment} ${questionText}`;
+  if (latestAnswer) {
+    return `Got it — ${latestAnswer}. ${questionText}`;
+  }
+  if (chiefComplaint) {
+    return `Since ${petName} has been dealing with ${chiefComplaint}, I need one more detail. ${questionText}`;
+  }
+  return questionText;
 }
 
 export function cleanQuestionDraft(rawDraft: string): string {

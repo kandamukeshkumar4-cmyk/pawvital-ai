@@ -15,14 +15,19 @@ export const MODEL_FALLBACK_REASONS = [
 export type ModelFallbackReason = (typeof MODEL_FALLBACK_REASONS)[number];
 
 export const MODELS = {
+  // mistral-nemotron (128K ctx, function-calling pedigree, clean JSON / no thinking tokens) —
+  // replaces the heavy Qwen 122B on the latency-critical hot path; emits parseable JSON with the
+  // existing prompt-based extraction (no reasoning-token budget risk). Qwen 122B kept as proven fallback.
   extraction: {
-    name: "qwen/qwen3.5-122b-a10b",
-    fallback: "qwen/qwen3.5-397b-a17b",
+    name: "mistralai/mistral-nemotron",
+    fallback: "qwen/qwen3.5-122b-a10b",
     role: "Data Extraction" as const,
   },
+  // Llama 4 Maverick (17B-active, benchmarked ~2.9s on NIM free tier) — stronger instruction
+  // following than Llama 3.3 70B (reduces stray "Got it —" openers); proven 3.3 70B as fallback.
   phrasing: {
-    name: "meta/llama-3.3-70b-instruct",
-    fallback: "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+    name: "meta/llama-4-maverick-17b-128e-instruct",
+    fallback: "meta/llama-3.3-70b-instruct",
     role: "Question Phrasing" as const,
   },
   phrasing_verifier: {
@@ -89,7 +94,7 @@ interface ModelFeatureRouteSettings {
 }
 
 const ROLE_ENV_PRIORITY: Record<ModelRole, readonly string[]> = {
-  extraction: ["NVIDIA_QWEN_API_KEY", "NVIDIA_API_KEY"],
+  extraction: ["NVIDIA_API_KEY", "NVIDIA_QWEN_API_KEY"],
   phrasing: ["NVIDIA_API_KEY"],
   phrasing_verifier: ["NVIDIA_API_KEY"],
   diagnosis: ["NVIDIA_DEEPSEEK_API_KEY", "NVIDIA_API_KEY"],

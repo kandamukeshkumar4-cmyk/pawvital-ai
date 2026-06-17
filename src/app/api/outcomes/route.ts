@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
   const { data: symptomCheck, error: symptomCheckError } = await supabase
     .from("symptom_checks")
-    .select("id")
+    .select("id, pet_id")
     .eq("id", parsedBody.data.check_id)
     .maybeSingle();
 
@@ -100,6 +100,32 @@ export async function POST(request: Request) {
       { error: "Symptom check not found" },
       { status: 404 }
     );
+  }
+
+  // IDOR guard: verify this check's pet belongs to the authenticated user
+  const petId = (symptomCheck as { id: string; pet_id: string }).pet_id;
+  if (petId) {
+    const { data: ownedPet, error: petError } = await supabase
+      .from("pets")
+      .select("id")
+      .eq("id", petId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (petError) {
+      console.error("[Outcomes] Failed to verify pet ownership:", petError);
+      return NextResponse.json(
+        { error: "Unable to verify the symptom check" },
+        { status: 500 }
+      );
+    }
+
+    if (!ownedPet) {
+      return NextResponse.json(
+        { error: "Symptom check not found" },
+        { status: 404 }
+      );
+    }
   }
 
   const { data: outcome, error: outcomeError } = await supabase

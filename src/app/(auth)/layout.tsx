@@ -5,5 +5,9 @@ export default function AuthLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <Suspense fallback={null}>{children}</Suspense>;
+  return (
+    <Suspense fallback={null}>
+      <div className="marketing">{children}</div>
+    </Suspense>
+  );
 }
