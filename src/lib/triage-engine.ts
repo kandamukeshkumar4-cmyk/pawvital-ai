@@ -219,13 +219,26 @@ export function getMissingQuestions(session: TriageSession): string[] {
 export function getNextQuestion(session: TriageSession): string | null {
   const missing = getMissingQuestions(session);
 
-  // Ask trajectory question once — after ≥3 questions answered and not yet asked
+  // Ask the trajectory question once — after ≥3 answered and not yet asked — but
+  // only once no CRITICAL follow-up is still pending. "Is it getting worse?" must
+  // never preempt an essential clinical question (gum colour, spay status, etc.).
+  // This also keeps getNextQuestion consistent with isReadyForDiagnosis, which
+  // gates on the critical-question contract.
   const hasSymptoms = session.known_symptoms.length > 0;
   const sufficientHistory = session.answered_questions.length >= 3;
   const trajectoryNotAsked = !session.answered_questions.includes("condition_progression") &&
     !session.last_question_asked?.includes("condition_progression");
+  const hasPendingCriticalQuestion = missing.some(
+    (qId) => FOLLOW_UP_QUESTIONS[qId]?.critical
+  );
 
-  if (hasSymptoms && sufficientHistory && trajectoryNotAsked) {
+  if (
+    hasSymptoms &&
+    sufficientHistory &&
+    trajectoryNotAsked &&
+    !hasPendingCriticalQuestion &&
+    !isReadyForDiagnosis(session)
+  ) {
     return "condition_progression";
   }
 
