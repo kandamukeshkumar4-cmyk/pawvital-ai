@@ -28,9 +28,9 @@ describe("VET-1432K Heatstroke and Trauma Question Cards", () => {
       }
     });
 
-    it("registry size is 29 (19 base + heat-trauma pack + GI history cards)", () => {
+    it("registry size is 31 (19 base + heat-trauma pack + GI history cards + breed pack)", () => {
       const cards = getAllQuestionCards();
-      expect(cards.length).toBe(29);
+      expect(cards.length).toBe(31);
     });
 
     it("new cards are retrievable by id", () => {

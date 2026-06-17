@@ -46,6 +46,11 @@ import {
   lacerationDepthCheck,
 } from "./question-cards/heat-trauma";
 
+import {
+  longBackBreedSpinalCheck,
+  deepChestedBreedAbdomenCheck,
+} from "./question-cards/breed";
+
 const SOURCE_CARDS: readonly ClinicalQuestionCard[] = [
   emergencyGlobalScreen,
   gumColorCheck,
@@ -76,6 +81,8 @@ const SOURCE_CARDS: readonly ClinicalQuestionCard[] = [
   woundCharacterizationCheck,
   bleedingVolumeCheck,
   lacerationDepthCheck,
+  longBackBreedSpinalCheck,
+  deepChestedBreedAbdomenCheck,
 ];
 
 function cloneQuestionCard(card: ClinicalQuestionCard): ClinicalQuestionCard {
@@ -84,6 +91,7 @@ function cloneQuestionCard(card: ClinicalQuestionCard): ClinicalQuestionCard {
       ...card,
       complaintFamilies: [...card.complaintFamilies],
       bodySystems: [...card.bodySystems],
+      breedFamilies: card.breedFamilies ? [...card.breedFamilies] : undefined,
       screensRedFlags: [...card.screensRedFlags],
       changesUrgencyIf: { ...card.changesUrgencyIf },
       allowedAnswers: [...card.allowedAnswers] as [string, ...string[]],
@@ -99,6 +107,7 @@ function cloneQuestionCard(card: ClinicalQuestionCard): ClinicalQuestionCard {
     ...card,
     complaintFamilies: [...card.complaintFamilies],
     bodySystems: [...card.bodySystems],
+    breedFamilies: card.breedFamilies ? [...card.breedFamilies] : undefined,
     screensRedFlags: [...card.screensRedFlags],
     changesUrgencyIf: { ...card.changesUrgencyIf },
     skipIfAnswered: [...card.skipIfAnswered],

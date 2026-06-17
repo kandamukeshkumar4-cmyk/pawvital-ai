@@ -212,12 +212,12 @@ const CANDIDATE_PROPOSALS: readonly CandidateProposal[] = [
 
 describe("Question Card Gap Proposal Pack (VET-1429K packaging)", () => {
   it("locks the current live registry counts in the proposal doc", () => {
-    expect(getAllQuestionCards()).toHaveLength(29);
+    expect(getAllQuestionCards()).toHaveLength(31);
     expect(EMERGENCY_RED_FLAG_IDS).toHaveLength(35);
     expect(KNOWN_SIGNAL_IDS).toHaveLength(14);
 
     expect(PROPOSAL_DOC).toContain(
-      "29 question cards, 35 canonical red flags, 14 clinical signals."
+      "31 question cards, 35 canonical red flags, 14 clinical signals."
     );
     expect(PROPOSAL_DOC).not.toContain("37 canonical red flags");
   });

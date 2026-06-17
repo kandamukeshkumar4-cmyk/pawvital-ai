@@ -6,6 +6,16 @@ interface BaseClinicalQuestionCard {
   complaintFamilies: string[];
   bodySystems: string[];
 
+  /**
+   * Optional breed keywords this card targets (case-insensitive substring
+   * match against the pet's breed), e.g. ["dachshund"] or
+   * ["deep_chested", "german shepherd", "great dane"]. When the pet's breed
+   * matches one of these keywords, the planner applies a small deterministic
+   * relevance boost so the card surfaces earlier. Purely additive: it never
+   * affects urgency, red-flag, or emergency-screen logic.
+   */
+  breedFamilies?: string[];
+
   phase:
     | "emergency_screen"
     | "characterize"
