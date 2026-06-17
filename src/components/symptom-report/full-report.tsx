@@ -8,18 +8,11 @@ import { WhatsHappeningSection } from "./whats-happening";
 import { UrgencyRationaleSection } from "./urgency-rationale";
 import { WhatItCouldBeSection } from "./what-it-could-be";
 import { VetHandoffCard } from "./vet-handoff-card";
-import { ConfidenceCalibrationSection } from "./confidence-calibration";
-import { EvidenceSourcesBar } from "./evidence-sources-bar";
-import { ClinicalNotesSection } from "./clinical-notes";
-import { EvidenceChainSection } from "./evidence-chain";
-import { SimilarCasesSection } from "./similar-cases";
 import { ReferenceImagesSection } from "./reference-images";
 import { RecommendedTestsSection } from "./recommended-tests";
 import { HomeCareSection } from "./home-care";
 import { ActionStepsSection } from "./action-steps";
-import { VetQuestionsSection } from "./vet-questions";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
-import { OwnerSummarySection } from "./owner-summary";
 import { NearestVetFinder } from "./nearest-vet-finder";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
@@ -275,40 +268,6 @@ export function FullReport({
         (report.recommendation === "emergency_vet" ||
           report.severity === "emergency") && <NearestVetFinder />}
 
-      <OwnerSummarySection
-        canExport={canExport}
-        confidenceCalibration={
-          report.calibrated_confidence ?? report.confidence_calibration
-        }
-        explanation={report.explanation}
-        feedbackEnabled={feedbackEnabled}
-        limitations={presentation.limitations}
-        pdfBusy={pdfBusy}
-        recommendationLabel={presentation.recommendationLabel}
-        onCopyVetSummary={copyVetSummary}
-        onJumpToHandoff={
-          report.vet_handoff_summary
-            ? () =>
-                handoffRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                })
-            : undefined
-        }
-        onJumpToFeedback={
-          !readOnlyShared
-            ? () =>
-                feedbackRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start",
-                })
-            : undefined
-        }
-        onDownloadPdf={() => void downloadPdf()}
-        onOpenShareModal={openShareModal}
-        readOnlyShared={readOnlyShared}
-      />
-
       <Modal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
@@ -380,34 +339,12 @@ export function FullReport({
         </div>
       </Modal>
 
-      <EvidenceSourcesBar report={report} />
-
       {report.recommended_tests && report.recommended_tests.length > 0 && (
         <RecommendedTestsSection tests={report.recommended_tests} />
       )}
 
       {report.home_care && report.home_care.length > 0 && (
         <HomeCareSection items={report.home_care} />
-      )}
-
-      {report.vet_questions && report.vet_questions.length > 0 && (
-        <VetQuestionsSection questions={report.vet_questions} />
-      )}
-
-      <ConfidenceCalibrationSection
-        calibration={report.calibrated_confidence ?? report.confidence_calibration}
-      />
-
-      {report.clinical_notes && (
-        <ClinicalNotesSection notes={report.clinical_notes} />
-      )}
-
-      {report.evidenceChain && report.evidenceChain.length > 0 && (
-        <EvidenceChainSection items={report.evidenceChain} />
-      )}
-
-      {report.similar_cases && report.similar_cases.length > 0 && (
-        <SimilarCasesSection cases={report.similar_cases} />
       )}
 
       {report.reference_images && report.reference_images.length > 0 && (
@@ -434,8 +371,11 @@ export function FullReport({
         </div>
       ) : null}
 
-      <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-        <p className="text-xs text-gray-500 leading-relaxed">
+      <div
+        className="p-4 rounded-xl"
+        style={{ background: "var(--card)", border: "1px solid var(--border)" }}
+      >
+        <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
           <strong>Medical Disclaimer:</strong> PawVital is an informational
           screening tool and cannot replace a hands-on veterinary exam,
           diagnostic testing, or professional veterinary advice. A licensed
