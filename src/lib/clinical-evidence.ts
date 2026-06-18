@@ -3,7 +3,9 @@ export type SupportedImageDomain =
   | "mass_swelling"
   | "eye"
   | "ear"
+  | "oral_gum"
   | "stool_vomit"
+  | "abdominal_distension"
   | "unsupported";
 
 export type VisionSeverityClass = "normal" | "needs_review" | "urgent";
@@ -152,6 +154,39 @@ const IMAGE_DOMAIN_KEYWORDS: Array<{
     ],
   },
   {
+    domain: "oral_gum",
+    keywords: [
+      "gum",
+      "gums",
+      "mouth",
+      "teeth",
+      "dental",
+      "tooth",
+      "oral",
+      "breath",
+      "bad breath",
+      "pale gums",
+      "yellow gums",
+      "blue gums",
+      "drooling",
+      "jaw",
+      "tongue",
+    ],
+  },
+  {
+    domain: "abdominal_distension",
+    keywords: [
+      "bloated",
+      "bloat",
+      "distended",
+      "swollen belly",
+      "enlarged abdomen",
+      "abdomen looks big",
+      "belly is swollen",
+      "tummy is distended",
+    ],
+  },
+  {
     domain: "stool_vomit",
     keywords: [
       "vomit",
@@ -243,7 +278,9 @@ const IMAGE_DOMAIN_LABEL_HINTS: Record<SupportedImageDomain, string[]> = {
   ],
   eye: ["eye", "conjunctivitis", "cornea", "eyelid", "ocular", "tear"],
   ear: ["ear", "otitis", "ear_flap", "ear flap", "canal"],
+  oral_gum: ["gum", "gums", "mouth", "dental", "tooth", "oral", "drooling", "pale gums", "bad breath"],
   stool_vomit: ["vomit", "stool", "poop", "diarrhea", "faeces", "feces"],
+  abdominal_distension: ["distended", "bloated", "swollen belly", "bloat", "enlarged abdomen", "distension"],
   unsupported: [],
 };
 
