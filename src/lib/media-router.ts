@@ -90,6 +90,21 @@ const IMAGE_SYMPTOM_KEYS: Record<SupportedImageDomain, string[]> = {
     "ear_discharge",
     "head_shaking",
   ],
+  oral_gum: [
+    "gum_color_change",
+    "oral_lesion",
+    "dental_concern",
+    "pale_gums",
+    "bad_breath",
+    "drooling_excessive",
+    "mouth_pain",
+  ],
+  abdominal_distension: [
+    "swollen_abdomen",
+    "bloat",
+    "abdominal_distension",
+    "distended_abdomen_with_retching",
+  ],
   stool_vomit: [
     "vomiting",
     "diarrhea",
@@ -182,6 +197,30 @@ const IMAGE_KEYWORDS: Record<SupportedImageDomain, string[]> = {
     "scratching his ear",
     "scratching her ear",
   ],
+  oral_gum: [
+    "gum",
+    "gums",
+    "pale gums",
+    "yellow gums",
+    "blue gums",
+    "mouth",
+    "teeth",
+    "dental",
+    "bad breath",
+    "drooling",
+    "oral",
+    "tooth",
+    "jaw",
+    "tongue",
+  ],
+  abdominal_distension: [
+    "bloated",
+    "bloat",
+    "distended",
+    "swollen belly",
+    "enlarged abdomen",
+    "belly is swollen",
+  ],
   stool_vomit: [
     "vomit",
     "vomiting",
@@ -254,6 +293,10 @@ const IMAGE_PROMPTS: Record<SupportedImageDomain, string> = {
     "A clear photo of the lump or swollen area would help us assess its size and appearance. Include something for scale (like a coin) if possible, in good lighting.",
   eye: "A clear photo of your dog's eye area would help. Good lighting and minimal blur are important — a flashlight can help illuminate.",
   ear: "A photo showing the outer ear flap or ear canal opening would be useful. Keep your dog still and use good lighting.",
+  abdominal_distension:
+    "A photo of your dog's belly from the side, showing the full flank, would help us assess the degree of distension. Have your dog stand if possible. This is an urgent concern — if your dog is also retching or very uncomfortable, go to an emergency vet immediately.",
+  oral_gum:
+    "A clear photo inside your dog's mouth — particularly the gums and teeth — would help us assess gum color and any lesions. Use a flashlight and ask someone to hold the lip up gently.",
   stool_vomit:
     "A photo of the vomit or stool may help us identify blood, color changes, or foreign material. No need to handle it — just photograph it in place.",
   unsupported: "",
@@ -364,8 +407,10 @@ function suggestImageDomain(
   const domainPriority: SupportedImageDomain[] = [
     "skin_wound",
     "mass_swelling",
+    "abdominal_distension",
     "eye",
     "ear",
+    "oral_gum",
     "stool_vomit",
   ];
 
