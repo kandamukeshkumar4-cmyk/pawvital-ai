@@ -22,7 +22,7 @@ import {
   X,
 } from "lucide-react";
 import Card from "@/components/ui/card";
-import Button from "@/components/ui/button";
+import Button, { buttonClassName } from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import TesterOnboardingGate from "@/components/tester-onboarding/tester-onboarding-gate";
 import {
@@ -1419,6 +1419,41 @@ export default function SymptomCheckerPage() {
                 </Card>
               ) : null}
               <FullReport report={report} />
+
+              {/* Hand-holding: tell first-time owners what to do after a report. */}
+              <Card className="border border-purple-200 bg-purple-50/60 p-5">
+                <h3 className="text-base font-semibold text-gray-900">
+                  What&apos;s next for {displayPetName}?
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-gray-600">
+                  Your report is saved in History. Keeping a daily check-in helps PawVital
+                  spot whether {displayPetName} is getting better or worse over time.
+                </p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <a
+                    href="/health-log"
+                    target="_top"
+                    className={`${buttonClassName()} w-full sm:w-auto`}
+                  >
+                    Log today&apos;s check-in
+                  </a>
+                  <a
+                    href="/analytics"
+                    target="_top"
+                    className={`${buttonClassName({ variant: "outline" })} w-full sm:w-auto`}
+                  >
+                    See {displayPetName}&apos;s Health Signals
+                  </a>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full sm:w-auto"
+                    onClick={startNewSession}
+                  >
+                    Start another check
+                  </Button>
+                </div>
+              </Card>
             </div>
           </div>
         )}

@@ -63,11 +63,15 @@ interface PetProfileModalProps {
   open: boolean;
   /** User skipped or dismissed without saving — session flag + parent state. */
   onSkipped: () => void;
+  /** Fired after a dog is saved successfully (used to hand off first-time
+   * users straight to the symptom checker). */
+  onSaved?: () => void;
 }
 
 export default function PetProfileModal({
   open,
   onSkipped,
+  onSaved,
 }: PetProfileModalProps) {
   const user = useAppStore((s) => s.user);
   const { savePet } = usePets();
@@ -159,6 +163,7 @@ export default function PetProfileModal({
     });
     try {
       await savePet(pet);
+      onSaved?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to save dog profile. Please try again.";
       setSaveError(msg);
