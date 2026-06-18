@@ -38,6 +38,7 @@ export interface UrgencyHighPayload {
   urgency: "emergency" | "high";
   petName: string;
   topDiagnosis: string;
+  reportStorageId?: string | null;
 }
 
 export interface OutcomeRequestedPayload {

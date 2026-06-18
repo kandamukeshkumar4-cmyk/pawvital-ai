@@ -12,6 +12,10 @@
 import { on, EventType } from "./event-bus";
 import { getServiceSupabase } from "@/lib/supabase-admin";
 import { withNotificationDeliveryState } from "@/lib/notification-delivery";
+import {
+  deliverUrgentOwnerEmail,
+  type UrgentEmailUrgency,
+} from "@/lib/urgent-email";
 
 type NotificationRow = {
   user_id: string;
@@ -21,29 +25,76 @@ type NotificationRow = {
   metadata: Record<string, unknown>;
 };
 
-async function insertNotification(row: NotificationRow): Promise<void> {
+interface InsertedNotification {
+  id: string;
+  metadata: Record<string, unknown>;
+}
+
+async function insertNotification(
+  row: NotificationRow
+): Promise<InsertedNotification | null> {
   const supabase = getServiceSupabase();
   if (!supabase) {
     // Supabase not configured (dev/demo mode) — skip silently
-    return;
+    return null;
   }
 
-  const payload = {
-    ...row,
-    metadata: withNotificationDeliveryState(row.metadata, {
-      status: "pending",
-      attempts: 0,
-      dead_lettered: false,
-      last_attempt_at: null,
-      delivered_at: null,
-      confirmation_id: null,
-      last_error: null,
-    }),
-  };
+  const metadata = withNotificationDeliveryState(row.metadata, {
+    status: "pending",
+    attempts: 0,
+    dead_lettered: false,
+    last_attempt_at: null,
+    delivered_at: null,
+    confirmation_id: null,
+    last_error: null,
+  });
 
-  const { error } = await supabase.from("notifications").insert(payload);
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert({ ...row, metadata })
+    .select("id")
+    .single();
+
   if (error) {
     console.error("[NotificationHandler] Failed to insert notification:", error);
+    return null;
+  }
+
+  const id = typeof data?.id === "string" ? data.id : null;
+  return id ? { id, metadata } : null;
+}
+
+function isHighUrgency(urgency: unknown): urgency is UrgentEmailUrgency {
+  return urgency === "emergency" || urgency === "high";
+}
+
+/**
+ * Attempt immediate urgent owner email for a freshly-inserted high-urgency
+ * notification. Non-fatal: failures are recorded as delivery state and never
+ * re-thrown into the event/report path.
+ */
+async function maybeSendUrgentEmail(
+  inserted: InsertedNotification | null,
+  input: {
+    userId: string;
+    urgency: UrgentEmailUrgency;
+    petName: string;
+    ownerMessage: string;
+    recommendedAction?: string | null;
+    reportStorageId?: string | null;
+  }
+): Promise<void> {
+  if (!inserted) {
+    return;
+  }
+  try {
+    await deliverUrgentOwnerEmail(
+      { notificationId: inserted.id, ...input },
+      inserted.metadata
+    );
+  } catch (error) {
+    // deliverUrgentOwnerEmail is designed never to throw; guard anyway.
+    console.error("[NotificationHandler] Urgent email delivery failed:", error);
   }
 }
 
@@ -60,10 +111,13 @@ function registerNotificationHandlers(): void {
         urgency: payload.urgency,
       },
     });
+    // Immediate urgent owner email is driven by the URGENCY_HIGH event, which
+    // the report pipeline always co-emits for high/emergency reports. Sending
+    // here too would double-email the owner, so REPORT_READY stays in-app only.
   });
 
   on(EventType.URGENCY_HIGH, async (payload) => {
-    await insertNotification({
+    const inserted = await insertNotification({
       user_id: payload.userId,
       type: "urgency_alert",
       title: `Urgent: ${payload.petName} needs attention`,
@@ -74,6 +128,20 @@ function registerNotificationHandlers(): void {
         topDiagnosis: payload.topDiagnosis,
       },
     });
+
+    if (isHighUrgency(payload.urgency)) {
+      await maybeSendUrgentEmail(inserted, {
+        userId: payload.userId,
+        urgency: payload.urgency,
+        petName: payload.petName,
+        ownerMessage: `Triage indicates ${payload.urgency} urgency for ${payload.petName}. Top differential: ${payload.topDiagnosis}.`,
+        recommendedAction:
+          payload.urgency === "emergency"
+            ? "Contact your veterinarian or an emergency clinic right away."
+            : "Arrange a veterinary visit as soon as possible.",
+        reportStorageId: payload.reportStorageId ?? null,
+      });
+    }
   });
 
   on(EventType.OUTCOME_REQUESTED, async (payload) => {
