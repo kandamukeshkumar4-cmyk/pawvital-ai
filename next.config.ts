@@ -11,7 +11,7 @@ export function buildContentSecurityPolicy(
     "style-src 'self' 'unsafe-inline' https:",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https:",
-    "connect-src 'self' https:",
+    "connect-src 'self' https: wss://centralus.stt.speech.microsoft.com wss://*.webpubsub.azure.com",
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -32,7 +32,7 @@ export function buildSecurityHeaders(
     { key: "X-Frame-Options", value: "DENY" },
     {
       key: "Permissions-Policy",
-      value: "camera=(), geolocation=(), microphone=()",
+      value: "camera=(), geolocation=(), microphone=(self)",
     },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
     { key: "Cross-Origin-Resource-Policy", value: "same-site" },
