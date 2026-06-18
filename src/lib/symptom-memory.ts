@@ -320,6 +320,7 @@ export function mergeCompressionResult(
       clinical_case_state: caseMemory.clinical_case_state,
       asking_because: caseMemory.asking_because,
       vet_record_context: caseMemory.vet_record_context,
+      daily_log_context: caseMemory.daily_log_context,
       // Only these fields come from compression
       compressed_summary: compressed.summary.replace(/\s+/g, " ").trim(),
       compression_model: compressed.model,
@@ -610,6 +611,7 @@ export function ensureStructuredCaseMemory(
     clinical_case_state: existing?.clinical_case_state,
     asking_because: existing?.asking_because,
     vet_record_context: existing?.vet_record_context,
+    daily_log_context: existing?.daily_log_context,
   };
 }
 

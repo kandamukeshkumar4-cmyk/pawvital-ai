@@ -512,6 +512,7 @@ ${input.referenceImageContext ? `REFERENCE IMAGE RETRIEVAL (similar corpus cases
 ${input.clinicalCaseContext ? `SIMILAR CLINICAL CASES (CSV corpus; use as supplementary case-similarity evidence, not a replacement for matrix ranking):\n${input.clinicalCaseContext}\n` : ""}
 
 ${input.session.vision_analysis ? `VISUAL ANALYSIS FROM PET PHOTO (analyzed by the NVIDIA 11B/90B vision stack):\n${input.session.vision_analysis}\n\nIMPORTANT: Incorporate the visual findings above into your differential diagnoses and clinical notes. Reference what was observed in the image (e.g., wound characteristics, skin condition, eye appearance). The visual analysis should heavily influence your report.\n` : ""}
+${input.session.case_memory?.daily_log_context ? `OWNER-LOGGED DAILY HEALTH TRENDS (the owner's own at-home daily check-ins — supportive background context only; do NOT use this to override the matrix-determined urgency or red flags, and do NOT treat owner-reported values as clinical measurements. Use it to enrich the timeline/history and tailor home-care and warning-sign guidance):\n${input.session.case_memory.daily_log_context}\n` : ""}
 YOUR TASK: Write the clinical report using the matrix's disease ranking as your primary guide. Do NOT reorder the differentials unless you have strong clinical reasoning to do so. The matrix has already applied breed multipliers, age factors, and symptom-specific modifiers.
 
 For each differential diagnosis, provide:

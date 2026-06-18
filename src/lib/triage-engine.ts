@@ -101,6 +101,12 @@ export interface StructuredCaseMemory {
   asking_because?: string;
   /** Doc Intel vet record summary when uploaded */
   vet_record_context?: string;
+  /**
+   * Owner-reported daily health-log summary (recent trends). Supportive
+   * narrative context for the LLM report only — never feeds deterministic
+   * urgency / red-flag logic.
+   */
+  daily_log_context?: string;
 }
 
 export interface PetProfile {
