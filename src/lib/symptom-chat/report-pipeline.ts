@@ -286,6 +286,7 @@ async function persistFinalReportToHistory({
         urgency: highestUrgency as "emergency" | "high",
         petName: pet.name ?? "your dog",
         topDiagnosis,
+        reportStorageId,
       });
     }
   }
