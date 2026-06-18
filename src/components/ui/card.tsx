@@ -11,7 +11,7 @@ export default function Card({ children, className = "", hover = false, onClick,
     <div
       className={`rounded-2xl border ${
         hover
-          ? "cursor-pointer transition-all duration-200 hover:border-white/[0.12] hover:bg-[#1c1c1c]"
+          ? "cursor-pointer transition-all duration-200 hover:border-gray-300 hover:bg-[#faf8f5]"
           : ""
       } ${className}`}
       style={{

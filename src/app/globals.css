@@ -16,21 +16,21 @@
   --card-hover: #f9fafb;
 }
 
-/* ─── Dashboard dark theme (Whoop-style) ────────────────────────────────── */
+/* ─── Dashboard light theme (warm cream / pet-friendly) ─────────────────── */
 .app-dark {
-  --background: #0a0a0a;
-  --foreground: #f1f5f9;
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --accent: #00c896;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #f43f5e;
-  --muted: #6b7280;
-  --border: rgba(255, 255, 255, 0.07);
-  --card: #141414;
-  --card-hover: #1c1c1c;
-  color-scheme: dark;
+  --background: #f7f4ef;
+  --foreground: #1c1814;
+  --primary: #7c4dc4;
+  --primary-dark: #6a3db4;
+  --accent: #00a878;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --muted: #8a7f74;
+  --border: #e8e2d8;
+  --card: #ffffff;
+  --card-hover: #faf8f5;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -101,9 +101,9 @@ body {
 
 /* ─── Custom scrollbar ───────────────────────────────────────────────────── */
 .app-dark ::-webkit-scrollbar         { width: 5px; }
-.app-dark ::-webkit-scrollbar-track   { background: #111; }
-.app-dark ::-webkit-scrollbar-thumb   { background: #2a2a2a; border-radius: 3px; }
-.app-dark ::-webkit-scrollbar-thumb:hover { background: #444; }
+.app-dark ::-webkit-scrollbar-track   { background: #f0ede8; }
+.app-dark ::-webkit-scrollbar-thumb   { background: #d4cec6; border-radius: 3px; }
+.app-dark ::-webkit-scrollbar-thumb:hover { background: #b8b0a6; }
 
 ::-webkit-scrollbar       { width: 6px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
