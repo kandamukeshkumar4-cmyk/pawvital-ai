@@ -1,5 +1,6 @@
 export type SupportedImageDomain =
   | "skin_wound"
+  | "mass_swelling"
   | "eye"
   | "ear"
   | "stool_vomit"
@@ -167,6 +168,22 @@ const IMAGE_DOMAIN_KEYWORDS: Array<{
     ],
   },
   {
+    domain: "mass_swelling",
+    keywords: [
+      "lump",
+      "bump",
+      "mass",
+      "swelling",
+      "growth",
+      "tumor",
+      "knot",
+      "nodule",
+      "cyst",
+      "bulge",
+      "raised area",
+    ],
+  },
+  {
     domain: "skin_wound",
     keywords: [
       "wound",
@@ -177,15 +194,9 @@ const IMAGE_DOMAIN_KEYWORDS: Array<{
       "hot spot",
       "hotspot",
       "lesion",
-      "lump",
-      "bump",
-      "mass",
       "bleeding",
-      "swelling",
       "paw",
       "leg",
-      "limp",
-      "limping",
     ],
   },
 ];
@@ -216,8 +227,19 @@ const IMAGE_DOMAIN_LABEL_HINTS: Record<SupportedImageDomain, string[]> = {
     "pyoderma",
     "dermatitis",
     "abscess",
-    "mass",
     "laceration",
+  ],
+  mass_swelling: [
+    "lump",
+    "mass",
+    "swelling",
+    "cyst",
+    "tumor",
+    "nodule",
+    "lipoma",
+    "growth",
+    "bump",
+    "bulge",
   ],
   eye: ["eye", "conjunctivitis", "cornea", "eyelid", "ocular", "tear"],
   ear: ["ear", "otitis", "ear_flap", "ear flap", "canal"],

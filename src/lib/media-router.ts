@@ -62,14 +62,19 @@ const IMAGE_SYMPTOM_KEYS: Record<SupportedImageDomain, string[]> = {
   skin_wound: [
     "wound_skin_issue",
     "skin_rash",
-    "lump_bump",
-    "mass",
-    "swelling",
     "hot_spot",
     "lesion",
     "hair_loss",
     "scab",
     "abscess",
+  ],
+  mass_swelling: [
+    "lump_bump",
+    "mass",
+    "swelling",
+    "cyst",
+    "nodule",
+    "growth",
   ],
   eye: [
     "eye_discharge",
@@ -126,10 +131,6 @@ const IMAGE_KEYWORDS: Record<SupportedImageDomain, string[]> = {
     "laceration",
     "rash",
     "skin",
-    "lump",
-    "bump",
-    "mass",
-    "swelling",
     "hot spot",
     "hotspot",
     "lesion",
@@ -142,6 +143,19 @@ const IMAGE_KEYWORDS: Record<SupportedImageDomain, string[]> = {
     "bald spot",
     "crusty",
     "pus",
+  ],
+  mass_swelling: [
+    "lump",
+    "bump",
+    "mass",
+    "swelling",
+    "growth",
+    "cyst",
+    "nodule",
+    "tumor",
+    "bulge",
+    "raised area",
+    "knot under skin",
   ],
   eye: [
     "eye",
@@ -236,6 +250,8 @@ const TEMPORAL_KEYWORDS: Record<SupportedTemporalDomain, string[]> = {
 const IMAGE_PROMPTS: Record<SupportedImageDomain, string> = {
   skin_wound:
     "A clear close-up photo of the affected skin or wound would help us assess severity. Try to fill the frame with the area, in good lighting.",
+  mass_swelling:
+    "A clear photo of the lump or swollen area would help us assess its size and appearance. Include something for scale (like a coin) if possible, in good lighting.",
   eye: "A clear photo of your dog's eye area would help. Good lighting and minimal blur are important — a flashlight can help illuminate.",
   ear: "A photo showing the outer ear flap or ear canal opening would be useful. Keep your dog still and use good lighting.",
   stool_vomit:
@@ -347,6 +363,7 @@ function suggestImageDomain(
 ): ImageSuggestion | null {
   const domainPriority: SupportedImageDomain[] = [
     "skin_wound",
+    "mass_swelling",
     "eye",
     "ear",
     "stool_vomit",
