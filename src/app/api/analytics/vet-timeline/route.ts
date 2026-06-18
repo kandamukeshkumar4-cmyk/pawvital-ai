@@ -72,9 +72,8 @@ export async function GET(request: Request) {
         .limit(10),
     ]);
 
-    const petNameById = new Map([[pet.id as string, pet.name as string]]);
     const checks = (checksResult.data ?? []).map((row) =>
-      symptomCheckRowToEntry(row as SymptomCheckDbRow, petNameById.get(petIdParam) ?? "Dog"),
+      symptomCheckRowToEntry(row as SymptomCheckDbRow, (pet.name as string) ?? "Dog"),
     );
     const logs = (logsResult.data ?? []) as HealthLog[];
     const journal = (journalResult.data ?? []) as JournalEntry[];

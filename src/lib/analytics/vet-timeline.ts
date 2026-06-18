@@ -62,6 +62,12 @@ function symptomCheckEntry(e: SymptomCheckEntry): VetTimelineEntry {
   };
 }
 
+function escalateTone(current: VetTimelineTone, next: VetTimelineTone): VetTimelineTone {
+  if (current === "alert" || next === "alert") return "alert";
+  if (next === "changed") return "changed";
+  return current;
+}
+
 function dailyLogEntries(log: HealthLog): VetTimelineEntry[] {
   const offSigns: string[] = [];
   let worstTone: VetTimelineTone = "normal";
@@ -78,7 +84,7 @@ function dailyLogEntries(log: HealthLog): VetTimelineEntry[] {
 
   if (log.vomiting_count > 0) {
     offSigns.push(`Vomiting: ${log.vomiting_count} time(s)`);
-    if (worstTone !== "alert") worstTone = "changed";
+    worstTone = escalateTone(worstTone, "changed");
   }
 
   // Context signals — from structured pack data.
@@ -86,14 +92,14 @@ function dailyLogEntries(log: HealthLog): VetTimelineEntry[] {
   const cs = log.context_signals;
   if (cs) {
     if (cs.gi?.blood_in_stool) { signals.push("Blood in stool"); worstTone = "alert"; }
-    if (cs.gi?.straining) { signals.push("Straining"); if (worstTone !== "alert") worstTone = "changed"; }
-    if (cs.urinary?.accidents) { signals.push("Urinary accidents"); if (worstTone !== "alert") worstTone = "changed"; }
-    if (cs.urinary?.increased_thirst) { signals.push("Increased thirst"); if (worstTone !== "alert") worstTone = "changed"; }
-    if (cs.mobility?.limping) { signals.push(cs.mobility.limb ? `Limping (${cs.mobility.limb})` : "Limping"); if (worstTone !== "alert") worstTone = "changed"; }
+    if (cs.gi?.straining) { signals.push("Straining"); worstTone = escalateTone(worstTone, "changed"); }
+    if (cs.urinary?.accidents) { signals.push("Urinary accidents"); worstTone = escalateTone(worstTone, "changed"); }
+    if (cs.urinary?.increased_thirst) { signals.push("Increased thirst"); worstTone = escalateTone(worstTone, "changed"); }
+    if (cs.mobility?.limping) { signals.push(cs.mobility.limb ? `Limping (${cs.mobility.limb})` : "Limping"); worstTone = escalateTone(worstTone, "changed"); }
     if (cs.skin_ear?.scratching) signals.push("Scratching");
     if (cs.skin_ear?.head_shaking) signals.push("Head shaking");
-    if (cs.skin_ear?.hot_spot) { signals.push("Hot spot"); if (worstTone !== "alert") worstTone = "changed"; }
-    if (cs.breathing?.coughing) { signals.push("Coughing"); if (worstTone !== "alert") worstTone = "changed"; }
+    if (cs.skin_ear?.hot_spot) { signals.push("Hot spot"); worstTone = escalateTone(worstTone, "changed"); }
+    if (cs.breathing?.coughing) { signals.push("Coughing"); worstTone = escalateTone(worstTone, "changed"); }
     if (cs.breathing?.labored) { signals.push("Labored breathing"); worstTone = "alert"; }
     if (cs.seizure?.occurred) { signals.push("Episode/seizure observed"); worstTone = "alert"; }
   }

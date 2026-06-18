@@ -285,7 +285,7 @@ function HealthSignalsContent() {
             />
           ) : null}
 
-          {vetTimeline ? (
+          {vetTimeline && vetTimeline.entries.length > 0 ? (
             <VetTimeline data={vetTimeline} petName={ownerReadout.petName} />
           ) : null}
 

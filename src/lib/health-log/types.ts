@@ -180,4 +180,6 @@ export const DEFAULT_LOG_INPUT: Omit<HealthLogInput, "pet_id"> = {
   weight_kg: null,
   meds_given: false,
   notes: null,
+  photo_urls: null,
+  context_signals: null,
 };

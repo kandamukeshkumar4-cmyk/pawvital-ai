@@ -110,7 +110,7 @@ export async function loadDogBrainContext({
         .limit(MAX_LOGS),
       supabase
         .from("symptom_checks")
-        .select("id, created_at, symptoms, severity, recommendation")
+        .select("id, created_at, symptoms, severity")
         .eq("pet_id", petId)
         .order("created_at", { ascending: false })
         .limit(MAX_CHECKS),
