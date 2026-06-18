@@ -76,4 +76,53 @@ describe("SpeechInputButton", () => {
       ).disabled
     ).toBe(true);
   });
+
+  it("shows a specific error message and keeps a transient error retryable", () => {
+    const start = jest.fn();
+    mockUseAzureSpeechInput.mockReturnValue({
+      error:
+        "Microphone access was blocked. Allow the mic for this site, then tap the mic again.",
+      errorReason: "permission_denied",
+      isBusy: false,
+      isSupported: true,
+      start,
+      state: "error",
+    });
+
+    render(
+      React.createElement(SpeechInputButton, { onTranscript: jest.fn() })
+    );
+
+    expect(screen.getByRole("status").textContent).toContain(
+      "Microphone access was blocked"
+    );
+    // Transient errors stay tappable so the owner can retry immediately.
+    const button = screen.getByRole("button");
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(button);
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the mic when voice input is unsupported in this browser", () => {
+    mockUseAzureSpeechInput.mockReturnValue({
+      error:
+        "Voice input isn't supported in this browser. Try Chrome or Edge, or type instead.",
+      errorReason: "unsupported",
+      isBusy: false,
+      isSupported: true,
+      start: jest.fn(),
+      state: "error",
+    });
+
+    render(
+      React.createElement(SpeechInputButton, { onTranscript: jest.fn() })
+    );
+
+    expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
+      true
+    );
+    expect(screen.getByRole("status").textContent).toContain(
+      "isn't supported in this browser"
+    );
+  });
 });

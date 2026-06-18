@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import {
+  classifySpeechError,
   requestAzureSpeechBrowserToken,
+  speechErrorMessage,
   useAzureSpeechInput,
   type AzureSpeechBrowserToken,
   type SpeechSdkLike,
@@ -76,6 +78,16 @@ function SpeechHarness({
       "span",
       { "data-testid": "speech-state" },
       speech.state
+    ),
+    React.createElement(
+      "span",
+      { "data-testid": "speech-error" },
+      speech.error ?? ""
+    ),
+    React.createElement(
+      "span",
+      { "data-testid": "speech-error-reason" },
+      speech.errorReason ?? ""
     ),
     React.createElement("span", { "data-testid": "transcript" }, transcript)
   );
@@ -172,5 +184,117 @@ describe("useAzureSpeechInput", () => {
     );
     expect(sdk.SpeechRecognizer).not.toHaveBeenCalled();
     expect(screen.getByTestId("speech-state").textContent).toBe("idle");
+  });
+
+  it("surfaces a permission-denied reason when the mic is blocked", async () => {
+    const { sdk } = makeSpeechSdk("ignored");
+    const SpeechRecognitionMock = jest.fn(() => ({
+      continuous: false,
+      interimResults: false,
+      lang: "en-US",
+      maxAlternatives: 1,
+      onerror: null,
+      onresult: null,
+      start: jest.fn(),
+      stop: jest.fn(),
+    }));
+    Object.defineProperty(window, "SpeechRecognition", {
+      configurable: true,
+      value: SpeechRecognitionMock,
+    });
+
+    render(
+      React.createElement(SpeechHarness, {
+        fetchToken: async () => null,
+        loadSdk: async () => sdk,
+      })
+    );
+
+    await waitFor(() =>
+      expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
+        false
+      )
+    );
+    fireEvent.click(screen.getByRole("button", { name: "start" }));
+
+    const recognition = await waitFor(() => {
+      const value = SpeechRecognitionMock.mock.results[0]?.value;
+      expect(value).toBeTruthy();
+      return value;
+    });
+    recognition.onerror({ error: "not-allowed" });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("speech-error-reason").textContent).toBe(
+        "permission_denied"
+      )
+    );
+    expect(screen.getByTestId("speech-state").textContent).toBe("error");
+    expect(screen.getByTestId("speech-error").textContent).toContain(
+      "Microphone access was blocked"
+    );
+  });
+
+  it("reports an unsupported reason when no recognition path exists", async () => {
+    const { sdk } = makeSpeechSdk("ignored");
+    // Microphone is present (button renders) but no Web Speech API and no Azure
+    // token — the user should learn why instead of facing a dead button.
+    Reflect.deleteProperty(window, "SpeechRecognition");
+    Reflect.deleteProperty(window, "webkitSpeechRecognition");
+
+    render(
+      React.createElement(SpeechHarness, {
+        fetchToken: async () => null,
+        loadSdk: async () => sdk,
+      })
+    );
+
+    await waitFor(() =>
+      expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
+        false
+      )
+    );
+    fireEvent.click(screen.getByRole("button", { name: "start" }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("speech-error-reason").textContent).toBe(
+        "unsupported"
+      )
+    );
+  });
+});
+
+describe("classifySpeechError", () => {
+  it("maps known Web Speech error codes to actionable reasons", () => {
+    expect(classifySpeechError(new Error("not-allowed"))).toBe(
+      "permission_denied"
+    );
+    expect(classifySpeechError("service-not-allowed")).toBe(
+      "permission_denied"
+    );
+    expect(classifySpeechError(new Error("no-speech"))).toBe("no_speech");
+    expect(classifySpeechError("audio-capture")).toBe("no_microphone");
+    expect(classifySpeechError(new Error("network"))).toBe("network");
+    expect(classifySpeechError("Web Speech API unavailable")).toBe(
+      "unsupported"
+    );
+  });
+
+  it("falls back to a retryable failure for unknown codes", () => {
+    expect(classifySpeechError(new Error("weird-glitch"))).toBe("failed");
+    expect(classifySpeechError(null)).toBe("failed");
+  });
+
+  it("provides a non-empty owner-facing message for every reason", () => {
+    for (const reason of [
+      "permission_denied",
+      "no_speech",
+      "no_microphone",
+      "unsupported",
+      "network",
+      "failed",
+    ] as const) {
+      expect(speechErrorMessage(reason).length).toBeGreaterThan(0);
+    }
   });
 });

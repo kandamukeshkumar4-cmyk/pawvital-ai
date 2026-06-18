@@ -9,6 +9,66 @@ export type AzureSpeechInputState =
   | "listening"
   | "starting";
 
+/**
+ * Specific, actionable reasons voice input can fail. The UI maps these to
+ * short owner-facing guidance instead of a single opaque "failed" message —
+ * the most common real-world causes (a denied mic prompt, a silent pause that
+ * trips the no-speech timeout, or a browser with no Web Speech support) each
+ * need a different next step from the user.
+ */
+export type SpeechErrorReason =
+  | "permission_denied"
+  | "no_speech"
+  | "no_microphone"
+  | "unsupported"
+  | "network"
+  | "failed";
+
+const SPEECH_ERROR_MESSAGES: Record<SpeechErrorReason, string> = {
+  permission_denied:
+    "Microphone access was blocked. Allow the mic for this site, then tap the mic again.",
+  no_speech: "I didn't catch anything — tap the mic and speak after it lights up.",
+  no_microphone: "No microphone was found. Check your mic, then try again.",
+  unsupported:
+    "Voice input isn't supported in this browser. Try Chrome or Edge, or type instead.",
+  network: "Voice input needs a connection right now. Check your network and retry.",
+  failed: "Voice input didn't work that time. Tap the mic to try again, or type instead.",
+};
+
+export function speechErrorMessage(reason: SpeechErrorReason): string {
+  return SPEECH_ERROR_MESSAGES[reason];
+}
+
+/**
+ * Map a raw Web Speech `SpeechRecognitionErrorEvent.error` code (or an Azure
+ * SDK error string) to a stable {@link SpeechErrorReason}. Unknown codes fall
+ * back to "failed" so the user still gets a retry affordance.
+ */
+export function classifySpeechError(raw: unknown): SpeechErrorReason {
+  const code = (
+    raw instanceof Error ? raw.message : typeof raw === "string" ? raw : ""
+  )
+    .toLowerCase()
+    .trim();
+
+  if (code === "not-allowed" || code === "service-not-allowed") {
+    return "permission_denied";
+  }
+  if (code === "no-speech") {
+    return "no_speech";
+  }
+  if (code === "audio-capture") {
+    return "no_microphone";
+  }
+  if (code === "network") {
+    return "network";
+  }
+  if (code.includes("unavailable") || code.includes("unsupported")) {
+    return "unsupported";
+  }
+  return "failed";
+}
+
 export type AzureSpeechBrowserToken = {
   enabled: true;
   expiresInSeconds: number;
@@ -176,6 +236,7 @@ export function useAzureSpeechInput({
 }: UseAzureSpeechInputOptions) {
   const [state, setState] = useState<AzureSpeechInputState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [errorReason, setErrorReason] = useState<SpeechErrorReason | null>(null);
   const [isSupported, setIsSupported] = useState(false);
   const mountedRef = useRef(false);
   const onTextRef = useRef(onText);
@@ -192,13 +253,23 @@ export function useAzureSpeechInput({
     onTextRef.current = onText;
   }, [onText]);
 
+  const failWith = useCallback((reason: SpeechErrorReason) => {
+    if (!mountedRef.current) {
+      return;
+    }
+    setErrorReason(reason);
+    setError(speechErrorMessage(reason));
+    setState("error");
+  }, []);
+
   const start = useCallback(async () => {
     if (!mountedRef.current || !browserSupportsSpeechInput()) {
-      setState("disabled");
+      failWith("unsupported");
       return;
     }
 
     setError(null);
+    setErrorReason(null);
     setState("starting");
 
     let recognizer: SpeechRecognizerLike | null = null;
@@ -250,19 +321,33 @@ export function useAzureSpeechInput({
         return;
       }
 
-      setState("disabled");
-    } catch {
-      if (mountedRef.current) {
-        setError("Speech input failed");
-        setState("error");
+      // Reached only when the browser exposed a microphone but no usable
+      // recognition path (no Azure token and no Web Speech API). Tell the user
+      // why instead of leaving a dead, silent button.
+      failWith("unsupported");
+    } catch (caught) {
+      // A user-initiated stop (Web Speech "aborted") is not a failure — reset
+      // quietly so the next tap starts cleanly.
+      if (caught instanceof Error && caught.message === "aborted") {
+        if (mountedRef.current) {
+          setState("idle");
+        }
+        return;
       }
+      // An empty transcript means recognition ran but heard nothing usable.
+      const reason =
+        caught instanceof Error && caught.message === "empty transcript"
+          ? "no_speech"
+          : classifySpeechError(caught);
+      failWith(reason);
     } finally {
       recognizer?.close();
     }
-  }, [fetchToken, language, loadSdk]);
+  }, [failWith, fetchToken, language, loadSdk]);
 
   return {
     error,
+    errorReason,
     isBusy: state === "starting" || state === "listening",
     isSupported,
     start,
