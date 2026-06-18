@@ -34,6 +34,23 @@ in the Supabase SQL editor, then we smoke-test save + read-back on an authed acc
 Until then the API returns TABLE_MISSING and the page shows "not switched on yet" — no
 breakage, just inert.
 
+### Phase 2b — Daily logs → AI brain ✅ SHIPPED
+The symptom-checker REPORT is now history-aware. On `action === "generate_report"`,
+the route fetches the pet's recent daily logs and injects a compact owner-reported
+summary into the report LLM prompt as SUPPORTIVE context only.
+- NEW `src/lib/health-log/context.ts` (`summarizeDailyLogsForContext`, 7 tests) +
+  `server-context.ts` (`loadDailyLogContext`, RLS-scoped, graceful null, injects
+  only when the name maps to exactly one pet).
+- `case_memory.daily_log_context` added to StructuredCaseMemory; preserved across
+  compression/recovery beside `vet_record_context`.
+- Read ONLY in `buildNarrativeReportPrompt` (LLM narrative). NEVER touches
+  deterministic urgency / red flags / matrix / readiness — injected AFTER the
+  blocking checks. Clinical-reviewer verdict: SHIP ("daily_log_context touches
+  deterministic clinical logic? NO; fencing adequate? YES").
+- Verifier: 441 route+health-log tests green, tsc/eslint clean, build passes.
+- Follow-ups (non-blocking, from review): prefer pet-id over name match if a
+  stable id reaches the route; consider an Objective-section clause.
+
 ### Original Phase 2 design notes
 The habit loop. Structured daily fields the owner can log in ~30s.
 

@@ -166,6 +166,7 @@ import { shouldPromptVetRecordUpload } from "@/lib/symptom-chat/vet-record-promp
 import { orchestrateNextQuestion } from "@/lib/symptom-chat/next-question-orchestration";
 import { buildQuestionResponseFlow } from "@/lib/symptom-chat/question-response-flow";
 import { resolveVerifiedUserId } from "@/lib/symptom-chat/server-identity";
+import { loadDailyLogContext } from "@/lib/health-log/server-context";
 import {
   isAsyncWorkerReplay,
   maybeOffloadSymptomChatTurn,
@@ -1583,6 +1584,22 @@ export async function POST(request: Request) {
           },
           { status: 409 }
         );
+      }
+
+      // Enrich the report with the owner's recent at-home daily logs as
+      // SUPPORTIVE narrative context. Best-effort: never blocks report
+      // generation, and never feeds deterministic urgency / red-flag logic
+      // (it is read in buildNarrativeReportPrompt only). See loadDailyLogContext.
+      const dailyLogContext = await loadDailyLogContext({
+        userId: verifiedUserId,
+        petName: effectivePet.name,
+      });
+      if (dailyLogContext) {
+        const memory = ensureStructuredCaseMemory(session);
+        session = {
+          ...session,
+          case_memory: { ...memory, daily_log_context: dailyLogContext },
+        };
       }
 
       return await generateReport({
