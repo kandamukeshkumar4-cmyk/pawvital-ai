@@ -4,6 +4,7 @@ import { useState } from "react";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
+import Textarea from "@/components/ui/textarea";
 import Button from "@/components/ui/button";
 import { useEffect, useRef } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -22,6 +23,8 @@ function onboardingToPet(
     ageUnit: PetAgeUnit;
     weight: number;
     weightUnit: "lbs" | "kg";
+    existingConditions: string[];
+    medications: string[];
   }
 ): Pet {
   let ageYears = 0;
@@ -52,11 +55,20 @@ function onboardingToPet(
     weight_unit: values.weightUnit,
     gender: "male",
     is_neutered: true,
-    existing_conditions: [],
-    medications: [],
+    existing_conditions: values.existingConditions,
+    medications: values.medications,
     created_at: now,
     updated_at: now,
   };
+}
+
+/** Split a comma-separated owner entry into a clean string array (max 20 items). */
+function parseCommaList(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 20);
 }
 
 interface PetProfileModalProps {
@@ -82,6 +94,8 @@ export default function PetProfileModal({
   const [ageUnit, setAgeUnit] = useState<PetAgeUnit>("years");
   const [weight, setWeight] = useState("");
   const [weightUnit, setWeightUnit] = useState<"lbs" | "kg">("lbs");
+  const [conditions, setConditions] = useState("");
+  const [medications, setMedications] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -160,6 +174,8 @@ export default function PetProfileModal({
       ageUnit,
       weight: parseFloat(weight),
       weightUnit,
+      existingConditions: parseCommaList(conditions),
+      medications: parseCommaList(medications),
     });
     try {
       await savePet(pet);
@@ -259,6 +275,24 @@ export default function PetProfileModal({
             ]}
           />
         </div>
+        <Textarea
+          label="Existing conditions (optional)"
+          value={conditions}
+          onChange={(e) => setConditions(e.target.value)}
+          placeholder="e.g. arthritis, skin allergies, heart murmur — separate with commas"
+          rows={2}
+        />
+        <Textarea
+          label="Current medications (optional)"
+          value={medications}
+          onChange={(e) => setMedications(e.target.value)}
+          placeholder="e.g. Apoquel, joint supplement — separate with commas"
+          rows={2}
+        />
+        <p className="-mt-2 text-xs text-gray-500">
+          These help PawVital tailor symptom checks to your dog. You can update them
+          anytime in Settings.
+        </p>
         {saveError && (
           <p className="text-sm text-red-600" role="alert">{saveError}</p>
         )}
