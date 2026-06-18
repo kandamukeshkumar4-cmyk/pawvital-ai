@@ -147,16 +147,16 @@ function ChatBubble({
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
           isUser
-            ? "bg-blue-100"
+            ? "bg-blue-500/20"
             : isEmergency
-              ? "bg-red-100"
+              ? "bg-red-500/20"
               : isCannotAssess
-                ? "bg-amber-100"
+                ? "bg-amber-500/20"
                 : isOutOfScope
-                  ? "bg-slate-100"
+                  ? "bg-slate-500/20"
                   : isImageGate
-                    ? "bg-amber-100"
-                    : "bg-purple-100"
+                    ? "bg-amber-500/20"
+                    : "bg-purple-500/20"
         }`}
       >
         {isUser ? (
@@ -178,22 +178,22 @@ function ChatBubble({
           isUser
             ? "bg-blue-600 text-white"
             : highlightEscalation
-              ? "bg-red-50 border-2 border-red-500 text-red-900 animate-pulse"
+              ? "bg-red-900/30 border-2 border-red-500 text-red-300 animate-pulse"
               : highlightClarification
-                ? "bg-orange-50 border border-orange-200 border-l-4 border-l-orange-400 text-orange-950"
+                ? "bg-orange-900/20 border border-orange-500/40 border-l-4 border-l-orange-400 text-orange-300"
                 : isEmergency
-                  ? "bg-red-50 border-2 border-red-300 text-red-900"
+                  ? "bg-red-900/30 border-2 border-red-500/50 text-red-300"
                   : isCannotAssess
-                    ? "bg-amber-50 border border-amber-400 text-amber-950"
+                    ? "bg-amber-900/20 border border-amber-500/40 text-amber-300"
                     : isOutOfScope
-                      ? "bg-slate-50 border border-slate-300 text-slate-900"
+                      ? "bg-slate-800 border border-slate-600 text-slate-300"
                       : isImageGate
-                        ? "bg-amber-50 border border-amber-300 text-amber-950"
-                        : "bg-gray-100 text-gray-800"
+                        ? "bg-amber-900/20 border border-amber-500/40 text-amber-300"
+                        : "bg-white/8 text-gray-200"
         }`}
       >
         {isCannotAssess && (
-          <p className="mb-1 text-xs font-semibold text-amber-700">
+          <p className="mb-1 text-xs font-semibold text-amber-400">
             Cannot safely assess at home
           </p>
         )}
@@ -1026,7 +1026,7 @@ export default function SymptomCheckerPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-900/20 px-4 py-3 text-sm text-amber-300">
           If your dog is struggling to breathe, has collapsed, is bleeding
           heavily, having repeated seizures, unable to urinate, or you think
           this is an emergency, contact a veterinarian immediately.
@@ -1036,14 +1036,14 @@ export default function SymptomCheckerPage() {
         {!sessionStarted && (
           <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Stethoscope className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                <Stethoscope className="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <h2 className="font-semibold text-gray-900">
+                <h2 className="font-semibold text-white">
                   Tell me what&apos;s going on with {displayPetName}
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-400">
                   I&apos;ll guide a dog-only symptom check, ask focused follow-up
                   questions, and prepare a vet handoff summary with urgency
                   guidance. PawVital does not diagnose or prescribe treatment.
@@ -1051,14 +1051,14 @@ export default function SymptomCheckerPage() {
               </div>
             </div>
 
-            <div className="bg-purple-50 rounded-xl p-4 mb-4">
+            <div className="bg-purple-500/10 rounded-xl p-4 mb-4 border border-purple-500/20">
               <div className="flex items-start gap-2">
-                <Bot className="w-5 h-5 text-purple-600 mt-0.5" />
+                <Bot className="w-5 h-5 text-purple-400 mt-0.5" />
                 <div>
-                  <p className="text-sm text-purple-900 font-medium">
+                  <p className="text-sm text-purple-300 font-medium">
                     How this works:
                   </p>
-                  <ol className="text-sm text-purple-800 mt-1 space-y-1 list-decimal ml-4">
+                  <ol className="text-sm text-purple-300/80 mt-1 space-y-1 list-decimal ml-4">
                     <li>
                       Describe what&apos;s happening in your own words or upload
                       a photo of the issue
@@ -1078,6 +1078,7 @@ export default function SymptomCheckerPage() {
               <p className="text-xs text-gray-500 mb-2">
                 Quick start — or type your own below:
               </p>
+
               <div className="flex flex-wrap gap-2">
                 {quickSymptoms.map((s) => (
                   <button
@@ -1087,7 +1088,7 @@ export default function SymptomCheckerPage() {
                         `${hasHydrated ? pet.name : "My dog"} has been ${s.toLowerCase()}`,
                       )
                     }
-                    className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-700 transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-full border border-white/10 text-gray-400 hover:bg-purple-500/20 hover:border-purple-500/40 hover:text-purple-300 transition-colors"
                   >
                     {s}
                   </button>
@@ -1101,15 +1102,15 @@ export default function SymptomCheckerPage() {
         {sessionStarted && (
           <Card className="p-0 overflow-hidden">
             {/* Chat header */}
-            <div className="flex flex-wrap items-start gap-3 border-b border-gray-100 bg-gray-50/50 px-4 py-3">
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <Bot className="w-4 h-4 text-purple-600" />
+            <div className="flex flex-wrap items-start gap-3 border-b border-white/8 bg-white/4 px-4 py-3">
+              <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
+                <Bot className="w-4 h-4 text-purple-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900">
+                <p className="text-sm font-semibold text-white">
                   Dog symptom check for {displayPetName}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-400">
                   {displayPetBreed}, {displayPetAgeYears}y, {displayPetWeight} lbs
                 </p>
               </div>
@@ -1197,13 +1198,13 @@ export default function SymptomCheckerPage() {
 
               {(loading || awaitingAsyncResult) && (
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-purple-600" />
+                  <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-purple-400" />
                   </div>
-                  <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                  <div className="bg-white/8 rounded-2xl px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
-                      <span className="text-sm text-gray-500">Thinking...</span>
+                      <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
+                      <span className="text-sm text-gray-400">Thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -1214,13 +1215,13 @@ export default function SymptomCheckerPage() {
 
             {/* Input area — hide when report is generated */}
             {!report && !isTerminalConversation && (
-              <div className="border-t border-gray-100 p-3">
+              <div className="border-t border-white/8 p-3">
                 {selectedImage && (
                   <div className="mb-3 relative inline-block">
                     <img
                       src={selectedImage}
                       alt="Preview"
-                      className="h-24 rounded border border-gray-200 object-contain bg-gray-50"
+                      className="h-24 rounded border border-white/10 object-contain bg-white/4"
                     />
                     <button
                       onClick={clearComposerImage}
@@ -1322,7 +1323,7 @@ export default function SymptomCheckerPage() {
         )}
 
         {!sessionStarted && !report && (
-          <div className="p-3 bg-white border border-gray-200 rounded-xl">
+          <div className="p-3 bg-white/4 border border-white/10 rounded-xl">
             <div className="flex flex-col gap-2 sm:flex-row">
               <div className="flex min-w-0 flex-1 gap-2">
                 <Button
@@ -1332,7 +1333,7 @@ export default function SymptomCheckerPage() {
                   title="Attach Photo"
                   aria-label="Attach photo"
                 >
-                  <ImagePlus className="w-5 h-5 text-gray-500" />
+                  <ImagePlus className="w-5 h-5 text-gray-400" />
                 </Button>
                 <SpeechInputButton
                   disabled={loading || awaitingAsyncResult}
@@ -1408,11 +1409,11 @@ export default function SymptomCheckerPage() {
           <div ref={reportRef} className="scroll-mt-4">
             <div className="space-y-4">
               {reportPersistenceMessage ? (
-                <Card className="border border-amber-300 bg-amber-50 p-4">
-                  <p className="text-sm font-semibold text-amber-900">
+                <Card className="border border-amber-500/30 bg-amber-900/20 p-4">
+                  <p className="text-sm font-semibold text-amber-300">
                     Report save status
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-amber-900/90">
+                  <p className="mt-1 text-sm leading-6 text-amber-300/80">
                     {reportPersistenceMessage}
                   </p>
                 </Card>
