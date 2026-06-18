@@ -12,3 +12,4 @@ export {
   DailySignalsGridView,
   StatusTimeline,
 } from "./daily-signals";
+export { VetTimeline } from "./vet-timeline";

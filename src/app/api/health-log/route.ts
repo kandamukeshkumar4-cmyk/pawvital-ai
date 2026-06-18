@@ -17,6 +17,61 @@ import {
  * intelligence routes. Demo mode (no Supabase) returns empty / 503 gracefully.
  */
 
+const ContextSignalsSchema = z
+  .object({
+    gi: z
+      .object({
+        blood_in_stool: z.boolean().optional(),
+        straining: z.boolean().optional(),
+        change_note: z.string().max(500).optional(),
+      })
+      .optional(),
+    urinary: z
+      .object({
+        accidents: z.boolean().optional(),
+        color_change: z.boolean().optional(),
+        increased_thirst: z.boolean().optional(),
+      })
+      .optional(),
+    mobility: z
+      .object({
+        limping: z.boolean().optional(),
+        limb: z.string().max(50).optional(),
+        reluctance_to_move: z.boolean().optional(),
+      })
+      .optional(),
+    skin_ear: z
+      .object({
+        scratching: z.boolean().optional(),
+        head_shaking: z.boolean().optional(),
+        odor: z.boolean().optional(),
+        hot_spot: z.boolean().optional(),
+      })
+      .optional(),
+    breathing: z
+      .object({
+        coughing: z.boolean().optional(),
+        labored: z.boolean().optional(),
+        exercise_intolerance: z.boolean().optional(),
+      })
+      .optional(),
+    seizure: z
+      .object({
+        occurred: z.boolean(),
+        duration_sec: z.number().int().min(0).max(7200).optional(),
+        recovery_note: z.string().max(500).optional(),
+      })
+      .optional(),
+    medication: z
+      .object({
+        name: z.string().max(200).optional(),
+        dose_notes: z.string().max(500).optional(),
+      })
+      .optional(),
+  })
+  .optional()
+  .nullable();
+
 const LogBodySchema = z.object({
   pet_id: z.string().uuid(),
   log_date: z
@@ -32,6 +87,8 @@ const LogBodySchema = z.object({
   weight_kg: z.number().positive().max(200).nullable().optional(),
   meds_given: z.boolean(),
   notes: z.string().trim().max(4000).nullable().optional(),
+  photo_urls: z.array(z.string().url()).max(10).optional().nullable(),
+  context_signals: ContextSignalsSchema,
 });
 
 const UUID_RE =
@@ -158,6 +215,8 @@ export async function POST(request: Request) {
       weight_kg: parsed.data.weight_kg ?? null,
       meds_given: parsed.data.meds_given,
       notes: parsed.data.notes ?? null,
+      photo_urls: parsed.data.photo_urls ?? [],
+      context_signals: parsed.data.context_signals ?? null,
     };
 
     // One log per pet per day — upsert so re-saving the same day updates it.

@@ -15,6 +15,53 @@ export type Energy = "normal" | "low" | "high";
 
 export type LogTone = "good" | "watch" | "alert";
 
+/**
+ * Structured dog-specific context signals stored as a JSONB blob alongside the
+ * daily log. Each sub-object captures pack-specific observations the owner
+ * noticed that day. All fields are optional — owners fill in what applies.
+ *
+ * Safety: these are owner observations only. They must never feed into
+ * deterministic urgency/red-flag logic and are labelled accordingly wherever
+ * summarised for AI context.
+ */
+export interface ContextSignals {
+  gi?: {
+    blood_in_stool?: boolean;
+    straining?: boolean;
+    change_note?: string;
+  };
+  urinary?: {
+    accidents?: boolean;
+    color_change?: boolean;
+    increased_thirst?: boolean;
+  };
+  mobility?: {
+    limping?: boolean;
+    limb?: string;
+    reluctance_to_move?: boolean;
+  };
+  skin_ear?: {
+    scratching?: boolean;
+    head_shaking?: boolean;
+    odor?: boolean;
+    hot_spot?: boolean;
+  };
+  breathing?: {
+    coughing?: boolean;
+    labored?: boolean;
+    exercise_intolerance?: boolean;
+  };
+  seizure?: {
+    occurred: boolean;
+    duration_sec?: number;
+    recovery_note?: string;
+  };
+  medication?: {
+    name?: string;
+    dose_notes?: string;
+  };
+}
+
 export interface HealthLogInput {
   pet_id: string;
   /** YYYY-MM-DD. Defaults to today server-side when omitted. */
@@ -28,6 +75,8 @@ export interface HealthLogInput {
   weight_kg?: number | null;
   meds_given: boolean;
   notes?: string | null;
+  photo_urls?: string[] | null;
+  context_signals?: ContextSignals | null;
 }
 
 export interface HealthLog extends HealthLogInput {
@@ -37,6 +86,7 @@ export interface HealthLog extends HealthLogInput {
   weight_kg: number | null;
   notes: string | null;
   photo_urls: string[];
+  context_signals: ContextSignals | null;
   created_at: string;
   updated_at: string;
 }

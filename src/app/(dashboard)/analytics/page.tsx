@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
-import { Activity, ChevronDown, Loader2, Stethoscope } from "lucide-react";
+import { Activity, Loader2, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { buttonClassName } from "@/components/ui/button";
@@ -12,9 +12,9 @@ import {
   OwnerStatusHero,
   RecentSigns,
   RecoveryTrendStrip,
-  StatusTimeline,
   TrackNext,
   VetPacket,
+  VetTimeline,
   WhyThisChanged,
 } from "@/components/analytics";
 import Select from "@/components/ui/select";
@@ -24,6 +24,7 @@ import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-ch
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { buildProductIntelligenceSnapshot } from "@/lib/product-intelligence";
 import { buildOwnerReadout } from "@/lib/analytics/owner-readout";
+import type { VetTimelineData } from "@/lib/analytics/vet-timeline";
 import type { HealthLog } from "@/lib/health-log/types";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { DEMO_ANALYTICS_SYMPTOM_ENTRIES } from "@/lib/demo-health-data";
@@ -48,6 +49,7 @@ function HealthSignalsContent() {
   const { pets, activePet } = useAppStore();
   const [rawEntries, setRawEntries] = useState<SymptomCheckEntry[]>([]);
   const [logs, setLogs] = useState<HealthLog[]>([]);
+  const [vetTimeline, setVetTimeline] = useState<VetTimelineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [petId, setPetId] = useState<string>("all");
   const [range, setRange] = useState<string>("90");
@@ -112,9 +114,27 @@ function HealthSignalsContent() {
     }
   }, [resolvedPetId]);
 
+  const loadVetTimeline = useCallback(async () => {
+    if (!isSupabaseConfigured || !resolvedPetId) {
+      setVetTimeline(null);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/analytics/vet-timeline?pet_id=${encodeURIComponent(resolvedPetId)}`,
+        { credentials: "include" },
+      );
+      const json = await res.json().catch(() => ({}));
+      setVetTimeline(res.ok && json.data ? (json.data as VetTimelineData) : null);
+    } catch {
+      setVetTimeline(null);
+    }
+  }, [resolvedPetId]);
+
   useEffect(() => {
     void loadLogs();
-  }, [loadLogs]);
+    void loadVetTimeline();
+  }, [loadLogs, loadVetTimeline]);
 
   const petOptions = useMemo(() => {
     const base = [{ value: "all", label: "All dogs" }];
@@ -265,20 +285,8 @@ function HealthSignalsContent() {
             />
           ) : null}
 
-          {!noChecks ? (
-            <details className="group rounded-2xl border border-[#e8e2d8] bg-white">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-4 text-sm font-medium text-[#7c4dc4]">
-                <span>The story over time</span>
-                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
-              </summary>
-              <div className="space-y-4 border-t border-[#e8e2d8] px-4 py-5 sm:px-5">
-                <p className="text-xs leading-relaxed text-[#8a857a]">
-                  A simple history of your checks — handy to show your vet. It isn&apos;t a
-                  diagnosis, just a record of what you reported over time.
-                </p>
-                <StatusTimeline entries={filtered} />
-              </div>
-            </details>
+          {vetTimeline ? (
+            <VetTimeline data={vetTimeline} petName={ownerReadout.petName} />
           ) : null}
 
           <p className="px-2 pb-4 pt-1 text-center text-xs leading-relaxed text-[#8a857a]">
