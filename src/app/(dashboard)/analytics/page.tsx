@@ -1,14 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { subDays } from "date-fns";
-import { BarChart3, Loader2 } from "lucide-react";
+import { BarChart3, ChevronDown, Loader2, Stethoscope } from "lucide-react";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import Card from "@/components/ui/card";
 import Select from "@/components/ui/select";
+import { buttonClassName } from "@/components/ui/button";
 import {
   HealthScoreCard,
+  OwnerStatusHero,
   ProductIntelligencePanel,
+  RecentSigns,
+  RecoveryTrendStrip,
   SeverityTrendChart,
   SymptomFrequencyChart,
   UrgencyDistribution,
@@ -17,6 +22,7 @@ import type { SymptomCheckEntry } from "@/components/timeline/types";
 import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-check-entry-map";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { buildProductIntelligenceSnapshot } from "@/lib/product-intelligence";
+import { buildOwnerReadout } from "@/lib/analytics/owner-readout";
 import {
   buildOwnerRecoveryCheckpoint,
   loadProductIntelligenceHistory,
@@ -155,6 +161,32 @@ function AnalyticsPageContent() {
     [filtered, now, selectedPetIdForRecovery]
   );
 
+  const selectedPetName = useMemo(() => {
+    if (petId === "all") return undefined;
+    return petOptions.find((option) => option.value === petId)?.label;
+  }, [petId, petOptions]);
+
+  const ownerReadout = useMemo(
+    () =>
+      buildOwnerReadout({
+        entries: filtered,
+        snapshot: productSnapshot,
+        now,
+        fallbackPetName: selectedPetName ?? "your dog",
+      }),
+    [filtered, productSnapshot, now, selectedPetName]
+  );
+
+  // Latest check's confidence drives the hero ring fill (0..1).
+  const latestConfidence = useMemo(() => {
+    if (filtered.length === 0) return 0.5;
+    const latest = [...filtered].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0];
+    const c = latest?.confidence ?? 0.5;
+    return c > 1 ? c / 100 : c;
+  }, [filtered]);
+
   const loadProductHistory = useCallback(async () => {
     if (!selectedPetIdForPersistence) {
       setProductUiState((current) => ({ ...current, history: null }));
@@ -248,20 +280,25 @@ function AnalyticsPageContent() {
   ]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-blue-600 mb-1">
-            <BarChart3 className="h-6 w-6" aria-hidden />
-            <span className="text-sm font-semibold uppercase tracking-wide">Insights</span>
+          <div className="mb-1 flex items-center gap-2 text-[#00a878]">
+            <BarChart3 className="h-5 w-5" aria-hidden />
+            <span className="text-sm font-semibold uppercase tracking-wide">
+              {ownerReadout.petName === "your dog"
+                ? "Health overview"
+                : `${ownerReadout.petName}'s health`}
+            </span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Health analytics</h1>
-          <p className="text-gray-500 mt-1">
-            Trends from symptom checks{!isSupabaseConfigured ? " (demo data)" : ""}
+          <h1 className="text-2xl font-bold text-[#2c2a26]">How is your dog doing?</h1>
+          <p className="mt-1 text-sm text-[#6b665d]">
+            A plain-language read on your recent symptom checks
+            {!isSupabaseConfigured ? " (demo data)" : ""}.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <div className="w-full sm:w-48">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="w-full sm:w-40">
             <Select
               label="Dog"
               options={petOptions}
@@ -269,9 +306,9 @@ function AnalyticsPageContent() {
               onChange={(e) => setPetId(e.target.value)}
             />
           </div>
-          <div className="w-full sm:w-48">
+          <div className="w-full sm:w-40">
             <Select
-              label="Date range"
+              label="Time"
               options={RANGE_OPTIONS}
               value={range}
               onChange={(e) => setRange(e.target.value)}
@@ -281,56 +318,113 @@ function AnalyticsPageContent() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-24 text-gray-500 gap-2">
+        <div className="flex items-center justify-center gap-2 py-24 text-[#6b665d]">
           <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
-          Loading analytics…
+          Loading…
         </div>
       ) : isSupabaseConfigured && pets.length === 0 ? (
-        <Card className="p-10 text-center text-gray-600">
-          <p>Add a dog profile to see analytics from your symptom checks.</p>
+        <Card className="p-10 text-center text-[#6b665d]">
+          <p>Add a dog profile to start tracking how your dog is doing.</p>
         </Card>
+      ) : ownerReadout.checkCount === 0 || !ownerReadout.verdict ? (
+        <section className="rounded-3xl border border-[#e8e2d8] bg-white p-8 text-center shadow-sm">
+          <div
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+            style={{ background: "rgba(0,168,120,0.12)", color: "#0a7d5b" }}
+          >
+            <Stethoscope className="h-7 w-7" aria-hidden />
+          </div>
+          <h2 className="mt-4 text-xl font-bold text-[#2c2a26]">
+            Let&apos;s get to know {ownerReadout.petName}
+          </h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[#6b665d]">
+            Do a quick symptom check and we&apos;ll show you how {ownerReadout.petName}
+            {" "}is doing — in plain language, with what to watch for.
+          </p>
+          <Link
+            href="/symptom-checker"
+            className={`${buttonClassName()} mt-5 inline-flex`}
+          >
+            <Stethoscope className="mr-2 h-4 w-4" aria-hidden />
+            Start a quick check
+          </Link>
+        </section>
       ) : (
         <>
-          <Card className="p-6">
-            <ProductIntelligencePanel
-              snapshot={productSnapshot}
-              historyCount={productUiState.history?.readiness.length}
-              onSaveSnapshot={selectedPetIdForPersistence ? saveReadinessSnapshot : undefined}
-              saveSnapshotDisabled={productUiState.historyLoading}
-              saveSnapshotInProgress={productUiState.readinessSaving}
-              saveSnapshotStatus={productUiState.readinessStatus}
-              recoveryCheckpoint={recoveryCheckpoint}
-              recoveryHistoryCount={productUiState.history?.recovery.length}
-              onSaveRecoveryCheckpoint={
-                selectedPetIdForPersistence ? saveRecoveryCheckpoint : undefined
-              }
-              saveRecoveryDisabled={productUiState.historyLoading}
-              saveRecoveryInProgress={productUiState.recoverySaving}
-              saveRecoveryStatus={productUiState.recoveryStatus}
-            />
-          </Card>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <HealthScoreCard entries={filtered} />
-            </Card>
-            <Card className="p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-2">Urgency mix</h2>
-              <p className="text-xs text-gray-500 mb-2">How often each urgency level appeared</p>
-              <UrgencyDistribution entries={filtered} />
-            </Card>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-1">Top symptoms</h2>
-              <p className="text-xs text-gray-500 mb-4">Five most common primary concerns</p>
-              <SymptomFrequencyChart entries={filtered} />
-            </Card>
-            <Card className="p-6">
-              <h2 className="text-sm font-semibold text-gray-900 mb-1">Severity over time</h2>
-              <p className="text-xs text-gray-500 mb-4">Per-check severity (chronological)</p>
-              <SeverityTrendChart entries={filtered} />
-            </Card>
-          </div>
+          <OwnerStatusHero
+            verdict={ownerReadout.verdict}
+            petName={ownerReadout.petName}
+            asOf={ownerReadout.asOf}
+            confidence={latestConfidence}
+          />
+
+          <RecoveryTrendStrip readout={ownerReadout.trend} petName={ownerReadout.petName} />
+
+          <RecentSigns signs={ownerReadout.signs} asOf={ownerReadout.asOf} />
+
+          <details className="group rounded-2xl border border-[#e8e2d8] bg-white">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-4 text-sm font-medium text-[#7c4dc4]">
+              <span>See the full details</span>
+              <ChevronDown
+                className="h-4 w-4 transition-transform group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <div className="space-y-5 border-t border-[#e8e2d8] px-4 py-5 sm:px-5">
+              <ProductIntelligencePanel
+                snapshot={productSnapshot}
+                historyCount={productUiState.history?.readiness.length}
+                onSaveSnapshot={
+                  selectedPetIdForPersistence ? saveReadinessSnapshot : undefined
+                }
+                saveSnapshotDisabled={productUiState.historyLoading}
+                saveSnapshotInProgress={productUiState.readinessSaving}
+                saveSnapshotStatus={productUiState.readinessStatus}
+                recoveryCheckpoint={recoveryCheckpoint}
+                recoveryHistoryCount={productUiState.history?.recovery.length}
+                onSaveRecoveryCheckpoint={
+                  selectedPetIdForPersistence ? saveRecoveryCheckpoint : undefined
+                }
+                saveRecoveryDisabled={productUiState.historyLoading}
+                saveRecoveryInProgress={productUiState.recoverySaving}
+                saveRecoveryStatus={productUiState.recoveryStatus}
+              />
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <Card className="p-5">
+                  <HealthScoreCard entries={filtered} />
+                </Card>
+                <Card className="p-5">
+                  <h2 className="mb-2 text-sm font-semibold text-gray-900">Urgency mix</h2>
+                  <p className="mb-2 text-xs text-gray-500">
+                    How often each urgency level appeared
+                  </p>
+                  <UrgencyDistribution entries={filtered} />
+                </Card>
+                <Card className="p-5">
+                  <h2 className="mb-1 text-sm font-semibold text-gray-900">Top symptoms</h2>
+                  <p className="mb-4 text-xs text-gray-500">
+                    Five most common primary concerns
+                  </p>
+                  <SymptomFrequencyChart entries={filtered} />
+                </Card>
+                <Card className="p-5">
+                  <h2 className="mb-1 text-sm font-semibold text-gray-900">
+                    Severity over time
+                  </h2>
+                  <p className="mb-4 text-xs text-gray-500">
+                    Per-check severity (chronological)
+                  </p>
+                  <SeverityTrendChart entries={filtered} />
+                </Card>
+              </div>
+            </div>
+          </details>
+
+          <p className="px-2 pb-4 pt-1 text-center text-xs leading-relaxed text-[#8a857a]">
+            PawVital helps you understand your dog&apos;s signs — it&apos;s not a
+            diagnosis and doesn&apos;t replace a vet. If you&apos;re worried or things
+            get worse, contact your vet. In an emergency, call an emergency vet right away.
+          </p>
         </>
       )}
     </div>
