@@ -63,10 +63,10 @@ export function TrackNext({
       </h3>
       <p className="mt-1 text-sm leading-relaxed text-[#6b665d]">{nextStep.detail}</p>
       <Link
-        href="/symptom-checker"
+        href="/health-log"
         className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#0a7d5b] hover:underline"
       >
-        Do a quick check-in for {petName}
+        Log today&apos;s check-in for {petName}
         <ArrowRight className="h-4 w-4" aria-hidden />
       </Link>
     </section>

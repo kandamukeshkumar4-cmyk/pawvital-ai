@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BarChart3,
+  ClipboardList,
   PawPrint,
 } from "lucide-react";
 import { filterPrivateTesterNavItems } from "@/lib/private-tester-scope";
@@ -27,6 +28,7 @@ const navItems = [
   { href: "/dashboard", icon: Activity, label: "Dashboard" },
   { href: "/pets", icon: PawPrint, label: "My Dogs" },
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
+  { href: "/health-log", icon: ClipboardList, label: "Daily Log" },
   { href: "/history", icon: Clock, label: "History" },
   { href: "/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/supplements", icon: Pill, label: "Supplements" },
@@ -78,7 +80,6 @@ export default function Sidebar() {
   }, [isDesktop, sidebarOpen, toggleSidebar]);
 
   const showMobileSidebar = !isDesktop && sidebarOpen;
-  const collapseLabel = isDesktop ? "Collapse" : "Close menu";
 
   return (
     <>

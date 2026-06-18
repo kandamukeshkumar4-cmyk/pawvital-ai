@@ -22,7 +22,19 @@ trend; only the debug UI is gone.)
 Verifier: tests/owner-readout.test.ts (13/13), tsc/eslint clean, build prerenders
 /analytics static, dedicated review = SHIP.
 
-## Phase 2 — Daily Health Log + Smart Follow-Up Prompts (NEXT, needs schema)
+## Phase 2 — Daily Health Log + Smart Follow-Up Prompts ✅ CODE-COMPLETE (deployed; needs migration)
+SHIPPED: `supabase-daily-health-log-schema.sql` (idempotent table + RLS + trigger),
+`src/lib/health-log/{types,readout}.ts` (pure, 8 tests), `src/app/api/health-log/route.ts`
+(GET list + POST upsert; auth + zod + pet-ownership + rate-limit; TABLE_MISSING/DEMO_MODE
+graceful), `src/app/(dashboard)/health-log/page.tsx` (form + readout + recent list),
+sidebar "Daily Log" nav, and analytics "Track next" now links to /health-log.
+Verifier: 21 tests green, tsc/eslint clean, build prerenders, review = SHIP.
+**ROLLOUT GATE (still open):** owner must run `supabase-daily-health-log-schema.sql`
+in the Supabase SQL editor, then we smoke-test save + read-back on an authed account.
+Until then the API returns TABLE_MISSING and the page shows "not switched on yet" — no
+breakage, just inert.
+
+### Original Phase 2 design notes
 The habit loop. Structured daily fields the owner can log in ~30s.
 
 Proposed schema (`supabase-daily-health-log-schema.sql`, idempotent, RLS by owner):
