@@ -77,11 +77,14 @@ export function TrackNext({
 export function VetPacket({
   packet,
   petName,
+  dailyLogCount = 0,
 }: {
   packet: OwnerVetPacket;
   petName: string;
+  /** Number of daily logs in view, surfaced in the summary line. */
+  dailyLogCount?: number;
 }) {
-  if (!packet.ready) return null;
+  if (!packet.ready && dailyLogCount === 0) return null;
   const parts: string[] = [];
   if (packet.rangeLabel) parts.push(packet.rangeLabel);
   parts.push(
@@ -91,6 +94,9 @@ export function VetPacket({
         ? "1 urgent flag"
         : `${packet.urgentFlags} urgent flags`,
   );
+  if (dailyLogCount > 0) {
+    parts.push(dailyLogCount === 1 ? "1 daily log" : `${dailyLogCount} daily logs`);
+  }
 
   return (
     <section className="rounded-2xl border border-[#e8e2d8] bg-[#faf8f5] p-5">

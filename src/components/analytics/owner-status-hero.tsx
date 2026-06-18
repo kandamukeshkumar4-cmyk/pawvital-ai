@@ -1,9 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, PawPrint, Phone, Stethoscope } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  HeartPulse,
+  Phone,
+  ShieldCheck,
+  Stethoscope,
+} from "lucide-react";
 import { buttonClassName } from "@/components/ui/button";
 import type { OwnerVerdict, OwnerVerdictState } from "@/lib/analytics/owner-readout";
+
+const STATE_ICON: Record<OwnerVerdictState, typeof HeartPulse> = {
+  watch: ShieldCheck,
+  schedule: HeartPulse,
+  urgent: AlertCircle,
+  emergency: AlertTriangle,
+};
 
 type StateStyle = {
   ring: string;
@@ -52,11 +66,11 @@ const STATE_STYLES: Record<OwnerVerdictState, StateStyle> = {
 function StatusRing({
   color,
   fill,
-  petName,
+  state,
 }: {
   color: string;
   fill: number;
-  petName: string;
+  state: OwnerVerdictState;
 }) {
   const size = 150;
   const stroke = 12;
@@ -64,7 +78,7 @@ function StatusRing({
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0.08, Math.min(1, fill));
   const dash = circumference * clamped;
-  const initial = petName.trim().charAt(0).toUpperCase() || "🐾";
+  const Icon = STATE_ICON[state];
 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
@@ -88,12 +102,12 @@ function StatusRing({
           strokeDasharray={`${dash} ${circumference}`}
         />
       </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center">
         <div
-          className="flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold"
+          className="flex h-12 w-12 items-center justify-center rounded-full"
           style={{ background: "rgba(0,0,0,0.04)", color }}
         >
-          {initial === "🐾" ? <PawPrint className="h-5 w-5" /> : initial}
+          <Icon className="h-6 w-6" aria-hidden />
         </div>
       </div>
     </div>
@@ -124,7 +138,7 @@ export function OwnerStatusHero({
       aria-label="Current status"
     >
       <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-center sm:gap-7 sm:text-left">
-        <StatusRing color={style.ring} fill={confidence} petName={petName} />
+        <StatusRing color={style.ring} fill={confidence} state={verdict.state} />
         <div className="min-w-0 flex-1">
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"

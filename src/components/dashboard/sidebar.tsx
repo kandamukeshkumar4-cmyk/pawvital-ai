@@ -30,7 +30,7 @@ const navItems = [
   { href: "/symptom-checker", icon: Stethoscope, label: "Symptom Checker" },
   { href: "/health-log", icon: ClipboardList, label: "Daily Log" },
   { href: "/history", icon: Clock, label: "History" },
-  { href: "/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/analytics", icon: BarChart3, label: "Health Signals" },
   { href: "/supplements", icon: Pill, label: "Supplements" },
   { href: "/reminders", icon: Bell, label: "Reminders" },
   { href: "/journal", icon: BookOpen, label: "Journal" },
