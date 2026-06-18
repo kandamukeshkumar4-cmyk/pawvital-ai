@@ -57,6 +57,26 @@ export interface OwnerSign {
   tone: "neutral" | "caution" | "alert";
 }
 
+/** A plain-language reason the current status looks the way it does. */
+export interface OwnerDriver {
+  label: string;
+  tone: "neutral" | "caution" | "alert";
+}
+
+/** One adaptive "what to do next" nudge derived from the latest check. */
+export interface OwnerNextStep {
+  title: string;
+  detail: string;
+}
+
+/** A vet-ready summary of the checks in view. */
+export interface OwnerVetPacket {
+  checkCount: number;
+  urgentFlags: number;
+  rangeLabel: string | null;
+  ready: boolean;
+}
+
 export interface OwnerReadout {
   dataState: OwnerDataState;
   petName: string;
@@ -67,6 +87,12 @@ export interface OwnerReadout {
   signs: OwnerSign[];
   /** Plain "as of" line for the latest check, e.g. "Based on today's check". */
   asOf: string | null;
+  /** Why the status looks the way it does — top drivers from recent checks. */
+  drivers: OwnerDriver[];
+  /** One adaptive next-step nudge. Null when there are no checks. */
+  nextStep: OwnerNextStep | null;
+  /** Vet-ready summary of the checks in view. */
+  vetPacket: OwnerVetPacket;
 }
 
 /** Wellness points by severity (higher = healthier). Mirrors product-intelligence. */
@@ -291,6 +317,119 @@ function resolveDataState(count: number): OwnerDataState {
   return "ready";
 }
 
+const URGENCY_REASON: Record<SymptomCheckEntry["urgency"], string> = {
+  monitor: "These signs look mild and can usually be watched at home.",
+  schedule: "Not an emergency, but worth a routine vet visit.",
+  urgent: "These signs can need same-day care — worth calling your vet.",
+  emergency: "Some signs shouldn't wait — contact an emergency vet.",
+};
+
+/**
+ * "Why this changed" — the plain-language drivers behind the current status.
+ * Built only from the owner's own checks (latest sign, why it matters, and
+ * whether it has come up before). Never surfaces a diagnosis label.
+ */
+function buildDrivers(
+  latest: SymptomCheckEntry,
+  all: SymptomCheckEntry[],
+): OwnerDriver[] {
+  const drivers: OwnerDriver[] = [];
+  const symptom = (latest.primary_symptom ?? "").trim();
+  if (symptom) {
+    drivers.push({
+      label: `${symptom} — flagged as ${SEVERITY_LABEL[latest.severity].toLowerCase()}`,
+      tone: SEVERITY_TONE[latest.severity],
+    });
+  }
+  drivers.push({
+    label: URGENCY_REASON[latest.urgency],
+    tone:
+      latest.urgency === "emergency" || latest.urgency === "urgent"
+        ? "caution"
+        : "neutral",
+  });
+
+  // Recurrence: has this same sign come up in earlier checks?
+  if (symptom) {
+    const key = symptom.toLowerCase();
+    const priorCount = all.filter(
+      (e) => e.id !== latest.id && (e.primary_symptom ?? "").trim().toLowerCase() === key,
+    ).length;
+    if (priorCount >= 1) {
+      drivers.push({
+        label: `You've noted this before — worth mentioning to your vet.`,
+        tone: "caution",
+      });
+    }
+  }
+
+  return drivers.slice(0, 3);
+}
+
+const NEXT_STEP_RULES: Array<{ test: RegExp; title: string; detail: string }> = [
+  {
+    test: /vomit|diarrh|stool|poop|nausea/i,
+    title: "Note any more vomiting or diarrhea",
+    detail: "Over the next day, keep a quick count and look for blood or signs of dehydration.",
+  },
+  {
+    test: /limp|lame|leg|paw|joint|mobility/i,
+    title: "Check the limp tomorrow",
+    detail: "See whether it's easing or getting worse, and whether it affects eating or resting.",
+  },
+  {
+    test: /scratch|itch|skin|ear|rash|lick/i,
+    title: "Watch the scratching and skin",
+    detail: "Note any new redness, hot spots, or hair loss to share with your vet.",
+  },
+  {
+    test: /eat|appetite|lethar|energy|tired|weak/i,
+    title: "Watch appetite and energy",
+    detail: "Check how the next couple of meals go and whether energy returns to normal.",
+  },
+  {
+    test: /cough|breath|wheez|pant|respir/i,
+    title: "Watch breathing closely",
+    detail: "Note any coughing, fast breathing, or effort — and call your vet if it worsens.",
+  },
+  {
+    test: /drink|water|thirst|urin|pee/i,
+    title: "Watch water and bathroom habits",
+    detail: "Note changes in how much your dog drinks and how often they pee.",
+  },
+];
+
+/** "Track next" — one adaptive nudge keyed to the latest check's main sign. */
+function buildNextStep(latest: SymptomCheckEntry, petName: string): OwnerNextStep {
+  const symptom = (latest.primary_symptom ?? "").trim();
+  const matched = NEXT_STEP_RULES.find((rule) => rule.test.test(symptom));
+  if (matched) {
+    return { title: matched.title, detail: matched.detail };
+  }
+  return {
+    title: `Check in on ${petName} tomorrow`,
+    detail: "A quick follow-up check helps spot whether things are getting better or worse.",
+  };
+}
+
+function buildVetPacket(entries: SymptomCheckEntry[]): OwnerVetPacket {
+  const urgentFlags = entries.filter(
+    (e) => e.urgency === "urgent" || e.urgency === "emergency",
+  ).length;
+  const rangeLabel =
+    entries.length === 0
+      ? null
+      : entries.length === 1
+        ? "1 check"
+        : `${entries.length} checks`;
+  return {
+    checkCount: entries.length,
+    urgentFlags,
+    rangeLabel,
+    ready: entries.length > 0,
+  };
+}
+
 /**
  * Map filtered symptom checks + the deterministic product-intelligence snapshot
  * into an owner-facing readout. Pure and side-effect free.
@@ -312,6 +451,7 @@ export function buildOwnerReadout({
   const petName = titleCaseName(latest?.pet_name ?? fallbackPetName);
 
   const trend = buildTrend(entries, dataState, snapshot, petName);
+  const vetPacket = buildVetPacket(entries);
 
   if (!latest) {
     return {
@@ -322,6 +462,9 @@ export function buildOwnerReadout({
       trend,
       signs: [],
       asOf: null,
+      drivers: [],
+      nextStep: null,
+      vetPacket,
     };
   }
 
@@ -333,5 +476,8 @@ export function buildOwnerReadout({
     trend,
     signs: buildSigns(latest),
     asOf: describeRecency(latest, now),
+    drivers: buildDrivers(latest, chronological),
+    nextStep: buildNextStep(latest, petName),
+    vetPacket,
   };
 }

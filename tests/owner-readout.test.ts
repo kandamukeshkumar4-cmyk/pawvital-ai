@@ -211,6 +211,66 @@ describe("buildOwnerReadout", () => {
     expect(readout.signs[0]).toEqual({ label: "Limping", tone: "alert" });
   });
 
+  it("builds 'why this status' drivers from the latest sign, reason, and recurrence", () => {
+    const entries = [
+      entry({ id: "a", created_at: "2026-06-10T12:00:00.000Z", primary_symptom: "Vomiting", urgency: "urgent", severity: "serious" }),
+      entry({ id: "b", created_at: "2026-06-16T12:00:00.000Z", primary_symptom: "Vomiting", urgency: "urgent", severity: "serious" }),
+    ];
+    const readout = buildOwnerReadout({ entries, snapshot: snapshot("steady"), now: NOW });
+
+    expect(readout.drivers.length).toBeGreaterThanOrEqual(2);
+    expect(readout.drivers[0].label.toLowerCase()).toContain("vomiting");
+    // recurrence driver present because "Vomiting" appears in an earlier check
+    expect(readout.drivers.some((d) => d.label.toLowerCase().includes("noted this before"))).toBe(true);
+    // never surfaces a diagnosis label
+    expect(readout.drivers.some((d) => d.label.toLowerCase().includes("gastro"))).toBe(false);
+  });
+
+  it("gives an adaptive next-step nudge keyed to the latest symptom", () => {
+    const vomit = buildOwnerReadout({
+      entries: [entry({ primary_symptom: "Vomiting and lethargy" })],
+      snapshot: snapshot("unknown"),
+      now: NOW,
+    });
+    expect(vomit.nextStep?.title.toLowerCase()).toMatch(/vomit|appetite|energy/);
+
+    const limp = buildOwnerReadout({
+      entries: [entry({ primary_symptom: "Limping after a walk" })],
+      snapshot: snapshot("unknown"),
+      now: NOW,
+    });
+    expect(limp.nextStep?.title.toLowerCase()).toContain("limp");
+
+    const unknown = buildOwnerReadout({
+      entries: [entry({ primary_symptom: "Something unusual" })],
+      snapshot: snapshot("unknown"),
+      now: NOW,
+    });
+    expect(unknown.nextStep?.title.toLowerCase()).toContain("check in");
+  });
+
+  it("summarises a vet packet with check count and urgent flags", () => {
+    const entries = [
+      entry({ id: "a", urgency: "monitor" }),
+      entry({ id: "b", urgency: "urgent" }),
+      entry({ id: "c", urgency: "emergency" }),
+    ];
+    const readout = buildOwnerReadout({ entries, snapshot: snapshot("steady"), now: NOW });
+
+    expect(readout.vetPacket.ready).toBe(true);
+    expect(readout.vetPacket.checkCount).toBe(3);
+    expect(readout.vetPacket.urgentFlags).toBe(2);
+    expect(readout.vetPacket.rangeLabel).toBe("3 checks");
+  });
+
+  it("returns an unready, empty vet packet and no drivers/next-step with zero checks", () => {
+    const readout = buildOwnerReadout({ entries: [], snapshot: snapshot("unknown"), now: NOW });
+    expect(readout.vetPacket.ready).toBe(false);
+    expect(readout.vetPacket.checkCount).toBe(0);
+    expect(readout.drivers).toHaveLength(0);
+    expect(readout.nextStep).toBeNull();
+  });
+
   it("never returns an all-clear: every non-empty verdict keeps a vet path in its copy", () => {
     for (const urgency of ["monitor", "schedule", "urgent", "emergency"] as const) {
       const readout = buildOwnerReadout({

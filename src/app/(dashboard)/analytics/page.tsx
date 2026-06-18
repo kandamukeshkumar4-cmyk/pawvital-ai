@@ -9,26 +9,21 @@ import Card from "@/components/ui/card";
 import Select from "@/components/ui/select";
 import { buttonClassName } from "@/components/ui/button";
 import {
-  HealthScoreCard,
   OwnerStatusHero,
-  ProductIntelligencePanel,
   RecentSigns,
   RecoveryTrendStrip,
   SeverityTrendChart,
   SymptomFrequencyChart,
+  TrackNext,
   UrgencyDistribution,
+  VetPacket,
+  WhyThisChanged,
 } from "@/components/analytics";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
 import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-check-entry-map";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { buildProductIntelligenceSnapshot } from "@/lib/product-intelligence";
 import { buildOwnerReadout } from "@/lib/analytics/owner-readout";
-import {
-  buildOwnerRecoveryCheckpoint,
-  loadProductIntelligenceHistory,
-  saveProductIntelligenceSnapshot,
-  type ProductIntelligenceHistory,
-} from "@/lib/product-intelligence-owner-workflow";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { DEMO_ANALYTICS_SYMPTOM_ENTRIES } from "@/lib/demo-health-data";
 import { useAppStore } from "@/store/app-store";
@@ -39,24 +34,6 @@ const RANGE_OPTIONS = [
   { value: "90", label: "Last 90 days" },
   { value: "all", label: "All time" },
 ];
-
-interface ProductIntelligenceUiState {
-  history: ProductIntelligenceHistory | null;
-  historyLoading: boolean;
-  readinessSaving: boolean;
-  readinessStatus: string | null;
-  recoverySaving: boolean;
-  recoveryStatus: string | null;
-}
-
-const INITIAL_PRODUCT_UI_STATE: ProductIntelligenceUiState = {
-  history: null,
-  historyLoading: false,
-  readinessSaving: false,
-  readinessStatus: null,
-  recoverySaving: false,
-  recoveryStatus: null,
-};
 
 function inDateRange(entry: SymptomCheckEntry, rangeKey: string, now: Date): boolean {
   if (rangeKey === "all") return true;
@@ -72,9 +49,6 @@ function AnalyticsPageContent() {
   const [loading, setLoading] = useState(true);
   const [petId, setPetId] = useState<string>("all");
   const [range, setRange] = useState<string>("90");
-  const [productUiState, setProductUiState] = useState<ProductIntelligenceUiState>(
-    INITIAL_PRODUCT_UI_STATE
-  );
 
   const loadChecks = useCallback(async () => {
     if (!isSupabaseConfigured) {
@@ -145,20 +119,10 @@ function AnalyticsPageContent() {
     return list;
   }, [rawEntries, range, petId, now]);
 
+  // Deterministic product-intelligence snapshot still powers the trend direction.
   const productSnapshot = useMemo(
     () => buildProductIntelligenceSnapshot({ entries: filtered }),
     [filtered]
-  );
-  const selectedPetIdForPersistence = isSupabaseConfigured && petId !== "all" ? petId : null;
-  const selectedPetIdForRecovery = petId !== "all" ? petId : null;
-  const recoveryCheckpoint = useMemo(
-    () =>
-      buildOwnerRecoveryCheckpoint({
-        petId: selectedPetIdForRecovery,
-        entries: filtered,
-        generatedAt: now.toISOString(),
-      }),
-    [filtered, now, selectedPetIdForRecovery]
   );
 
   const selectedPetName = useMemo(() => {
@@ -187,98 +151,6 @@ function AnalyticsPageContent() {
     return c > 1 ? c / 100 : c;
   }, [filtered]);
 
-  const loadProductHistory = useCallback(async () => {
-    if (!selectedPetIdForPersistence) {
-      setProductUiState((current) => ({ ...current, history: null }));
-      return;
-    }
-
-    setProductUiState((current) => ({ ...current, historyLoading: true }));
-    try {
-      const history = await loadProductIntelligenceHistory(selectedPetIdForPersistence);
-      setProductUiState((current) => ({ ...current, history }));
-    } catch (error) {
-      console.error("Product intelligence history load failed:", error);
-      setProductUiState((current) => ({ ...current, history: null }));
-    } finally {
-      setProductUiState((current) => ({ ...current, historyLoading: false }));
-    }
-  }, [selectedPetIdForPersistence]);
-
-  useEffect(() => {
-    void loadProductHistory();
-  }, [loadProductHistory]);
-
-  const saveReadinessSnapshot = useCallback(async () => {
-    if (!selectedPetIdForPersistence || !productSnapshot.persistenceAllowed) {
-      return;
-    }
-
-    setProductUiState((current) => ({
-      ...current,
-      readinessSaving: true,
-      readinessStatus: null,
-    }));
-    try {
-      await saveProductIntelligenceSnapshot({
-        petId: selectedPetIdForPersistence,
-        readiness: {
-          generatedAt: new Date().toISOString(),
-          sourceCheckIds: filtered.map((entry) => entry.id),
-        },
-      });
-      setProductUiState((current) => ({ ...current, readinessStatus: "Snapshot saved" }));
-      await loadProductHistory();
-    } catch (error) {
-      console.error("Product intelligence snapshot save failed:", error);
-      setProductUiState((current) => ({ ...current, readinessStatus: "Snapshot save failed" }));
-    } finally {
-      setProductUiState((current) => ({ ...current, readinessSaving: false }));
-    }
-  }, [filtered, loadProductHistory, productSnapshot.persistenceAllowed, selectedPetIdForPersistence]);
-
-  const saveRecoveryCheckpoint = useCallback(async () => {
-    if (
-      !selectedPetIdForPersistence ||
-      !recoveryCheckpoint?.persistenceAllowed ||
-      !recoveryCheckpoint.reportSourceId
-    ) {
-      return;
-    }
-
-    setProductUiState((current) => ({
-      ...current,
-      recoverySaving: true,
-      recoveryStatus: null,
-    }));
-    try {
-      await saveProductIntelligenceSnapshot({
-        petId: selectedPetIdForPersistence,
-        recovery: {
-          reportSourceId: recoveryCheckpoint.reportSourceId,
-          generatedAt: new Date().toISOString(),
-          sourceCheckIds: filtered.map((entry) => entry.id),
-        },
-      });
-      setProductUiState((current) => ({ ...current, recoveryStatus: "Checkpoint saved" }));
-      await loadProductHistory();
-    } catch (error) {
-      console.error("Product intelligence recovery checkpoint save failed:", error);
-      setProductUiState((current) => ({
-        ...current,
-        recoveryStatus: "Checkpoint save failed",
-      }));
-    } finally {
-      setProductUiState((current) => ({ ...current, recoverySaving: false }));
-    }
-  }, [
-    filtered,
-    loadProductHistory,
-    recoveryCheckpoint?.reportSourceId,
-    recoveryCheckpoint?.persistenceAllowed,
-    selectedPetIdForPersistence,
-  ]);
-
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -287,7 +159,7 @@ function AnalyticsPageContent() {
             <BarChart3 className="h-5 w-5" aria-hidden />
             <span className="text-sm font-semibold uppercase tracking-wide">
               {ownerReadout.petName === "your dog"
-                ? "Health overview"
+                ? "Health signals"
                 : `${ownerReadout.petName}'s health`}
             </span>
           </div>
@@ -360,63 +232,56 @@ function AnalyticsPageContent() {
 
           <RecoveryTrendStrip readout={ownerReadout.trend} petName={ownerReadout.petName} />
 
+          <WhyThisChanged drivers={ownerReadout.drivers} />
+
           <RecentSigns signs={ownerReadout.signs} asOf={ownerReadout.asOf} />
+
+          {ownerReadout.nextStep ? (
+            <TrackNext nextStep={ownerReadout.nextStep} petName={ownerReadout.petName} />
+          ) : null}
+
+          <VetPacket packet={ownerReadout.vetPacket} petName={ownerReadout.petName} />
 
           <details className="group rounded-2xl border border-[#e8e2d8] bg-white">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-4 text-sm font-medium text-[#7c4dc4]">
-              <span>See the full details</span>
+              <span>Full history — useful for your vet</span>
               <ChevronDown
                 className="h-4 w-4 transition-transform group-open:rotate-180"
                 aria-hidden
               />
             </summary>
             <div className="space-y-5 border-t border-[#e8e2d8] px-4 py-5 sm:px-5">
-              <ProductIntelligencePanel
-                snapshot={productSnapshot}
-                historyCount={productUiState.history?.readiness.length}
-                onSaveSnapshot={
-                  selectedPetIdForPersistence ? saveReadinessSnapshot : undefined
-                }
-                saveSnapshotDisabled={productUiState.historyLoading}
-                saveSnapshotInProgress={productUiState.readinessSaving}
-                saveSnapshotStatus={productUiState.readinessStatus}
-                recoveryCheckpoint={recoveryCheckpoint}
-                recoveryHistoryCount={productUiState.history?.recovery.length}
-                onSaveRecoveryCheckpoint={
-                  selectedPetIdForPersistence ? saveRecoveryCheckpoint : undefined
-                }
-                saveRecoveryDisabled={productUiState.historyLoading}
-                saveRecoveryInProgress={productUiState.recoverySaving}
-                saveRecoveryStatus={productUiState.recoveryStatus}
-              />
+              <p className="text-xs leading-relaxed text-[#8a857a]">
+                The full check-by-check history below is handy to show your vet. It
+                isn&apos;t a diagnosis — it&apos;s a record of what you reported over time.
+              </p>
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <Card className="p-5">
-                  <HealthScoreCard entries={filtered} />
-                </Card>
-                <Card className="p-5">
-                  <h2 className="mb-2 text-sm font-semibold text-gray-900">Urgency mix</h2>
+                  <h2 className="mb-2 text-sm font-semibold text-gray-900">
+                    How urgent were the checks?
+                  </h2>
                   <p className="mb-2 text-xs text-gray-500">
                     How often each urgency level appeared
                   </p>
                   <UrgencyDistribution entries={filtered} />
                 </Card>
                 <Card className="p-5">
-                  <h2 className="mb-1 text-sm font-semibold text-gray-900">Top symptoms</h2>
-                  <p className="mb-4 text-xs text-gray-500">
-                    Five most common primary concerns
-                  </p>
+                  <h2 className="mb-1 text-sm font-semibold text-gray-900">
+                    Most common concerns
+                  </h2>
+                  <p className="mb-4 text-xs text-gray-500">Your top reported signs</p>
                   <SymptomFrequencyChart entries={filtered} />
                 </Card>
-                <Card className="p-5">
-                  <h2 className="mb-1 text-sm font-semibold text-gray-900">
-                    Severity over time
-                  </h2>
-                  <p className="mb-4 text-xs text-gray-500">
-                    Per-check severity (chronological)
-                  </p>
-                  <SeverityTrendChart entries={filtered} />
-                </Card>
               </div>
+              <Card className="p-5">
+                <h2 className="mb-1 text-sm font-semibold text-gray-900">
+                  Severity over time
+                </h2>
+                <p className="mb-4 text-xs text-gray-500">
+                  Per-check severity (chronological)
+                </p>
+                <SeverityTrendChart entries={filtered} />
+              </Card>
             </div>
           </details>
 
