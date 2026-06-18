@@ -14,6 +14,7 @@ import { HomeCareSection } from "./home-care";
 import { ActionStepsSection } from "./action-steps";
 import { OutcomeFeedbackSection } from "./outcome-feedback";
 import { NearestVetFinder } from "./nearest-vet-finder";
+import { ReadAloudButton } from "./read-aloud-button";
 import Button from "@/components/ui/button";
 import Card from "@/components/ui/card";
 import Modal from "@/components/ui/modal";
@@ -31,6 +32,37 @@ const URGENCY_TIMEFRAME: Record<SymptomReport["recommendation"], string> = {
   vet_24h: "24 hours",
   emergency_vet: "right now",
 };
+
+function spokenUrgencyLine(report: SymptomReport): string {
+  switch (report.recommendation) {
+    case "monitor":
+      return "Guidance: you can monitor at home for now.";
+    case "emergency_vet":
+      return "Guidance: see a veterinarian right now.";
+    case "vet_24h":
+      return "Guidance: see a veterinarian within 24 hours.";
+    case "vet_48h":
+      return "Guidance: see a veterinarian within 48 hours.";
+    default:
+      return "";
+  }
+}
+
+/**
+ * A short, owner-friendly summary for read-aloud. Deliberately concise (not the
+ * full vet handoff packet) so listening stays useful: urgency, the most-likely
+ * cause, and a not-a-diagnosis reminder.
+ */
+function buildSpokenSummary(report: SymptomReport): string {
+  return [
+    spokenUrgencyLine(report),
+    buildHeroSubtitle(report),
+    "This is urgency guidance, not a diagnosis. Your veterinarian confirms the cause.",
+  ]
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(" ");
+}
 
 function buildHeroSubtitle(report: SymptomReport): string {
   const topDifferential = report.differential_diagnoses?.find((dx) =>
@@ -200,31 +232,39 @@ export function FullReport({
     setLinkCopyState("idle");
   };
 
-  const headerActions = canExport ? (
+  const headerActions = (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className={`w-full justify-center gap-1.5 sm:w-auto ${actionToneClass}`}
-        onClick={() => void downloadPdf()}
-        loading={pdfBusy}
-      >
-        <Download className="w-4 h-4" />
-        <span>{presentation.downloadLabel}</span>
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className={`w-full justify-center sm:w-auto ${actionToneClass}`}
-        onClick={openShareModal}
-      >
-        <Share2 className="w-4 h-4" />
-        <span className="ml-1.5">{presentation.shareButtonLabel}</span>
-      </Button>
+      <ReadAloudButton
+        text={buildSpokenSummary(report)}
+        className={actionToneClass}
+      />
+      {canExport ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={`w-full justify-center gap-1.5 sm:w-auto ${actionToneClass}`}
+            onClick={() => void downloadPdf()}
+            loading={pdfBusy}
+          >
+            <Download className="w-4 h-4" />
+            <span>{presentation.downloadLabel}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={`w-full justify-center sm:w-auto ${actionToneClass}`}
+            onClick={openShareModal}
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="ml-1.5">{presentation.shareButtonLabel}</span>
+          </Button>
+        </>
+      ) : null}
     </>
-  ) : null;
+  );
 
   return (
     <div className="space-y-4 animate-fade-in sm:space-y-5">
