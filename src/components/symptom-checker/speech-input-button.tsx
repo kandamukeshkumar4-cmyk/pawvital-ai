@@ -52,9 +52,9 @@ export function SpeechInputButton({
         aria-label={title}
         className={`px-3 ${
           isListening
-            ? "border-purple-400 bg-purple-500/20 text-purple-400"
+            ? "border-purple-400 bg-purple-100 text-purple-700"
             : hasError
-              ? "border-red-400 text-red-400"
+              ? "border-red-300 text-red-600"
               : ""
         }`}
         disabled={disabled || isBusy || isPermanentlyUnavailable}
@@ -68,13 +68,13 @@ export function SpeechInputButton({
         {isBusy ? (
           <Loader2
             className={`w-5 h-5 animate-spin ${
-              isListening ? "text-purple-400" : "text-gray-400"
+              isListening ? "text-purple-600" : "text-gray-500"
             }`}
           />
         ) : hasError ? (
-          <MicOff className="w-5 h-5 text-red-400" />
+          <MicOff className="w-5 h-5 text-red-500" />
         ) : (
-          <Mic className="w-5 h-5 text-gray-300" />
+          <Mic className="w-5 h-5 text-gray-500" />
         )}
       </Button>
       {/* Accessible status for screen readers — announces listening + errors. */}
@@ -84,7 +84,7 @@ export function SpeechInputButton({
       {hasError && (
         <p
           role="status"
-          className="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-red-500/30 bg-[#1c1c1c] px-3 py-2 text-xs leading-snug text-red-400 shadow-md"
+          className="absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs leading-snug text-red-600 shadow-md"
         >
           {error}
         </p>

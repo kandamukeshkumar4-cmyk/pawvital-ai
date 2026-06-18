@@ -19,7 +19,7 @@ export default function DashboardLayout({
 
   return (
     <SubscriptionProvider>
-      <div className="app-dark min-h-screen overflow-x-hidden" style={{ background: "#0a0a0a" }}>
+      <div className="app-dark min-h-screen overflow-x-hidden">
         <PetOnboardingHost />
         <Sidebar />
         <div

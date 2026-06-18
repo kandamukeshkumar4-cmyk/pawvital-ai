@@ -87,7 +87,7 @@ export default function Sidebar() {
           type="button"
           aria-label="Close navigation"
           className="fixed inset-0 z-30 backdrop-blur-[1px] lg:hidden"
-          style={{ background: "rgba(0,0,0,0.6)" }}
+          style={{ background: "rgba(0,0,0,0.3)" }}
           onClick={toggleSidebar}
         />
       ) : null}
@@ -99,27 +99,27 @@ export default function Sidebar() {
             : "-translate-x-full lg:w-20 lg:translate-x-0"
         }`}
         style={{
-          background: "#0a0a0a",
-          borderRight: "1px solid rgba(255,255,255,0.06)",
+          background: "#ffffff",
+          borderRight: "1px solid #e8e2d8",
         }}
       >
         {/* Logo */}
         <div
           className="flex items-center gap-3 px-5 py-5"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ borderBottom: "1px solid #e8e2d8" }}
         >
           <div
             className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl"
-            style={{ background: "rgba(0,200,150,0.15)" }}
+            style={{ background: "rgba(0,168,120,0.12)" }}
           >
-            <Heart className="h-6 w-6" style={{ color: "#00c896" }} />
+            <Heart className="h-6 w-6" style={{ color: "#00a878" }} />
           </div>
           {sidebarOpen && (
             <div className="min-w-0">
-              <span className="text-lg font-bold text-white">PawVital</span>
+              <span className="text-lg font-bold text-gray-900">PawVital</span>
               <span
                 className="ml-1 rounded px-1.5 py-0.5 text-xs font-medium"
-                style={{ background: "rgba(0,200,150,0.12)", color: "#00c896" }}
+                style={{ background: "rgba(0,168,120,0.1)", color: "#00a878" }}
               >
                 AI
               </span>
@@ -132,24 +132,24 @@ export default function Sidebar() {
           <div
             className="mx-4 mt-4 rounded-xl p-3"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.07)",
+              background: "#f7f4ef",
+              border: "1px solid #e8e2d8",
             }}
           >
             <div className="flex items-center gap-3">
               <div
                 className="flex h-10 w-10 items-center justify-center rounded-full text-lg"
-                style={{ background: "rgba(255,255,255,0.08)" }}
+                style={{ background: "#f0ede8" }}
               >
                 🐕
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">
+                <p className="truncate text-sm font-semibold text-gray-900">
                   {activePet.name}
                 </p>
                 <p
                   className="truncate text-xs"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
+                  style={{ color: "#8a7f74" }}
                 >
                   {activePet.breed}
                   {" · "}
@@ -172,26 +172,26 @@ export default function Sidebar() {
                 href={item.href}
                 className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200"
                 style={{
-                  background: isActive ? "rgba(0,200,150,0.08)" : "transparent",
-                  color: isActive ? "#00c896" : "rgba(255,255,255,0.55)",
+                  background: isActive ? "rgba(0,168,120,0.08)" : "transparent",
+                  color: isActive ? "#00a878" : "#6b6057",
                   fontWeight: isActive ? 600 : 400,
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
-                    (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.9)";
+                    (e.currentTarget as HTMLElement).style.background = "#f7f4ef";
+                    (e.currentTarget as HTMLElement).style.color = "#1c1814";
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) {
                     (e.currentTarget as HTMLElement).style.background = "transparent";
-                    (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.55)";
+                    (e.currentTarget as HTMLElement).style.color = "#6b6057";
                   }
                 }}
               >
                 <item.icon
                   className="h-5 w-5 flex-shrink-0"
-                  style={{ color: isActive ? "#00c896" : "inherit" }}
+                  style={{ color: isActive ? "#00a878" : "inherit" }}
                 />
                 {sidebarOpen && <span className="text-sm">{item.label}</span>}
               </Link>
@@ -202,25 +202,25 @@ export default function Sidebar() {
         {/* Collapse toggle */}
         <div
           className="px-3 py-3"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ borderTop: "1px solid #e8e2d8" }}
         >
           <button
             onClick={toggleSidebar}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
-            style={{ color: "rgba(255,255,255,0.35)" }}
+            style={{ color: "#b8b0a6" }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
-              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.65)";
+              (e.currentTarget as HTMLElement).style.background = "#f7f4ef";
+              (e.currentTarget as HTMLElement).style.color = "#6b6057";
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.background = "transparent";
-              (e.currentTarget as HTMLElement).style.color = "rgba(255,255,255,0.35)";
+              (e.currentTarget as HTMLElement).style.color = "#b8b0a6";
             }}
           >
             {sidebarOpen ? (
               <>
                 <ChevronLeft className="h-5 w-5" />
-                <span className="text-sm">{collapseLabel}</span>
+                <span className="text-sm">Collapse</span>
               </>
             ) : (
               <ChevronRight className="h-5 w-5" />
@@ -231,9 +231,9 @@ export default function Sidebar() {
             <button
               onClick={signOut}
               className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
-              style={{ color: "#f43f5e" }}
+              style={{ color: "#dc2626" }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "rgba(244,63,94,0.1)";
+                (e.currentTarget as HTMLElement).style.background = "rgba(220,38,38,0.08)";
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.background = "transparent";
