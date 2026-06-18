@@ -32,6 +32,9 @@ export interface VetTimelineEntry {
   hasPhotos: boolean;
 }
 
+/** Source filter for UI and route query params. "all" = no filter. */
+export type VetTimelineFilter = "all" | VetTimelineSource;
+
 /** What to tell the vet about a given urgency level. */
 const URGENCY_VET_NOTE: Record<SymptomCheckEntry["urgency"], string> = {
   monitor: "Watch at home — mention at next routine visit.",
@@ -220,4 +223,53 @@ export function buildVetTimeline({
   if (logNext.length === 0) logNext.push("Everything looks normal — keep checking in weekly.");
 
   return { entries: all, vetSummary, recurringSymptoms, logNext };
+}
+
+/**
+ * Filter timeline entries by source. Returns a new VetTimelineData with only
+ * matching entries; vetSummary/recurringSymptoms/logNext are kept unchanged so
+ * the summary pane always reflects the full picture regardless of the active filter.
+ */
+export function filterTimelineEntries(
+  data: VetTimelineData,
+  filter: VetTimelineFilter,
+): VetTimelineData {
+  if (filter === "all") return data;
+  return { ...data, entries: data.entries.filter((e) => e.source === filter) };
+}
+
+/**
+ * Generate a plain-text vet packet suitable for copy-paste into a message or
+ * print. Owner observations only — always carries the non-clinical disclaimer.
+ */
+export function formatVetPacketText(data: VetTimelineData, petName: string): string {
+  const lines: string[] = [
+    `--- Owner Health Summary for ${petName} ---`,
+    `Generated from owner-logged data only. Not a clinical record — observations are owner-reported.`,
+    "",
+  ];
+
+  if (data.vetSummary) {
+    lines.push("WHAT TO TELL YOUR VET:", data.vetSummary, "");
+  }
+
+  if (data.recurringSymptoms.length > 0) {
+    lines.push(
+      "RECURRING SIGNS:",
+      data.recurringSymptoms.map((s) => `  • ${s}`).join("\n"),
+      "",
+    );
+  }
+
+  if (data.entries.length > 0) {
+    lines.push("HISTORY (newest first):");
+    for (const e of data.entries) {
+      lines.push(`  [${e.date}] ${e.summary}`);
+      for (const d of e.details) lines.push(`    ${d}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("--- End of owner summary ---");
+  return lines.join("\n");
 }

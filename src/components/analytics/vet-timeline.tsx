@@ -1,7 +1,9 @@
 "use client";
 
-import { ClipboardList, BookOpen, Activity, Pill, Camera, ChevronDown } from "lucide-react";
-import type { VetTimelineData, VetTimelineEntry, VetTimelineSource, VetTimelineTone } from "@/lib/analytics/vet-timeline";
+import { useState } from "react";
+import { ClipboardList, BookOpen, Activity, Pill, Camera, ChevronDown, Copy, Check } from "lucide-react";
+import type { VetTimelineData, VetTimelineEntry, VetTimelineSource, VetTimelineTone, VetTimelineFilter } from "@/lib/analytics/vet-timeline";
+import { filterTimelineEntries, formatVetPacketText } from "@/lib/analytics/vet-timeline";
 
 /**
  * VetTimeline — chronological vet-ready story of all owner-logged data.
@@ -79,18 +81,54 @@ function TimelineRow({ entry }: { entry: VetTimelineEntry }) {
   );
 }
 
+const FILTER_LABELS: Record<VetTimelineFilter, string> = {
+  all: "All",
+  symptom_check: "Symptom checks",
+  daily_log: "Daily logs",
+  journal: "Journal",
+  medication: "Meds",
+};
+const FILTERS: VetTimelineFilter[] = ["all", "symptom_check", "daily_log", "journal", "medication"];
+
 export function VetTimeline({ data, petName }: { data: VetTimelineData; petName: string }) {
-  const { entries, vetSummary, recurringSymptoms, logNext } = data;
+  const [filter, setFilter] = useState<VetTimelineFilter>("all");
+  const [copied, setCopied] = useState(false);
+  const { vetSummary, recurringSymptoms, logNext } = data;
+  const filtered = filterTimelineEntries(data, filter);
+
+  const copyVetPacket = async () => {
+    const text = formatVetPacketText(data, petName);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard blocked — no-op
+    }
+  };
 
   return (
     <div className="space-y-4">
-      {/* Vet-ready summary */}
+      {/* Vet-ready summary + copy button */}
       {vetSummary && (
         <div className="rounded-2xl border border-[#e8e2d8] bg-white px-5 py-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#00a878]">
-            What to tell the vet
-          </p>
-          <p className="mt-1 text-sm leading-relaxed text-[#2c2a26]">{vetSummary}</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#00a878]">
+                What to tell the vet
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-[#2c2a26]">{vetSummary}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void copyVetPacket()}
+              title="Copy full vet summary"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#e8e2d8] bg-[#f7f4ef] px-3 py-1.5 text-xs text-[#6b665d] transition-colors hover:bg-[#ede9e1]"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-[#00a878]" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
+              {copied ? "Copied!" : "Copy for vet"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -113,27 +151,46 @@ export function VetTimeline({ data, petName }: { data: VetTimelineData; petName:
         </div>
       )}
 
-      {/* Chronological timeline */}
-      {entries.length > 0 ? (
-        <details className="group rounded-2xl border border-[#e8e2d8] bg-white" open>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-4 text-sm font-medium text-[#7c4dc4]">
-            <span>{petName}&apos;s story over time</span>
-            <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
-          </summary>
-          <div className="space-y-2 border-t border-[#e8e2d8] px-4 py-4 sm:px-5">
-            <p className="mb-3 text-xs text-[#8a857a]">
-              All sources, newest first — symptom checks, daily logs, journal, and meds. Owner observations only; not a clinical record.
-            </p>
-            {entries.map((e, i) => (
-              <TimelineRow key={`${e.source}-${e.date}-${i}`} entry={e} />
+      {/* Chronological timeline with source filters */}
+      <details className="group rounded-2xl border border-[#e8e2d8] bg-white" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-4 text-sm font-medium text-[#7c4dc4]">
+          <span>{petName}&apos;s story over time</span>
+          <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+        </summary>
+        <div className="border-t border-[#e8e2d8] px-4 py-4 sm:px-5">
+          {/* Source filter tabs */}
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  filter === f
+                    ? "border-[#7c4dc4] bg-[#7c4dc4] text-white"
+                    : "border-[#e8e2d8] bg-[#f7f4ef] text-[#6b665d] hover:bg-[#ede9e1]"
+                }`}
+              >
+                {FILTER_LABELS[f]}
+              </button>
             ))}
           </div>
-        </details>
-      ) : (
-        <div className="rounded-2xl border border-[#e8e2d8] bg-white px-5 py-8 text-center text-sm text-[#6b665d]">
-          No events logged yet. Start a symptom check or add a daily log to build {petName}&apos;s timeline.
+          <p className="mb-3 text-xs text-[#8a857a]">
+            Owner observations only; not a clinical record.
+          </p>
+          {filtered.entries.length > 0 ? (
+            <div className="space-y-2">
+              {filtered.entries.map((e, i) => (
+                <TimelineRow key={`${e.source}-${e.date}-${i}`} entry={e} />
+              ))}
+            </div>
+          ) : (
+            <p className="py-4 text-center text-sm text-[#8a857a]">
+              No {filter === "all" ? "events" : FILTER_LABELS[filter].toLowerCase()} logged yet.
+            </p>
+          )}
         </div>
-      )}
+      </details>
 
       {/* Log next prompts */}
       {logNext.length > 0 && (

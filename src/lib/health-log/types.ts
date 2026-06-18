@@ -58,7 +58,12 @@ export interface ContextSignals {
   };
   medication?: {
     name?: string;
+    /** "HH:MM" or free text, e.g. "08:30" */
+    time_given?: string;
+    missed_late?: boolean;
     dose_notes?: string;
+    /** Owner-observed side effects — history only, never dosing advice */
+    side_effect_notes?: string;
   };
 }
 
