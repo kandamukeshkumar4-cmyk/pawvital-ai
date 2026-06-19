@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { subDays } from "date-fns";
-import { Activity, Loader2, Stethoscope } from "lucide-react";
+import { Loader2, Stethoscope } from "lucide-react";
 import Link from "next/link";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { buttonClassName } from "@/components/ui/button";
@@ -199,17 +199,13 @@ function HealthSignalsContent() {
     <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="mb-1 flex items-center gap-2 text-[#00a878]">
-            <Activity className="h-5 w-5" aria-hidden />
-            <span className="text-sm font-semibold uppercase tracking-wide">
-              {board.petName === "your dog" ? "Health Signals" : `${board.petName}'s Health Signals`}
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-[#2c2a26]">
-            What changed, what matters, and what to tell your vet
+          <h1 className="text-[32px] font-bold leading-tight text-[#1c2522]">
+            {board.petName === "your dog"
+              ? "Health Signals"
+              : `${board.petName.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}'s Health Signals`}
           </h1>
-          <p className="mt-1 text-sm text-[#6b665d]">
-            PawVital remembers {board.petName} and helps you explain the story
+          <p className="mt-1 text-[15px] text-[#8a978f]">
+            90 days of owner-logged memory, shown as a vet-ready story
             {!isSupabaseConfigured ? " (demo data)" : ""}.
           </p>
         </div>

@@ -373,7 +373,7 @@ export function SignalGrid({ grid }: { grid: SignalGridModel }) {
   if (!grid.hasData) {
     return (
       <section className={`${CARD} p-5`}>
-        <p className={LABEL}>7-day signal grid</p>
+        <p className={LABEL}>14-day signal grid</p>
         <p className="mt-3 text-sm leading-relaxed text-[#6b665d]">
           No daily logs yet this week. A 30-second daily log fills this grid so you can see
           whether each signal is steady or changing.
@@ -388,7 +388,7 @@ export function SignalGrid({ grid }: { grid: SignalGridModel }) {
   return (
     <section className={`${CARD} overflow-hidden`}>
       <div className="border-b border-[#f0ebe2] px-5 py-4">
-        <p className={LABEL}>7-day signal grid</p>
+        <p className={LABEL}>14-day signal grid</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-sm">
