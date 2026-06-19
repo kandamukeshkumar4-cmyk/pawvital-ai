@@ -1,4 +1,5 @@
 import type { SymptomCheckEntry } from "@/components/timeline/types";
+import type { HealthLog } from "@/lib/health-log/types";
 
 /** Stable id for Biscuit in analytics demo data. */
 export const DEMO_PET_VET821_ID = "demo-pet-vet-821";
@@ -120,3 +121,67 @@ export const DEMO_ANALYTICS_SYMPTOM_ENTRIES: SymptomCheckEntry[] = [
     report_summary: "Possible heat stress — cool gradually and seek emergency care if collapse or vomiting.",
   },
 ];
+
+function dateNDaysAgo(now: Date, n: number): string {
+  const d = new Date(now);
+  d.setDate(d.getDate() - n);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Demo daily logs for the analytics board, built relative to `now` so the
+ * 7-day grid, trends, and timeline always populate regardless of the calendar
+ * date. Tells a realistic "gut upset, slowly worsening, vet-worthy" story for
+ * Biscuit so the redesigned Health Signals page is fully exercised in demo mode.
+ */
+export function buildDemoHealthLogs(petId: string, now: Date = new Date()): HealthLog[] {
+  const base = (n: number, over: Partial<HealthLog>): HealthLog => ({
+    id: `demo-log-${n}`,
+    user_id: "demo-user",
+    pet_id: petId,
+    log_date: dateNDaysAgo(now, n),
+    appetite: "normal",
+    water: "normal",
+    stool: "normal",
+    urination: "normal",
+    vomiting_count: 0,
+    energy: "normal",
+    weight_kg: 12.4,
+    meds_given: false,
+    notes: null,
+    photo_urls: [],
+    context_signals: null,
+    created_at: new Date(now).toISOString(),
+    updated_at: new Date(now).toISOString(),
+    ...over,
+  });
+
+  return [
+    base(6, { weight_kg: 12.5 }),
+    base(5, { weight_kg: 12.4 }),
+    base(4, { stool: "soft", appetite: "reduced", weight_kg: 12.4, notes: "Less playful this evening." }),
+    base(3, { stool: "diarrhea", appetite: "reduced", energy: "low", weight_kg: 12.3 }),
+    base(2, {
+      stool: "soft",
+      appetite: "reduced",
+      energy: "low",
+      vomiting_count: 1,
+      meds_given: true,
+      weight_kg: 12.3,
+      photo_urls: ["demo://stool-photo"],
+      context_signals: { medication: { name: "Probiotic", time_given: "18:30" } },
+    }),
+    base(1, {
+      stool: "diarrhea",
+      appetite: "reduced",
+      energy: "low",
+      meds_given: true,
+      weight_kg: 12.3,
+      context_signals: { medication: { name: "Probiotic", time_given: "08:30" } },
+    }),
+    base(0, { stool: "diarrhea", appetite: "reduced", energy: "low", weight_kg: 12.4 }),
+  ];
+}

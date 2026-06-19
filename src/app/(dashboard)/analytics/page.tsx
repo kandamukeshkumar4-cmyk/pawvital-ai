@@ -7,16 +7,14 @@ import Link from "next/link";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { buttonClassName } from "@/components/ui/button";
 import {
-  DailyLogSnapshot,
-  DailySignalsGridView,
-  OwnerStatusHero,
-  RecentSigns,
-  RecoveryTrendStrip,
-  TrackNext,
-  VetPacket,
-  VetTimeline,
-  WhyThisChanged,
-} from "@/components/analytics";
+  DecisionCard,
+  InsightTiles,
+  SignalGrid,
+  PatternTimeline,
+  TrendCards,
+  VetPacketPanel,
+  LogNextChecklist,
+} from "@/components/analytics/health-board";
 import Select from "@/components/ui/select";
 import Card from "@/components/ui/card";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
@@ -24,10 +22,15 @@ import { symptomCheckRowToEntry, type SymptomCheckDbRow } from "@/lib/symptom-ch
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { buildProductIntelligenceSnapshot } from "@/lib/product-intelligence";
 import { buildOwnerReadout } from "@/lib/analytics/owner-readout";
-import type { VetTimelineData } from "@/lib/analytics/vet-timeline";
+import { buildHealthBoard } from "@/lib/analytics/health-board";
+import type { OwnerVerdict } from "@/lib/analytics/owner-readout";
 import type { HealthLog } from "@/lib/health-log/types";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
-import { DEMO_ANALYTICS_SYMPTOM_ENTRIES } from "@/lib/demo-health-data";
+import {
+  DEMO_ANALYTICS_SYMPTOM_ENTRIES,
+  DEMO_PET_VET821_ID,
+  buildDemoHealthLogs,
+} from "@/lib/demo-health-data";
 import { useAppStore } from "@/store/app-store";
 
 const RANGE_OPTIONS = [
@@ -48,8 +51,7 @@ function inDateRange(entry: SymptomCheckEntry, rangeKey: string, now: Date): boo
 function HealthSignalsContent() {
   const { pets, activePet } = useAppStore();
   const [rawEntries, setRawEntries] = useState<SymptomCheckEntry[]>([]);
-  const [logs, setLogs] = useState<HealthLog[]>([]);
-  const [vetTimeline, setVetTimeline] = useState<VetTimelineData | null>(null);
+  const [realLogs, setRealLogs] = useState<HealthLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [petId, setPetId] = useState<string>("all");
   const [range, setRange] = useState<string>("90");
@@ -100,7 +102,7 @@ function HealthSignalsContent() {
 
   const loadLogs = useCallback(async () => {
     if (!isSupabaseConfigured || !resolvedPetId) {
-      setLogs([]);
+      setRealLogs([]);
       return;
     }
     try {
@@ -108,33 +110,15 @@ function HealthSignalsContent() {
         credentials: "include",
       });
       const json = await res.json().catch(() => ({}));
-      setLogs(res.ok && Array.isArray(json.data) ? json.data : []);
+      setRealLogs(res.ok && Array.isArray(json.data) ? json.data : []);
     } catch {
-      setLogs([]);
-    }
-  }, [resolvedPetId]);
-
-  const loadVetTimeline = useCallback(async () => {
-    if (!isSupabaseConfigured || !resolvedPetId) {
-      setVetTimeline(null);
-      return;
-    }
-    try {
-      const res = await fetch(
-        `/api/analytics/vet-timeline?pet_id=${encodeURIComponent(resolvedPetId)}`,
-        { credentials: "include" },
-      );
-      const json = await res.json().catch(() => ({}));
-      setVetTimeline(res.ok && json.data ? (json.data as VetTimelineData) : null);
-    } catch {
-      setVetTimeline(null);
+      setRealLogs([]);
     }
   }, [resolvedPetId]);
 
   useEffect(() => {
     void loadLogs();
-    void loadVetTimeline();
-  }, [loadLogs, loadVetTimeline]);
+  }, [loadLogs]);
 
   const petOptions = useMemo(() => {
     const base = [{ value: "all", label: "All dogs" }];
@@ -157,6 +141,14 @@ function HealthSignalsContent() {
     return list;
   }, [rawEntries, range, petId, now]);
 
+  // Daily logs: real (Supabase) or demo. Biscuit carries the rich demo story;
+  // other demo pets show an empty grid so the empty-state path is visible too.
+  const logs = useMemo(() => {
+    if (isSupabaseConfigured) return realLogs;
+    const targetIsOtherPet = petId !== "all" && petId !== DEMO_PET_VET821_ID;
+    return targetIsOtherPet ? [] : buildDemoHealthLogs(DEMO_PET_VET821_ID, now);
+  }, [realLogs, petId, now]);
+
   const productSnapshot = useMemo(
     () => buildProductIntelligenceSnapshot({ entries: filtered }),
     [filtered],
@@ -167,50 +159,56 @@ function HealthSignalsContent() {
     return petOptions.find((o) => o.value === petId)?.label;
   }, [petId, petOptions]);
 
+  const fallbackPetName = selectedPetName ?? activePet?.name ?? "your dog";
+
   const ownerReadout = useMemo(
     () =>
       buildOwnerReadout({
         entries: filtered,
         snapshot: productSnapshot,
         now,
-        fallbackPetName: selectedPetName ?? activePet?.name ?? "your dog",
+        fallbackPetName,
       }),
-    [filtered, productSnapshot, now, selectedPetName, activePet?.name],
+    [filtered, productSnapshot, now, fallbackPetName],
   );
 
-  const latestConfidence = useMemo(() => {
-    if (filtered.length === 0) return 0.5;
-    const latest = [...filtered].sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    )[0];
-    const c = latest?.confidence ?? 0.5;
-    return c > 1 ? c / 100 : c;
-  }, [filtered]);
+  const board = useMemo(
+    () => buildHealthBoard({ checks: filtered, logs, now, fallbackPetName }),
+    [filtered, logs, now, fallbackPetName],
+  );
 
-  const latestLog = useMemo(() => {
-    if (logs.length === 0) return null;
-    return [...logs].sort(
-      (a, b) => new Date(b.log_date).getTime() - new Date(a.log_date).getTime(),
-    )[0];
-  }, [logs]);
+  const noChecks = filtered.length === 0;
+  const noLogs = logs.length === 0;
+  const empty = noChecks && noLogs;
 
-  const noChecks = ownerReadout.checkCount === 0 || !ownerReadout.verdict;
+  // The decision card needs a verdict. Symptom checks drive it; when the owner
+  // only has daily logs, show a neutral "keep watching" card that still points
+  // them to a check.
+  const verdict: OwnerVerdict =
+    ownerReadout.verdict ?? {
+      state: "watch",
+      headline: `Keep an eye on ${board.petName}`,
+      subline:
+        "No symptom check yet — your daily logs are building the picture. Run a quick check if anything looks off.",
+      ctaLabel: "Start a check",
+      emergency: false,
+    };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-1 flex items-center gap-2 text-[#00a878]">
             <Activity className="h-5 w-5" aria-hidden />
             <span className="text-sm font-semibold uppercase tracking-wide">
-              {ownerReadout.petName === "your dog"
-                ? "Health signals"
-                : `${ownerReadout.petName}'s health`}
+              {board.petName === "your dog" ? "Health Signals" : `${board.petName}'s Health Signals`}
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-[#2c2a26]">How is your dog doing?</h1>
+          <h1 className="text-2xl font-bold text-[#2c2a26]">
+            What changed, what matters, and what to tell your vet
+          </h1>
           <p className="mt-1 text-sm text-[#6b665d]">
-            A plain-language read on your recent checks and daily logs
+            PawVital remembers {board.petName} and helps you explain the story
             {!isSupabaseConfigured ? " (demo data)" : ""}.
           </p>
         </div>
@@ -219,7 +217,7 @@ function HealthSignalsContent() {
             <Select label="Dog" options={petOptions} value={petId} onChange={(e) => setPetId(e.target.value)} />
           </div>
           <div className="w-full sm:w-40">
-            <Select label="Time" options={RANGE_OPTIONS} value={range} onChange={(e) => setRange(e.target.value)} />
+            <Select label="Time range" options={RANGE_OPTIONS} value={range} onChange={(e) => setRange(e.target.value)} />
           </div>
         </div>
       </div>
@@ -233,64 +231,53 @@ function HealthSignalsContent() {
         <Card className="p-10 text-center text-[#6b665d]">
           <p>Add a dog profile to start tracking how your dog is doing.</p>
         </Card>
+      ) : empty ? (
+        <section className="rounded-3xl border border-[#e8e2d8] bg-white p-8 text-center shadow-sm">
+          <div
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+            style={{ background: "rgba(0,168,120,0.12)", color: "#0a7d5b" }}
+          >
+            <Stethoscope className="h-7 w-7" aria-hidden />
+          </div>
+          <h2 className="mt-4 text-xl font-bold text-[#2c2a26]">
+            Let&apos;s get to know {board.petName}
+          </h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[#6b665d]">
+            Do a quick symptom check or log today&apos;s signs, and we&apos;ll start building
+            {" "}{board.petName}&apos;s health story — in plain language, ready for your vet.
+          </p>
+          <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <Link href="/symptom-checker" className={`${buttonClassName()} inline-flex`}>
+              <Stethoscope className="mr-2 h-4 w-4" aria-hidden />
+              Start a quick check
+            </Link>
+            <Link
+              href="/health-log"
+              className={`${buttonClassName({ variant: "outline" })} inline-flex border-[#cfe6dd] text-[#0a7d5b]`}
+            >
+              Log today&apos;s signs
+            </Link>
+          </div>
+        </section>
       ) : (
         <>
-          {noChecks ? (
-            <section className="rounded-3xl border border-[#e8e2d8] bg-white p-8 text-center shadow-sm">
-              <div
-                className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
-                style={{ background: "rgba(0,168,120,0.12)", color: "#0a7d5b" }}
-              >
-                <Stethoscope className="h-7 w-7" aria-hidden />
-              </div>
-              <h2 className="mt-4 text-xl font-bold text-[#2c2a26]">
-                Let&apos;s get to know {ownerReadout.petName}
-              </h2>
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[#6b665d]">
-                Do a quick symptom check and we&apos;ll show you how {ownerReadout.petName}
-                {" "}is doing — in plain language, with what to watch for.
-              </p>
-              <Link href="/symptom-checker" className={`${buttonClassName()} mt-5 inline-flex`}>
-                <Stethoscope className="mr-2 h-4 w-4" aria-hidden />
-                Start a quick check
-              </Link>
-            </section>
-          ) : (
-            <>
-              <OwnerStatusHero
-                verdict={ownerReadout.verdict!}
-                petName={ownerReadout.petName}
-                asOf={ownerReadout.asOf}
-                confidence={latestConfidence}
-              />
-              <RecoveryTrendStrip readout={ownerReadout.trend} petName={ownerReadout.petName} />
-              <WhyThisChanged drivers={ownerReadout.drivers} />
-              <RecentSigns signs={ownerReadout.signs} asOf={ownerReadout.asOf} />
-            </>
-          )}
-
-          {/* Daily Log sync — always shown so the loop is visible even before a check */}
-          <DailyLogSnapshot latest={latestLog} petName={ownerReadout.petName} />
-          <DailySignalsGridView logs={logs} now={now} />
-
-          {!noChecks && ownerReadout.nextStep ? (
-            <TrackNext nextStep={ownerReadout.nextStep} petName={ownerReadout.petName} />
-          ) : null}
-
-          {!noChecks ? (
-            <VetPacket
-              packet={ownerReadout.vetPacket}
-              petName={ownerReadout.petName}
-              dailyLogCount={logs.length}
-            />
-          ) : null}
-
-          {vetTimeline && vetTimeline.entries.length > 0 ? (
-            <VetTimeline data={vetTimeline} petName={ownerReadout.petName} />
-          ) : null}
+          <DecisionCard
+            verdict={verdict}
+            petName={board.petName}
+            lastCheckedLabel={board.lastCheckedLabel}
+            vetCopyText={board.vetPacket.copyText}
+          />
+          <InsightTiles board={board} />
+          <SignalGrid grid={board.grid} />
+          <PatternTimeline events={board.timeline} />
+          <TrendCards cards={board.trends} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <VetPacketPanel packet={board.vetPacket} petName={board.petName} />
+            <LogNextChecklist items={board.logNext} />
+          </div>
 
           <p className="px-2 pb-4 pt-1 text-center text-xs leading-relaxed text-[#8a857a]">
-            PawVital helps you understand your dog&apos;s signs — it&apos;s not a diagnosis and
+            PawVital helps you understand {board.petName}&apos;s signs — it&apos;s not a diagnosis and
             doesn&apos;t replace a vet. If you&apos;re worried or things get worse, contact your
             vet. In an emergency, call an emergency vet right away.
           </p>
