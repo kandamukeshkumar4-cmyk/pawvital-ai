@@ -11,4 +11,6 @@ export interface DetectedSignal {
   signal_type: SignalType;
   severity: SignalSeverity;
   owner_message: string;
+  dedupe_key: string;
+  next_action?: string;
 }
