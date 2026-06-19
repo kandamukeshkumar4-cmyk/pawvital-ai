@@ -35,14 +35,14 @@ export async function loadVetTimelineForPet(
       .select("id, pet_id, symptoms, ai_response, severity, recommendation, created_at")
       .eq("pet_id", petId)
       .order("created_at", { ascending: false })
-      .limit(20),
+      .limit(60),
     supabase
       .from("daily_health_logs")
       .select("*")
       .eq("user_id", userId)
       .eq("pet_id", petId)
       .order("log_date", { ascending: false })
-      .limit(30),
+      .limit(90),
     supabase
       .from("journal_entries")
       .select(
@@ -51,7 +51,7 @@ export async function loadVetTimelineForPet(
       .eq("user_id", userId)
       .eq("pet_id", petId)
       .order("entry_date", { ascending: false })
-      .limit(10),
+      .limit(30),
   ]);
 
   const checks = (checksResult.data ?? []).map((row) =>

@@ -147,7 +147,7 @@ function ChatBubble({
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
           isUser
-            ? "bg-blue-500/20"
+            ? "bg-[#e7f4ee]"
             : isEmergency
               ? "bg-red-500/20"
               : isCannotAssess
@@ -156,11 +156,11 @@ function ChatBubble({
                   ? "bg-slate-500/20"
                   : isImageGate
                     ? "bg-amber-500/20"
-                    : "bg-purple-500/20"
+                    : "bg-[#e7f4ee]"
         }`}
       >
         {isUser ? (
-          <User className="w-4 h-4 text-blue-600" />
+          <User className="w-4 h-4 text-[#15795a]" />
         ) : isEmergency ? (
           <AlertCircle className="w-4 h-4 text-red-600" />
         ) : isCannotAssess ? (
@@ -170,13 +170,13 @@ function ChatBubble({
         ) : isImageGate ? (
           <AlertTriangle className="w-4 h-4 text-amber-600" />
         ) : (
-          <Bot className="w-4 h-4 text-purple-600" />
+          <Bot className="w-4 h-4 text-[#1f9d6b]" />
         )}
       </div>
       <div
         className={`max-w-[min(85%,32rem)] rounded-2xl px-4 py-3 sm:max-w-[80%] ${
           isUser
-            ? "bg-blue-600 text-white"
+            ? "bg-[#1f9d6b] text-white"
             : highlightEscalation
               ? "bg-red-50 border-2 border-red-400 text-red-700 animate-pulse"
               : highlightClarification
@@ -206,7 +206,7 @@ function ChatBubble({
           <img
             src={message.image}
             alt="Uploaded by user"
-            className="w-full max-w-sm rounded-lg mb-2 border border-blue-400/30 object-contain"
+            className="w-full max-w-sm rounded-lg mb-2 border border-[#cfe6da] object-contain"
           />
         )}
         {highlightClarification && (
@@ -216,7 +216,7 @@ function ChatBubble({
           </p>
         )}
         {message.askingBecause && !isUser && (
-          <p className="mb-2 text-xs text-purple-700/90 border-l-2 border-purple-300 pl-2">
+          <p className="mb-2 text-xs text-[#15795a] border-l-2 border-[#cfe6da] pl-2">
             <span className="font-medium">Why I&apos;m asking: </span>
             {message.askingBecause}
           </p>
@@ -227,7 +227,7 @@ function ChatBubble({
         <p
           className={`text-[10px] mt-1 ${
             isUser
-              ? "text-blue-200"
+              ? "text-white/70"
               : isEmergency
                 ? "text-red-500"
                 : isCannotAssess
@@ -1053,8 +1053,8 @@ export default function SymptomCheckerPage() {
         {!sessionStarted && (
           <Card className="p-4 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Stethoscope className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-[#e7f4ee] rounded-xl flex items-center justify-center">
+                <Stethoscope className="w-5 h-5 text-[#1f9d6b]" />
               </div>
               <div>
                 <h2 className="font-semibold text-gray-900">
@@ -1068,14 +1068,14 @@ export default function SymptomCheckerPage() {
               </div>
             </div>
 
-            <div className="bg-purple-50 rounded-xl p-4 mb-4 border border-purple-200">
+            <div className="bg-[#f3f9f6] rounded-xl p-4 mb-4 border border-[#cfe6da]">
               <div className="flex items-start gap-2">
-                <Bot className="w-5 h-5 text-purple-600 mt-0.5" />
+                <Bot className="w-5 h-5 text-[#1f9d6b] mt-0.5" />
                 <div>
-                  <p className="text-sm text-purple-700 font-medium">
+                  <p className="text-sm text-[#15795a] font-medium">
                     How this works:
                   </p>
-                  <ol className="text-sm text-purple-600 mt-1 space-y-1 list-decimal ml-4">
+                  <ol className="text-sm text-[#1f9d6b] mt-1 space-y-1 list-decimal ml-4">
                     <li>
                       Describe what&apos;s happening in your own words or upload
                       a photo of the issue
@@ -1105,7 +1105,7 @@ export default function SymptomCheckerPage() {
                         `${hasHydrated ? pet.name : "My dog"} has been ${s.toLowerCase()}`,
                       )
                     }
-                    className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-colors"
+                    className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-600 hover:bg-[#f3f9f6] hover:border-[#cfe6da] hover:text-[#15795a] transition-colors"
                   >
                     {s}
                   </button>
@@ -1120,8 +1120,8 @@ export default function SymptomCheckerPage() {
           <Card className="p-0 overflow-hidden">
             {/* Chat header */}
             <div className="flex flex-wrap items-start gap-3 border-b border-gray-200 bg-gray-50/80 px-4 py-3">
-              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                <Bot className="w-4 h-4 text-purple-600" />
+              <div className="w-8 h-8 bg-[#e7f4ee] rounded-full flex items-center justify-center">
+                <Bot className="w-4 h-4 text-[#1f9d6b]" />
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900">
@@ -1215,12 +1215,12 @@ export default function SymptomCheckerPage() {
 
               {(loading || awaitingAsyncResult) && (
                 <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-purple-600" />
+                  <div className="w-8 h-8 rounded-full bg-[#e7f4ee] flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-[#1f9d6b]" />
                   </div>
                   <div className="bg-gray-100 rounded-2xl px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                      <Loader2 className="w-4 h-4 animate-spin text-[#1f9d6b]" />
                       <span className="text-sm text-gray-500">Thinking...</span>
                     </div>
                   </div>
@@ -1294,7 +1294,7 @@ export default function SymptomCheckerPage() {
                           : "Type your answer or attach a photo..."
                       }
                       rows={2}
-                      className="min-w-0 flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="min-w-0 flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#1f9d6b]"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -1317,7 +1317,7 @@ export default function SymptomCheckerPage() {
                       className={`flex w-full items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-all sm:w-auto ${
                         conversationState === "escalation"
                           ? "bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 shadow-lg shadow-red-200 animate-pulse"
-                          : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-200"
+                          : "bg-[#1f9d6b] hover:bg-[#15795a] shadow-sm"
                       }`}
                     >
                       {conversationState === "escalation" ? (
@@ -1374,7 +1374,7 @@ export default function SymptomCheckerPage() {
                   onKeyDown={handleKeyDown}
                   placeholder={`Describe what's going on with ${displayPetName} or attach a photo...`}
                   rows={2}
-                  className="min-w-0 flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="min-w-0 flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#1f9d6b]"
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -1409,7 +1409,7 @@ export default function SymptomCheckerPage() {
         {/* Generating Report Loading State */}
         {generatingReport && (
           <Card className="p-8 text-center animate-pulse">
-            <Stethoscope className="w-12 h-12 text-purple-500 mx-auto mb-4" />
+            <Stethoscope className="w-12 h-12 text-[#1f9d6b] mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-700">
               Preparing Vet Handoff Summary...
             </h3>
@@ -1438,7 +1438,7 @@ export default function SymptomCheckerPage() {
               <FullReport report={report} />
 
               {/* Hand-holding: tell first-time owners what to do after a report. */}
-              <Card className="border border-purple-200 bg-purple-50/60 p-5">
+              <Card className="border border-[#cfe6da] bg-[#f3f9f6] p-5">
                 <h3 className="text-base font-semibold text-gray-900">
                   What&apos;s next for {displayPetName}?
                 </h3>

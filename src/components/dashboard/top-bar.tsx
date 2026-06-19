@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Menu, ChevronDown, CheckCircle2, Stethoscope } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -83,18 +84,25 @@ export default function TopBar() {
 
           {/* Dog selector pill */}
           {activePet && (
-            <a
+            <Link
               href="/pets"
-              target="_top"
               className="hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors"
               style={{ background: "#f7f4ef", border: "1px solid #e8e2d8", color: "#1c1814" }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f0ede8")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f7f4ef")}
             >
-              <span className="text-base leading-none">🐕</span>
-              <span className="text-sm font-semibold text-[#1c1814]">{activePet.name}</span>
+              <span
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                style={{ background: "#1f9d6b" }}
+                aria-hidden
+              >
+                {activePet.name.charAt(0).toUpperCase()}
+              </span>
+              <span className="text-sm font-semibold text-[#1c1814]">
+                {activePet.name.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}
+              </span>
               <ChevronDown className="h-3.5 w-3.5 text-[#8a7f74]" aria-hidden />
-            </a>
+            </Link>
           )}
 
           {/* Last log status pill */}
