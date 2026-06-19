@@ -99,5 +99,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 
-  return NextResponse.json({ path: objectPath });
+  // Short-lived signed URL so the client can show a thumbnail immediately. The
+  // PATH is what's persisted; the signedUrl is display-only and best-effort.
+  const { data: signed } = await supabase.storage
+    .from("journal-photos")
+    .createSignedUrl(objectPath, 60 * 60);
+
+  return NextResponse.json({ path: objectPath, signedUrl: signed?.signedUrl ?? null });
 }
