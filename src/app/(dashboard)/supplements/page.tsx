@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pill, ExternalLink, Sparkles } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
@@ -10,74 +10,21 @@ import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 
 interface SupplementItem {
-  id: string;
   name: string;
   purpose: string;
   dosage: string;
   frequency: string;
   brand: string;
   price: string;
-  isActive: boolean;
   priority: "essential" | "recommended" | "optional";
 }
 
-const aiRecommendations: SupplementItem[] = [
-  {
-    id: "1",
-    name: "Glucosamine & Chondroitin",
-    purpose: "Joint health & mobility support",
-    dosage: "1,500mg daily",
-    frequency: "Once daily with food",
-    brand: "Nutramax Dasuquin",
-    price: "$35/month",
-    isActive: true,
-    priority: "essential",
-  },
-  {
-    id: "2",
-    name: "Omega-3 Fish Oil",
-    purpose: "Anti-inflammatory, skin & coat health",
-    dosage: "1,000mg EPA+DHA daily",
-    frequency: "Once daily with food",
-    brand: "Nordic Naturals Omega-3 Pet",
-    price: "$25/month",
-    isActive: true,
-    priority: "essential",
-  },
-  {
-    id: "3",
-    name: "Probiotic",
-    purpose: "Digestive health & immune support",
-    dosage: "1 scoop daily",
-    frequency: "Once daily with morning meal",
-    brand: "Purina Pro Plan FortiFlora",
-    price: "$30/month",
-    isActive: true,
-    priority: "recommended",
-  },
-  {
-    id: "4",
-    name: "CoQ10",
-    purpose: "Heart health & cellular energy",
-    dosage: "100mg daily",
-    frequency: "Once daily",
-    brand: "Zesty Paws CoQ10",
-    price: "$22/month",
-    isActive: false,
-    priority: "optional",
-  },
-  {
-    id: "5",
-    name: "Calming Support",
-    purpose: "Anxiety & stress reduction",
-    dosage: "As needed",
-    frequency: "During storms, travel, or stressful events",
-    brand: "VetriScience Composure",
-    price: "$18/month",
-    isActive: false,
-    priority: "optional",
-  },
-];
+interface SupplementPlan {
+  supplements: SupplementItem[];
+  nutrition_grade: string;
+  monthly_cost: string;
+  summary: string;
+}
 
 const priorityConfig = {
   essential: { label: "Essential", variant: "danger" as const },
@@ -88,29 +35,92 @@ const priorityConfig = {
 export default function SupplementsPage() {
   const quarantinedSurface = getPrivateTesterQuarantinedSurface("/supplements");
   const { activePet } = useAppStore();
-  const [supplements, setSupplements] = useState(aiRecommendations);
-  const [generating, setGenerating] = useState(false);
+  const [plan, setPlan] = useState<SupplementPlan | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleSupplement = (id: string) => {
-    setSupplements((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s))
-    );
-  };
+  const fetchPlan = useCallback(async () => {
+    if (!activePet) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const petPayload = {
+        name: activePet.name,
+        breed: activePet.breed,
+        species: activePet.species,
+        age_years: activePet.age_years,
+        age_months: activePet.age_months,
+        weight: activePet.weight,
+        weight_unit: activePet.weight_unit,
+        gender: activePet.gender,
+        is_neutered: activePet.is_neutered,
+        existing_conditions: activePet.existing_conditions ?? [],
+        medications: activePet.medications ?? [],
+      };
+      const res = await fetch("/api/ai/supplements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pet: petPayload }),
+      });
+      if (!res.ok) throw new Error("Failed to load plan");
+      const data: SupplementPlan = await res.json();
+      // Normalize to our item shape (route may return without isActive)
+      const normalized: SupplementPlan = {
+        ...data,
+        supplements: (data.supplements || []).map((s: any) => ({
+          name: s.name || "Supplement",
+          purpose: s.purpose || "",
+          dosage: s.dosage || "",
+          frequency: s.frequency || "",
+          brand: s.brand || "",
+          price: s.price || "",
+          priority: (s.priority || "optional") as "essential" | "recommended" | "optional",
+        })),
+      };
+      setPlan(normalized);
+    } catch (e) {
+      setError("Unable to load personalized plan right now.");
+      setPlan(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [activePet]);
 
-  const generatePlan = async () => {
-    setGenerating(true);
-    // Simulate AI generation
-    await new Promise((r) => setTimeout(r, 2000));
-    setGenerating(false);
-  };
+  useEffect(() => {
+    if (activePet) {
+      void fetchPlan();
+    } else {
+      setPlan(null);
+    }
+  }, [activePet, fetchPlan]);
 
-  const activeCount = supplements.filter((s) => s.isActive).length;
-  const monthlyCost = supplements
-    .filter((s) => s.isActive)
-    .reduce((sum, s) => sum + parseInt(s.price.replace(/[^0-9]/g, "")), 0);
+  const supplements = plan?.supplements ?? [];
+  const hasData = supplements.length > 0;
 
   if (quarantinedSurface) {
     return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
+  }
+
+  if (!activePet) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Supplement Plan</h1>
+          <p className="text-gray-500 mt-1">AI-personalized nutrition recommendations</p>
+        </div>
+        <Card className="p-8 text-center">
+          <p className="text-gray-600">Add a dog profile to generate a personalized supplement plan.</p>
+          <a href="/pets" className="inline-block mt-4 text-[#0a7d5b] hover:underline">Go to pet profiles →</a>
+        </Card>
+        <Card className="p-4 bg-gray-50">
+          <p className="text-xs text-gray-500 text-center">
+            Supplement recommendations are generated by AI based on your dog&apos;s profile.
+            Always consult your veterinarian before starting any new supplement regimen.
+            Affiliate links may be used.
+          </p>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -119,73 +129,59 @@ export default function SupplementsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Supplement Plan</h1>
           <p className="text-gray-500 mt-1">
-            AI-personalized nutrition recommendations for {activePet?.name || "your dog"}
+            AI-personalized nutrition recommendations for {activePet.name}
           </p>
         </div>
-        <Button onClick={generatePlan} loading={generating}>
+        <Button onClick={fetchPlan} loading={loading} disabled={loading}>
           <Sparkles className="w-4 h-4 mr-2" />
           Regenerate Plan
         </Button>
       </div>
 
-      {/* Summary */}
+      {error ? (
+        <Card className="p-4 border-red-200 bg-red-50 text-red-700 text-sm">{error}</Card>
+      ) : null}
+
+      {/* Summary cards from live response (or fallback) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 text-center">
-          <p className="text-3xl font-bold text-blue-600">{activeCount}</p>
-          <p className="text-sm text-gray-500">Active Supplements</p>
+          <p className="text-3xl font-bold text-[#0a7d5b]">{supplements.length}</p>
+          <p className="text-sm text-gray-500">Recommended Supplements</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-3xl font-bold text-green-600">${monthlyCost}</p>
+          <p className="text-3xl font-bold text-[#0a7d5b]">{plan?.monthly_cost ?? "—"}</p>
           <p className="text-sm text-gray-500">Monthly Cost</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-3xl font-bold text-amber-600">A+</p>
+          <p className="text-3xl font-bold text-[#0a7d5b]">{plan?.nutrition_grade ?? "—"}</p>
           <p className="text-sm text-gray-500">Nutrition Grade</p>
         </Card>
       </div>
 
-      {/* AI Insight */}
-      <Card className="p-5 bg-blue-50 border-blue-200">
-        <div className="flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-blue-800">
-              AI Recommendation for {activePet?.name || "Cooper"}
-            </p>
-            <p className="text-sm text-blue-700 mt-1">
-              Based on {activePet?.name || "Cooper"}&apos;s age ({activePet?.age_years || 11} years),
-              breed ({activePet?.breed || "Golden Retriever"}), and existing conditions
-              (mild arthritis), we prioritize joint support and anti-inflammatory supplements.
-              The Glucosamine + Omega-3 combination has shown 73% improvement in mobility
-              for similar profiles.
-            </p>
-          </div>
-        </div>
-      </Card>
+      {/* Live summary from route when available */}
+      {plan?.summary ? (
+        <Card className="p-5 border-[#cfe6dd]">
+          <p className="text-sm text-[#0a7d5b] font-medium">Plan summary</p>
+          <p className="text-sm text-gray-700 mt-1">{plan.summary}</p>
+        </Card>
+      ) : null}
 
-      {/* Supplement List */}
+      {/* Supplement List (real data or empty state) */}
       <div className="space-y-4">
-        {supplements.map((supp) => (
-          <Card
-            key={supp.id}
-            className={`p-6 transition-all ${
-              supp.isActive ? "border-blue-200 bg-white" : "bg-gray-50 opacity-75"
-            }`}
-          >
-            <div className="flex items-start justify-between">
+        {loading ? (
+          <Card className="p-6 text-center text-gray-500">Loading personalized plan…</Card>
+        ) : hasData ? (
+          supplements.map((supp, idx) => (
+            <Card key={idx} className="p-6 border-[#e8e2d8]">
               <div className="flex items-start gap-4">
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    supp.isActive ? "bg-blue-100" : "bg-gray-200"
-                  }`}
-                >
-                  <Pill className={`w-6 h-6 ${supp.isActive ? "text-blue-600" : "text-gray-400"}`} />
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#e6f3ed]">
+                  <Pill className="w-6 h-6 text-[#0a7d5b]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold text-gray-900">{supp.name}</h3>
-                    <Badge variant={priorityConfig[supp.priority].variant}>
-                      {priorityConfig[supp.priority].label}
+                    <Badge variant={priorityConfig[supp.priority]?.variant ?? "info"}>
+                      {priorityConfig[supp.priority]?.label ?? "Optional"}
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-600 mt-1">{supp.purpose}</p>
@@ -196,31 +192,21 @@ export default function SupplementsPage() {
                     <span className="font-medium text-gray-700">{supp.price}</span>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
                 <a
                   href="#"
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors self-start"
                   title="Buy this supplement"
                 >
                   <ExternalLink className="w-4 h-4 text-gray-400" />
                 </a>
-                <button
-                  onClick={() => toggleSupplement(supp.id)}
-                  className={`w-10 h-6 rounded-full transition-colors relative ${
-                    supp.isActive ? "bg-blue-600" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      supp.isActive ? "left-[18px]" : "left-0.5"
-                    }`}
-                  />
-                </button>
               </div>
-            </div>
+            </Card>
+          ))
+        ) : (
+          <Card className="p-6 text-center text-gray-600">
+            No supplements returned for this profile yet. Try regenerating or add more profile details.
           </Card>
-        ))}
+        )}
       </div>
 
       {/* Disclaimer */}

@@ -17,6 +17,7 @@ import {
   type HealthLogInput,
 } from "@/lib/health-log/types";
 import { buildHealthLogReadout } from "@/lib/health-log/readout";
+import type { DetectedSignal } from "@/lib/dog-brain/types";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -68,6 +69,8 @@ export default function HealthLogPage() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [afterSaveSignals, setAfterSaveSignals] = useState<DetectedSignal[]>([]);
+  const [signalsLoading, setSignalsLoading] = useState(false);
   // Display-only signed URLs (parallel to form.photo_urls paths) for thumbnails.
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
@@ -162,6 +165,8 @@ export default function HealthLogPage() {
         return [saved, ...withoutSameDay];
       });
       setSavedAt(saved.log_date);
+      // Trigger after-save brain signals refresh using the live detector
+      void loadAfterSaveSignals(saved.pet_id);
     } catch {
       setError("Network error saving your log.");
     } finally {
@@ -173,6 +178,25 @@ export default function HealthLogPage() {
     key: K,
     value: HealthLogInput[K],
   ) => setForm((f) => ({ ...f, [key]: value }));
+
+  // Fetch fresh signals after a save (closes save -> see brain result loop)
+  const loadAfterSaveSignals = useCallback(async (petId: string) => {
+    if (!petId) return;
+    setSignalsLoading(true);
+    try {
+      const res = await fetch(`/api/dog-brain/signals?pet_id=${encodeURIComponent(petId)}`);
+      const json = await res.json().catch(() => null);
+      if (json && Array.isArray(json.signals)) {
+        setAfterSaveSignals(json.signals as DetectedSignal[]);
+      } else {
+        setAfterSaveSignals([]);
+      }
+    } catch {
+      setAfterSaveSignals([]);
+    } finally {
+      setSignalsLoading(false);
+    }
+  }, []);
 
   // Real file upload (mirrors the journal convention): each file POSTs to
   // /api/health-log/upload, which stores it in owner-scoped Supabase Storage and
@@ -631,10 +655,30 @@ export default function HealthLogPage() {
             </p>
           ) : null}
           {savedAt ? (
-            <p className="flex items-center gap-1.5 text-sm text-[#0a7d5b]">
-              <CheckCircle2 className="h-4 w-4" aria-hidden />
-              Saved your check-in for {savedAt}.
-            </p>
+            <div className="space-y-2">
+              <p className="flex items-center gap-1.5 text-sm text-[#0a7d5b]">
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                Saved your check-in for {savedAt}.
+              </p>
+              {/* After-save "what the brain noticed" using live signals (re-fetches on each save) */}
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-[#8a857a] mb-1">What the brain noticed</p>
+                {signalsLoading ? (
+                  <p className="text-xs text-[#6b665d]">Checking recent patterns…</p>
+                ) : afterSaveSignals.length > 0 ? (
+                  <ul className="text-sm text-[#2c2a26] space-y-0.5">
+                    {afterSaveSignals.slice(0, 3).map((s, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <span>•</span>
+                        <span>{s.owner_message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-[#6b665d]">No new patterns flagged from recent logs.</p>
+                )}
+              </div>
+            </div>
           ) : null}
 
           <div className="flex justify-end">
