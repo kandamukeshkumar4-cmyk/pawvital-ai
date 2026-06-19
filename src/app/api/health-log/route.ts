@@ -65,7 +65,10 @@ const ContextSignalsSchema = z
     medication: z
       .object({
         name: z.string().max(200).optional(),
+        time_given: z.string().max(20).optional(),
+        missed_late: z.boolean().optional(),
         dose_notes: z.string().max(500).optional(),
+        side_effect_notes: z.string().max(500).optional(),
       })
       .optional(),
   })

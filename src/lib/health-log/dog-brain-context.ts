@@ -71,7 +71,10 @@ function contextSignalsSummary(signals: ContextSignals): string {
   if (signals.medication) {
     const med = signals.medication;
     const name = med.name ? ` (${med.name})` : "";
-    parts.push(`medication given${name} — history only, not dosing advice`);
+    const timing = med.time_given ? ` at ${med.time_given}` : "";
+    const late = med.missed_late ? " [missed/late dose]" : "";
+    const side = med.side_effect_notes ? ` — owner noted: ${med.side_effect_notes.slice(0, 120)}` : "";
+    parts.push(`medication given${name}${timing}${late}${side} — history only, not dosing advice`);
   }
 
   return parts.length > 0 ? parts.join("; ") : "";
@@ -80,24 +83,33 @@ function contextSignalsSummary(signals: ContextSignals): string {
 export async function loadDogBrainContext({
   userId,
   petName,
+  petId: petIdArg,
 }: {
   userId: string | null;
   petName: string;
+  /** Pass when available to skip the name-lookup query and avoid duplicate-name null context. */
+  petId?: string;
 }): Promise<string | null> {
-  if (!userId || !petName.trim()) return null;
+  if (!userId) return null;
 
   try {
     const supabase = await createServerSupabaseClient();
 
-    // Resolve pet by name. Skip if ambiguous (two same-named pets).
-    const { data: pets } = await supabase
-      .from("pets")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("name", petName)
-      .limit(2);
-    if (!pets || pets.length !== 1) return null;
-    const petId = pets[0].id as string;
+    // Use petId directly if provided; otherwise resolve by name (skip if ambiguous).
+    let petId: string;
+    if (petIdArg) {
+      petId = petIdArg;
+    } else {
+      if (!petName.trim()) return null;
+      const { data: pets } = await supabase
+        .from("pets")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("name", petName)
+        .limit(2);
+      if (!pets || pets.length !== 1) return null;
+      petId = pets[0].id as string;
+    }
 
     // Fetch all sources in parallel — single round-trip set.
     const [logsResult, checksResult, journalResult] = await Promise.all([

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ClipboardList, Loader2 } from "lucide-react";
+import { CheckCircle2, ClipboardList, Loader2, ChevronDown } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Select from "@/components/ui/select";
@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   DEFAULT_LOG_INPUT,
   SELECT_FIELDS,
+  type ContextSignals,
   type HealthLog,
   type HealthLogInput,
 } from "@/lib/health-log/types";
@@ -32,6 +33,33 @@ const TONE_BG: Record<"good" | "watch" | "alert", string> = {
   alert: "rgba(226,92,92,0.12)",
 };
 
+/** Shared checkbox list for simple boolean context_signals packs. */
+function PackCheckboxes({
+  items,
+  values,
+  onChange,
+}: {
+  items: { key: string; label: string }[];
+  values: Record<string, boolean | string | undefined> | undefined;
+  onChange: (key: string, checked: boolean) => void;
+}) {
+  return (
+    <>
+      {items.map(({ key, label }) => (
+        <label key={key} className="flex items-center gap-2 text-sm text-[#4a463f]">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300"
+            checked={Boolean(values?.[key])}
+            onChange={(e) => onChange(key, e.target.checked)}
+          />
+          {label}
+        </label>
+      ))}
+    </>
+  );
+}
+
 export default function HealthLogPage() {
   const { activePet, pets } = useAppStore();
   const [logs, setLogs] = useState<HealthLog[]>([]);
@@ -45,6 +73,10 @@ export default function HealthLogPage() {
     log_date: todayIso(),
     ...DEFAULT_LOG_INPUT,
   });
+
+  // Merge a partial update into context_signals without losing other packs.
+  const setSignals = (patch: Partial<ContextSignals>) =>
+    setForm((f) => ({ ...f, context_signals: { ...(f.context_signals ?? {}), ...patch } }));
 
   // Keep the selected pet in sync with the active pet once it loads.
   useEffect(() => {
@@ -288,6 +320,185 @@ export default function HealthLogPage() {
             </label>
           </div>
 
+          {/* Specific observations — collapsible pack inputs */}
+          <details className="group rounded-xl border border-[#e8e2d8]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-[#4a463f]">
+              <span>Specific observations <span className="ml-1 text-xs font-normal text-[#8a857a]">(optional)</span></span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-[#8a857a] transition-transform group-open:rotate-180" aria-hidden />
+            </summary>
+            <div className="space-y-4 border-t border-[#e8e2d8] px-4 py-4">
+              <p className="text-xs text-[#8a857a]">
+                Tap the signs you noticed today. These go to your vet history — they&apos;re owner observations, not a diagnosis.
+              </p>
+
+              {/* GI */}
+              <fieldset>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Digestion &amp; stomach</legend>
+                <div className="mt-2 space-y-2">
+                  <PackCheckboxes
+                    items={[
+                      { key: "blood_in_stool", label: "Blood in stool" },
+                      { key: "straining", label: "Straining to go" },
+                    ]}
+                    values={form.context_signals?.gi}
+                    onChange={(key, checked) => setSignals({ gi: { ...(form.context_signals?.gi ?? {}), [key]: checked } })}
+                  />
+                  <Input
+                    label="GI note (optional)"
+                    value={form.context_signals?.gi?.change_note ?? ""}
+                    onChange={(e) => setSignals({ gi: { ...(form.context_signals?.gi ?? {}), change_note: e.target.value || undefined } })}
+                    placeholder="e.g. loose stool for 2 days"
+                  />
+                </div>
+              </fieldset>
+
+              {/* Urinary */}
+              <fieldset>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Drinking &amp; urination</legend>
+                <div className="mt-2 space-y-2">
+                  <PackCheckboxes
+                    items={[
+                      { key: "increased_thirst", label: "Drinking more than usual" },
+                      { key: "accidents", label: "Accidents indoors" },
+                      { key: "color_change", label: "Urine looks different (color/smell)" },
+                    ]}
+                    values={form.context_signals?.urinary}
+                    onChange={(key, checked) => setSignals({ urinary: { ...(form.context_signals?.urinary ?? {}), [key]: checked } })}
+                  />
+                </div>
+              </fieldset>
+
+              {/* Mobility */}
+              <fieldset>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Movement &amp; pain</legend>
+                <div className="mt-2 space-y-2">
+                  <PackCheckboxes
+                    items={[
+                      { key: "limping", label: "Limping" },
+                      { key: "reluctance_to_move", label: "Reluctant to get up or move" },
+                    ]}
+                    values={form.context_signals?.mobility}
+                    onChange={(key, checked) => setSignals({ mobility: { ...(form.context_signals?.mobility ?? {}), [key]: checked } })}
+                  />
+                  {form.context_signals?.mobility?.limping && (
+                    <Input
+                      label="Which leg? (optional)"
+                      value={form.context_signals?.mobility?.limb ?? ""}
+                      onChange={(e) => setSignals({ mobility: { ...(form.context_signals?.mobility ?? {}), limping: true, limb: e.target.value || undefined } })}
+                      placeholder="e.g. front left"
+                    />
+                  )}
+                </div>
+              </fieldset>
+
+              {/* Skin/Ear */}
+              <fieldset>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Skin &amp; ears</legend>
+                <div className="mt-2 space-y-2">
+                  <PackCheckboxes
+                    items={[
+                      { key: "scratching", label: "Scratching / licking excessively" },
+                      { key: "head_shaking", label: "Shaking head" },
+                      { key: "hot_spot", label: "Hot spot or sore patch" },
+                      { key: "odor", label: "Unusual odor (ears, skin)" },
+                    ]}
+                    values={form.context_signals?.skin_ear}
+                    onChange={(key, checked) => setSignals({ skin_ear: { ...(form.context_signals?.skin_ear ?? {}), [key]: checked } })}
+                  />
+                </div>
+              </fieldset>
+
+              {/* Breathing */}
+              <fieldset>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Breathing &amp; heart</legend>
+                <div className="mt-2 space-y-2">
+                  <PackCheckboxes
+                    items={[
+                      { key: "coughing", label: "Coughing" },
+                      { key: "labored", label: "Labored or fast breathing" },
+                      { key: "exercise_intolerance", label: "Tires quickly on walks" },
+                    ]}
+                    values={form.context_signals?.breathing}
+                    onChange={(key, checked) => setSignals({ breathing: { ...(form.context_signals?.breathing ?? {}), [key]: checked } })}
+                  />
+                </div>
+              </fieldset>
+
+              {/* Seizure/episode */}
+              <fieldset>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Seizure or episode</legend>
+                <div className="mt-2 space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-[#4a463f]">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300"
+                      checked={form.context_signals?.seizure?.occurred ?? false}
+                      onChange={(e) => setSignals({ seizure: { ...(form.context_signals?.seizure ?? { occurred: false }), occurred: e.target.checked } })}
+                    />
+                    Seizure or episode occurred today
+                  </label>
+                  {form.context_signals?.seizure?.occurred && (
+                    <>
+                      <Input
+                        label="Duration (seconds, optional)"
+                        type="number"
+                        min={0}
+                        max={7200}
+                        value={form.context_signals?.seizure?.duration_sec != null ? String(form.context_signals.seizure.duration_sec) : ""}
+                        onChange={(e) => setSignals({ seizure: { ...(form.context_signals?.seizure ?? { occurred: true }), duration_sec: e.target.value ? Number(e.target.value) : undefined } })}
+                      />
+                      <Textarea
+                        label="Recovery notes (optional)"
+                        value={form.context_signals?.seizure?.recovery_note ?? ""}
+                        onChange={(e) => setSignals({ seizure: { ...(form.context_signals?.seizure ?? { occurred: true }), recovery_note: e.target.value || undefined } })}
+                        placeholder="How long to recover? Any confusion?"
+                        rows={2}
+                      />
+                    </>
+                  )}
+                </div>
+              </fieldset>
+
+              {/* Medication event */}
+              <fieldset>
+                <legend className="text-xs font-semibold uppercase tracking-wide text-[#6b665d]">Medication history</legend>
+                <p className="mb-2 text-xs text-[#8a857a]">Record what was given — for your vet history only, not dosing advice.</p>
+                <div className="space-y-2">
+                  <Input
+                    label="Medication name (optional)"
+                    value={form.context_signals?.medication?.name ?? ""}
+                    onChange={(e) => setSignals({ medication: { ...(form.context_signals?.medication ?? {}), name: e.target.value || undefined } })}
+                    placeholder="e.g. Apoquel 16mg"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      label="Time given (optional)"
+                      type="time"
+                      value={form.context_signals?.medication?.time_given ?? ""}
+                      onChange={(e) => setSignals({ medication: { ...(form.context_signals?.medication ?? {}), time_given: e.target.value || undefined } })}
+                    />
+                    <label className="flex items-end gap-2 pb-2.5 text-sm text-[#4a463f]">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300"
+                        checked={form.context_signals?.medication?.missed_late ?? false}
+                        onChange={(e) => setSignals({ medication: { ...(form.context_signals?.medication ?? {}), missed_late: e.target.checked || undefined } })}
+                      />
+                      Missed or late dose
+                    </label>
+                  </div>
+                  <Textarea
+                    label="Side effects noted (optional)"
+                    value={form.context_signals?.medication?.side_effect_notes ?? ""}
+                    onChange={(e) => setSignals({ medication: { ...(form.context_signals?.medication ?? {}), side_effect_notes: e.target.value || undefined } })}
+                    placeholder="Owner observations only — contact your vet for any concerns"
+                    rows={2}
+                  />
+                </div>
+              </fieldset>
+            </div>
+          </details>
+
           <Textarea
             label="Notes (optional)"
             value={form.notes ?? ""}
@@ -295,6 +506,26 @@ export default function HealthLogPage() {
             placeholder="Anything else you noticed today?"
             rows={3}
           />
+
+          {/* Photo URLs — text fallback until a file-upload component is wired in */}
+          <div>
+            <label className="block text-sm font-medium text-[#4a463f]">
+              Photo link <span className="text-xs font-normal text-[#8a857a]">(optional — paste a URL to attach)</span>
+            </label>
+            <input
+              type="url"
+              className="mt-1 w-full rounded-lg border border-[#e8e2d8] bg-white px-3 py-2 text-sm text-[#2c2a26] placeholder-[#b0aaa0] focus:border-[#7c4dc4] focus:outline-none"
+              placeholder="https://..."
+              value={form.photo_urls?.[0] ?? ""}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                setField("photo_urls", val ? [val] : null);
+              }}
+            />
+            <p className="mt-1 text-xs text-[#8a857a]">
+              Full photo upload coming soon. For now you can paste a cloud photo URL (Google Photos share link, etc).
+            </p>
+          </div>
 
           {error ? (
             <p className="text-sm text-red-600" role="alert">
