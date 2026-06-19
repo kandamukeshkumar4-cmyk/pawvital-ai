@@ -36,7 +36,9 @@ const LogBodySchema = z.object({
   weight_kg: z.number().positive().max(200).nullable().optional(),
   meds_given: z.boolean(),
   notes: z.string().trim().max(4000).nullable().optional(),
-  photo_urls: z.array(z.string().url()).max(10).optional().nullable(),
+  // Storage object paths (from /api/health-log/upload) or pasted URLs — both
+  // accepted, mirroring the journal photo convention.
+  photo_urls: z.array(z.string().min(1).max(1024)).max(10).optional().nullable(),
   context_signals: ContextSignalsSchema,
 });
 

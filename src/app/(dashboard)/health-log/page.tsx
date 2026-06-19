@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ClipboardList, Loader2, ChevronDown } from "lucide-react";
 import Card from "@/components/ui/card";
-import Button from "@/components/ui/button";
+import Button, { buttonClassName } from "@/components/ui/button";
 import Select from "@/components/ui/select";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -67,6 +67,7 @@ export default function HealthLogPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const [form, setForm] = useState<HealthLogInput>({
     pet_id: activePet?.id ?? pets[0]?.id ?? "",
@@ -170,6 +171,52 @@ export default function HealthLogPage() {
     key: K,
     value: HealthLogInput[K],
   ) => setForm((f) => ({ ...f, [key]: value }));
+
+  // Real file upload (mirrors the journal convention): each file POSTs to
+  // /api/health-log/upload, which stores it in owner-scoped Supabase Storage and
+  // returns a path we persist in photo_urls. Up to 6 photos per log.
+  const onPhotoFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    if (!isSupabaseConfigured) {
+      setError("Sign in with a saved profile to attach photos.");
+      e.target.value = "";
+      return;
+    }
+    setPhotoUploading(true);
+    setError(null);
+    const uploaded: string[] = [];
+    try {
+      for (let i = 0; i < files.length && uploaded.length < 6; i++) {
+        const fd = new FormData();
+        fd.append("file", files[i]);
+        const res = await fetch("/api/health-log/upload", {
+          method: "POST",
+          credentials: "include",
+          body: fd,
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setError(json.error || "Photo upload failed.");
+          break;
+        }
+        if (typeof json.path === "string") uploaded.push(json.path);
+      }
+      if (uploaded.length > 0) {
+        setForm((f) => ({
+          ...f,
+          photo_urls: [...(f.photo_urls ?? []), ...uploaded].slice(0, 6),
+        }));
+      }
+    } catch {
+      setError("Photo upload failed.");
+    } finally {
+      setPhotoUploading(false);
+      e.target.value = ""; // allow re-selecting the same file
+    }
+  };
+
+  const photoCount = form.photo_urls?.length ?? 0;
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -507,23 +554,49 @@ export default function HealthLogPage() {
             rows={3}
           />
 
-          {/* Photo URLs — text fallback until a file-upload component is wired in */}
+          {/* Photo upload — real file upload to owner-scoped Supabase Storage */}
           <div>
             <label className="block text-sm font-medium text-[#4a463f]">
-              Photo link <span className="text-xs font-normal text-[#8a857a]">(optional — paste a URL to attach)</span>
+              Photos <span className="text-xs font-normal text-[#8a857a]">(optional)</span>
             </label>
-            <input
-              type="url"
-              className="mt-1 w-full rounded-lg border border-[#e8e2d8] bg-white px-3 py-2 text-sm text-[#2c2a26] placeholder-[#b0aaa0] focus:border-[#7c4dc4] focus:outline-none"
-              placeholder="https://..."
-              value={form.photo_urls?.[0] ?? ""}
-              onChange={(e) => {
-                const val = e.target.value.trim();
-                setField("photo_urls", val ? [val] : null);
-              }}
-            />
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <label
+                className={`${buttonClassName({ variant: "outline", size: "sm" })} cursor-pointer ${
+                  photoUploading || !isSupabaseConfigured ? "pointer-events-none opacity-50" : ""
+                }`}
+              >
+                {photoUploading ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" aria-hidden />
+                    Uploading…
+                  </>
+                ) : (
+                  "Add photos"
+                )}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  className="hidden"
+                  disabled={photoUploading || !isSupabaseConfigured}
+                  onChange={(e) => void onPhotoFiles(e)}
+                />
+              </label>
+              {photoCount > 0 ? (
+                <span className="text-sm text-[#4a463f]">
+                  {photoCount} photo{photoCount === 1 ? "" : "s"} attached
+                  <button
+                    type="button"
+                    className="ml-2 text-xs font-medium text-[#b23636] hover:underline"
+                    onClick={() => setField("photo_urls", null)}
+                  >
+                    Clear
+                  </button>
+                </span>
+              ) : null}
+            </div>
             <p className="mt-1 text-xs text-[#8a857a]">
-              Full photo upload coming soon. For now you can paste a cloud photo URL (Google Photos share link, etc).
+              JPG, PNG, or WebP up to 5MB each (max 6). Stored privately for your vet records.
             </p>
           </div>
 
