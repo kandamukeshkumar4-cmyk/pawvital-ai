@@ -81,12 +81,15 @@ async function loadContext(args: { userId: string | null; petName: string; petId
 beforeEach(() => jest.clearAllMocks());
 
 describe("Dog Brain report context — uses prior dog logs when petId is available", () => {
-  it("builds context from prior logs/checks/journal and SKIPS the name lookup", async () => {
-    const { supabase, fromCalls } = buildSupabase({
-      daily_health_logs: PRIOR_LOGS,
-      symptom_checks: PRIOR_CHECKS,
-      journal_entries: PRIOR_JOURNAL,
-    });
+  it("builds context from prior logs/checks/journal and verifies pet ownership", async () => {
+    const { supabase, fromCalls } = buildSupabase(
+      {
+        daily_health_logs: PRIOR_LOGS,
+        symptom_checks: PRIOR_CHECKS,
+        journal_entries: PRIOR_JOURNAL,
+      },
+      [{ id: "pet-1" }], // ownership check returns the pet
+    );
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
     const ctx = await loadContext({ userId: "u1", petName: "Bruno", petId: "pet-1" });
@@ -99,9 +102,21 @@ describe("Dog Brain report context — uses prior dog logs when petId is availab
     expect(ctx!.toLowerCase()).toContain("seemed tired after walk");
     // Always carries the non-override disclaimer.
     expect(ctx!.toLowerCase()).toContain("do not override clinical assessment");
-    // petId shortcut: the pets name-lookup was never queried.
-    expect(fromCalls).not.toContain("pets");
+    // petId path: pets IS queried for ownership verification (not the ambiguous name lookup).
+    expect(fromCalls).toContain("pets");
     expect(fromCalls).toEqual(expect.arrayContaining(["daily_health_logs", "symptom_checks", "journal_entries"]));
+  });
+
+  it("returns null when petId is supplied but does not belong to the user", async () => {
+    const { supabase } = buildSupabase(
+      { daily_health_logs: PRIOR_LOGS, symptom_checks: PRIOR_CHECKS, journal_entries: PRIOR_JOURNAL },
+      [], // ownership check returns empty — pet not owned by this user
+    );
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const ctx = await loadContext({ userId: "u1", petName: "Bruno", petId: "pet-other-user" });
+
+    expect(ctx).toBeNull();
   });
 
   it("falls back to the name lookup when no petId is given", async () => {

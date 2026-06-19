@@ -180,7 +180,11 @@ export async function POST(request: Request) {
       weight_kg: parsed.data.weight_kg ?? null,
       meds_given: parsed.data.meds_given,
       notes: parsed.data.notes ?? null,
-      photo_urls: parsed.data.photo_urls ?? [],
+      // Only keep storage paths scoped to this user; strip external URLs or
+      // cross-user paths that bypassed the upload route.
+      photo_urls: (parsed.data.photo_urls ?? []).filter((p) =>
+        p.startsWith(`${user.id}/`),
+      ),
     };
     // `context_signals` lives behind a migration that may not be applied to the
     // live DB yet. Only send the column when the owner actually logged signals,
