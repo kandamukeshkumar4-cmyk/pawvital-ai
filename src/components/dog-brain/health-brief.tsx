@@ -323,17 +323,34 @@ function PatternTimeline({ logs }: { logs: HealthLog[] }) {
 
 // ─── RIGHT SIDEBAR ────────────────────────────────────────────────────────────
 
-const STATIC_REMINDERS = [
-  { label: "Heartworm check-up", timing: "Today", timingBg: "#e7f4ee", timingFg: "#15795a" },
-  { label: "Flea & tick prevention", timing: "3 days", timingBg: "#fbf0db", timingFg: "#c1852a" },
-  { label: "Annual vaccination", timing: "15 days", timingBg: "#f3f4f6", timingFg: "#6b7280" },
-];
+interface ReminderRow {
+  id: string;
+  title: string;
+  next_due: string | null;
+}
+
+/** Owner-friendly timing badge from next_due relative to now. */
+function reminderTiming(nextDue: string | null): { label: string; bg: string; fg: string } {
+  if (!nextDue) return { label: "Scheduled", bg: "#f3f4f6", fg: "#6b7280" };
+  const due = new Date(nextDue);
+  if (Number.isNaN(due.getTime())) return { label: "Scheduled", bg: "#f3f4f6", fg: "#6b7280" };
+  const days = Math.round((due.getTime() - Date.now()) / 86_400_000);
+  if (days <= 0) return { label: "Today", bg: "#e7f4ee", fg: "#15795a" };
+  if (days <= 7) return { label: `${days} day${days === 1 ? "" : "s"}`, bg: "#fbf0db", fg: "#c1852a" };
+  return {
+    label: due.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    bg: "#f3f4f6",
+    fg: "#6b7280",
+  };
+}
 
 function RightSidebar({
   actions,
+  reminders,
   petName,
 }: {
   actions: string[];
+  reminders: ReminderRow[];
   petName: string;
 }) {
   return (
@@ -369,25 +386,32 @@ function RightSidebar({
         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f] mb-3">
           Upcoming Reminders
         </p>
-        <ul className="space-y-2.5">
-          {STATIC_REMINDERS.map((r) => (
-            <li key={r.label} className="flex items-center justify-between gap-2">
-              <span className="text-[13px] text-[#3f4a45]">{r.label}</span>
-              <span
-                className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-                style={{ background: r.timingBg, color: r.timingFg }}
-              >
-                {r.timing}
-              </span>
-            </li>
-          ))}
-        </ul>
+        {reminders.length > 0 ? (
+          <ul className="space-y-2.5">
+            {reminders.map((r) => {
+              const t = reminderTiming(r.next_due);
+              return (
+                <li key={r.id} className="flex items-center justify-between gap-2">
+                  <span className="text-[13px] text-[#3f4a45]">{r.title}</span>
+                  <span
+                    className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                    style={{ background: t.bg, color: t.fg }}
+                  >
+                    {t.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-[13px] text-[#8a978f]">No upcoming reminders yet.</p>
+        )}
         <a
           href="/reminders"
           target="_top"
           className="mt-3 block text-center text-xs font-medium text-[#1f9d6b] hover:underline"
         >
-          View all reminders
+          {reminders.length > 0 ? "View all reminders" : "Add a reminder"}
         </a>
       </div>
 
@@ -508,6 +532,7 @@ export default function HealthBrief({
   const [signals, setSignals] = useState<DetectedSignal[]>([]);
   const [state, setState] = useState<BriefState>("stable");
   const [logs, setLogs] = useState<HealthLog[]>([]);
+  const [reminders, setReminders] = useState<ReminderRow[]>([]);
 
   useEffect(() => {
     if (!petId) {
@@ -518,21 +543,25 @@ export default function HealthBrief({
     setLoading(true);
     (async () => {
       try {
-        const [sigRes, logRes] = await Promise.all([
+        const [sigRes, logRes, remRes] = await Promise.all([
           fetch(`/api/dog-brain/signals?pet_id=${petId}`),
           fetch(`/api/health-log?pet_id=${petId}&limit=14`),
+          fetch(`/api/reminders?pet_id=${petId}&limit=4`),
         ]);
         const sig = (await sigRes.json().catch(() => null)) as DogBrainSignalsResponse | null;
         const lg = (await logRes.json().catch(() => null)) as { data?: HealthLog[] } | null;
+        const rem = (await remRes.json().catch(() => null)) as { data?: ReminderRow[] } | null;
         if (cancelled) return;
         setSignals(sig?.signals ?? []);
         setState(sig?.state ?? "stable");
         setLogs(Array.isArray(lg?.data) ? lg!.data : []);
+        setReminders(Array.isArray(rem?.data) ? rem!.data : []);
       } catch {
         if (!cancelled) {
           setSignals([]);
           setState("stable");
           setLogs([]);
+        setReminders([]);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -575,7 +604,7 @@ export default function HealthBrief({
       </div>
 
       {/* Right sidebar */}
-      <RightSidebar actions={actions} petName={petName} />
+      <RightSidebar actions={actions} reminders={reminders} petName={petName} />
     </div>
   );
 }
