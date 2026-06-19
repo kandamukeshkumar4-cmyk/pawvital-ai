@@ -7,7 +7,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { useAppStore } from "@/store/app-store";
-import { usePets } from "@/hooks/useSupabase";
+import { usePets, useAuth } from "@/hooks/useSupabase";
 import type { Pet } from "@/types";
 import { NotificationPreferencesForm } from "@/components/notifications/notification-preferences-form";
 
@@ -30,6 +30,7 @@ const breedOptions = [
 export default function SettingsPage() {
   const { pets, setActivePet } = useAppStore();
   const { savePet, deletePet } = usePets();
+  const { user, isConfigured } = useAuth();
   const [showAddPet, setShowAddPet] = useState(false);
   const [saving, setSaving] = useState(false);
   const [petSaveError, setPetSaveError] = useState<string | null>(null);
@@ -262,11 +263,29 @@ export default function SettingsPage() {
       {/* Account Settings */}
       <Card className="p-6">
         <h2 className="text-lg font-bold text-gray-900 mb-6">Account</h2>
-        <div className="space-y-4">
-          <Input label="Full Name" placeholder="Your name" defaultValue="Sarah M." />
-          <Input label="Email" type="email" placeholder="you@example.com" defaultValue="sarah@example.com" />
-          <Button>Save Changes</Button>
-        </div>
+        {isConfigured && user ? (
+          <div className="space-y-4">
+            <Input
+              label="Full Name"
+              placeholder="Your name"
+              value={user.full_name ?? ""}
+              readOnly
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={user.email ?? ""}
+              readOnly
+            />
+            <p className="text-xs text-gray-500">
+              Your account email. Contact support to change it.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">
+            Sign in with a saved profile to manage your account details.
+          </p>
+        )}
       </Card>
 
       <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
@@ -279,22 +298,14 @@ export default function SettingsPage() {
         <NotificationPreferencesForm />
       </section>
 
-      {/* Subscription */}
+      {/* Subscription — billing is not wired yet; show an honest state instead
+          of fabricated plan/price/trial text. */}
       <Card className="p-6">
         <h2 className="text-lg font-bold text-gray-900 mb-2">Subscription</h2>
-        <div className="flex items-center gap-3 mb-4">
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-            Active - Free Trial
-          </span>
-          <span className="text-sm text-gray-500">Trial ends in 5 days</span>
-        </div>
-        <p className="text-sm text-gray-600 mb-4">
-          Your plan: <strong>PawVital Pro</strong> — $9.97/month after trial
+        <p className="text-sm text-gray-600">
+          Billing and plan management aren&apos;t available yet. You&apos;ll be able to
+          manage your subscription here once it launches.
         </p>
-        <div className="flex gap-3">
-          <Button variant="outline" size="sm">Manage Subscription</Button>
-          <Button variant="ghost" size="sm" className="text-red-500">Cancel</Button>
-        </div>
       </Card>
     </div>
   );
