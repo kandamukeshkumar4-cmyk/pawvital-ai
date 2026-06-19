@@ -10,7 +10,6 @@ import {
   Pill,
   Bell,
   BookOpen,
-  Users,
   Settings,
   Heart,
   LogOut,
@@ -34,7 +33,8 @@ const navItems = [
   { href: "/supplements", icon: Pill, label: "Supplements" },
   { href: "/reminders", icon: Bell, label: "Reminders" },
   { href: "/journal", icon: BookOpen, label: "Journal" },
-  { href: "/community", icon: Users, label: "Paw Circle" },
+  // Paw Circle (community) is quarantined from default nav until a separate
+  // moderated-community ticket exists. The route still exists but is unlinked.
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 

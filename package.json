@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/build.js",
+    "build": "next build",
+    "build:local": "node scripts/build.js",
     "start": "next start",
     "guard:prod-deploy": "node scripts/guard-prod-deploy.mjs",
     "deploy:prod": "node scripts/guard-prod-deploy.mjs && npx vercel --prod",
