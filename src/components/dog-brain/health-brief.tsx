@@ -349,8 +349,12 @@ function buildTimelineEvents(logs: HealthLog[], reminders: ReminderRow[]): Timel
     }
   });
 
+  // The timeline tells the story of recent *activity*. A reminder due in the
+  // future shouldn't out-rank today's daily log, so clamp future due dates to
+  // just-before-now — past-due reminders keep their real time.
+  const recencyFloor = Date.now() - 60_000;
   reminders.slice(0, 3).forEach((r, i) => {
-    const at = r.next_due ? new Date(r.next_due).getTime() || 0 : 0;
+    const due = r.next_due ? new Date(r.next_due).getTime() || 0 : 0;
     events.push({
       id: `rem-${r.id ?? i}`,
       type: "reminder",
@@ -358,7 +362,7 @@ function buildTimelineEvents(logs: HealthLog[], reminders: ReminderRow[]): Timel
       subtitle: r.title,
       timeLabel: r.next_due ? formatTimelineDate(r.next_due) : "Scheduled",
       statusLabel: "Scheduled",
-      sortAt: at,
+      sortAt: Math.min(due, recencyFloor),
     });
   });
 
