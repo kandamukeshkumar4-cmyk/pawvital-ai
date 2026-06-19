@@ -36,7 +36,7 @@ interface ReminderRow {
 }
 
 const typeConfig: Record<ReminderType, { icon: typeof Pill; color: string; bg: string }> = {
-  medication: { icon: Pill, color: "text-[#7c4dc4]", bg: "bg-purple-50" },
+  medication: { icon: Pill, color: "text-[#15795a]", bg: "bg-[#e7f4ee]" },
   vet_appointment: { icon: Calendar, color: "text-[#4f7fb8]", bg: "bg-blue-50" },
   flea_tick: { icon: Bug, color: "text-[#c1852a]", bg: "bg-amber-50" },
   vaccination: { icon: Syringe, color: "text-[#15795a]", bg: "bg-[#e7f4ee]" },

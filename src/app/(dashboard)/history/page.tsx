@@ -303,7 +303,7 @@ export default function HistoryPage() {
     return (
       <div className="max-w-2xl mx-auto mt-8">
         <Card className="p-8 text-center">
-          <Stethoscope className="w-12 h-12 text-blue-400 mx-auto mb-4" />
+          <Stethoscope className="w-12 h-12 text-[#1f9d6b] mx-auto mb-4" />
           <h1 className="text-xl font-bold text-gray-900 mb-2">
             Add a dog to see history
           </h1>
@@ -320,7 +320,7 @@ export default function HistoryPage() {
     <div className="max-w-3xl mx-auto space-y-6 pb-10">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Clock className="w-7 h-7 text-blue-600" />
+          <Clock className="w-7 h-7 text-[#15795a]" />
           Symptom Check History
         </h1>
         <p className="text-gray-500 mt-1 text-sm">
@@ -329,7 +329,7 @@ export default function HistoryPage() {
       </div>
 
       {shareMessage && (
-        <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+        <p className="text-sm text-[#15795a] bg-[#e7f4ee] border border-[#cfe6da] rounded-lg px-3 py-2">
           {shareMessage}
         </p>
       )}
@@ -342,7 +342,7 @@ export default function HistoryPage() {
 
       {loading && rows.length === 0 ? (
         <div className="flex justify-center py-16">
-          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#1f9d6b] animate-spin" />
         </div>
       ) : rows.length === 0 && loadError ? (
         <Card className="p-8 text-center text-amber-900 text-sm bg-amber-50 border-amber-200">

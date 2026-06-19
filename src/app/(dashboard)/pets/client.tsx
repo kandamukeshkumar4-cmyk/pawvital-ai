@@ -70,7 +70,7 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
   if (pets.length === 0) {
     return (
       <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="w-32 h-32 bg-indigo-50 text-indigo-400 rounded-full flex items-center justify-center mb-6">
+        <div className="w-32 h-32 bg-[#e7f4ee] text-[#1f9d6b] rounded-full flex items-center justify-center mb-6">
           <Dog size={64} />
         </div>
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Welcome to your Dog Dashboard</h1>
@@ -114,7 +114,7 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
             <div key={pet.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition group">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-[#e7f4ee] text-[#15795a] rounded-full flex items-center justify-center">
                     <Dog size={24} />
                   </div>
                   <div>
@@ -159,7 +159,7 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
                   <span className={`capitalize font-medium ${
                     lastSeverity === "emergency" || lastSeverity === "high" || lastSeverity === "urgent" ? "text-red-600" :
                     lastSeverity === "medium" ? "text-amber-600" :
-                    lastSeverity === "low" ? "text-emerald-600" : "text-slate-400"
+                    lastSeverity === "low" ? "text-[#1f9d6b]" : "text-slate-400"
                   }`}>
                     {lastSeverity || "None"}
                   </span>
@@ -168,7 +168,7 @@ export function PetDashboardClient({ initialPets, initialChecks, isDemo }: { ini
 
               <div className="flex gap-2">
                 <Button
-                  className="flex-1 text-sm bg-indigo-600 hover:bg-slate-700 hover:text-white"
+                  className="flex-1 text-sm bg-[#1f9d6b] hover:bg-[#15795a] hover:text-white"
                   onClick={() => navigateWithBrowser(`/symptom-checker?pet=${pet.id}`)}
                 >
                   New Check

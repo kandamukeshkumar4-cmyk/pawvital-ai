@@ -30,7 +30,7 @@ const moodIcons: Record<
   { icon: typeof Smile; color: string; label: string }
 > = {
   happy: { icon: Smile, color: "text-green-500", label: "Happy" },
-  normal: { icon: Meh, color: "text-blue-500", label: "Normal" },
+  normal: { icon: Meh, color: "text-[#1f9d6b]", label: "Normal" },
   low: { icon: Frown, color: "text-amber-500", label: "Low energy" },
   sick: { icon: ThermometerSun, color: "text-red-500", label: "Sick / off" },
 };
@@ -350,9 +350,9 @@ function JournalPageContent() {
       )}
 
       {weeklySummary && (
-        <Card className="p-6 border-blue-100 bg-gradient-to-br from-blue-50/80 to-white">
+        <Card className="p-6 border-[#cfe6da] bg-gradient-to-br from-[#f3f9f6] to-white">
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-blue-600" />
+            <Sparkles className="w-5 h-5 text-[#15795a]" />
             <h2 className="font-semibold text-gray-900">Weekly AI summary</h2>
             <Badge variant={trendBadgeVariant(weeklySummary.trend)}>
               Trend: {weeklySummary.trend}
@@ -389,7 +389,7 @@ function JournalPageContent() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4 text-center">
-          <p className="text-2xl font-bold text-blue-600">
+          <p className="text-2xl font-bold text-[#15795a]">
             {loading ? "—" : entries.length}
           </p>
           <p className="text-xs text-gray-500">Total entries</p>
@@ -407,7 +407,7 @@ function JournalPageContent() {
           <p className="text-xs text-gray-500">Happy days (30d)</p>
         </Card>
         <Card className="p-4 text-center">
-          <p className="text-2xl font-bold text-purple-600">{entriesWithPhotos}</p>
+          <p className="text-2xl font-bold text-[#15795a]">{entriesWithPhotos}</p>
           <p className="text-xs text-gray-500">Entries with photos</p>
         </Card>
       </div>
@@ -415,7 +415,7 @@ function JournalPageContent() {
       <div className="space-y-4">
         {loading && (
           <Card className="p-8 flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#15795a]" />
           </Card>
         )}
         {!loading && entries.length === 0 && isSupabaseConfigured && (
@@ -432,7 +432,7 @@ function JournalPageContent() {
                 className="p-6 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-[#e7f4ee] text-[#15795a] flex items-center justify-center flex-shrink-0">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -481,7 +481,7 @@ function JournalPageContent() {
                       </div>
                     )}
                     {entry.ai_summary && (
-                      <p className="mt-3 text-sm text-blue-900 bg-blue-50/80 rounded-lg p-3">
+                      <p className="mt-3 text-sm text-[#15795a] bg-[#f3f9f6] rounded-lg p-3">
                         {entry.ai_summary}
                       </p>
                     )}
@@ -526,7 +526,7 @@ function JournalPageContent() {
                     onClick={() => setForm({ ...form, mood: key })}
                     className={`p-2 rounded-xl border-2 transition-all ${
                       form.mood === key
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-[#1f9d6b] bg-[#e7f4ee]"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                     title={info.label}
