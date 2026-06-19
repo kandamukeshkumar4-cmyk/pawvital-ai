@@ -134,3 +134,11 @@ describe("GET /api/analytics/vet-timeline/pdf — guard paths", () => {
     expect(res.status).toBe(404);
   });
 });
+
+// Note: the happy-path render (VetTimelineDocument -> %PDF buffer) is NOT
+// exercised here. @react-pdf/renderer is ESM and this Jest config
+// (useESM:false, transformIgnorePatterns ignores node_modules) cannot transform
+// it, so the repo convention is to mock @react-pdf in route tests. The real
+// render was verified out-of-harness by compiling the document with tsc and
+// rendering in native Node: full timeline -> 5402-byte %PDF, empty history ->
+// 3504-byte %PDF. Re-prove with `tsc` + `renderToBuffer` if the document changes.
