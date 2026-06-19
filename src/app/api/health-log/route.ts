@@ -118,6 +118,20 @@ function isMissingTable(error: { code?: string; message?: string } | null): bool
   );
 }
 
+/**
+ * Detect a missing COLUMN (Postgres 42703 / PostgREST PGRST204 schema-cache
+ * miss). `context_signals` lives behind a migration that may not be applied to
+ * the live DB yet — when that's the case we drop the field and retry so an
+ * otherwise-valid daily log still saves instead of 500-ing.
+ */
+function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === "42703" || error.code === "PGRST204") return true;
+  return /column .* does not exist|could not find the .* column/i.test(
+    error.message ?? "",
+  );
+}
+
 export async function GET(request: Request) {
   const limit = await rateLimited(request);
   if (!limit.success) {
@@ -205,7 +219,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Pet not found" }, { status: 404 });
     }
 
-    const row = {
+    const baseRow = {
       user_id: user.id,
       pet_id: parsed.data.pet_id,
       log_date: parsed.data.log_date ?? todayIso(),
@@ -219,15 +233,28 @@ export async function POST(request: Request) {
       meds_given: parsed.data.meds_given,
       notes: parsed.data.notes ?? null,
       photo_urls: parsed.data.photo_urls ?? [],
-      context_signals: parsed.data.context_signals ?? null,
     };
+    // `context_signals` lives behind a migration that may not be applied to the
+    // live DB yet. Only send the column when the owner actually logged signals,
+    // and retry without it if the column is missing — so core daily logging keeps
+    // working pre-migration instead of 500-ing.
+    const row: Record<string, unknown> =
+      parsed.data.context_signals != null
+        ? { ...baseRow, context_signals: parsed.data.context_signals }
+        : baseRow;
+
+    const upsert = (r: Record<string, unknown>) =>
+      supabase
+        .from("daily_health_logs")
+        .upsert(r, { onConflict: "user_id,pet_id,log_date" })
+        .select()
+        .single();
 
     // One log per pet per day — upsert so re-saving the same day updates it.
-    const { data, error } = await supabase
-      .from("daily_health_logs")
-      .upsert(row, { onConflict: "user_id,pet_id,log_date" })
-      .select()
-      .single();
+    let { data, error } = await upsert(row);
+    if (error && isMissingColumn(error) && "context_signals" in row) {
+      ({ data, error } = await upsert(baseRow));
+    }
     if (error) {
       if (isMissingTable(error)) {
         return NextResponse.json(
