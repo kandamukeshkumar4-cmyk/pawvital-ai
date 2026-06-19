@@ -15,6 +15,7 @@ import {
   VetPacketPanel,
   LogNextChecklist,
 } from "@/components/analytics/health-board";
+import { VetReportButton } from "@/components/analytics/vet-report-button";
 import Select from "@/components/ui/select";
 import Card from "@/components/ui/card";
 import type { SymptomCheckEntry } from "@/components/timeline/types";
@@ -274,6 +275,11 @@ function HealthSignalsContent() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <VetPacketPanel packet={board.vetPacket} petName={board.petName} />
             <LogNextChecklist items={board.logNext} />
+          </div>
+
+          {/* Shareable vet-ready PDF built from the same timeline data. */}
+          <div className="flex justify-center">
+            <VetReportButton petId={isSupabaseConfigured ? resolvedPetId : null} />
           </div>
 
           <p className="px-2 pb-4 pt-1 text-center text-xs leading-relaxed text-[#8a857a]">
