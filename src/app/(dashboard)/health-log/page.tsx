@@ -68,6 +68,8 @@ export default function HealthLogPage() {
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+  // Display-only signed URLs (parallel to form.photo_urls paths) for thumbnails.
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
   const [form, setForm] = useState<HealthLogInput>({
     pet_id: activePet?.id ?? pets[0]?.id ?? "",
@@ -186,6 +188,7 @@ export default function HealthLogPage() {
     setPhotoUploading(true);
     setError(null);
     const uploaded: string[] = [];
+    const previews: string[] = [];
     try {
       for (let i = 0; i < files.length && uploaded.length < 6; i++) {
         const fd = new FormData();
@@ -200,13 +203,17 @@ export default function HealthLogPage() {
           setError(json.error || "Photo upload failed.");
           break;
         }
-        if (typeof json.path === "string") uploaded.push(json.path);
+        if (typeof json.path === "string") {
+          uploaded.push(json.path);
+          previews.push(typeof json.signedUrl === "string" ? json.signedUrl : "");
+        }
       }
       if (uploaded.length > 0) {
         setForm((f) => ({
           ...f,
           photo_urls: [...(f.photo_urls ?? []), ...uploaded].slice(0, 6),
         }));
+        setPhotoPreviews((prev) => [...prev, ...previews].slice(0, 6));
       }
     } catch {
       setError("Photo upload failed.");
@@ -588,13 +595,31 @@ export default function HealthLogPage() {
                   <button
                     type="button"
                     className="ml-2 text-xs font-medium text-[#b23636] hover:underline"
-                    onClick={() => setField("photo_urls", null)}
+                    onClick={() => {
+                      setField("photo_urls", null);
+                      setPhotoPreviews([]);
+                    }}
                   >
                     Clear
                   </button>
                 </span>
               ) : null}
             </div>
+            {photoPreviews.some(Boolean) ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {photoPreviews.map((url, i) =>
+                  url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={i}
+                      src={url}
+                      alt="Attached health-log photo"
+                      className="h-16 w-16 rounded-lg border border-[#e8e2d8] object-cover"
+                    />
+                  ) : null,
+                )}
+              </div>
+            ) : null}
             <p className="mt-1 text-xs text-[#8a857a]">
               JPG, PNG, or WebP up to 5MB each (max 6). Stored privately for your vet records.
             </p>
