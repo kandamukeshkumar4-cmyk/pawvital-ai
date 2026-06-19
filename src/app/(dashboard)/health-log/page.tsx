@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ClipboardList, Loader2, ChevronDown } from "lucide-react";
+import { CheckCircle2, Loader2, ChevronDown } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button, { buttonClassName } from "@/components/ui/button";
 import Select from "@/components/ui/select";
@@ -50,29 +50,137 @@ function EmojiMetricRow<T extends string>({
     <div className="flex items-center justify-between gap-2 py-3">
       <span className="w-24 shrink-0 text-sm font-medium text-[#4a463f]">{label}</span>
       <div className="flex flex-wrap gap-2">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onChange(opt.value)}
-            className="flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 transition-all"
-            style={{
-              background: value === opt.value ? "#e7f4ee" : "#f7f4ef",
-              border: `2px solid ${value === opt.value ? "#1f9d6b" : "transparent"}`,
-            }}
-            aria-pressed={value === opt.value}
-          >
-            <span className="text-xl leading-none">{opt.emoji}</span>
-            <span
-              className="text-[10px] font-medium"
-              style={{ color: value === opt.value ? "#15795a" : "#8a7f74" }}
+        {options.map((opt) => {
+          const selected = value === opt.value;
+          return (
+            <button
+              // key flips when selection changes so the chosen chip remounts and
+              // replays the pop animation — the little dopamine hit on every tap.
+              key={`${opt.value}-${selected}`}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`paw-press flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 transition-all duration-150 hover:-translate-y-0.5 ${
+                selected ? "paw-pop" : ""
+              }`}
+              style={{
+                background: selected ? "#e7f4ee" : "#f7f4ef",
+                border: `2px solid ${selected ? "#1f9d6b" : "transparent"}`,
+                boxShadow: selected ? "0 4px 12px rgba(31,157,107,0.25)" : "none",
+              }}
+              aria-pressed={selected}
             >
-              {opt.label}
-            </span>
-          </button>
-        ))}
+              <span className="text-xl leading-none">{opt.emoji}</span>
+              <span
+                className="text-[10px] font-medium"
+                style={{ color: selected ? "#15795a" : "#8a7f74" }}
+              >
+                {opt.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
+  );
+}
+
+/** Consecutive logged days ending at today (or yesterday if today isn't logged
+ *  yet). Real streak from real logs — no fabrication. */
+function computeStreak(logs: { log_date?: string }[]): number {
+  const days = new Set(
+    logs.map((l) => (l.log_date ?? "").slice(0, 10)).filter(Boolean),
+  );
+  if (days.size === 0) return 0;
+  const fmt = (dt: Date) => dt.toISOString().slice(0, 10);
+  const cursor = new Date();
+  if (!days.has(fmt(cursor))) {
+    cursor.setDate(cursor.getDate() - 1);
+    if (!days.has(fmt(cursor))) return 0;
+  }
+  let streak = 0;
+  while (days.has(fmt(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+const CONFETTI_COLORS = ["#1f9d6b", "#e8a23c", "#4f7fb8", "#e2675b", "#15795a", "#bff0db"];
+
+/** Casino-grade reward on a successful check-in: confetti burst + streak badge.
+ *  Re-fires whenever `trigger` increments. Pure CSS, no library. */
+function Celebration({ trigger, streak }: { trigger: number; streak: number }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    if (trigger === 0) return;
+    const raf = requestAnimationFrame(() => setShow(true));
+    const t = setTimeout(() => setShow(false), 2200);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
+  }, [trigger]);
+  if (!show) return null;
+  const pieces = Array.from({ length: 30 });
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center">
+      <div className="absolute left-1/2 top-1/2">
+        {pieces.map((_, i) => {
+          const angle = (i / pieces.length) * 360;
+          const dist = 110 + (i % 5) * 34;
+          const x = Math.cos((angle * Math.PI) / 180) * dist;
+          const y = Math.sin((angle * Math.PI) / 180) * dist;
+          return (
+            <span
+              key={i}
+              className="paw-confetti absolute block h-2.5 w-2.5 rounded-[2px]"
+              style={{
+                background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+                ["--tx" as string]: `${x}px`,
+                ["--ty" as string]: `${y}px`,
+                animationDelay: `${(i % 6) * 25}ms`,
+              }}
+            />
+          );
+        })}
+      </div>
+      <div className="paw-streak rounded-2xl border border-[#e7f4ee] bg-white/95 px-7 py-5 text-center shadow-2xl">
+        <div className="text-4xl">🎉</div>
+        <div className="mt-1.5 text-lg font-bold text-[#15795a]">Check-in saved!</div>
+        {streak > 0 && (
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#fff3e0] px-3.5 py-1.5 text-sm font-bold text-[#c1852a]">
+            🔥 {streak}-day streak
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Keyframes for the gamified Daily Log (tap-pop, confetti, streak pop-in). */
+function DailyLogAnimations() {
+  return (
+    <style>{`
+      @keyframes pawPop { 0%{transform:scale(1)} 45%{transform:scale(1.22)} 100%{transform:scale(1)} }
+      .paw-pop { animation: pawPop .32s ease; }
+      .paw-press { transition: transform .12s ease; }
+      .paw-press:active { transform: scale(.9); }
+      @keyframes pawConfettiBurst {
+        0% { transform: translate(0,0) scale(1); opacity: 1; }
+        100% { transform: translate(var(--tx), var(--ty)) scale(.3); opacity: 0; }
+      }
+      .paw-confetti { animation: pawConfettiBurst 1.6s cubic-bezier(.15,.7,.3,1) forwards; }
+      @keyframes pawStreakIn {
+        0% { transform: scale(.6); opacity: 0; }
+        45% { transform: scale(1.08); opacity: 1; }
+        70% { transform: scale(.97); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      .paw-streak { animation: pawStreakIn .5s cubic-bezier(.2,1.2,.3,1) forwards; }
+      @media (prefers-reduced-motion: reduce) {
+        .paw-pop, .paw-confetti, .paw-streak, .paw-press { animation: none !important; transition: none !important; }
+      }
+    `}</style>
   );
 }
 
@@ -110,6 +218,7 @@ export default function HealthLogPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [celebrate, setCelebrate] = useState(0);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [afterSaveSignals, setAfterSaveSignals] = useState<DetectedSignal[]>([]);
   const [signalsLoading, setSignalsLoading] = useState(false);
@@ -207,6 +316,7 @@ export default function HealthLogPage() {
         return [saved, ...withoutSameDay];
       });
       setSavedAt(saved.log_date);
+      setCelebrate((c) => c + 1); // fire the reward animation
       // Trigger after-save brain signals refresh using the live detector
       void loadAfterSaveSignals(saved.pet_id);
     } catch {
@@ -290,23 +400,30 @@ export default function HealthLogPage() {
   };
 
   const photoCount = form.photo_urls?.length ?? 0;
+  const streak = useMemo(() => computeStreak(logs), [logs]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <div>
-        <div className="mb-1 flex items-center gap-2 text-[#00a878]">
-          <ClipboardList className="h-5 w-5" aria-hidden />
-          <span className="text-sm font-semibold uppercase tracking-wide">
-            Daily check-in
-          </span>
+      <DailyLogAnimations />
+      <Celebration trigger={celebrate} streak={streak} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[32px] font-bold leading-tight text-[#1c2522]">
+            {(activePet?.name ?? "your dog").replace(/\b\p{L}/gu, (c) => c.toUpperCase())} Daily check-in
+          </h1>
+          <p className="mt-1 text-[15px] text-[#8a978f]">
+            Teach the Brain what normal looks like.
+          </p>
         </div>
-        <h1 className="text-2xl font-bold text-[#2c2a26]">
-          How is {activePet?.name ?? "your dog"} doing today?
-        </h1>
-        <p className="mt-1 text-sm text-[#6b665d]">
-          A quick 30-second log. Over time this shows what&apos;s getting better or
-          worse — and makes a clean record to share with your vet.
-        </p>
+        {streak > 0 && (
+          <div className="paw-streak flex items-center gap-2 rounded-full border border-[#ffe0b2] bg-[#fff6e9] px-4 py-2">
+            <span className="text-lg leading-none">🔥</span>
+            <div className="leading-tight">
+              <div className="text-base font-bold text-[#c1852a]">{streak}-day streak</div>
+              <div className="text-[11px] text-[#a8895a]">Keep it going!</div>
+            </div>
+          </div>
+        )}
       </div>
 
       {!isSupabaseConfigured ? (
