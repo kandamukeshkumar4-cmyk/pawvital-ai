@@ -17,6 +17,11 @@ import {
   Bell,
   Info,
   ShieldCheck,
+  Utensils,
+  Waves,
+  Scale,
+  AlertCircle,
+  Pill,
 } from "lucide-react";
 import type { HealthLog } from "@/lib/health-log/types";
 import type { DetectedSignal, SignalSeverity, SignalType } from "@/lib/dog-brain/types";
@@ -29,10 +34,18 @@ const SIGNAL_TITLE: Record<SignalType, string> = {
   possible_med_side_effect: "Medication note",
 };
 
-const SEV_META: Record<SignalSeverity, { line: string; bg: string }> = {
-  info: { line: "#4f7fb8", bg: "#f0f5fb" },
-  watch: { line: "#e8a23c", bg: "#fdf8ef" },
-  alert: { line: "#e2675b", bg: "#fdf1ef" },
+const SIGNAL_ICON: Record<SignalType, typeof Utensils> = {
+  appetite_drop: Utensils,
+  stool_change: Waves,
+  vomiting_trend: AlertCircle,
+  weight_downtrend: Scale,
+  possible_med_side_effect: Pill,
+};
+
+const SEV_META: Record<SignalSeverity, { line: string; bg: string; fg: string }> = {
+  info: { line: "#4f7fb8", bg: "#f0f5fb", fg: "#4f7fb8" },
+  watch: { line: "#e8a23c", bg: "#fdf8ef", fg: "#c1852a" },
+  alert: { line: "#e2675b", bg: "#fdf1ef", fg: "#b8473c" },
 };
 
 export function SymptomContextStrip({ petId, petName }: { petId: string | null; petName: string }) {
@@ -139,14 +152,31 @@ export function SymptomRemembersPanel({ petId }: { petId: string | null }) {
           <ul className="space-y-2.5">
             {signals.map((s) => {
               const m = SEV_META[s.severity];
+              const Icon = SIGNAL_ICON[s.signal_type];
               return (
                 <li
                   key={s.dedupe_key}
-                  className="rounded-r-lg border-l-[3px] py-1.5 pl-2.5"
+                  className="flex gap-2.5 rounded-r-lg border-l-[3px] py-2 pl-2.5 pr-2"
                   style={{ borderColor: m.line, background: m.bg }}
                 >
-                  <div className="text-[12px] font-medium text-[#1c2522]">{SIGNAL_TITLE[s.signal_type]}</div>
-                  <div className="text-[11px] leading-snug text-[#8a978f]">{s.owner_message}</div>
+                  <span
+                    className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg"
+                    style={{ background: "#ffffff", color: m.fg }}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[12px] font-semibold text-[#1c2522]">{SIGNAL_TITLE[s.signal_type]}</span>
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide"
+                        style={{ background: "#ffffff", color: m.fg }}
+                      >
+                        {s.severity === "info" ? "Noted" : "Recent change"}
+                      </span>
+                    </div>
+                    <div className="text-[11px] leading-snug text-[#8a978f]">{s.owner_message}</div>
+                  </div>
                 </li>
               );
             })}

@@ -13,17 +13,16 @@ import {
   AlertCircle,
   Send,
   Loader2,
-  Activity,
   Bot,
   User,
   Zap,
   RotateCcw,
   ImagePlus,
   X,
+  ShieldCheck,
 } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button, { buttonClassName } from "@/components/ui/button";
-import Badge from "@/components/ui/badge";
 import TesterOnboardingGate from "@/components/tester-onboarding/tester-onboarding-gate";
 import {
   ProgressBar,
@@ -1000,17 +999,21 @@ export default function SymptomCheckerPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-                Dog Symptom Checker
+              <h1 className="text-2xl font-bold text-[#1c2522] sm:text-[32px] sm:leading-tight">
+                Dog symptom check for{" "}
+                {displayPetName.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}
               </h1>
-              <Badge variant="info">
-                <Activity className="w-3 h-3 mr-1" />
-                Urgency guidance
-              </Badge>
+              <span
+                className="flex h-6 w-6 items-center justify-center rounded-full"
+                style={{ background: "#e7f4ee", color: "#1f9d6b" }}
+                title="Urgency guidance"
+                aria-label="Urgency guidance"
+              >
+                <ShieldCheck className="h-4 w-4" aria-hidden />
+              </span>
             </div>
-            <p className="text-gray-500 mt-1">
-              Dog-only symptom triage support. Not a diagnosis or a replacement
-              for a veterinarian.
+            <p className="text-[15px] text-[#8a978f] mt-1">
+              We&apos;ll ask a few focused questions to understand what&apos;s going on.
             </p>
           </div>
           <div className="flex w-full items-center gap-3 sm:w-auto sm:flex-shrink-0">
