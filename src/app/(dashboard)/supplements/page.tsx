@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Pill, Sparkles, ToggleLeft, ToggleRight, ChevronDown } from "lucide-react";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
@@ -236,13 +237,12 @@ export default function SupplementsPage() {
           <p className="mt-3 text-sm text-[#8a978f]">
             Add a dog profile to generate a personalized supplement plan.
           </p>
-          <a
+          <Link
             href="/pets"
-            target="_top"
             className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#1f9d6b] hover:underline"
           >
             Go to pet profiles →
-          </a>
+          </Link>
         </div>
       </div>
     );

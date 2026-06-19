@@ -140,12 +140,15 @@ export default function Sidebar() {
               style={{ background: "linear-gradient(to bottom, #e7f4ee, #f7f4ef)" }}
             >
               <div
-                className="flex h-16 w-16 items-center justify-center rounded-2xl text-3xl mb-2 shadow-sm"
-                style={{ background: "#fff", border: "2px solid #c0dfd0" }}
+                className="flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold text-white mb-2 shadow-sm"
+                style={{ background: "#1f9d6b", border: "2px solid #c0dfd0" }}
+                aria-hidden
               >
-                🐕
+                {activePet.name.charAt(0).toUpperCase()}
               </div>
-              <p className="text-[15px] font-bold text-[#1c1814]">{activePet.name}</p>
+              <p className="text-[15px] font-bold text-[#1c1814]">
+                {activePet.name.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}
+              </p>
               <p className="text-xs mt-0.5" style={{ color: "#8a7f74" }}>
                 {activePet.breed}
               </p>
@@ -163,16 +166,15 @@ export default function Sidebar() {
                 </p>
                 <p className="text-[10px]" style={{ color: "#8a7f74" }}>Age</p>
               </div>
-              <a
+              <Link
                 href="/pets"
-                target="_top"
                 className="flex-1 py-2 text-center text-xs font-medium transition-colors"
                 style={{ color: "#1f9d6b" }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#15795a")}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#1f9d6b")}
               >
                 View profile
-              </a>
+              </Link>
             </div>
           </div>
         )}

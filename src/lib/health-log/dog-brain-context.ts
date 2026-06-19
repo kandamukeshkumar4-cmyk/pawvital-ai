@@ -21,9 +21,11 @@ import { summarizeDailyLogsForContext } from "./context";
  * richer output, zero additional Supabase round-trips vs. two separate calls.
  */
 
-const MAX_LOGS = 14;
-const MAX_CHECKS = 5;
-const MAX_JOURNAL = 5;
+// 90-day Dog Brain memory window (supportive report context only — never feeds
+// deterministic triage/urgency). Roughly one log/day → ~90 logs covers 90 days.
+const MAX_LOGS = 90;
+const MAX_CHECKS = 30;
+const MAX_JOURNAL = 30;
 
 function formatDate(iso: string): string {
   return iso.slice(0, 10);
