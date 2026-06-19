@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Save, Trash2, Edit2 } from "lucide-react";
+import { Plus, Save, Trash2, Edit2, PawPrint } from "lucide-react";
 import Card from "@/components/ui/card";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -106,7 +106,9 @@ export default function SettingsPage() {
 
         {pets.length === 0 && !showAddPet && (
           <div className="text-center py-12">
-            <div className="text-4xl mb-4">🐕</div>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e7f4ee] text-[#15795a]">
+              <PawPrint className="h-7 w-7" aria-hidden />
+            </div>
             <p className="text-gray-500 mb-4">No dogs added yet</p>
             <Button onClick={() => setShowAddPet(true)}>
               <Plus className="w-4 h-4 mr-2" /> Add Your First Dog
@@ -119,8 +121,8 @@ export default function SettingsPage() {
           {pets.map((pet) => (
             <div key={pet.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-xl">
-                  🐕
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f9d6b] text-base font-bold text-white">
+                  {pet.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">{pet.name}</p>

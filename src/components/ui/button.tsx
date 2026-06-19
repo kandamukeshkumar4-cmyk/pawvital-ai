@@ -25,11 +25,11 @@ export function buttonClassName({
 
   const variants: Record<ButtonVariant, string> = {
     primary:
-      "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-lg shadow-blue-500/25",
+      "bg-[#1f9d6b] text-white hover:bg-[#15795a] focus:ring-[#1f9d6b] shadow-sm",
     secondary:
       "bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500 shadow-lg shadow-amber-500/25",
     outline:
-      "border-2 border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500",
+      "border-2 border-[#cfe6da] text-[#15795a] hover:bg-[#f3f9f6] focus:ring-[#1f9d6b]",
     ghost: "text-gray-600 hover:bg-gray-100 focus:ring-gray-500",
     danger: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
     warm:

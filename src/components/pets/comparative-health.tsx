@@ -81,7 +81,7 @@ export function ComparativeHealth({ stats }: ComparativeHealthProps) {
                 )}
                 {trend === "down" && (
                   <span className="inline-flex" title="Severity trending down">
-                    <ArrowUpRight className="w-4 h-4 text-emerald-500" aria-hidden />
+                    <ArrowUpRight className="w-4 h-4 text-[#1f9d6b]" aria-hidden />
                   </span>
                 )}
                 {trend === "stable" && (
@@ -104,7 +104,7 @@ export function ComparativeHealth({ stats }: ComparativeHealthProps) {
                   <span className={`font-medium capitalize ${
                     isUrgent ? "text-red-700" : 
                     lastSeverity === "medium" ? "text-amber-600" : 
-                    lastSeverity === "low" ? "text-emerald-600" : 
+                    lastSeverity === "low" ? "text-[#1f9d6b]" : 
                     "text-slate-400"
                   }`}>
                     {lastSeverity || "No data"}
