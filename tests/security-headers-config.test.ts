@@ -20,7 +20,9 @@ describe("security header config", () => {
         "style-src 'self' 'unsafe-inline' https:",
         "img-src 'self' data: blob: https:",
         "font-src 'self' data: https:",
-        "connect-src 'self' https:",
+        // connect-src allows the Azure Speech (STT) + Web PubSub WSS origins so the
+        // symptom-checker microphone and live-update sockets work (see next.config.ts).
+        "connect-src 'self' https: wss://centralus.stt.speech.microsoft.com wss://*.webpubsub.azure.com",
         "frame-ancestors 'none'",
         "object-src 'none'",
         "base-uri 'self'",
@@ -47,8 +49,10 @@ describe("security header config", () => {
     );
     expect(headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(headers.get("X-Frame-Options")).toBe("DENY");
+    // microphone=(self) so the symptom-checker speech-to-text can request the mic
+    // on our own origin (camera + geolocation stay fully disabled).
     expect(headers.get("Permissions-Policy")).toBe(
-      "camera=(), geolocation=(), microphone=()",
+      "camera=(), geolocation=(), microphone=(self)",
     );
     expect(headers.get("Strict-Transport-Security")).toBe(
       "max-age=63072000; includeSubDomains; preload",

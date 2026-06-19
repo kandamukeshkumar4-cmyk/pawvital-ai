@@ -159,7 +159,8 @@ describe("private tester scope UI", () => {
 
     render(React.createElement(Sidebar));
 
-    expect(screen.getByText("Analytics")).toBeTruthy();
+    // The analytics nav item was renamed "Analytics" → "Health Signals".
+    expect(screen.getByText("Health Signals")).toBeTruthy();
     expect(screen.getByText("Supplements")).toBeTruthy();
     expect(screen.getByText("Reminders")).toBeTruthy();
     expect(screen.getByText("Journal")).toBeTruthy();
