@@ -34,15 +34,14 @@ import {
   ShieldCheck,
   ShieldAlert,
 } from "lucide-react";
-import type { DetectedSignal, SignalSeverity, SignalType } from "@/lib/dog-brain/types";
+import type {
+  BriefState,
+  DetectedSignal,
+  DogBrainSignalsResponse,
+  SignalSeverity,
+  SignalType,
+} from "@/lib/dog-brain/types";
 import type { HealthLog } from "@/lib/health-log/types";
-
-type BriefState = "stable" | "watch" | "needs_attention";
-
-interface SignalsResponse {
-  state: BriefState;
-  signals: DetectedSignal[];
-}
 
 const STATE_META: Record<
   BriefState,
@@ -235,7 +234,7 @@ export default function HealthBrief({
           fetch(`/api/dog-brain/signals?pet_id=${petId}`),
           fetch(`/api/health-log?pet_id=${petId}&limit=14`),
         ]);
-        const sig = (await sigRes.json().catch(() => null)) as SignalsResponse | null;
+        const sig = (await sigRes.json().catch(() => null)) as DogBrainSignalsResponse | null;
         const lg = (await logRes.json().catch(() => null)) as { data?: HealthLog[] } | null;
         if (cancelled) return;
         setSignals(sig?.signals ?? []);
