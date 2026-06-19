@@ -68,9 +68,10 @@ describe("detectDogBrainSignals", () => {
 
   it("detects weight downtrends and medication history without clinical dosing advice", () => {
     const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", weight_kg: 18.8 }),
       log({
         log_date: "2026-06-03",
-        weight_kg: 18.8,
+        weight_kg: 19.2,
         meds_given: true,
         context_signals: {
           medication: {
@@ -92,5 +93,31 @@ describe("detectDogBrainSignals", () => {
     expect(result.signals.find((signal) => signal.signal_type === "possible_med_side_effect")?.next_action).toContain(
       "ask your vet before changing any dose",
     );
+  });
+
+  it("does not alarm an owner over a single isolated vomit", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", vomiting_count: 1 }),
+      log({ log_date: "2026-06-04", vomiting_count: 0 }),
+      log({ log_date: "2026-06-03", vomiting_count: 0 }),
+    ]);
+    expect(result.signals.find((s) => s.signal_type === "vomiting_trend")).toBeUndefined();
+  });
+
+  it("needs at least 3 weigh-ins before calling a weight downtrend", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", weight_kg: 18.8 }),
+      log({ log_date: "2026-06-01", weight_kg: 20 }),
+    ]);
+    expect(result.signals.find((s) => s.signal_type === "weight_downtrend")).toBeUndefined();
+  });
+
+  it("does not call a dip-then-recovery a weight downtrend", () => {
+    const result = detectDogBrainSignals([
+      log({ log_date: "2026-06-05", weight_kg: 18.5 }),
+      log({ log_date: "2026-06-03", weight_kg: 15 }),
+      log({ log_date: "2026-06-01", weight_kg: 20 }),
+    ]);
+    expect(result.signals.find((s) => s.signal_type === "weight_downtrend")).toBeUndefined();
   });
 });

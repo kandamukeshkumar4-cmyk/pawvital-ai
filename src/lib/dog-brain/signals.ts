@@ -98,6 +98,12 @@ function vomitingSignal(logs: HealthLog[]): DetectedSignal | null {
   const total = recent.reduce((sum, log) => sum + Math.max(0, log.vomiting_count ?? 0), 0);
   if (total === 0) return null;
 
+  // A single isolated vomit isn't a pattern — don't alarm an owner over it.
+  // Require repetition: ≥2 episodes, vomiting on ≥2 days, or one heavy day (≥3).
+  const daysWithVomiting = recent.filter((log) => (log.vomiting_count ?? 0) > 0).length;
+  const heavySingleDay = recent.some((log) => (log.vomiting_count ?? 0) >= 3);
+  if (total < 2 && daysWithVomiting < 2 && !heavySingleDay) return null;
+
   const severity: SignalSeverity = latest.vomiting_count >= 3 || total >= 4 ? "alert" : "watch";
   return {
     signal_type: "vomiting_trend",
@@ -118,7 +124,8 @@ function weightSignal(logs: HealthLog[]): DetectedSignal | null {
   const weighed = [...logs]
     .reverse()
     .filter((log) => typeof log.weight_kg === "number" && log.weight_kg > 0);
-  if (weighed.length < 2) return null;
+  // Need at least 3 weigh-ins to call a trend (two points is just noise).
+  if (weighed.length < 3) return null;
 
   const first = weighed[0];
   const last = weighed[weighed.length - 1];
@@ -126,6 +133,11 @@ function weightSignal(logs: HealthLog[]): DetectedSignal | null {
   const lastWeight = last.weight_kg as number;
   const dropRatio = (firstWeight - lastWeight) / firstWeight;
   if (dropRatio < WEIGHT_WATCH_DROP) return null;
+
+  // Only a SUSTAINED downtrend: the latest reading must be the lowest, so a
+  // dip-then-recovery (e.g. 30 → 20 → 29) doesn't read as a downward trend.
+  const minWeight = Math.min(...weighed.map((w) => w.weight_kg as number));
+  if (lastWeight > minWeight) return null;
 
   const severity: SignalSeverity = dropRatio >= WEIGHT_ALERT_DROP ? "alert" : "watch";
   return {
