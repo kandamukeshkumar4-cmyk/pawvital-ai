@@ -325,7 +325,7 @@ function detectChange(scores: (number | null)[]): ChangeDirection {
   return "none";
 }
 
-function buildGrid(logs: HealthLog[], now: Date, days = 7): SignalGridModel {
+function buildGrid(logs: HealthLog[], now: Date, days = 14): SignalGridModel {
   const todayStr = localDateString(now);
   const dates: string[] = [];
   for (let i = days - 1; i >= 0; i--) {

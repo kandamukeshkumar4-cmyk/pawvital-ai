@@ -87,11 +87,11 @@ describe("buildHealthBoard — multi-day daily logs", () => {
     log(0, { appetite: "reduced", stool: "diarrhea", energy: "low", weight_kg: 12.4 }),
   ];
 
-  it("fills the 7-day grid with the right tones", () => {
+  it("fills the 14-day grid with the right tones", () => {
     const board = buildHealthBoard({ checks: [], logs, now: NOW, fallbackPetName: "Bruno" });
     expect(board.grid.hasData).toBe(true);
-    expect(board.grid.days).toHaveLength(7);
-    expect(board.grid.days[6].isToday).toBe(true);
+    expect(board.grid.days).toHaveLength(14);
+    expect(board.grid.days[13].isToday).toBe(true);
 
     const stool = board.grid.rows.find((r) => r.key === "stool")!;
     const today = stool.cells.find((c) => c.date === daysAgo(0))!;
