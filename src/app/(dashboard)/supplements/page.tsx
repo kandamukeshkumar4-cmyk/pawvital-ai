@@ -1,236 +1,355 @@
 "use client";
 
-import { useState } from "react";
-import { Pill, ExternalLink, Sparkles } from "lucide-react";
-import Card from "@/components/ui/card";
-import Button from "@/components/ui/button";
-import Badge from "@/components/ui/badge";
+import { useCallback, useEffect, useState } from "react";
+import { Pill, Sparkles, ToggleLeft, ToggleRight, ChevronDown } from "lucide-react";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
 
 interface SupplementItem {
-  id: string;
   name: string;
   purpose: string;
   dosage: string;
   frequency: string;
   brand: string;
   price: string;
-  isActive: boolean;
   priority: "essential" | "recommended" | "optional";
 }
 
-const aiRecommendations: SupplementItem[] = [
-  {
-    id: "1",
-    name: "Glucosamine & Chondroitin",
-    purpose: "Joint health & mobility support",
-    dosage: "1,500mg daily",
-    frequency: "Once daily with food",
-    brand: "Nutramax Dasuquin",
-    price: "$35/month",
-    isActive: true,
-    priority: "essential",
-  },
-  {
-    id: "2",
-    name: "Omega-3 Fish Oil",
-    purpose: "Anti-inflammatory, skin & coat health",
-    dosage: "1,000mg EPA+DHA daily",
-    frequency: "Once daily with food",
-    brand: "Nordic Naturals Omega-3 Pet",
-    price: "$25/month",
-    isActive: true,
-    priority: "essential",
-  },
-  {
-    id: "3",
-    name: "Probiotic",
-    purpose: "Digestive health & immune support",
-    dosage: "1 scoop daily",
-    frequency: "Once daily with morning meal",
-    brand: "Purina Pro Plan FortiFlora",
-    price: "$30/month",
-    isActive: true,
-    priority: "recommended",
-  },
-  {
-    id: "4",
-    name: "CoQ10",
-    purpose: "Heart health & cellular energy",
-    dosage: "100mg daily",
-    frequency: "Once daily",
-    brand: "Zesty Paws CoQ10",
-    price: "$22/month",
-    isActive: false,
-    priority: "optional",
-  },
-  {
-    id: "5",
-    name: "Calming Support",
-    purpose: "Anxiety & stress reduction",
-    dosage: "As needed",
-    frequency: "During storms, travel, or stressful events",
-    brand: "VetriScience Composure",
-    price: "$18/month",
-    isActive: false,
-    priority: "optional",
-  },
-];
+interface SupplementPlan {
+  supplements: SupplementItem[];
+  nutrition_grade: string;
+  monthly_cost: string;
+  summary: string;
+}
 
-const priorityConfig = {
-  essential: { label: "Essential", variant: "danger" as const },
-  recommended: { label: "Recommended", variant: "warning" as const },
-  optional: { label: "Optional", variant: "info" as const },
-};
+type TabKey = "active" | "ask_vet" | "followups";
+
+function classifySupplements(supplements: SupplementItem[]) {
+  return {
+    active: supplements.filter((s) => s.priority === "essential"),
+    ask_vet: supplements.filter((s) => s.priority === "recommended"),
+    followups: supplements.filter((s) => s.priority === "optional"),
+  };
+}
+
+function ReminderToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex items-center gap-2 text-sm"
+      style={{ color: on ? "#1f9d6b" : "#8a7f74" }}
+    >
+      {on ? (
+        <ToggleRight className="h-5 w-5" aria-hidden />
+      ) : (
+        <ToggleLeft className="h-5 w-5" aria-hidden />
+      )}
+      <span>Check in after 7 days</span>
+    </button>
+  );
+}
+
+function SupplementCard({ item, tab }: { item: SupplementItem; tab: TabKey }) {
+  const [reminder, setReminder] = useState(tab === "active");
+  const [notes, setNotes] = useState("");
+  const [expanded, setExpanded] = useState(false);
+
+  const badgeLabel =
+    tab === "active" ? "Active" : tab === "ask_vet" ? "Ask vet" : "Follow-up";
+  const badgeBg =
+    tab === "active" ? "#e7f4ee" : tab === "ask_vet" ? "#fbf0db" : "#e9f1fa";
+  const badgeFg =
+    tab === "active" ? "#15795a" : tab === "ask_vet" ? "#c1852a" : "#4f7fb8";
+
+  return (
+    <div className="rounded-2xl border border-[#eef1ef] bg-white overflow-hidden">
+      <div className="p-4 space-y-3">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: "#f3f9f6" }}
+            >
+              <Pill className="h-[18px] w-[18px] text-[#1f9d6b]" aria-hidden />
+            </span>
+            <p className="text-sm font-semibold text-[#1c2522]">{item.name}</p>
+          </div>
+          <span
+            className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{ background: badgeBg, color: badgeFg }}
+          >
+            {badgeLabel}
+          </span>
+        </div>
+
+        {/* Purpose */}
+        <p className="text-sm leading-relaxed text-[#6f8579]">{item.purpose}</p>
+
+        {/* Evidence chip (from dosage as proxy) */}
+        {item.dosage && (
+          <div className="flex flex-wrap gap-2">
+            <span
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium"
+              style={{ background: "#fbf0db", color: "#c1852a", border: "1px solid #f5d8a0" }}
+            >
+              {item.dosage} · {item.frequency}
+            </span>
+          </div>
+        )}
+
+        {/* Meta row */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#8a978f]">
+          <span>Brand: {item.brand || "Any quality brand"}</span>
+          <span className="font-medium text-[#4a5a55]">{item.price}</span>
+        </div>
+
+        {/* Reminder toggle */}
+        <div
+          className="flex items-center justify-between pt-1"
+          style={{ borderTop: "1px solid #f0f4f2" }}
+        >
+          <ReminderToggle on={reminder} onToggle={() => setReminder((r) => !r)} />
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="flex items-center gap-1 text-xs text-[#8a978f] hover:text-[#4a5a55] transition-colors"
+          >
+            Your notes
+            <ChevronDown
+              className="h-3.5 w-3.5 transition-transform"
+              style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Expandable notes textarea */}
+      {expanded && (
+        <div
+          className="px-4 pb-4"
+          style={{ borderTop: "1px solid #f0f4f2" }}
+        >
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value.slice(0, 250))}
+            rows={3}
+            placeholder="Side effects, changes noticed, questions for your vet…"
+            className="mt-3 w-full resize-none rounded-xl border border-[#e8e2d8] px-3 py-2.5 text-sm text-[#1c2522] placeholder:text-[#b9c6bf] focus:border-[#1f9d6b] focus:outline-none"
+          />
+          <p className="mt-1 text-right text-[11px] text-[#8a978f]">{notes.length}/250</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmptyTabState({ tab, petName }: { tab: TabKey; petName: string }) {
+  const messages: Record<TabKey, string> = {
+    active: `No active supplements for ${petName} yet. Generate a plan above to get personalized recommendations.`,
+    ask_vet: `No vet discussion items for ${petName} yet. Recommendations from the AI plan will appear here.`,
+    followups: `No follow-up supplements for ${petName} yet. Optional items from the AI plan will appear here.`,
+  };
+  return (
+    <div className="rounded-2xl border border-[#eef1ef] bg-white px-6 py-8 text-center">
+      <Pill className="mx-auto h-8 w-8 text-[#c0dfd0]" aria-hidden />
+      <p className="mt-3 text-sm text-[#8a978f]">{messages[tab]}</p>
+    </div>
+  );
+}
 
 export default function SupplementsPage() {
   const quarantinedSurface = getPrivateTesterQuarantinedSurface("/supplements");
   const { activePet } = useAppStore();
-  const [supplements, setSupplements] = useState(aiRecommendations);
-  const [generating, setGenerating] = useState(false);
+  const [plan, setPlan] = useState<SupplementPlan | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("active");
 
-  const toggleSupplement = (id: string) => {
-    setSupplements((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, isActive: !s.isActive } : s))
-    );
-  };
+  const fetchPlan = useCallback(async () => {
+    if (!activePet) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const petPayload = {
+        name: activePet.name,
+        breed: activePet.breed,
+        species: activePet.species,
+        age_years: activePet.age_years,
+        age_months: activePet.age_months,
+        weight: activePet.weight,
+        weight_unit: activePet.weight_unit,
+        gender: activePet.gender,
+        is_neutered: activePet.is_neutered,
+        existing_conditions: activePet.existing_conditions ?? [],
+        medications: activePet.medications ?? [],
+      };
+      const res = await fetch("/api/ai/supplements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pet: petPayload }),
+      });
+      if (!res.ok) throw new Error("Failed to load plan");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data: any = await res.json();
+      const normalized: SupplementPlan = {
+        ...data,
+        supplements: (data.supplements || []).map((s: SupplementItem) => ({
+          name: s.name || "Supplement",
+          purpose: s.purpose || "",
+          dosage: s.dosage || "",
+          frequency: s.frequency || "",
+          brand: s.brand || "",
+          price: s.price || "",
+          priority: (s.priority || "optional") as "essential" | "recommended" | "optional",
+        })),
+      };
+      setPlan(normalized);
+    } catch {
+      setError("Unable to load personalized plan right now.");
+      setPlan(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [activePet]);
 
-  const generatePlan = async () => {
-    setGenerating(true);
-    // Simulate AI generation
-    await new Promise((r) => setTimeout(r, 2000));
-    setGenerating(false);
-  };
-
-  const activeCount = supplements.filter((s) => s.isActive).length;
-  const monthlyCost = supplements
-    .filter((s) => s.isActive)
-    .reduce((sum, s) => sum + parseInt(s.price.replace(/[^0-9]/g, "")), 0);
+  useEffect(() => {
+    if (activePet) void fetchPlan();
+    else setPlan(null);
+  }, [activePet, fetchPlan]);
 
   if (quarantinedSurface) {
     return <PrivateTesterQuarantinedSurface {...quarantinedSurface} />;
   }
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+  if (!activePet) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Supplement Plan</h1>
-          <p className="text-gray-500 mt-1">
-            AI-personalized nutrition recommendations for {activePet?.name || "your dog"}
+          <h1 className="text-2xl font-semibold text-[#1c2522]">Vet-safe supplement support</h1>
+          <p className="mt-1 text-sm text-[#8a978f]">Track, follow up, and discuss with your vet.</p>
+        </div>
+        <div className="rounded-2xl border border-[#eef1ef] bg-white px-6 py-10 text-center">
+          <Pill className="mx-auto h-10 w-10 text-[#c0dfd0]" aria-hidden />
+          <p className="mt-3 text-sm text-[#8a978f]">
+            Add a dog profile to generate a personalized supplement plan.
+          </p>
+          <a
+            href="/pets"
+            target="_top"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#1f9d6b] hover:underline"
+          >
+            Go to pet profiles →
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const supplements = plan?.supplements ?? [];
+  const classified = classifySupplements(supplements);
+  const tabItems = classified[activeTab];
+
+  const TABS: { key: TabKey; label: string; count: number }[] = [
+    { key: "active", label: "Active", count: classified.active.length },
+    { key: "ask_vet", label: "Ask vet about", count: classified.ask_vet.length },
+    { key: "followups", label: "Follow-ups", count: classified.followups.length },
+  ];
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-[#1c2522]">Vet-safe supplement support</h1>
+          <p className="mt-1 text-sm text-[#8a978f]">
+            Track, follow up, and discuss with your vet.
           </p>
         </div>
-        <Button onClick={generatePlan} loading={generating}>
-          <Sparkles className="w-4 h-4 mr-2" />
-          Regenerate Plan
-        </Button>
+        <button
+          onClick={() => void fetchPlan()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-lg border border-[#cfe6da] bg-white px-4 py-2.5 text-sm font-medium text-[#15795a] hover:bg-[#f3f9f6] disabled:opacity-50 transition-colors"
+        >
+          <Sparkles className="h-4 w-4" aria-hidden />
+          {loading ? "Generating…" : "Generate plan"}
+        </button>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 text-center">
-          <p className="text-3xl font-bold text-blue-600">{activeCount}</p>
-          <p className="text-sm text-gray-500">Active Supplements</p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-3xl font-bold text-green-600">${monthlyCost}</p>
-          <p className="text-sm text-gray-500">Monthly Cost</p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-3xl font-bold text-amber-600">A+</p>
-          <p className="text-sm text-gray-500">Nutrition Grade</p>
-        </Card>
-      </div>
-
-      {/* AI Insight */}
-      <Card className="p-5 bg-blue-50 border-blue-200">
-        <div className="flex items-start gap-3">
-          <Sparkles className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-blue-800">
-              AI Recommendation for {activePet?.name || "Cooper"}
-            </p>
-            <p className="text-sm text-blue-700 mt-1">
-              Based on {activePet?.name || "Cooper"}&apos;s age ({activePet?.age_years || 11} years),
-              breed ({activePet?.breed || "Golden Retriever"}), and existing conditions
-              (mild arthritis), we prioritize joint support and anti-inflammatory supplements.
-              The Glucosamine + Omega-3 combination has shown 73% improvement in mobility
-              for similar profiles.
-            </p>
-          </div>
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
         </div>
-      </Card>
+      )}
 
-      {/* Supplement List */}
-      <div className="space-y-4">
-        {supplements.map((supp) => (
-          <Card
-            key={supp.id}
-            className={`p-6 transition-all ${
-              supp.isActive ? "border-blue-200 bg-white" : "bg-gray-50 opacity-75"
-            }`}
+      {/* Plan summary */}
+      {plan?.summary && (
+        <div className="rounded-xl border border-[#cfe6da] bg-[#f3f9f6] px-4 py-3">
+          <p className="text-sm leading-relaxed text-[#15795a]">{plan.summary}</p>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div
+        className="flex gap-1 rounded-xl p-1"
+        style={{ background: "#f3f4f6" }}
+      >
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key)}
+            className="relative flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-all"
+            style={{
+              background: activeTab === tab.key ? "#fff" : "transparent",
+              color: activeTab === tab.key ? "#1c2522" : "#8a978f",
+              boxShadow: activeTab === tab.key ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+            }}
           >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div
-                  className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    supp.isActive ? "bg-blue-100" : "bg-gray-200"
-                  }`}
-                >
-                  <Pill className={`w-6 h-6 ${supp.isActive ? "text-blue-600" : "text-gray-400"}`} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900">{supp.name}</h3>
-                    <Badge variant={priorityConfig[supp.priority].variant}>
-                      {priorityConfig[supp.priority].label}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{supp.purpose}</p>
-                  <div className="flex flex-wrap gap-4 mt-3 text-sm text-gray-500">
-                    <span>Dose: {supp.dosage}</span>
-                    <span>Frequency: {supp.frequency}</span>
-                    <span>Brand: {supp.brand}</span>
-                    <span className="font-medium text-gray-700">{supp.price}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href="#"
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Buy this supplement"
-                >
-                  <ExternalLink className="w-4 h-4 text-gray-400" />
-                </a>
-                <button
-                  onClick={() => toggleSupplement(supp.id)}
-                  className={`w-10 h-6 rounded-full transition-colors relative ${
-                    supp.isActive ? "bg-blue-600" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                      supp.isActive ? "left-[18px]" : "left-0.5"
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </Card>
+            {tab.label}
+            {tab.count > 0 && (
+              <span
+                className="ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                style={{
+                  background: activeTab === tab.key ? "#1f9d6b" : "#d1d5db",
+                  color: "#fff",
+                }}
+              >
+                {tab.count}
+              </span>
+            )}
+          </button>
         ))}
       </div>
 
-      {/* Disclaimer */}
-      <Card className="p-4 bg-gray-50">
-        <p className="text-xs text-gray-500 text-center">
-          Supplement recommendations are generated by AI based on your dog&apos;s profile.
-          Always consult your veterinarian before starting any new supplement regimen.
-          Affiliate links may be used.
+      {/* Tab content */}
+      <div className="space-y-3">
+        {loading ? (
+          <div className="rounded-2xl border border-[#eef1ef] bg-white px-6 py-8 text-center text-sm text-[#8a978f]">
+            Generating personalized plan for {activePet.name}…
+          </div>
+        ) : tabItems.length > 0 ? (
+          tabItems.map((item, i) => (
+            <SupplementCard key={i} item={item} tab={activeTab} />
+          ))
+        ) : (
+          <EmptyTabState tab={activeTab} petName={activePet.name} />
+        )}
+      </div>
+
+      {/* Vet-first disclaimer */}
+      <div className="rounded-2xl border border-[#eef1ef] bg-[#f9fafb] px-5 py-4">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8a978f] mb-1">
+          Vet-first, always.
         </p>
-      </Card>
+        <p className="text-xs leading-relaxed text-[#8a978f]">
+          Supplement suggestions are generated by AI based on {activePet.name}&apos;s profile.
+          Always discuss with your veterinarian before starting any new supplement — especially
+          if your dog has existing conditions or takes medications.
+        </p>
+      </div>
     </div>
   );
 }
