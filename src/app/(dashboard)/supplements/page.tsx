@@ -2,7 +2,19 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Pill, Sparkles, ToggleLeft, ToggleRight, ChevronDown } from "lucide-react";
+import {
+  Pill,
+  Sparkles,
+  ToggleLeft,
+  ToggleRight,
+  ChevronDown,
+  ShieldCheck,
+  Circle,
+  HelpCircle,
+  FileText,
+  Activity,
+} from "lucide-react";
+import type { DetectedSignal } from "@/lib/dog-brain/types";
 import { PrivateTesterQuarantinedSurface } from "@/components/private-tester/quarantined-surface";
 import { getPrivateTesterQuarantinedSurface } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
@@ -161,6 +173,107 @@ function EmptyTabState({ tab, petName }: { tab: TabKey; petName: string }) {
   );
 }
 
+const SAFETY_RULES = [
+  "Always ask your vet before starting anything new",
+  "Never use human supplements for pets",
+  "Look for vet-quality products from trusted brands",
+  "Watch for any new or changing symptoms",
+  "Stop and contact your vet if concerned",
+];
+
+const VET_QUESTIONS = [
+  "Is this supplement appropriate for my dog?",
+  "Are there any interactions with current health or history?",
+  "What changes should we watch for?",
+];
+
+/** Right rail (mockup #5): vet-safety guidance + real Dog Brain evidence. */
+function SupplementRail({ petId, petName }: { petId: string | null; petName: string }) {
+  const [signals, setSignals] = useState<DetectedSignal[]>([]);
+  useEffect(() => {
+    if (!petId) return;
+    let cancelled = false;
+    fetch(`/api/dog-brain/signals?pet_id=${petId}`)
+      .then((r) => r.json())
+      .then((j: { signals?: DetectedSignal[] }) => {
+        if (!cancelled) setSignals(Array.isArray(j?.signals) ? j.signals : []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [petId]);
+
+  return (
+    <aside className="space-y-4">
+      <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-[#1f9d6b]" aria-hidden />
+          <p className="text-sm font-bold text-[#1c2522]">Before you start anything</p>
+        </div>
+        <p className="mb-3 text-xs text-[#8a978f]">Safety first. These rules help keep {petName} safe.</p>
+        <ul className="space-y-2.5">
+          {SAFETY_RULES.map((rule) => (
+            <li key={rule} className="flex items-start gap-2 text-[13px] text-[#3f4a45]">
+              <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#c3cfc9]" aria-hidden />
+              {rule}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <HelpCircle className="h-5 w-5 text-[#1f9d6b]" aria-hidden />
+          <p className="text-sm font-bold text-[#1c2522]">Questions for your vet</p>
+        </div>
+        <p className="mb-3 text-xs text-[#8a978f]">Bring these to your next visit.</p>
+        <ul className="space-y-2">
+          {VET_QUESTIONS.map((q) => (
+            <li key={q} className="text-[13px] leading-snug text-[#3f4a45]">• {q}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="rounded-2xl border border-[#eef1ef] bg-white p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Activity className="h-5 w-5 text-[#1f9d6b]" aria-hidden />
+          <p className="text-sm font-bold text-[#1c2522]">
+            Brain evidence <span className="font-normal text-[#8a978f]">(connected to logs &amp; signals)</span>
+          </p>
+        </div>
+        {signals.length > 0 ? (
+          <div className="grid grid-cols-2 gap-2">
+            {signals.slice(0, 4).map((s) => (
+              <div key={s.dedupe_key} className="rounded-xl border border-[#eef1ef] bg-[#f9fbfa] p-3">
+                <p className="text-[11px] font-semibold text-[#1c2522]">{s.signal_type.replace(/_/g, " ")}</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-[#8a978f]">{s.owner_message}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[13px] text-[#8a978f]">No active patterns — keep logging to build evidence.</p>
+        )}
+      </div>
+
+      <a
+        href="/analytics"
+        target="_top"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1f9d6b] py-3 text-sm font-semibold text-white hover:bg-[#15795a] transition-colors"
+      >
+        <FileText className="h-4 w-4" aria-hidden />
+        Create vet-safe summary
+      </a>
+      <div className="rounded-xl border border-[#d6e4f2] bg-[#f0f5fb] p-3">
+        <p className="text-[11px] leading-relaxed text-[#5a6f86]">
+          PawVital uses {petName}&apos;s history only to organize information. We don&apos;t provide
+          dosing or treatment advice. Always follow your veterinarian&apos;s guidance.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
 export default function SupplementsPage() {
   const quarantinedSurface = getPrivateTesterQuarantinedSurface("/supplements");
   const { activePet } = useAppStore();
@@ -259,12 +372,12 @@ export default function SupplementsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-[#1c2522]">Vet-safe supplement support</h1>
-          <p className="mt-1 text-sm text-[#8a978f]">
+          <h1 className="text-[32px] font-bold leading-tight text-[#1c2522]">Vet-safe supplement support</h1>
+          <p className="mt-1 text-[15px] text-[#8a978f]">
             Track, follow up, and discuss with your vet.
           </p>
         </div>
@@ -278,6 +391,8 @@ export default function SupplementsPage() {
         </button>
       </div>
 
+      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-5">
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -349,6 +464,10 @@ export default function SupplementsPage() {
           Always discuss with your veterinarian before starting any new supplement — especially
           if your dog has existing conditions or takes medications.
         </p>
+      </div>
+        </div>
+
+        <SupplementRail petId={activePet.id ?? null} petName={activePet.name} />
       </div>
     </div>
   );

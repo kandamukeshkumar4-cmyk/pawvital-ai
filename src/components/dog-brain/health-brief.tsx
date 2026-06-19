@@ -349,10 +349,12 @@ function buildTimelineEvents(logs: HealthLog[], reminders: ReminderRow[]): Timel
     }
   });
 
-  // The timeline tells the story of recent *activity*. A reminder due in the
-  // future shouldn't out-rank today's daily log, so clamp future due dates to
-  // just-before-now — past-due reminders keep their real time.
-  const recencyFloor = Date.now() - 60_000;
+  // The timeline tells the story of recent *activity* — the newest daily log
+  // should always lead, so clamp reminders to just below the newest log (a
+  // future-due reminder must not out-rank today's check-in). Past-due reminders
+  // still can't jump ahead of the latest log.
+  const newestLogAt = events.reduce((max, e) => Math.max(max, e.sortAt), 0);
+  const reminderCeiling = newestLogAt > 0 ? newestLogAt - 1 : Date.now();
   reminders.slice(0, 3).forEach((r, i) => {
     const due = r.next_due ? new Date(r.next_due).getTime() || 0 : 0;
     events.push({
@@ -362,7 +364,7 @@ function buildTimelineEvents(logs: HealthLog[], reminders: ReminderRow[]): Timel
       subtitle: r.title,
       timeLabel: r.next_due ? formatTimelineDate(r.next_due) : "Scheduled",
       statusLabel: "Scheduled",
-      sortAt: Math.min(due, recencyFloor),
+      sortAt: Math.min(due, reminderCeiling),
     });
   });
 
