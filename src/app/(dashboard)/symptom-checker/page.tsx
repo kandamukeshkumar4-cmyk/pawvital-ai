@@ -38,6 +38,7 @@ import { useAppStore } from "@/store/app-store";
 import { FullReport, type SymptomReport } from "@/components/symptom-report";
 import { SpeechInputButton } from "@/components/symptom-checker/speech-input-button";
 import { VetRecordIntakeButton } from "@/components/symptom-checker/vet-record-intake-button";
+import { SymptomContextStrip, SymptomRemembersPanel } from "@/components/symptom-checker/context-rail";
 import { QUICK_START_SYMPTOMS } from "@/lib/symptom-chat/quick-start-symptoms";
 import {
   useWebPubSubLiveUpdates,
@@ -994,7 +995,7 @@ export default function SymptomCheckerPage() {
 
   return (
     <TesterOnboardingGate>
-      <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
+      <div className="mx-auto max-w-6xl space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -1026,11 +1027,24 @@ export default function SymptomCheckerPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-          If your dog is struggling to breathe, has collapsed, is bleeding
-          heavily, having repeated seizures, unable to urinate, or you think
-          this is an emergency, contact a veterinarian immediately.
+        {/* Emergency banner (mockup #2) */}
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[#f3cfc9] bg-[#fbeae8] px-4 py-3">
+          <AlertTriangle className="h-5 w-5 flex-shrink-0 text-[#c0473b]" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[#b8473c]">Emergency signs?</p>
+            <p className="text-[13px] leading-snug text-[#9c5b53]">
+              If your dog has difficulty breathing, collapses, has repeated seizures, severe bleeding, or is
+              unable to stand or urinate, go to an emergency vet now.
+            </p>
+          </div>
         </div>
+
+        {/* Dog Brain context strip (mockup #2) — real counts */}
+        <SymptomContextStrip petId={activePet?.id ?? null} petName={displayPetName} />
+
+        {/* Chat (left) + What PawVital remembers (right) */}
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="min-w-0 space-y-4 sm:space-y-6">
 
         {/* Pre-session: Welcome + Quick Start */}
         {!sessionStarted && (
@@ -1457,6 +1471,9 @@ export default function SymptomCheckerPage() {
             </div>
           </div>
         )}
+          </div>
+          <SymptomRemembersPanel petId={activePet?.id ?? null} />
+        </div>
       </div>
     </TesterOnboardingGate>
   );
