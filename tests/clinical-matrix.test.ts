@@ -220,7 +220,10 @@ describe("FOLLOW_UP_QUESTIONS integrity", () => {
   it("every question should be referenced by at least one symptom", () => {
     // Session-global questions are intentionally not tied to specific symptoms —
     // they are selected by triage-engine via session state, not by the symptom planner.
-    const SESSION_GLOBAL_QUESTIONS = new Set(["condition_progression"]);
+    const SESSION_GLOBAL_QUESTIONS = new Set([
+      "condition_progression",
+      "additional_context",
+    ]);
 
     const referencedQuestions = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
@@ -284,7 +287,10 @@ describe("Cross-reference consistency", () => {
 
   it("no orphaned questions (in FOLLOW_UP_QUESTIONS but never referenced)", () => {
     // Session-global questions are intentionally not in any symptom's follow_up_questions.
-    const SESSION_GLOBAL_QUESTIONS = new Set(["condition_progression"]);
+    const SESSION_GLOBAL_QUESTIONS = new Set([
+      "condition_progression",
+      "additional_context",
+    ]);
 
     const referenced = new Set<string>();
     for (const entry of Object.values(SYMPTOM_MAP)) {
