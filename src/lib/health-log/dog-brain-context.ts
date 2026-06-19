@@ -95,10 +95,17 @@ export async function loadDogBrainContext({
   try {
     const supabase = await createServerSupabaseClient();
 
-    // Use petId directly if provided; otherwise resolve by name (skip if ambiguous).
+    // Resolve pet id — verify ownership at the app layer regardless of RLS.
     let petId: string;
     if (petIdArg) {
-      petId = petIdArg;
+      const { data: ownedPets } = await supabase
+        .from("pets")
+        .select("id")
+        .eq("id", petIdArg)
+        .eq("user_id", userId)
+        .limit(1);
+      if (!ownedPets || ownedPets.length === 0) return null;
+      petId = (ownedPets[0] as { id: string }).id;
     } else {
       if (!petName.trim()) return null;
       const { data: pets } = await supabase

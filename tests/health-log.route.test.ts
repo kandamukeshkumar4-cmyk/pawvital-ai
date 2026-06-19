@@ -163,17 +163,35 @@ describe("POST /api/health-log — missing context_signals column retries withou
 });
 
 describe("POST /api/health-log — photo_urls persists independently of context_signals", () => {
-  it("writes photo_urls when context_signals is absent", async () => {
+  it("writes owner-scoped storage paths", async () => {
     const { supabase, upsertRows } = buildSupabase([
       { data: { id: "log-1" }, error: null },
     ]);
     mockCreateServerSupabaseClient.mockResolvedValue(supabase);
 
-    const photos = ["https://example.com/a.jpg", "https://example.com/b.jpg"];
+    // Owner-scoped storage paths (as produced by /api/health-log/upload).
+    const photos = ["user-1/health-log/a.jpg", "user-1/health-log/b.jpg"];
     const res = await callPost(baseBody({ photo_urls: photos }));
 
     expect(res.status).toBe(201);
     expect(upsertRows[0].photo_urls).toEqual(photos);
     expect(upsertRows[0]).not.toHaveProperty("context_signals");
+  });
+
+  it("strips external URLs and cross-user paths from photo_urls before persisting", async () => {
+    const { supabase, upsertRows } = buildSupabase([
+      { data: { id: "log-2" }, error: null },
+    ]);
+    mockCreateServerSupabaseClient.mockResolvedValue(supabase);
+
+    const mixed = [
+      "user-1/health-log/ok.jpg",        // valid — kept
+      "https://example.com/evil.jpg",     // external URL — stripped
+      "other-user/health-log/spy.jpg",    // cross-user path — stripped
+    ];
+    const res = await callPost(baseBody({ photo_urls: mixed }));
+
+    expect(res.status).toBe(201);
+    expect(upsertRows[0].photo_urls).toEqual(["user-1/health-log/ok.jpg"]);
   });
 });
