@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, ChevronDown, CheckCircle2, Stethoscope } from "lucide-react";
+import { Menu, ChevronDown, CheckCircle2, Stethoscope, Check, PawPrint } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useSubscription } from "@/contexts/subscription-context";
@@ -41,9 +41,23 @@ function useLastLogStatus(petId: string | null) {
 }
 
 export default function TopBar() {
-  const { user, activePet, toggleSidebar } = useAppStore();
+  const { user, activePet, pets, setActivePet, toggleSidebar } = useAppStore();
   const { plan, loading } = useSubscription();
   const lastLog = useLastLogStatus(activePet?.id ?? null);
+
+  const [petMenuOpen, setPetMenuOpen] = useState(false);
+  const petMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!petMenuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (petMenuRef.current && !petMenuRef.current.contains(e.target as Node)) {
+        setPetMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [petMenuOpen]);
+  const titleCase = (s: string) => s.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
 
   const badge = !isSupabaseConfigured
     ? "Demo"
@@ -57,7 +71,7 @@ export default function TopBar() {
 
   const badgeStyle: React.CSSProperties =
     badge === "Demo"
-      ? { background: "rgba(124,77,196,0.1)", color: "#7c4dc4", border: "1px solid rgba(124,77,196,0.25)" }
+      ? { background: "#fbf0db", color: "#c1852a", border: "1px solid #f0e0bc" }
       : badge === "Clinic"
         ? { background: "rgba(0,168,120,0.1)", color: "#00a878", border: "1px solid rgba(0,168,120,0.25)" }
         : badge === "Pro"
@@ -82,27 +96,86 @@ export default function TopBar() {
             <Menu className="h-5 w-5" />
           </button>
 
-          {/* Dog selector pill */}
+          {/* Dog selector dropdown (real pet switcher) */}
           {activePet && (
-            <Link
-              href="/pets"
-              className="hidden sm:flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors"
-              style={{ background: "#f7f4ef", border: "1px solid #e8e2d8", color: "#1c1814" }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f0ede8")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f7f4ef")}
-            >
-              <span
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white"
-                style={{ background: "#1f9d6b" }}
-                aria-hidden
+            <div ref={petMenuRef} className="relative hidden sm:block">
+              <button
+                type="button"
+                onClick={() => setPetMenuOpen((o) => !o)}
+                aria-haspopup="listbox"
+                aria-expanded={petMenuOpen}
+                className="flex items-center gap-2 rounded-xl px-3 py-1.5 transition-colors"
+                style={{ background: "#f7f4ef", border: "1px solid #e8e2d8", color: "#1c1814" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f0ede8")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f7f4ef")}
               >
-                {activePet.name.charAt(0).toUpperCase()}
-              </span>
-              <span className="text-sm font-semibold text-[#1c1814]">
-                {activePet.name.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}
-              </span>
-              <ChevronDown className="h-3.5 w-3.5 text-[#8a7f74]" aria-hidden />
-            </Link>
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                  style={{ background: "#1f9d6b" }}
+                  aria-hidden
+                >
+                  {activePet.name.charAt(0).toUpperCase()}
+                </span>
+                <span className="text-sm font-semibold text-[#1c1814]">{titleCase(activePet.name)}</span>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 text-[#8a7f74] transition-transform ${petMenuOpen ? "rotate-180" : ""}`}
+                  aria-hidden
+                />
+              </button>
+
+              {petMenuOpen && (
+                <div
+                  role="listbox"
+                  className="absolute left-0 top-full z-40 mt-1.5 w-60 overflow-hidden rounded-xl border border-[#e8e2d8] bg-white shadow-lg"
+                >
+                  <p className="px-3 pt-2.5 pb-1 text-[10px] font-semibold uppercase tracking-widest text-[#8a978f]">
+                    Switch dog
+                  </p>
+                  <ul className="max-h-72 overflow-y-auto py-1">
+                    {pets.map((p) => {
+                      const selected = p.id === activePet.id;
+                      return (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={selected}
+                            onClick={() => {
+                              setActivePet(p);
+                              setPetMenuOpen(false);
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-[#f3f9f6]"
+                          >
+                            <span
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white"
+                              style={{ background: selected ? "#1f9d6b" : "#b9c6bf" }}
+                              aria-hidden
+                            >
+                              {p.name.charAt(0).toUpperCase()}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-[#1c2522]">
+                                {titleCase(p.name)}
+                              </span>
+                              <span className="block truncate text-[11px] text-[#8a978f]">{p.breed}</span>
+                            </span>
+                            {selected && <Check className="h-4 w-4 shrink-0 text-[#1f9d6b]" aria-hidden />}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <Link
+                    href="/pets"
+                    onClick={() => setPetMenuOpen(false)}
+                    className="flex items-center gap-2 border-t border-[#eef1ef] px-3 py-2.5 text-sm font-medium text-[#15795a] hover:bg-[#f3f9f6]"
+                  >
+                    <PawPrint className="h-4 w-4" aria-hidden />
+                    Manage dogs
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Last log status pill */}
