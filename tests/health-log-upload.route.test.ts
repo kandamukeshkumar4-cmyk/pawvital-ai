@@ -42,6 +42,10 @@ function buildSupabase(userId: string | null, uploadError: unknown = null) {
             uploadCalls.push({ bucket: lastBucket, path });
             return { error: uploadError };
           },
+          createSignedUrl: async (path: string) => ({
+            data: { signedUrl: `https://signed.example/${path}` },
+            error: null,
+          }),
         };
       },
     },
@@ -109,6 +113,9 @@ describe("POST /api/health-log/upload", () => {
     expect(uploadCalls[0].path.startsWith("user-1/")).toBe(true);
     expect(uploadCalls[0].path.endsWith(".jpg")).toBe(true);
     expect(json.path).toBe(uploadCalls[0].path);
+    // a display-only signed URL is returned for the thumbnail
+    expect(typeof json.signedUrl).toBe("string");
+    expect(json.signedUrl).toContain(uploadCalls[0].path);
   });
 
   it("503 in demo mode (no Supabase)", async () => {
