@@ -6,6 +6,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { ContextSignalsSchema } from "@/lib/health-log/context-signals-schema";
 
 /**
  * Daily Health Log API.
@@ -15,65 +16,10 @@ import {
  *
  * Auth + RLS + pet-ownership enforced, mirroring the journal / product-
  * intelligence routes. Demo mode (no Supabase) returns empty / 503 gracefully.
+ *
+ * The context_signals schema lives in a shared module so the route and tests
+ * validate against the exact same contract.
  */
-
-const ContextSignalsSchema = z
-  .object({
-    gi: z
-      .object({
-        blood_in_stool: z.boolean().optional(),
-        straining: z.boolean().optional(),
-        change_note: z.string().max(500).optional(),
-      })
-      .optional(),
-    urinary: z
-      .object({
-        accidents: z.boolean().optional(),
-        color_change: z.boolean().optional(),
-        increased_thirst: z.boolean().optional(),
-      })
-      .optional(),
-    mobility: z
-      .object({
-        limping: z.boolean().optional(),
-        limb: z.string().max(50).optional(),
-        reluctance_to_move: z.boolean().optional(),
-      })
-      .optional(),
-    skin_ear: z
-      .object({
-        scratching: z.boolean().optional(),
-        head_shaking: z.boolean().optional(),
-        odor: z.boolean().optional(),
-        hot_spot: z.boolean().optional(),
-      })
-      .optional(),
-    breathing: z
-      .object({
-        coughing: z.boolean().optional(),
-        labored: z.boolean().optional(),
-        exercise_intolerance: z.boolean().optional(),
-      })
-      .optional(),
-    seizure: z
-      .object({
-        occurred: z.boolean(),
-        duration_sec: z.number().int().min(0).max(7200).optional(),
-        recovery_note: z.string().max(500).optional(),
-      })
-      .optional(),
-    medication: z
-      .object({
-        name: z.string().max(200).optional(),
-        time_given: z.string().max(20).optional(),
-        missed_late: z.boolean().optional(),
-        dose_notes: z.string().max(500).optional(),
-        side_effect_notes: z.string().max(500).optional(),
-      })
-      .optional(),
-  })
-  .optional()
-  .nullable();
 
 const LogBodySchema = z.object({
   pet_id: z.string().uuid(),

@@ -110,6 +110,13 @@ export interface StructuredCaseMemory {
 }
 
 export interface PetProfile {
+  /**
+   * Stable DB pet id when known (the client sends the active pet, which carries
+   * it). Optional and purely carried through — deterministic clinical logic
+   * never reads it. Used only to give the Dog Brain report context an exact
+   * pet_id and skip the ambiguous name lookup.
+   */
+  id?: string;
   name: string;
   species?: string;
   breed: string;

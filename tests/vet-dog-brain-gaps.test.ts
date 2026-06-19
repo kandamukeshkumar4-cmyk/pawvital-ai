@@ -12,7 +12,7 @@
  *  - formatVetPacketText produces a valid vet packet
  */
 
-import { z } from "zod";
+import { ContextSignalsSchema } from "@/lib/health-log/context-signals-schema";
 import type { ContextSignals, HealthLog } from "@/lib/health-log/types";
 import {
   buildVetTimeline,
@@ -78,28 +78,8 @@ function journal(overrides: Partial<JournalEntry> = {}): JournalEntry {
   };
 }
 
-// ── ContextSignals Zod schema (mirrors the API) ───────────────────────────────
-
-const MedicationSchema = z.object({
-  name: z.string().max(200).optional(),
-  time_given: z.string().max(20).optional(),
-  missed_late: z.boolean().optional(),
-  dose_notes: z.string().max(500).optional(),
-  side_effect_notes: z.string().max(500).optional(),
-});
-
-const ContextSignalsSchema = z
-  .object({
-    gi: z.object({ blood_in_stool: z.boolean().optional(), straining: z.boolean().optional(), change_note: z.string().max(500).optional() }).optional(),
-    urinary: z.object({ accidents: z.boolean().optional(), color_change: z.boolean().optional(), increased_thirst: z.boolean().optional() }).optional(),
-    mobility: z.object({ limping: z.boolean().optional(), limb: z.string().max(50).optional(), reluctance_to_move: z.boolean().optional() }).optional(),
-    skin_ear: z.object({ scratching: z.boolean().optional(), head_shaking: z.boolean().optional(), odor: z.boolean().optional(), hot_spot: z.boolean().optional() }).optional(),
-    breathing: z.object({ coughing: z.boolean().optional(), labored: z.boolean().optional(), exercise_intolerance: z.boolean().optional() }).optional(),
-    seizure: z.object({ occurred: z.boolean(), duration_sec: z.number().int().min(0).max(7200).optional(), recovery_note: z.string().max(500).optional() }).optional(),
-    medication: MedicationSchema.optional(),
-  })
-  .optional()
-  .nullable();
+// ContextSignalsSchema is imported from the shared module — the SAME schema the
+// API route validates against (no duplication / drift).
 
 // ── Each pack parses cleanly ─────────────────────────────────────────────────
 

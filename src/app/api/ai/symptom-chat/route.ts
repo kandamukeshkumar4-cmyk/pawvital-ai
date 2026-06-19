@@ -1593,6 +1593,9 @@ export async function POST(request: Request) {
       const dailyLogContext = await loadDogBrainContext({
         userId: verifiedUserId,
         petName: effectivePet.name,
+        // Stable DB pet id when the client sent it — skips the ambiguous
+        // name lookup. Falls back to name resolution when absent.
+        petId: effectivePet.id,
       });
       if (dailyLogContext) {
         const memory = ensureStructuredCaseMemory(session);
