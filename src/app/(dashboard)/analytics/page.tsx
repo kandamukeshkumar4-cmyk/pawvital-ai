@@ -277,6 +277,24 @@ function HealthSignalsContent() {
             <LogNextChecklist items={board.logNext} />
           </div>
 
+          {/* Copy vet summary — full-width CTA */}
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                if (navigator.clipboard?.writeText) {
+                  void navigator.clipboard.writeText(board.vetPacket.copyText);
+                }
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-base font-semibold text-white transition-colors"
+              style={{ background: "#1f9d6b" }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#15795a")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#1f9d6b")}
+            >
+              Copy vet summary
+            </button>
+          </div>
+
           {/* Shareable vet-ready PDF built from the same timeline data. */}
           <div className="flex justify-center">
             <VetReportButton petId={isSupabaseConfigured ? resolvedPetId : null} />

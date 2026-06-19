@@ -34,6 +34,48 @@ const TONE_BG: Record<"good" | "watch" | "alert", string> = {
   alert: "rgba(226,92,92,0.12)",
 };
 
+/** Emoji face selector row — replaces boring Select dropdowns for the core metrics. */
+function EmojiMetricRow<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; emoji: string; label: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 py-3">
+      <span className="w-24 shrink-0 text-sm font-medium text-[#4a463f]">{label}</span>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className="flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 transition-all"
+            style={{
+              background: value === opt.value ? "#e7f4ee" : "#f7f4ef",
+              border: `2px solid ${value === opt.value ? "#1f9d6b" : "transparent"}`,
+            }}
+            aria-pressed={value === opt.value}
+          >
+            <span className="text-xl leading-none">{opt.emoji}</span>
+            <span
+              className="text-[10px] font-medium"
+              style={{ color: value === opt.value ? "#15795a" : "#8a7f74" }}
+            >
+              {opt.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Shared checkbox list for simple boolean context_signals packs. */
 function PackCheckboxes({
   items,
@@ -329,9 +371,10 @@ export default function HealthLogPage() {
 
       {/* Log form */}
       <form onSubmit={(e) => void submit(e)}>
-        <Card className="space-y-4 p-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {pets.length > 1 ? (
+        <Card className="p-5 sm:p-6 space-y-0 divide-y divide-[#f0ede8]">
+          {/* Date + pet header */}
+          <div className="pb-4 flex flex-wrap items-end gap-4">
+            {pets.length > 1 && (
               <Select
                 label="Dog"
                 value={form.pet_id}
@@ -339,7 +382,7 @@ export default function HealthLogPage() {
                 options={petOptions}
                 required
               />
-            ) : null}
+            )}
             <Input
               label="Date"
               type="date"
@@ -349,34 +392,74 @@ export default function HealthLogPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {SELECT_FIELDS.map((field) => (
-              <Select
-                key={field.key}
-                label={field.label}
-                value={form[field.key]}
-                onChange={(e) =>
-                  setField(
-                    field.key,
-                    e.target.value as HealthLogInput[typeof field.key],
-                  )
-                }
-                options={field.options.map((o) => ({ value: o.value, label: o.label }))}
-              />
-            ))}
-            <Input
-              label="Vomiting (times today)"
-              type="number"
-              min={0}
-              max={100}
-              value={String(form.vomiting_count)}
-              onChange={(e) =>
-                setField("vomiting_count", Math.max(0, Number(e.target.value) || 0))
-              }
-            />
+          {/* Emoji metric selectors */}
+          <EmojiMetricRow
+            label="Appetite"
+            value={form.appetite}
+            options={[
+              { value: "none" as const, emoji: "😔", label: "None" },
+              { value: "reduced" as const, emoji: "😐", label: "Reduced" },
+              { value: "normal" as const, emoji: "😊", label: "Normal" },
+              { value: "increased" as const, emoji: "😋", label: "More" },
+            ]}
+            onChange={(v) => setField("appetite", v)}
+          />
+          <EmojiMetricRow
+            label="Energy"
+            value={form.energy}
+            options={[
+              { value: "low" as const, emoji: "😴", label: "Low" },
+              { value: "normal" as const, emoji: "😊", label: "Normal" },
+              { value: "high" as const, emoji: "⚡", label: "High" },
+            ]}
+            onChange={(v) => setField("energy", v)}
+          />
+          <EmojiMetricRow
+            label="Water"
+            value={form.water}
+            options={[
+              { value: "less" as const, emoji: "💧", label: "Less" },
+              { value: "normal" as const, emoji: "😊", label: "Normal" },
+              { value: "more" as const, emoji: "🫗", label: "More" },
+            ]}
+            onChange={(v) => setField("water", v)}
+          />
+          <EmojiMetricRow
+            label="Stool"
+            value={form.stool}
+            options={[
+              { value: "diarrhea" as const, emoji: "😣", label: "Loose" },
+              { value: "soft" as const, emoji: "😕", label: "Soft" },
+              { value: "normal" as const, emoji: "✅", label: "Normal" },
+              { value: "none" as const, emoji: "❌", label: "None" },
+            ]}
+            onChange={(v) => setField("stool", v)}
+          />
+
+          {/* Vomiting counter */}
+          <div className="flex items-center justify-between py-3">
+            <span className="text-sm font-medium text-[#4a463f]">Vomiting</span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setField("vomiting_count", Math.max(0, form.vomiting_count - 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8e2d8] text-[#4a463f] hover:bg-[#f7f4ef] transition-colors text-lg font-medium"
+              >
+                −
+              </button>
+              <span className="w-6 text-center text-sm font-semibold text-[#1c1814]">{form.vomiting_count}</span>
+              <button
+                type="button"
+                onClick={() => setField("vomiting_count", Math.min(100, form.vomiting_count + 1))}
+                className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8e2d8] text-[#4a463f] hover:bg-[#f7f4ef] transition-colors text-lg font-medium"
+              >
+                +
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Weight */}
+          <div className="py-3">
             <Input
               label="Weight (kg, optional)"
               type="number"
@@ -387,16 +470,18 @@ export default function HealthLogPage() {
                 setField("weight_kg", e.target.value ? Number(e.target.value) : null)
               }
             />
-            <label className="flex items-end gap-2 pb-2.5 text-sm text-[#4a463f]">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300"
-                checked={form.meds_given}
-                onChange={(e) => setField("meds_given", e.target.checked)}
-              />
-              Gave medication / fluids today
-            </label>
           </div>
+
+          {/* Meds */}
+          <label className="flex items-center gap-2 py-3 text-sm text-[#4a463f] cursor-pointer">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300"
+              checked={form.meds_given}
+              onChange={(e) => setField("meds_given", e.target.checked)}
+            />
+            Gave medication / fluids today
+          </label>
 
           {/* Specific observations — collapsible pack inputs */}
           <details className="group rounded-xl border border-[#e8e2d8]">
@@ -650,46 +735,53 @@ export default function HealthLogPage() {
           </div>
 
           {error ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="pt-3 text-sm text-red-600" role="alert">
               {error}
             </p>
           ) : null}
+
+          {/* After-save confirmation + signal chips */}
           {savedAt ? (
-            <div className="space-y-2">
-              <p className="flex items-center gap-1.5 text-sm text-[#0a7d5b]">
-                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                Saved your check-in for {savedAt}.
-              </p>
-              {/* After-save "what the brain noticed" using live signals (re-fetches on each save) */}
-              <div>
-                <p className="text-[11px] uppercase tracking-wide text-[#8a857a] mb-1">What the brain noticed</p>
-                {signalsLoading ? (
-                  <p className="text-xs text-[#6b665d]">Checking recent patterns…</p>
-                ) : afterSaveSignals.length > 0 ? (
-                  <ul className="text-sm text-[#2c2a26] space-y-0.5">
-                    {afterSaveSignals.slice(0, 3).map((s, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span>•</span>
-                        <span>{s.owner_message}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-xs text-[#6b665d]">No new patterns flagged from recent logs.</p>
-                )}
+            <div className="space-y-3 pt-3">
+              <div className="flex items-center gap-2 rounded-xl bg-[#e7f4ee] px-4 py-3">
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-[#1f9d6b]" aria-hidden />
+                <p className="text-sm font-medium text-[#15795a]">
+                  Check-in saved!{" "}
+                  <span className="font-normal">{savedAt}</span>
+                </p>
               </div>
+              {signalsLoading ? (
+                <p className="text-xs text-[#6b665d]">Checking patterns…</p>
+              ) : afterSaveSignals.length > 0 ? (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#8a978f] mb-2">
+                    What the brain noticed
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {afterSaveSignals.slice(0, 3).map((s, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+                        style={{ background: "#fbf0db", color: "#c1852a", border: "1px solid #f5d8a0" }}
+                      >
+                        {s.owner_message}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
-          <div className="flex justify-end">
-            <Button
+          {/* Full-width save button */}
+          <div className="pt-4">
+            <button
               type="submit"
               disabled={!form.pet_id || saving}
-              loading={saving}
-              className="w-full sm:w-auto"
+              className="w-full rounded-xl bg-[#1f9d6b] py-3.5 text-base font-semibold text-white hover:bg-[#15795a] disabled:opacity-50 transition-colors"
             >
-              Save today&apos;s check-in
-            </Button>
+              {saving ? "Saving…" : "Save check-in"}
+            </button>
           </div>
         </Card>
       </form>

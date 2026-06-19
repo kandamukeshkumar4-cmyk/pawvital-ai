@@ -128,37 +128,51 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Active Pet */}
+        {/* Active Pet card */}
         {activePet && sidebarOpen && (
           <div
-            className="mx-4 mt-4 rounded-xl p-3"
-            style={{
-              background: "#f7f4ef",
-              border: "1px solid #e8e2d8",
-            }}
+            className="mx-3 mt-4 rounded-2xl overflow-hidden"
+            style={{ border: "1px solid #e8e2d8" }}
           >
-            <div className="flex items-center gap-3">
+            {/* Dog avatar header */}
+            <div
+              className="flex flex-col items-center py-5 px-4"
+              style={{ background: "linear-gradient(to bottom, #e7f4ee, #f7f4ef)" }}
+            >
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-full text-lg"
-                style={{ background: "#f0ede8" }}
+                className="flex h-16 w-16 items-center justify-center rounded-2xl text-3xl mb-2 shadow-sm"
+                style={{ background: "#fff", border: "2px solid #c0dfd0" }}
               >
                 🐕
               </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-gray-900">
-                  {activePet.name}
-                </p>
-                <p
-                  className="truncate text-xs"
-                  style={{ color: "#8a7f74" }}
-                >
-                  {activePet.breed}
-                  {" · "}
+              <p className="text-[15px] font-bold text-[#1c1814]">{activePet.name}</p>
+              <p className="text-xs mt-0.5" style={{ color: "#8a7f74" }}>
+                {activePet.breed}
+              </p>
+            </div>
+            {/* Stats row */}
+            <div
+              className="flex items-center divide-x divide-[#e8e2d8] px-0"
+              style={{ background: "#f7f4ef", borderTop: "1px solid #e8e2d8" }}
+            >
+              <div className="flex-1 py-2 text-center">
+                <p className="text-xs font-semibold text-[#1c1814]">
                   {activePet.age_months > 0
                     ? `${activePet.age_years}y ${activePet.age_months}m`
                     : `${activePet.age_years}y`}
                 </p>
+                <p className="text-[10px]" style={{ color: "#8a7f74" }}>Age</p>
               </div>
+              <a
+                href="/pets"
+                target="_top"
+                className="flex-1 py-2 text-center text-xs font-medium transition-colors"
+                style={{ color: "#1f9d6b" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#15795a")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#1f9d6b")}
+              >
+                View profile
+              </a>
             </div>
           </div>
         )}

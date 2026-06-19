@@ -335,6 +335,16 @@ export function InsightTiles({ board }: { board: HealthBoardModel }) {
   );
 }
 
+/* ---------------------------------------------------------- emoji face helpers */
+
+const TONE_EMOJI: Record<SignalTone, string> = {
+  good: "😊",
+  watch: "😐",
+  alert: "😣",
+  info: "💧",
+  muted: "—",
+};
+
 /* --------------------------------------------------------------- 3. signal grid */
 
 function ChangeBadge({ change }: { change: ChangeDirection }) {
@@ -402,19 +412,21 @@ export function SignalGrid({ grid }: { grid: SignalGridModel }) {
                 <td className="px-4 py-2.5 text-left font-medium text-[#4a463f]">{row.label}</td>
                 {row.cells.map((cell) => (
                   <td key={cell.date} className="px-2 py-2.5 text-center">
-                    <span className="inline-flex flex-col items-center gap-1">
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ background: TONE_DOT[cell.tone] }}
-                        aria-hidden
-                      />
-                      <span
-                        className="text-[11px] leading-none"
-                        style={{ color: cell.logged ? TONE_TEXT[cell.tone] : "#c0b9ad" }}
-                      >
-                        {cell.label}
+                    {cell.logged ? (
+                      <span className="inline-flex flex-col items-center gap-0.5">
+                        <span className="text-base leading-none" title={cell.label}>
+                          {TONE_EMOJI[cell.tone]}
+                        </span>
+                        <span
+                          className="text-[10px] leading-none font-medium"
+                          style={{ color: TONE_TEXT[cell.tone] }}
+                        >
+                          {cell.label}
+                        </span>
                       </span>
-                    </span>
+                    ) : (
+                      <span className="text-[#d6cfc4] text-base">—</span>
+                    )}
                   </td>
                 ))}
                 <td className="px-3 py-2.5 text-right">
