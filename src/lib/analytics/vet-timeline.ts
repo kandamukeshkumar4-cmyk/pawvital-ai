@@ -118,14 +118,20 @@ function dailyLogEntries(log: HealthLog): VetTimelineEntry[] {
 
   const medEntry: VetTimelineEntry[] = [];
   if (cs?.medication?.name || log.meds_given) {
-    const medName = cs?.medication?.name ?? "medication";
-    const doseNote = cs?.medication?.dose_notes ? ` — ${cs.medication.dose_notes}` : "";
+    const med = cs?.medication;
+    const medName = med?.name ?? "medication";
+    const doseNote = med?.dose_notes ? ` — ${med.dose_notes}` : "";
+    // Owner-reported history detail — never dosing advice.
+    const medDetails: string[] = [];
+    if (med?.time_given) medDetails.push(`Time given: ${med.time_given}`);
+    if (med?.missed_late) medDetails.push("Owner noted: missed or late dose");
+    if (med?.side_effect_notes) medDetails.push(`Owner-observed side effects: ${med.side_effect_notes}`);
     medEntry.push({
       date: log.log_date,
       source: "medication",
       summary: `Medication given: ${medName}${doseNote} (history only — not dosing advice)`,
       tone: "normal",
-      details: [],
+      details: medDetails,
       hasPhotos: false,
     });
   }
