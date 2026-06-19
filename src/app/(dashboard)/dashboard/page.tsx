@@ -5,6 +5,7 @@ import {
   PawPrint,
   ShieldAlert,
   Stethoscope,
+  Upload,
 } from "lucide-react";
 import Card from "@/components/ui/card";
 import { buttonClassName } from "@/components/ui/button";
@@ -12,6 +13,11 @@ import HealthBrief from "@/components/dog-brain/health-brief";
 import { isPrivateTesterModeEnabled } from "@/lib/private-tester-access";
 import { PRIVATE_TESTER_FOCUS_SUMMARY } from "@/lib/private-tester-scope";
 import { useAppStore } from "@/store/app-store";
+
+/** Display pet names with leading capitals so "bruno" reads as "Bruno". */
+function titleCasePetName(name: string): string {
+  return name.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+}
 
 const privateTesterActions = [
   {
@@ -122,20 +128,20 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-[#1c2522]">
-            {activePet ? `${activePet.name}'s health brief` : "Health brief"}
+          <h1 className="text-[32px] font-bold leading-tight text-[#1c2522]">
+            {activePet ? `${titleCasePetName(activePet.name)}'s Health Brief` : "Health Brief"}
           </h1>
-          <p className="mt-1 text-sm text-[#8a978f]">
+          <p className="mt-1 text-[15px] text-[#8a978f]">
             Your daily overview of what matters most.
           </p>
         </div>
         <a
-          href="/symptom-checker"
+          href="/analytics"
           target="_top"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1f9d6b] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#15795a]"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#e2e6e3] bg-white px-4 py-2.5 text-sm font-medium text-[#3f4a45] hover:bg-[#f7f9f8]"
         >
-          <Stethoscope className="h-4 w-4" />
-          Start symptom check
+          <Upload className="h-4 w-4" />
+          Share summary
         </a>
       </div>
 
