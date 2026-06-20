@@ -49,7 +49,7 @@ export function ComparativeHealth({ stats }: ComparativeHealthProps) {
           <h2 className="text-xl font-bold text-slate-900">Comparative Health</h2>
           <p className="text-sm text-slate-500">Compare status across your pets</p>
         </div>
-        <select 
+        <select
           className="mt-3 sm:mt-0 text-sm border-slate-200 rounded-lg bg-slate-50 text-slate-700"
           value={sortParam}
           onChange={(e) =>
@@ -68,7 +68,7 @@ export function ComparativeHealth({ stats }: ComparativeHealthProps) {
           const needsAttention = daysSinceLastCheck !== null && daysSinceLastCheck >= 30;
 
           return (
-            <div 
+            <div
               key={pet.id}
               className={`p-4 rounded-xl border ${isUrgent ? "border-red-500 bg-red-50" : "border-slate-200 bg-white"} relative flex flex-col`}
             >
@@ -102,9 +102,9 @@ export function ComparativeHealth({ stats }: ComparativeHealthProps) {
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Status</span>
                   <span className={`font-medium capitalize ${
-                    isUrgent ? "text-red-700" : 
-                    lastSeverity === "medium" ? "text-amber-600" : 
-                    lastSeverity === "low" ? "text-[#1f9d6b]" : 
+                    isUrgent ? "text-red-700" :
+                    lastSeverity === "medium" ? "text-amber-600" :
+                    lastSeverity === "low" ? "text-[#1f9d6b]" :
                     "text-slate-400"
                   }`}>
                     {lastSeverity || "No data"}

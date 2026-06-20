@@ -75,7 +75,7 @@ export default function TopBar() {
       : badge === "Clinic"
         ? { background: "rgba(0,168,120,0.1)", color: "#00a878", border: "1px solid rgba(0,168,120,0.25)" }
         : badge === "Pro"
-          ? { background: "rgba(59,130,246,0.1)", color: "#3b82f6", border: "1px solid rgba(59,130,246,0.25)" }
+          ? { background: "#e7f4ee", color: "#15795a", border: "1px solid #c0dfd0" }
           : { background: "#f0ede8", color: "#8a7f74", border: "1px solid #e8e2d8" };
 
   return (

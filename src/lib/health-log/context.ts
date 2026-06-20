@@ -9,21 +9,28 @@ import { SELECT_FIELDS, type HealthLog } from "./types";
  * Pure and side-effect free.
  */
 
-const MAX_LOGS = 14;
+const DEFAULT_MAX_LOGS = 14;
 
 function field<T extends string>(log: HealthLog, key: string): T {
   return (log as unknown as Record<string, T>)[key];
 }
 
+/**
+ * @param maxLogs how many of the newest logs to summarize. Defaults to a
+ *   14-day recent window; the Dog Brain passes its full 90-day window so the
+ *   summary reflects long-window trends ("appetite off on 9 of 87 days"), not
+ *   just the last two weeks.
+ */
 export function summarizeDailyLogsForContext(
   logs: HealthLog[],
   petName: string,
+  maxLogs: number = DEFAULT_MAX_LOGS,
 ): string {
   if (logs.length === 0) return "";
 
   const newestFirst = [...logs]
     .sort((a, b) => new Date(b.log_date).getTime() - new Date(a.log_date).getTime())
-    .slice(0, MAX_LOGS);
+    .slice(0, Math.max(1, maxLogs));
   const chronological = [...newestFirst].reverse();
   const days = newestFirst.length;
   const newest = newestFirst[0].log_date;

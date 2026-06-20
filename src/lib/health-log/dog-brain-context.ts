@@ -161,12 +161,15 @@ export async function loadDogBrainContext({
     // ── Daily logs ──
     const logs = (logsResult.data ?? []) as HealthLog[];
     if (logs.length > 0) {
-      const logSummary = summarizeDailyLogsForContext(logs, petName);
+      // Long-window (full 90-day) trend summary — not just the last 14 days.
+      const logSummary = summarizeDailyLogsForContext(logs, petName, MAX_LOGS);
       if (logSummary) sections.push(logSummary);
 
-      // Structured context_signals from recent logs (newest first).
+      // Pack signals from the recent window (last ~14 days, newest first) — the
+      // detailed GI/urinary/mobility/etc. notes that matter most right now.
+      const RECENT_PACK_WINDOW = 14;
       const signalParts: string[] = [];
-      for (const log of logs.slice(0, 7)) {
+      for (const log of logs.slice(0, RECENT_PACK_WINDOW)) {
         const sig = log.context_signals;
         if (!sig) continue;
         const summary = contextSignalsSummary(sig);
@@ -174,7 +177,7 @@ export async function loadDogBrainContext({
       }
       if (signalParts.length > 0) {
         sections.push(
-          `Owner-logged pack signals (${disclaimer}): ${signalParts.join(" | ")}`,
+          `Owner-logged pack signals — recent ${RECENT_PACK_WINDOW} days (${disclaimer}): ${signalParts.join(" | ")}`,
         );
       }
 
