@@ -65,9 +65,24 @@ Tests to add (TDD, red→green):
 ## Production / manual verification
 - Pending. Browser walkthrough (Daily Log → signal → Symptom Checker uses Brain question → follow-up) deferred until the checker clears #5 and more of the chain lands.
 
+## 7 required proofs — ALL COVERED ✅
+- (a) 90-day event affects context — `dog-brain-90day-window.test.ts`
+- (b) emergency urgency can't be lowered by benign memory — `dog-brain-context-urgency-guard.test.ts`
+- (c) vet-record durable pet-scoped persistence — `azure-document-intake-route.test.ts` (run 4)
+- (d) duplicate pending follow-up not created — `dog-brain-followups-route.test.ts` (run 3)
+- (e) follow-up outcome updates Brain memory + next actions — `dog-brain-followup-context.test.ts` + `dog-brain-followup-outcome.route.test.ts` (run 4)
+- (f) daily-log abnormal input creates a signal — `dog-brain-signals.test.ts`
+- (g) symptom checker asks a targeted question from Brain context — `dog-brain-question-priority.test.ts` (run 2)
+
+Backend closed loop is wired + test-proven end to end: log → signal → symptom-checker question tiebreak → follow-up (durable, deduped, server due_at) → owner outcome → Brain context updates next actions → report/context cites it.
+
+## Remaining (NOT done — do not claim full "done" yet)
+- **Gap #5 UI surfacing** (every-tab-reflects-Brain contract): Reminders page must show Brain follow-ups alongside owner reminders; History needs a Brain timeline; Supplements follow-up linkage. Backend (`GET /api/dog-brain/followups`, signals) already exists — this is client wiring.
+- **Browser walkthrough** (manual): needs an authenticated session; demo-mode preview stalls (see memory). The full chain is proven by tests but not yet demonstrated live.
+- **Gap #6 signal breadth**: water/urination, breathing, mobility, skin/ear, energy, supplement-improvement; carry stool DIRECTION (checker nit); enrich shape (confidence, vet_handoff_text, suggested_followup_date).
+- **Gap #7 fast-follow (thermo)**: fold detectDogBrainSignals into loadDogBrainContext (90-log superset) to delete priority-symptoms-server.ts + duplicate ownership/logs query.
+- **Before PR/handoff**: full `npm run lint`, full test gate `clinical|dog-brain|symptom|health-log|followups|vet-record`, remote build, and `/thermo-review` on the cumulative diff.
+
 ## Next iteration
-- DONE this run: Blocker #5 (maker + clinical checker APPROVE-WITH-NITS + thermo APPROVE-WITH-NITS, Promise.all fix) committed facb000 + 53d34ef; proof (d) committed 796e7eb.
-- NEXT: gap #3 proof (c) — vet-record durable pet-scoped persistence to `vet_record_summaries` (extend `tests/vet-record-intake-button.test.ts` / `azure-document-intake-route.test.ts`; feature done, assert the row write incl. pet_id+user_id).
-- THEN gap #4 — follow-up outcome → Brain memory: `followups/[id]` PATCH only flips status; make the outcome feed back into context/next-actions + test (e). This is a real feature gap, not just a test.
-- THEN UI surfacing (Reminders/History) + signal breadth (#6) + the fold fast-follow (#7).
-- Browser walkthrough still pending (needs auth session) — defer until the follow-up loop (gap #4) lands so the full chain is demonstrable.
+- Gap #5: wire the Reminders page to surface Brain follow-ups (GET /api/dog-brain/followups) merged with owner reminders in one queue; verify behavior. Then History Brain timeline.
+- Then gap #6 (signal breadth incl. stool direction) and gap #7 (fold fast-follow).
