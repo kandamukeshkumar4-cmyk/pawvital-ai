@@ -981,11 +981,18 @@ export async function POST(request: Request) {
     let brainPrioritySymptoms: string[] = [];
     if (action === "chat" && verifiedUserId && effectivePet) {
       try {
-        const brainContext = await loadDogBrainContext({
-          userId: verifiedUserId,
-          petName: effectivePet.name,
-          petId: effectivePet.id,
-        });
+        // Independent best-effort loads — run concurrently, never block the turn.
+        const [brainContext, prioritySymptoms] = await Promise.all([
+          loadDogBrainContext({
+            userId: verifiedUserId,
+            petName: effectivePet.name,
+            petId: effectivePet.id,
+          }),
+          loadDogBrainPrioritySymptoms({
+            userId: verifiedUserId,
+            petId: effectivePet.id,
+          }),
+        ]);
         if (brainContext) {
           const memory = ensureStructuredCaseMemory(session);
           session = {
@@ -993,10 +1000,7 @@ export async function POST(request: Request) {
             case_memory: { ...memory, daily_log_context: brainContext },
           };
         }
-        brainPrioritySymptoms = await loadDogBrainPrioritySymptoms({
-          userId: verifiedUserId,
-          petId: effectivePet.id,
-        });
+        brainPrioritySymptoms = prioritySymptoms;
       } catch {
         /* best-effort — Brain memory must never block the clinical turn */
       }
