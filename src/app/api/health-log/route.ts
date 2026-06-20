@@ -6,6 +6,7 @@ import {
   checkRateLimit,
   getRateLimitId,
 } from "@/lib/rate-limit";
+import { isMissingTable } from "@/lib/api/table-missing";
 import { ContextSignalsSchema } from "@/lib/health-log/context-signals-schema";
 
 /**
@@ -51,19 +52,6 @@ function todayIso(): string {
 
 function rateLimited(request: Request) {
   return checkRateLimit(generalApiLimiter, getRateLimitId(request));
-}
-
-/**
- * Detect "table not applied yet" so the feature degrades gracefully until the
- * migration is run. Matches both the Postgres code (42P01) and PostgREST's
- * schema-cache miss (PGRST205), plus the human-readable fallbacks.
- */
-function isMissingTable(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  if (error.code === "42P01" || error.code === "PGRST205") return true;
-  return /relation .* does not exist|could not find the table/i.test(
-    error.message ?? "",
-  );
 }
 
 /**

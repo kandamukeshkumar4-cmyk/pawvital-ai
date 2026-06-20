@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
 import { generalApiLimiter, checkRateLimit, getRateLimitId } from "@/lib/rate-limit";
+import { isMissingTable } from "@/lib/api/table-missing";
 
 /**
  * Reminders API.
@@ -26,12 +27,6 @@ const CreateSchema = z.object({
   next_due: z.string().datetime({ offset: true }).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
 });
-
-function isMissingTable(error: { code?: string; message?: string } | null): boolean {
-  if (!error) return false;
-  if (error.code === "42P01" || error.code === "PGRST205") return true;
-  return /relation .* does not exist|could not find the table/i.test(error.message ?? "");
-}
 
 export async function GET(request: Request) {
   const limit = await checkRateLimit(generalApiLimiter, getRateLimitId(request));
