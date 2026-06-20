@@ -220,8 +220,12 @@ Create a supplement plan. Respond in this exact JSON format:
 
 Consider breed-specific needs, age-related requirements, and existing conditions. Include 4-6 supplements. Respond ONLY with valid JSON.`;
 
+    // Supplements are non-clinical structured generation — use the fast
+    // 'phrasing' model (llama-4-maverick-17b), not the heavy 253B 'diagnosis'
+    // clinical model, which was timing out and falling through to the
+    // "Unable to generate" placeholder for every request.
     const result = await generateNvidiaJson<Record<string, unknown>>({
-      role: "diagnosis",
+      role: "phrasing",
       prompt,
       maxTokens: 1024,
       temperature: 0.3,

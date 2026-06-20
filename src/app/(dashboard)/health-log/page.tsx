@@ -402,6 +402,22 @@ export default function HealthLogPage() {
   const photoCount = form.photo_urls?.length ?? 0;
   const streak = useMemo(() => computeStreak(logs), [logs]);
 
+  // Core quick-status derived from context_signals packs (the detailed packs
+  // stay adaptive). Breathing + mobility are high-signal vet warning signs that
+  // shouldn't hide inside notes.
+  const breathingValue: "normal" | "coughing" | "labored" = form.context_signals
+    ?.breathing?.labored
+    ? "labored"
+    : form.context_signals?.breathing?.coughing
+      ? "coughing"
+      : "normal";
+  const mobilityValue: "normal" | "stiff" | "limping" = form.context_signals
+    ?.mobility?.limping
+    ? "limping"
+    : form.context_signals?.mobility?.reluctance_to_move
+      ? "stiff"
+      : "normal";
+
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <DailyLogAnimations />
@@ -551,6 +567,53 @@ export default function HealthLogPage() {
               { value: "none" as const, emoji: "❌", label: "None" },
             ]}
             onChange={(v) => setField("stool", v)}
+          />
+          <EmojiMetricRow
+            label="Urination"
+            value={form.urination}
+            options={[
+              { value: "straining" as const, emoji: "😣", label: "Straining" },
+              { value: "less" as const, emoji: "🔅", label: "Less" },
+              { value: "normal" as const, emoji: "✅", label: "Normal" },
+              { value: "more" as const, emoji: "💦", label: "More" },
+            ]}
+            onChange={(v) => setField("urination", v)}
+          />
+          <EmojiMetricRow
+            label="Breathing"
+            value={breathingValue}
+            options={[
+              { value: "labored" as const, emoji: "😮‍💨", label: "Labored" },
+              { value: "coughing" as const, emoji: "😷", label: "Cough" },
+              { value: "normal" as const, emoji: "✅", label: "Normal" },
+            ]}
+            onChange={(v) =>
+              setSignals({
+                breathing: {
+                  ...(form.context_signals?.breathing ?? {}),
+                  coughing: v === "coughing",
+                  labored: v === "labored",
+                },
+              })
+            }
+          />
+          <EmojiMetricRow
+            label="Mobility"
+            value={mobilityValue}
+            options={[
+              { value: "limping" as const, emoji: "🦴", label: "Limping" },
+              { value: "stiff" as const, emoji: "😬", label: "Stiff" },
+              { value: "normal" as const, emoji: "✅", label: "Normal" },
+            ]}
+            onChange={(v) =>
+              setSignals({
+                mobility: {
+                  ...(form.context_signals?.mobility ?? {}),
+                  limping: v === "limping",
+                  reluctance_to_move: v === "stiff",
+                },
+              })
+            }
           />
 
           {/* Vomiting counter */}
