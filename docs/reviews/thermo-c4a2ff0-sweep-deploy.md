@@ -15,9 +15,9 @@
 ## Review Against Canonical Standard (SKILL.md)
 
 ### 0. Ambition for structural simplification / code-judo
-**Positive.** 
+**Positive.**
 - Community: entire fake social surface (posts state, likes, modals, filters, hardcoded initialPosts) deleted. One-line redirect is the judo move.
-- Signals route: ~100 lines of bespoke `computeSignals`/`deriveState`/`UUID_RE` + silent 200 fallbacks deleted. Now thin adapter to canonical lib + strict boundary enforcement. 
+- Signals route: ~100 lines of bespoke `computeSignals`/`deriveState`/`UUID_RE` + silent 200 fallbacks deleted. Now thin adapter to canonical lib + strict boundary enforcement.
 - No new layers added.
 
 ### 1-2. File size / spaghetti growth

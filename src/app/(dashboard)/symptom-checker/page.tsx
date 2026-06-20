@@ -326,7 +326,11 @@ export default function SymptomCheckerPage() {
     weight: 50,
     existing_conditions: [],
   };
-  const displayPetName = hasHydrated ? pet.name : "your dog";
+  // Title-case at the source so every consumer (H1, context strip, chat header)
+  // shows "Bruno", never raw lowercase "bruno".
+  const displayPetName = hasHydrated
+    ? pet.name.replace(/\b\p{L}/gu, (c) => c.toUpperCase())
+    : "your dog";
   const displayPetBreed = hasHydrated ? pet.breed : "Unknown";
   const displayPetAgeYears = hasHydrated ? pet.age_years : 4;
   const displayPetWeight = hasHydrated ? pet.weight : 50;
@@ -1000,8 +1004,7 @@ export default function SymptomCheckerPage() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-2xl font-bold text-[#1c2522] sm:text-[32px] sm:leading-tight">
-                Dog symptom check for{" "}
-                {displayPetName.replace(/\b\p{L}/gu, (c) => c.toUpperCase())}
+                Dog symptom check for {displayPetName}
               </h1>
               <span
                 className="flex h-6 w-6 items-center justify-center rounded-full"
@@ -1274,6 +1277,7 @@ export default function SymptomCheckerPage() {
                     />
                     <VetRecordIntakeButton
                       disabled={loading || awaitingAsyncResult}
+                      petId={activePet?.id ?? null}
                       onContext={appendVetRecordContextToInput}
                     />
                     <input
@@ -1358,6 +1362,7 @@ export default function SymptomCheckerPage() {
                 />
                 <VetRecordIntakeButton
                   disabled={loading || awaitingAsyncResult}
+                  petId={activePet?.id ?? null}
                   onContext={appendVetRecordContextToInput}
                 />
                 <input

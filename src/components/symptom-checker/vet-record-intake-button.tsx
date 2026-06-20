@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 
 type VetRecordIntakeButtonProps = {
   disabled?: boolean;
+  petId?: string | null;
   onContext(text: string): void;
 };
 
@@ -50,6 +51,7 @@ function failureMessageForResponse(
 
 export function VetRecordIntakeButton({
   disabled = false,
+  petId,
   onContext,
 }: VetRecordIntakeButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +61,11 @@ export function VetRecordIntakeButton({
   const uploadFile = async (file: File) => {
     const formData = new FormData();
     formData.set("file", file);
+    // Send the owned pet id so the extracted summary becomes durable, pet-scoped
+    // Dog Brain memory (vet_record_summaries), not just one-session context.
+    if (petId) {
+      formData.set("pet_id", petId);
+    }
 
     const response = await fetch("/api/azure/documents/vet-record-intake", {
       body: formData,

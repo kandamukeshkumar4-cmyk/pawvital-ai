@@ -110,28 +110,56 @@ export async function POST(request: Request) {
     if (petError) throw petError;
     if (!pet) return NextResponse.json({ error: "Pet not found" }, { status: 404 });
 
-    // Idempotent on (pet_id, signal_key) while pending — the unique partial
-    // index means a duplicate insert for an open signal is ignored, not nagged.
+    // Idempotent on (pet_id, signal_key) while pending. PostgREST upsert can't
+    // target the partial unique index (WHERE status = 'pending'), so we dedup
+    // with an explicit pre-query, then insert. The partial index still guards the
+    // race: a concurrent insert raises 23505, which we treat as "already exists".
+    const { data: existing, error: existingError } = await auth.supabase
+      .from("dog_brain_followups")
+      .select("*")
+      .eq("user_id", auth.user.id)
+      .eq("pet_id", parsed.data.pet_id)
+      .eq("signal_key", parsed.data.signal_key)
+      .eq("status", "pending")
+      .maybeSingle();
+    if (existingError) {
+      if (isMissingTable(existingError)) {
+        return NextResponse.json({ code: "TABLE_MISSING" }, { status: 503 });
+      }
+      throw existingError;
+    }
+    if (existing) {
+      return NextResponse.json({ data: existing, deduped: true });
+    }
+
+    // Default a follow-up to 3 days out when the caller doesn't schedule one,
+    // so it surfaces on its own timeline rather than immediately.
+    const dueAt =
+      parsed.data.due_at ??
+      new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await auth.supabase
       .from("dog_brain_followups")
-      .upsert(
-        {
-          user_id: auth.user.id,
-          pet_id: parsed.data.pet_id,
-          signal_key: parsed.data.signal_key,
-          prompt: parsed.data.prompt,
-          due_at: parsed.data.due_at ?? null,
-          metadata: parsed.data.metadata ?? null,
-          status: "pending",
-        },
-        { onConflict: "pet_id,signal_key", ignoreDuplicates: true },
-      )
+      .insert({
+        user_id: auth.user.id,
+        pet_id: parsed.data.pet_id,
+        signal_key: parsed.data.signal_key,
+        prompt: parsed.data.prompt,
+        due_at: dueAt,
+        metadata: parsed.data.metadata ?? null,
+        status: "pending",
+      })
       .select()
       .maybeSingle();
 
     if (error) {
       if (isMissingTable(error)) {
         return NextResponse.json({ code: "TABLE_MISSING" }, { status: 503 });
+      }
+      // Unique-violation = a concurrent request already created the open
+      // follow-up. Treat as success (deduped), never a 500.
+      if (error.code === "23505") {
+        return NextResponse.json({ deduped: true });
       }
       throw error;
     }
