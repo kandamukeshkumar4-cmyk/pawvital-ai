@@ -151,3 +151,6 @@ scripts/devops/*
 # IDE / editor
 Roo-Code
 .runpod_ssh
+
+# Playwright/dev run artifacts
+output/
