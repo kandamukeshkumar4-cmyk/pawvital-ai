@@ -120,29 +120,39 @@ export async function loadDogBrainContext({
       petId = pets[0].id as string;
     }
 
-    // Fetch all sources in parallel — single round-trip set.
-    const [logsResult, checksResult, journalResult] = await Promise.all([
-      supabase
-        .from("daily_health_logs")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("pet_id", petId)
-        .order("log_date", { ascending: false })
-        .limit(MAX_LOGS),
-      supabase
-        .from("symptom_checks")
-        .select("id, created_at, symptoms, severity")
-        .eq("pet_id", petId)
-        .order("created_at", { ascending: false })
-        .limit(MAX_CHECKS),
-      supabase
-        .from("journal_entries")
-        .select("entry_date, mood, notes, photo_urls")
-        .eq("user_id", userId)
-        .eq("pet_id", petId)
-        .order("entry_date", { ascending: false })
-        .limit(MAX_JOURNAL),
-    ]);
+    // Fetch all sources in parallel — single round-trip set. The vet-record
+    // query is best-effort: a missing table returns {data:null} (never throws),
+    // so it degrades cleanly until the migration is applied.
+    const [logsResult, checksResult, journalResult, vetRecordsResult] =
+      await Promise.all([
+        supabase
+          .from("daily_health_logs")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("pet_id", petId)
+          .order("log_date", { ascending: false })
+          .limit(MAX_LOGS),
+        supabase
+          .from("symptom_checks")
+          .select("id, created_at, symptoms, severity")
+          .eq("pet_id", petId)
+          .order("created_at", { ascending: false })
+          .limit(MAX_CHECKS),
+        supabase
+          .from("journal_entries")
+          .select("entry_date, mood, notes, photo_urls")
+          .eq("user_id", userId)
+          .eq("pet_id", petId)
+          .order("entry_date", { ascending: false })
+          .limit(MAX_JOURNAL),
+        supabase
+          .from("vet_record_summaries")
+          .select("file_name, context_text, created_at")
+          .eq("user_id", userId)
+          .eq("pet_id", petId)
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
 
     const sections: string[] = [];
     const disclaimer =
@@ -209,6 +219,23 @@ export async function loadDogBrainContext({
       });
       sections.push(
         `Owner journal (${disclaimer}): ${jLines.join(" | ")}`,
+      );
+    }
+
+    // ── Imported vet records (#3) ──
+    const vetRecords = (vetRecordsResult.data ?? []) as Array<{
+      file_name: string | null;
+      context_text: string | null;
+      created_at: string;
+    }>;
+    if (vetRecords.length > 0) {
+      const vrLines = vetRecords.map((v) => {
+        const date = formatDate(v.created_at);
+        const snippet = (v.context_text ?? "").replace(/\s+/g, " ").slice(0, 220);
+        return `${date} — ${v.file_name ?? "vet record"}${snippet ? `: ${snippet}` : ""}`;
+      });
+      sections.push(
+        `Imported vet records (extracted from owner-uploaded documents; ${disclaimer}):\n${vrLines.join("\n")}`,
       );
     }
 
